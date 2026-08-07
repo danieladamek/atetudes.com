@@ -5,6 +5,20 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-06 — Published: repo + GitHub Pages live (initial deploy)
+
+- With Daniel's go-ahead: created public repo **github.com/danieladamek/atetudes.com** and
+  pushed `main` (root commit `fa5731a`, the initial build below).
+- Enabled GitHub Pages from `main` branch root; custom domain **atetudes.com** picked up
+  from `CNAME`; build completed.
+- **Deploy spot-check** (verification step 5, via the Pages edge IP with Host header, since
+  DNS is not yet configured): `/`, both `/studies/…/` pages, `/blog/`, `/blog/welcome.html`,
+  `/assets/site.css` all serve HTTP 200; study pages byte-identical sizes to the ingested
+  editions; landing title correct.
+- **HTTPS enforcement pending**: cert cannot issue until Daniel sets the DNS records
+  (apex A → 185.199.108.153/109/110/111, `www` CNAME → `danieladamek.github.io`). Flip
+  "Enforce HTTPS" (or ask a session to) once DNS propagates.
+
 ## 2026-08-06 — Initial build (v1)
 
 - **Scaffold**: repo initialized (`main`), `CNAME` (atetudes.com), `.nojekyll`, Site Charter
