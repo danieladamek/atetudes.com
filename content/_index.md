@@ -9,17 +9,21 @@ layout: hextra-home
 
 <div class="hx:mb-6">
 {{< hextra/hero-subtitle >}}
-  Interactive jazz study materials, generated — not drawn.
+  Interactive jazz études — see it, flip it, hear it.
 {{< /hextra/hero-subtitle >}}
 </div>
 
 <div class="hx:mb-8" style="max-width: 46rem;">
 
-Every chart on this site is **derived by code** from a handful of musical first principles,
-and machine-checked before publication — no note is ever placed by hand. The studies share
-one visual language: **color means scale degree**, always relative to the current root.
-Once the code is in your eye, every page reads the same way — a root is red whether you're
-looking at a fretboard box or a keyboard voicing.
+<p style="margin:0 0 1rem;">Learn the shapes that make jazz work — modes on the guitar
+neck, chords moving through a scale on neck and keyboard. Each study is a living chart:
+pick any key, flip between hearings, step through the motion, and tap any note to hear
+it.</p>
+
+<p style="margin:0;">One convention ties it all together: <strong>color shows what a note
+does</strong> in the current key. The root is always red, the third always blue, the
+seventh always amber — so a shape you learn in one study is instantly readable in every
+other.</p>
 
 <div class="degree-legend" aria-label="Degree color code">
   <span class="deg" style="background:#B82929;color:#fff">R</span>

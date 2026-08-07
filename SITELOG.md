@@ -5,6 +5,18 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-06 — Landing copy rewritten learner-first (Daniel's direction)
+
+- Daniel found the hero copy off-putting — it led with the engineering story
+  ("generated, not drawn", derivation/assertions) rather than what a visiting musician
+  gets. Rewritten around the learner: what the studies teach, how they respond (pick a
+  key, flip hearings, tap to hear), and what the colors do for the reader. Tagline is
+  now "Interactive jazz études — see it, flip it, hear it." Site meta description
+  updated to match. The generated-and-verified story remains told on the blog
+  (welcome post), where it fits.
+- Verified: landing at 1280/390 px, zero console errors, links clean (fixed missing
+  paragraph spacing in the hero on inspection).
+
 ## 2026-08-06 — Brand: @etudes wordmark adopted site-wide (Daniel's direction)
 
 - Daniel supplied the logo: a red **@** followed by **etudes** with each letter in a

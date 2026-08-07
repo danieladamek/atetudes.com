@@ -32,7 +32,7 @@ cascade:
     images: ["/assets/og.png"]
 
 params:
-  description: "Programmatically generated, interactive jazz study materials."
+  description: "Interactive jazz études for guitar and keyboard — modes, voicings, and voice leading in every key. See it, flip it, hear it."
   theme:
     default: "light"
     displayToggle: false
