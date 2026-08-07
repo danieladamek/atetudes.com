@@ -27,17 +27,21 @@ menu:
       params:
         type: "search"
 
+cascade:
+  params:
+    images: ["/assets/og.png"]
+
 params:
   description: "Programmatically generated, interactive jazz study materials."
   theme:
     default: "light"
     displayToggle: false
   navbar:
-    displayTitle: true
+    displayTitle: false
     displayLogo: true
     logo:
-      path: "assets/favicon.svg"
-      width: 22
+      path: "assets/logo.svg"
+      width: 118
   page:
     width: "normal"
   footer:

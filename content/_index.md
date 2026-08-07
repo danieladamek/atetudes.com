@@ -4,9 +4,7 @@ layout: hextra-home
 ---
 
 <div class="hx:mt-6 hx:mb-6">
-{{< hextra/hero-headline style="background-image:linear-gradient(to right,#212126,#4A4A52)" >}}
-  At-Etudes
-{{< /hextra/hero-headline >}}
+  <img src="/assets/logo.svg" alt="At-Etudes" width="380" style="display:block;max-width:100%;">
 </div>
 
 <div class="hx:mb-6">

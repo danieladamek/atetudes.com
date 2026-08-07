@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 190" role="img" aria-label="At-Etudes">
+  <!-- Brand wordmark: @ + etudes = the degree sequence R 2 3 4 5 6 7
+       in the Spec v1.1 degree colors (a musical-function use of the palette). -->
+  <text x="0" y="138" font-family="Georgia, 'Times New Roman', serif" font-size="168" fill="#B82929">@</text>
+  <text x="186" y="138" font-family="-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="118" font-weight="700" letter-spacing="3">
+    <tspan fill="#3C8B2F">e</tspan><tspan fill="#2959A6">t</tspan><tspan fill="#A9ABB4">u</tspan><tspan fill="#212126">d</tspan><tspan fill="#1CB8D1">e</tspan><tspan fill="#D99A08">s</tspan>
+  </text>
+</svg>

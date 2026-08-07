@@ -5,6 +5,22 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-06 — Brand: @etudes wordmark adopted site-wide (Daniel's direction)
+
+- Daniel supplied the logo: a red **@** followed by **etudes** with each letter in a
+  degree color — the mark spells the degree sequence **R·2·3·4·5·6·7** in Spec v1.1
+  colors (a musical-function use of the palette). Recreated as a vector wordmark at
+  `assets/logo.svg` (house fonts: Georgia @, Helvetica letters; exact Spec hexes).
+- Now used as: **navbar logo** (title text off — the wordmark carries the name),
+  **landing hero** (replacing the text headline), **favicon** (the red @ alone,
+  replacing the ink Æ), and a new **OG image** `assets/og.png` (1200×630 @2x, rendered
+  from the SVG in Chromium) wired site-wide via a config cascade — closes the missing
+  OG-image item from the initial build.
+- **For the vault Spec:** the brand mark's use of the degree palette (degree-sequence
+  wordmark) should be recorded as a ratified convention in doc 4 / Site Prompt v1.1.
+- Verified: landing, study wrapper, blog in Chromium at 1280/390 px, zero console
+  errors, link checker clean, og:image meta confirmed on all page types.
+
 ## 2026-08-06 — Study pages: iframe wrappers replace nav injection (Daniel's direction)
 
 - **Vault files are now published byte-identical** (verified with `cmp` against
