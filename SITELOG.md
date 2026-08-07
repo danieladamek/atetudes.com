@@ -5,6 +5,18 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-06 — Live: DNS resolved, HTTPS enforced, site public at https://atetudes.com
+
+- Daniel set the GoDaddy records (4 apex A → GitHub Pages IPs, `www` CNAME →
+  `danieladamek.github.io`); both hostnames resolve to all four IPs.
+- Original certificate request had stalled (domain was attached before DNS existed);
+  re-saved the custom domain to trigger a fresh request — Let's Encrypt cert issued
+  (expires 2026-11-05), **Enforce HTTPS enabled** via API.
+- **Live spot-check over real DNS/TLS**: `/`, both studies, `/blog/`, `/blog/welcome.html`,
+  `/assets/site.css` all HTTP 200 on https; study pages byte-identical to ingested
+  editions; `http://` → 301 → `https://atetudes.com/`; `https://www.` → 301 → apex.
+  (One transient 503 on the stylesheet during edge propagation; clean on retry.)
+
 ## 2026-08-06 — Published: repo + GitHub Pages live (initial deploy)
 
 - With Daniel's go-ahead: created public repo **github.com/danieladamek/atetudes.com** and
