@@ -5,6 +5,29 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-06 — Redesign: site rebuilt on Hugo + Hextra (Daniel's direction)
+
+- **Stack change, approved by Daniel in-session** (supersedes the charter's plain-static
+  clause; amendment noted at the top of `CLAUDE.md`, vault-side Site Prompt v1.1 pending):
+  the site is now a **Hugo** site using the **Hextra** theme (hugo module, v0.12.3),
+  built and deployed by **GitHub Actions** (`.github/workflows/pages.yaml`; Pages build
+  type switched from branch to workflow).
+- **Look neutralized to house style** per Daniel's choice: light mode only, dark-mode
+  toggle off, Hextra's blue accent overridden to near-neutral ink via HSL variables in
+  `assets/css/custom.css` — degree colors stay reserved for musical function (legend on
+  the landing page, as before).
+- **URLs preserved**: studies unchanged at `/studies/<slug>/` (now served from
+  `static/studies/`, files untouched); `/blog/` unchanged; the welcome post's canonical
+  URL is now `/blog/welcome/` with a redirect alias at the old `/blog/welcome.html`.
+  Retired (unpublished, no inbound links): `/assets/site.css`.
+- **Retired tooling**: `tools/build_blog.py` (blog is Hugo content in `content/blog/`);
+  old hand-built `index.html`, `blog/*.html`, `assets/site.css` removed — git history is
+  the archive. `tools/check_site.py` now checks the built `public/`.
+- **Verified** (doctrine): all five key pages in Chromium at 1280 px and 390 px, zero
+  console errors, screenshots inspected (caught and fixed: footer said "Hextra Project",
+  hero headline gradient washed out), study controls exercised and responding, link
+  checker clean on the built output.
+
 ## 2026-08-06 — Live: DNS resolved, HTTPS enforced, site public at https://atetudes.com
 
 - Daniel set the GoDaddy records (4 apex A → GitHub Pages IPs, `www` CNAME →

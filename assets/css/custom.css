@@ -1,0 +1,38 @@
+/* atetudes.com — house-style overrides for the Hextra chrome.
+   Site Charter: degree colors are reserved for musical function; chrome
+   stays in the neutral family (ink #212126 / gray #73737A / #ECECEE).
+   Hextra's accent color derives from these HSL variables — pinned to a
+   near-neutral ink so links/accents never collide with the degree palette
+   (in particular the 3rd's blue #2959A6). */
+
+:root {
+  --primary-hue: 240deg;
+  --primary-saturation: 4%;
+  --primary-lightness: 14%;
+}
+
+/* Degree-color legend on the landing page — the one sanctioned
+   musical-function use of the palette in site chrome. */
+.degree-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin: 1.25rem 0 0.25rem;
+}
+.degree-legend .deg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.degree-caption {
+  color: #73737A;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}

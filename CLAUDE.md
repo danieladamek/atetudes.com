@@ -1,5 +1,16 @@
 # 🌐 atetudes.com — Site Charter & Claude Code Prompt (v1.0)
 
+> **AMENDMENT 2026-08-06 (Daniel, in-session):** the stack is now **Hugo + the Hextra
+> theme**, built and deployed by **GitHub Actions** (the "plain static HTML, no framework"
+> clause of *Stack & hosting* is superseded; `tools/build_blog.py` is retired — the blog is
+> Hugo content under `content/blog/`). Hextra's chrome is neutralized to the house palette
+> (light-only, ink accent — see `assets/css/custom.css`); degree-color rules, study-page
+> self-containment, URL permanence, verification doctrine, and SITELOG discipline are
+> unchanged. Study pages live in `static/studies/<slug>/` (served at the same URLs).
+> `tools/check_site.py` now checks the built `public/` (run `hugo` first). A vault-side
+> Site Prompt v1.1 recording this supersession is pending — flag it in every scrum note
+> until it lands.
+
 > **How to use this document:** paste it (or commit it as `CLAUDE.md`) into the root of the
 > `atetudes.com` repository. It governs Claude Code sessions that build and maintain the site.
 > It is the downstream sibling of the vault's Primary Prompt; where the two disagree, the

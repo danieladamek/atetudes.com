@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Static integrity checks for atetudes.com (Site Charter, Verification #4).
 
-Walks every .html file in the repo, parses it, and verifies that every
-internal link and asset reference resolves to a real file. Also checks the
-Pages plumbing (CNAME, .nojekyll). Stdlib only. Exit code 0 = clean.
+Walks every .html file in the BUILT site (public/ — run `hugo` first),
+parses it, and verifies that every internal link and asset reference
+resolves to a real file. Also checks the Pages plumbing (CNAME, .nojekyll).
+Stdlib only. Exit code 0 = clean.
 
-    python3 tools/check_site.py
+    hugo && python3 tools/check_site.py
 """
 
 import sys
@@ -13,8 +14,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 
-ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", "notes", "blog/src"}
+ROOT = Path(__file__).resolve().parent.parent / "public"
+SKIP_DIRS = ()
 
 
 class LinkCollector(HTMLParser):
@@ -53,6 +54,9 @@ def resolve(link, page_dir):
 
 def main():
     problems = []
+    if not ROOT.is_dir():
+        print("public/ not found — run `hugo` first")
+        sys.exit(1)
 
     for plumbing in ("CNAME", ".nojekyll"):
         if not (ROOT / plumbing).exists():

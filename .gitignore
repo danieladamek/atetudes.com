@@ -1,2 +1,6 @@
 notes/
 .DS_Store
+.claude/
+public/
+resources/
+.hugo_build.lock
