@@ -5,6 +5,18 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-06 — Study pages: site nav bar injected at ingest (Daniel's direction)
+
+- Both study pages now carry the site navigation bar (Æ mark + At-Etudes → home,
+  Studies, Blog) at the top. Injection is done by the new **`tools/ingest_study.py`** —
+  a deterministic, idempotent transform run at every ingest (marker comments delimit the
+  block; a fresh vault edition is dropped in place and the script re-run). The generated
+  pages are never hand-edited; the injected bar is inline-styled, neutral-chrome only,
+  and links with absolute URLs so downloaded pages stay self-contained and still point
+  home. Ingest workflow note added to the CLAUDE.md amendment.
+- Verified: both studies in Chromium at 1280/390 px, zero console errors, controls
+  exercised, link checker clean; double-run of the injector confirmed idempotent.
+
 ## 2026-08-06 — Redesign: site rebuilt on Hugo + Hextra (Daniel's direction)
 
 - **Stack change, approved by Daniel in-session** (supersedes the charter's plain-static
