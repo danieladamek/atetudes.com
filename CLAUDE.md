@@ -7,12 +7,14 @@
 > (light-only, ink accent — see `assets/css/custom.css`); degree-color rules, study-page
 > self-containment, URL permanence, verification doctrine, and SITELOG discipline are
 > unchanged. Study pages live in `static/studies/<slug>/` (served at the same URLs).
-> `tools/check_site.py` now checks the built `public/` (run `hugo` first). **Ingesting a
-> study now has one extra step:** after placing the new vault edition at
-> `static/studies/<slug>/index.html`, run `tools/ingest_study.py` — it idempotently injects
-> the site nav bar (self-contained, neutral chrome, absolute links) after `<body>`; the
-> vault file is never hand-edited. A vault-side Site Prompt v1.1 recording this
-> supersession is pending — flag it in every scrum note until it lands.
+> `tools/check_site.py` now checks the built `public/` (run `hugo` first). **Study pages
+> are published untouched:** the vault edition is copied byte-identical to
+> `static/studies/<slug>/study.html`, and a Hugo wrapper page
+> (`content/studies/<slug>.md`, `layout: study`) serves the permanent
+> `/studies/<slug>/` URL — real site navbar above a full-viewport iframe, with an
+> "Open standalone" link to the raw file. Ingest = copy the file, rebuild, verify.
+> A vault-side Site Prompt v1.1 recording this supersession is pending — flag it in
+> every scrum note until it lands.
 
 > **How to use this document:** paste it (or commit it as `CLAUDE.md`) into the root of the
 > `atetudes.com` repository. It governs Claude Code sessions that build and maintain the site.

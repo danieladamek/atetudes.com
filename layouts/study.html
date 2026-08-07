@@ -1,0 +1,20 @@
+{{- /*
+Study wrapper: real Hextra chrome (navbar, search) above a full-viewport
+iframe that loads the untouched, generated study file living at
+<page URL>/study.html. The vault edition is never modified — ingest is a
+plain file copy into static/studies/<slug>/study.html.
+*/ -}}
+{{ define "main" }}
+{{ partial "sidebar.html" (dict "context" . "disableSidebar" true "displayPlaceholder" false) }}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 20px;background:#fff;border-bottom:1px solid #E2E2E6;">
+  <span style="font-size:13.5px;color:#73737A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ .Title }}</span>
+  <a href="{{ .RelPermalink }}study.html" target="_blank" rel="noopener" style="flex-shrink:0;font-size:13.5px;color:#212126;text-decoration:underline;text-underline-offset:2px;">
+    Open standalone&nbsp;↗
+  </a>
+</div>
+<iframe
+  src="{{ .RelPermalink }}study.html"
+  title="{{ .Title }}"
+  style="display:block;width:100%;height:calc(100dvh - 104px);border:0;background:#F6F6F8;"
+></iframe>
+{{ end }}

@@ -5,6 +5,25 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-06 — Study pages: iframe wrappers replace nav injection (Daniel's direction)
+
+- **Vault files are now published byte-identical** (verified with `cmp` against
+  `02 Publications/`): each lives at `/studies/<slug>/study.html`, and the permanent
+  `/studies/<slug>/` URL is now a Hugo wrapper page (`layout: study`) — real Hextra
+  navbar (search included) + slim title bar with an **"Open standalone ↗"** link + a
+  full-viewport iframe loading the raw file. Downloading via the standalone link yields
+  exactly the vault edition.
+- `tools/ingest_study.py` retired (same-day; injection approach superseded before any
+  vault re-ingest needed it). **Ingest is now a plain file copy** to
+  `static/studies/<slug>/study.html` — no transformation of generated pages, ever.
+- New `/studies/` section index (docs-style list of all studies); navbar "Studies" menu
+  now points there instead of the landing anchor.
+- Layout note: `layouts/study.html` includes Hextra's sidebar partial (collapsed) —
+  without it the theme's mobile hamburger JS throws on a missing container (caught as
+  console errors in verification, fixed).
+- Verified: wrappers + raw files + landing + studies index in Chromium at 1280/390 px,
+  zero console errors, controls exercised *inside* the iframes, link checker clean.
+
 ## 2026-08-06 — Study pages: site nav bar injected at ingest (Daniel's direction)
 
 - Both study pages now carry the site navigation bar (Æ mark + At-Etudes → home,
