@@ -5,6 +5,31 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-08 — Modes study: the listening release (Daniel's direction, built in Cowork)
+
+- `studies/modes-from-pentatonic-boxes/study.html` gains four features, per P1 of
+  `notes/specs/modes-pentatonic-roadmap.md` (UI layer only — the vault payload is
+  untouched, and the page remains a self-contained single file):
+  - **Drone** — a sustained tonal-center pad (root + octave + fifth, low register).
+    Two grains, one drone at a time: the control-row button drones the caption's
+    global hearing, and **each box's panel has its own drone button** droning *that
+    box's* hearing — flip the box major ↔ minor and its drone follows (A → F♯ for
+    box 5 of A major, verified). Turning a drone on anywhere moves it there;
+    "sound: off" silences it.
+  - **Tempo control** — box playback was hardwired at 210 ms/note; now an eighth-note
+    BPM slider (60–200, default 140 ≈ the old feel).
+  - **Play all** — plays the five boxes in order down the neck, auto-scrolling, with
+    the sounding box's title highlighted; click again to stop.
+  - **Clickable legend** — the footer's degree-color legend now pins a family across
+    every box (the hover highlight, made sticky and touch-friendly).
+- Verified headless (Chromium, `file://`): zero console errors; drone follows key
+  change (A→C) and hearing flip (C major → A minor); legend pin highlights 12 / dims
+  75 dots and releases clean; tour starts, highlights, stops; sound-off tears down
+  drone and tour. Desktop screenshot reviewed.
+- **For the vault's Update Log**: the site copy of this study now leads the vault
+  edition (260806.13) — these four features should be folded back into the vault
+  master or the divergence noted there.
+
 ## 2026-08-06 — Landing copy rewritten learner-first (Daniel's direction)
 
 - Daniel found the hero copy off-putting — it led with the engineering story
