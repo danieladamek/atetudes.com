@@ -1,6 +1,22 @@
+# Obsidian / Cowork program-management layer — never commit
 notes/
-.DS_Store
-.claude/
+🚀 *.md
+
+# Built publications — rebuildable from generators/ by definition.
+# The published interactive editions live (tracked) in static/studies/.
+publications/
+
+# Hugo
 public/
 resources/
 .hugo_build.lock
+
+# Tooling / OS
+.claude/
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
