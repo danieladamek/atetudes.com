@@ -51,6 +51,11 @@ other.</p>
     title="Tetrad Voice Leading — Cycling Through a Scale"
     subtitle="Four-note chords walk through a scale one smooth voice-leading move at a time — on a guitar neck and a keyboard. Any key, five cycles, sound included."
   >}}
+  {{< card
+    link="/studies/triadetudes/"
+    title="Triadetudes — the Triad Étude Designer"
+    subtitle="Design your own isolation étude: three pivot notes anchor triads cycling with minimal voice movement — fretboard, notation, playable keyboard, metronome, and a practice log."
+  >}}
 {{< /cards >}}
 
 <h2 class="hx:text-2xl hx:font-semibold hx:mt-10 hx:mb-4">Blog</h2>

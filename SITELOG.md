@@ -5,6 +5,35 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-08 — NEW STUDY: Triadetudes v1.0 (Daniel's direction, built in Cowork)
+
+- **`/studies/triadetudes/`** — the triad étude designer, the site's first **site-side
+  application**: its music engine (scales with correct spelling across major/harmonic/
+  melodic minor, triad voicing enumeration, pivot-constrained minimal-movement voice
+  leading, five progression engines + custom, upper-structure reinterpretation over a
+  chosen bass) is computed live in JavaScript with in-page self-tests, not
+  vault-generated. **This supersedes the vault-payload requirement for this page and
+  must be recorded as a charter amendment in the vault's Site Prompt / Update Log**
+  (flagged; see `notes/specs/etudor-prd... → triadetudes-prd.md` §2 and the single-file
+  offline requirement in `notes/specs/triadetudes-roadmap.md` §5).
+- Features at v1.0: key/scale/string-set/pivot selection with isolation box · cycling
+  4ths/6ths/3rds, scalar, chromatic, custom progressions · typed arpeggio patterns with
+  derived subdivisions (and correct tuplet notation — quarter/half-note tuplets
+  bracketed, never beamed) · meter + bar-split transport with 3-level accents · full
+  étude rendered end-to-end on a grand staff with click-to-jump · playable synced
+  keyboard + echo staff · root/3rd-below/5th-below bass options with function
+  relabeling · practice notebook (intention/accomplished, localStorage history,
+  restore-exact-étude, markdown export). Colors per Design Spec v1.1.
+- Development lineage preserved in `notes/prototypes/` (etudor v0.1–0.2, triadetudes
+  v0.3–0.5); spec + roadmaps in `notes/specs/`.
+- Verified per the charter (web edition): in-page assertions green; Playwright/Chromium
+  from `file://` **with network disabled — zero requests, zero console errors**; core
+  flows exercised (scale/extension/arp/meter changes, transport stepping, notebook
+  save+restore round-trip); desktop + 390 px screenshots reviewed across v0.3–v0.5.
+- Landing page: Triadetudes card added to the Studies grid. Wrapper page
+  `content/studies/triadetudes.md` (standard `layout: study` iframe + "Open
+  standalone").
+
 ## 2026-08-08 — Modes study: the listening release (Daniel's direction, built in Cowork)
 
 - `studies/modes-from-pentatonic-boxes/study.html` gains four features, per P1 of
