@@ -54,6 +54,7 @@
   .bpmrow{display:flex;align-items:center;gap:8px;margin-top:10px}
   .bpmrow input[type=range]{flex:1}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+  #chipsDock .chips{margin:10px 0 2px}
   .chips button{font:inherit;font-size:12.5px;padding:4px 10px;border:1.4px solid var(--line);
     border-radius:14px;background:#fff;cursor:pointer;color:var(--ink)}
   .chips button.cur{border-color:var(--red);color:var(--red);font-weight:bold}
@@ -132,7 +133,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.6</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.7</div>
 </header>
 
 <div class="cards">
@@ -220,10 +221,14 @@
     <div id="breakBlock" style="display:none">
       <label>The changes (chords or romans: <i>Dm7 G7 Cmaj7</i> · <i>ii7 V7 Imaj7</i> · <i>G7alt</i> · <i>F/G</i>)</label>
       <input type="text" id="breakIn" spellcheck="false" style="width:100%">
-      <div class="hint">Type the progression you actually face; the app derives the
-      upper-structure triad on your string set and grounds it on the chord's root in the
-      bass. Tap a chip to edit it — where a chord holds more than one honest triad the
-      chip grows a ▾. Romans resolve in the selected key.</div>
+      <!-- in break-down the chip row docks HERE, beside the field that writes the
+           same data; in build-up it lives at its stage position (#chipsHome) -->
+      <div id="chipsDock"></div>
+      <div class="hint">Type the progression you actually face, or grow it chip by chip
+      with +. The app derives the upper-structure triad on your string set and grounds
+      it on the chord's root in the bass. Tap a chip to edit it — where a chord holds
+      more than one honest triad the chip grows a ▾. Romans resolve in the selected
+      key.</div>
     </div>
   </div>
 
@@ -266,7 +271,7 @@
   </div>
 </div>
 
-<div class="chips" id="chips"></div>
+<div id="chipsHome"><div class="chips" id="chips"></div></div>
 
 <div class="board">
   <span class="mini"></span>
@@ -321,7 +326,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.6 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.7 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -2283,7 +2288,13 @@ function renderKbd(){
   if(keepPulse)svg.appendChild(keepPulse); else el("g",{id:"kbdPulse"},svg);
 }
 function renderChips(){
-  const div=document.getElementById("chips"); div.innerHTML="";
+  const div=document.getElementById("chips");
+  // one strip, two homes (v0.6.7): in break-down the chips ARE the input and
+  // dock beside the changes field; in build-up they are a position display and
+  // live at the stage. The element MOVES — one row, one render path, never two.
+  const host=document.getElementById(st.harmonyMode==="break"?"chipsDock":"chipsHome");
+  if(host&&div.parentElement!==host)host.appendChild(div);
+  div.innerHTML="";
   if(st.harmonyMode!=="break"){
     SEQ.forEach((ch,i)=>{
       const b=document.createElement("button");
@@ -2440,9 +2451,14 @@ function openChipEditor(i,anchor){
   ed.appendChild(acts);
   document.body.appendChild(ed);
   const r=anchor.getBoundingClientRect();
-  const w=ed.offsetWidth||320;
+  const w=ed.offsetWidth||320, eh=ed.offsetHeight||300;
+  // clamp to the VIEWPORT, not the anchor's card: the popup may overhang the
+  // card but never run off screen; flip above the chip when below won't fit
   ed.style.left=Math.max(8,Math.min(window.scrollX+r.left,window.scrollX+window.innerWidth-w-8))+"px";
-  ed.style.top=(window.scrollY+r.bottom+6)+"px";
+  let top=window.scrollY+r.bottom+6;
+  if(r.bottom+eh+12>window.innerHeight&&r.top-eh-12>0)top=window.scrollY+r.top-eh-6;
+  ed.style.top=top+"px";
+  ed.scrollIntoView({block:"nearest"});
   setTimeout(()=>document.addEventListener("pointerdown",chipEdOutside,true),0);
 }
 function cfgObj(){

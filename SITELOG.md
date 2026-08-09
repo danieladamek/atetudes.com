@@ -5,6 +5,36 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.7: the chip editor comes to the changes (backlog item, Daniel's dispatch)
+
+- **Placement fix, per the item: nothing new built.** In break-down mode the chip row and
+  its `+` now dock inside the Harmony card, directly under the changes field — the input
+  lives beside the field that writes the same data. In build-up mode the row stays at its
+  stage position above the fretboard (a read-only where-am-I display). **One element, one
+  render path**: `renderChips()` moves the single `#chips` node between two new anchor
+  containers (`#chipsDock` in the card, `#chipsHome` at the stage) chosen by mode; a
+  count assertion in the checks pins exactly one row through mode round-trips and
+  notebook restores. Element IDs unchanged (new IDs added, none renamed, per v0.6.6's
+  constraint).
+- **Popup geometry**: the editor now clamps to the viewport vertically as well —
+  flipping above its anchor chip when there is no room below — and scrolls itself into
+  view. Pre-move finding, recorded as the item asked: the popup was NOT already broken
+  at 390 px (horizontal clamp held on first and last chips), so the vertical flip is
+  new capability for the docked position, not an inherited-bug fix.
+- Both entry paths verified in the new home: `+` appends (seeded from the last symbol,
+  `G7` on empty — reachable even with an empty progression) and opens the editor on the
+  new chip; the text field round-trip is pinned — a ▾ choice on `G9` survives a text
+  edit that leaves that token untouched.
+- One bug of this build's own making, caught by the doctrine before it shipped: a
+  variable collision in the editor's new positioning code (`h` shadowed the heading
+  helper) broke the page script entirely; the zero-console-errors gate caught it on the
+  first verification run.
+- Verified per doctrine: engine suite 130/130, characterization + all anti-drift pins
+  unmoved; 23 Playwright checks from `file://` offline, zero console errors — mount per
+  mode, single-row assertion across two mode round-trips, editor fully within viewport
+  on first and last chips at 1280 px and 390 px, restore-driven mounts both ways;
+  rendered and inspected at both widths in both modes. Update Log 260809.4.
+
 ## 2026-08-09 — Triadetudes v0.6.6: the design survives a context change (backlog item, Daniel's dispatch)
 
 - **The reset is gone, by representation rather than patching.** A string-set click used
