@@ -23,6 +23,18 @@
         padding:12px 14px;flex:1 1 260px;min-width:250px}
   .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
            color:var(--gray);margin:0 0 10px;font-weight:bold}
+  /* the metronome block: inverted — it is its own appliance, not an étude control.
+     Family convention: first card, top-left, in every app. */
+  .card.metro{background:var(--ink);border-color:var(--ink);color:#ECECEE}
+  .card.metro h2{color:#9C9CA4}
+  .card.metro label{color:#9C9CA4}
+  .card.metro .hint{color:#85858D}
+  .card.metro select{background:#2E2E34;color:#ECECEE;border-color:#44444C}
+  .card.metro .transport button{background:#2E2E34;color:#ECECEE;border-color:#44444C}
+  .card.metro .transport button.primary{background:#ECECEE;color:var(--ink);
+    border-color:#ECECEE;font-weight:bold}
+  .card.metro .chk{color:#D8D8DC}
+  .card.metro input[type=range]{accent-color:#ECECEE}
   label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
   select,input[type=text]{
     font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
@@ -84,10 +96,47 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v1.0</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.5.4</div>
 </header>
 
 <div class="cards">
+  <div class="card metro">
+    <h2>Metronome</h2>
+    <div class="transport">
+      <button id="metroBtn" class="primary">Start</button>
+      <button id="tapBtn" title="tap a tempo">Tap</button>
+      <span id="beatLamp" style="display:flex;gap:5px;align-items:center;margin-left:4px"></span>
+    </div>
+    <div class="bpmrow">
+      <span style="font-size:12px;color:#9C9CA4">BPM</span>
+      <input type="range" id="bpmRange" min="30" max="200" value="72">
+      <span id="bpmVal" style="font-size:13px;width:30px;text-align:right">72</span>
+    </div>
+    <div class="row2">
+      <div><label>Time</label>
+        <select id="meterSel"><option value="4" selected>4/4</option><option value="3">3/4</option>
+          <option value="5">5/4</option><option value="6">6/4</option></select></div>
+      <div><label>Subdivision</label>
+        <select id="subSel"><option value="1" selected>beats</option><option value="2">8ths</option>
+          <option value="3">triplets</option><option value="4">16ths</option></select></div>
+      <div><label>Voice</label>
+        <select id="voiceSel"><option value="beep" selected>beep</option>
+          <option value="wood">wood</option><option value="tick">tick</option></select></div>
+    </div>
+    <div class="transport" style="gap:9px;margin-top:8px">
+      <button id="clickTgl" title="click sound on/off">Sound: on</button>
+      <label class="chk" style="margin:0"><input type="checkbox" id="accChk" checked> accents</label>
+    </div>
+    <div class="bpmrow">
+      <span style="font-size:12px;color:#9C9CA4">Vol</span>
+      <input type="range" id="clickVolR" min="0" max="100" value="80">
+      <span id="clickVolVal" style="font-size:13px;width:30px;text-align:right">80</span>
+    </div>
+    <div class="hint">A full metronome on its own clock — use it with or without the étude.
+    The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
+    metronome, first block, this look.)</div>
+  </div>
+
   <div class="card">
     <h2>Design</h2>
     <div class="row2">
@@ -149,21 +198,19 @@
       <button id="prevBtn" title="previous chord">◀</button>
       <button id="playBtn" class="primary">Play</button>
       <button id="nextBtn" title="next chord">▶</button>
-      <label class="chk" style="margin:0 0 0 6px"><input type="checkbox" id="metroChk"> metronome only</label>
     </div>
-    <div class="bpmrow">
-      <span style="font-size:12px;color:var(--gray)">BPM</span>
-      <input type="range" id="bpmRange" min="30" max="200" value="72">
-      <span id="bpmVal" style="font-size:13px;width:30px;text-align:right">72</span>
-    </div>
-    <div class="row2">
-      <div><label>Time</label>
-        <select id="meterSel"><option value="4" selected>4/4</option><option value="3">3/4</option>
-          <option value="5">5/4</option><option value="6">6/4</option></select></div>
-      <div><label>Bar split (beats per chord)</label><select id="splitSel"></select></div>
+    <label>Bar split (beats per chord)</label>
+    <select id="splitSel"></select>
+    <div class="transport" style="gap:9px;margin-top:8px">
+      <label class="chk" style="margin:0"><input type="checkbox" id="countChk"> count-in</label>
+      <label class="chk" style="margin:0"><input type="checkbox" id="metroChk"> mute chords</label>
     </div>
     <div class="hint">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord
-    2 beats, next chord 3, new bar. Accents: bar &gt; chord &gt; beat.</div>
+    2 beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next
+    bar</b> — the click you already hear is your count-in. If it isn't, Play starts it
+    (count-in adds one clicked bar first). Stopping the étude leaves a self-started metronome
+    running; the metronome's Stop stops everything — it owns the clock. Mute chords: the
+    changes still animate in time — play-along, you supply the triads.</div>
   </div>
 </div>
 
@@ -219,7 +266,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v1.0 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.5.4 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -399,6 +446,7 @@ const st={
   arpPattern:null, arpCustom:false,  // arpPattern: array of string numbers (repeats OK) or null=block chord
   roots:false, ext:"none",
   bpm:72, meter:4, splitIdx:1, metroOnly:false,
+  clickOn:true, clickVol:0.8, clickAccent:true, clickSub:1, clickVoice:"beep", countIn:false,
   cur:0,
 };
 let SEQ=[], VOIC=[], BOX=null, ECHO=[];
@@ -509,14 +557,42 @@ function playNote(midi,when,dur=0.7,vel=0.24){
   o.connect(f).connect(g).connect(ac.destination);
   o.start(t); o.stop(t+dur+0.05);
 }
-function click(when,level){ // level 2=bar,1=chord,0=beat
+/* metronome voices — three synthesized clicks, zero assets. Accent character is
+   per-voice (frequency/filter + gain per level); level 2=bar,1=chord,0=beat,-1=sub */
+const CLICK_VOICES={
+  beep:{type:"square",  freq:{2:1800,1:1500,0:1150,"-1":950},
+        gain:{2:.17,1:.12,0:.08,"-1":.045}, dur:.05},
+  wood:{type:"triangle",freq:{2:1660,1:1250,0:1000,"-1":820},
+        gain:{2:.50,1:.38,0:.28,"-1":.16},  dur:.022},
+  tick:{noise:true,     hp:  {2:5200,1:6000,0:6800,"-1":7600},
+        gain:{2:.50,1:.35,0:.25,"-1":.14},  dur:.04},
+};
+let NOISE_BUF=null;
+function noiseBuf(ac){
+  if(!NOISE_BUF){
+    NOISE_BUF=ac.createBuffer(1,Math.floor(ac.sampleRate*0.06),ac.sampleRate);
+    const d=NOISE_BUF.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  }
+  return NOISE_BUF;
+}
+function click(when,level){
   const ac=ctx(); if(!ac)return;
   const t=when||ac.currentTime;
-  const o=ac.createOscillator(),g=ac.createGain();
-  o.type="square"; o.frequency.value=level===2?1800:level===1?1500:1150;
-  g.gain.setValueAtTime(level===2?0.17:level===1?0.12:0.08,t);
-  g.gain.exponentialRampToValueAtTime(0.0005,t+0.05);
-  o.connect(g).connect(ac.destination); o.start(t); o.stop(t+0.06);
+  const lv=st.clickAccent?level:Math.min(level,0);   // accents off = every beat is a beat
+  const v=CLICK_VOICES[st.clickVoice]||CLICK_VOICES.beep;
+  const g=ac.createGain();
+  g.gain.setValueAtTime((v.gain[lv]??v.gain[0])*st.clickVol,t);
+  g.gain.exponentialRampToValueAtTime(0.0005,t+v.dur);
+  g.connect(ac.destination);
+  if(v.noise){
+    const s=ac.createBufferSource(); s.buffer=noiseBuf(ac);
+    const f=ac.createBiquadFilter(); f.type="highpass"; f.frequency.value=v.hp[lv]??v.hp[0];
+    s.connect(f).connect(g); s.start(t); s.stop(t+v.dur+0.01);
+  }else{
+    const o=ac.createOscillator(); o.type=v.type; o.frequency.value=v.freq[lv]??v.freq[0];
+    o.connect(g); o.start(t); o.stop(t+v.dur+0.01);
+  }
 }
 function orderedMidis(i){
   const v=VOIC[i]; if(!v)return{notes:[],bass:null};
@@ -542,34 +618,139 @@ function strum(i,when,durBeats){
   }
 }
 
-/* transport with meter + bar split */
-let timer=null,nextBeat=0,runStep=0,beatInChord=0,patPos=0;
-function pattern(){ return SPLITS[st.meter][st.splitIdx]||[st.meter]; }
-function playing(){return !!timer;}
-function start(){
-  const ac=ctx(); if(!ac)return;
-  nextBeat=ac.currentTime+0.1; runStep=0; beatInChord=0; patPos=0;
-  timer=setInterval(schedule,25);
-  document.getElementById("playBtn").textContent="Stop";
-}
-function stop(){ clearInterval(timer); timer=null;
-  document.getElementById("playBtn").textContent="Play"; }
-function schedule(){
-  const ac=ctx(); const ahead=0.12, spb=60/st.bpm, pat=pattern();
-  while(nextBeat<ac.currentTime+ahead){
-    const t=nextBeat;
-    if(beatInChord===0){
-      click(t,patPos===0?2:1);
-      if(!st.metroOnly){
-        const idx=runStep%SEQ.length;
-        strum(idx,t,pat[patPos]);
-        setTimeout(()=>{st.cur=idx;renderActive();},Math.max(0,(t-ac.currentTime)*1000));
+/* ============ metronome — shared component v1 ============
+   Canonical source: engine/metronome.mjs (pure core, CI-tested; an anti-drift
+   test asserts these definitions match the module verbatim). The metronome OWNS
+   the clock; the étude transport below is a subscriber that joins the grid at
+   bar boundaries. Hand-inlined until Phase B's build step inlines modules. */
+function createMetroCore(opts={}){
+  const ms={bpm:opts.bpm??72,meter:opts.meter??4,running:false,anchor:0,nextIdx:0};
+  const spb=()=>60/ms.bpm;
+  return {
+    get running(){return ms.running;}, get bpm(){return ms.bpm;}, get meter(){return ms.meter;},
+    start(now){ms.running=true;ms.anchor=now;ms.nextIdx=0;},
+    stop(){ms.running=false;},
+    setMeter(m){ms.meter=m;},
+    setBpm(bpm){
+      if(ms.running&&ms.nextIdx>0){
+        // re-anchor so the next beat lands one new-spb after the last emitted beat:
+        // tempo changes bend the grid forward, never tear it
+        const last=ms.anchor+(ms.nextIdx-1)*spb();
+        ms.bpm=bpm; ms.anchor=last-(ms.nextIdx-1)*(60/bpm);
+      } else ms.bpm=bpm;
+    },
+    pump(now,ahead){
+      if(!ms.running)return[];
+      const out=[];
+      while(ms.anchor+ms.nextIdx*spb()<now+ahead){
+        const i=ms.nextIdx++;
+        out.push({time:ms.anchor+i*spb(),index:i,bar:Math.floor(i/ms.meter),beat:i%ms.meter});
       }
-    } else click(t,0);
-    beatInChord++;
-    if(beatInChord>=pat[patPos]){ beatInChord=0; patPos=(patPos+1)%pat.length; runStep++; }
-    nextBeat+=spb;
+      return out;
+    },
+    nextBarStartIndex(){const i=ms.nextIdx;return i%ms.meter===0?i:i+(ms.meter-i%ms.meter);},
+  };
+}
+function createTapTempo(o={}){
+  const maxGap=o.maxGap??2.5,win=o.window??4,taps=[];
+  return(now)=>{
+    if(taps.length&&now-taps[taps.length-1]>maxGap)taps.length=0;
+    taps.push(now);
+    if(taps.length<2)return null;
+    const r=taps.slice(-win),iv=(r[r.length-1]-r[0])/(r.length-1);
+    return Math.round(Math.min(200,Math.max(30,60/iv)));
+  };
+}
+const SUB_OFFSETS={1:[],2:[0.5],3:[1/3,2/3],4:[0.25,0.5,0.75]};
+
+/* ---- this page's metronome instance + the étude transport that syncs to it ---- */
+const METRO=createMetroCore({bpm:72,meter:4});
+const tapTempo=createTapTempo();
+let pumpTimer=null,metroOwner=null;   // who started the clock: 'metro' | 'transport'
+const etude={on:false,joinIdx:0,countInBar:false,beatInChord:0,patPos:0,runStep:0};
+function pattern(){ return SPLITS[st.meter][st.splitIdx]||[st.meter]; }
+function playing(){return etude.on;}
+function ensurePump(){ if(!pumpTimer)pumpTimer=setInterval(pumpBeats,25); }
+function idlePump(){ if(pumpTimer&&!METRO.running){clearInterval(pumpTimer);pumpTimer=null;} }
+function pumpBeats(){
+  const ac=ctx(); if(!ac)return;
+  const spb=60/st.bpm;
+  for(const ev of METRO.pump(ac.currentTime,0.12)){
+    if(etude.on&&etude.countInBar&&ev.index<st.meter){
+      // transport-started count-in bar: click always audible (that is its job)
+      click(ev.time,ev.index===0?2:0); lamp(ev); continue;
+    }
+    const rel=etude.on?ev.index-etude.joinIdx:-1;
+    let level=ev.beat===0?2:0, attack=false, idx=0;
+    if(rel>=0&&etude.beatInChord===0){
+      attack=true; idx=etude.runStep%SEQ.length;
+      level=ev.beat===0?2:1;              // bar > chord > beat while the étude runs
+    }
+    if(st.clickOn){
+      click(ev.time,level);
+      for(const o of SUB_OFFSETS[st.clickSub]) click(ev.time+o*spb,-1);
+    }
+    if(rel>=0){
+      // cursor advance belongs to the transport, not the audio: "mute chords"
+      // is play-along — changes animate, the player supplies the triads
+      if(attack){
+        if(!st.metroOnly) strum(idx,ev.time,pattern()[etude.patPos]);
+        setTimeout(()=>{st.cur=idx;renderActive();},Math.max(0,(ev.time-ac.currentTime)*1000));
+      }
+      etude.beatInChord++;
+      if(etude.beatInChord>=pattern()[etude.patPos]){
+        etude.beatInChord=0; etude.patPos=(etude.patPos+1)%pattern().length; etude.runStep++;
+      }
+    }
+    lamp(ev);
   }
+}
+/* the lamp lives on the dark block: idle charcoal, beats light, downbeat full white */
+const LAMP={idle:"#44444C",beat:"#B9B9BF",bar:"#FFFFFF"};
+function lamp(ev){
+  const ac=ctx(); if(!ac)return;
+  setTimeout(()=>{
+    document.querySelectorAll("#beatLamp span").forEach((d,i)=>{
+      d.style.background=i===ev.beat?(ev.beat===0?LAMP.bar:LAMP.beat):LAMP.idle;
+      d.style.transform=i===ev.beat&&ev.beat===0?"scale(1.25)":"scale(1)";});
+  },Math.max(0,(ev.time-ac.currentTime)*1000));
+}
+function renderLamp(){
+  const w=document.getElementById("beatLamp"); if(!w)return; w.innerHTML="";
+  for(let i=0;i<st.meter;i++){const s=document.createElement("span");
+    s.style.cssText="width:9px;height:9px;border-radius:50%;background:"+LAMP.idle+
+      ";display:inline-block;transition:background .06s,transform .06s";
+    w.appendChild(s);}
+}
+function resetLamp(){ document.querySelectorAll("#beatLamp span").forEach(d=>{
+  d.style.background=LAMP.idle; d.style.transform="scale(1)";}); }
+function metroToggle(){
+  const ac=ctx(); if(!ac)return;
+  if(METRO.running){ stopAll(); return; }   // the metronome owns the clock: its Stop stops everything
+  METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
+  METRO.start(ac.currentTime+0.08); metroOwner="metro"; ensurePump(); syncPlayUI();
+}
+function etudeToggle(){
+  const ac=ctx(); if(!ac)return;
+  if(etude.on){
+    etude.on=false;
+    if(metroOwner==="transport"){ METRO.stop(); metroOwner=null; idlePump(); resetLamp(); }
+    syncPlayUI(); return;                   // a self-started metronome keeps running
+  }
+  etude.beatInChord=0; etude.patPos=0; etude.runStep=0; etude.countInBar=false;
+  if(METRO.running){
+    etude.joinIdx=METRO.nextBarStartIndex();   // join the running grid at the next bar —
+  }else{                                        // the click you already hear is the count-in
+    METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
+    METRO.start(ac.currentTime+0.08); metroOwner="transport"; ensurePump();
+    etude.joinIdx=st.countIn?st.meter:0; etude.countInBar=st.countIn;
+  }
+  etude.on=true; syncPlayUI();
+}
+function stopAll(){ etude.on=false; METRO.stop(); metroOwner=null; idlePump(); resetLamp(); syncPlayUI(); }
+function syncPlayUI(){
+  const p=document.getElementById("playBtn"); if(p)p.textContent=etude.on?"Stop":"Play";
+  const m=document.getElementById("metroBtn"); if(m)m.textContent=METRO.running?"Stop":"Start";
 }
 
 /* ============ echo staff ============ */
@@ -984,7 +1165,9 @@ function cfgObj(){
     motion:{arpeggio:st.arpPattern?st.arpPattern.join("-"):"block",
       subdivision:st.arpPattern?[...new Set(pattern())].map(b=>b+" beats: "+subdivisionName(b,st.arpPattern.length)).join("; "):"block"},
     display:{roots:st.roots,extension:st.ext},
-    transport:{bpm:st.bpm,meter:st.meter+"/4",barSplit:pattern().join("+"),metronomeOnly:st.metroOnly}};
+    transport:{bpm:st.bpm,meter:st.meter+"/4",barSplit:pattern().join("+"),chordsMuted:st.metroOnly,
+      metronome:{sound:st.clickOn,voice:st.clickVoice,volume:Math.round(st.clickVol*100),accents:st.clickAccent,
+        subdivision:{1:"beats",2:"8ths",3:"triplets",4:"16ths"}[st.clickSub],countIn:st.countIn}}};
 }
 function renderCfg(){ document.getElementById("cfgPre").textContent=JSON.stringify(cfgObj(),null,1); renderSummary(); }
 function renderAll(){ renderFret(); renderScore(); renderStaff(); syncArpIn(); }
@@ -998,13 +1181,18 @@ function rawCfg(){
   return {v:1,key:st.key,scaleType:st.scaleType,set:[...st.set],pivotString:st.pivotString,
     pivotFrets:[...st.pivotFrets],prog:st.prog,startDeg:st.startDeg,chromLen:st.chromLen,
     custom:st.custom,arpPattern:st.arpPattern?[...st.arpPattern]:null,roots:st.roots,ext:st.ext,
-    bpm:st.bpm,meter:st.meter,splitIdx:st.splitIdx};
+    bpm:st.bpm,meter:st.meter,splitIdx:st.splitIdx,
+    clickOn:st.clickOn,clickVol:st.clickVol,clickAccent:st.clickAccent,
+    clickSub:st.clickSub,clickVoice:st.clickVoice,countIn:st.countIn};
 }
 function applyRaw(c){
   Object.assign(st,{key:c.key,scaleType:c.scaleType,set:[...c.set],pivotString:c.pivotString,
     pivotFrets:[...c.pivotFrets],prog:c.prog,startDeg:c.startDeg,chromLen:c.chromLen,
     custom:c.custom,arpPattern:c.arpPattern?[...c.arpPattern]:null,roots:c.roots,ext:c.ext,
-    bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0});
+    bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0,
+    // metronome fields default for entries saved before v0.5.1 — old études restore intact
+    clickOn:c.clickOn??true,clickVol:c.clickVol??0.8,clickAccent:c.clickAccent??true,
+    clickSub:c.clickSub??1,clickVoice:c.clickVoice??"beep",countIn:c.countIn??false});
   const def=[st.pivotString,...st.setLowHigh.filter(x=>x!==st.pivotString)];
   st.arpCustom=!!st.arpPattern&&st.arpPattern.join()!==def.join();
   document.getElementById("keySel").value=st.key;
@@ -1023,7 +1211,22 @@ function applyRaw(c){
   document.getElementById("bpmVal").textContent=st.bpm;
   document.getElementById("meterSel").value=st.meter; refreshSplitSel();
   document.getElementById("splitSel").value=st.splitIdx;
+  METRO.setBpm(st.bpm); METRO.setMeter(st.meter); renderLamp();
+  syncClickUI();
   rebuild();
+}
+function syncClickUI(){
+  const b=document.getElementById("clickTgl");
+  if(b){b.textContent="Sound: "+(st.clickOn?"on":"off");
+        b.style.color=st.clickOn?"":"var(--gray)";}
+  const a=document.getElementById("accChk"); if(a)a.checked=st.clickAccent;
+  const s=document.getElementById("subSel"); if(s)s.value=String(st.clickSub);
+  const vc=document.getElementById("voiceSel"); if(vc)vc.value=st.clickVoice;
+  const c=document.getElementById("countChk"); if(c)c.checked=st.countIn;
+  const m=document.getElementById("metroChk"); if(m)m.checked=st.metroOnly;
+  const v=document.getElementById("clickVolR");
+  if(v){v.value=Math.round(st.clickVol*100);
+    document.getElementById("clickVolVal").textContent=Math.round(st.clickVol*100);}
 }
 function progLabel(){
   const o=document.querySelector("#progSel option:checked");
@@ -1187,15 +1390,35 @@ function initControls(){
 
   document.getElementById("prevBtn").addEventListener("click",()=>{st.cur=(st.cur-1+SEQ.length)%SEQ.length;renderActive();strum(st.cur);});
   document.getElementById("nextBtn").addEventListener("click",()=>{st.cur=(st.cur+1)%SEQ.length;renderActive();strum(st.cur);});
-  document.getElementById("playBtn").addEventListener("click",()=>{playing()?stop():start();});
+  document.getElementById("playBtn").addEventListener("click",etudeToggle);
+  document.getElementById("metroBtn").addEventListener("click",metroToggle);
+  document.getElementById("tapBtn").addEventListener("click",()=>{
+    const b=tapTempo(performance.now()/1000);
+    if(b){st.bpm=b;METRO.setBpm(b);
+      document.getElementById("bpmRange").value=b;
+      document.getElementById("bpmVal").textContent=b;renderCfg();}
+  });
   const bpmR=document.getElementById("bpmRange");
-  bpmR.addEventListener("input",()=>{st.bpm=+bpmR.value;document.getElementById("bpmVal").textContent=st.bpm;});
+  bpmR.addEventListener("input",()=>{st.bpm=+bpmR.value;METRO.setBpm(st.bpm);
+    document.getElementById("bpmVal").textContent=st.bpm;});
   document.getElementById("meterSel").addEventListener("change",e=>{
-    st.meter=+e.target.value; st.splitIdx=0; refreshSplitSel(); renderScore(); syncArpIn(); renderCfg();});
+    st.meter=+e.target.value; METRO.setMeter(st.meter); renderLamp();
+    st.splitIdx=0; refreshSplitSel(); renderScore(); syncArpIn(); renderCfg();});
   refreshSplitSel();
   document.getElementById("splitSel").addEventListener("change",e=>{
     st.splitIdx=+e.target.value; renderScore(); syncArpIn(); renderCfg();});
-  document.getElementById("metroChk").addEventListener("change",e=>{st.metroOnly=e.target.checked;});
+  document.getElementById("metroChk").addEventListener("change",e=>{st.metroOnly=e.target.checked;renderCfg();});
+  document.getElementById("clickTgl").addEventListener("click",()=>{
+    st.clickOn=!st.clickOn; syncClickUI(); renderCfg();});
+  document.getElementById("accChk").addEventListener("change",e=>{st.clickAccent=e.target.checked;renderCfg();});
+  document.getElementById("subSel").addEventListener("change",e=>{st.clickSub=+e.target.value;renderCfg();});
+  document.getElementById("voiceSel").addEventListener("change",e=>{st.clickVoice=e.target.value;click();renderCfg();});
+  document.getElementById("countChk").addEventListener("change",e=>{st.countIn=e.target.checked;renderCfg();});
+  document.getElementById("clickVolR").addEventListener("input",e=>{
+    st.clickVol=+e.target.value/100;
+    document.getElementById("clickVolVal").textContent=e.target.value;});
+  document.getElementById("clickVolR").addEventListener("change",()=>renderCfg());
+  syncClickUI(); renderLamp(); syncPlayUI();
   document.getElementById("echoClear").addEventListener("click",()=>{ECHO=[];renderStaff();});
   document.getElementById("saveEntry").addEventListener("click",saveEntry);
   document.getElementById("exportLog").addEventListener("click",exportLog);
