@@ -119,6 +119,16 @@ blocks produced by the Python, with its assertion suite). Hand-typing pitch cont
 spellings, or voicing data into site code is forbidden — it is the web-side form of golden
 rule 1.
 
+**Boundary clause (ratified 2026-08-08, charter §7 of the web contracts):** golden rule 1
+governs *authored* content — anything At-Etudes ships. **User-supplied input at runtime is
+data, not code**, and is exempt: a chart the user types or imports into an app is theirs, and
+the site never asserts it is correct — only that everything *derived* from it is. All
+voicings, substitutions, spellings, and note events computed from user input pass the same
+assertion suite as generated content (`engine/`, CI-enforced), and no derived musical data is
+ever stored — it is recomputed from the source every time. Named-rule derivations with
+load-time assertions (interval formulas, quality tables) are pitch-class math, not hand-placed
+data.
+
 ## Degree colors are reserved for musical function
 
 Site chrome — nav, headers, links, buttons, blog styling — stays in the neutral family: ink

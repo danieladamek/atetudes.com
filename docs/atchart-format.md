@@ -1,10 +1,10 @@
-# The `.atchart.md` chart interchange format — v1 (DRAFT)
+# The `.atchart.md` chart interchange format — v1
 
-> Status: **draft, pending Daniel's ratification** (backlog: *Ratify the chart
-> interchange format*). The parser and serializer in `engine/atchart.mjs` implement
-> exactly this document; the round-trip test corpus in `engine/tests/atchart.test.mjs`
-> is the executable form of it. Once ratified, this file is law like the rest of
-> `docs/` — the format version only ever moves forward.
+> Status: **RATIFIED by Daniel, 2026-08-08** (charter, web contracts §8). This file is
+> law like the rest of `docs/`: the format version only ever moves forward, and the v2
+> reservations in §3 may not be improvised into v1. The parser and serializer in
+> `engine/atchart.mjs` implement exactly this document; the round-trip corpus in
+> `engine/tests/atchart.test.mjs` is its executable form, CI-enforced.
 
 ## 1. What it is
 

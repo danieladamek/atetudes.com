@@ -5,6 +5,20 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-08 — Ratifications: web contracts, .atchart.md v1, version arbitration (Cowork)
+
+- **Charter gains a "Web application contracts" section** (`docs/charter-and-conventions.md`):
+  the single-file promise (§5, adopted earlier today), the **copyright posture** (§6 — no
+  server-side chart library, sharing, accounts, or community collection, ever; ratified
+  knowingly), the **authored/user-input boundary** for golden rule 1 (§7 — user charts are
+  data, not code; everything derived from them passes the assertion suite; nothing derived
+  is stored), and the **chart interchange format as law** (§8). CLAUDE.md Part II carries
+  the boundary clause verbatim. These were the two blockers gating Phase B — now clear.
+- **`.atchart.md` v1 ratified** — `docs/atchart-format.md` status flips from draft to law.
+- **Version arbitration:** the Triadetudes study shipped in `efcc44f` labeled "v1.0" is
+  the roadmap's **v0.5**; the roadmap's numbering line wins (v1.0 remains the site
+  integration / hub extraction milestone). The commit message stands as history.
+
 ## 2026-08-08 — Engine test infrastructure: `engine/`, CI-enforced (Cowork)
 
 - **New tracked directory `engine/`** — the shared JS music engine, site-side counterpart
