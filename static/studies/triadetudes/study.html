@@ -132,7 +132,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.5</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.6</div>
 </header>
 
 <div class="cards">
@@ -174,7 +174,7 @@
   </div>
 
   <div class="card">
-    <h2>Design</h2>
+    <h2>Harmony</h2>
     <div class="row2">
       <div><label>Key</label><select id="keySel"></select></div>
       <div><label>Scale</label>
@@ -184,16 +184,7 @@
           <option value="mel">Melodic minor</option>
         </select></div>
     </div>
-    <label>String set (triads live here)</label>
-    <div class="seg" id="setSeg"></div>
-    <div class="hint">Pivots: click any scale note on a string of the set — that note and the
-    next two scale notes up the same string become your pivots (dashed rings). The dashed
-    box is your isolation zone.</div>
-  </div>
-
-  <div class="card">
-    <h2>Harmony</h2>
-    <div class="seg" id="modeSeg">
+    <div class="seg" id="modeSeg" style="margin-top:8px">
       <button data-mode="build" class="on">Build up</button>
       <button data-mode="break">Break down</button>
     </div>
@@ -237,7 +228,13 @@
   </div>
 
   <div class="card">
-    <h2>Context & Motion</h2>
+    <h2>Shape & Motion</h2>
+    <label>String set (triads live here)</label>
+    <div class="seg" id="setSeg"></div>
+    <div class="hint">Pivots: click any scale note on a string of the set — that note and the
+    next two scale notes up the same string become your pivots (dashed rings). The dashed
+    box is your isolation zone. Changing set, key or scale carries your pattern and
+    pivots along — same figure, same degrees, new context.</div>
     <label>Arpeggio pattern (string numbers; repeats OK; empty = block chord)</label>
     <input type="text" id="arpIn" size="14" spellcheck="false" placeholder="e.g. 2-3-3-1">
     <span id="arpErr" style="color:var(--red);font-size:11.5px"></span>
@@ -324,7 +321,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.5 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.6 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -715,6 +712,146 @@ function resolveRoman(tok, key, scaleType = "major") {
   return { symbol, parsed: parseChord(symbol) };
 }
 return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, resolveRoman };
+})();
+/* ============ string-set engine — shared component v1 ============
+   Canonical source: engine/string-sets.mjs (pure, CI-tested; an anti-drift
+   test asserts this inline copy matches the module verbatim). */
+const STRSETS = (() => {
+/* string-sets.mjs — slot- and degree-relative translation across string sets.
+ *
+ * Pure module: no DOM, no audio, structural assertions at load. Shared family
+ * code (Triadetudes v0.6.6 is the first consumer; Tetrad Voice-Leading has
+ * string sets too, and Phase B's drill layer inherits this either way).
+ *
+ * The law this module encodes: an étude's design is RELATIVE, not absolute.
+ * An arpeggio pattern's meaning is which SLOT of the set — low, mid, high —
+ * in what order; a pivot's meaning is which SCALE DEGREE, not which fret.
+ * Store and display absolute string/fret numbers (they are what the player
+ * reads), but translate through the relative form on any context change, so
+ * the design survives instead of resetting.
+ *
+ * Golden rule 1: every translation is DERIVED by the named rule below and
+ * asserted, never mapped per-set by hand. A set→pattern lookup table would
+ * emit identical output today and is a Spec violation.
+ */
+
+// A string set is an array of distinct string numbers, 1 = highest pitch.
+// lowToHigh orders it low-pitch → high-pitch (i.e. descending string numbers:
+// [2,3,4] → [4,3,2]); a SLOT is an index into that order. 0 = lowest.
+function lowToHigh(set) {
+  return [...set].sort((a, b) => b - a);
+}
+
+// parseArp's ceiling, shared so the module and the field agree
+const MAX_PATTERN = 16;
+
+/** slotsOf([3,4,2,2], [2,3,4]) → [1,0,2,2] — mid, low, high, high */
+function slotsOf(pattern, set) {
+  const order = lowToHigh(set);
+  return pattern.map((sn) => {
+    const k = order.indexOf(sn);
+    if (k < 0) throw new Error(`slotsOf: string ${sn} not in set ${set.join("-")}`);
+    return k;
+  });
+}
+
+/** stringsOf([1,0,2,2], [3,4,5]) → [4,5,3,3] — the same figure on the new set */
+function stringsOf(slots, set) {
+  const order = lowToHigh(set);
+  return slots.map((k) => {
+    if (!Number.isInteger(k) || k < 0 || k >= order.length)
+      throw new Error(`stringsOf: slot ${k} outside a ${order.length}-string set`);
+    return order[k];
+  });
+}
+
+/** translatePattern: absolute strings → slots → absolute strings on the new
+ * set. Total for equal-size sets (every set this family offers has three
+ * strings), null passes through (a block chord has nothing to translate).
+ * Derived, then asserted: the slot list must read back identical. */
+function translatePattern(pattern, fromSet, toSet) {
+  if (pattern === null || pattern === undefined) return null;
+  if (pattern.length > MAX_PATTERN)
+    throw new Error(`translatePattern: ${pattern.length} notes exceeds the ${MAX_PATTERN}-note ceiling`);
+  if (lowToHigh(fromSet).length !== lowToHigh(toSet).length)
+    throw new Error("translatePattern: sets differ in size — translation is not total");
+  const slots = slotsOf(pattern, fromSet);
+  const out = stringsOf(slots, toSet);
+  if (slotsOf(out, toSet).join() !== slots.join())
+    throw new Error("translatePattern: slot list not preserved");
+  return out;
+}
+
+/** the same slot on another set — how the pivot string travels */
+function translateString(sn, fromSet, toSet) {
+  return stringsOf(slotsOf([sn], fromSet), toSet)[0];
+}
+
+/**
+ * pivotWindow(notes, startDegree, nearFret) → [f0,f1,f2]
+ *
+ * notes: the scale positions on ONE string, ascending, as {fret, degree}
+ * (degree 0-6; every scale in the family carries seven degrees, so a degree
+ * survives any key or scale change). The window starts on the occurrence of
+ * startDegree NEAREST nearFret — the box slides across the neck rather than
+ * jumping (roadmap §1.2's rule, applied to manual context changes) — and
+ * takes the next two scale notes up the same string.
+ *
+ * Occurrences too high on the neck to fit a full three-note window are not
+ * candidates; if no candidate carries the degree at all (out-of-range
+ * paranoia), the nearest-fitting window is taken clamped. Derived, then
+ * asserted: three strictly ascending frets from the input list.
+ */
+function pivotWindow(notes, startDegree, nearFret) {
+  if (!Array.isArray(notes) || notes.length < 3)
+    throw new Error("pivotWindow: need at least three scale positions");
+  for (let i = 1; i < notes.length; i++)
+    if (notes[i].fret <= notes[i - 1].fret)
+      throw new Error("pivotWindow: positions must ascend");
+  let best = -1;
+  for (let i = 0; i <= notes.length - 3; i++)
+    if (notes[i].degree === startDegree)
+      if (best < 0 || Math.abs(notes[i].fret - nearFret) < Math.abs(notes[best].fret - nearFret))
+        best = i;
+  if (best < 0) {
+    // no window-fitting occurrence (should not happen on a 15-fret neck:
+    // any pitch class above fret 11 recurs 12 frets lower) — take the
+    // nearest occurrence anywhere and clamp the window into range
+    for (let i = 0; i < notes.length; i++)
+      if (notes[i].degree === startDegree)
+        if (best < 0 || Math.abs(notes[i].fret - nearFret) < Math.abs(notes[best].fret - nearFret))
+          best = i;
+    if (best < 0) throw new Error(`pivotWindow: degree ${startDegree} not on this string`);
+    best = Math.min(best, notes.length - 3);
+  }
+  const w = [notes[best].fret, notes[best + 1].fret, notes[best + 2].fret];
+  if (!(w[0] < w[1] && w[1] < w[2]))
+    throw new Error("pivotWindow: derived window not ascending");
+  return w;
+}
+
+// ---------- load-time structural assertions (golden rule 1, site form) ----------
+
+{
+  // translate(translate(p, A, B), B, A) === p — the round-trip invariant,
+  // across every pair of the family's four sets and probe figures of every shape
+  const SETS = [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6]];
+  const SLOT_PROBES = [[0], [1, 0, 2, 2], [2, 1, 0], [0, 0, 1, 2, 2, 1, 0, 0]];
+  for (const A of SETS)
+    for (const B of SETS)
+      for (const slots of SLOT_PROBES) {
+        const p = stringsOf(slots, A);
+        const back = translatePattern(translatePattern(p, A, B), B, A);
+        if (back.join() !== p.join())
+          throw new Error("string-sets: translate round-trip is not the identity");
+      }
+  // the worked case from the item, as arithmetic
+  if (slotsOf([3, 4, 2, 2], [2, 3, 4]).join() !== "1,0,2,2")
+    throw new Error("string-sets: 3-4-2-2 on 2-3-4 must read mid,low,high,high");
+  if (translatePattern([3, 4, 2, 2], [2, 3, 4], [3, 4, 5]).join("-") !== "4-5-3-3")
+    throw new Error("string-sets: the worked case must translate to 4-5-3-3");
+}
+return { lowToHigh, slotsOf, stringsOf, translatePattern, translateString, pivotWindow, MAX_PATTERN };
 })();
 /* ============ upper-structure engine — shared component v1 ============
    Canonical source: engine/upper-structure.mjs (same anti-drift discipline). */
@@ -1362,6 +1499,43 @@ function defaultArpIfStale(){
   }
 }
 
+/* ---- context changes translate the design instead of destroying it (v0.6.6) ----
+   The étude's meaning is relative — a pattern names SLOTS of the set (low, mid,
+   high), a pivot names a SCALE DEGREE — so set, key and scale changes carry the
+   design across by the string-sets engine's named rules. State and serialization
+   stay absolute (what the player reads); the relative form is the internal truth
+   passed through on every transition. Silent by design: nothing went wrong. */
+function pivotContext(){
+  const sd=scaleData();
+  return {slot:st.setLowHigh.indexOf(st.pivotString),
+    degree:sd.pcs.indexOf((OPEN[st.pivotString]+st.pivotFrets[0])%12),
+    fret0:st.pivotFrets[0]};
+}
+function reseatPivot(cap){
+  if(cap.slot<0||cap.degree<0){ defaultPivots(); return; }   // degenerate: start over
+  st.pivotString=st.setLowHigh[cap.slot];
+  const sd=scaleData();
+  const notes=scaleFretsOnString(st.pivotString)
+    .map(f=>({fret:f,degree:sd.pcs.indexOf((OPEN[st.pivotString]+f)%12)}));
+  st.pivotFrets=STRSETS.pivotWindow(notes,cap.degree,cap.fret0);
+}
+function changeSet(newSet){
+  const cap=pivotContext();
+  st.arpPattern=STRSETS.translatePattern(st.arpPattern,st.set,newSet);
+  st.set=newSet;
+  reseatPivot(cap);
+}
+function changeKey(newKey){
+  const cap=pivotContext();   // degree read against the OLD key, then re-seated
+  st.key=newKey;
+  reseatPivot(cap);
+}
+function changeScale(newScale){
+  const cap=pivotContext();   // all three scales carry seven degrees — it survives
+  st.scaleType=newScale;
+  reseatPivot(cap);
+}
+
 /* ---- onset derivation: the note-event seed ----
    Pure: (voicing on a string set, arp pattern, bass midi, span, bpm) → ordered
    onset list {midi,string,fret,role,offset,dur}. These are v0.7 §1.4's note-event
@@ -1952,7 +2126,10 @@ function renderFret(){
   }
   if(BOX){
     const ys=BOX.strings.map(fy), yLo=Math.min(...ys)-17,yHi=Math.max(...ys)+17;
-    const xLo=(BOX.fLo===0?FX0-34:FX0+(BOX.fLo-1)*FW+FW*0.28), xHi=FX0+BOX.fHi*FW-FW*0.22;
+    // clamp to the drawn board: voicings may legally sit at NFRETS+1..2, and a
+    // translated box seated high would otherwise run its border off the SVG
+    const xLo=(BOX.fLo===0?FX0-34:FX0+(BOX.fLo-1)*FW+FW*0.28),
+          xHi=Math.min(FX0+BOX.fHi*FW-FW*0.22,FX0+NFRETS*FW+9);
     el("rect",{x:xLo,y:yLo,width:xHi-xLo,height:yHi-yLo,rx:12,fill:"none",
       stroke:"#73737A","stroke-width":1.6,"stroke-dasharray":"6 4"},svg);
   }
@@ -2322,7 +2499,8 @@ function applyRaw(c){
     clickOn:c.clickOn??true,clickVol:c.clickVol??0.8,clickAccent:c.clickAccent??true,
     clickSub:c.clickSub??1,clickVoice:c.clickVoice??"beep",countIn:c.countIn??false});
   const def=[st.pivotString,...st.setLowHigh.filter(x=>x!==st.pivotString)];
-  st.arpCustom=!!st.arpPattern&&st.arpPattern.join()!==def.join();
+  st.arpCustom=!!st.arpPattern&&
+    STRSETS.slotsOf(st.arpPattern,st.set).join()!==STRSETS.slotsOf(def,st.set).join();
   syncHarmonyUI(); syncBreakIn();
   document.getElementById("keySel").value=st.key;
   document.getElementById("scaleSel").value=st.scaleType;
@@ -2483,10 +2661,13 @@ function initControls(){
   const keySel=document.getElementById("keySel");
   KEYS.forEach(k=>{const o=document.createElement("option");o.textContent=k;keySel.appendChild(o);});
   keySel.value=st.key;
-  keySel.addEventListener("change",()=>{st.key=keySel.value;defaultPivots();st.cur=0;rebuild();});
+  // v0.6.6: context changes translate the design — no defaultPivots, no
+  // pattern wipe, and st.cur holds (the progression's shape is unchanged, so
+  // resetting the position was a fourth reset with no remaining justification)
+  keySel.addEventListener("change",()=>{changeKey(keySel.value);rebuild();});
 
   document.getElementById("scaleSel").addEventListener("change",e=>{
-    st.scaleType=e.target.value; defaultPivots(); st.cur=0;
+    changeScale(e.target.value);
     refreshStartSel(); rebuild();
   });
 
@@ -2496,7 +2677,7 @@ function initControls(){
     b.textContent=set.join("-");
     if(set.join()===st.set.join())b.className="on";
     b.addEventListener("click",()=>{
-      st.set=set; defaultPivots(); st.cur=0;
+      changeSet(set);
       [...seg.children].forEach(c=>c.className="");
       b.className="on"; rebuild();
     });
@@ -2535,7 +2716,8 @@ function initControls(){
     err.textContent="";
     st.arpPattern=r.pattern;
     const def=[st.pivotString,...st.setLowHigh.filter(x=>x!==st.pivotString)];
-    st.arpCustom=!!r.pattern&&r.pattern.join()!==def.join();
+    st.arpCustom=!!r.pattern&&
+      STRSETS.slotsOf(r.pattern,st.set).join()!==STRSETS.slotsOf(def,st.set).join();
     syncArpIn(); renderScore(); renderActive();
   });
   document.getElementById("rootsChk").addEventListener("change",e=>{st.roots=e.target.checked;renderActive();});
@@ -2634,6 +2816,10 @@ function initControls(){
     if(seq[0].bassPc!==2)console.error("TEST: Dm7 break-down bass is D");
     st.harmonyMode=save.m; st.breakProg=save.p; BREAK=[];
   })();
+  // v0.6.6: the design survives a context change (the item's worked case, live)
+  eq(STRSETS.translatePattern([3,4,2,2],[2,3,4],[3,4,5]).join("-"),"4-5-3-3",
+    "3-4-2-2 on 2-3-4 = mid,low,high,high = 4-5-3-3 on 3-4-5");
+  eq(STRSETS.slotsOf([3,4,2,2],[2,3,4]).join(","),"1,0,2,2","worked case slots");
   // v0.6.5 arpOnsets: pure onset seed — count, order, roles, span
   (function(){
     const v={frets:[5,5,3]}, s=[3,2,1];

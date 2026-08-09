@@ -5,6 +5,51 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.6: the design survives a context change (backlog item, Daniel's dispatch)
+
+- **The reset is gone, by representation rather than patching.** A string-set click used
+  to run three resets (pivots re-defaulted, arpeggio pattern wiped, position zeroed), and
+  key/scale changes re-defaulted the pivots too. Root cause per the item: the design was
+  stored absolute (string/fret numbers) when its meaning is relative (slot of the set,
+  scale degree). New shared module **`engine/string-sets.mjs`** encodes the law: patterns
+  translate through slot lists (`3-4-2-2` on 2-3-4 = mid-low-high-high = `4-5-3-3` on
+  3-4-5 — the item's worked case, pinned by name in module load-asserts, engine tests,
+  and the in-page self-tests), pivots re-seat by scale degree with the octave nearest the
+  prior fret so the box slides rather than jumps. All derived by named rule and asserted;
+  translation is silent — the field just redisplays, because nothing went wrong.
+- The three handlers now call `changeSet`/`changeKey`/`changeScale` (translate + re-seat)
+  and reset nothing. **Build call, per the item's invitation: `st.cur=0` dropped on all
+  three** — the progression's shape is unchanged by a context change, so the position
+  survives too. Serialization untouched: `rawCfg()` still stores absolute strings beside
+  the set, no `v:` bump, and a pre-item notebook entry restores byte-identically (tested).
+- **The two-card regroup**: Design and Context & Motion dissolve into **Harmony** (key ·
+  scale · build-up/break-down · progression · start-on · bass) and **Shape & Motion**
+  (string set + pivots hint · arpeggio pattern + subdivision readout · root notes + badge
+  hint). DOM-only: every element ID unchanged, and the notebook restore path drives the
+  new layout untouched. At 1280 px the four cards (with Metronome and Transport) now fill
+  one row evenly — tighter than the five-card wrap it replaces; inspected at 390 px too.
+- One cosmetic fix exposed by the new freedom: a translated box seated high could run its
+  dashed border off the SVG edge (pre-existing v0.5 rendering; voicings may legally sit at
+  NFRETS+2). The border now clamps to the drawn board.
+- Verified per doctrine: engine suite 130/130 — `engine/tests/string-sets.test.mjs` covers
+  the worked case by name, slot round-trips across all four sets and pattern shapes incl.
+  the 16-note ceiling, the pivot sweep across all keys × scales × sets asserting degree
+  preserved *and* octave nearest, plus headless no-reset behaviour through the study's own
+  transition functions and a cycle-all-sets-return-home identity. Characterization +
+  anti-drift pins unmoved, new verbatim pin on the string-sets inline. 48 Playwright
+  checks from `file://` offline with zero console errors, including the click-through of
+  the reported bug (custom pattern + custom pivots, all four sets cycled: figure and box
+  translated, `arpCustom` true, position held). Screenshots inspected at both widths.
+  Update Log 260809.3.
+- **Report-backs from the item:** (1) watched before/after, the nearest-octave rule reads
+  as a true translation — the box slides diagonally because the *same pivot pitches* live
+  higher on the lower string; the grip visibly travels rather than teleporting. (2) The
+  sibling check: **Tetrad Voice-Leading carries no equivalent reset today** — its set
+  change swaps precomputed passes and preserves position, with no user-authored pattern
+  or pivots to destroy; it becomes a string-sets.mjs consumer the moment its roadmap adds
+  them. **Modes-from-Pentatonic-Boxes has no string-set concept at all.** No fix items
+  needed; finding on record here.
+
 ## 2026-08-09 — Triadetudes v0.6.5: the sounding-note pulse (backlog item, Daniel's dispatch)
 
 - **The missing half of the order badges: which note is sounding right now.** One moving
