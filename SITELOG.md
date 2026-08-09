@@ -5,6 +5,93 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-08 — NEW APP: Metronome v1.0 — the first At-Etudes appliance (Daniel's direction, Cowork)
+
+- **`/studies/metronome/`** — the shared metronome component, standing alone as its own
+  published page: the dark appliance block (family look), three click voices, tap tempo,
+  accents, subdivisions to 16ths, beat lamp. Settings persist locally; single
+  self-contained file, offline from a double-click. Wrapper page + landing card added.
+- **The notepad, with the pattern built in**: a free-text pad (autosaved) plus saved
+  notes, where **every saved note is stamped with the metronome's settings at that
+  moment** — an idea remembers the tempo it arrived at. *Apply* on any note restores
+  the metronome to that moment; *Export (.md)* writes pad + notes with each note's
+  settings as a fenced JSON data block. That text-plus-machine-readable-payload shape is
+  deliberate: it is the seed of the idea-development notepad Daniel wants to grow and
+  spread to the other apps (backlog: *The notepad pattern*).
+- The **anti-drift CI test now covers both carriers** (triadetudes + metronome): every
+  app inlining the component must match `engine/metronome.mjs` verbatim or deploy blocks.
+- Verified per doctrine: 14 Playwright checks from `file://`, network disabled, zero
+  console errors — ticking, tap tempo, note save/apply/export with settings payload,
+  full persistence across reload. One real bug caught and fixed in verification: the
+  in-page self-test ran before config load and clobbered stored settings on every visit.
+  Engine suite 85/85.
+
+## 2026-08-08 — Triadetudes v0.5.4: the metronome block stands alone (Daniel's design, Cowork)
+
+- **First card, top-left, inverted** — the family convention, stated in the block itself:
+  every At-Etudes app carries this metronome, first block, this look. Ink ground,
+  light-on-dark controls, inverted primary Start button; the beat lamp now lights
+  white-on-charcoal (downbeat full white + scale bump) instead of fighting a white card.
+  It reads as an appliance among the étude's paper-white controls, which is the point.
+- **Three click voices** — one small Voice select, no UI sprawl: **beep** (square, the
+  original), **wood** (short triangle "tock"), **tick** (high-passed noise, hi-hat-ish).
+  All synthesized inline, zero assets, per-voice accent character; changing voice
+  auditions it. Voice rides in the config; pre-v0.5.4 entries default to beep.
+- Verified per doctrine: 13 Playwright checks from `file://` (card order, computed dark
+  background, all three voices scheduling, lamp palette, join/stop/play-along semantics
+  intact, config round-trip), zero console errors; engine suite 85/85, anti-drift and
+  characterization pins intact.
+
+## 2026-08-08 — Triadetudes v0.5.3: the metronome becomes a standalone shared component (Daniel's direction, Cowork)
+
+- **Inverted the clock ownership** per Daniel's design: the metronome is now its own
+  machine — own card above the Transport, own Start button, BPM + **tap tempo**, time
+  signature, accents, subdivision (beats/8ths/**triplets/16ths**), sound toggle, volume,
+  and a visual **beat lamp**. The étude transport is a *subscriber*: **Play joins a
+  running metronome at the next bar boundary** (grid-locked — verified to <5ms), so the
+  click you already hear is the count-in. If the metronome isn't running, Play starts it
+  (optional count-in bar). Stopping the étude leaves a self-started metronome running;
+  the metronome's Stop stops everything — it owns the clock.
+- **The component is shared-by-design:** canonical source is `engine/metronome.mjs`
+  (pure timing core, injected time, 9 CI tests — grid math, tempo-bend continuity, tap
+  averaging, bar-join indices). The study carries a hand-inlined copy until Phase B's
+  build step; an **anti-drift CI test asserts the copy matches the module verbatim**.
+  Every future app instantiates this same metronome; the map-side studies can adopt it
+  at their next touch.
+- Verified per doctrine: 20 Playwright checks from `file://`, network disabled, zero
+  console errors — standalone ticking, bar-boundary join, stop-semantics both ways,
+  tap tempo, triplet subdivision, config round-trip incl. legacy entries. Engine suite
+  **85/85**; music core untouched, characterization pin intact.
+
+## 2026-08-08 — Triadetudes v0.5.2: mute-chords keeps the animation (Daniel's request, Cowork)
+
+- The v0.5.1 channel split left the cursor advance inside the chord player's branch, so
+  muting the chords also froze the display. Corrected: **the cursor advance belongs to the
+  transport, not the audio** — the chips, fretboard and score now track the count whether
+  or not the chords sound. "Mute chords" is thereby a true **play-along mode**: the changes
+  animate in time, the player supplies the triads (with or without the click).
+- Verified per doctrine (Playwright, `file://`, network disabled, 17 behavioral checks
+  incl. muted-playback advancing the cursor with zero notes scheduled; zero console
+  errors); engine suite 76/76, characterization pin intact.
+
+## 2026-08-08 — Triadetudes v0.5.1: the metronome becomes its own channel (Daniel's request, Cowork)
+
+- **Click on/off** — the ask: chords can now play without the click. Previously the click
+  was welded into the playback scheduler; `schedule()` now offers each beat to two
+  independent consumers — the metronome channel and the chord player — on one shared clock.
+- **Full metronome:** volume slider · accents toggle (bar>chord>beat, or flat) · beat/8th
+  subdivision · **count-in** (one clicked bar before the étude enters; always audible —
+  that is its job — even with the click otherwise off). "Metronome only" is now "mute
+  chords": with it, the channel pairs give all four play modes.
+- All metronome state rides in `rawCfg()`/`applyRaw()` — notebook restore rebuilds it;
+  entries saved before v0.5.1 restore with defaults (verified).
+- Page version strings corrected to **v0.5.1** per the same-day arbitration (the shipped
+  study is the roadmap's v0.5 line; v1.0 remains the site-integration milestone).
+- Verified per doctrine: Playwright/Chromium from `file://` with network disabled — zero
+  requests, zero console errors; changed behavior exercised (click-off scheduling, count-in
+  bar isolation, 8th subdivision rate, config round-trip incl. legacy entries); screenshots
+  at 1280 and 390 px; engine suite 76/76 (music core untouched — characterization pin intact).
+
 ## 2026-08-08 — Ratifications: web contracts, .atchart.md v1, version arbitration (Cowork)
 
 - **Charter gains a "Web application contracts" section** (`docs/charter-and-conventions.md`):

@@ -56,6 +56,11 @@ other.</p>
     title="Triadetudes — the Triad Étude Designer"
     subtitle="Design your own isolation étude: three pivot notes anchor triads cycling with minimal voice movement — fretboard, notation, playable keyboard, metronome, and a practice log."
   >}}
+  {{< card
+    link="/studies/metronome/"
+    title="Metronome"
+    subtitle="The At-Etudes metronome, standing alone — three click voices, tap tempo, accents, subdivisions — with a notepad that saves every idea alongside the tempo it arrived at."
+  >}}
 {{< /cards >}}
 
 <h2 class="hx:text-2xl hx:font-semibold hx:mt-10 hx:mb-4">Blog</h2>
@@ -65,5 +70,10 @@ other.</p>
     link="/blog/"
     title="Notes on the system"
     subtitle="How the studies are built, what changed, and what's next."
+  >}}
+  {{< card
+    link="/studies/metronome/"
+    title="Metronome"
+    subtitle="The At-Etudes metronome, standing alone — three click voices, tap tempo, accents, subdivisions — with a notepad that saves every idea alongside the tempo it arrived at."
   >}}
 {{< /cards >}}
