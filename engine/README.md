@@ -13,10 +13,16 @@ the DOM; everything is testable headless.
 
 ```
 engine/
-├── chord.mjs        chord-symbol parser: string → structured chord (pure)
-├── atchart.mjs      .atchart.md v1 parser + serializer (pure)         [spec: docs/atchart-format.md]
+├── chord.mjs            chord-symbol parser: string → structured chord; roman-numeral
+│                        parsing + key resolution (resolveRoman, scaleNotes) (pure)
+├── upper-structure.mjs  parsed chord → ranked upper-structure triads + auto bass,
+│                        by named rule (pure) — Triadetudes break-down mode / ST-2
+├── metronome.mjs        metronome core: beat grid, tempo bends, tap tempo (pure)
+├── atchart.mjs          .atchart.md v1 parser + serializer (pure)     [spec: docs/atchart-format.md]
 └── tests/
     ├── chord.test.mjs
+    ├── upper-structure.test.mjs      roadmap §3.1's decomposition table as corpus
+    ├── metronome.test.mjs            includes the study-inline anti-drift pin
     ├── atchart.test.mjs
     ├── triadetudes-engine.test.mjs   characterization of the shipped study's engine
     └── _load-triadetudes.mjs         extracts the study's <script> for headless testing

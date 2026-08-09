@@ -5,7 +5,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseChord, parseRoman, pcOf } from "../chord.mjs";
+import { parseChord, parseRoman, resolveRoman, scaleNotes, pcOf } from "../chord.mjs";
 
 const mod12 = (n) => ((n % 12) + 12) % 12;
 const pcsFrom = (root, ivs) => ivs.map((iv) => mod12(pcOf(root) + iv));
@@ -124,4 +124,78 @@ test("roman numerals parse to degree tokens", () => {
   assert.equal(parseRoman("III+").caseQuality, "aug");
   assert.equal(parseRoman("Q7"), null);
   assert.equal(parseRoman("Dm7"), null, "absolute symbols are not romans");
+});
+
+// ---- roman-numeral RESOLUTION (Triadetudes v0.6 — the consumer with a key) ----
+
+const TWELVE_KEYS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+// [roman, scale-degree index, semitone offset of the degree root in major,
+//  suffix the symbol must end with, interval set the chord must carry]
+const ROMAN_CASES_MAJOR = [
+  ["ii7", 1, 2, "m7", [0, 3, 7, 10]],
+  ["V7", 4, 7, "7", [0, 4, 7, 10]],
+  ["Imaj7", 0, 0, "maj7", [0, 4, 7, 11]],
+  ["I6", 0, 0, "6", [0, 4, 7, 9]],
+  ["vi", 5, 9, "m", [0, 3, 7]],
+  ["IV", 3, 5, "", [0, 4, 7]],
+  ["viiø7", 6, 11, "m7b5", [0, 3, 6, 10]],
+  ["vii°7", 6, 11, "dim7", [0, 3, 6, 9]],
+  ["V9", 4, 7, "9", [0, 4, 7, 10, 14]],
+  ["iv", 3, 5, "m", [0, 3, 7]], // borrowed: the numeral's case wins over the key
+];
+
+test("roman resolution: every case, all twelve major keys", () => {
+  for (const key of TWELVE_KEYS)
+    for (const [tok, deg, semis, suffix, ivs] of ROMAN_CASES_MAJOR) {
+      const r = resolveRoman(tok, key, "major");
+      assert.ok(r, `${tok} in ${key} resolves`);
+      const wantPc = (pcOf(key) + semis) % 12;
+      assert.equal(r.parsed.root.pc, wantPc, `${tok} in ${key}: root pc`);
+      assert.equal(r.parsed.root.name, scaleNotes(key, "major")[deg].name,
+        `${tok} in ${key}: root spelled from the scale`);
+      assert.ok(r.symbol.endsWith(suffix) || suffix === "",
+        `${tok} in ${key}: symbol ${r.symbol} carries ${suffix}`);
+      assert.deepEqual(r.parsed.intervals, ivs, `${tok} in ${key}: intervals`);
+    }
+});
+
+test("roman resolution: minor modes resolve against their own scales", () => {
+  // harmonic minor: V7 is the raised-seventh dominant, i is minor
+  for (const key of TWELVE_KEYS) {
+    const five = resolveRoman("V7", key, "harm");
+    assert.equal(five.parsed.root.pc, (pcOf(key) + 7) % 12, `V7 in ${key} harm`);
+    assert.deepEqual(five.parsed.intervals, [0, 4, 7, 10]);
+    const one = resolveRoman("i", key, "harm");
+    assert.equal(one.parsed.root.pc, pcOf(key));
+    assert.deepEqual(one.parsed.intervals, [0, 3, 7]);
+    // melodic minor: degree 6 sits a major sixth up (the raised 6th)
+    const six = resolveRoman("vi", key, "mel");
+    assert.equal(six.parsed.root.pc, (pcOf(key) + 9) % 12, `vi in ${key} mel`);
+  }
+});
+
+test("roman resolution: accidentals bend the spelled scale note", () => {
+  assert.equal(resolveRoman("bVII", "C").symbol, "Bb");
+  assert.equal(resolveRoman("bVII", "Eb").symbol, "Db", "flat key stays flat-side");
+  assert.equal(resolveRoman("bVII7", "G").symbol, "F7");
+  assert.equal(resolveRoman("#iv", "C").parsed.root.name, "F#");
+  assert.equal(resolveRoman("bII", "A").parsed.root.name, "Bb");
+});
+
+test("roman resolution: imaj7 is minor-major; non-romans return null", () => {
+  assert.equal(resolveRoman("imaj7", "C").symbol, "CmMaj7");
+  assert.equal(resolveRoman("Dm7", "C"), null, "absolute symbols pass through");
+  assert.equal(resolveRoman("nonsense", "C"), null);
+});
+
+test("scaleNotes spells each scale with one note per letter", () => {
+  for (const key of TWELVE_KEYS)
+    for (const scaleType of ["major", "harm", "mel"]) {
+      const notes = scaleNotes(key, scaleType);
+      assert.equal(notes.length, 7, `${key} ${scaleType}`);
+      assert.equal(new Set(notes.map((n) => n.name[0])).size, 7, "seven letters");
+      assert.equal(new Set(notes.map((n) => n.pc)).size, 7, "seven pitch classes");
+    }
+  assert.equal(scaleNotes("A", "harm").map((n) => n.name).join(" "), "A B C D E F G#");
+  assert.equal(scaleNotes("A", "mel").map((n) => n.name).join(" "), "A B C D E F# G#");
 });

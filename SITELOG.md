@@ -5,6 +5,40 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.0: the harmony panel — break-down mode + chip editor (backlog item, Daniel's dispatch)
+
+- **Break-down mode is the new front door** (roadmap §3.1): one **Harmony** card with two
+  modes. *Build up* is the previous behavior relabeled, and the "Hear the triads over a
+  bass" menu now lives inside it — extension-selection and progression-selection are one
+  musical decision. *Break down* takes the changes as you'd face them on a gig —
+  `Dm7 G7 Cmaj7`, `ii7 V7 Imaj7`, `Fmaj7#11`, `G7alt`, `F/G` — and derives per chord the
+  upper-structure triad on the selected string set plus the chord root as the bass, on the
+  lower staff and in the audio.
+- **Nothing is looked up; everything is derived** (golden rule 1 / charter §7): the new
+  shared module `engine/upper-structure.mjs` derives candidates from `parseChord()` output
+  by four named rules (chord-tone triads · tension triad on the b7 · tritone-sub triad ·
+  triad identity) with a named per-family ranking; roadmap §3.1's decomposition table is
+  enforced as the assertion corpus in `engine/tests/upper-structure.test.mjs`. Roman
+  numerals resolve against the étude's key via the new `resolveRoman()` in
+  `engine/chord.mjs`, tested across all twelve keys and all three scales. Both modules are
+  hand-inlined into the study (the metronome precedent) with a verbatim anti-drift pin.
+- **Chip editor** (§3.2): chips are now writable — tap to edit (root wheel + quality
+  menu), "+" to append, drag to reorder, long-press to delete, "×2" to repeat. Chips show
+  both identities (big `B°`, small `= G7`); where one symbol holds several honest triads
+  the chip grows a ▾ (`G9` → B°, F, or Dm; per Daniel's call the menu offers *every*
+  derived candidate) and the choice is remembered per chord in the config. `°7` rotates
+  its stacked-m3 reading on each repeat. Unparseable tokens are data, not a crash: the
+  chip carries the parser's message and the rest of the progression still renders.
+- Everything round-trips through `rawCfg()`/`applyRaw()` — including per-chord ▾ choices —
+  so the practice notebook restores break-down études exactly; pre-v0.6 entries restore
+  as build-up études unchanged.
+- Verified per doctrine: engine suite 115/115 (characterization golden-masters ran against
+  the edited study — build-up's musical output is pinned unmoved); 40 Playwright checks
+  from `file://` with network disabled (mode switch, mixed roman/alt/slash/garbage input,
+  ▾ choice + round-trip, old-config restore, ×2/append/delete/drag, °7 rotation, score
+  symbols, bass audio), zero console errors; screenshots inspected at 1280 px and 390 px;
+  `hugo` + `tools/check_site.py` clean. Update Log 260809.1.
+
 ## 2026-08-09 — Triadetudes v0.5.5: mini transports on every board (Daniel's request, Cowork)
 
 - Each of the three stage boards — fretboard, score, keyboard — now carries a small

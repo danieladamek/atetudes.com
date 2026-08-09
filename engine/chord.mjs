@@ -292,3 +292,83 @@ export function parseRoman(tok) {
     seventh: m[4] || null,
   };
 }
+
+// ---------- roman-numeral RESOLUTION (needs a key — the consumer's half) ----------
+// Triadetudes v0.6 break-down mode resolves "ii7 V7 Imaj7" against the étude's
+// selected key and scale. Scale steps are named rules asserted at load, exactly
+// like the quality rules above; the resolved symbol is re-parsed by parseChord,
+// so every resolution passes the parser's own structural assertions.
+
+const SCALE_LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+
+export const SCALE_STEPS = {
+  major: [2, 2, 1, 2, 2, 2, 1],
+  harm: [2, 1, 2, 2, 1, 3, 1],
+  mel: [2, 1, 2, 2, 2, 2, 1],
+};
+for (const [n, steps] of Object.entries(SCALE_STEPS)) {
+  if (steps.length !== 7) throw new Error(`scale ${n}: needs 7 steps`);
+  if (steps.reduce((a, b) => a + b, 0) !== 12)
+    throw new Error(`scale ${n}: steps must sum to an octave`);
+}
+
+/** scaleNotes("Eb","major") → 7 spelled degrees [{name,pc},…] — one per letter */
+export function scaleNotes(tonic, scaleType = "major") {
+  const steps = SCALE_STEPS[scaleType];
+  if (!steps) throw new Error(`unknown scale type "${scaleType}"`);
+  let idx = SCALE_LETTERS.indexOf(tonic[0]);
+  if (idx < 0) throw new Error(`bad tonic "${tonic}"`);
+  const notes = [{ name: tonic, pc: pcOf(tonic) }];
+  for (let i = 0; i < 6; i++) {
+    idx = (idx + 1) % 7;
+    const L = SCALE_LETTERS[idx];
+    const target = mod12(notes[notes.length - 1].pc + steps[i]);
+    let alt = (target - LETTER_PC[L]) % 12;
+    if (alt > 6) alt -= 12;
+    if (alt < -6) alt += 12;
+    notes.push({
+      name: L + (alt === 1 ? "#" : alt === 2 ? "##" : alt === -1 ? "b" : alt === -2 ? "bb" : ""),
+      pc: target,
+    });
+  }
+  return notes;
+}
+
+// the numeral's case and figures name the quality — the user's numeral wins
+// over the key's diatonic default ("iv" in major is a borrowed minor chord)
+function romanQualitySuffix(r) {
+  if (r.seventh === "maj7") return r.caseQuality === "min" ? "mMaj7" : "maj7";
+  if (r.seventh === "maj9") return r.caseQuality === "min" ? "mMaj7" : "maj9";
+  if (r.seventh === "7")
+    return r.halfDim ? "m7b5"
+      : r.caseQuality === "dim" ? "dim7"
+      : r.caseQuality === "min" ? "m7"
+      : r.caseQuality === "aug" ? "7#5"
+      : "7";
+  if (r.seventh === "9") return r.halfDim ? "m7b5" : r.caseQuality === "min" ? "m9" : "9";
+  if (r.seventh === "6") return r.caseQuality === "min" ? "m6" : "6";
+  if (r.halfDim) return "m7b5"; // ø with no figure still implies the seventh
+  return { maj: "", min: "m", dim: "dim", aug: "aug" }[r.caseQuality];
+}
+
+/**
+ * resolveRoman("ii7","C") → { symbol:"Dm7", parsed:<parseChord result> }.
+ * Returns null when the token is not a roman numeral (callers then try
+ * parseChord directly). The degree comes from the key's spelled scale; a
+ * leading b/# bends the spelled note, not the pitch class table (bVII in
+ * Eb major is Db, not C#).
+ */
+export function resolveRoman(tok, key, scaleType = "major") {
+  const r = parseRoman(tok);
+  if (!r) return null;
+  const base = scaleNotes(key, scaleType)[r.degree];
+  let name = base.name;
+  if (r.accidental) {
+    const acc = accOf(name) + r.accidental;
+    if (Math.abs(acc) > 2)
+      throw new Error(`"${tok}" in ${key}: spelling needs ${Math.abs(acc)} accidentals`);
+    name = name[0] + (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc));
+  }
+  const symbol = name + romanQualitySuffix(r);
+  return { symbol, parsed: parseChord(symbol) };
+}

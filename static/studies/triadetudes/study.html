@@ -57,6 +57,38 @@
   .chips button{font:inherit;font-size:12.5px;padding:4px 10px;border:1.4px solid var(--line);
     border-radius:14px;background:#fff;cursor:pointer;color:var(--ink)}
   .chips button.cur{border-color:var(--red);color:var(--red);font-weight:bold}
+  /* break-down chips: big triad identity over small source-symbol identity */
+  .chips button.bd{display:inline-flex;flex-direction:column;align-items:center;
+    line-height:1.15;padding:3px 11px;min-width:44px}
+  .chips button.bd .big{font-size:14px;font-weight:bold}
+  .chips button.bd .eq{font-size:10px;color:var(--gray)}
+  .chips button.bd.cur .eq{color:var(--red)}
+  .chips button.bd.err{border-color:var(--red);border-style:dashed;color:var(--red)}
+  .chips button.bd.err .eq{color:var(--red)}
+  .chips button.bd.drag{opacity:0.35}
+  .chips button.add{border-style:dashed;color:var(--gray);font-weight:bold;min-width:34px}
+  /* the chip editor popover */
+  .chipEd{position:absolute;z-index:30;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;box-shadow:0 6px 22px rgba(33,33,38,.14);padding:10px 12px;
+    width:min(340px,calc(100vw - 32px))}
+  .chipEd h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
+    margin:8px 0 5px;font-weight:bold}
+  .chipEd h3:first-child{margin-top:0}
+  .chipEd .wheel{display:flex;flex-wrap:wrap;gap:4px}
+  .chipEd .wheel button{font:inherit;font-size:12px;padding:3px 0;width:32px;
+    border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
+  .chipEd .wheel button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chipEd .usList button{display:block;width:100%;text-align:left;font:inherit;font-size:12.5px;
+    padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;
+    cursor:pointer;margin-bottom:4px}
+  .chipEd .usList button.on{border-color:var(--red);color:var(--red);font-weight:bold}
+  .chipEd .usList .deg{color:var(--gray);font-size:11px}
+  .chipEd .usList button.on .deg{color:var(--red)}
+  .chipEd .acts{display:flex;gap:6px;margin-top:10px}
+  .chipEd .acts button{font:inherit;font-size:12px;padding:4px 10px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;cursor:pointer}
+  .chipEd .acts button.danger{color:var(--red)}
+  .chipEd .err{color:var(--red);font-size:11.5px;margin-top:4px}
   .board{background:var(--card);border:1px solid var(--line);border-radius:10px;
          padding:10px 12px;margin-bottom:12px;position:relative}
   .mini{position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5}
@@ -100,7 +132,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.5.5</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.0</div>
 </header>
 
 <div class="cards">
@@ -154,27 +186,54 @@
     </div>
     <label>String set (triads live here)</label>
     <div class="seg" id="setSeg"></div>
-    <label>Progression</label>
-    <select id="progSel">
-      <option value="cycle4">Cycling 4ths</option>
-      <option value="cycle6">Cycling 6ths</option>
-      <option value="cycle3">Cycling 3rds</option>
-      <option value="scaleUp">Scalar up</option>
-      <option value="scaleDown">Scalar down</option>
-      <option value="chromUp">Chromatic up</option>
-      <option value="chromDown">Chromatic down</option>
-      <option value="custom">Custom…</option>
-    </select>
-    <div class="row2">
-      <div><label>Start on</label><select id="startSel"></select></div>
-      <div id="lenWrap" style="display:none"><label>Steps</label>
-        <select id="lenSel"><option>4</option><option selected>6</option><option>8</option><option>12</option></select></div>
-    </div>
-    <span id="customWrap" style="display:none"><label>Custom (romans or chords: <i>ii V i</i> · <i>Dm G7 C</i>)</label>
-      <input type="text" id="customIn" size="24" value="ii V I vi"></span>
     <div class="hint">Pivots: click any scale note on a string of the set — that note and the
     next two scale notes up the same string become your pivots (dashed rings). The dashed
     box is your isolation zone.</div>
+  </div>
+
+  <div class="card">
+    <h2>Harmony</h2>
+    <div class="seg" id="modeSeg">
+      <button data-mode="build" class="on">Build up</button>
+      <button data-mode="break">Break down</button>
+    </div>
+    <div id="buildBlock">
+      <label>Progression</label>
+      <select id="progSel">
+        <option value="cycle4">Cycling 4ths</option>
+        <option value="cycle6">Cycling 6ths</option>
+        <option value="cycle3">Cycling 3rds</option>
+        <option value="scaleUp">Scalar up</option>
+        <option value="scaleDown">Scalar down</option>
+        <option value="chromUp">Chromatic up</option>
+        <option value="chromDown">Chromatic down</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <div class="row2">
+        <div><label>Start on</label><select id="startSel"></select></div>
+        <div id="lenWrap" style="display:none"><label>Steps</label>
+          <select id="lenSel"><option>4</option><option selected>6</option><option>8</option><option>12</option></select></div>
+      </div>
+      <span id="customWrap" style="display:none"><label>Custom (romans or chords: <i>ii V i</i> · <i>Dm G7 C</i>)</label>
+        <input type="text" id="customIn" size="24" value="ii V I vi"></span>
+      <label>Hear the triads over a bass (extension)</label>
+      <select id="extSel">
+        <option value="none">none — plain triad</option>
+        <option value="root">the root — triad grounded on its own bass</option>
+        <option value="third">diatonic 3rd below → seventh chord</option>
+        <option value="fifth">diatonic 5th below → bigger color</option>
+      </select>
+      <div class="hint">Triads first, meaning added underneath: with a bass, every dot is
+      relabeled relative to the new root — the same shape changes meaning.</div>
+    </div>
+    <div id="breakBlock" style="display:none">
+      <label>The changes (chords or romans: <i>Dm7 G7 Cmaj7</i> · <i>ii7 V7 Imaj7</i> · <i>G7alt</i> · <i>F/G</i>)</label>
+      <input type="text" id="breakIn" spellcheck="false" style="width:100%">
+      <div class="hint">Type the progression you actually face; the app derives the
+      upper-structure triad on your string set and grounds it on the chord's root in the
+      bass. Tap a chip to edit it — where a chord holds more than one honest triad the
+      chip grows a ▾. Romans resolve in the selected key.</div>
+    </div>
   </div>
 
   <div class="card">
@@ -184,15 +243,7 @@
     <span id="arpErr" style="color:var(--red);font-size:11.5px"></span>
     <div class="hint" id="arpHint"></div>
     <label class="chk"><input type="checkbox" id="rootsChk"> Show root notes on lower strings</label>
-    <label>Hear the triad over a bass (extension)</label>
-    <select id="extSel">
-      <option value="none">none — plain triad</option>
-      <option value="root">the root — triad grounded on its own bass</option>
-      <option value="third">diatonic 3rd below → seventh chord</option>
-      <option value="fifth">diatonic 5th below → bigger color</option>
-    </select>
-    <div class="hint">With a bass, every dot is relabeled relative to the new root — the same
-    shape changes meaning. Order badges on the sounding notes show each string's slot(s)
+    <div class="hint">Order badges on the sounding notes show each string's slot(s)
     in the pattern.</div>
   </div>
 
@@ -273,7 +324,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.5.5 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.0 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -283,6 +334,721 @@ intention and outcome — history lives in this browser; Export keeps a markdown
 
 <script>
 "use strict";
+/* ============ chord engine — shared component v1 ============
+   Canonical source: engine/chord.mjs (pure, CI-tested; an anti-drift test
+   asserts this inline copy matches the module verbatim). Namespaced so the
+   study's own core below keeps its identical-by-derivation primitives.
+   Hand-inlined until Phase B's build step inlines modules. */
+const CHORD = (() => {
+/* chord.mjs — the shared chord-symbol parser.
+ *
+ * Pure function: chord symbol string → structured chord. No DOM, no state.
+ * Built once for Triadetudes' break-down mode (roadmap §3.1) and the .atchart.md
+ * format (Substitute Teacher PRD §3) — the single largest piece of shared code
+ * in the family, per the family note.
+ *
+ * Doctrine: every quality is a NAMED RULE deriving an interval set from pitch-class
+ * math; the module asserts structural sanity of every rule at load (root present,
+ * ascending, unique). Nothing is hand-placed per chord.
+ */
+
+// ---------- pitch-class primitives (mirrors the shipped Triadetudes core) ----------
+
+const LETTER_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+
+function accOf(name) {
+  let a = 0;
+  for (const ch of name.slice(1)) a += ch === "#" ? 1 : ch === "b" ? -1 : 0;
+  return a;
+}
+
+function pcOf(name) {
+  return (((LETTER_PC[name[0]] + accOf(name)) % 12) + 12) % 12;
+}
+
+const mod12 = (n) => ((n % 12) + 12) % 12;
+
+// ---------- named quality rules ----------
+// Base triads + seventh/sixth structures as interval sets from the root.
+// deg maps chord-degree → interval so alterations are transforms, not new tables.
+
+const DEG = { 1: 0, 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21 };
+
+const TRIADS = {
+  maj: [DEG[1], DEG[3], DEG[5]],
+  min: [DEG[1], DEG[3] - 1, DEG[5]],
+  dim: [DEG[1], DEG[3] - 1, DEG[5] - 1],
+  aug: [DEG[1], DEG[3], DEG[5] + 1],
+  sus4: [DEG[1], DEG[4], DEG[5]],
+  sus2: [DEG[1], DEG[2], DEG[5]],
+};
+
+// seventh-family rules: triad + the named seventh/sixth
+const SEVENTHS = {
+  maj7: { triad: "maj", add: DEG[7] },
+  7: { triad: "maj", add: DEG[7] - 1 },
+  m7: { triad: "min", add: DEG[7] - 1 },
+  m7b5: { triad: "dim", add: DEG[7] - 1 },
+  dim7: { triad: "dim", add: DEG[7] - 2 },
+  mMaj7: { triad: "min", add: DEG[7] },
+  6: { triad: "maj", add: DEG[6] },
+  m6: { triad: "min", add: DEG[6] },
+  "7sus4": { triad: "sus4", add: DEG[7] - 1 },
+};
+
+// extension degrees stack on top of a seventh structure
+const EXT_DEGREES = { 9: DEG[9], 11: DEG[11], 13: DEG[13] };
+
+// ---------- load-time structural assertions (golden rule 1, site form) ----------
+
+function assertRule(name, ivs) {
+  if (ivs[0] !== 0) throw new Error(`rule ${name}: no root`);
+  for (let i = 1; i < ivs.length; i++)
+    if (ivs[i] <= ivs[i - 1]) throw new Error(`rule ${name}: not ascending`);
+  if (new Set(ivs.map(mod12)).size !== ivs.length)
+    throw new Error(`rule ${name}: duplicate pitch class`);
+}
+for (const [n, ivs] of Object.entries(TRIADS)) assertRule(n, ivs);
+for (const [n, r] of Object.entries(SEVENTHS))
+  assertRule(n, [...TRIADS[r.triad], r.add]);
+
+// ---------- tokenizer ----------
+
+const ROOT_RE = /^([A-G])(#{1,2}|b{1,2})?/;
+
+const QUALITY_TOKENS = [
+  // order matters: longest / most specific first
+  ["maj13", { seventh: "maj7", exts: [9, 13] }],
+  ["maj11", { seventh: "maj7", exts: [9, 11] }],
+  ["maj9", { seventh: "maj7", exts: [9] }],
+  ["maj7", { seventh: "maj7" }],
+  ["Δ7", { seventh: "maj7" }],
+  ["Δ", { seventh: "maj7" }],
+  ["mMaj7", { seventh: "mMaj7" }],
+  ["mM7", { seventh: "mMaj7" }],
+  ["minMaj7", { seventh: "mMaj7" }],
+  ["m13", { seventh: "m7", exts: [9, 13] }],
+  ["m11", { seventh: "m7", exts: [9, 11] }],
+  ["m9", { seventh: "m7", exts: [9] }],
+  ["m7b5", { seventh: "m7b5" }],
+  ["ø7", { seventh: "m7b5" }],
+  ["ø", { seventh: "m7b5" }],
+  ["m7", { seventh: "m7" }],
+  ["m6", { seventh: "m6" }],
+  ["min7", { seventh: "m7" }],
+  ["min", { triad: "min" }],
+  ["m", { triad: "min" }],
+  ["-7", { seventh: "m7" }],
+  ["-", { triad: "min" }],
+  ["dim7", { seventh: "dim7" }],
+  ["°7", { seventh: "dim7" }],
+  ["o7", { seventh: "dim7" }],
+  ["dim", { triad: "dim" }],
+  ["°", { triad: "dim" }],
+  ["aug", { triad: "aug" }],
+  ["+", { triad: "aug" }],
+  ["13sus4", { seventh: "7sus4", exts: [9, 13] }],
+  ["9sus4", { seventh: "7sus4", exts: [9] }],
+  ["7sus4", { seventh: "7sus4" }],
+  ["7sus", { seventh: "7sus4" }],
+  ["sus4", { triad: "sus4" }],
+  ["sus2", { triad: "sus2" }],
+  ["sus", { triad: "sus4" }],
+  ["13", { seventh: "7", exts: [9, 13] }],
+  ["11", { seventh: "7", exts: [9, 11] }],
+  ["9", { seventh: "7", exts: [9] }],
+  ["7", { seventh: "7" }],
+  ["6", { seventh: "6" }],
+];
+
+const ALTER_RE = /^(b5|#5|b9|#9|#11|b13|alt|add9|add11|add13|no3|no5)/;
+
+// the named rule for "alt": b9 #9 #5 over a dominant — the tritone-sub hearing
+const ALT_SET = ["b9", "#9", "#5"];
+
+const ALTER_APPLY = {
+  b5: (ivs) => replaceDeg(ivs, DEG[5], DEG[5] - 1),
+  "#5": (ivs) => replaceDeg(ivs, DEG[5], DEG[5] + 1),
+  b9: (ivs) => addIv(ivs, DEG[9] - 1),
+  "#9": (ivs) => addIv(ivs, DEG[9] + 1),
+  "#11": (ivs) => addIv(ivs, DEG[11] + 1),
+  b13: (ivs) => addIv(ivs, DEG[13] - 1),
+  add9: (ivs) => addIv(ivs, DEG[9]),
+  add11: (ivs) => addIv(ivs, DEG[11]),
+  add13: (ivs) => addIv(ivs, DEG[13]),
+  no3: (ivs) => ivs.filter((iv) => mod12(iv) !== 4 && mod12(iv) !== 3),
+  no5: (ivs) => ivs.filter((iv) => mod12(iv) !== 7),
+};
+
+function replaceDeg(ivs, from, to) {
+  return ivs.map((iv) => (iv === from ? to : iv));
+}
+function addIv(ivs, iv) {
+  return ivs.includes(iv) ? ivs : [...ivs, iv];
+}
+
+// ---------- the parser ----------
+
+/**
+ * parseChord("Dm7") →
+ * { input, root:{name,pc}, bass:{name,pc}|null, triad:"min", seventh:"m7"|null,
+ *   extensions:[9,...], alterations:["b9",...], intervals:[0,3,7,10], pcs:[2,5,9,0],
+ *   symbol: canonical re-spelling }
+ * Throws on unparseable input (callers present the message; bad user text is data,
+ * not a crash — see ST PRD §8.2).
+ */
+function parseChord(input) {
+  if (typeof input !== "string") throw new Error("chord symbol must be a string");
+  const src = input.trim();
+  if (!src) throw new Error("empty chord symbol");
+
+  // slash bass: split on the LAST slash whose right side parses as a note
+  let head = src,
+    bassName = null;
+  const slash = src.lastIndexOf("/");
+  if (slash > 0) {
+    const right = src.slice(slash + 1).trim();
+    if (ROOT_RE.test(right) && right.replace(ROOT_RE, "") === "") {
+      head = src.slice(0, slash).trim();
+      bassName = right;
+    }
+  }
+
+  const rm = head.match(ROOT_RE);
+  if (!rm) throw new Error(`no root in "${input}"`);
+  const rootName = rm[1] + (rm[2] || "");
+  let rest = head.slice(rm[0].length);
+
+  // quality token (longest match wins by table order)
+  let triad = "maj",
+    seventh = null,
+    exts = [];
+  for (const [tok, spec] of QUALITY_TOKENS) {
+    if (rest.startsWith(tok)) {
+      // "m" must not swallow the m of "maj" (table order already guards; belt+braces)
+      rest = rest.slice(tok.length);
+      if (spec.seventh) {
+        seventh = spec.seventh;
+        triad = SEVENTHS[seventh].triad;
+      } else triad = spec.triad;
+      exts = [...(spec.exts || [])];
+      break;
+    }
+  }
+
+  // alterations, in written order; parens transparent
+  const alterations = [];
+  let guard = 0;
+  while (rest.length) {
+    if (++guard > 12) throw new Error(`unparseable tail "${rest}" in "${input}"`);
+    if (rest[0] === "(" || rest[0] === ")" || rest[0] === " ") {
+      rest = rest.slice(1);
+      continue;
+    }
+    const am = rest.match(ALTER_RE);
+    if (!am) throw new Error(`unrecognized "${rest}" in "${input}"`);
+    alterations.push(am[1]);
+    rest = rest.slice(am[1].length);
+  }
+
+  // "alt" expands to the named rule, and implies a plain dominant if none given
+  let alts = alterations.flatMap((a) => (a === "alt" ? ALT_SET : [a]));
+  if (alterations.includes("alt") && !seventh) {
+    seventh = "7";
+    triad = "maj";
+  }
+
+  // derive intervals: triad → seventh add → extensions → alteration transforms
+  let intervals = [...TRIADS[triad]];
+  if (seventh) intervals = [...TRIADS[SEVENTHS[seventh].triad], SEVENTHS[seventh].add];
+  for (const e of exts) intervals = addIv(intervals, EXT_DEGREES[e]);
+  for (const a of alts) {
+    const fn = ALTER_APPLY[a];
+    if (!fn) throw new Error(`no rule for alteration "${a}"`);
+    intervals = fn(intervals);
+  }
+  intervals = [...intervals].sort((a, b) => a - b);
+
+  // structural assertions on the derived result — never ship an unasserted chord
+  if (intervals[0] !== 0 && !alterations.includes("no3"))
+    if (!intervals.includes(0)) throw new Error(`derived chord lost its root: "${input}"`);
+  const pcs = intervals.map((iv) => mod12(pcOf(rootName) + iv));
+  if (new Set(pcs).size !== pcs.length)
+    throw new Error(`derived duplicate pitch class in "${input}"`);
+
+  return {
+    input: src,
+    root: { name: rootName, pc: pcOf(rootName) },
+    bass: bassName ? { name: bassName, pc: pcOf(bassName) } : null,
+    triad,
+    seventh,
+    extensions: exts,
+    alterations,
+    intervals,
+    pcs,
+    symbol: canonicalSymbol(rootName, triad, seventh, exts, alterations, bassName),
+  };
+}
+
+// ---------- canonical re-spelling (the serializer's half of round-trip) ----------
+
+function canonicalSymbol(root, triad, seventh, exts, alterations, bass) {
+  let q;
+  const top = exts.length ? Math.max(...exts) : null;
+  if (seventh === "maj7") q = top ? `maj${top}` : "maj7";
+  else if (seventh === "7") q = top ? String(top) : "7";
+  else if (seventh === "m7") q = top ? `m${top}` : "m7";
+  else if (seventh === "m7b5") q = "m7b5";
+  else if (seventh === "dim7") q = "dim7";
+  else if (seventh === "mMaj7") q = "mMaj7";
+  else if (seventh === "6") q = "6";
+  else if (seventh === "m6") q = "m6";
+  else if (seventh === "7sus4") q = top ? `${top}sus4` : "7sus4";
+  else
+    q = { maj: "", min: "m", dim: "dim", aug: "aug", sus4: "sus4", sus2: "sus2" }[triad];
+  const alt = alterations.filter((a) => a !== "alt").join("");
+  const altTag = alterations.includes("alt") ? "alt" : alt;
+  return root + q + altTag + (bass ? "/" + bass : "");
+}
+
+// ---------- roman-numeral tokens (parsed, not resolved — resolution needs a key) ----------
+
+const ROMAN_RE = /^(b|#)?(VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)(°|o|ø|\+)?(maj7|m7b5|7|maj9|9|6)?$/;
+const ROMAN_DEG = { i: 0, ii: 1, iii: 2, iv: 3, v: 4, vi: 5, vii: 6 };
+
+/** parseRoman("iim7") → {degree:1, lowered:false, caseQuality:"min", seventh:"m7"} or null */
+function parseRoman(tok) {
+  const m = tok.trim().match(ROMAN_RE);
+  if (!m) return null;
+  const numeral = m[2];
+  const lower = numeral === numeral.toLowerCase();
+  let caseQuality = lower ? "min" : "maj";
+  if (m[3] === "°" || m[3] === "o") caseQuality = "dim";
+  if (m[3] === "ø") caseQuality = "dim";
+  if (m[3] === "+") caseQuality = "aug";
+  return {
+    degree: ROMAN_DEG[numeral.toLowerCase()],
+    accidental: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0,
+    caseQuality,
+    halfDim: m[3] === "ø",
+    seventh: m[4] || null,
+  };
+}
+
+// ---------- roman-numeral RESOLUTION (needs a key — the consumer's half) ----------
+// Triadetudes v0.6 break-down mode resolves "ii7 V7 Imaj7" against the étude's
+// selected key and scale. Scale steps are named rules asserted at load, exactly
+// like the quality rules above; the resolved symbol is re-parsed by parseChord,
+// so every resolution passes the parser's own structural assertions.
+
+const SCALE_LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+
+const SCALE_STEPS = {
+  major: [2, 2, 1, 2, 2, 2, 1],
+  harm: [2, 1, 2, 2, 1, 3, 1],
+  mel: [2, 1, 2, 2, 2, 2, 1],
+};
+for (const [n, steps] of Object.entries(SCALE_STEPS)) {
+  if (steps.length !== 7) throw new Error(`scale ${n}: needs 7 steps`);
+  if (steps.reduce((a, b) => a + b, 0) !== 12)
+    throw new Error(`scale ${n}: steps must sum to an octave`);
+}
+
+/** scaleNotes("Eb","major") → 7 spelled degrees [{name,pc},…] — one per letter */
+function scaleNotes(tonic, scaleType = "major") {
+  const steps = SCALE_STEPS[scaleType];
+  if (!steps) throw new Error(`unknown scale type "${scaleType}"`);
+  let idx = SCALE_LETTERS.indexOf(tonic[0]);
+  if (idx < 0) throw new Error(`bad tonic "${tonic}"`);
+  const notes = [{ name: tonic, pc: pcOf(tonic) }];
+  for (let i = 0; i < 6; i++) {
+    idx = (idx + 1) % 7;
+    const L = SCALE_LETTERS[idx];
+    const target = mod12(notes[notes.length - 1].pc + steps[i]);
+    let alt = (target - LETTER_PC[L]) % 12;
+    if (alt > 6) alt -= 12;
+    if (alt < -6) alt += 12;
+    notes.push({
+      name: L + (alt === 1 ? "#" : alt === 2 ? "##" : alt === -1 ? "b" : alt === -2 ? "bb" : ""),
+      pc: target,
+    });
+  }
+  return notes;
+}
+
+// the numeral's case and figures name the quality — the user's numeral wins
+// over the key's diatonic default ("iv" in major is a borrowed minor chord)
+function romanQualitySuffix(r) {
+  if (r.seventh === "maj7") return r.caseQuality === "min" ? "mMaj7" : "maj7";
+  if (r.seventh === "maj9") return r.caseQuality === "min" ? "mMaj7" : "maj9";
+  if (r.seventh === "7")
+    return r.halfDim ? "m7b5"
+      : r.caseQuality === "dim" ? "dim7"
+      : r.caseQuality === "min" ? "m7"
+      : r.caseQuality === "aug" ? "7#5"
+      : "7";
+  if (r.seventh === "9") return r.halfDim ? "m7b5" : r.caseQuality === "min" ? "m9" : "9";
+  if (r.seventh === "6") return r.caseQuality === "min" ? "m6" : "6";
+  if (r.halfDim) return "m7b5"; // ø with no figure still implies the seventh
+  return { maj: "", min: "m", dim: "dim", aug: "aug" }[r.caseQuality];
+}
+
+/**
+ * resolveRoman("ii7","C") → { symbol:"Dm7", parsed:<parseChord result> }.
+ * Returns null when the token is not a roman numeral (callers then try
+ * parseChord directly). The degree comes from the key's spelled scale; a
+ * leading b/# bends the spelled note, not the pitch class table (bVII in
+ * Eb major is Db, not C#).
+ */
+function resolveRoman(tok, key, scaleType = "major") {
+  const r = parseRoman(tok);
+  if (!r) return null;
+  const base = scaleNotes(key, scaleType)[r.degree];
+  let name = base.name;
+  if (r.accidental) {
+    const acc = accOf(name) + r.accidental;
+    if (Math.abs(acc) > 2)
+      throw new Error(`"${tok}" in ${key}: spelling needs ${Math.abs(acc)} accidentals`);
+    name = name[0] + (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc));
+  }
+  const symbol = name + romanQualitySuffix(r);
+  return { symbol, parsed: parseChord(symbol) };
+}
+return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, resolveRoman };
+})();
+/* ============ upper-structure engine — shared component v1 ============
+   Canonical source: engine/upper-structure.mjs (same anti-drift discipline). */
+const UPPER = (({ LETTER_PC }) => {
+/* upper-structure.mjs — upper-structure triads by named rule.
+ *
+ * Pure module: parseChord() output → ranked upper-structure triad candidates
+ * plus the auto-selected bass. No DOM, no audio, headless-testable.
+ *
+ * Shared family code (family note §5): first consumer is Triadetudes v0.6
+ * break-down mode (roadmap §3.1); second is Substitute Teacher's ST-2 voicing
+ * lens ("upper-structure triad over bass", ST PRD §4.2) and the substitution
+ * lab's "upper-structure reinterpretation" row (§4.3).
+ *
+ * Doctrine (golden rule 1 / charter §7): the roadmap §3.1 decomposition table
+ * is the ASSERTION CORPUS (engine/tests/upper-structure.test.mjs), not the
+ * implementation. Nothing here maps a symbol to a triad; every candidate is
+ * DERIVED from the parsed chord's pitch-class content by one of four named
+ * rules, then structurally asserted before it is returned:
+ *
+ *   1. chord-tone triads — every 3-subset of the chord's pitch classes that
+ *      forms a maj/min/dim/aug triad (triad root ≠ chord root). Covers the
+ *      rootless sevenths (Cmaj7→Em, Dm7→F, G7→B°, Cm7b5→Ebm, CmMaj7→Eb+),
+ *      the extension colors (Cmaj9→G, Dm9→Am), the relative pairing of sixth
+ *      chords (C6→Am, Cm6→A°), the b9-diminished family (G7b9→Ab°), and
+ *      °7's symmetric rotation.
+ *   2. tension triad on the b7 — dominants carrying a natural 9 (and sus
+ *      dominants): the major triad built on the b7 sounds b7-9-11 (G9→F).
+ *      Any member not in the chord symbol (the 11 over G9) is an ADDED
+ *      TENSION, declared as such on the candidate.
+ *   3. tritone-sub triad — alt dominants: the major triad on the b5 is the
+ *      tritone substitute's own triad (G7alt→Db), sounding b5-b7-b9. The b5
+ *      is the added tension of the sub hearing, declared as such.
+ *   4. triad identity — a plain triad is its own material (C→C; F/G→F over G).
+ *
+ * Ranking is a NAMED PREFERENCE POLICY per chord function (§3.1's defaults):
+ * alt → tritone-sub triad; dominant b9 → the diminished on the b9; sixth
+ * chords → the relative triad on the 6; maj9/m9 → the 5-7-9 extension color;
+ * any seventh → its rootless 3-5-7 stack; dominant 9 → guide tones first
+ * (B°), tension triad second (F). candidates[0] is the default; every other
+ * candidate is an honest alternative the UI may offer (the chip's "▾").
+ *
+ * The auto bass is the chord root — or the slash bass when the user wrote one.
+ */
+
+
+const mod12 = (n) => ((n % 12) + 12) % 12;
+const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+const PLAIN_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+
+// ---------- triad shapes (the only qualities the family's triad engines play) ----------
+
+const TRIAD_SHAPES = { maj: [0, 4, 7], min: [0, 3, 7], dim: [0, 3, 6], aug: [0, 4, 8] };
+const TRIAD_SUFFIX = { maj: "", min: "m", dim: "°", aug: "+" };
+
+// ---------- degree labels: semitones + letter offsets, kept congruent ----------
+
+const LABEL_SEMIS = {
+  R: 0, b9: 1, 9: 2, b3: 3, "#9": 3, 3: 4, 4: 5, 11: 5, b5: 6, "#11": 6,
+  5: 7, "#5": 8, b13: 8, 6: 9, 13: 9, bb7: 9, b7: 10, 7: 11,
+};
+const LABEL_LETTER = {
+  R: 0, b9: 1, 9: 1, "#9": 1, b3: 2, 3: 2, 4: 3, 11: 3, "#11": 3,
+  b5: 4, 5: 4, "#5": 4, b13: 5, 6: 5, 13: 5, bb7: 6, b7: 6, 7: 6,
+};
+// chord interval → degree label (context: interval 9 is bb7 inside a dim7)
+const IV_LABEL = {
+  0: "R", 1: "b9", 2: "9", 3: "b3", 4: "3", 5: "4", 6: "b5", 7: "5", 8: "#5",
+  9: "6", 10: "b7", 11: "7", 13: "b9", 14: "9", 15: "#9", 17: "11", 18: "#11",
+  20: "b13", 21: "13",
+};
+
+// ---------- load-time structural assertions (golden rule 1, site form) ----------
+
+function assertShape(name, ivs) {
+  if (ivs[0] !== 0) throw new Error(`shape ${name}: no root`);
+  for (let i = 1; i < ivs.length; i++)
+    if (ivs[i] <= ivs[i - 1]) throw new Error(`shape ${name}: not ascending`);
+  if (new Set(ivs.map(mod12)).size !== ivs.length)
+    throw new Error(`shape ${name}: duplicate pitch class`);
+}
+for (const [n, ivs] of Object.entries(TRIAD_SHAPES)) assertShape(n, ivs);
+
+// the two label tables must agree in domain, and each label's letter must sit
+// within two semitones of its pitch — a typo in either table fails the load
+for (const lab of Object.keys(LABEL_SEMIS)) {
+  if (!(lab in LABEL_LETTER)) throw new Error(`label ${lab}: no letter offset`);
+  const drift = mod12(LABEL_SEMIS[lab] - LETTER_PC[LETTERS[LABEL_LETTER[lab]]]);
+  if (drift > 2 && drift < 10) throw new Error(`label ${lab}: letter/semis disagree`);
+}
+
+// the generated rules are interval arithmetic; assert the identities they claim:
+// a major triad on the b7 sounds the 9 and the 11 …
+if (mod12(LABEL_SEMIS.b7 + 4) !== LABEL_SEMIS[9] || mod12(LABEL_SEMIS.b7 + 7) !== LABEL_SEMIS[11])
+  throw new Error("tension-b7 rule: triad on b7 does not sound 9 and 11");
+// … and a major triad on the b5 sounds the b7 and the b9 (the tritone sub)
+if (mod12(LABEL_SEMIS.b5 + 4) !== LABEL_SEMIS.b7 || mod12(LABEL_SEMIS.b5 + 7) !== LABEL_SEMIS.b9)
+  throw new Error("tritone-sub rule: triad on b5 does not sound b7 and b9");
+
+// ---------- triad classification ----------
+
+/** classify a set of 3 pitch classes as a triad; returns every valid
+ * (rootPc, quality) reading — one for maj/min/dim, three for aug. */
+function classifyTriad(pcs) {
+  const out = [];
+  for (const r of pcs) {
+    const rel = pcs.map((p) => mod12(p - r)).sort((a, b) => a - b);
+    for (const [q, shape] of Object.entries(TRIAD_SHAPES))
+      if (rel.every((v, i) => v === shape[i])) out.push({ rootPc: r, quality: q });
+  }
+  return out;
+}
+
+// ---------- spelling ----------
+
+/** spell a candidate's root from its degree relative to the chord root;
+ * fall back to plain pitch-class names when the degree spelling (or the
+ * triad it implies) would need double accidentals (Bbb° → A°, A# → Bb). */
+function spellRoot(parsed, rootPc, quality, rootLabel) {
+  const off = LABEL_LETTER[rootLabel];
+  if (off === undefined) return PLAIN_NAMES[rootPc];
+  const letterIdx = (LETTERS.indexOf(parsed.root.name[0]) + off) % 7;
+  const letter = LETTERS[letterIdx];
+  let acc = mod12(rootPc - LETTER_PC[letter]);
+  if (acc > 6) acc -= 12;
+  if (Math.abs(acc) > 1) return PLAIN_NAMES[rootPc];
+  // the spelling must also serve the triad's own members without doubles
+  for (let k = 1; k < 3; k++) {
+    const mLetter = LETTERS[(letterIdx + 2 * k) % 7];
+    let mAcc = mod12(mod12(rootPc + TRIAD_SHAPES[quality][k]) - LETTER_PC[mLetter]);
+    if (mAcc > 6) mAcc -= 12;
+    if (Math.abs(mAcc) > 1) return PLAIN_NAMES[rootPc];
+  }
+  return letter + (acc === 1 ? "#" : acc === -1 ? "b" : "");
+}
+
+// ---------- the ranking policy (named preferences, derived per chord) ----------
+
+function prefsFor(parsed) {
+  const raw = parsed.intervals;
+  const third = raw.includes(4) ? "3" : raw.includes(3) ? "b3" : null;
+  const fifth = raw.includes(7) ? "5" : raw.includes(6) ? "b5" : raw.includes(8) ? "#5" : null;
+  const sev =
+    parsed.seventh === "dim7" ? "bb7" : raw.includes(11) ? "7" : raw.includes(10) ? "b7" : null;
+  const has9 = raw.includes(14);
+  const hasB9 = raw.includes(13);
+  const dom = parsed.seventh === "7";
+  const p = [];
+  if (parsed.alterations.includes("alt"))
+    p.push({ labels: ["b5", "b7", "b9"], rule: "tritone-sub" });
+  if (dom && hasB9 && third === "3" && fifth === "5")
+    p.push({ labels: ["b9", "3", "5"], rule: "b9-diminished" });
+  if (parsed.seventh === "6" || parsed.seventh === "m6") {
+    if (third) p.push({ labels: ["6", "R", third], rule: "relative-triad" });
+  } else if (parsed.seventh) {
+    if (!dom && has9 && fifth && sev)
+      p.push({ labels: [fifth, sev, "9"], rule: "extension-color" });
+    if (third && fifth && sev)
+      p.push({ labels: [third, fifth, sev], rule: "rootless-seventh" });
+    if ((dom && has9) || parsed.seventh === "7sus4")
+      p.push({ labels: ["b7", "9", "11"], rule: "tension-b7" });
+    if (dom && has9 && fifth)
+      p.push({ labels: [fifth, "b7", "9"], rule: "extension-color" });
+  } else if (third && fifth) {
+    p.push({ labels: ["R", third, fifth], rule: "triad-identity" });
+  }
+  return p;
+}
+
+// every preference the policy can emit for an unaltered family must itself be
+// a well-formed triad — asserted at load across the family probe space
+{
+  const probes = [
+    { seventh: "maj7", triad: [0, 4, 7, 11] }, { seventh: "7", triad: [0, 4, 7, 10] },
+    { seventh: "m7", triad: [0, 3, 7, 10] }, { seventh: "m7b5", triad: [0, 3, 6, 10] },
+    { seventh: "dim7", triad: [0, 3, 6, 9] }, { seventh: "mMaj7", triad: [0, 3, 7, 11] },
+    { seventh: "6", triad: [0, 4, 7, 9] }, { seventh: "m6", triad: [0, 3, 7, 9] },
+    { seventh: "7sus4", triad: [0, 5, 7, 10] },
+  ];
+  for (const pr of probes)
+    for (const ext of [[], [14], [13]]) {
+      const fake = {
+        seventh: pr.seventh, intervals: [...pr.triad, ...ext],
+        alterations: [], root: { name: "C", pc: 0 },
+      };
+      for (const pref of prefsFor(fake)) {
+        const pcs = pref.labels.map((l) => LABEL_SEMIS[l]);
+        if (!classifyTriad(pcs).length)
+          throw new Error(`preference ${pref.labels} for ${pr.seventh} is not a triad`);
+      }
+    }
+}
+
+// ---------- generated candidates (rules that may add a declared tension) ----------
+
+function generatedCandidates(parsed) {
+  const raw = parsed.intervals;
+  const out = [];
+  const alteredNine = raw.includes(13) || raw.includes(15);
+  if (((parsed.seventh === "7" && raw.includes(14)) || parsed.seventh === "7sus4") && !alteredNine)
+    out.push({ rootLabel: "b7", quality: "maj", labels: ["b7", "9", "11"], rule: "tension-b7" });
+  if (parsed.alterations.includes("alt"))
+    out.push({ rootLabel: "b5", quality: "maj", labels: ["b5", "b7", "b9"], rule: "tritone-sub" });
+  return out;
+}
+
+// ---------- the derivation ----------
+
+/**
+ * upperStructures(parseChord("G9")) →
+ * { candidates: [ { root:{pc,name}, quality:"dim", pcs:[11,2,5],
+ *     degrees:["3","5","b7"], added:[], rule:"rootless-seventh", label:"B°" }, … ],
+ *   bass: {pc,name},          // chord root, or the slash bass if written
+ *   symmetric: false }        // true for °7 — rotate candidates per repeat
+ *
+ * candidates[0] is the default; the rest are honest alternatives, ranked.
+ * Throws only on malformed input or an internal derivation error — a chord
+ * with no honest triad inside it (Gsus4) returns candidates: [].
+ */
+function upperStructures(parsed) {
+  if (!parsed || !parsed.root || !Array.isArray(parsed.pcs) || !Array.isArray(parsed.intervals))
+    throw new Error("upperStructures expects parseChord() output");
+  const rootPc = parsed.root.pc;
+  const found = new Map();
+
+  const register = (triadRoot, quality, sourceRule, addedLabels, rootLabelHint) => {
+    const triRoot = mod12(triadRoot);
+    const key = triRoot + ":" + quality;
+    if (found.has(key)) return;
+    // members ordered as stacked from the triad root (the table's notation)
+    const ordered = TRIAD_SHAPES[quality].map((iv) => mod12(triRoot + iv));
+    const added = [];
+    const degrees = ordered.map((pc, k) => {
+      const i = parsed.pcs.indexOf(pc);
+      if (i >= 0) {
+        const iv = parsed.intervals[i];
+        return iv === 9 && parsed.seventh === "dim7" ? "bb7" : IV_LABEL[iv];
+      }
+      const lab = addedLabels && addedLabels[k];
+      if (!lab) throw new Error(`internal: pc ${pc} neither chord tone nor declared tension`);
+      added.push(lab);
+      return lab;
+    });
+    // structural assertions — never return an unasserted candidate
+    if (new Set(ordered).size !== 3) throw new Error("internal: duplicate pc in candidate");
+    for (let k = 0; k < 3; k++)
+      if (mod12(rootPc + LABEL_SEMIS[degrees[k]]) !== ordered[k])
+        throw new Error(`internal: degree ${degrees[k]} does not land on pc ${ordered[k]}`);
+    const rootLabel = rootLabelHint || degrees[0];
+    const name = spellRoot(parsed, triRoot, quality, rootLabel);
+    found.set(key, {
+      root: { pc: mod12(triRoot), name },
+      quality,
+      pcs: ordered,
+      degrees,
+      added,
+      rule: sourceRule,
+      label: name + TRIAD_SUFFIX[quality],
+      relRoot: mod12(triRoot - rootPc),
+    });
+  };
+
+  // rule 1 — chord-tone triads (triad root ≠ chord root)
+  const pcs = parsed.pcs;
+  for (let i = 0; i < pcs.length; i++)
+    for (let j = i + 1; j < pcs.length; j++)
+      for (let k = j + 1; k < pcs.length; k++) {
+        const trio = [pcs[i], pcs[j], pcs[k]];
+        const ids = classifyTriad(trio);
+        if (!ids.length) continue;
+        // canonical reading: the root nearest above the chord root, never the
+        // chord root itself (that would be the chord's own triad, not an upper one)
+        const upper = ids
+          .filter((id) => mod12(id.rootPc - rootPc) !== 0)
+          .sort((a, b) => mod12(a.rootPc - rootPc) - mod12(b.rootPc - rootPc))[0];
+        if (!upper) continue;
+        register(upper.rootPc, upper.quality, "chord-tone-triad", null, null);
+      }
+
+  // rules 2 & 3 — generated triads with declared added tensions
+  for (const g of generatedCandidates(parsed))
+    register(rootPc + LABEL_SEMIS[g.rootLabel], g.quality, g.rule, g.labels, g.rootLabel);
+
+  // rule 4 — triad identity (plain triads are their own material)
+  if (!parsed.seventh && TRIAD_SHAPES[parsed.triad]) {
+    const members = TRIAD_SHAPES[parsed.triad].map((iv) => mod12(rootPc + iv));
+    if (members.every((pc) => parsed.pcs.includes(pc)))
+      register(rootPc, parsed.triad, "triad-identity", null, "R");
+  }
+
+  // ranking: named preference order, then fewest added tensions, then lowest root
+  const prefs = prefsFor(parsed).map((p) => ({
+    rule: p.rule,
+    set: p.labels.map((l) => mod12(rootPc + LABEL_SEMIS[l])).sort((a, b) => a - b).join(","),
+  }));
+  const candidates = [...found.values()]
+    .map((c) => {
+      const setKey = [...c.pcs].sort((a, b) => a - b).join(",");
+      const pi = prefs.findIndex((p) => p.set === setKey);
+      if (pi >= 0) c.rule = prefs[pi].rule;
+      return { c, pi: pi >= 0 ? pi : prefs.length };
+    })
+    .sort(
+      (a, b) =>
+        a.pi - b.pi ||
+        a.c.added.length - b.c.added.length ||
+        a.c.relRoot - b.c.relRoot
+    )
+    .map(({ c }) => {
+      const { relRoot, ...pub } = c;
+      return pub;
+    });
+
+  return {
+    candidates,
+    bass: parsed.bass
+      ? { pc: parsed.bass.pc, name: parsed.bass.name }
+      : { pc: rootPc, name: parsed.root.name },
+    symmetric: parsed.seventh === "dim7",
+  };
+}
+
+/** stable identity for a candidate, for config round-trips: "pc:quality".
+ * findCandidate() re-matches a stored choice against a fresh derivation —
+ * a stale key (the chord was edited) returns null and the caller falls back
+ * to the default. */
+function candidateKey(c) {
+  return mod12(c.root.pc) + ":" + c.quality;
+}
+function findCandidate(candidates, key) {
+  return candidates.find((c) => candidateKey(c) === key) || null;
+}
+return { upperStructures, candidateKey, findCandidate };
+})(CHORD);
 /* ============ music core ============ */
 const LETTER_PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 const LETTERS = ["C","D","E","F","G","A","B"];
@@ -354,6 +1120,7 @@ function ivlOf(pc,ref,q){
 function scaleData(){ const n=buildScale(st.key,st.scaleType);
   return {notes:n,pcs:n.map(x=>x.pc),qual:SCALES[st.scaleType].qual,roman:SCALES[st.scaleType].roman}; }
 function buildSequence(){
+  if(st.harmonyMode==="break"){ buildBreakdown(); return breakSequence(); }
   const sd=scaleData(), d0=st.startDeg, out=[];
   const push=(deg)=>{ const dd=((deg%7)+7)%7;
     out.push({rootPc:sd.pcs[dd],q:sd.qual[dd],label:chordName(sd.pcs[dd],sd.qual[dd],st.key),
@@ -450,13 +1217,59 @@ const st={
   get setLowHigh(){ return [...this.set].sort((a,b)=>b-a); },
   pivotString:2, pivotFrets:[1,3,5],
   prog:"cycle4", startDeg:0, chromLen:6, custom:"ii V I vi",
+  // harmony panel (v0.6): build = diatonic engines (above), break = typed changes
+  // decomposed into upper-structure triads. breakProg is the canonical store:
+  // one entry per chip, us = the remembered per-chord structure choice ("pc:quality")
+  harmonyMode:"build",
+  breakProg:[{sym:"Dm7",us:null},{sym:"G7",us:null},{sym:"Cmaj7",us:null}],
   arpPattern:null, arpCustom:false,  // arpPattern: array of string numbers (repeats OK) or null=block chord
   roots:false, ext:"none",
   bpm:72, meter:4, splitIdx:1, metroOnly:false,
   clickOn:true, clickVol:0.8, clickAccent:true, clickSub:1, clickVoice:"beep", countIn:false,
   cur:0,
 };
-let SEQ=[], VOIC=[], BOX=null, ECHO=[];
+let SEQ=[], VOIC=[], BOX=null, ECHO=[], BREAK=[];
+
+/* ---- break-down derivation: st.breakProg → BREAK (chips) → SEQ (étude) ----
+   Bad user text is DATA, not a crash (charter §7): a token that won't parse
+   carries its message on the chip and the rest still renders. */
+function buildBreakdown(){
+  const dimSeen={};
+  BREAK=st.breakProg.map(entry=>{
+    const out={sym:entry.sym,us:entry.us,err:null,seqIndex:null};
+    let parsed;
+    try{
+      const rr=CHORD.resolveRoman(entry.sym,st.key,st.scaleType);
+      parsed=rr?rr.parsed:CHORD.parseChord(entry.sym);
+      out.roman=rr?entry.sym:null;
+      out.shownSym=rr?rr.symbol:parsed.symbol;
+    }catch(e){ out.err=e.message; return out; }
+    const result=UPPER.upperStructures(parsed);
+    if(!result.candidates.length){ out.err="no honest triad inside "+out.shownSym; return out; }
+    out.parsed=parsed; out.result=result;
+    let choice=entry.us?UPPER.findCandidate(result.candidates,entry.us):null;
+    if(!choice&&result.symmetric&&!entry.us){
+      // °7 rotates per repeat: the same diminished chord takes its next stacked
+      // m3 reading each time it recurs, unless the user pinned one
+      const k=parsed.root.pc+":dim7";
+      const n=dimSeen[k]||0; dimSeen[k]=n+1;
+      choice=result.candidates[n%result.candidates.length];
+    }
+    out.choice=choice||result.candidates[0];
+    return out;
+  });
+}
+function breakSequence(){
+  const sd=scaleData(), out=[];
+  for(const b of BREAK){
+    if(b.err){ b.seqIndex=null; continue; }
+    b.seqIndex=out.length;
+    out.push({rootPc:b.choice.root.pc,q:b.choice.quality,
+      label:b.choice.label,roman:null,diatonicDeg:sd.pcs.indexOf(b.choice.root.pc),
+      bassPc:b.result.bass.pc,srcSymbol:b.shownSym});
+  }
+  return out;
+}
 
 function scaleFretsOnString(str){
   const pcs=new Set(scaleData().pcs);
@@ -509,6 +1322,7 @@ function syncArpIn(){
   const e=document.getElementById("arpErr"); if(e)e.textContent="";
 }
 function bassPcFor(ch){
+  if(ch.bassPc!==undefined) return ch.bassPc;   // break-down: the chord root, always
   if(st.ext==="none") return null;
   if(st.ext==="root") return ch.rootPc;
   const sd=scaleData();
@@ -925,13 +1739,18 @@ function renderScore(){
   SEQ.forEach((ch,i)=>{
     const beats=beatsOf(i), x=X0+acc*unit, w=beats*unit;
     SCORE_X[i]={x,w};
-    // chord symbol + roman (tetrad name when a relabeling bass is sounding)
+    // chord symbol + roman (tetrad name when a relabeling bass is sounding;
+    // in break-down the typed symbol is the identity, the triad the reading)
     const bassPc=bassPcFor(ch);
     const relabel=bassPc!==null&&bassPc!==ch.rootPc;
     const lb=el("text",{x:x+3,y:16,"font-size":"12.5","font-weight":"bold",
-      fill:relabel?"#B82929":"#212126"},svg);
-    lb.textContent=relabel?tetradName(bassPc,ch):ch.label;
-    if(ch.roman||relabel){
+      fill:ch.srcSymbol?"#212126":relabel?"#B82929":"#212126"},svg);
+    lb.textContent=ch.srcSymbol?ch.srcSymbol:relabel?tetradName(bassPc,ch):ch.label;
+    if(ch.srcSymbol){
+      if(ch.srcSymbol!==ch.label){
+        const r=el("text",{x:x+3,y:28,"font-size":"9.5",fill:"#B82929"},svg);
+        r.textContent=ch.label;}
+    }else if(ch.roman||relabel){
       const r=el("text",{x:x+3,y:28,"font-size":"9.5",fill:"#73737A"},svg);
       r.textContent=relabel?(ch.label+(ch.roman?" · "+ch.roman:"")):ch.roman;}
     const v=VOIC[i], s=st.setLowHigh;
@@ -1118,11 +1937,19 @@ function renderActive(){
   renderReadout(); renderKbd(); renderChips(); renderCfg(); highlightScore();
 }
 function renderReadout(){
-  const ch=SEQ[st.cur]; if(!ch)return;
+  const ch=SEQ[st.cur];
+  if(!ch){
+    if(st.harmonyMode==="break")
+      document.getElementById("readout").innerHTML=
+        `<span class="sub">no playable chords yet — fix the chips above</span>`;
+    return;
+  }
   const invName=["root pos.","1st inv.","2nd inv."][VOIC[st.cur]?VOIC[st.cur].inv:0]||"";
   const bass=bassPcFor(ch);
   let html=`<b>${ch.label}</b> <span class="sub">${ch.roman?ch.roman+" · ":""}${invName} · ${st.cur+1} of ${SEQ.length} · ${st.key} ${SCALES[st.scaleType].label}</span>`;
-  if(bass!==null){
+  if(ch.srcSymbol&&ch.srcSymbol!==ch.label)
+    html=`<b>${ch.label}</b> <span class="sub">= </span><b style="color:var(--red)">${ch.srcSymbol}</b> <span class="sub">over ${pcName(bass,st.key)} · ${invName} · ${st.cur+1} of ${SEQ.length} · ${st.key} ${SCALES[st.scaleType].label}</span>`;
+  else if(bass!==null){
     if(bass===ch.rootPc) html+=` <span class="sub">— root ${pcName(bass,st.key)} in the bass</span>`;
     else html+=` <span class="sub">— over ${pcName(bass,st.key)} → </span><b style="color:var(--red)">${tetradName(bass,ch)}</b>`;
   }
@@ -1172,18 +1999,182 @@ function renderKbd(){
 }
 function renderChips(){
   const div=document.getElementById("chips"); div.innerHTML="";
-  SEQ.forEach((ch,i)=>{
-    const b=document.createElement("button");
-    b.textContent=ch.label; if(i===st.cur)b.className="cur";
-    b.addEventListener("click",()=>{st.cur=i;renderActive();strum(i);});
-    div.appendChild(b);
+  if(st.harmonyMode!=="break"){
+    SEQ.forEach((ch,i)=>{
+      const b=document.createElement("button");
+      b.textContent=ch.label; if(i===st.cur)b.className="cur";
+      b.addEventListener("click",()=>{st.cur=i;renderActive();strum(i);});
+      div.appendChild(b);
+    });
+    return;
+  }
+  // break-down: chips are the writable progression (§3.2). Tap = edit, drag =
+  // reorder, long-press = delete, "+" = append. Big triad, small "= symbol".
+  BREAK.forEach((b,i)=>{
+    const btn=document.createElement("button");
+    btn.className="bd"+(b.err?" err":"")+(b.seqIndex!==null&&b.seqIndex===st.cur?" cur":"");
+    btn.draggable=true; btn.dataset.idx=i;
+    const big=document.createElement("span"); big.className="big";
+    const eq=document.createElement("span"); eq.className="eq";
+    if(b.err){
+      big.textContent=b.sym; eq.textContent="⚠ unreadable"; btn.title=b.err;
+    }else{
+      big.textContent=b.choice.label+((b.result.candidates.length>1)?" ▾":"");
+      eq.textContent="= "+b.shownSym+(b.roman?" · "+b.roman:"");
+      btn.title=b.choice.degrees.join("-")+" of "+b.shownSym;
+    }
+    btn.appendChild(big); btn.appendChild(eq);
+    let lp=null,moved=false;
+    btn.addEventListener("pointerdown",()=>{ moved=false;
+      lp=setTimeout(()=>{lp=null;deleteChip(i);},600); });
+    const cancelLp=()=>{ if(lp){clearTimeout(lp);lp=null;} };
+    btn.addEventListener("pointerup",cancelLp);
+    btn.addEventListener("pointerleave",()=>{moved=true;cancelLp();});
+    btn.addEventListener("click",()=>{
+      if(moved)return;
+      if(b.seqIndex!==null){ st.cur=b.seqIndex; renderActive(); strum(st.cur); }
+      // renderActive re-renders the chips — anchor to the live button, not this one
+      const fresh=document.querySelectorAll("#chips button.bd")[i]||btn;
+      openChipEditor(i,fresh);
+    });
+    btn.addEventListener("dragstart",e=>{ cancelLp(); closeChipEditor();
+      e.dataTransfer.setData("text/plain",String(i)); btn.classList.add("drag"); });
+    btn.addEventListener("dragend",()=>btn.classList.remove("drag"));
+    btn.addEventListener("dragover",e=>e.preventDefault());
+    btn.addEventListener("drop",e=>{
+      e.preventDefault();
+      const from=+e.dataTransfer.getData("text/plain");
+      if(isNaN(from)||from===i)return;
+      const[m]=st.breakProg.splice(from,1);
+      st.breakProg.splice(i,0,m);
+      breakChanged();
+    });
+    div.appendChild(btn);
+  });
+  const add=document.createElement("button");
+  add.className="add"; add.textContent="+"; add.title="append a chord";
+  add.addEventListener("click",()=>{
+    const last=st.breakProg[st.breakProg.length-1];
+    st.breakProg.push({sym:last?last.sym:"G7",us:null});
+    breakChanged();
+    const chips=div.querySelectorAll("button.bd");
+    const nb=chips[chips.length-1];
+    if(nb)openChipEditor(st.breakProg.length-1,nb);
+  });
+  div.appendChild(add);
+}
+function deleteChip(i){
+  closeChipEditor();
+  st.breakProg.splice(i,1);
+  breakChanged();
+}
+function breakChanged(){
+  syncBreakIn(); st.cur=0; rebuild();
+}
+function parseBreakText(text){
+  // tokens on whitespace/commas/bars; per-chord ▾ choices survive a text edit
+  // wherever the token at that position is unchanged
+  const toks=text.split(/[\s|,]+/).map(t=>t.trim()).filter(Boolean);
+  return toks.map((sym,i)=>{
+    const old=st.breakProg[i];
+    return {sym,us:old&&old.sym===sym?old.us:null};
   });
 }
+function syncBreakIn(){
+  const inp=document.getElementById("breakIn");
+  if(inp)inp.value=st.breakProg.map(e=>e.sym).join(" ");
+}
+
+/* ---- the chip editor popover: root wheel + quality menu + ▾ choice ---- */
+let CHIP_ED=null;
+function closeChipEditor(){ if(CHIP_ED){CHIP_ED.remove();CHIP_ED=null;
+  document.removeEventListener("pointerdown",chipEdOutside,true);} }
+function chipEdOutside(e){ if(CHIP_ED&&!CHIP_ED.contains(e.target))closeChipEditor(); }
+const ED_ROOTS=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
+const ED_QUALS=[["maj7","maj7"],["7","7"],["m7","m7"],["m7b5","m7b5"],["dim7","dim7"],
+  ["6","6"],["m6","m6"],["maj9","maj9"],["9","9"],["m9","m9"],["13","13"],
+  ["7b9","7b9"],["7#9","7#9"],["7alt","alt"],["7sus4","7sus4"],["9sus4","9sus4"],
+  ["mMaj7","mMaj7"],["maj",""],["m","m"],["dim","dim"],["aug","aug"]];
+function openChipEditor(i,anchor){
+  closeChipEditor();
+  const b=BREAK[i]; if(!b)return;
+  const ed=document.createElement("div"); ed.className="chipEd"; CHIP_ED=ed;
+  const rootName=b.parsed?b.parsed.root.name:(b.sym.match(/^[A-G](#{1,2}|b{1,2})?/)||[""])[0];
+  const tail=b.parsed?b.shownSym.slice(rootName.length):b.sym.slice(rootName.length);
+  const setSym=(sym)=>{ st.breakProg[i]={sym,us:null}; breakChanged();
+    const chips=document.querySelectorAll("#chips button.bd");
+    if(chips[i])openChipEditor(i,chips[i]); };
+  const h=(t)=>{const e2=document.createElement("h3");e2.textContent=t;ed.appendChild(e2);};
+  if(b.err){ const e2=document.createElement("div");e2.className="err";
+    e2.textContent=b.err;ed.appendChild(e2); }
+  h("Root");
+  const wheel=document.createElement("div"); wheel.className="wheel";
+  ED_ROOTS.forEach(r=>{
+    const rb=document.createElement("button"); rb.textContent=r;
+    if(b.parsed&&pcOf(r)===b.parsed.root.pc)rb.className="on";
+    rb.addEventListener("click",()=>setSym(r+tail));
+    wheel.appendChild(rb);
+  });
+  ed.appendChild(wheel);
+  h("Quality");
+  const qw=document.createElement("div"); qw.className="wheel";
+  ED_QUALS.forEach(([lab,q])=>{
+    const qb=document.createElement("button"); qb.textContent=lab;
+    qb.style.width="auto"; qb.style.padding="3px 7px";
+    const cur=rootName+q;
+    if(!b.err&&b.shownSym===cur)qb.className="on";
+    qb.addEventListener("click",()=>setSym((rootName||"C")+q));
+    qw.appendChild(qb);
+  });
+  ed.appendChild(qw);
+  if(b.result&&b.result.candidates.length>1){
+    h("Upper structure — this chord's honest triads");
+    const ul=document.createElement("div"); ul.className="usList";
+    b.result.candidates.forEach(c=>{
+      const cb=document.createElement("button");
+      if(UPPER.candidateKey(c)===UPPER.candidateKey(b.choice))cb.className="on";
+      cb.innerHTML=`<b>${c.label}</b> <span class="deg">${c.degrees.join("-")}`+
+        (c.added.length?` (+${c.added.join(",")})`:"")+` · ${c.rule}</span>`;
+      cb.addEventListener("click",()=>{
+        st.breakProg[i].us=UPPER.candidateKey(c);
+        breakChanged();
+        const chips=document.querySelectorAll("#chips button.bd");
+        if(chips[i])openChipEditor(i,chips[i]);
+      });
+      ul.appendChild(cb);
+    });
+    ed.appendChild(ul);
+  }
+  const acts=document.createElement("div"); acts.className="acts";
+  const mk=(t,fn,cls)=>{const a=document.createElement("button");a.textContent=t;
+    if(cls)a.className=cls;a.addEventListener("click",fn);acts.appendChild(a);};
+  mk("×2 repeat",()=>{ st.breakProg.splice(i+1,0,{sym:st.breakProg[i].sym,us:st.breakProg[i].us});
+    breakChanged(); closeChipEditor(); });
+  mk("delete",()=>deleteChip(i),"danger");
+  mk("done",()=>closeChipEditor());
+  ed.appendChild(acts);
+  document.body.appendChild(ed);
+  const r=anchor.getBoundingClientRect();
+  const w=ed.offsetWidth||320;
+  ed.style.left=Math.max(8,Math.min(window.scrollX+r.left,window.scrollX+window.innerWidth-w-8))+"px";
+  ed.style.top=(window.scrollY+r.bottom+6)+"px";
+  setTimeout(()=>document.addEventListener("pointerdown",chipEdOutside,true),0);
+}
 function cfgObj(){
+  const harmony=st.harmonyMode==="break"
+    ?{mode:"break-down",changes:BREAK.map(b=>b.err
+        ?{typed:b.sym,error:b.err}
+        :{typed:b.sym,symbol:b.shownSym,triad:b.choice.label,
+          degrees:b.choice.degrees.join("-"),rule:b.choice.rule,
+          bass:pcName(b.result.bass.pc,st.key),
+          chosen:b.us?true:undefined})}
+    :{mode:"build-up",extension:st.ext};
   return {version:1,module:"triad-isolation",key:st.key,scale:SCALES[st.scaleType].label,
     stringSet:st.set,pivot:{string:st.pivotString,frets:st.pivotFrets,
       notes:st.pivotFrets.map(f=>spelled(OPEN[st.pivotString]+f).name)},
-    progression:{type:st.prog,start:SCALES[st.scaleType].roman[st.startDeg],
+    harmony,
+    progression:{type:st.harmonyMode==="break"?"break-down":st.prog,
+      start:SCALES[st.scaleType].roman[st.startDeg],
       custom:st.prog==="custom"?st.custom:undefined,chords:SEQ.map(c=>c.label)},
     motion:{arpeggio:st.arpPattern?st.arpPattern.join("-"):"block",
       subdivision:st.arpPattern?[...new Set(pattern())].map(b=>b+" beats: "+subdivisionName(b,st.arpPattern.length)).join("; "):"block"},
@@ -1204,6 +2195,8 @@ function rawCfg(){
   return {v:1,key:st.key,scaleType:st.scaleType,set:[...st.set],pivotString:st.pivotString,
     pivotFrets:[...st.pivotFrets],prog:st.prog,startDeg:st.startDeg,chromLen:st.chromLen,
     custom:st.custom,arpPattern:st.arpPattern?[...st.arpPattern]:null,roots:st.roots,ext:st.ext,
+    harmonyMode:st.harmonyMode,
+    breakProg:st.breakProg.map(e=>({sym:e.sym,us:e.us})),
     bpm:st.bpm,meter:st.meter,splitIdx:st.splitIdx,
     clickOn:st.clickOn,clickVol:st.clickVol,clickAccent:st.clickAccent,
     clickSub:st.clickSub,clickVoice:st.clickVoice,countIn:st.countIn};
@@ -1213,11 +2206,16 @@ function applyRaw(c){
     pivotFrets:[...c.pivotFrets],prog:c.prog,startDeg:c.startDeg,chromLen:c.chromLen,
     custom:c.custom,arpPattern:c.arpPattern?[...c.arpPattern]:null,roots:c.roots,ext:c.ext,
     bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0,
+    // pre-v0.6 entries carry no harmony panel — they were all build-up études
+    harmonyMode:c.harmonyMode??"build",
+    breakProg:(c.breakProg??[{sym:"Dm7",us:null},{sym:"G7",us:null},{sym:"Cmaj7",us:null}])
+      .map(e=>({sym:e.sym,us:e.us??null})),
     // metronome fields default for entries saved before v0.5.1 — old études restore intact
     clickOn:c.clickOn??true,clickVol:c.clickVol??0.8,clickAccent:c.clickAccent??true,
     clickSub:c.clickSub??1,clickVoice:c.clickVoice??"beep",countIn:c.countIn??false});
   const def=[st.pivotString,...st.setLowHigh.filter(x=>x!==st.pivotString)];
   st.arpCustom=!!st.arpPattern&&st.arpPattern.join()!==def.join();
+  syncHarmonyUI(); syncBreakIn();
   document.getElementById("keySel").value=st.key;
   document.getElementById("scaleSel").value=st.scaleType;
   const seg=document.getElementById("setSeg");
@@ -1257,19 +2255,23 @@ function progLabel(){
 }
 function summaryText(){
   const piv=st.pivotFrets.map(f=>spelled(OPEN[st.pivotString]+f).name).join(" ");
+  const how=st.harmonyMode==="break"
+    ?"break down ("+st.breakProg.map(e=>e.sym).join(" ")+")"
+    :progLabel()+(st.prog==="custom"?" ("+st.custom+")":"");
   return st.key+" "+SCALES[st.scaleType].label+" · strings "+st.set.join("-")+
-    " · pivots "+piv+" on string "+st.pivotString+" · "+progLabel()+
-    (st.prog==="custom"?" ("+st.custom+")":"")+
+    " · pivots "+piv+" on string "+st.pivotString+" · "+how+
     " · arp "+(st.arpPattern?st.arpPattern.join("-"):"block")+
     " · "+st.meter+"/4 split "+pattern().join("+")+" · "+st.bpm+" bpm"+
-    (st.ext!=="none"?" · over bass ("+st.ext+")":"")+
-    " — "+SEQ.map(c=>c.label).join("  ");
+    (st.harmonyMode!=="break"&&st.ext!=="none"?" · over bass ("+st.ext+")":"")+
+    " — "+SEQ.map(c=>c.srcSymbol&&c.srcSymbol!==c.label?c.label+"="+c.srcSymbol:c.label).join("  ");
 }
 function renderSummary(){ const d=document.getElementById("cfgSummary"); if(d)d.textContent=summaryText(); }
 function fmtWhen(iso){ const d=new Date(iso);
   return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+
          d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); }
 function entryTitle(){
+  if(st.harmonyMode==="break")
+    return SEQ.length?SEQ[0].srcSymbol+"… break-down · "+st.key+" "+SCALES[st.scaleType].label:"étude";
   return SEQ.length?SEQ[0].label+" · "+progLabel()+" · "+st.key+" "+SCALES[st.scaleType].label:"étude";
 }
 function renderHist(){
@@ -1347,6 +2349,13 @@ function exportLog(){
 }
 
 /* ============ controls ============ */
+function syncHarmonyUI(){
+  document.querySelectorAll("#modeSeg button").forEach(b=>{
+    b.className=b.dataset.mode===st.harmonyMode?"on":"";});
+  const bb=document.getElementById("buildBlock"), kb=document.getElementById("breakBlock");
+  if(bb)bb.style.display=st.harmonyMode==="break"?"none":"block";
+  if(kb)kb.style.display=st.harmonyMode==="break"?"block":"none";
+}
 function refreshStartSel(){
   const sel=document.getElementById("startSel");
   sel.innerHTML="";
@@ -1388,6 +2397,19 @@ function initControls(){
 
   refreshStartSel();
   document.getElementById("startSel").addEventListener("change",e=>{st.startDeg=+e.target.value;st.cur=0;rebuild();});
+
+  document.querySelectorAll("#modeSeg button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      st.harmonyMode=b.dataset.mode; st.cur=0;
+      closeChipEditor(); syncHarmonyUI(); rebuild();
+    });
+  });
+  document.getElementById("breakIn").addEventListener("change",e=>{
+    st.breakProg=parseBreakText(e.target.value);
+    if(!st.breakProg.length)st.breakProg=[{sym:"Dm7",us:null},{sym:"G7",us:null},{sym:"Cmaj7",us:null}];
+    breakChanged();
+  });
+  syncBreakIn();
 
   const progSel=document.getElementById("progSel");
   progSel.addEventListener("change",()=>{
@@ -1487,9 +2509,27 @@ function initControls(){
   eq(subdivisionName(2,8),"16ths","8 over 2 = 16ths");
   eq(writtenValue(4/3),2,"3-over-4 written as halves");
   eq(writtenValue(2/3),1,"3-over-2 written as quarters");
+  // v0.6 break-down: the inlined engines derive, the page only renders
+  eq(UPPER.upperStructures(CHORD.parseChord("G7")).candidates[0].label,"B°","G7 → B°");
+  eq(UPPER.upperStructures(CHORD.parseChord("Cmaj7")).candidates[0].label,"Em","Cmaj7 → Em");
+  eq(UPPER.upperStructures(CHORD.parseChord("G9")).candidates.length>=2,true,"G9 is multi-structure");
+  eq(UPPER.upperStructures(CHORD.parseChord("F/G")).bass.pc,7,"slash bass wins");
+  eq(CHORD.resolveRoman("ii7","C").symbol,"Dm7","ii7 in C = Dm7");
+  eq(CHORD.resolveRoman("V7","Eb").symbol,"Bb7","V7 in Eb = Bb7");
+  (function(){
+    const save={m:st.harmonyMode,p:st.breakProg};
+    st.harmonyMode="break";
+    st.breakProg=[{sym:"Dm7",us:null},{sym:"XYZ",us:null},{sym:"Cmaj7",us:null}];
+    const seq=buildSequence();
+    if(seq.length!==2)console.error("TEST: bad token must not sink the progression",seq);
+    if(BREAK[1].err===null)console.error("TEST: bad token must carry its message");
+    if(seq[0].bassPc!==2)console.error("TEST: Dm7 break-down bass is D");
+    st.harmonyMode=save.m; st.breakProg=save.p; BREAK=[];
+  })();
 })();
 
 initControls();
+syncHarmonyUI();
 defaultPivots();
 defaultArpPattern();
 rebuild();
