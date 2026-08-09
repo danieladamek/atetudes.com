@@ -58,7 +58,11 @@
     border-radius:14px;background:#fff;cursor:pointer;color:var(--ink)}
   .chips button.cur{border-color:var(--red);color:var(--red);font-weight:bold}
   .board{background:var(--card);border:1px solid var(--line);border-radius:10px;
-         padding:10px 12px;margin-bottom:12px}
+         padding:10px 12px;margin-bottom:12px;position:relative}
+  .mini{position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5}
+  .mini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+  .mini button:hover{border-color:var(--ink)}
   .board svg{width:100%;height:auto;display:block}
   .board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
              font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
@@ -96,7 +100,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.5.4</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.5.5</div>
 </header>
 
 <div class="cards">
@@ -217,16 +221,19 @@
 <div class="chips" id="chips"></div>
 
 <div class="board">
+  <span class="mini"></span>
   <div class="readout" id="readout"></div>
   <svg id="fret" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
 </div>
 
 <div class="board">
+  <span class="mini"></span>
   <div class="bh"><span>The étude — end to end (click a bar to jump there)</span></div>
   <svg id="score" viewBox="0 0 1160 214" aria-label="etude notation"></svg>
 </div>
 
 <div class="board">
+  <span class="mini"></span>
   <svg id="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>
 </div>
 
@@ -266,7 +273,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.5.4 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.5.5 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -751,6 +758,22 @@ function stopAll(){ etude.on=false; METRO.stop(); metroOwner=null; idlePump(); r
 function syncPlayUI(){
   const p=document.getElementById("playBtn"); if(p)p.textContent=etude.on?"Stop":"Play";
   const m=document.getElementById("metroBtn"); if(m)m.textContent=METRO.running?"Stop":"Start";
+  document.querySelectorAll(".mini button[data-role=play]").forEach(b=>{
+    b.style.color=etude.on?"var(--gray)":""; });
+}
+/* mini transports — the same four moves on every board, so the stand never
+   needs the Transport card mid-practice */
+function buildMinis(){
+  document.querySelectorAll(".board .mini").forEach(m=>{
+    m.innerHTML="";
+    const mk=(g,title,fn,role)=>{const b=document.createElement("button");
+      b.textContent=g; b.title=title; if(role)b.dataset.role=role;
+      b.addEventListener("click",fn); m.appendChild(b);};
+    mk("⏮","previous chord",()=>{st.cur=(st.cur-1+SEQ.length)%SEQ.length;renderActive();strum(st.cur);});
+    mk("▶","play the étude",()=>{if(!etude.on)etudeToggle();},"play");
+    mk("⏹","stop",()=>{if(etude.on)etudeToggle();else if(METRO.running)stopAll();});
+    mk("⏭","next chord",()=>{st.cur=(st.cur+1)%SEQ.length;renderActive();strum(st.cur);});
+  });
 }
 
 /* ============ echo staff ============ */
@@ -1418,6 +1441,7 @@ function initControls(){
     st.clickVol=+e.target.value/100;
     document.getElementById("clickVolVal").textContent=e.target.value;});
   document.getElementById("clickVolR").addEventListener("change",()=>renderCfg());
+  buildMinis();
   syncClickUI(); renderLamp(); syncPlayUI();
   document.getElementById("echoClear").addEventListener("click",()=>{ECHO=[];renderStaff();});
   document.getElementById("saveEntry").addEventListener("click",saveEntry);

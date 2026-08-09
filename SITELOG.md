@@ -5,6 +5,17 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.5.5: mini transports on every board (Daniel's request, Cowork)
+
+- Each of the three stage boards — fretboard, score, keyboard — now carries a small
+  ⏮ ▶ ⏹ ⏭ cluster top-right: step back/forward (with strum), play the étude, stop.
+  Same semantics as the Transport card (⏹ also quick-stops a standalone metronome);
+  no more scrolling to the cards mid-practice. First installment of the roadmap's
+  §3.3 practice-posture work.
+- Verified per doctrine: 8 Playwright checks from `file://` (minis on all three boards,
+  step/play/stop wired across different boards' clusters), zero console errors;
+  suite 85/85.
+
 ## 2026-08-08 — NEW APP: Metronome v1.0 — the first At-Etudes appliance (Daniel's direction, Cowork)
 
 - **`/studies/metronome/`** — the shared metronome component, standing alone as its own
