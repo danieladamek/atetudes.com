@@ -22,7 +22,7 @@ const HARVEST = [
   "accOf", "pcOf", "buildScale", "pcName", "triadPcs", "chordName", "ivlOf",
   "scaleData", "buildSequence", "voicingsFor", "chooseVoicings",
   "scaleFretsOnString", "defaultPivots", "defaultArpPattern", "parseArp",
-  "writtenValue", "subdivisionName", "bassPcFor", "tetradName",
+  "writtenValue", "subdivisionName", "bassPcFor", "tetradName", "arpOnsets",
   "st", "SCALES", "SPLITS", "OPEN", "NFRETS", "KEYS", "IVL_LABEL", "IVL_FAMILY",
 ];
 

@@ -5,6 +5,41 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.5: the sounding-note pulse (backlog item, Daniel's dispatch)
+
+- **The missing half of the order badges: which note is sounding right now.** One moving
+  element, per Daniel's design decision in the item: a neutral ring (charcoal on light,
+  white on black keys), concentric with the sounding dot, expanding from the dot's own
+  radius and fading in ~180 ms. Dot fill, size, label, order badge, isolation box: all
+  untouched. Fretboard and keyboard pulse from **one** subscriber and one event; ring
+  geometry is a ratio of the host dot (fret r 14, keys r 6–7.5), so one tuning serves both.
+- **The pulse is the transport's, not the audio's**: onset derivation was lifted out of
+  `strum()` into a pure `arpOnsets()` — the note-event seed, carrying v0.7 §1.4's field
+  names (`{midi,string,fret,role,offset,dur}`, minus `slot`) so the note-event refactor
+  absorbs it rather than migrating it. Both the audio path and the pulse consume that one
+  list, which is why play-along (chords muted) still shows where in the figure you are.
+  **The bass never pulses** — settled by Daniel: it's a pedal, filtered by `role`, and on
+  the keyboard the bass marker visibly holds still while its neighbours pulse.
+- Block chords spawn their three rings 28 ms apart, overlapping into **one gesture**
+  (rendered both ways per the item; the overlap reads correctly — choice recorded here).
+  Arpeggio mode keeps one ring alive at a time. `prefers-reduced-motion: reduce` degrades
+  to a fixed-radius fade. Pulses live in their own SVG layers (the keyboard grew layer
+  structure for this) so chord changes never kill a mid-flight ring; nothing was added to
+  `rawCfg()` — the cue exists only while the transport runs.
+- Verified per doctrine: engine suite 119/119, including the new headless onset tests
+  (invariants across every meter split × arp on/off × both harmony modes) and the
+  **equivalence pin** — `arpOnsets` reproduces `strum()`'s previous inline scheduling
+  number-for-number, so the audio is provably unmoved. 14 Playwright checks from `file://`
+  offline (ring on a derived (string,fret); both views on the same midi; no bass pulse
+  with a bass sounding; play-along pulse; break-down pulse; reduced-motion fade;
+  stop-clears-all), zero console errors; screenshots inspected at 1280/390 px at 60 and
+  160 bpm plus pulse-timed close-ups of both boards. `hugo` + `check_site.py` clean.
+  One deviation from the item's acceptance wording, surfaced for review: the literal
+  "last onset + duration within the chord's span" assertion contradicts the shipped legato
+  behaviour the same item pins as unchanged (note tails ring past the span by design), so
+  the structural assertions bound the **onsets** to the span and durations to positive —
+  the tails stay faithful to the audio. Update Log 260809.2.
+
 ## 2026-08-09 — Triadetudes v0.6.0: the harmony panel — break-down mode + chip editor (backlog item, Daniel's dispatch)
 
 - **Break-down mode is the new front door** (roadmap §3.1): one **Harmony** card with two

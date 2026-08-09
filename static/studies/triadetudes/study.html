@@ -132,7 +132,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.0</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.5</div>
 </header>
 
 <div class="cards">
@@ -324,7 +324,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.0 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.5 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1362,6 +1362,49 @@ function defaultArpIfStale(){
   }
 }
 
+/* ---- onset derivation: the note-event seed ----
+   Pure: (voicing on a string set, arp pattern, bass midi, span, bpm) → ordered
+   onset list {midi,string,fret,role,offset,dur}. These are v0.7 §1.4's note-event
+   field names minus `slot`; when the note-event refactor lands, THIS function is
+   absorbed into it — do not build a second one. Both strum() (audio) and the
+   pulse subscriber (visual) consume this list, so play-along mode (chords muted)
+   still gets the visual cue; `role` exists so the bass — a pedal under the
+   figure, not a step in it — can be filtered by meaning, not by view.
+   NOTE: durations are release tails and may ring past the chord span (the
+   shipped legato behaviour of strum, pinned by tests); onsets stay inside it. */
+function arpOnsets(voicing,setLowHigh,pattern,bassMidi,durBeats,bpm){
+  const byStr={};
+  voicing.frets.forEach((f,k)=>{byStr[setLowHigh[k]]={midi:OPEN[setLowHigh[k]]+f,fret:f};});
+  const out=[];
+  if(bassMidi!==null&&bassMidi!==undefined)
+    out.push({midi:bassMidi,string:null,fret:null,role:"bass",offset:0,dur:1.0});
+  const order=pattern||setLowHigh;
+  for(const sn of order)
+    if(!(sn in byStr)) throw new Error("arpOnsets: string "+sn+" outside the set");
+  const span=(durBeats||2)*(60/bpm);
+  if(!pattern){
+    order.forEach((sn,k)=>out.push({midi:byStr[sn].midi,string:sn,fret:byStr[sn].fret,
+      role:"chord",offset:k*0.028,dur:0.85}));
+  }else{
+    const step=span/order.length;
+    order.forEach((sn,k)=>out.push({midi:byStr[sn].midi,string:sn,fret:byStr[sn].fret,
+      role:"chord",offset:k*step,dur:Math.min(0.9,step*1.6)}));
+  }
+  // structural assertions — derived, then checked, before anyone consumes it
+  const chord=out.filter(e=>e.role==="chord");
+  if(chord.length!==order.length) throw new Error("arpOnsets: onset count != pattern length");
+  for(let k=0;k<chord.length;k++){
+    if(k>0&&chord[k].offset<=chord[k-1].offset)
+      throw new Error("arpOnsets: onsets not strictly increasing");
+    if(chord[k].offset<0||chord[k].offset>=span)
+      throw new Error("arpOnsets: onset outside the chord span");
+    if(!(chord[k].dur>0)) throw new Error("arpOnsets: non-positive duration");
+    if(!setLowHigh.includes(chord[k].string))
+      throw new Error("arpOnsets: onset on a string outside the set");
+  }
+  return out;
+}
+
 /* ============ audio ============ */
 let AC=null;
 function ctx(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
@@ -1426,17 +1469,66 @@ function orderedMidis(i){
     bass=low-(((low-b)%12)+12)%12; if(bass>=low)bass-=12; if(bass<28)bass+=12; }
   return {notes,bass};
 }
+function onsetsFor(i,durBeats){
+  const v=VOIC[i]; if(!v)return[];
+  const {bass}=orderedMidis(i);
+  return arpOnsets(v,st.setLowHigh,st.arpPattern,bass,durBeats,st.bpm);
+}
 function strum(i,when,durBeats){
   const ac=ctx(); if(!ac)return;
   const t=when||ac.currentTime+0.02;
-  const {notes,bass}=orderedMidis(i);
-  if(bass!==null)playNote(bass,t,1.0,0.2);
-  if(!st.arpPattern){
-    notes.forEach((m,k)=>playNote(m,t+k*0.028,0.85,0.2));
-  }else{
-    const spb=60/st.bpm, D=(durBeats||2)*spb, L=notes.length, step=D/L;
-    notes.forEach((m,k)=>playNote(m,t+k*step,Math.min(0.9,step*1.6),0.2));
+  for(const ev of onsetsFor(i,durBeats)) playNote(ev.midi,t+ev.offset,ev.dur,0.2);
+}
+
+/* ---- the sounding-note pulse (v0.6.5) ----
+   The transport's cue, not the audio's: scheduled from the pump alongside (not
+   inside) strum(), so play-along mode still shows where in the figure you are.
+   One moving element per the item: a neutral ring, concentric with the sounding
+   dot, expanding from the dot's own radius and fading in ~180 ms. The dot, its
+   label, its badge: untouched. Bass onsets never pulse (role filter). Always on,
+   no config key; nothing survives the transport stopping. */
+const PULSE={life:180,grow:0.9,strokeRatio:0.18,opacity:0.9,timers:[]};
+function reducedMotion(){
+  return !!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+function clearPulses(){
+  PULSE.timers.forEach(clearTimeout); PULSE.timers=[];
+  document.querySelectorAll("#fret .pulse, #kbd .pulse").forEach(n=>n.remove());
+}
+function schedulePulses(i,when,durBeats){
+  const ac=ctx(); if(!ac)return;
+  for(const ev of onsetsFor(i,durBeats)){
+    if(ev.role!=="chord")continue;   // the bass is a pedal, not a step (v0.7's role field)
+    const delay=Math.max(0,(when-ac.currentTime+ev.offset)*1000);
+    PULSE.timers.push(setTimeout(()=>firePulse(ev),delay));
   }
+}
+function firePulse(ev){
+  if(!etude.on)return;               // stopped between scheduling and firing
+  // arpeggio mode: one ring alive at a time; block chords read as one gesture
+  if(st.arpPattern)document.querySelectorAll("#fret .pulse, #kbd .pulse").forEach(n=>n.remove());
+  const fl=document.querySelector("#fret #pulseLayer");
+  if(fl&&ev.string!==null)ringPulse(fl,fx(ev.fret),fy(ev.string),14,"#212126",ev);
+  const kl=document.querySelector("#kbd #kbdPulse"), g=kbdGeom(ev.midi);
+  if(kl&&g)ringPulse(kl,g.x,g.y,g.r,g.black?"#FFFFFF":"#212126",ev);
+}
+function ringPulse(layer,x,y,r0,color,ev){
+  const c=el("circle",{cx:x,cy:y,r:r0,fill:"none",stroke:color,
+    "stroke-width":(r0*PULSE.strokeRatio).toFixed(2),"stroke-opacity":PULSE.opacity,
+    "pointer-events":"none","class":"pulse","data-midi":ev.midi,
+    "data-string":ev.string===null?"":ev.string,"data-fret":ev.fret===null?"":ev.fret},layer);
+  const t0=performance.now(), still=reducedMotion();
+  if(still)c.setAttribute("r",(r0*1.5).toFixed(2));   // reduced motion: fade only, no growth
+  const tick=(now)=>{
+    // rAF hands the FRAME's start time, which can precede t0 — clamp so the
+    // ring never renders smaller than its host dot
+    const p=Math.max(0,(now-t0)/PULSE.life);
+    if(p>=1||!c.isConnected){c.remove();return;}
+    if(!still)c.setAttribute("r",(r0*(1+PULSE.grow*p)).toFixed(2));
+    c.setAttribute("stroke-opacity",(PULSE.opacity*(1-p)).toFixed(3));
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 /* ============ metronome — shared component v1 ============
@@ -1516,6 +1608,8 @@ function pumpBeats(){
       // is play-along — changes animate, the player supplies the triads
       if(attack){
         if(!st.metroOnly) strum(idx,ev.time,pattern()[etude.patPos]);
+        // the pulse is the transport's, not the audio's: it fires in play-along too
+        schedulePulses(idx,ev.time,pattern()[etude.patPos]);
         setTimeout(()=>{st.cur=idx;renderActive();},Math.max(0,(ev.time-ac.currentTime)*1000));
       }
       etude.beatInChord++;
@@ -1554,7 +1648,7 @@ function metroToggle(){
 function etudeToggle(){
   const ac=ctx(); if(!ac)return;
   if(etude.on){
-    etude.on=false;
+    etude.on=false; clearPulses();
     if(metroOwner==="transport"){ METRO.stop(); metroOwner=null; idlePump(); resetLamp(); }
     syncPlayUI(); return;                   // a self-started metronome keeps running
   }
@@ -1568,7 +1662,7 @@ function etudeToggle(){
   }
   etude.on=true; syncPlayUI();
 }
-function stopAll(){ etude.on=false; METRO.stop(); metroOwner=null; idlePump(); resetLamp(); syncPlayUI(); }
+function stopAll(){ etude.on=false; clearPulses(); METRO.stop(); metroOwner=null; idlePump(); resetLamp(); syncPlayUI(); }
 function syncPlayUI(){
   const p=document.getElementById("playBtn"); if(p)p.textContent=etude.on?"Stop":"Play";
   const m=document.getElementById("metroBtn"); if(m)m.textContent=METRO.running?"Stop":"Start";
@@ -1890,6 +1984,7 @@ function renderFret(){
   }
   el("g",{id:"ctxLayer"},svg);
   el("g",{id:"activeLayer"},svg);
+  el("g",{id:"pulseLayer"},svg);   // pulses outlive chord changes; renderActive never clears this
   renderActive();
 }
 function renderActive(){
@@ -1955,10 +2050,22 @@ function renderReadout(){
   }
   document.getElementById("readout").innerHTML=html;
 }
+/* keyboard geometry — ONE derivation for the active markers and the pulse ring;
+   two copies of this arithmetic would be the drift bug the item warns about */
+const KBD={LO:36,HI:84,WK:22,WH:92,BH:56,BW:13};
+const kbdIsWhite=m=>[0,2,4,5,7,9,11].includes(m%12);
+function kbdGeom(midi){
+  if(midi<KBD.LO||midi>KBD.HI)return null;
+  let wi=0; for(let m=KBD.LO;m<midi;m++) if(kbdIsWhite(m))wi++;
+  return kbdIsWhite(midi)
+    ?{x:wi*KBD.WK+KBD.WK/2,y:KBD.WH-20,r:7.5,black:false}
+    :{x:wi*KBD.WK,y:KBD.BH-12,r:6,black:true};
+}
 function renderKbd(){
-  const svg=document.getElementById("kbd"); svg.innerHTML="";
-  const LO=36,HI=84,WK=22,WH=92,BH=56,BW=13;
-  const isW=m=>[0,2,4,5,7,9,11].includes(m%12);
+  const svg=document.getElementById("kbd");
+  const keepPulse=svg.querySelector("#kbdPulse");  // a chord change must not kill a mid-flight pulse
+  svg.innerHTML="";
+  const {LO,HI,WK,WH,BH,BW}=KBD, isW=kbdIsWhite;
   const whites=[]; for(let m=LO;m<=HI;m++) if(isW(m))whites.push(m);
   const xOf={}; whites.forEach((m,i)=>xOf[m]=i*WK);
   const act=new Map();
@@ -1978,9 +2085,9 @@ function renderKbd(){
     r.addEventListener("click",()=>{playNote(m);echoAdd(m);});
     if(m%12===0){const t=el("text",{x:xOf[m]+WK/2,y:WH-4,"text-anchor":"middle",
       "font-size":"7.5",fill:"#B9B9BF","pointer-events":"none"},svg);t.textContent="C"+(Math.floor(m/12)-1);}
-    if(act.has(m)){const a=act.get(m);
-      el("circle",{cx:xOf[m]+WK/2,cy:WH-20,r:7.5,fill:FAM_COLOR[a.fam],"pointer-events":"none"},svg);
-      const t=el("text",{x:xOf[m]+WK/2,y:WH-17,"text-anchor":"middle","font-size":"7",
+    if(act.has(m)){const a=act.get(m), g=kbdGeom(m);
+      el("circle",{cx:g.x,cy:g.y,r:g.r,fill:FAM_COLOR[a.fam],"pointer-events":"none"},svg);
+      const t=el("text",{x:g.x,y:g.y+3,"text-anchor":"middle","font-size":"7",
         fill:FAM_TEXT[a.fam],class:"dot-label"},svg);t.textContent=a.lab;}
   }
   for(const m of whites){
@@ -1989,13 +2096,14 @@ function renderKbd(){
       const bx=xOf[m]+WK-BW/2;
       const r=el("rect",{x:bx,y:0,width:BW,height:BH,fill:"#212126",cursor:"pointer"},svg);
       r.addEventListener("click",()=>{playNote(nb);echoAdd(nb);});
-      if(act.has(nb)){const a=act.get(nb);
-        el("circle",{cx:bx+BW/2,cy:BH-12,r:6,fill:FAM_COLOR[a.fam],stroke:"#fff",
+      if(act.has(nb)){const a=act.get(nb), g=kbdGeom(nb);
+        el("circle",{cx:g.x,cy:g.y,r:g.r,fill:FAM_COLOR[a.fam],stroke:"#fff",
           "stroke-width":1.2,"pointer-events":"none"},svg);
-        const t=el("text",{x:bx+BW/2,y:BH-9.2,"text-anchor":"middle","font-size":"6",
+        const t=el("text",{x:g.x,y:g.y+2.8,"text-anchor":"middle","font-size":"6",
           fill:FAM_TEXT[a.fam],class:"dot-label"},svg);t.textContent=a.lab;}
     }
   }
+  if(keepPulse)svg.appendChild(keepPulse); else el("g",{id:"kbdPulse"},svg);
 }
 function renderChips(){
   const div=document.getElementById("chips"); div.innerHTML="";
@@ -2525,6 +2633,19 @@ function initControls(){
     if(BREAK[1].err===null)console.error("TEST: bad token must carry its message");
     if(seq[0].bassPc!==2)console.error("TEST: Dm7 break-down bass is D");
     st.harmonyMode=save.m; st.breakProg=save.p; BREAK=[];
+  })();
+  // v0.6.5 arpOnsets: pure onset seed — count, order, roles, span
+  (function(){
+    const v={frets:[5,5,3]}, s=[3,2,1];
+    const arp=arpOnsets(v,s,[2,3,3,1],null,2,72);
+    eq(arp.length,4,"arp onsets: one per pattern note");
+    eq(arp.every(e=>e.role==="chord"),true,"no bass, no bass onset");
+    eq(arp[1].offset>arp[0].offset,true,"onsets increase");
+    const blk=arpOnsets(v,s,null,40,2,72);
+    eq(blk.length,4,"block: bass + three notes");
+    eq(blk[0].role,"bass","bass first, offset 0");
+    eq(blk[0].offset,0,"bass at the attack");
+    eq(blk.filter(e=>e.role==="chord").length,3,"three chord onsets");
   })();
 })();
 
