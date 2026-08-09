@@ -30,6 +30,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Engine tests
+        # node:test, zero dependencies — includes the characterization suite that
+        # pins the shipped Triadetudes engine. A red test blocks deploy.
+        run: node --test engine/tests/*.test.mjs
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"

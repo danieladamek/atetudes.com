@@ -5,6 +5,23 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-08 — Engine test infrastructure: `engine/`, CI-enforced (Cowork)
+
+- **New tracked directory `engine/`** — the shared JS music engine, site-side counterpart
+  of `generators/`: the chord-symbol parser (`chord.mjs`), the `.atchart.md` v1
+  parser/serializer (`atchart.mjs`, spec drafted at `docs/atchart-format.md`, pending
+  ratification), and a test suite (76 tests) on Node's built-in runner — zero
+  dependencies, per the no-frameworks guardrail.
+- **`pages.yaml` gains an "Engine tests" step before the Hugo build** — the first CI
+  enforcement of the assertion doctrine on the site side. Includes a characterization
+  suite that loads `static/studies/triadetudes/study.html` verbatim and pins its engine
+  (self-tests promoted from console.error, golden-master voicings, whole-config-space
+  invariants, parser cross-checks). The study file itself is untouched; a future
+  extraction must reproduce these values or CI blocks the deploy.
+- Why now: Phase A of the family plan (`notes/specs/at-etudes-app-family.md` §5) — the
+  parser serves both Triadetudes v0.6 break-down mode and Substitute Teacher ST-0, and
+  the pin protects the Phase B hub extraction.
+
 ## 2026-08-08 — NEW STUDY: Triadetudes v1.0 (Daniel's direction, built in Cowork)
 
 - **`/studies/triadetudes/`** — the triad étude designer, the site's first **site-side
