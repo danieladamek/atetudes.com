@@ -118,6 +118,23 @@ test("C°7: every candidate is dim, roots stack in minor 3rds, symmetric flag se
   assert.equal(res.candidates[2].label, "A°", "Bbb° respelled to A° — no double flats shipped");
 });
 
+test("mMaj7: the augmented upper structure offers all three rotations, b3 first (v0.6.8)", () => {
+  // one shape, three honest names — the aug subset's symmetry made visible
+  const { candidates } = upperStructures(parseChord("DmMaj7"));
+  assert.deepEqual(candidates.map((c) => c.label), ["F+", "A+", "C#+"]);
+  const rels = candidates.map((c) => (c.root.pc - pcOf("D") + 12) % 12);
+  assert.deepEqual(rels, [3, 7, 11], "rooted on b3, 5, 7 — lowest degree first");
+  for (const c of candidates)
+    assert.deepEqual([...c.pcs].sort((a, b) => a - b),
+      [...candidates[0].pcs].sort((a, b) => a - b), "all three are the same pitch-class set");
+  assert.deepEqual(candidates[0].degrees, ["b3", "5", "7"]);
+  assert.deepEqual(candidates[2].degrees, ["7", "b3", "5"], "each rotation reads from its own root");
+  // and the aug identity chord still leads with its own root among its rotations
+  const aug = upperStructures(parseChord("C+")).candidates;
+  assert.equal(aug[0].label, "C+");
+  assert.equal(aug.length, 3, "identity plus the two other rotations");
+});
+
 test("only °7 is symmetric", () => {
   for (const sym of ["G7", "G9", "Cmaj7", "Cm7b5", "C"])
     assert.equal(upperStructures(parseChord(sym)).symmetric, false, sym);

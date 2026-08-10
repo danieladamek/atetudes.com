@@ -63,7 +63,10 @@
     line-height:1.15;padding:3px 11px;min-width:44px}
   .chips button.bd .big{font-size:14px;font-weight:bold}
   .chips button.bd .eq{font-size:10px;color:var(--gray)}
-  .chips button.bd.cur .eq{color:var(--red)}
+  /* cur and err must never share a costume (v0.6.8): current = ink weight and
+     a solid heavier border; error keeps red — the honest use of an alarm color */
+  .chips button.bd.cur{border-color:var(--ink);color:var(--ink);border-width:2.2px;font-weight:bold}
+  .chips button.bd.cur .eq{color:var(--ink)}
   .chips button.bd.err{border-color:var(--red);border-style:dashed;color:var(--red)}
   .chips button.bd.err .eq{color:var(--red)}
   .chips button.bd.drag{opacity:0.35}
@@ -133,7 +136,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.7</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.8</div>
 </header>
 
 <div class="cards">
@@ -326,7 +329,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.7 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.8 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -983,13 +986,18 @@ function spellRoot(parsed, rootPc, quality, rootLabel) {
   let acc = mod12(rootPc - LETTER_PC[letter]);
   if (acc > 6) acc -= 12;
   if (Math.abs(acc) > 1) return PLAIN_NAMES[rootPc];
-  // the spelling must also serve the triad's own members without doubles
-  for (let k = 1; k < 3; k++) {
-    const mLetter = LETTERS[(letterIdx + 2 * k) % 7];
-    let mAcc = mod12(mod12(rootPc + TRIAD_SHAPES[quality][k]) - LETTER_PC[mLetter]);
-    if (mAcc > 6) mAcc -= 12;
-    if (Math.abs(mAcc) > 1) return PLAIN_NAMES[rootPc];
-  }
+  // the spelling must also serve the triad's own members without doubles —
+  // except for aug: a symmetric triad's members take their names from the
+  // chord's own degrees, not from a stacked-third respelling (C#+ inside
+  // DmMaj7 is C#-F-A on the chart, never C#-E#-G##), so its root keeps the
+  // degree spelling the chord gave it
+  if (quality !== "aug")
+    for (let k = 1; k < 3; k++) {
+      const mLetter = LETTERS[(letterIdx + 2 * k) % 7];
+      let mAcc = mod12(mod12(rootPc + TRIAD_SHAPES[quality][k]) - LETTER_PC[mLetter]);
+      if (mAcc > 6) mAcc -= 12;
+      if (Math.abs(mAcc) > 1) return PLAIN_NAMES[rootPc];
+    }
   return letter + (acc === 1 ? "#" : acc === -1 ? "b" : "");
 }
 
@@ -1127,13 +1135,13 @@ function upperStructures(parsed) {
         const trio = [pcs[i], pcs[j], pcs[k]];
         const ids = classifyTriad(trio);
         if (!ids.length) continue;
-        // canonical reading: the root nearest above the chord root, never the
-        // chord root itself (that would be the chord's own triad, not an upper one)
-        const upper = ids
-          .filter((id) => mod12(id.rootPc - rootPc) !== 0)
-          .sort((a, b) => mod12(a.rootPc - rootPc) - mod12(b.rootPc - rootPc))[0];
-        if (!upper) continue;
-        register(upper.rootPc, upper.quality, "chord-tone-triad", null, null);
+        // register EVERY reading rooted off the chord root. maj/min/dim have
+        // exactly one; an augmented subset is symmetric and carries three
+        // honest names for one shape (DmMaj7 → F+ = A+ = C#+) — all offered,
+        // ranked lowest chord-degree first by the sort below
+        for (const id of ids)
+          if (mod12(id.rootPc - rootPc) !== 0)
+            register(id.rootPc, id.quality, "chord-tone-triad", null, null);
       }
 
   // rules 2 & 3 — generated triads with declared added tensions
@@ -2224,11 +2232,14 @@ function renderReadout(){
   const invName=["root pos.","1st inv.","2nd inv."][VOIC[st.cur]?VOIC[st.cur].inv:0]||"";
   const bass=bassPcFor(ch);
   let html=`<b>${ch.label}</b> <span class="sub">${ch.roman?ch.roman+" · ":""}${invName} · ${st.cur+1} of ${SEQ.length} · ${st.key} ${SCALES[st.scaleType].label}</span>`;
+  // every prefix of the sentence is true: "F+" · "F+ over D" · "F+ over D =
+  // DmMaj7" — the bass sits between the triad and the equality it makes hold.
+  // No inline color: the degree palette is reserved; emphasis is weight.
   if(ch.srcSymbol&&ch.srcSymbol!==ch.label)
-    html=`<b>${ch.label}</b> <span class="sub">= </span><b style="color:var(--red)">${ch.srcSymbol}</b> <span class="sub">over ${pcName(bass,st.key)} · ${invName} · ${st.cur+1} of ${SEQ.length} · ${st.key} ${SCALES[st.scaleType].label}</span>`;
+    html=`<b>${ch.label}</b> <span class="sub">over ${pcName(bass,st.key)} = </span><b>${ch.srcSymbol}</b> <span class="sub">· ${invName} · ${st.cur+1} of ${SEQ.length} · ${st.key} ${SCALES[st.scaleType].label}</span>`;
   else if(bass!==null){
     if(bass===ch.rootPc) html+=` <span class="sub">— root ${pcName(bass,st.key)} in the bass</span>`;
-    else html+=` <span class="sub">— over ${pcName(bass,st.key)} → </span><b style="color:var(--red)">${tetradName(bass,ch)}</b>`;
+    else html+=` <span class="sub">— over ${pcName(bass,st.key)} → </span><b>${tetradName(bass,ch)}</b>`;
   }
   document.getElementById("readout").innerHTML=html;
 }
@@ -2315,8 +2326,17 @@ function renderChips(){
     if(b.err){
       big.textContent=b.sym; eq.textContent="⚠ unreadable"; btn.title=b.err;
     }else{
-      big.textContent=b.choice.label+((b.result.candidates.length>1)?" ▾":"");
-      eq.textContent="= "+b.shownSym+(b.roman?" · "+b.roman:"");
+      // slash notation so no partial read is false: "F+/D" is true on its own,
+      // and it is the app's own input syntax (F/G already parses). The small
+      // line is suppressed when it would only repeat the big one.
+      const slash=b.result.bass.pc!==b.choice.root.pc?"/"+b.result.bass.name:"";
+      const bigTxt=b.choice.label+slash;
+      big.textContent=bigTxt+((b.result.candidates.length>1)?" ▾":"");
+      const parts=[];
+      if(b.shownSym!==bigTxt)parts.push("= "+b.shownSym);
+      if(b.roman)parts.push(b.roman);
+      eq.textContent=parts.join(" · ");
+      if(!parts.length)eq.style.display="none";
       btn.title=b.choice.degrees.join("-")+" of "+b.shownSym;
     }
     btn.appendChild(big); btn.appendChild(eq);
@@ -2832,6 +2852,9 @@ function initControls(){
     if(seq[0].bassPc!==2)console.error("TEST: Dm7 break-down bass is D");
     st.harmonyMode=save.m; st.breakProg=save.p; BREAK=[];
   })();
+  // v0.6.8: the aug upper structure is symmetric — three names, one shape
+  eq(UPPER.upperStructures(CHORD.parseChord("DmMaj7")).candidates.map(c=>c.label).join(","),
+    "F+,A+,C#+","mMaj7 aug rotations, b3 first");
   // v0.6.6: the design survives a context change (the item's worked case, live)
   eq(STRSETS.translatePattern([3,4,2,2],[2,3,4],[3,4,5]).join("-"),"4-5-3-3",
     "3-4-2-2 on 2-3-4 = mid,low,high,high = 4-5-3-3 on 3-4-5");

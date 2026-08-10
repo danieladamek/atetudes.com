@@ -5,6 +5,43 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.8: the readout says only true things (backlog item, Daniel's dispatch)
+
+- **No partial read is false anymore.** The break-down readout reorders to
+  **`F+ over D = DmMaj7 · 2nd inv. · …`** — "F+" true, "F+ over D" true, the whole line
+  true; the bass sits between the triad and the equality it makes hold. Chips take
+  **slash notation**: big `F+/D`, small `= DmMaj7` — and `F+/D` is the app's own input
+  syntax, so the chip reads back in the language the user types. The small line is
+  suppressed when it would only repeat the big one (`F/G` chips no longer echo
+  themselves). The deliberate register difference stands for Daniel's inspection: the
+  readout says "over" (prose has room), the chip says "/" (it doesn't).
+- **The root's red comes off the source symbol** in both readout branches (the build-up
+  arrow variant included) — a test asserts the readout emits no inline color at all.
+  And the concrete bug on the element Daniel was looking at is fixed: **current and
+  unreadable chips no longer share a costume** — current is ink weight with a solid
+  heavier border, error keeps red dashed (the honest use of an alarm color); a computed-
+  style check pins that they differ by border style, not color alone.
+- **The symmetry is now visible**: `classifyTriad` returns three readings for an
+  augmented subset, and the engine now registers each — `DmMaj7` grows its ▾ offering
+  **F+ / A+ / C#+** (b3 first, consistent with the rootless-seventh stack), one guitar
+  shape with three names, moved in major thirds. Two engine changes in
+  `engine/upper-structure.mjs` (register every off-root aug reading; aug roots keep
+  their degree spelling — C#+ no longer respelled Db+ by the stacked-third double-
+  accidental check, since a symmetric triad's members take the chord's own degree
+  names). Module re-inlined, anti-drift pin re-verified.
+- **Recorded, not fixed here, per the item's scope**: the wider `--red` leak into
+  interface furniture (Play button, danger/delete, build-up selection states) — and one
+  more sighting for that list: the score's small triad reading under each break-down
+  symbol is also red. Re-deciding the accent color is its own item with Spec
+  consequences.
+- Verified per doctrine: engine suite 131/131 (new aug-rotation test; characterization +
+  anti-drift pins green; degree colors on the boards spot-asserted unmoved); 28
+  Playwright checks from `file://` offline, zero console errors — the DmMaj7 strings
+  pinned verbatim, a nine-symbol corpus asserting no `triad = symbol` substring without
+  the bass between, no inline color in the readout, cur/err computed-style separation,
+  the ▾ rotation list; rendered and inspected at 1280/390 px in both modes.
+  Update Log 260809.5.
+
 ## 2026-08-09 — Triadetudes v0.6.7: the chip editor comes to the changes (backlog item, Daniel's dispatch)
 
 - **Placement fix, per the item: nothing new built.** In break-down mode the chip row and

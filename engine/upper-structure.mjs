@@ -121,13 +121,18 @@ function spellRoot(parsed, rootPc, quality, rootLabel) {
   let acc = mod12(rootPc - LETTER_PC[letter]);
   if (acc > 6) acc -= 12;
   if (Math.abs(acc) > 1) return PLAIN_NAMES[rootPc];
-  // the spelling must also serve the triad's own members without doubles
-  for (let k = 1; k < 3; k++) {
-    const mLetter = LETTERS[(letterIdx + 2 * k) % 7];
-    let mAcc = mod12(mod12(rootPc + TRIAD_SHAPES[quality][k]) - LETTER_PC[mLetter]);
-    if (mAcc > 6) mAcc -= 12;
-    if (Math.abs(mAcc) > 1) return PLAIN_NAMES[rootPc];
-  }
+  // the spelling must also serve the triad's own members without doubles —
+  // except for aug: a symmetric triad's members take their names from the
+  // chord's own degrees, not from a stacked-third respelling (C#+ inside
+  // DmMaj7 is C#-F-A on the chart, never C#-E#-G##), so its root keeps the
+  // degree spelling the chord gave it
+  if (quality !== "aug")
+    for (let k = 1; k < 3; k++) {
+      const mLetter = LETTERS[(letterIdx + 2 * k) % 7];
+      let mAcc = mod12(mod12(rootPc + TRIAD_SHAPES[quality][k]) - LETTER_PC[mLetter]);
+      if (mAcc > 6) mAcc -= 12;
+      if (Math.abs(mAcc) > 1) return PLAIN_NAMES[rootPc];
+    }
   return letter + (acc === 1 ? "#" : acc === -1 ? "b" : "");
 }
 
@@ -265,13 +270,13 @@ export function upperStructures(parsed) {
         const trio = [pcs[i], pcs[j], pcs[k]];
         const ids = classifyTriad(trio);
         if (!ids.length) continue;
-        // canonical reading: the root nearest above the chord root, never the
-        // chord root itself (that would be the chord's own triad, not an upper one)
-        const upper = ids
-          .filter((id) => mod12(id.rootPc - rootPc) !== 0)
-          .sort((a, b) => mod12(a.rootPc - rootPc) - mod12(b.rootPc - rootPc))[0];
-        if (!upper) continue;
-        register(upper.rootPc, upper.quality, "chord-tone-triad", null, null);
+        // register EVERY reading rooted off the chord root. maj/min/dim have
+        // exactly one; an augmented subset is symmetric and carries three
+        // honest names for one shape (DmMaj7 → F+ = A+ = C#+) — all offered,
+        // ranked lowest chord-degree first by the sort below
+        for (const id of ids)
+          if (mod12(id.rootPc - rootPc) !== 0)
+            register(id.rootPc, id.quality, "chord-tone-triad", null, null);
       }
 
   // rules 2 & 3 — generated triads with declared added tensions
