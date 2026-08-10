@@ -5,6 +5,45 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes v0.7.1: the two costs, and Free gets a logic (v0.7 arc phase 1, Daniel's dispatch)
+
+- **Free's opening chord is no longer decided by array emission order.** Per Daniel's
+  call in the item: Free keeps the seed anchor and drops only the pivot term, so the
+  étude begins in the isolation zone and is then *seen to leave it*. In Daniel's
+  configuration Free's first chord is identical to Grip's, for the stated reason (the
+  anchor), reached through the named tie rule.
+- **Tie rules are named per mode, and the pin was the arbiter.** Free ties resolve to
+  the lower neck position (smaller mean fret). Grip's ties — which turn out to include
+  the *default étude's own opening chord* — are pinned to the historical resolution:
+  earliest inversion (root position first), then the lower octave, which is the
+  candidate generation order, now stated and asserted rather than accidental. The
+  first cut applied the lower-position rule to both modes and the golden master
+  moved — per the dispatch the pin is the authority, so the rule was scoped to Free
+  and Grip's rule was named as what it always was. The default config's genuine tie
+  ([5,5,3] vs [0,1,0], both anchor 1.0) is now a running assertion in both modes.
+- **One cost became two named quantities** (spec §6.1.4): `voiceLeadCost` in PITCH
+  (midi, voices matched by sorted order) and `placementCost` in FRETS (pivot window,
+  seed anchor). Behaviour-preserving today — the arithmetic-identity test proves
+  pitch-led equals fret-led while the set is fixed, and every characterization pin
+  passed untouched — and it is the precondition for six strings, where one pitch has
+  three fingerings.
+- **The ladder is named and bounded.** Free walks the neck (roadmap §1.1's Ladder,
+  previously arriving by accident); within three frets of the neck's end it wraps —
+  re-seeking in the lowest position against the previous voicing transposed down an
+  octave, the box jumping visibly to the nut. The item's verified two-cycle walk
+  passes verbatim: 5 6 7 9 10 10 12 → 1, then 1 2 4 5 5 7 8 9, one wrap, nothing past
+  the drawn board. Grip provably never wraps.
+- **The readout says what each mode is doing and what it costs**, derived per render:
+  Grip "30 semitones of movement across the cycle (Free would take 24)"; Free "24
+  against 30 for Grip — wraps to the nut at bar 8"; Line gets its sentence too.
+  Movement totals are derived musical data, never stored; `rawCfg()` unchanged, no
+  new keys, round-trip no-op, restore corpus (box→grip, linear→free, line) re-proved.
+- Verified per doctrine: engine suite 170/170 (new costs suite: arithmetic identity,
+  seed rule, both tie rules firing on the real default-config tie, the verbatim
+  ladder walk, movement totals 30/24, grip-never-wraps); 15 Playwright checks from
+  `file://` offline, zero console/page errors; rendered and inspected at 1280/390 px
+  at fast and slow tempo. Update Log 260810.6.
+
 ## 2026-08-10 — Triadetudes v0.7.0: a voicing becomes a note list, and Line goes live (backlog item, Daniel's dispatch)
 
 - **The first slice of the note-event refactor**: a voicing is no longer three frets

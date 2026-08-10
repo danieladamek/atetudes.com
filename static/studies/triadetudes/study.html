@@ -138,7 +138,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.0</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.1</div>
 </header>
 
 <div class="cards">
@@ -259,6 +259,7 @@
           <button data-pb="both">Both</button>
         </div></div>
     </div>
+    <div class="hint" id="placeHint"></div>
     <label class="chk"><input type="checkbox" id="rootsChk"> Show root notes on lower strings</label>
     <details class="hint"><summary style="cursor:pointer">? pivots, placement, and the badges</summary>
     Pivots: click any scale note on a string of the set — that note and the next two scale
@@ -368,7 +369,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.7.0 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.7.1 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1490,29 +1491,83 @@ function lineVoicing(chord){
   const inv=t.indexOf(notes[0].midi%12);
   return {notes,inv:inv<0?0:inv};
 }
+/* ---- the two costs (v0.7 phase 1, spec §6.1.4) ----
+   VOICE LEADING is measured in PITCH: midi, voices matched by sorted order
+   (the note list is ascending by construction). PLACEMENT is measured in
+   FRETS: distance from the pivot window, anchor to its centre on the seed
+   chord. They were summed as one number while the set never changed — the
+   split changes nothing today (fret diff on a fixed string IS the midi diff)
+   and is the precondition for six strings, where one pitch has three
+   fingerings. */
+function voiceLeadCost(v,prev){
+  if(!prev)return 0;
+  let d=0;
+  for(let i=0;i<v.notes.length;i++)d+=Math.abs(v.notes[i].midi-prev.notes[i].midi);
+  return d;
+}
+function placementCost(v,prev,pi,pmin,pmax,pmean,pivotW,anchorW){
+  const pf=v.notes[pi].fret;
+  const pivotCost=st.pivotFrets.includes(pf)?0:
+    (pf>=pmin&&pf<=pmax?1.5:Math.min(Math.abs(pf-pmin),Math.abs(pf-pmax)));
+  let c=pivotW*pivotCost;
+  if(!prev)c+=Math.abs(pf-pmean)*anchorW;
+  return c;
+}
+function meanFret(v){ return v.notes.reduce((a,n)=>a+n.fret,0)/v.notes.length; }
+/* total voice-leading movement across a voiced sequence, in semitones; a
+   wrapped transition is measured against the previous voicing an octave down */
+function movementTotal(voic){
+  let t=0;
+  for(let i=1;i<voic.length;i++){
+    if(!voic[i]||!voic[i-1])continue;
+    let p=voic[i-1];
+    if(voic[i].wrapped)p={notes:p.notes.map(n=>({...n,midi:n.midi-12}))};
+    t+=voiceLeadCost(voic[i],p);
+  }
+  return t;
+}
 function chooseVoicings(seq){
   // placement: GRIP weights the isolation zone — the ratified first-class
-  // voicing constraint (roadmap §4) — FREE releases it and lets pure
-  // voice-leading choose; both are pinned byte-identical to the pre-note-list
-  // behaviour. LINE places tones freely along the set by the §6.1.2 rule.
+  // voicing constraint (roadmap §4). FREE keeps the seed anchor and drops
+  // only the pivot term (Daniel, 2026-08-10): the étude begins in the
+  // isolation zone and is then seen to leave it. LINE places tones freely
+  // along the set by the §6.1.2 rule. Tie rules, NAMED per mode: Free ties
+  // resolve to the LOWER NECK POSITION (smaller mean fret); Grip ties keep
+  // the EARLIEST INVERSION, then the lower octave — which is the candidate
+  // generation order, stated and asserted rather than accidental, because it
+  // is the pinned behaviour of every shipped étude.
   if(st.placement==="line")return seq.map(ch=>lineVoicing(ch));
   const s=st.setLowHigh, pi=s.indexOf(st.pivotString);
   const pmin=Math.min(...st.pivotFrets), pmax=Math.max(...st.pivotFrets);
   const pmean=(pmin+pmax)/2;
   const pivotW=st.placement==="free"?0:4;
-  const anchorW=st.placement==="free"?0:0.5;
+  const anchorW=0.5;
   let prev=null; const out=[];
   for(const ch of seq){
     const cands=voicingsFor(ch,s);
     let best=null,bc=1e9;
     for(const v of cands){
-      const pf=v.notes[pi].fret;
-      const pivotCost = st.pivotFrets.includes(pf)?0:
-        (pf>=pmin&&pf<=pmax?1.5:Math.min(Math.abs(pf-pmin),Math.abs(pf-pmax)));
-      let cost=pivotW*pivotCost;
-      if(prev){ for(let i=0;i<3;i++) cost+=Math.abs(v.notes[i].fret-prev.notes[i].fret); }
-      else cost+=Math.abs(v.notes[pi].fret-pmean)*anchorW;
-      if(cost<bc){bc=cost;best=v;}
+      const cost=placementCost(v,prev,pi,pmin,pmax,pmean,pivotW,anchorW)
+                +voiceLeadCost(v,prev);
+      const tied=cost===bc&&best!==null;
+      if(cost<bc||(tied&&st.placement==="free"&&meanFret(v)<meanFret(best))){
+        bc=cost;best=v;
+      } // grip ties: first candidate stands — inversion order, root position first
+    }
+    if(st.placement==="free"&&prev&&best&&
+       Math.max(...best.notes.map(n=>n.fret))>NFRETS-3){
+      // the LADDER WRAP (named rule, item §2): Free walks the neck — roadmap
+      // §1.1's Ladder, now designed rather than accidental. Within three frets
+      // of the neck's end the climb restarts: re-seek in the lowest position,
+      // minimising pitch distance from the previous voicing transposed down an
+      // octave. The box jumps to the nut — a visible consequence, not a clamp.
+      const ghost={notes:prev.notes.map(n=>({...n,midi:n.midi-12}))};
+      let wb=null,wc=1e9;
+      for(const v of cands){
+        const c=voiceLeadCost(v,ghost);
+        if(c<wc||(c===wc&&wb&&meanFret(v)<meanFret(wb))){wc=c;wb=v;}
+      }
+      best={...wb,wrapped:true};
     }
     out.push(best); prev=best;
   }
@@ -2884,7 +2939,39 @@ function cfgObj(){
         subdivision:{1:"beats",2:"8ths",3:"triplets",4:"16ths"}[st.clickSub],countIn:st.countIn}}};
 }
 function renderCfg(){ document.getElementById("cfgPre").textContent=JSON.stringify(cfgObj(),null,1); renderSummary(); }
-function renderAll(){ renderFret(); renderScore(); renderStaff(); syncArpIn(); }
+/* ---- the placement readout: what each mode is doing and what it costs ----
+   (v0.7 phase 1, per v0.6.8's doctrine). Movement totals are DERIVED per
+   render — total voice-leading distance in semitones across the cycle, a
+   wrapped transition measured against the previous voicing an octave down. */
+function movementTotals(){
+  const save=st.placement,out={};
+  for(const p of ["grip","free"]){
+    st.placement=p;
+    out[p]=movementTotal(chooseVoicings(SEQ));
+  }
+  st.placement=save;
+  return out;
+}
+function placeHintText(){
+  if(!SEQ.length)return"";
+  const t=movementTotals();
+  if(st.placement==="grip")
+    return "Grip: one note per string, anchored to your pivots — "+t.grip+
+      " semitones of movement across the cycle (Free would take "+t.free+").";
+  if(st.placement==="free"){
+    const wrapAt=VOIC.findIndex(v=>v&&v.wrapped);
+    return "Free: starts at your pivots, then follows the smoothest voice leading — "+
+      t.free+" semitones across the cycle, against "+t.grip+" for Grip."+
+      (wrapAt>=0?" Wraps to the nut at bar "+(wrapAt+1)+".":"");
+  }
+  return "Line: window tones taken in the window, the rest at minimum span — "+
+    movementTotal(VOIC)+" semitones of movement, playable in sequence.";
+}
+function renderPlaceHint(){
+  const d=document.getElementById("placeHint");
+  if(d)d.textContent=placeHintText();
+}
+function renderAll(){ renderFret(); renderScore(); renderStaff(); syncArpIn(); renderPlaceHint(); }
 
 /* ============ practice notebook ============ */
 const LOG_KEY="triadetudes.v1.log";
