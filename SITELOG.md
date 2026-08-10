@@ -5,6 +5,22 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.12: BPM and click sound join the Transport (Daniel's review additions to the 7/4 item)
+
+- **BPM slider** between the transport buttons and the Time sig/Bar split row — a mirror
+  of the Metronome card's, per the item's one-state-two-views discipline: bounds cloned
+  at init (no drift), both sliders drive one `changeBpm()`, `syncBpmUI()` resyncs both
+  on every move and restore. **No tap tempo in the mirror**, per Daniel. Mid-run tempo
+  bending unchanged (the core's grid-bend rule, already pinned).
+- **Sound: on/off toggle** in the checkbox row — same discipline: both buttons drive one
+  `toggleClick()`, `syncClickUI()` dresses both, restores sync both. Play-along setup
+  (sound off · mute chords) now lives entirely in the Transport.
+- Range sliders on light cards take the neutral ink accent (Spec v1.2 rule 8 — the
+  default browser blue sat too close to degree-3's family); the dark Metronome card
+  keeps its light accent.
+- Verified: both mirrors tested in both directions plus restore; suite 153/153; zero
+  console errors; card inspected at 1280/390 px. Update Log 260809.10.
+
 ## 2026-08-09 — Triadetudes v0.6.11 + Metronome v1.0.1: 7/4, and a time signature in the Transport (backlog item, Daniel's dispatch)
 
 - **7/4 is a family change, shipped as one**: the meter joins the shared metronome block
