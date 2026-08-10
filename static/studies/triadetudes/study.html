@@ -138,7 +138,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.3</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.4</div>
 </header>
 
 <div class="cards">
@@ -333,8 +333,9 @@
 </div>
 
 <details class="board" style="padding:10px 14px">
-  <summary style="cursor:pointer;font-size:12.5px;color:var(--gray)">Echo staff — scratch pad for notes you click (keyboard or fretboard)</summary>
-  <div class="bh" style="margin-top:6px"><span></span><button id="echoClear">clear</button></div>
+  <summary style="cursor:pointer;font-size:12.5px;color:var(--gray)">Sketch a figure — click notes, then load them as a note sequence</summary>
+  <div class="bh" style="margin-top:6px"><span id="echoMsg" style="text-transform:none;letter-spacing:0;font-weight:normal;color:var(--gray)"></span>
+    <span style="white-space:nowrap"><button id="echoEmit">use as note sequence</button> <button id="echoClear">clear</button></span></div>
   <svg id="staff" viewBox="0 0 1160 190" aria-label="echo staff"></svg>
 </details>
 
@@ -374,7 +375,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.7.3 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.7.4 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -2453,6 +2454,31 @@ function mergeLog(existing,incoming){
    the historical name, kept as the alias the harness and self-tests use. */
 const arpOnsets=NOTE_EVENTS.noteEvents;
 
+/* ---- the sketchpad's classifier (v0.7.4) ----
+   A clicked note is a TARGET or an APPROACH, derived by named rule from the
+   then-current chord — never asked (golden rule 1). The rule (the item's "real
+   design problem"): pc ∈ the chord's own triad → target, carrying its triad
+   degree; anything else → approach, attaching to the next target in the
+   buffer. Manual override exists (tap in the staff) but the derivation is the
+   default. Emission drops octave and placement — charter §7: the click is the
+   user's data; everything derived from it passes the suite. */
+function classifyClick(midi,ch){
+  const pc=((midi%12)+12)%12;
+  if(!ch)return {role:"approach",degText:null};
+  const pcs=triadPcs(ch.rootPc,ch.q);
+  const ix=pcs.indexOf(pc);
+  return ix>=0?{role:"target",degText:String([1,3,5][ix])}
+              :{role:"approach",degText:null};
+}
+function degTextFor(midi,rootPc){
+  // the promoted-target rule: a non-chord tone raised to target by hand is
+  // named as a degree of the CHORD root (tones-mode targets resolve against
+  // the chord), flat spellings — the same table the emitter's absolute
+  // key-degree form uses, aimed at the other root
+  const rel=((((midi%12)+12)%12)-rootPc+12)%12;
+  return {0:"1",1:"b2",2:"2",3:"b3",4:"3",5:"4",6:"b5",7:"5",8:"b6",9:"6",10:"b7",11:"7"}[rel];
+}
+
 /* ============ audio ============ */
 let AC=null;
 function ctx(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
@@ -2820,10 +2846,18 @@ function echoAdd(note){
   const q=ch?ch.q:"maj";
   const {lab,fam}=ivlOf(((midi%12)+12)%12,ref,q);
   const sp=spelled(midi);
-  ECHO.push({midi,name:sp.name,oct:sp.oct,lab,fam,string:src.string,fret:src.fret});
-  if(ECHO.length>14)ECHO.shift();
+  // v0.7.4: role derives at click time against the then-current chord (the
+  // honest reading — the chord you heard when you clicked), and the chord's
+  // root rides along so a later hand-promotion names its degree against the
+  // same root, not whatever chord is current by then
+  const cls=classifyClick(midi,ch);
+  ECHO.push({midi,name:sp.name,oct:sp.oct,lab,fam,string:src.string,fret:src.fret,
+    role:cls.role,degText:cls.degText,rootPc:ch?ch.rootPc:pcOf(st.key)});
+  if(ECHO.length>14){ECHO.shift();echoMsg("sketch full — oldest note dropped");}
+  else echoMsg("");
   renderStaff();
 }
+function echoMsg(t){ const e=document.getElementById("echoMsg"); if(e)e.textContent=t; }
 const SVGNS="http://www.w3.org/2000/svg";
 function el(n,attrs,parent){ const e=document.createElementNS(SVGNS,n);
   for(const k in attrs)e.setAttribute(k,attrs[k]); if(parent)parent.appendChild(e); return e; }
@@ -2876,13 +2910,36 @@ function renderStaff(){
       const a=el("text",{x:x-16,y:y+4,"text-anchor":"middle","font-size":"13",fill:"#212126"},svg);
       a.textContent=acc.replace(/#/g,"♯").replace(/b/g,"♭");
     }
-    el("ellipse",{cx:x,cy:y,rx:7,ry:5.4,fill:FAM_COLOR[n.fam],transform:`rotate(-14 ${x} ${y})`},svg);
-    const t=el("text",{x:x,y:y+2.6,"text-anchor":"middle","font-size":"6.5",
-      fill:FAM_TEXT[n.fam],class:"dot-label"},svg);
-    t.textContent=n.lab;
+    // v0.7.4 — role in the weight channel, §2.6 verbatim: a target is the full
+    // solid head with its label; an approach is hollow at 0.6 radius, no label,
+    // degree color when diatonic, violet when chromatic (outside the scale)
+    if(n.role==="approach"){
+      const sd=scaleData();
+      const chrom=!sd.pcs.includes(((n.midi%12)+12)%12);
+      el("ellipse",{cx:x,cy:y,rx:7*0.6,ry:5.4*0.6,fill:"#fff",
+        stroke:chrom?"#7847A8":FAM_COLOR[n.fam],"stroke-width":1.6,
+        transform:`rotate(-14 ${x} ${y})`},svg);
+    }else{
+      el("ellipse",{cx:x,cy:y,rx:7,ry:5.4,fill:FAM_COLOR[n.fam],transform:`rotate(-14 ${x} ${y})`},svg);
+      const t=el("text",{x:x,y:y+2.6,"text-anchor":"middle","font-size":"6.5",
+        fill:FAM_TEXT[n.fam],class:"dot-label"},svg);
+      t.textContent=n.lab;
+    }
     const nm=el("text",{x:x,y:yA3+8*HS+16,"text-anchor":"middle","font-size":"9.5",fill:"#73737A"},svg);
     nm.textContent=n.name+n.oct;
+    // the override: tapping switches target ↔ approach — the derivation is the
+    // default, never the only path (element-scoped listener; no document keys)
+    const hit=el("rect",{x:x-dx/2,y:y-16,width:dx,height:32,fill:"transparent",
+      style:"cursor:pointer","data-echo":String(i)},svg);
+    hit.addEventListener("click",()=>{
+      if(n.role==="approach"){ n.role="target"; n.degText=n.degText??degTextFor(n.midi,n.rootPc); }
+      else n.role="approach";
+      renderStaff();
+    });
   });
+  const cap=el("text",{x:1130,y:yA3+8*HS+16,"text-anchor":"end","font-size":"9.5",
+    fill:"#B9B9BF"},svg);
+  cap.textContent="solid = target · hollow = approach · tap a note to switch";
 }
 
 /* ============ full-étude score ============ */
@@ -3965,7 +4022,21 @@ function initControls(){
   document.getElementById("clickVolR").addEventListener("change",()=>renderCfg());
   buildMinis();
   syncClickUI(); renderLamp(); syncPlayUI();
-  document.getElementById("echoClear").addEventListener("click",()=>{ECHO=[];renderStaff();});
+  document.getElementById("echoClear").addEventListener("click",()=>{ECHO=[];echoMsg("");renderStaff();});
+  document.getElementById("echoEmit").addEventListener("click",()=>{
+    // the sketch becomes a figure: the engine's emitter derives the grammar
+    // string (lossy by design — degrees and relationships survive; octave and
+    // placement do not) and it enters the SAME pipeline as typed input
+    const r=MOTION.emitFromClicks(
+      ECHO.map(n=>({midi:n.midi,role:n.role,degText:n.degText})),
+      {scalePcs:[...scaleData().pcs],tonicPc:pcOf(st.key)});
+    if(r.error){echoMsg(r.error);return;}
+    st.motionMode="tones";     // a sketched figure names degrees, not strings — said out loud
+    syncMotionUI();
+    applyMotionInput(r.src);
+    if(st.figureError){echoMsg("the emitted figure did not parse — "+st.figureError.message);return;}
+    echoMsg("loaded as a note sequence — the field is now in tones mode; "+r.discarded);
+  });
   document.getElementById("saveEntry").addEventListener("click",saveEntry);
   document.getElementById("exportLog").addEventListener("click",exportLog);
   document.getElementById("importBtn").addEventListener("click",

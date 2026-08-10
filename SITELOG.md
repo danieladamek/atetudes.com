@@ -5,6 +5,48 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes v0.7.4: the echo staff becomes the way into the grammar (Daniel's dispatch)
+
+- **The orphan gets the job the grammar created.** The echo staff — the app's only
+  notation in v0.3, a click log ever since the score arrived in v0.4 — is now the figure
+  sketchpad: click a figure on the fretboard or keyboard, press **use as note sequence**,
+  and the app derives the grammar string and loads it into the field, where the readout
+  narrates it back. The panel is renamed to advertise the job ("Sketch a figure — click
+  notes, then load them as a note sequence") and stays collapsed by default.
+- **Which clicked notes are targets? Derived, never asked** (golden rule 1): a clicked
+  pitch class in the current chord's own triad is a **target** carrying its triad degree;
+  anything else is an **approach** attaching to the next target — classified at click
+  time against the then-current chord, whose root rides along in the buffer entry so a
+  later hand-promotion names its degree against the same root. The override exists:
+  tapping a note in the staff switches it target ↔ approach (a promoted non-chord tone
+  takes its chord-root-relative degree by the same flat-spelling table the emitter uses).
+  The buffer renders roles in §2.6's channels — targets solid with labels, approaches
+  hollow at 0.6 radius, degree color diatonic, violet chromatic, no label — with a
+  caption teaching the tap.
+- **Emission is lossy and says so, once**: `MOTION.emitFromClicks` (shipped with the
+  grammar, now consumed) writes signed-distance approaches when the click sits within
+  two semitones or one scale step of its target, absolute degree tokens otherwise; the
+  emitted string enters the SAME pipeline as typed input, the field switches to tones
+  mode **out loud** ("loaded as a note sequence — the field is now in tones mode; octave
+  and placement dropped — a figure is a design, not a fingering"). The round-trip law is
+  a test: `parse(emit(buffer))` ≡ the buffer's degrees and approach relationships —
+  never its pitches (the same sketch an octave up emits identically, asserted).
+- **Every refusal is named**: a trailing approach with no target ("click a chord tone
+  last" — the field untouched), the empty sketch, a sketch over the 16-event ceiling
+  (refused at emit, before the field), and buffer overflow past 14 notes now *says*
+  "sketch full — oldest note dropped" instead of silently shifting.
+- **Deliberately not done, verified**: playback writes nothing to the buffer — asserted
+  under a running transport; no correctness-checking, no MIDI. Zero document-level key
+  listeners, still. The buffer is never stored (charter §7: the clicks are the user's
+  data; everything derived passes the suite; `rawCfg()` untouched).
+- Verified per doctrine: engine suite 206/206 (7 new sketch tests: classification rule,
+  promoted-target rule, round-trip corpus incl. the trailing-approach error and the
+  ceiling, emitted-figure resolution); 24 interactive Playwright checks from `file://`
+  offline (real fretboard + keyboard clicks, tap-override both directions, all named
+  refusals, playback isolation), zero console/page errors; the phase-2/3 legacy DOM
+  matrix (42 hashes, 14 configs) STILL byte-identical; rendered and inspected at
+  1280/390 px. Update Log 260810.9.
+
 ## 2026-08-10 — Triadetudes v0.7.3: the motion grammar and enclosures (v0.7 arc phase 3, Daniel's dispatch)
 
 - **The grammar is engine code first** — `engine/motion.mjs` (family module, hand-inlined
