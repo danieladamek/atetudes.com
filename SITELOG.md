@@ -38,6 +38,9 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
   in `SPLITS[7]`, though 5/4 carries `[1,4]`/`[4,1]` — a one-beat chord against a
   six-beat chord is not a grouping anyone practises, but the asymmetry should be a
   decision: add them to 7, or drop 5/4's pair.
+- **Review fix, same day (Daniel):** the wrapped "Bar split" label pushed its select
+  below the Time sig's — the row now bottom-aligns (`.row2.alignEnd`), selects sharing
+  a baseline at both widths (0 px delta, asserted and inspected).
 - Verified per doctrine: engine suite 153/153 (five new metronome-core deferral tests;
   split-rule walk over every meter transition; the existing split-sum invariant covers
   7 automatically; 3/4–6/4 golden masters byte-identical); 24 Playwright checks across

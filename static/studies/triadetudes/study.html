@@ -41,6 +41,7 @@
     border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
   .row2{display:flex;gap:10px;flex-wrap:wrap}
   .row2>div{flex:1 1 90px}
+  .row2.alignEnd{align-items:flex-end}   /* selects share a baseline when a label wraps */
   .seg{display:flex;flex-wrap:wrap;gap:6px}
   .seg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
     border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
@@ -259,7 +260,7 @@
       <button id="playBtn" class="primary">Play</button>
       <button id="nextBtn" title="next chord">▶</button>
     </div>
-    <div class="row2">
+    <div class="row2 alignEnd">
       <div><label>Time sig</label>
         <select id="meterSel2"></select></div>
       <div><label>Bar split (beats per chord)</label>
