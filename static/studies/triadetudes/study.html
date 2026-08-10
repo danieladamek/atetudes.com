@@ -137,7 +137,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.12</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.13</div>
 </header>
 
 <div class="cards">
@@ -238,19 +238,34 @@
 
   <div class="card">
     <h2>Shape & Motion</h2>
-    <label>String set (triads live here)</label>
+    <label>String set (triads live here, high → low)</label>
     <div class="seg" id="setSeg"></div>
-    <div class="hint">Pivots: click any scale note on a string of the set — that note and the
-    next two scale notes up the same string become your pivots (dashed rings). The dashed
-    box is your isolation zone. Changing set, key or scale carries your pattern and
-    pivots along — same figure, same degrees, new context.</div>
-    <label>Arpeggio pattern (string numbers; repeats OK; empty = block chord)</label>
-    <input type="text" id="arpIn" size="14" spellcheck="false" placeholder="e.g. 2-3-3-1">
+    <label>Arpeggio pattern (H·M·L = the set's high·middle·low string; repeats OK)</label>
+    <input type="text" id="arpIn" size="14" spellcheck="false" placeholder="e.g. M-L-H">
     <span id="arpErr" style="color:var(--red);font-size:11.5px"></span>
     <div class="hint" id="arpHint"></div>
+    <div class="row2">
+      <div><label>Placement</label>
+        <div class="seg" id="placeSeg">
+          <button data-place="box" class="on">Box</button>
+          <button data-place="linear">Linear</button>
+        </div></div>
+      <div><label>Playback</label>
+        <div class="seg" id="playbackSeg">
+          <button data-pb="arpeggiated" class="on">Arpeggiated</button>
+          <button data-pb="block">Block</button>
+          <button data-pb="both">Both</button>
+        </div></div>
+    </div>
     <label class="chk"><input type="checkbox" id="rootsChk"> Show root notes on lower strings</label>
-    <div class="hint">Order badges on the sounding notes show each string's slot(s)
-    in the pattern.</div>
+    <details class="hint"><summary style="cursor:pointer">? pivots, the box, and the badges</summary>
+    Pivots: click any scale note on a string of the set — that note and the next two scale
+    notes up the same string become your pivots (dashed rings). The dashed box is your
+    isolation zone: Box placement keeps the figure seeking it, and when a figure can't fit,
+    the box widens visibly rather than letting notes escape. Linear releases the figure to
+    pure voice-leading. Changing set, key or scale carries your pattern and pivots along —
+    same figure, same degrees, new context. Order badges on the sounding notes show each
+    string's position(s) in the pattern.</details>
   </div>
 
   <div class="card">
@@ -347,7 +362,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.12 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.13 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1414,6 +1429,11 @@ function chooseVoicings(seq){
   const s=st.setLowHigh, pi=s.indexOf(st.pivotString);
   const pmin=Math.min(...st.pivotFrets), pmax=Math.max(...st.pivotFrets);
   const pmean=(pmin+pmax)/2;
+  // placement (v0.6.13): Box weights the isolation zone — the ratified
+  // first-class voicing constraint (roadmap §4) — Linear releases it and lets
+  // pure voice-leading choose. Box is the default and the pinned behaviour.
+  const pivotW=st.placement==="linear"?0:4;
+  const anchorW=st.placement==="linear"?0:0.5;
   let prev=null; const out=[];
   for(const ch of seq){
     const cands=voicingsFor(ch,s);
@@ -1422,9 +1442,9 @@ function chooseVoicings(seq){
       const pf=v.frets[pi];
       const pivotCost = st.pivotFrets.includes(pf)?0:
         (pf>=pmin&&pf<=pmax?1.5:Math.min(Math.abs(pf-pmin),Math.abs(pf-pmax)));
-      let cost=4*pivotCost;
+      let cost=pivotW*pivotCost;
       if(prev){ for(let i=0;i<3;i++) cost+=Math.abs(v.frets[i]-prev.frets[i]); }
-      else cost+=Math.abs(v.frets[pi]-pmean)*0.5;
+      else cost+=Math.abs(v.frets[pi]-pmean)*anchorW;
       if(cost<bc){bc=cost;best=v;}
     }
     out.push(best); prev=best;
@@ -1444,7 +1464,11 @@ const st={
   // one entry per chip, us = the remembered per-chord structure choice ("pc:quality")
   harmonyMode:"build",
   breakProg:[{sym:"Dm7",us:null},{sym:"G7",us:null},{sym:"Cmaj7",us:null}],
-  arpPattern:null, arpCustom:false,  // arpPattern: array of string numbers (repeats OK) or null=block chord
+  arpPattern:null, arpCustom:false,  // arpPattern: array of string numbers (repeats OK) or null
+  // v0.6.13: three axes, three controls — the pattern is TONES/ORDER only;
+  // placement (box|linear) and playback (arpeggiated|block|both) are named.
+  // "empty field = block chord" is retired: emptiness means emptiness.
+  placement:"box", playback:"arpeggiated",
   roots:false, ext:"none",
   bpm:72, meter:4, splitIdx:1, metroOnly:false,
   clickOn:true, clickVol:0.8, clickAccent:true, clickSub:1, clickVoice:"beep", countIn:false,
@@ -1510,14 +1534,40 @@ function defaultArpPattern(){
   st.arpPattern=[st.pivotString,...s.filter(x=>x!==st.pivotString)];
   st.arpCustom=false;
 }
+/* the set's display name, derived from the tuning — never a typed label table
+   (golden rule 1): [1,2,3] → "E-B-G", read high → low exactly as the numbers were */
+function setLabel(set){
+  return set.map(sn=>SHARP_NAMES[OPEN[sn]%12]).join("-");
+}
+/* the pattern in SLOT vocabulary: H = the highest-pitched string of the set,
+   one convention, stated once, held everywhere the pattern is displayed */
+function patText(pattern){
+  if(!pattern)return"";
+  const s=st.setLowHigh;
+  return pattern.map(sn=>"LMH"[s.indexOf(sn)]).join("-");
+}
+/* what the boards draw: the pattern unless playback is Block */
+function displayPattern(){ return st.playback==="block"?null:st.arpPattern; }
 function parseArp(text){
-  // "2-3-3-1", "2331", "2 3 3 1" → [2,3,3,1]; every digit must be a string of the set
-  const digits=(text.match(/\d/g)||[]).map(Number);
-  if(!digits.length)return {pattern:null};                    // empty = block chord
-  if(digits.length>16)return {err:"max 16 notes"};
-  const bad=digits.find(d=>!st.set.includes(d));
-  if(bad!==undefined)return {err:"string "+bad+" isn't in the "+st.set.join("-")+" set"};
-  return {pattern:digits};
+  // "H-M-L", "hml", and the pre-v0.6.13 "2-3-1"/"231" all parse; letters are
+  // slots against the CURRENT set, digits must belong to it. Old muscle memory
+  // and pasted configs are not punished; the field normalises to H-M-L on sync.
+  const s=st.setLowHigh;
+  const toks=(text.toUpperCase().match(/[HML]|\d/g)||[]);
+  if(!toks.length)return {pattern:null};                    // empty means empty
+  if(toks.length>16)return {err:"max 16 notes"};
+  const out=[];
+  for(const t of toks){
+    if(t==="L")out.push(s[0]);
+    else if(t==="M")out.push(s[1]);
+    else if(t==="H")out.push(s[2]);
+    else{
+      const d=+t;
+      if(!st.set.includes(d))return {err:"string "+d+" isn't in the "+st.set.join("-")+" set"};
+      out.push(d);
+    }
+  }
+  return {pattern:out};
 }
 function writtenValue(d){
   // the notated value for one tuplet note sounding d beats: smallest standard value >= d
@@ -1532,14 +1582,18 @@ function subdivisionName(beats,L){
   return nm+" "+(L===3?"triplet":L+"-tuplet")+" ("+L+" over "+beats+" beats)";
 }
 function arpHintText(){
-  if(!st.arpPattern)return"Block chord — all notes together at each chord change.";
+  if(st.playback==="block")
+    return"Block playback — the harmony sounds together at each change"+
+      (st.arpPattern?"; the pattern is kept for when you switch back":"")+".";
+  if(!st.arpPattern)return"No pattern yet — the default (pivot slot first) returns on rebuild.";
   const pat=pattern(), L=st.arpPattern.length;
   const per=[...new Set(pat)].map(b=>b+" beats → "+subdivisionName(b,L)).join(" · ");
-  return L+" notes per chord: "+per+". ① starts the pattern; default is pivot string first.";
+  return L+" notes per chord: "+per+". ① starts the pattern; default is the pivot's slot first"+
+    (st.playback==="both"?". Both: the harmony strums under the line's downbeat":"")+".";
 }
 function syncArpIn(){
   const inp=document.getElementById("arpIn");
-  if(inp)inp.value=st.arpPattern?st.arpPattern.join("-"):"";
+  if(inp)inp.value=patText(st.arpPattern);
   const h=document.getElementById("arpHint"); if(h)h.textContent=arpHintText();
   const e=document.getElementById("arpErr"); if(e)e.textContent="";
 }
@@ -1813,7 +1867,7 @@ function orderedMidis(i){
   const v=VOIC[i]; if(!v)return{notes:[],bass:null};
   const s=st.setLowHigh;
   const byStr={}; v.frets.forEach((f,k)=>byStr[s[k]]=OPEN[s[k]]+f);
-  const order=st.arpPattern||s;
+  const order=displayPattern()||s;
   const notes=order.map(x=>byStr[x]);
   const b=bassPcFor(SEQ[i]); let bass=null;
   if(b!==null){ const low=Math.min(...notes);
@@ -1821,9 +1875,19 @@ function orderedMidis(i){
   return {notes,bass};
 }
 function onsetsFor(i,durBeats){
+  // playback is a named axis (v0.6.13): Block sounds the harmony whatever the
+  // pattern says; Arpeggiated runs the pattern; Both strums the harmony under
+  // the line's downbeat. arpOnsets itself is untouched — the equivalence pin
+  // stands — this function only composes its calls.
   const v=VOIC[i]; if(!v)return[];
   const {bass}=orderedMidis(i);
-  return arpOnsets(v,st.setLowHigh,st.arpPattern,bass,durBeats,st.bpm);
+  if(st.playback==="block"||!st.arpPattern)
+    return arpOnsets(v,st.setLowHigh,null,bass,durBeats,st.bpm);
+  const line=arpOnsets(v,st.setLowHigh,st.arpPattern,bass,durBeats,st.bpm);
+  if(st.playback!=="both")return line;
+  const strumChord=arpOnsets(v,st.setLowHigh,null,null,durBeats,st.bpm)
+    .map(ev=>({...ev,dur:Math.min(ev.dur,0.5),strum:true})); // harmony context, not steps
+  return [...strumChord,...line];
 }
 function strum(i,when,durBeats){
   const ac=ctx(); if(!ac)return;
@@ -1849,7 +1913,7 @@ function clearPulses(){
 function schedulePulses(i,when,durBeats){
   const ac=ctx(); if(!ac)return;
   for(const ev of onsetsFor(i,durBeats)){
-    if(ev.role!=="chord")continue;   // the bass is a pedal, not a step (v0.7's role field)
+    if(ev.role!=="chord"||ev.strum)continue;   // pedals and harmony strums are not steps
     const delay=Math.max(0,(when-ac.currentTime+ev.offset)*1000);
     PULSE.timers.push(setTimeout(()=>firePulse(ev),delay));
   }
@@ -2259,7 +2323,8 @@ function renderScore(){
       const byStr={}; v.frets.forEach((f,k)=>byStr[s[k]]=OPEN[s[k]]+f);
       const noteInfo=m=>{const sp=spelled(m);
         const {lab,fam}=ivlOf(((m%12)+12)%12,ref,ch.q); return {...sp,lab,fam};};
-      if(!st.arpPattern){
+      const dp=displayPattern();
+      if(!dp){
         // block chord: stacked heads at slot start, one stem
         const ms=s.map(x2=>byStr[x2]);
         const open=beats>=2, xh=x+16;
@@ -2268,12 +2333,12 @@ function renderScore(){
           yTop=Math.min(yTop,y);yLow=Math.max(yLow,y);}
         if(beats<4) el("line",{x1:xh+6,y1:yLow,x2:xh+6,y2:yTop-26,stroke:"#212126","stroke-width":1.2},svg);
       }else{
-        const L=st.arpPattern.length, d=beats/L;
+        const L=dp.length, d=beats/L;
         const dyadic=[4,2,1,0.5,0.25].includes(d);
         const wv=dyadic?d:writtenValue(d);      // the value the notes are WRITTEN as
         const open=wv>=2;
         const xs=[],ys=[];
-        st.arpPattern.forEach((str,k)=>{
+        dp.forEach((str,k)=>{
           const m=byStr[str], n=noteInfo(m);
           const xk=x+(k+0.5)*(w/L);
           const y=head(xk,n.name,n.oct,n.fam,n.lab,open);
@@ -2417,7 +2482,7 @@ function renderActive(){
       }
     }
   }
-  const order=st.arpPattern;
+  const order=displayPattern();
   for(let i=0;i<3;i++){
     const f=v.frets[i],s2=s[i],pc=(OPEN[s2]+f)%12;
     const {lab,fam}=ivlOf(pc,ref,ch.q);
@@ -2716,8 +2781,8 @@ function cfgObj(){
     progression:{type:st.harmonyMode==="break"?"break-down":st.prog,
       start:SCALES[st.scaleType].roman[st.startDeg],
       custom:st.prog==="custom"?st.custom:undefined,chords:SEQ.map(c=>c.label)},
-    motion:{arpeggio:st.arpPattern?st.arpPattern.join("-"):"block",
-      subdivision:st.arpPattern?[...new Set(pattern())].map(b=>b+" beats: "+subdivisionName(b,st.arpPattern.length)).join("; "):"block"},
+    motion:{pattern:patText(st.arpPattern)||"none",placement:st.placement,playback:st.playback,
+      subdivision:displayPattern()?[...new Set(pattern())].map(b=>b+" beats: "+subdivisionName(b,displayPattern().length)).join("; "):"block"},
     display:{roots:st.roots,extension:st.ext},
     transport:{bpm:st.bpm,meter:st.meter+"/4",barSplit:pattern().join("+"),chordsMuted:st.metroOnly,
       metronome:{sound:st.clickOn,voice:st.clickVoice,volume:Math.round(st.clickVol*100),accents:st.clickAccent,
@@ -2735,6 +2800,7 @@ function rawCfg(){
   return {v:1,key:st.key,scaleType:st.scaleType,set:[...st.set],pivotString:st.pivotString,
     pivotFrets:[...st.pivotFrets],prog:st.prog,startDeg:st.startDeg,chromLen:st.chromLen,
     custom:st.custom,arpPattern:st.arpPattern?[...st.arpPattern]:null,roots:st.roots,ext:st.ext,
+    placement:st.placement,playback:st.playback,
     harmonyMode:st.harmonyMode,
     breakProg:st.breakProg.map(e=>({sym:e.sym,us:e.us})),
     bpm:st.bpm,meter:st.meter,splitIdx:st.splitIdx,
@@ -2747,6 +2813,10 @@ function applyRaw(c){
   Object.assign(st,{key:keyFor(pcOf(c.key),c.scaleType),scaleType:c.scaleType,set:[...c.set],pivotString:c.pivotString,
     pivotFrets:[...c.pivotFrets],prog:c.prog,startDeg:c.startDeg,chromLen:c.chromLen,
     custom:c.custom,arpPattern:c.arpPattern?[...c.arpPattern]:null,roots:c.roots,ext:c.ext,
+    // pre-v0.6.13 entries encoded playback in the pattern's emptiness — the
+    // named axes derive from that encoding, so old entries restore identically
+    placement:c.placement??"box",
+    playback:c.playback??(c.arpPattern?"arpeggiated":"block"),
     bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0,
     // pre-v0.6 entries carry no harmony panel — they were all build-up études
     harmonyMode:c.harmonyMode??"build",
@@ -2755,14 +2825,20 @@ function applyRaw(c){
     // metronome fields default for entries saved before v0.5.1 — old études restore intact
     clickOn:c.clickOn??true,clickVol:c.clickVol??0.8,clickAccent:c.clickAccent??true,
     clickSub:c.clickSub??1,clickVoice:c.clickVoice??"beep",countIn:c.countIn??false});
+  // foreign/imported configs may be internally inconsistent — a pivot string
+  // outside the set re-seats to the default before anything derives from it
+  if(!st.set.includes(st.pivotString))defaultPivots();
   const def=[st.pivotString,...st.setLowHigh.filter(x=>x!==st.pivotString)];
-  st.arpCustom=!!st.arpPattern&&
+  // a pattern that doesn't belong to its set (foreign/imported config) is
+  // stale data, not a crash: mark it non-custom and rebuild re-derives the default
+  st.arpCustom=!!st.arpPattern&&st.arpPattern.every(x=>st.set.includes(x))&&
     STRSETS.slotsOf(st.arpPattern,st.set).join()!==STRSETS.slotsOf(def,st.set).join();
   syncHarmonyUI(); syncBreakIn();
   refreshKeySel();
   document.getElementById("scaleSel").value=st.scaleType;
   const seg=document.getElementById("setSeg");
-  [...seg.children].forEach(b=>b.className=b.textContent===st.set.join("-")?"on":"");
+  [...seg.children].forEach(b=>b.className=b.textContent===setLabel(st.set)?"on":"");
+  syncShapeUI();
   refreshStartSel(); document.getElementById("startSel").value=st.startDeg;
   document.getElementById("progSel").value=st.prog;
   document.getElementById("lenWrap").style.display=/chrom/.test(st.prog)?"block":"none";
@@ -2805,7 +2881,8 @@ function summaryText(){
     :progLabel()+(st.prog==="custom"?" ("+st.custom+")":"");
   return st.key+" "+SCALES[st.scaleType].label+" · strings "+st.set.join("-")+
     " · pivots "+piv+" on string "+st.pivotString+" · "+how+
-    " · arp "+(st.arpPattern?st.arpPattern.join("-"):"block")+
+    " · arp "+(patText(st.arpPattern)||"none")+" · "+st.playback+
+    (st.placement!=="box"?" · linear":"")+
     " · "+st.meter+"/4 split "+pattern().join("+")+" · "+st.bpm+" bpm"+
     (st.harmonyMode!=="break"&&st.ext!=="none"?" · over bass ("+st.ext+")":"")+
     " — "+SEQ.map(c=>c.srcSymbol&&c.srcSymbol!==c.label?c.label+"="+c.srcSymbol:c.label).join("  ");
@@ -2921,6 +2998,12 @@ function exportLog(){
 }
 
 /* ============ controls ============ */
+function syncShapeUI(){
+  document.querySelectorAll("#placeSeg button").forEach(b=>{
+    b.className=b.dataset.place===st.placement?"on":"";});
+  document.querySelectorAll("#playbackSeg button").forEach(b=>{
+    b.className=b.dataset.pb===st.playback?"on":"";});
+}
 function syncHarmonyUI(){
   document.querySelectorAll("#modeSeg button").forEach(b=>{
     b.className=b.dataset.mode===st.harmonyMode?"on":"";});
@@ -2968,7 +3051,8 @@ function initControls(){
   const seg=document.getElementById("setSeg");
   [[1,2,3],[2,3,4],[3,4,5],[4,5,6]].forEach(set=>{
     const b=document.createElement("button");
-    b.textContent=set.join("-");
+    b.textContent=setLabel(set);   // derived from the tuning, never typed
+    b.title="strings "+set.join("-");
     if(set.join()===st.set.join())b.className="on";
     b.addEventListener("click",()=>{
       changeSet(set);
@@ -3013,6 +3097,17 @@ function initControls(){
     st.arpCustom=!!r.pattern&&
       STRSETS.slotsOf(r.pattern,st.set).join()!==STRSETS.slotsOf(def,st.set).join();
     syncArpIn(); renderScore(); renderActive();
+  });
+  document.querySelectorAll("#placeSeg button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      st.placement=b.dataset.place; syncShapeUI(); rebuild();});
+  });
+  document.querySelectorAll("#playbackSeg button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      st.playback=b.dataset.pb;
+      if(st.playback!=="block"&&!st.arpPattern)defaultArpPattern(); // a line needs a pattern
+      syncShapeUI(); syncArpIn();
+      renderScore(); renderActive();});
   });
   document.getElementById("rootsChk").addEventListener("change",e=>{st.roots=e.target.checked;renderActive();});
   document.getElementById("extSel").addEventListener("change",e=>{st.ext=e.target.value;renderScore();renderActive();});
@@ -3125,6 +3220,13 @@ function initControls(){
     if(seq[0].bassPc!==2)console.error("TEST: Dm7 break-down bass is D");
     st.harmonyMode=save.m; st.breakProg=save.p; BREAK=[];
   })();
+  // v0.6.13: the panel speaks slots; digits remain the compatibility dialect
+  eq(parseArp("H-M-L").pattern.join(","),
+    [st.setLowHigh[2],st.setLowHigh[1],st.setLowHigh[0]].join(","),"letters parse by slot");
+  eq(parseArp("hml").pattern.join(","),parseArp("H-M-L").pattern.join(","),"case-insensitive");
+  eq(patText(parseArp("2-3-1").pattern),"M-L-H","digits normalise to slot vocabulary");
+  eq(setLabel([1,2,3]),"E-B-G","set label derived from the tuning");
+  eq(setLabel([4,5,6]),"D-A-E","low set label derived too");
   // all twelve keys: spelling derived per scale, ties toward flats
   eq(keysFor("major").join(" "),"C Db D Eb E F Gb G Ab A Bb B","major keys chromatic");
   eq(keyFor(1,"harm"),"C#","harmonic minor prefers C# (Db needs Bbb)");

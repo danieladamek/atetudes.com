@@ -5,6 +5,50 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes v0.6.13: the panel says what it means (backlog item, Daniel's dispatch)
+
+- **The ⚠ answered empirically before building** (Daniel's ask): across all 5,760
+  voicings in the full config space, no single figure exceeds 9 semitones of pitch span
+  or 4 frets of grip — today's engine cannot produce the Linear picture per-chord. What
+  does widen is the union box across a progression (to 8 frets in 4 of 720 configs,
+  worst: C harm scaleUp on 3-4-5) because the pivot cost is soft. The item's reading
+  confirmed: effectively Box, nothing guaranteeing it, no separate bug to file.
+- **The set selector names pitches** — `E-B-G · B-G-D · G-D-A · D-A-E`, derived from
+  `OPEN` by `setLabel()` (no typed table; string numbers remain as tooltips), read
+  high → low exactly as the numbers were.
+- **The pattern speaks slots**: `H-M-L` (H = the set's highest-pitched string, one
+  convention) in the field, the hint, `cfgObj()`'s `motion.pattern`, and the summary
+  string; order badges unchanged (they were always order positions). Digits still parse
+  and normalise on sync — old muscle memory and pasted configs unpunished. A pleasant
+  consequence of slot display: the field text no longer changes on a set change at all.
+- **Placement `Box · Linear`** — two named options, not a checkbox. Box (default)
+  weights the isolation zone in `chooseVoicings` exactly as today — the golden masters
+  pin it byte-identical; Linear releases the pivot constraint to pure voice-leading
+  (the ratified roadmap-§4 constraint, exposed; asserted to actually differ with
+  high-seated pivots). **Overflow widens the drawn box** — asserted on the worst
+  surveyed case, `st.placement` untouched; never a silent fallback.
+- **Playback `Arpeggiated · Block · Both`** retires "empty = block chord": emptiness
+  means emptiness, playback is named. Old entries derive it from the retired encoding
+  (`arpPattern:null` → Block) and restore identically — asserted key-by-key across a
+  four-era corpus, plus the new-shape round-trip no-op. `Both` strums the harmony under
+  the line's downbeat: composed in `onsetsFor()` over an untouched `arpOnsets` (the
+  equivalence pin stands), strum events flagged so the v0.6.5 pulse skips them (harmony
+  context, not steps — the bass-pedal doctrine extended), and mute-chords still mutes.
+- **Two robustness holes found by the tests and fixed**: a foreign/imported config
+  whose pattern names strings outside its set made `applyRaw` throw (v0.6.6's slot
+  comparison; reachable since v0.6.9's import) — now stale-data-not-a-crash; and one
+  whose pivot string sits outside its set produced a garbage default pattern — now
+  re-seats through `defaultPivots()` first.
+- The pivots/box/badges prose moves into a "?" disclosure (the item's recommendation) —
+  the concept keeps its home, the denser panel keeps its calm.
+- `rawCfg()`: pattern storage unchanged (absolute strings beside `set`, slots derive on
+  load); `placement`/`playback` join as additive keys with derivation defaults, the
+  same ratified mechanism as v0.6's `harmonyMode`. No `v:` bump.
+- Verified per doctrine: engine suite 158/158 (new panel suite: derived labels, slot
+  dialects, placement-differs, box-widening, displayPattern; all pins green); 28
+  Playwright checks from `file://` offline, zero console errors; panel inspected at
+  1280/390 px. Update Log 260810.1.
+
 ## 2026-08-09 — Triadetudes v0.6.12: BPM and click sound join the Transport (Daniel's review additions to the 7/4 item)
 
 - **BPM slider** between the transport buttons and the Time sig/Bar split row — a mirror
