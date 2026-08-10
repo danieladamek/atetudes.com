@@ -5,6 +5,41 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.9: the notebook round-trips (backlog item, Daniel's dispatch)
+
+- **Import lands, and the export learns to deserve it** (roadmap §2's Import line, S as
+  rated). The fenced JSON block in each exported entry now carries the **full entry**
+  (id, savedAt, minutes, title, summary, notes, cfg) instead of only the config — same
+  visual document, lossless round-trip. New **Import (.md/.json)** button beside Export:
+  an exported log **merges** back in (dedup by id, append unknowns, sort by date —
+  import never deletes, re-import is a no-op), and a bare `.json` config applies as the
+  current étude with restore semantics (nothing saved until the user saves) — the
+  "étude import" half of Daniel's ask, one branch.
+- **Pre-v0.6.9 exports import degraded but intact**, by pinned policy rather than
+  improvisation: configs arrive whole (the point of migration), ids are content-hashed
+  from the entry text (so re-importing an old file is idempotent too), dates
+  reconstructed from the entry's human line plus the export header's year — V8 parses
+  the year-less form into 2001, so the header-year injection is load-bearing — falling
+  back to import time, prose intention/accomplished recovered. The import message says
+  "from an older export (dates approximate)".
+- **Pure and seeded for the notepad arc**: `logToMarkdown` / `parseLogExport` /
+  `mergeLog` are DOM-free functions above the engine-slice cut, harvested by the
+  characterization loader, written against the fenced-JSON-under-headings convention
+  the notepad decisions ratified and `.atchart.md` §2.5 preserves — marked for
+  absorption into `engine/notepad.mjs` (the `arpOnsets` precedent). Builder's check
+  from the item ran: the notepad module has not landed, so the seed lives in-study.
+- Bad files are data (charter §7 boundary clause): broken JSON, foreign JSON, truncated
+  fences and headerless files all produce a named message beside the button — mixed
+  files import the intact entries and count the broken ones. `rawCfg()` untouched, no
+  `v:` bump.
+- Verified per doctrine: engine suite 137/137 (new headless notebook suite: lossless
+  round-trip field-identical, degraded policy pinned exactly incl. the 2026 date
+  reconstruction, garbage/mixed files, merge idempotence; all prior pins green); 18
+  Playwright checks from `file://` offline driving the **real file input** — export,
+  wipe, import, history byte-identical; old-format import restores a break-down étude
+  exactly; bare-config apply; two failure modes named — zero console errors; notebook
+  inspected at 1280/390 px. Update Log 260809.6.
+
 ## 2026-08-09 — Triadetudes v0.6.8: the readout says only true things (backlog item, Daniel's dispatch)
 
 - **No partial read is false anymore.** The break-down readout reorders to

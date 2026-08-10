@@ -136,7 +136,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.8</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.9</div>
 </header>
 
 <div class="cards">
@@ -312,11 +312,17 @@
       <div class="transport" style="margin-top:10px">
         <button id="saveEntry" class="primary">Save entry</button>
         <button id="exportLog">Export log (.md)</button>
+        <button id="importBtn">Import (.md/.json)</button>
+        <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json"
+          style="display:none">
         <span id="saveMsg" class="hint" style="margin:0"></span>
       </div>
+      <span id="importMsg" class="hint"></span>
       <div class="hint">Saving captures this étude's full configuration with your notes —
       restoring an entry later rebuilds the exercise exactly. Export writes the whole log
-      as a markdown file (config JSON included).</div>
+      as a markdown file (config JSON included); Import merges an exported log back in —
+      nothing is deleted, duplicates are skipped — or loads a single étude config (.json)
+      as the current étude.</div>
       <details style="margin-top:10px"><summary style="cursor:pointer">Full configuration (JSON)</summary>
         <pre id="cfgPre"></pre>
         <button id="copyBtn">Copy configuration</button> <span id="copyMsg"></span>
@@ -329,7 +335,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.8 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.9 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1549,6 +1555,84 @@ function changeScale(newScale){
   reseatPivot(cap);
 }
 
+/* ---- the notebook's document form: export/import round-trip (v0.6.9) ----
+   Pure functions, no DOM: entries ⇄ the exported markdown. The document is
+   prose plus a fenced JSON block per entry under ## headings — the convention
+   the notepad arc ratified and .atchart.md §2.5 preserves. Since v0.6.9 the
+   fenced block carries the FULL entry, so export → import is lossless; before
+   that it carried only cfg, and parseLogExport's degraded path reconstructs
+   what it can (ids content-hashed for idempotence, dates best-effort from the
+   entry's human line plus the header's year, falling back to import time).
+   SEED for engine/notepad.mjs (notepad arc): absorb these, do not rebuild. */
+function fmtWhen(iso){ const d=new Date(iso);
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+
+         d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); }
+function logToMarkdown(entries,exportedAt){
+  let md="# Triadetudes practice log\n\nExported "+exportedAt+"\n";
+  for(const en of entries){
+    md+="\n---\n\n## "+en.title+"\n\n*"+fmtWhen(en.savedAt)+(en.minutes?" · ~"+en.minutes+" min":"")+"*\n\n";
+    md+=en.summary+"\n\n";
+    if(en.intention) md+="**Intention:** "+en.intention+"\n\n";
+    if(en.accomplished) md+="**Accomplished:** "+en.accomplished+"\n\n";
+    md+="```json\n"+JSON.stringify({id:en.id,savedAt:en.savedAt,minutes:en.minutes??null,
+      title:en.title,summary:en.summary,intention:en.intention||"",
+      accomplished:en.accomplished||"",cfg:en.cfg})+"\n```\n";
+  }
+  return md;
+}
+function hashStr(s){ let h=5381; for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;
+  return h.toString(36); }
+function parseLogExport(text,importedAt){
+  const out={entries:[],skipped:0,degraded:0};
+  if(typeof text!=="string"||!text.trim())return out;
+  const head=text.match(/^Exported (.+)$/m);
+  let year=null;
+  if(head){ const y=head[1].match(/\b(20\d\d)\b/); if(y)year=+y[1]; }
+  for(const sec of text.split(/\n## /).slice(1)){
+    const fence=sec.match(/```json\n([\s\S]*?)\n```/);
+    if(!fence){out.skipped++;continue;}
+    let data;
+    try{data=JSON.parse(fence[1]);}catch(e){out.skipped++;continue;}
+    if(data&&typeof data==="object"&&data.cfg&&data.id!==undefined){
+      // v0.6.9+ full entry — lossless
+      out.entries.push({id:String(data.id),savedAt:data.savedAt,minutes:data.minutes??null,
+        title:data.title??sec.split("\n")[0].trim(),summary:data.summary??"",
+        intention:data.intention||"",accomplished:data.accomplished||"",cfg:data.cfg});
+      continue;
+    }
+    if(data&&typeof data==="object"&&data.v!==undefined){
+      // pre-v0.6.9: the block is a bare cfg — import degraded, never refused
+      out.degraded++;
+      const title=sec.split("\n")[0].trim();
+      const when=sec.match(/^\*(.+?)(?: · ~(\d+) min)?\*$/m);
+      let savedAt=importedAt||null, minutes=null;
+      if(when){
+        if(when[2])minutes=+when[2];
+        const d=new Date(when[1]+(year?" "+year:""));
+        if(!isNaN(d)&&(!year||d.getFullYear()===year))savedAt=d.toISOString();
+      }
+      const sm=sec.match(/^\*.+\*\n\n([\s\S]*?)\n\n(?:\*\*Intention|\*\*Accomplished|```json)/m);
+      const im=sec.match(/\*\*Intention:\*\* ([\s\S]*?)\n\n/);
+      const am=sec.match(/\*\*Accomplished:\*\* ([\s\S]*?)\n\n/);
+      out.entries.push({id:"imp-"+hashStr(sec),savedAt,minutes,title,
+        summary:sm?sm[1].trim():"",intention:im?im[1].trim():"",
+        accomplished:am?am[1].trim():"",cfg:data});
+      continue;
+    }
+    out.skipped++;
+  }
+  return out;
+}
+function mergeLog(existing,incoming){
+  // dedup by id, append unknowns, sort by date — import never deletes
+  const byId=new Map(existing.map(e=>[String(e.id),e]));
+  let added=0;
+  for(const en of incoming)
+    if(!byId.has(String(en.id))){ byId.set(String(en.id),en); added++; }
+  const list=[...byId.values()].sort((a,b)=>String(a.savedAt||"")<String(b.savedAt||"")?-1:1);
+  return {list,added};
+}
+
 /* ---- onset derivation: the note-event seed ----
    Pure: (voicing on a string set, arp pattern, bass midi, span, bpm) → ordered
    onset list {midi,string,fret,role,offset,dur}. These are v0.7 §1.4's note-event
@@ -2588,9 +2672,6 @@ function summaryText(){
     " — "+SEQ.map(c=>c.srcSymbol&&c.srcSymbol!==c.label?c.label+"="+c.srcSymbol:c.label).join("  ");
 }
 function renderSummary(){ const d=document.getElementById("cfgSummary"); if(d)d.textContent=summaryText(); }
-function fmtWhen(iso){ const d=new Date(iso);
-  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+
-         d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); }
 function entryTitle(){
   if(st.harmonyMode==="break")
     return SEQ.length?SEQ[0].srcSymbol+"… break-down · "+st.key+" "+SCALES[st.scaleType].label:"étude";
@@ -2642,6 +2723,43 @@ function currentEntry(){
     accomplished:document.getElementById("accompIn").value.trim(),
     cfg:rawCfg()};
 }
+/* ---- import: the round-trip's other half (v0.6.9). Files are user-supplied
+   runtime data (charter §7 boundary clause): validated, defaulted, surfaced —
+   never trusted, never a crash. A .md log merges; a bare .json cfg applies as
+   the current étude with restore semantics (nothing saved until the user saves). */
+function importMsgSet(t){
+  const m=document.getElementById("importMsg");
+  if(m){ m.textContent=t; if(t)setTimeout(()=>{ if(m.textContent===t)m.textContent=""; },8000); }
+}
+function looksLikeCfg(o){
+  return o&&typeof o==="object"&&o.v!==undefined&&typeof o.key==="string"&&
+    Array.isArray(o.set)&&Array.isArray(o.pivotFrets);
+}
+async function importLogFile(file){
+  try{
+    const text=await file.text();
+    if(/^\s*\{/.test(text)){
+      let data; try{data=JSON.parse(text);}catch(e){throw new Error("not valid JSON");}
+      const cfg=data&&data.cfg&&data.id!==undefined?data.cfg:data;   // full entry or bare cfg
+      if(!looksLikeCfg(cfg))throw new Error("not a Triadetudes config");
+      applyRaw(cfg);
+      importMsgSet("étude loaded — save an entry to keep it");
+      return;
+    }
+    const res=parseLogExport(text,new Date().toISOString());
+    if(!res.entries.length)
+      throw new Error("no entries found"+(res.skipped?" ("+res.skipped+" unreadable)":""));
+    const list=loadLog();
+    if(list===null){importMsgSet("storage unavailable here — can't hold an imported log");return;}
+    const m=mergeLog(list,res.entries);
+    if(!saveLog(m.list)){importMsgSet("couldn't save in this browser");return;}
+    renderHist();
+    importMsgSet("imported "+m.added+" new entr"+(m.added===1?"y":"ies")+
+      (res.entries.length-m.added?" · "+(res.entries.length-m.added)+" already here":"")+
+      (res.degraded?" · "+res.degraded+" from an older export (dates approximate)":"")+
+      (res.skipped?" · "+res.skipped+" unreadable skipped":""));
+  }catch(e){ importMsgSet("import failed: "+e.message); }
+}
 function saveEntry(){
   const msg=document.getElementById("saveMsg"), list=loadLog();
   const en=currentEntry();
@@ -2655,14 +2773,7 @@ function saveEntry(){
 function exportLog(){
   const list=loadLog()||[], cur=currentEntry(), all=[...list];
   if(cur.intention||cur.accomplished||!all.length) all.push(cur);
-  let md="# Triadetudes practice log\n\nExported "+new Date().toLocaleString()+"\n";
-  for(const en of all){
-    md+="\n---\n\n## "+en.title+"\n\n*"+fmtWhen(en.savedAt)+(en.minutes?" · ~"+en.minutes+" min":"")+"*\n\n";
-    md+=en.summary+"\n\n";
-    if(en.intention) md+="**Intention:** "+en.intention+"\n\n";
-    if(en.accomplished) md+="**Accomplished:** "+en.accomplished+"\n\n";
-    md+="```json\n"+JSON.stringify(en.cfg)+"\n```\n";
-  }
+  const md=logToMarkdown(all,new Date().toLocaleString());
   const blob=new Blob([md],{type:"text/markdown"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -2794,6 +2905,12 @@ function initControls(){
   document.getElementById("echoClear").addEventListener("click",()=>{ECHO=[];renderStaff();});
   document.getElementById("saveEntry").addEventListener("click",saveEntry);
   document.getElementById("exportLog").addEventListener("click",exportLog);
+  document.getElementById("importBtn").addEventListener("click",
+    ()=>document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change",e=>{
+    if(e.target.files&&e.target.files[0])importLogFile(e.target.files[0]);
+    e.target.value="";
+  });
   document.getElementById("copyBtn").addEventListener("click",async()=>{
     try{await navigator.clipboard.writeText(JSON.stringify(cfgObj(),null,2));
       document.getElementById("copyMsg").textContent="copied";
