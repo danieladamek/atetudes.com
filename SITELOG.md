@@ -5,6 +5,43 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.10: all twelve keys (backlog item, Daniel's dispatch)
+
+- **The key selector reaches every pitch class.** Db/C#, Gb/F# and B join the nine —
+  print-era residue removed; break-down romans, the chip wheel and `resolveRoman()` all
+  supported twelve already, and the selector was the only gate.
+- **The spelling is a derivation, not a table** (the item's rule, golden rule 1): of the
+  enharmonic spellings of a tonic, the one whose scale carries the fewest accidentals
+  wins, ties toward flats. That yields **Db major but C# harmonic minor, Gb major but
+  F# minor, Ab minor over G# minor** — and a load-time assertion proves **no offered
+  scale needs a double accidental, across all 12 tonics × 3 scale types** (melodic
+  minor confirmed: F#/C# clear the raised-sixth pressure). `FLAT_KEYS` now derives from
+  the same arithmetic (flat naming for keys whose major scale is flatward), reproducing
+  the old set exactly for the old keys — the two lists can no longer drift. `KEYS` is
+  the major-scale snapshot; the selector re-derives per scale.
+- **One true tie found in the whole 12×3 space and pinned**: pc 1 melodic minor — Db
+  (with Fb) and C# (with B#) both spell clean at six accidentals, so the ratified
+  flats-tie-break yields **Db melodic minor**. If C# melodic minor is preferred, the
+  tie-break becomes "flats in major, sharps in minor" — flagged for Daniel, one line
+  either way.
+- **Restores are pitch-class-true**: saved keys normalize through `pcOf()` to the
+  canonical spelling for the entry's scale. All nine legacy keys × three scales restore
+  as themselves (asserted, all 27); a foreign `C#`+major normalizes to Db at the same
+  pitch class. No format change, no `v:` bump.
+- Verified per doctrine: engine suite 143/143 — the KEYS-looping invariants (voicings,
+  sevenths, pivot sweep) now cover twelve keys automatically, the fixed-key golden
+  masters pin the nine byte-identical, and the roman path is asserted **on screen**, not
+  just in the engine (`ii7 V7 Imaj7` in Gb renders Abm7 · Db7 · Gbmaj7). 55 Playwright
+  checks from `file://` offline, zero console errors, readout/chips/score/fretboard
+  regex-swept for stray double accidentals in B, Db/C# and Gb/F# across all three
+  scales; inspected at 1280/390 px. Update Log 260809.7.
+- **Report-back (the item's open question):** the selector's label does change under
+  the cursor on a scale change (Db major → C# harmonic minor) — rendered and judged:
+  it reads as instructive, because the entire page respells in the same instant (chips,
+  readout, staff), the selection stays at the same list position, and the sounding key
+  is audibly unchanged. Recommend keeping the single mutating label over a `Db / C#`
+  dual label; screenshots captured for Daniel's own call.
+
 ## 2026-08-09 — Triadetudes v0.6.9: the notebook round-trips (backlog item, Daniel's dispatch)
 
 - **Import lands, and the export learns to deserve it** (roadmap §2's Import line, S as

@@ -136,7 +136,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.9</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.10</div>
 </header>
 
 <div class="cards">
@@ -335,7 +335,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.9 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.10 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1208,8 +1208,8 @@ return { upperStructures, candidateKey, findCandidate };
 /* ============ music core ============ */
 const LETTER_PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 const LETTERS = ["C","D","E","F","G","A","B"];
-const KEYS = ["C","G","D","A","E","F","Bb","Eb","Ab"];
-const FLAT_KEYS = new Set(["F","Bb","Eb","Ab","Db"]);
+/* KEYS and FLAT_KEYS are DERIVED below (all-twelve-keys item) — one rule,
+   not two hand-kept lists; the derivation sits after buildScale(). */
 const SHARP_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 const FLAT_NAMES  = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 const OPEN = {1:64,2:59,3:55,4:50,5:45,6:40};
@@ -1249,6 +1249,57 @@ function buildScale(tonic,type){
   }
   return notes;
 }
+/* ---- the twelve keys, spelled by derivation (all-twelve-keys item) ----
+   Rule: of the enharmonic spellings of a tonic, take the one whose scale
+   carries the fewest accidentals; ties break toward flats. A rule, not a
+   table (golden rule 1): it yields Db major but C# harmonic minor, Gb major
+   but F# minor, Ab minor over G# minor — and no offered scale ever needs a
+   double accidental, asserted at load across all 12 tonics × 3 scale types.
+   FLAT_KEYS derives from the same arithmetic (a key prefers flat naming when
+   its major scale is flatward) so the two can never drift apart. */
+function tonicSpellings(pc){
+  const out=[];
+  for(const L of LETTERS){
+    let alt=(pc-LETTER_PC[L])%12; if(alt>6)alt-=12; if(alt<-6)alt+=12;
+    if(alt===0)out.push(L);
+    else if(alt===1)out.push(L+"#");
+    else if(alt===-1)out.push(L+"b");
+  }
+  return out;
+}
+function scaleAccCount(tonic,type){
+  return buildScale(tonic,type).reduce((a,n)=>a+n.name.length-1,0);
+}
+function keyFor(pc,type){
+  pc=((pc%12)+12)%12;
+  let best=null,bc=1e9;
+  for(const c of tonicSpellings(pc)){
+    const n=scaleAccCount(c,type);
+    if(n<bc||(n===bc&&accOf(c)<accOf(best))){bc=n;best=c;}
+  }
+  return best;
+}
+function keysFor(type){ return [0,1,2,3,4,5,6,7,8,9,10,11].map(pc=>keyFor(pc,type)); }
+const KEYS=keysFor("major");   // the default-scale snapshot; the selector re-derives per scale
+const FLAT_KEYS=new Set(
+  ["major","harm","mel"].flatMap(t=>keysFor(t)).filter(k=>{
+    let f=0,s=0;
+    for(const n of buildScale(k,"major")){
+      f+=(n.name.match(/b/g)||[]).length; s+=(n.name.match(/#/g)||[]).length;
+    }
+    return f>s;
+  }));
+(function assertTwelveKeys(){
+  for(const type of ["major","harm","mel"]){
+    const ks=keysFor(type);
+    if(new Set(ks.map(pcOf)).size!==12)
+      throw new Error("twelve-keys: "+type+" does not cover all pitch classes");
+    for(const k of ks)
+      for(const n of buildScale(k,type))
+        if(/##|bb/.test(n.name))
+          throw new Error("twelve-keys: "+k+" "+type+" needs a double accidental ("+n.name+")");
+  }
+})();
 function pcName(pc,key){
   pc=((pc%12)+12)%12;
   // prefer the current scale's own spelling (Eb+ in C harmonic minor, not D#+)
@@ -1552,6 +1603,8 @@ function changeKey(newKey){
 function changeScale(newScale){
   const cap=pivotContext();   // all three scales carry seven degrees — it survives
   st.scaleType=newScale;
+  // same sounding tonic, respelled for the new scale (Db major → C# harm minor)
+  st.key=keyFor(pcOf(st.key),newScale);
   reseatPivot(cap);
 }
 
@@ -2607,7 +2660,9 @@ function rawCfg(){
     clickSub:st.clickSub,clickVoice:st.clickVoice,countIn:st.countIn};
 }
 function applyRaw(c){
-  Object.assign(st,{key:c.key,scaleType:c.scaleType,set:[...c.set],pivotString:c.pivotString,
+  // saved keys are spelled strings; normalize by pitch class to the canonical
+  // spelling for the entry's scale — same sounding key, always reachable
+  Object.assign(st,{key:keyFor(pcOf(c.key),c.scaleType),scaleType:c.scaleType,set:[...c.set],pivotString:c.pivotString,
     pivotFrets:[...c.pivotFrets],prog:c.prog,startDeg:c.startDeg,chromLen:c.chromLen,
     custom:c.custom,arpPattern:c.arpPattern?[...c.arpPattern]:null,roots:c.roots,ext:c.ext,
     bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0,
@@ -2622,7 +2677,7 @@ function applyRaw(c){
   st.arpCustom=!!st.arpPattern&&
     STRSETS.slotsOf(st.arpPattern,st.set).join()!==STRSETS.slotsOf(def,st.set).join();
   syncHarmonyUI(); syncBreakIn();
-  document.getElementById("keySel").value=st.key;
+  refreshKeySel();
   document.getElementById("scaleSel").value=st.scaleType;
   const seg=document.getElementById("setSeg");
   [...seg.children].forEach(b=>b.className=b.textContent===st.set.join("-")?"on":"");
@@ -2789,6 +2844,15 @@ function syncHarmonyUI(){
   if(bb)bb.style.display=st.harmonyMode==="break"?"none":"block";
   if(kb)kb.style.display=st.harmonyMode==="break"?"block":"none";
 }
+function refreshKeySel(){
+  const sel=document.getElementById("keySel");
+  if(!sel)return;
+  sel.innerHTML="";
+  for(const k of keysFor(st.scaleType)){
+    const o=document.createElement("option");o.textContent=k;sel.appendChild(o);
+  }
+  sel.value=st.key;
+}
 function refreshStartSel(){
   const sel=document.getElementById("startSel");
   sel.innerHTML="";
@@ -2806,8 +2870,7 @@ function refreshSplitSel(){
 }
 function initControls(){
   const keySel=document.getElementById("keySel");
-  KEYS.forEach(k=>{const o=document.createElement("option");o.textContent=k;keySel.appendChild(o);});
-  keySel.value=st.key;
+  refreshKeySel();
   // v0.6.6: context changes translate the design — no defaultPivots, no
   // pattern wipe, and st.cur holds (the progression's shape is unchanged, so
   // resetting the position was a fourth reset with no remaining justification)
@@ -2815,7 +2878,7 @@ function initControls(){
 
   document.getElementById("scaleSel").addEventListener("change",e=>{
     changeScale(e.target.value);
-    refreshStartSel(); rebuild();
+    refreshKeySel(); refreshStartSel(); rebuild();
   });
 
   const seg=document.getElementById("setSeg");
@@ -2969,6 +3032,12 @@ function initControls(){
     if(seq[0].bassPc!==2)console.error("TEST: Dm7 break-down bass is D");
     st.harmonyMode=save.m; st.breakProg=save.p; BREAK=[];
   })();
+  // all twelve keys: spelling derived per scale, ties toward flats
+  eq(keysFor("major").join(" "),"C Db D Eb E F Gb G Ab A Bb B","major keys chromatic");
+  eq(keyFor(1,"harm"),"C#","harmonic minor prefers C# (Db needs Bbb)");
+  eq(keyFor(6,"harm"),"F#","harmonic minor prefers F#");
+  eq(keyFor(8,"harm"),"Ab","Ab minor over G# minor (G# needs F##)");
+  eq(KEYS.length,12,"twelve keys offered");
   // v0.6.8: the aug upper structure is symmetric — three names, one shape
   eq(UPPER.upperStructures(CHORD.parseChord("DmMaj7")).candidates.map(c=>c.label).join(","),
     "F+,A+,C#+","mMaj7 aug rotations, b3 first");
