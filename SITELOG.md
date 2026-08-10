@@ -5,6 +5,30 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes v0.6.14: grip, line and free (backlog item, Daniel's dispatch)
+
+- **Placement's states renamed to what they mean**, correcting v0.6.13's axis (the PO's
+  wireframe misread, per the item — the build was faithful to the item it had): **Grip**
+  (one note per string, playable as a chord, anchored to the pivots — was `box`),
+  **Free** (the grip chosen by smoothest voice-leading, anchor released — was `linear`),
+  and **Line** (free placement along the set, up to three notes per string — roadmap
+  §1.4's grip-vs-line axis), which is **present but disabled** with its one-line reason
+  ("needs the note-event refactor (v0.7)") — a named missing state, not a silent
+  absence, per the v0.6.8 doctrine. v0.7a gains a load-bearing consumer.
+- **The storage trap, asserted from the real restore path**: stored `box` → `grip`,
+  stored `linear` → **`free`** — never `line`, which is new and has no history; unknown
+  and absent values land on `grip`. All six branches pinned in Playwright plus in-page
+  asserts; the restore corpus grew by the v0.6.13 era; additive, no `v:` bump,
+  round-trip no-op with the new values.
+- **The box stops being a mode**: the "?" disclosure now gives one sentence per
+  placement and says the dashed box simply draws where the figure ended up living — a
+  consequence of the placement, not a setting. Button titles carry the same sentences.
+- Verified per doctrine: engine suite 158/158 (panel suite re-voiced to grip/free; all
+  pins green — Grip reproduces the pinned `box` cost weights exactly); 18 Playwright
+  checks from `file://` offline, zero console errors, incl. disabled-Line inertness;
+  panel inspected at 1280/390 px. The motion-grammar §6.1 correction was already made
+  by the PO session in the same pass. Update Log 260810.2.
+
 ## 2026-08-10 — Triadetudes v0.6.13: the panel says what it means (backlog item, Daniel's dispatch)
 
 - **The ⚠ answered empirically before building** (Daniel's ask): across all 5,760

@@ -1,9 +1,12 @@
-/* triadetudes-panel.test.mjs — v0.6.13: the panel says what it means.
+/* triadetudes-panel.test.mjs — v0.6.13/.14: the panel says what it means.
  *
  * Set labels derive from the tuning (no typed table), the pattern speaks slot
  * vocabulary with the digit dialect still accepted, placement is a real
- * constraint (box ≠ linear for at least one config; box is the pinned
- * default), and box overflow WIDENS the drawn zone — never a silent fallback.
+ * constraint (grip ≠ free for at least one config; grip is the pinned
+ * default; line waits on the note-event refactor), and box overflow WIDENS
+ * the drawn zone — never a silent fallback. The v0.6.14 storage migration
+ * (box→grip, linear→free, never line) is asserted in-page and in Playwright,
+ * since it lives on applyRaw's DOM path.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -37,9 +40,9 @@ test("slot vocabulary: letters parse, digits parse, both normalise to H-M-L", ()
   assert.equal(e.patText([4, 5, 6]), "H-M-L", "display is set-independent");
 });
 
-test("placement is a real constraint: box and linear disagree somewhere, box is default", () => {
+test("placement is a real constraint: grip and free disagree somewhere, grip is default", () => {
   const e = loadTriadetudesEngine();
-  assert.equal(e.st.placement, "box", "named default");
+  assert.equal(e.st.placement, "grip", "named default");
   // seat the pivots high so the box constraint has something to pull against
   const sd = e.scaleData();
   const notes = unwrap(e.scaleFretsOnString(2)).map((f) => ({
@@ -50,14 +53,14 @@ test("placement is a real constraint: box and linear disagree somewhere, box is 
     e.st.pivotFrets = e.STRSETS ? e.STRSETS.pivotWindow(notes, 0, nearFret)
       : e.st.pivotFrets;
     const seq = e.buildSequence();
-    e.st.placement = "box";
+    e.st.placement = "grip";
     const box = unwrap(e.chooseVoicings(seq).map((v) => v.frets));
-    e.st.placement = "linear";
+    e.st.placement = "free";
     const lin = unwrap(e.chooseVoicings(seq).map((v) => v.frets));
-    e.st.placement = "box";
+    e.st.placement = "grip";
     if (JSON.stringify(box) !== JSON.stringify(lin)) differs = true;
   }
-  assert.ok(differs, "high pivots: box holds position, linear releases it");
+  assert.ok(differs, "high pivots: grip holds position, free releases it");
 });
 
 test("box overflow widens the drawn zone — placement never silently changes", () => {
@@ -74,7 +77,7 @@ test("box overflow widens the drawn zone — placement never silently changes", 
   for (const v of voic)
     for (const f of unwrap(v.frets))
       assert.ok(f >= lo && f <= hi, "every note stays inside the widened box");
-  assert.equal(e.st.placement, "box", "no silent escape to linear");
+  assert.equal(e.st.placement, "grip", "no silent escape from grip");
 });
 
 test("displayPattern follows playback: block hides the line, arpeggiated shows it", () => {

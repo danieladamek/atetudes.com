@@ -46,6 +46,7 @@
   .seg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
     border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
   .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .seg button:disabled{opacity:.45;cursor:not-allowed}
   .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
   .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
@@ -137,7 +138,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.13</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.14</div>
 </header>
 
 <div class="cards">
@@ -247,8 +248,9 @@
     <div class="row2">
       <div><label>Placement</label>
         <div class="seg" id="placeSeg">
-          <button data-place="box" class="on">Box</button>
-          <button data-place="linear">Linear</button>
+          <button data-place="grip" class="on" title="one note per string, playable as a chord, anchored to your pivots">Grip</button>
+          <button data-place="line" disabled title="notes placed freely along the set, up to three per string — needs the note-event refactor (v0.7)">Line</button>
+          <button data-place="free" title="the grip chosen by smoothest voice-leading, pivot anchor released">Free</button>
         </div></div>
       <div><label>Playback</label>
         <div class="seg" id="playbackSeg">
@@ -258,14 +260,17 @@
         </div></div>
     </div>
     <label class="chk"><input type="checkbox" id="rootsChk"> Show root notes on lower strings</label>
-    <details class="hint"><summary style="cursor:pointer">? pivots, the box, and the badges</summary>
+    <details class="hint"><summary style="cursor:pointer">? pivots, placement, and the badges</summary>
     Pivots: click any scale note on a string of the set — that note and the next two scale
-    notes up the same string become your pivots (dashed rings). The dashed box is your
-    isolation zone: Box placement keeps the figure seeking it, and when a figure can't fit,
-    the box widens visibly rather than letting notes escape. Linear releases the figure to
-    pure voice-leading. Changing set, key or scale carries your pattern and pivots along —
-    same figure, same degrees, new context. Order badges on the sounding notes show each
-    string's position(s) in the pattern.</details>
+    notes up the same string become your pivots (dashed rings). Placement decides where the
+    figure's notes live: <b>Grip</b> — one note per string, playable as a chord, anchored to
+    your pivots; <b>Line</b> (coming with the note-event refactor) — notes placed freely
+    along the set, up to three per string, preferring the pivot window; <b>Free</b> — the
+    grip chosen by smoothest voice-leading, anchor released. The dashed box simply draws
+    where the figure ended up living — a consequence of the placement, not a setting.
+    Changing set, key or scale carries your pattern and pivots along — same figure, same
+    degrees, new context. Order badges on the sounding notes show each string's position(s)
+    in the pattern.</details>
   </div>
 
   <div class="card">
@@ -362,7 +367,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.13 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.14 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1429,11 +1434,13 @@ function chooseVoicings(seq){
   const s=st.setLowHigh, pi=s.indexOf(st.pivotString);
   const pmin=Math.min(...st.pivotFrets), pmax=Math.max(...st.pivotFrets);
   const pmean=(pmin+pmax)/2;
-  // placement (v0.6.13): Box weights the isolation zone — the ratified
-  // first-class voicing constraint (roadmap §4) — Linear releases it and lets
-  // pure voice-leading choose. Box is the default and the pinned behaviour.
-  const pivotW=st.placement==="linear"?0:4;
-  const anchorW=st.placement==="linear"?0:0.5;
+  // placement: GRIP weights the isolation zone — the ratified first-class
+  // voicing constraint (roadmap §4) — FREE releases it and lets pure
+  // voice-leading choose. Grip is the default and the pinned behaviour.
+  // (LINE draws from a different candidate space entirely — voicingsFor is
+  // one-note-per-string — and waits on the note-event refactor.)
+  const pivotW=st.placement==="free"?0:4;
+  const anchorW=st.placement==="free"?0:0.5;
   let prev=null; const out=[];
   for(const ch of seq){
     const cands=voicingsFor(ch,s);
@@ -1466,9 +1473,14 @@ const st={
   breakProg:[{sym:"Dm7",us:null},{sym:"G7",us:null},{sym:"Cmaj7",us:null}],
   arpPattern:null, arpCustom:false,  // arpPattern: array of string numbers (repeats OK) or null
   // v0.6.13: three axes, three controls — the pattern is TONES/ORDER only;
-  // placement (box|linear) and playback (arpeggiated|block|both) are named.
-  // "empty field = block chord" is retired: emptiness means emptiness.
-  placement:"box", playback:"arpeggiated",
+  // placement and playback (arpeggiated|block|both) are named.
+  // v0.6.14 renames placement's states to what they mean: GRIP (one note per
+  // string, anchored to the pivots — the isolation thesis), FREE (the grip
+  // chosen by smoothest voice-leading, anchor released), and LINE (free
+  // placement along the set, up to three notes per string) which is named but
+  // unbuildable until the note-event refactor. The drawn box is a CONSEQUENCE
+  // of placement, not a mode.
+  placement:"grip", playback:"arpeggiated",
   roots:false, ext:"none",
   bpm:72, meter:4, splitIdx:1, metroOnly:false,
   clickOn:true, clickVol:0.8, clickAccent:true, clickSub:1, clickVoice:"beep", countIn:false,
@@ -2814,8 +2826,11 @@ function applyRaw(c){
     pivotFrets:[...c.pivotFrets],prog:c.prog,startDeg:c.startDeg,chromLen:c.chromLen,
     custom:c.custom,arpPattern:c.arpPattern?[...c.arpPattern]:null,roots:c.roots,ext:c.ext,
     // pre-v0.6.13 entries encoded playback in the pattern's emptiness — the
-    // named axes derive from that encoding, so old entries restore identically
-    placement:c.placement??"box",
+    // named axes derive from that encoding, so old entries restore identically.
+    // v0.6.14 renames placement's stored values: box → grip, and — the trap —
+    // linear → FREE (it was the unanchored grip), NEVER "line", which is new
+    // and has no stored history. Unknown values land on grip.
+    placement:({box:"grip",linear:"free",grip:"grip",free:"free"})[c.placement]??"grip",
     playback:c.playback??(c.arpPattern?"arpeggiated":"block"),
     bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0,
     // pre-v0.6 entries carry no harmony panel — they were all build-up études
@@ -2882,7 +2897,7 @@ function summaryText(){
   return st.key+" "+SCALES[st.scaleType].label+" · strings "+st.set.join("-")+
     " · pivots "+piv+" on string "+st.pivotString+" · "+how+
     " · arp "+(patText(st.arpPattern)||"none")+" · "+st.playback+
-    (st.placement!=="box"?" · linear":"")+
+    (st.placement!=="grip"?" · "+st.placement:"")+
     " · "+st.meter+"/4 split "+pattern().join("+")+" · "+st.bpm+" bpm"+
     (st.harmonyMode!=="break"&&st.ext!=="none"?" · over bass ("+st.ext+")":"")+
     " — "+SEQ.map(c=>c.srcSymbol&&c.srcSymbol!==c.label?c.label+"="+c.srcSymbol:c.label).join("  ");
@@ -3267,6 +3282,12 @@ renderHist();
   applyRaw(JSON.parse(before));
   const after=JSON.stringify(rawCfg());
   if(before!==after)console.error("TEST: rawCfg/applyRaw round-trip drifted",before,after);
+  // v0.6.14 placement migration: linear was the unanchored grip → free, NEVER line
+  const c=JSON.parse(before); c.placement="linear"; applyRaw(c);
+  if(st.placement!=="free")console.error("TEST: stored linear must resolve to free, got",st.placement);
+  const c2=JSON.parse(before); c2.placement="box"; applyRaw(c2);
+  if(st.placement!=="grip")console.error("TEST: stored box must resolve to grip, got",st.placement);
+  applyRaw(JSON.parse(before));
 })();
 </script>
 </body>
