@@ -5,6 +5,51 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes v0.7.3: the motion grammar and enclosures (v0.7 arc phase 3, Daniel's dispatch)
+
+- **The grammar is engine code first** — `engine/motion.mjs` (family module, hand-inlined
+  with a verbatim-checked namespace): `parse` / `serialize` / `describe` / `resolve` plus
+  the sketchpad's `emitFromClicks`, with the fixed-point property (`serialize∘parse`
+  idempotent) asserted at module load over a probe corpus, and every spec §8 assertion a
+  running test — approaches exactly their written distance, scale approaches adjacent in
+  the étude's scale, absolute degrees landing on the key's pitch class in the octave
+  nearest the target, nothing hand-placed, the 16-event ceiling refusing by name.
+- **The grammar as specified**: `(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]` in tones mode,
+  `(-1,+2)H - M - (-s)L` in shape mode; a leading sign is distance, an unsigned token is
+  an absolute key degree; `s` is the étude's selected scale (chord-scales stay a v0.8+
+  question, not improvised). **Motion follows: the shape · the tones** is a named mode
+  control; the typed text re-parses under a mode switch, never silently converted; the
+  legacy digit dialect still parses and normalises.
+- **describe() is the deliverable**: the live sentence under the field names the idiom by
+  derivation — enclosed / approached from / a run from — and the spec's own example
+  renders verbatim ("The root, enclosed — a half step below, then a whole step above.").
+  Parse failures are the sentence refusing to finish plus a caret at the offending
+  character in a monospace line — no red box, no color. Rhythm generalises: n parses from
+  the figure ("9 over 2 beats → …"), divides evenly, names awkward tuplets plainly, and
+  refuses by name above the ceiling.
+- **Approach markers per Spec v1.3 §2.6, now law**: 0.6 of the host radius, hollow, the
+  color as stroke — degree color when diatonic, violet #7847A8 when chromatic — no new
+  ring, no interval label; the slur to the target in annotation gray 1.2, drawn UNDER the
+  dots; keyboard hosts the same treatment at its own radii; the score draws cue-size
+  approach heads under the same color rules. The sounding-note pulse treats approaches as
+  steps (they ring); the bass pedal and harmony strums still do not.
+- **Line re-checked as the item demanded**: approaches put more notes per string, so the
+  v0.7.0 rule holds and hardens — entering Line moves the figure to tones mode (stated),
+  shape mode disables with its reason, and tones figures fully resolve against Line
+  placements (the C figure's [5] lands at B-string 8). Legacy paths are provably
+  untouched: the phase-2 byte-level DOM matrix (42 hashes, 14 configs) is STILL identical
+  with the grammar in the file, and a null figure short-circuits to the pre-grammar order.
+- **Forward-compat constraints honored** (Daniel, mid-build): `echoAdd()` widened to
+  `{midi, string, fret}` at all three call sites (string/fret absent for keyboard clicks,
+  nothing consuming them yet); zero document-level key listeners added — the count across
+  all four published studies remains zero; no global digit/Space bindings.
+- Verified per doctrine: engine suite 199/199 (20 grammar tests incl. the fixed-point
+  corpus and emit precedence; 5 in-app figure-pipeline tests; every prior pin untouched);
+  23 interactive Playwright checks from `file://` offline, zero console/page errors;
+  figure rendered and inspected at 1280/390 px at slow and fast tempo. `rawCfg()` gains
+  `motionMode`/`motionSrc` additively; pre-grammar entries restore figureless and
+  identical. Update Log 260810.8.
+
 ## 2026-08-10 — Triadetudes v0.7.2: the note-event refactor completes (v0.7 arc phase 2, Daniel's dispatch)
 
 - **One list per chord, every consumer reading it.** The producer is

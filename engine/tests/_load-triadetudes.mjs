@@ -27,6 +27,7 @@ const HARVEST = [
   "fmtWhen", "logToMarkdown", "parseLogExport", "mergeLog",
   "keyFor", "keysFor", "CHORD", "UPPER", "STRSETS", "splitFor",
   "setLabel", "patText", "displayPattern", "orderedNotes",
+  "MOTION", "motionSource", "parsedFigure", "activeFigure", "figureEntries", "orderedEntries",
   "voiceLeadCost", "placementCost", "meanFret", "movementTotal",
   "st", "SCALES", "SPLITS", "OPEN", "NFRETS", "KEYS", "IVL_LABEL", "IVL_FAMILY",
 ];

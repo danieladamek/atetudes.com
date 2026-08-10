@@ -34,8 +34,11 @@ export function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
       slot: null, onset: 0, dur: 1.0 });
   const seq = order || voicing.notes;
   for (const n of seq)
-    if (!voicing.notes.includes(n))
+    if (n.role === undefined && !voicing.notes.includes(n))
       throw new Error("noteEvents: ordered note is not one of the voicing's notes");
+    // untagged orders are the legacy voicing-note paths and must be identity;
+    // role-tagged entries come from the motion resolver, which asserted their
+    // pitches, distances and placements before they arrived here
   const span = (durBeats || 2) * (60 / bpm);
   if (!order) {
     seq.forEach((n, k) => out.push({ midi: n.midi, string: n.string, fret: n.fret,
@@ -43,11 +46,11 @@ export function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
   } else {
     const step = span / seq.length;
     seq.forEach((n, k) => out.push({ midi: n.midi, string: n.string, fret: n.fret,
-      role: "chord", slot: n.slot ?? null, onset: k * step,
+      role: n.role ?? "chord", slot: n.slot ?? null, onset: k * step,
       dur: Math.min(0.9, step * 1.6) }));
   }
   // structural assertions — derived, then checked, before anyone consumes it
-  const chord = out.filter((e) => e.role === "chord");
+  const chord = out.filter((e) => e.role !== "bass");
   if (chord.length !== seq.length)
     throw new Error("noteEvents: event count != sequence length");
   for (let k = 0; k < chord.length; k++) {

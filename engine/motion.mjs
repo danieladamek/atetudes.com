@@ -1,0 +1,383 @@
+/* motion.mjs — the motion grammar (component v1).
+ *
+ * The shared drill layer's figure language (spec: notes/specs/motion-grammar.md;
+ * Triadetudes v0.7 phase 3 is the first consumer; Tetradetudes and Substitute
+ * Teacher inherit it). Pure: no DOM, no audio, no globals.
+ *
+ *   tones mode :  (-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]
+ *   shape mode :  (-1,+2)H   - M          - (-s)L
+ *
+ * Targets: [deg] in tones mode (degrees 1–7 and compound 9/11/13, accidentals
+ * b/#; compounds reduce mod 7 for pitch, keep their spelling for the readout);
+ * H/M/L in shape mode (H = the set's highest-pitched string). Approach items,
+ * in parens before their target, played in written order, target last:
+ * a LEADING SIGN means distance from the target (-1 half step below, +2 whole
+ * step above, -s the next scale tone below, +2s two scale steps); an UNSIGNED
+ * token is an absolute degree of the étude's KEY (b9, 2, #9) taken in the
+ * octave nearest the target. `s` means the étude's selected scale — chord-
+ * scales are a v0.8+ question and are not improvised here (spec §4.4).
+ *
+ * describe() is the deliverable, not documentation (spec §5): it names the
+ * idiom by DERIVATION from the figure's shape — enclosed / a run from /
+ * approached from — never a lookup of figures. Parse failures surface as the
+ * sentence refusing to finish plus a caret position; no color anywhere.
+ *
+ * MAX_EVENTS refuses by name; nothing truncates.
+ */
+
+const mod12 = (n) => ((n % 12) + 12) % 12;
+
+export const MAX_EVENTS = 16; // the family's figure ceiling (parseArp's, shared)
+
+// degree → semitones above the root/tonic (chord.mjs's DEG arithmetic, restated
+// and load-asserted; compounds reduce mod 7 for pitch, spelling kept aside)
+const DEG_SEMIS = { 1: 0, 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21 };
+const DEGREES = [1, 2, 3, 4, 5, 6, 7, 9, 11, 13];
+for (const d of DEGREES)
+  if (!(d in DEG_SEMIS)) throw new Error(`motion: degree ${d} has no interval`);
+if (DEG_SEMIS[9] % 12 !== DEG_SEMIS[2] || DEG_SEMIS[11] % 12 !== DEG_SEMIS[4] ||
+    DEG_SEMIS[13] % 12 !== DEG_SEMIS[6])
+  throw new Error("motion: compound degrees must reduce mod 7");
+
+export function degreeSemis(deg, acc) { return DEG_SEMIS[deg] + (acc || 0); }
+
+// ---------- parse ----------
+
+const err = (pos, message, figures) => ({ error: { pos, message }, figures });
+
+/**
+ * parse("( -1,+2 )[1] - [3]", "tones") →
+ *   { mode, figures: [ { approaches:[item…], target } … ], n }
+ * or { error: { pos, message }, figures: <parsed so far> }.
+ *
+ * item: {kind:"semi",delta:±n} | {kind:"scale",delta:±k}
+ *     | {kind:"degree",deg,acc,text}
+ * target (tones): {kind:"degree",deg,acc,text} · (shape): {kind:"slot",slot}
+ */
+export function parse(src, mode) {
+  if (typeof src !== "string") return err(0, "not a string", []);
+  const figures = [];
+  let i = 0, n = 0;
+  const ws = () => { while (i < src.length && /\s/.test(src[i])) i++; };
+  const parseDegreeToken = () => {
+    const m = src.slice(i).match(/^([b#]?)(13|11|9|[1-7])/);
+    if (!m) return null;
+    i += m[0].length;
+    return { kind: "degree", deg: +m[2], acc: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0,
+      text: m[0] };
+  };
+  const parseItem = () => {
+    const m = src.slice(i).match(/^([+-])(\d*)(s?)/);
+    if (m && (m[2] || m[3])) {
+      i += m[0].length;
+      const sign = m[1] === "-" ? -1 : 1;
+      if (m[3] === "s") return { kind: "scale", delta: sign * (m[2] ? +m[2] : 1) };
+      return { kind: "semi", delta: sign * +m[2] };
+    }
+    if (m) return "sign-without-distance";
+    return parseDegreeToken();
+  };
+  while (i < src.length) {
+    ws();
+    if (i >= src.length) break;
+    const approaches = [];
+    if (src[i] === "(") {
+      i++;
+      for (;;) {
+        ws();
+        if (src[i] === ")") { i++; break; }
+        const item = parseItem();
+        if (item === "sign-without-distance")
+          return err(i, "a sign needs a distance: -1, +2, -s, +2s", figures);
+        if (!item)
+          return err(i, "expected an approach: -1, +2, -s, +2s, or a degree like b9", figures);
+        approaches.push(item);
+        ws();
+        if (src[i] === ",") { i++; continue; }
+        if (src[i] === ")") { i++; break; }
+        return err(i, 'expected "," or ")" in the approach figure', figures);
+      }
+      ws();
+    }
+    let target = null;
+    if (mode === "shape") {
+      const c = (src[i] || "").toUpperCase();
+      if (c === "H" || c === "M" || c === "L") { target = { kind: "slot", slot: c }; i++; }
+      else return err(i, "expected a slot target: H, M or L", figures);
+    } else {
+      if (src[i] === "[") {
+        i++;
+        const d = parseDegreeToken();
+        if (!d) return err(i, "expected a degree inside [ ]", figures);
+        if (src[i] !== "]") return err(i, 'expected "]"', figures);
+        i++;
+        target = d;
+      } else return err(i, "expected a target like [1] or [b3]", figures);
+    }
+    figures.push({ approaches, target });
+    n += approaches.length + 1;
+    if (n > MAX_EVENTS)
+      return err(i, `${n} notes per chord — ${MAX_EVENTS} is the ceiling; split the figure`,
+        figures);
+    ws();
+    if (i >= src.length) break;
+    if (src[i] === "-") { i++; continue; }
+    return err(i, 'expected "-" between figures', figures);
+  }
+  if (!figures.length) return err(0, "empty figure", figures);
+  return { mode, figures, n };
+}
+
+// ---------- serialize (idempotent normal form) ----------
+
+const itemText = (it) =>
+  it.kind === "semi" ? (it.delta < 0 ? String(it.delta) : "+" + it.delta) :
+  it.kind === "scale" ? ((it.delta < 0 ? "-" : "+") +
+    (Math.abs(it.delta) === 1 ? "" : Math.abs(it.delta)) + "s") :
+  (it.acc === -1 ? "b" : it.acc === 1 ? "#" : "") + it.deg;
+
+export function serialize(parsed) {
+  return parsed.figures.map((f) => {
+    const t = f.target.kind === "slot" ? f.target.slot
+      : "[" + itemText(f.target) + "]";
+    return (f.approaches.length ? "(" + f.approaches.map(itemText).join(",") + ")" : "") + t;
+  }).join(" - ");
+}
+
+// ---------- describe: the idiom, named by derivation ----------
+
+const ORDINAL = { 1: "root", 2: "2nd", 3: "3rd", 4: "4th", 5: "5th", 6: "6th",
+  7: "7th", 9: "9th", 11: "11th", 13: "13th" };
+const SLOT_NAME = { H: "high string", M: "middle string", L: "low string" };
+
+function targetName(t) {
+  if (t.kind === "slot") return "the " + SLOT_NAME[t.slot];
+  const acc = t.acc === -1 ? "♭" : t.acc === 1 ? "♯" : "";
+  return "the " + acc + ORDINAL[t.deg];
+}
+function itemName(it) {
+  if (it.kind === "semi") {
+    const n = Math.abs(it.delta), side = it.delta < 0 ? "below" : "above";
+    const dist = n === 1 ? "a half step" : n === 2 ? "a whole step" : n + " semitones";
+    return dist + " " + side;
+  }
+  if (it.kind === "scale") {
+    const k = Math.abs(it.delta), side = it.delta < 0 ? "below" : "above";
+    return (k === 1 ? "the scale tone" : k + " scale steps") + " " + side;
+  }
+  const acc = it.acc === -1 ? "♭" : it.acc === 1 ? "♯" : "";
+  return "the " + acc + it.deg;
+}
+function sideOf(it) { // signed items only; absolute degrees have no side until resolved
+  return it.kind === "degree" ? null : it.delta < 0 ? -1 : 1;
+}
+
+export function describe(parsed) {
+  return parsed.figures.map((f) => {
+    const t = targetName(f.target);
+    const a = f.approaches;
+    if (!a.length) return t.charAt(0).toUpperCase() + t.slice(1) + ".";
+    const names = a.map(itemName);
+    const list = names.length === 1 ? names[0] :
+      names.slice(0, -1).join(", ") + ", then " + names[names.length - 1];
+    const sides = a.map(sideOf);
+    let idiom;
+    if (a.length === 1) idiom = "approached from " + list;
+    else if (a.length === 2 && sides[0] !== null && sides[1] !== null &&
+             sides[0] !== sides[1]) idiom = "enclosed — " + list;
+    else if (sides.every((s2) => s2 !== null) &&
+             sides.every((s2) => s2 === sides[0]))
+      idiom = "approached by a run from " + list;
+    else idiom = "approached — " + list;
+    const T = t.charAt(0).toUpperCase() + t.slice(1);
+    return T + ", " + idiom + ".";
+  }).join(" ");
+}
+
+// ---------- resolve: figures + a chord context → role-tagged note entries ----------
+
+/**
+ * ctx: {
+ *   chordPcs: [r,t,f],           // the chord's own tones (root first)
+ *   rootPc,                      // for degree targets beyond the triad
+ *   voicing: {notes:[{midi,string,fret,slot}]},
+ *   scalePcs: [7 pcs],           // the étude's selected scale
+ *   tonicPc,                     // for absolute-degree approaches
+ *   open: {string→midi}, nfrets,
+ *   set: [strings], setLowHigh: [low→high]
+ * }
+ * Returns entries [{midi,string,fret,slot,role}...] in playing order.
+ * Every derivation is asserted before return (spec §8).
+ */
+export function resolve(parsed, ctx) {
+  const out = [];
+  const placeOnSet = (midi, nearFret, preferString) => {
+    // nearest playable position to nearFret; prefer the target's own string
+    let best = null;
+    for (const sn of ctx.set) {
+      const f = midi - ctx.open[sn];
+      if (f < 0 || f > ctx.nfrets + 2) continue;
+      const d = Math.abs(f - nearFret) + (sn === preferString ? 0 : 0.25);
+      if (!best || d < best.d) best = { string: sn, fret: f, d };
+    }
+    if (!best) throw new Error("motion: no playable position for midi " + midi);
+    return best;
+  };
+  let prevFret = null;
+  for (const fig of parsed.figures) {
+    // target first — approaches are relative to it
+    let tNote = null;
+    if (fig.target.kind === "slot") {
+      const slot = { L: 0, M: 1, H: 2 }[fig.target.slot];
+      tNote = ctx.voicing.notes.find((n) => n.slot === slot);
+      if (!tNote) throw new Error("motion: slot " + fig.target.slot +
+        " is not a bijection here — shape mode needs one note per string");
+      tNote = { ...tNote };
+    } else {
+      const t = fig.target;
+      const pc = (t.acc === 0 && t.deg === 1) ? ctx.chordPcs[0]
+        : (t.acc === 0 && t.deg === 3) ? ctx.chordPcs[1]
+        : (t.acc === 0 && t.deg === 5) ? ctx.chordPcs[2]
+        : mod12(ctx.rootPc + degreeSemis(t.deg, t.acc));
+      const inVoicing = ctx.voicing.notes.find((n) => mod12(n.midi) === pc);
+      if (inVoicing) tNote = { ...inVoicing };
+      else {
+        const near = prevFret ?? ctx.voicing.notes.reduce((a, n) => a + n.fret, 0) /
+          ctx.voicing.notes.length;
+        // any octave of the pc on the set, nearest the reference position
+        let best = null;
+        for (const sn of ctx.set)
+          for (let f = 0; f <= ctx.nfrets + 2; f++)
+            if (mod12(ctx.open[sn] + f) === pc) {
+              const d = Math.abs(f - near);
+              if (!best || d < best.d) best = { string: sn, fret: f, d };
+            }
+        if (!best) throw new Error("motion: target pc " + pc + " unplaceable on the set");
+        tNote = { midi: ctx.open[best.string] + best.fret, string: best.string,
+          fret: best.fret, slot: ctx.setLowHigh.indexOf(best.string) };
+      }
+    }
+    // approaches, in written order, target last
+    for (const it of fig.approaches) {
+      let midi;
+      if (it.kind === "semi") midi = tNote.midi + it.delta;
+      else if (it.kind === "scale") {
+        const dir = it.delta < 0 ? -1 : 1;
+        let m = tNote.midi, steps = Math.abs(it.delta);
+        while (steps > 0) {
+          m += dir;
+          if (ctx.scalePcs.includes(mod12(m))) steps--;
+          if (Math.abs(m - tNote.midi) > 24)
+            throw new Error("motion: scale walk ran away — scale context broken");
+        }
+        midi = m;
+      } else {
+        const pc = mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc));
+        // the octave nearest the target
+        const base = tNote.midi - mod12(tNote.midi) + pc;
+        const cands = [base - 12, base, base + 12];
+        midi = cands.reduce((a, b) =>
+          Math.abs(b - tNote.midi) < Math.abs(a - tNote.midi) ? b : a);
+      }
+      const pos = placeOnSet(midi, tNote.fret, tNote.string);
+      const ev = { midi, string: pos.string, fret: pos.fret,
+        slot: ctx.setLowHigh.indexOf(pos.string), role: "approach" };
+      // derived, then asserted (spec §8)
+      if (it.kind === "semi" && ev.midi - tNote.midi !== it.delta)
+        throw new Error("motion: approach is not its written distance from the target");
+      if (it.kind === "scale" && !ctx.scalePcs.includes(mod12(ev.midi)))
+        throw new Error("motion: scale approach left the scale");
+      if (it.kind === "degree" &&
+          mod12(ev.midi) !== mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc)))
+        throw new Error("motion: degree approach missed its pitch class");
+      if (ctx.open[ev.string] + ev.fret !== ev.midi)
+        throw new Error("motion: approach placement dishonest");
+      out.push(ev);
+    }
+    out.push({ ...tNote, role: "chord" });
+    prevFret = tNote.fret;
+  }
+  if (out.length > MAX_EVENTS)
+    throw new Error("motion: " + out.length + " notes — " + MAX_EVENTS + " is the ceiling");
+  return out;
+}
+
+// ---------- the sketchpad's emitter (the grammar's first external producer) ----------
+
+/**
+ * emitFromClicks(clicks, ctx) → { src, discarded } | { error }
+ * clicks: [{midi, role:"target"|"approach", degText?}] in click order (= playing
+ * order). Classification happens at click time against the then-current chord
+ * (the honest reading — see the item); this function only serialises.
+ * Emission is deliberately LOSSY: degrees and relationships survive; octave and
+ * placement are discarded — a figure is a design, not a fingering.
+ * ctx: { scalePcs, tonicPc } for approach-form selection.
+ */
+export function emitFromClicks(clicks, ctx) {
+  const figures = [];
+  let pending = [];
+  for (const c of clicks) {
+    if (c.role === "target") {
+      const m = (c.degText || "").match(/^([b#]?)(13|11|9|[1-7])$/);
+      if (!m) return { error: 'a target needs a degree — got "' + (c.degText || "") + '"' };
+      const target = { kind: "degree", deg: +m[2],
+        acc: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0, text: m[0] };
+      const approaches = pending.map((a) => {
+        const d = a.midi - c.midi;
+        if (d !== 0 && Math.abs(d) <= 2) return { kind: "semi", delta: d };
+        // one scale step away → ±s
+        const dir = d < 0 ? -1 : 1;
+        let m2 = c.midi, hit = null;
+        for (let k = 1; k <= 12; k++) {
+          m2 += dir;
+          if (ctx.scalePcs.includes(mod12(m2))) { hit = m2; break; }
+        }
+        if (hit === a.midi) return { kind: "scale", delta: dir };
+        // otherwise the absolute key degree of the clicked pitch class
+        const rel = mod12(a.midi - ctx.tonicPc);
+        const NAMES = { 0: [1, 0], 1: [2, -1], 2: [2, 0], 3: [3, -1], 4: [3, 0],
+          5: [4, 0], 6: [5, -1], 7: [5, 0], 8: [6, -1], 9: [6, 0], 10: [7, -1], 11: [7, 0] };
+        const [deg, acc] = NAMES[rel];
+        return { kind: "degree", deg, acc };
+      });
+      figures.push({ approaches, target });
+      pending = [];
+    } else pending.push(c);
+  }
+  if (pending.length)
+    return { error: pending.length +
+      " trailing approach note(s) with no target to resolve to — click a chord tone last" };
+  if (!figures.length) return { error: "nothing to emit — the sketch is empty" };
+  const parsed = { mode: "tones", figures,
+    n: figures.reduce((a, f) => a + f.approaches.length + 1, 0) };
+  if (parsed.n > MAX_EVENTS)
+    return { error: parsed.n + " notes — " + MAX_EVENTS + " is the ceiling" };
+  return { src: serialize(parsed),
+    discarded: "octave and placement dropped — a figure is a design, not a fingering" };
+}
+
+// ---------- load-time assertions (golden rule 1, site form) ----------
+
+{
+  // the fixed-point property on a probe corpus: serialize ∘ parse is idempotent
+  const probes = [
+    ["tones", "(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]"],
+    ["tones", "[1]-[3]-[5]"],
+    ["tones", "(b9,-1)[1]"],
+    ["shape", "(-1,+2)H - M - (-s)L"],
+    ["shape", "H-M-L"],
+  ];
+  for (const [mode, src] of probes) {
+    const p1 = parse(src, mode);
+    if (p1.error) throw new Error("motion: probe failed to parse: " + src);
+    const s1 = serialize(p1);
+    const p2 = parse(s1, mode);
+    if (p2.error || serialize(p2) !== s1)
+      throw new Error("motion: serialize∘parse is not a fixed point for " + src);
+    if (!describe(p1)) throw new Error("motion: describe incomplete for " + src);
+  }
+  if (!parse("x", "tones").error) throw new Error("motion: garbage must refuse");
+  const over = parse(Array(9).fill("(-1)[1]").join("-"), "tones");
+  if (!over.error || !/ceiling/.test(over.error.message))
+    throw new Error("motion: the event ceiling must refuse by name");
+}
