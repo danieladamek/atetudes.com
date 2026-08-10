@@ -12,9 +12,14 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
   at init (no drift), both sliders drive one `changeBpm()`, `syncBpmUI()` resyncs both
   on every move and restore. **No tap tempo in the mirror**, per Daniel. Mid-run tempo
   bending unchanged (the core's grid-bend rule, already pinned).
-- **Sound: on/off toggle** in the checkbox row — same discipline: both buttons drive one
-  `toggleClick()`, `syncClickUI()` dresses both, restores sync both. Play-along setup
-  (sound off · mute chords) now lives entirely in the Transport.
+- **A "metronome" checkbox** leads the checkbox row (`metronome · count-in · mute
+  chords`) — Daniel's second-round call, replacing the first-pass Sound button: a
+  selection box reads naturally beside count-in. Same one-state discipline: checkbox
+  and the Metronome card's Sound button drive the same `st.clickOn` through
+  `syncClickUI()`, restores sync both. Play-along setup (metronome off · mute chords)
+  now lives entirely in the Transport. Also per review: the Bar split label breaks
+  after the name, "(beats per chord)" entirely below it, selects still sharing their
+  baseline.
 - Range sliders on light cards take the neutral ink accent (Spec v1.2 rule 8 — the
   default browser blue sat too close to degree-3's family); the dark Metronome card
   keeps its light accent.

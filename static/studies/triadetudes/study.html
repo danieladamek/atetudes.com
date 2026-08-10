@@ -268,11 +268,12 @@
     <div class="row2 alignEnd">
       <div><label>Time sig</label>
         <select id="meterSel2"></select></div>
-      <div><label>Bar split (beats per chord)</label>
+      <div><label>Bar split<br>(beats per chord)</label>
         <select id="splitSel"></select></div>
     </div>
     <div class="transport" style="gap:9px;margin-top:8px">
-      <button id="clickTgl2" title="metronome click sound on/off">Sound: on</button>
+      <label class="chk" style="margin:0" title="metronome click sound on/off">
+        <input type="checkbox" id="clickChk2"> metronome</label>
       <label class="chk" style="margin:0"><input type="checkbox" id="countChk"> count-in</label>
       <label class="chk" style="margin:0"><input type="checkbox" id="metroChk"> mute chords</label>
     </div>
@@ -2779,11 +2780,11 @@ function applyRaw(c){
 }
 function toggleClick(){ st.clickOn=!st.clickOn; syncClickUI(); renderCfg(); }
 function syncClickUI(){
-  for(const id of ["clickTgl","clickTgl2"]){   // metronome card + Transport mirror
-    const b=document.getElementById(id);
-    if(b){b.textContent="Sound: "+(st.clickOn?"on":"off");
-          b.style.color=st.clickOn?"":"var(--gray)";}
-  }
+  const b=document.getElementById("clickTgl");
+  if(b){b.textContent="Sound: "+(st.clickOn?"on":"off");
+        b.style.color=st.clickOn?"":"var(--gray)";}
+  const k=document.getElementById("clickChk2");   // Transport mirror: a checkbox
+  if(k)k.checked=st.clickOn;
   const a=document.getElementById("accChk"); if(a)a.checked=st.clickAccent;
   const s=document.getElementById("subSel"); if(s)s.value=String(st.clickSub);
   const vc=document.getElementById("voiceSel"); if(vc)vc.value=st.clickVoice;
@@ -3045,7 +3046,8 @@ function initControls(){
     st.splitIdx=+e.target.value; renderScore(); syncArpIn(); renderCfg();});
   document.getElementById("metroChk").addEventListener("change",e=>{st.metroOnly=e.target.checked;renderCfg();});
   document.getElementById("clickTgl").addEventListener("click",toggleClick);
-  document.getElementById("clickTgl2").addEventListener("click",toggleClick);
+  document.getElementById("clickChk2").addEventListener("change",e=>{
+    st.clickOn=e.target.checked; syncClickUI(); renderCfg();});
   document.getElementById("accChk").addEventListener("change",e=>{st.clickAccent=e.target.checked;renderCfg();});
   document.getElementById("subSel").addEventListener("change",e=>{st.clickSub=+e.target.value;renderCfg();});
   document.getElementById("voiceSel").addEventListener("change",e=>{st.clickVoice=e.target.value;click();renderCfg();});
