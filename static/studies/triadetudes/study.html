@@ -136,7 +136,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.10</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.11</div>
 </header>
 
 <div class="cards">
@@ -155,7 +155,7 @@
     <div class="row2">
       <div><label>Time</label>
         <select id="meterSel"><option value="4" selected>4/4</option><option value="3">3/4</option>
-          <option value="5">5/4</option><option value="6">6/4</option></select></div>
+          <option value="5">5/4</option><option value="6">6/4</option><option value="7">7/4</option></select></div>
       <div><label>Subdivision</label>
         <select id="subSel"><option value="1" selected>beats</option><option value="2">8ths</option>
           <option value="3">triplets</option><option value="4">16ths</option></select></div>
@@ -259,8 +259,12 @@
       <button id="playBtn" class="primary">Play</button>
       <button id="nextBtn" title="next chord">▶</button>
     </div>
-    <label>Bar split (beats per chord)</label>
-    <select id="splitSel"></select>
+    <div class="row2">
+      <div><label>Time sig</label>
+        <select id="meterSel2"></select></div>
+      <div><label>Bar split (beats per chord)</label>
+        <select id="splitSel"></select></div>
+    </div>
     <div class="transport" style="gap:9px;margin-top:8px">
       <label class="chk" style="margin:0"><input type="checkbox" id="countChk"> count-in</label>
       <label class="chk" style="margin:0"><input type="checkbox" id="metroChk"> mute chords</label>
@@ -335,7 +339,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.10 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.6.11 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1227,6 +1231,9 @@ const SPLITS = {
   3:[[3],[1,2],[2,1],[1,1,1]],
   5:[[5],[2,3],[3,2],[1,4],[4,1]],
   6:[[6],[3,3],[2,2,2],[4,2],[2,4]],
+  // 7/4: whole bar, the halves-of-seven, the three-group rotations. [1,6]/[6,1]
+  // deliberately omitted pending Daniel's call on the 5/4 asymmetry (see item).
+  7:[[7],[4,3],[3,4],[2,2,3],[3,2,2],[2,3,2]],
 };
 const IVL_LABEL = {0:"R",1:"b2",2:"2",3:"b3",4:"3",5:"4",6:"b5",7:"5",8:"b6",9:"6",10:"b7",11:"7"};
 const IVL_FAMILY = {0:"R",1:"2",2:"2",3:"3",4:"3",5:"4",6:"5",7:"5",8:"6",9:"6",10:"7",11:"7"};
@@ -1608,6 +1615,18 @@ function changeScale(newScale){
   reseatPivot(cap);
 }
 
+/* the meter-change split rule (named, v0.6.6 doctrine — no || swallowing an
+   out-of-range index): keep the split if the IDENTICAL grouping exists in the
+   new meter, otherwise the new meter's whole-bar default (index 0). Not total
+   like slot translation — groupings sum to their meter — and honest about it:
+   the fallback is a defined outcome, visible in the selector. */
+function splitFor(oldMeter,oldIdx,newMeter){
+  const old=SPLITS[oldMeter]&&SPLITS[oldMeter][oldIdx];
+  if(!old)return 0;
+  const j=SPLITS[newMeter].findIndex(p=>p.join("+")===old.join("+"));
+  return j>=0?j:0;
+}
+
 /* ---- the notebook's document form: export/import round-trip (v0.6.9) ----
    Pure functions, no DOM: entries ⇄ the exported markdown. The document is
    prose plus a fenced JSON block per entry under ## headings — the convention
@@ -1861,13 +1880,26 @@ function ringPulse(layer,x,y,r0,color,ev){
    the clock; the étude transport below is a subscriber that joins the grid at
    bar boundaries. Hand-inlined until Phase B's build step inlines modules. */
 function createMetroCore(opts={}){
-  const ms={bpm:opts.bpm??72,meter:opts.meter??4,running:false,anchor:0,nextIdx:0};
+  const ms={bpm:opts.bpm??72,meter:opts.meter??4,running:false,anchor:0,nextIdx:0,
+    meterStart:0,pendingMeter:null};
   const spb=()=>60/ms.bpm;
   return {
     get running(){return ms.running;}, get bpm(){return ms.bpm;}, get meter(){return ms.meter;},
-    start(now){ms.running=true;ms.anchor=now;ms.nextIdx=0;},
-    stop(){ms.running=false;},
-    setMeter(m){ms.meter=m;},
+    get pendingMeter(){return ms.pendingMeter;},
+    start(now){
+      if(ms.pendingMeter!==null){ms.meter=ms.pendingMeter;ms.pendingMeter=null;}
+      ms.running=true;ms.anchor=now;ms.nextIdx=0;ms.meterStart=0;
+    },
+    stop(){ms.running=false;ms.pendingMeter=null;},
+    setMeter(m){
+      // mid-run, a meter change is a musical event: it lands on the NEXT bar
+      // line, never mid-bar — the lamp and the clock must always agree. Beat
+      // indices stay continuous (subscribers keep their join points); only the
+      // bar/beat numbering rebases from the boundary where the change lands.
+      if(ms.running&&ms.nextIdx>ms.meterStart){
+        if(m===ms.meter)ms.pendingMeter=null; else ms.pendingMeter=m;
+      }else{ms.meter=m;ms.meterStart=ms.nextIdx;}
+    },
     setBpm(bpm){
       if(ms.running&&ms.nextIdx>0){
         // re-anchor so the next beat lands one new-spb after the last emitted beat:
@@ -1880,12 +1912,21 @@ function createMetroCore(opts={}){
       if(!ms.running)return[];
       const out=[];
       while(ms.anchor+ms.nextIdx*spb()<now+ahead){
-        const i=ms.nextIdx++;
-        out.push({time:ms.anchor+i*spb(),index:i,bar:Math.floor(i/ms.meter),beat:i%ms.meter});
+        const i=ms.nextIdx;
+        if(ms.pendingMeter!==null&&i>ms.meterStart&&(i-ms.meterStart)%ms.meter===0){
+          ms.meter=ms.pendingMeter;ms.pendingMeter=null;ms.meterStart=i;
+        }
+        ms.nextIdx++;
+        const rel=i-ms.meterStart;
+        out.push({time:ms.anchor+i*spb(),index:i,
+          bar:Math.floor(rel/ms.meter),beat:rel%ms.meter});
       }
       return out;
     },
-    nextBarStartIndex(){const i=ms.nextIdx;return i%ms.meter===0?i:i+(ms.meter-i%ms.meter);},
+    nextBarStartIndex(){
+      const rel=ms.nextIdx-ms.meterStart;
+      return rel%ms.meter===0?ms.nextIdx:ms.nextIdx+(ms.meter-rel%ms.meter);
+    },
   };
 }
 function createTapTempo(o={}){
@@ -1905,7 +1946,27 @@ const METRO=createMetroCore({bpm:72,meter:4});
 const tapTempo=createTapTempo();
 let pumpTimer=null,metroOwner=null;   // who started the clock: 'metro' | 'transport'
 const etude={on:false,joinIdx:0,countInBar:false,beatInChord:0,patPos:0,runStep:0};
-function pattern(){ return SPLITS[st.meter][st.splitIdx]||[st.meter]; }
+function pattern(){ return SPLITS[st.meter][st.splitIdx]; }
+/* one state, two views: st.meter is owned here; the Metronome card's selector
+   and the Transport card's mirror both call this and both get resynced. The
+   clock defers the change to the next bar line while running (core rule); the
+   lamp follows the CLOCK, so the two can never disagree. */
+function changeMeter(m){
+  if(m===st.meter){METRO.setMeter(m);syncMeterUI();return;} // cancels a pending change
+  st.splitIdx=splitFor(st.meter,st.splitIdx,m);
+  st.meter=m;
+  METRO.setMeter(m);
+  if(etude.on){ // keep the transport's walk inside the new pattern's bounds
+    etude.patPos%=pattern().length;
+    if(etude.beatInChord>=pattern()[etude.patPos])etude.beatInChord=0;
+  }
+  renderLamp(); refreshSplitSel(); syncMeterUI();
+  renderScore(); syncArpIn(); renderCfg();
+}
+function syncMeterUI(){
+  const a=document.getElementById("meterSel"); if(a)a.value=String(st.meter);
+  const b=document.getElementById("meterSel2"); if(b)b.value=String(st.meter);
+}
 function playing(){return etude.on;}
 function ensurePump(){ if(!pumpTimer)pumpTimer=setInterval(pumpBeats,25); }
 function idlePump(){ if(pumpTimer&&!METRO.running){clearInterval(pumpTimer);pumpTimer=null;} }
@@ -1923,6 +1984,8 @@ function pumpBeats(){
       attack=true; idx=etude.runStep%SEQ.length;
       level=ev.beat===0?2:1;              // bar > chord > beat while the étude runs
     }
+    if(ev.beat===0&&document.querySelectorAll("#beatLamp span").length!==METRO.meter)
+      renderLamp();   // a deferred meter change just landed — the lamp turns with it
     if(st.clickOn){
       click(ev.time,level);
       for(const o of SUB_OFFSETS[st.clickSub]) click(ev.time+o*spb,-1);
@@ -1956,7 +2019,10 @@ function lamp(ev){
 }
 function renderLamp(){
   const w=document.getElementById("beatLamp"); if(!w)return; w.innerHTML="";
-  for(let i=0;i<st.meter;i++){const s=document.createElement("span");
+  // the lamp shows what the CLOCK is counting: a deferred meter change keeps
+  // the old dot count until the bar line where the clock actually turns
+  const n=METRO.running?METRO.meter:st.meter;
+  for(let i=0;i<n;i++){const s=document.createElement("span");
     s.style.cssText="width:9px;height:9px;border-radius:50%;background:"+LAMP.idle+
       ";display:inline-block;transition:background .06s,transform .06s";
     w.appendChild(s);}
@@ -2691,7 +2757,7 @@ function applyRaw(c){
   document.getElementById("extSel").value=st.ext;
   document.getElementById("bpmRange").value=st.bpm;
   document.getElementById("bpmVal").textContent=st.bpm;
-  document.getElementById("meterSel").value=st.meter; refreshSplitSel();
+  syncMeterUI(); refreshSplitSel();
   document.getElementById("splitSel").value=st.splitIdx;
   METRO.setBpm(st.bpm); METRO.setMeter(st.meter); renderLamp();
   syncClickUI();
@@ -2946,9 +3012,15 @@ function initControls(){
   const bpmR=document.getElementById("bpmRange");
   bpmR.addEventListener("input",()=>{st.bpm=+bpmR.value;METRO.setBpm(st.bpm);
     document.getElementById("bpmVal").textContent=st.bpm;});
-  document.getElementById("meterSel").addEventListener("change",e=>{
-    st.meter=+e.target.value; METRO.setMeter(st.meter); renderLamp();
-    st.splitIdx=0; refreshSplitSel(); renderScore(); syncArpIn(); renderCfg();});
+  // the Transport's Time sig is a MIRROR of the Metronome card's — its options
+  // are cloned from the shared block so one list can never drift from the other
+  const m2=document.getElementById("meterSel2");
+  [...document.getElementById("meterSel").options].forEach(o=>{
+    const c=document.createElement("option");c.value=o.value;c.textContent=o.textContent;
+    m2.appendChild(c);});
+  document.getElementById("meterSel").addEventListener("change",e=>changeMeter(+e.target.value));
+  m2.addEventListener("change",e=>changeMeter(+e.target.value));
+  syncMeterUI();
   refreshSplitSel();
   document.getElementById("splitSel").addEventListener("change",e=>{
     st.splitIdx=+e.target.value; renderScore(); syncArpIn(); renderCfg();});

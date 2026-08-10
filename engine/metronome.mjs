@@ -15,13 +15,26 @@
  */
 
 export function createMetroCore(opts={}){
-  const ms={bpm:opts.bpm??72,meter:opts.meter??4,running:false,anchor:0,nextIdx:0};
+  const ms={bpm:opts.bpm??72,meter:opts.meter??4,running:false,anchor:0,nextIdx:0,
+    meterStart:0,pendingMeter:null};
   const spb=()=>60/ms.bpm;
   return {
     get running(){return ms.running;}, get bpm(){return ms.bpm;}, get meter(){return ms.meter;},
-    start(now){ms.running=true;ms.anchor=now;ms.nextIdx=0;},
-    stop(){ms.running=false;},
-    setMeter(m){ms.meter=m;},
+    get pendingMeter(){return ms.pendingMeter;},
+    start(now){
+      if(ms.pendingMeter!==null){ms.meter=ms.pendingMeter;ms.pendingMeter=null;}
+      ms.running=true;ms.anchor=now;ms.nextIdx=0;ms.meterStart=0;
+    },
+    stop(){ms.running=false;ms.pendingMeter=null;},
+    setMeter(m){
+      // mid-run, a meter change is a musical event: it lands on the NEXT bar
+      // line, never mid-bar — the lamp and the clock must always agree. Beat
+      // indices stay continuous (subscribers keep their join points); only the
+      // bar/beat numbering rebases from the boundary where the change lands.
+      if(ms.running&&ms.nextIdx>ms.meterStart){
+        if(m===ms.meter)ms.pendingMeter=null; else ms.pendingMeter=m;
+      }else{ms.meter=m;ms.meterStart=ms.nextIdx;}
+    },
     setBpm(bpm){
       if(ms.running&&ms.nextIdx>0){
         // re-anchor so the next beat lands one new-spb after the last emitted beat:
@@ -34,12 +47,21 @@ export function createMetroCore(opts={}){
       if(!ms.running)return[];
       const out=[];
       while(ms.anchor+ms.nextIdx*spb()<now+ahead){
-        const i=ms.nextIdx++;
-        out.push({time:ms.anchor+i*spb(),index:i,bar:Math.floor(i/ms.meter),beat:i%ms.meter});
+        const i=ms.nextIdx;
+        if(ms.pendingMeter!==null&&i>ms.meterStart&&(i-ms.meterStart)%ms.meter===0){
+          ms.meter=ms.pendingMeter;ms.pendingMeter=null;ms.meterStart=i;
+        }
+        ms.nextIdx++;
+        const rel=i-ms.meterStart;
+        out.push({time:ms.anchor+i*spb(),index:i,
+          bar:Math.floor(rel/ms.meter),beat:rel%ms.meter});
       }
       return out;
     },
-    nextBarStartIndex(){const i=ms.nextIdx;return i%ms.meter===0?i:i+(ms.meter-i%ms.meter);},
+    nextBarStartIndex(){
+      const rel=ms.nextIdx-ms.meterStart;
+      return rel%ms.meter===0?ms.nextIdx:ms.nextIdx+(ms.meter-rel%ms.meter);
+    },
   };
 }
 

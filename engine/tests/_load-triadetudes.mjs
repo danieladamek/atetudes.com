@@ -25,7 +25,7 @@ const HARVEST = [
   "writtenValue", "subdivisionName", "bassPcFor", "tetradName", "arpOnsets",
   "pivotContext", "changeSet", "changeKey", "changeScale",
   "fmtWhen", "logToMarkdown", "parseLogExport", "mergeLog",
-  "keyFor", "keysFor", "CHORD", "UPPER",
+  "keyFor", "keysFor", "CHORD", "UPPER", "splitFor",
   "st", "SCALES", "SPLITS", "OPEN", "NFRETS", "KEYS", "IVL_LABEL", "IVL_FAMILY",
 ];
 

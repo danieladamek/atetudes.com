@@ -105,6 +105,70 @@ test("subdivision offsets: correct counts, all inside the beat, evenly spaced", 
     SUB_OFFSETS[k].forEach((o) => assert.ok(o > 0 && o < 1, `offset ${o} inside beat`));
 });
 
+test("setMeter mid-run defers to the next bar line; indices stay continuous", () => {
+  const m = createMetroCore({ bpm: 60, meter: 4 }); // spb 1.0
+  m.start(0);
+  m.pump(0, 2.5); // beats 0,1,2 — mid-bar
+  m.setMeter(7);
+  assert.equal(m.meter, 4, "clock keeps the old meter until the bar line");
+  assert.equal(m.pendingMeter, 7, "the change is queued, not dropped");
+  const evs = m.pump(0, 12.5); // beats 3..12
+  assert.equal(evs[0].index, 3, "index continuity");
+  assert.equal(evs[0].beat, 3, "beat 3 still counted in 4");
+  assert.equal(evs[1].index, 4);
+  assert.equal(evs[1].beat, 0, "the bar line lands");
+  assert.equal(m.meter, 7, "…and the new meter with it");
+  assert.equal(m.pendingMeter, null);
+  for (let k = 1; k <= 7 && k < evs.length; k++)
+    assert.equal(evs[k].beat, (k - 1) % 7, `beat numbering rebased to 7 (ev ${k})`);
+  assert.equal(evs[8].beat, 0, "next 7-bar starts seven beats later");
+});
+
+test("setMeter before the first beat, or while stopped, applies immediately", () => {
+  const m = createMetroCore({ bpm: 120, meter: 4 });
+  m.setMeter(5);
+  assert.equal(m.meter, 5, "stopped: immediate");
+  m.start(10);
+  m.setMeter(3);
+  assert.equal(m.meter, 3, "started but nothing emitted yet: immediate");
+  const evs = m.pump(10, 1.6);
+  assert.deepEqual(evs.map((e) => e.beat), [0, 1, 2, 0], "counting in 3 from the top");
+});
+
+test("setMeter back to the current meter cancels a pending change", () => {
+  const m = createMetroCore({ bpm: 60, meter: 4 });
+  m.start(0);
+  m.pump(0, 1.5);
+  m.setMeter(7);
+  m.setMeter(4);
+  assert.equal(m.pendingMeter, null, "round trip within a bar is a no-op");
+  const evs = m.pump(0, 6.5);
+  assert.ok(evs.every((e) => e.beat === e.index % 4), "grid never left 4");
+});
+
+test("nextBarStartIndex respects the rebased grid after a deferred change", () => {
+  const m = createMetroCore({ bpm: 60, meter: 4 });
+  m.start(0);
+  m.pump(0, 2.5); // through beat 2
+  m.setMeter(7);
+  assert.equal(m.nextBarStartIndex(), 4, "join point is the old meter's boundary");
+  m.pump(0, 6.5); // through index 6 — change landed at 4
+  assert.equal(m.nextBarStartIndex(), 11, "4 + 7: the new meter's next bar");
+});
+
+test("start() applies a pending meter and resets the grid", () => {
+  const m = createMetroCore({ bpm: 60, meter: 4 });
+  m.start(0);
+  m.pump(0, 1.5);
+  m.setMeter(7);
+  m.stop();
+  assert.equal(m.pendingMeter, null, "stop clears the queue");
+  m.setMeter(7);
+  m.start(100);
+  assert.equal(m.meter, 7);
+  assert.equal(m.pump(100, 0.5)[0].beat, 0);
+});
+
 // ---- anti-drift: the hand-inlined copy in the study must match this module ----
 
 test("every app carrying the metronome matches the module verbatim (no drift)", () => {

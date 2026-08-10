@@ -5,6 +5,46 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-09 — Triadetudes v0.6.11 + Metronome v1.0.1: 7/4, and a time signature in the Transport (backlog item, Daniel's dispatch)
+
+- **7/4 is a family change, shipped as one**: the meter joins the shared metronome block
+  in BOTH carriers (Triadetudes and the Metronome study), `SPLITS[7]` lands in the
+  established style (`[7] · 4+3 · 3+4 · 2+2+3 · 3+2+2 · 2+3+2`), and
+  `engine/metronome.mjs` + its verbatim anti-drift pin moved together — the Metronome
+  study re-verified in the same pass (v1.0.1: loads clean, runs in 7/4, seven lamp
+  dots). `subdivisionName()` asserted across every 7/4 split × arpeggio lengths 1–16
+  (the 2.33-beat case names itself "whole-note triplet (3 over 7 beats)" by
+  `writtenValue`'s existing ≥ rule); seven lamp dots confirmed at 390 px.
+- **The Transport gains a Time sig selector, left of Bar split** — a mirror, not a
+  second control: options cloned from the shared block at init (one list, no drift),
+  both selectors drive one `changeMeter()`, and `syncMeterUI()` resyncs both on every
+  change and restore. Sync tested in both directions, including a change made with the
+  Transport card scrolled out of view.
+- **The v0.6.6-disease bug the placement exposes, fixed by named rule**: `pattern()`'s
+  `|| [st.meter]` silent swallow is REMOVED (a source-form test pins its absence);
+  every meter change routes through `splitFor()` — keep the split only if the identical
+  grouping exists in the new meter, else the new meter's whole-bar default, visible in
+  the selector. Not total, honestly so: groupings sum to their meter, so a real meter
+  change lands on the whole bar and says so on screen.
+- **Mid-playback meter changes defer to the next bar line** — the card's own
+  Play-joins-at-the-next-bar doctrine, now in the clock itself: `setMeter()` queues
+  while running, the pump applies the change exactly on a bar boundary with beat
+  indices continuous (étude join points survive) and bar/beat numbering rebased; the
+  lamp follows the CLOCK's meter, redrawing at the bar line where the change lands, so
+  lamp and clock can never disagree (asserted live: state 7 / clock 4 / queue full
+  right after the change; clock 7 / queue empty / seven dots one bar later). Setting
+  the meter back before the bar line cancels the queue. The selector is never disabled.
+- **Deliberate omission for Daniel's call, raised not resolved**: no `[1,6]`/`[6,1]`
+  in `SPLITS[7]`, though 5/4 carries `[1,4]`/`[4,1]` — a one-beat chord against a
+  six-beat chord is not a grouping anyone practises, but the asymmetry should be a
+  decision: add them to 7, or drop 5/4's pair.
+- Verified per doctrine: engine suite 153/153 (five new metronome-core deferral tests;
+  split-rule walk over every meter transition; the existing split-sum invariant covers
+  7 automatically; 3/4–6/4 golden masters byte-identical); 24 Playwright checks across
+  both studies from `file://` offline, zero console errors; `rawCfg()` shape unchanged
+  and legacy meter/split restores identity-checked for all four old meters; the two-up
+  Transport row and the seven-dot lamp inspected at 1280/390 px. Update Log 260809.9.
+
 ## 2026-08-09 — Triadetudes v0.6.10: all twelve keys (backlog item, Daniel's dispatch)
 
 - **The key selector reaches every pitch class.** Db/C#, Gb/F# and B join the nine —
