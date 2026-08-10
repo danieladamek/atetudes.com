@@ -72,7 +72,7 @@ test("golden: default config — C major cycle4, set 1-2-3, pivots 1-3-5 on stri
   const e = fresh();
   const voic = e.chooseVoicings(e.buildSequence());
   assert.deepEqual(
-    unwrap(voic.map((v) => v.frets)),
+    unwrap(voic.map((v) => v.notes.map((n) => n.fret))),
     [[5,5,3],[5,6,5],[4,3,1],[4,5,3],[5,5,5],[7,6,5],[4,3,3],[5,5,3]]
   );
 });
@@ -88,7 +88,7 @@ test("golden: Eb harmonic minor cycle6 on set 3-4-5", () => {
   assert.deepEqual(unwrap(seq.map((c) => c.label)),
     ["Ebm","Cb","Abm","F°","D°","Bb","Gb+","Ebm"],
     "spelling: Cb not B, Gb+ not F#+ — flat-side discipline");
-  assert.deepEqual(unwrap(e.chooseVoicings(seq).map((v) => v.frets)),
+  assert.deepEqual(unwrap(e.chooseVoicings(seq).map((v) => v.notes.map((n) => n.fret))),
     [[6,4,3],[6,4,4],[2,1,1],[2,3,1],[5,3,1],[5,3,3],[5,4,3],[6,4,3]]);
 });
 
@@ -130,10 +130,12 @@ test("invariant: every chosen voicing is ascending in pitch and inside the neck"
     e.st.key = key; e.defaultPivots();
     const s = e.st.setLowHigh;
     for (const v of e.chooseVoicings(e.buildSequence())) {
-      const midis = v.frets.map((f, i) => e.OPEN[s[i]] + f);
+      const midis = unwrap(v.notes).map((n) => n.midi);
       assert.ok(midis[0] < midis[1] && midis[1] < midis[2], `${key}: ascending`);
-      v.frets.forEach((f) =>
-        assert.ok(f >= 0 && f <= e.NFRETS + 2, `${key}: fret ${f} in range`));
+      for (const n of unwrap(v.notes)) {
+        assert.ok(n.fret >= 0 && n.fret <= e.NFRETS + 2, `${key}: fret ${n.fret} in range`);
+        assert.equal(n.midi, e.OPEN[n.string] + n.fret, `${key}: midi honest`);
+      }
     }
   }
 });
@@ -143,7 +145,7 @@ test("invariant: voicings realize their chord's pitch classes exactly", () => {
   const s = e.st.setLowHigh;
   const seq = e.buildSequence();
   e.chooseVoicings(seq).forEach((v, i) => {
-    const pcs = new Set(v.frets.map((f, k) => (e.OPEN[s[k]] + f) % 12));
+    const pcs = new Set(unwrap(v.notes).map((n) => n.midi % 12));
     const want = new Set(e.triadPcs(seq[i].rootPc, seq[i].q));
     assert.deepEqual([...pcs].sort(), [...want].sort(), `chord ${i} pc set`);
   });

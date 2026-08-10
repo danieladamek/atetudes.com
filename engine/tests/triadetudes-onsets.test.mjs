@@ -14,10 +14,11 @@ import { loadTriadetudesEngine, unwrap } from "./_load-triadetudes.mjs";
 
 const close = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
 
-/* the OLD inline strum() computation, verbatim as arithmetic — the pin's oracle */
+/* the OLD inline strum() computation, verbatim as arithmetic — the pin's oracle.
+ * Voicings are note lists now; the oracle's numbers are unchanged. */
 function oldInline(voicing, setLowHigh, pattern, bassMidi, durBeats, bpm, OPEN) {
   const byStr = {};
-  voicing.frets.forEach((f, k) => (byStr[setLowHigh[k]] = OPEN[setLowHigh[k]] + f));
+  voicing.notes.forEach((n) => (byStr[n.string] = n.midi));
   const order = pattern || setLowHigh;
   const notes = order.map((x) => byStr[x]);
   const out = [];
@@ -42,7 +43,8 @@ test("equivalence pin: arpOnsets reproduces strum()'s previous inline scheduling
       for (const pattern of [null, unwrap(e.st.arpPattern) || [2, 3, 1], [2, 3, 3, 1], [1, 1, 2, 3, 2, 1]])
         voic.forEach((v, i) => {
           for (const bass of [null, 38]) {
-            const now = unwrap(e.arpOnsets(v, s, pattern, bass, durBeats, bpm));
+            const order = pattern ? pattern.map((sn) => v.notes.find((n) => n.string === sn)) : null;
+            const now = unwrap(e.arpOnsets(v, order, bass, durBeats, bpm));
             const old = oldInline(unwrap(v), s, pattern, bass, durBeats, bpm, unwrap(e.OPEN));
             assert.equal(now.length, old.length, `chord ${i}: same event count`);
             now.forEach((ev, k) => {
@@ -58,7 +60,8 @@ test("roles: bass first when present, chord onsets carry (string,fret) from the 
   const e = loadTriadetudesEngine();
   const voic = e.chooseVoicings(e.buildSequence());
   const s = unwrap(e.st.setLowHigh);
-  const evs = unwrap(e.arpOnsets(voic[0], s, [2, 3, 3, 1], 38, 2, 72));
+  const pat = [2, 3, 3, 1].map((sn) => voic[0].notes.find((n) => n.string === sn));
+  const evs = unwrap(e.arpOnsets(voic[0], pat, 38, 2, 72));
   assert.equal(evs[0].role, "bass");
   assert.equal(evs[0].offset, 0);
   assert.equal(evs[0].string, null, "the bass is a pedal, not a fretted step");
@@ -66,8 +69,8 @@ test("roles: bass first when present, chord onsets carry (string,fret) from the 
   assert.equal(chord.length, 4);
   for (const ev of chord) {
     assert.ok(s.includes(ev.string), "string inside the set");
-    const k = s.indexOf(ev.string);
-    assert.equal(ev.fret, unwrap(voic[0]).frets[k], "fret is the voicing's, not recomputed");
+    const src = unwrap(voic[0]).notes.find((n) => n.string === ev.string && n.fret === ev.fret);
+    assert.ok(src, "fret/string pair is the voicing's, not recomputed");
     assert.equal(ev.midi, unwrap(e.OPEN)[ev.string] + ev.fret, "midi from string+fret");
   }
 });
@@ -91,7 +94,8 @@ test("invariants across every meter split × arp on/off × both harmony modes", 
         for (const durBeats of split)
           for (const pattern of [null, [2, 3, 1], [2, 3, 3, 1]])
             voic.forEach((v, i) => {
-              const evs = unwrap(e.arpOnsets(v, s, pattern, 40, durBeats, 72));
+              const order = pattern ? pattern.map((sn) => v.notes.find((n) => n.string === sn)) : null;
+              const evs = unwrap(e.arpOnsets(v, order, 40, durBeats, 72));
               const chord = evs.filter((ev) => ev.role === "chord");
               assert.equal(chord.length, (pattern || s).length,
                 `${cfg.mode} chord ${i}: one onset per pattern note`);
@@ -109,6 +113,6 @@ test("derivation errors throw loudly (assertions live in the pure function)", ()
   const e = loadTriadetudesEngine();
   const voic = e.chooseVoicings(e.buildSequence());
   const s = unwrap(e.st.setLowHigh);
-  assert.throws(() => e.arpOnsets(voic[0], s, [2, 5], null, 2, 72),
-    /outside the set/, "pattern string outside the set is a derivation error");
+  assert.throws(() => e.arpOnsets(voic[0], [{string: 5, fret: 0, midi: 45}], null, 2, 72),
+    /not one of the voicing/, "a foreign note in the order is a derivation error");
 });

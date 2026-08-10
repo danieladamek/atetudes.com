@@ -82,7 +82,8 @@ test("étude invariants hold in 7/4: voicings and onsets across every split", ()
   e.SPLITS[7].forEach((split) => {
     for (const durBeats of unwrap(split))
       voic.forEach((v) => {
-        const evs = unwrap(e.arpOnsets(v, s, [2, 3, 1], 40, durBeats, 72));
+        const order = [2, 3, 1].map((sn) => v.notes.find((n) => n.string === sn));
+        const evs = unwrap(e.arpOnsets(v, order, 40, durBeats, 72));
         assert.equal(evs.filter((x) => x.role === "chord").length, 3);
       });
   });

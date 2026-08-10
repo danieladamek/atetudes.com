@@ -5,6 +5,47 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes v0.7.0: a voicing becomes a note list, and Line goes live (backlog item, Daniel's dispatch)
+
+- **The first slice of the note-event refactor**: a voicing is no longer three frets
+  positionally bound to the string set but a list of `{string, fret, midi}` — still
+  exactly three chord tones, ascending in pitch, midi carried rather than recomputed.
+  All nine call sites converted (cost function, box extent, `arpOnsets`, fretboard,
+  score, keyboard, and the characterization pin's accessors); nothing indexes a note by
+  string position anymore. Roles, onsets and durations stayed where they were — this is
+  the refactor's first slice, not a second representation beside it.
+- **Line is selectable.** `lineVoicing()` implements spec §6.1.2 verbatim: window tones
+  taken in the window, remaining tones minimising total fret span, at most three notes
+  per string, ties → tighter span → nearer the pivot centre → the lower string.
+  Stateless per chord — a line has no grip continuity. **The item's eight-chord table
+  passes as the assertion corpus, both columns**: Grip pinned unmoved through the
+  representation change, and the Line column reaches Daniel's stated placement — the C
+  chord's fifth at B-string 8 beside the third at fret 5, two notes on one string, with
+  the isolation box tightening from 3–8 to 5–8 exactly as the item predicted.
+- **One nuance in the item's prose, pinned precisely rather than papered over**: "in
+  every differing row the pitches are unchanged" holds exactly for the mid-progression
+  moves (C, Em — same sounding pitches, new location); the *last* C differs in octave
+  because Grip had drifted to E4-G4-C5 by positional continuity while the stateless
+  Line returns to C4-E4-G4 — identical to the first C, per the table's own rows. Pitch
+  classes are identical in every row; the test states the property exactly.
+- **The H-M-L question resolved by a named rule, said out loud**: under Line the shape
+  field is disabled and the hint states that Line plays its notes in placement order,
+  low to high (a slot stops being a bijection when two notes share a string); tones-mode
+  patterns arrive with the motion grammar. Block under Line still sounds all three and
+  the hint says *sounded*, not gripped. The pulse rings the shared-string notes
+  individually; `line` round-trips through `rawCfg()`; stored `linear` still resolves
+  to `free`, provably never `line`.
+- **Caught by the doctrine, worth recording**: the in-page v0.6.5 self-test still called
+  the old `arpOnsets` signature and threw at page load — killing every statement after
+  it — while the headless suite stayed green (the engine slice cuts above the self-test
+  block). The zero-console-errors Playwright gate caught what the unit suite could not;
+  fixed, all green.
+- Verified per doctrine: engine suite 164/164 (new line corpus file; every prior pin
+  through the representation change — golden masters byte-identical in value, accessors
+  updated; the onsets equivalence oracle re-proved against the note list); 19 Playwright
+  checks from `file://` offline, zero console/page errors; Daniel's configuration
+  rendered and inspected at 1280/390 px. Update Log 260810.3.
+
 ## 2026-08-10 — Triadetudes v0.6.14: grip, line and free (backlog item, Daniel's dispatch)
 
 - **Placement's states renamed to what they mean**, correcting v0.6.13's axis (the PO's

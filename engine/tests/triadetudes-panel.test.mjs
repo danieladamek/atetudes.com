@@ -54,9 +54,9 @@ test("placement is a real constraint: grip and free disagree somewhere, grip is 
       : e.st.pivotFrets;
     const seq = e.buildSequence();
     e.st.placement = "grip";
-    const box = unwrap(e.chooseVoicings(seq).map((v) => v.frets));
+    const box = unwrap(e.chooseVoicings(seq).map((v) => v.notes.map((n) => n.fret)));
     e.st.placement = "free";
-    const lin = unwrap(e.chooseVoicings(seq).map((v) => v.frets));
+    const lin = unwrap(e.chooseVoicings(seq).map((v) => v.notes.map((n) => n.fret)));
     e.st.placement = "grip";
     if (JSON.stringify(box) !== JSON.stringify(lin)) differs = true;
   }
@@ -71,12 +71,13 @@ test("box overflow widens the drawn zone — placement never silently changes", 
   const voic = e.chooseVoicings(e.buildSequence());
   const piv = unwrap(e.st.pivotFrets);
   let lo = Math.min(...piv), hi = Math.max(...piv);
-  for (const v of voic) { lo = Math.min(lo, ...unwrap(v.frets)); hi = Math.max(hi, ...unwrap(v.frets)); }
+  for (const v of voic) { const fs = unwrap(v.notes).map((n) => n.fret);
+    lo = Math.min(lo, ...fs); hi = Math.max(hi, ...fs); }
   assert.ok(hi - lo > Math.max(...piv) - Math.min(...piv),
     "the union outgrows the pivot window — the box must widen");
   for (const v of voic)
-    for (const f of unwrap(v.frets))
-      assert.ok(f >= lo && f <= hi, "every note stays inside the widened box");
+    for (const n of unwrap(v.notes))
+      assert.ok(n.fret >= lo && n.fret <= hi, "every note stays inside the widened box");
   assert.equal(e.st.placement, "grip", "no silent escape from grip");
 });
 

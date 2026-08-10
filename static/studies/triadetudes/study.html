@@ -138,7 +138,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.6.14</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.0</div>
 </header>
 
 <div class="cards">
@@ -249,7 +249,7 @@
       <div><label>Placement</label>
         <div class="seg" id="placeSeg">
           <button data-place="grip" class="on" title="one note per string, playable as a chord, anchored to your pivots">Grip</button>
-          <button data-place="line" disabled title="notes placed freely along the set, up to three per string — needs the note-event refactor (v0.7)">Line</button>
+          <button data-place="line" title="notes placed freely along the set, up to three per string, preferring the pivot window — playable in sequence, not as a chord">Line</button>
           <button data-place="free" title="the grip chosen by smoothest voice-leading, pivot anchor released">Free</button>
         </div></div>
       <div><label>Playback</label>
@@ -264,8 +264,9 @@
     Pivots: click any scale note on a string of the set — that note and the next two scale
     notes up the same string become your pivots (dashed rings). Placement decides where the
     figure's notes live: <b>Grip</b> — one note per string, playable as a chord, anchored to
-    your pivots; <b>Line</b> (coming with the note-event refactor) — notes placed freely
-    along the set, up to three per string, preferring the pivot window; <b>Free</b> — the
+    your pivots; <b>Line</b> — notes placed freely
+    along the set, up to three per string, preferring the pivot window, playable in
+    sequence rather than as a chord; <b>Free</b> — the
     grip chosen by smoothest voice-leading, anchor released. The dashed box simply draws
     where the figure ended up living — a consequence of the placement, not a setting.
     Changing set, key or scale carries your pattern and pivots along — same figure, same
@@ -367,7 +368,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.6.14 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.7.0 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1407,7 +1408,11 @@ function buildSequence(){
   return out;
 }
 
-/* triad voicings on the 3-string set */
+/* triad voicings on the 3-string set.
+   v0.7 first slice: a voicing is a NOTE LIST — {notes:[{string,fret,midi}],inv},
+   ascending in pitch — not three frets positionally bound to the set. Grip and
+   Free still emit one note per string; Line (below) may put two on one string,
+   which the old shape could not even represent. */
 function voicingsFor(chord,s){
   const t=triadPcs(chord.rootPc,chord.q);
   const orders=[[0,1,2],[1,2,0],[2,0,1]];
@@ -1425,20 +1430,75 @@ function voicingsFor(chord,s){
         if(f<0||f>NFRETS+2){ok=false;break;}
         frets.push(f);
       }
-      if(ok) res.push({frets,inv:oi});
+      if(ok) res.push({
+        notes:frets.map((f,i)=>({string:s[i],fret:f,midi:OPEN[s[i]]+f})),
+        inv:oi});
     }
   }
   return res;
 }
+
+/* Line placement (spec §6.1.2, the rule verbatim): a chord tone present in the
+   pivot window is taken there; remaining tones take the placement on the set
+   minimising total fret span; at most three notes per string. Ties: tighter
+   span, then nearer the pivot centre, then the lower string. Stateless per
+   chord — a line has no grip continuity to preserve. */
+function lineVoicing(chord){
+  const t=triadPcs(chord.rootPc,chord.q);
+  const centre=st.pivotFrets.reduce((a,b)=>a+b,0)/st.pivotFrets.length;
+  const windowNotes=st.pivotFrets.map(f=>({string:st.pivotString,fret:f,
+    midi:OPEN[st.pivotString]+f}));
+  const placed=[],remaining=[];
+  for(const pc of t){
+    const w=windowNotes.find(n=>n.midi%12===pc);
+    if(w)placed.push({...w}); else remaining.push(pc);
+  }
+  // candidate positions per remaining tone: every octave on every set string
+  const candsFor=(pc)=>{
+    const out=[];
+    for(const sn of st.set)
+      for(let f=0;f<=NFRETS+2;f++)
+        if((OPEN[sn]+f)%12===pc)out.push({string:sn,fret:f,midi:OPEN[sn]+f});
+    return out;
+  };
+  let bestCombo=null,bestKey=null;
+  const tryCombo=(combo)=>{
+    const all=[...placed,...combo];
+    const perString={};
+    for(const n of all)perString[n.string]=(perString[n.string]||0)+1;
+    if(Object.values(perString).some(c=>c>3))return;   // at most three per string
+    const frets=all.map(n=>n.fret);
+    const span=Math.max(...frets)-Math.min(...frets);
+    const drift=combo.reduce((a,n)=>a+Math.abs(n.fret-centre),0);
+    const lowStr=-combo.reduce((a,n)=>a+n.string,0);   // lower pitch = higher number
+    const key=[span,drift,lowStr];
+    if(!bestKey||key[0]<bestKey[0]||
+       (key[0]===bestKey[0]&&(key[1]<bestKey[1]||
+        (key[1]===bestKey[1]&&key[2]<bestKey[2])))){bestKey=key;bestCombo=combo;}
+  };
+  const walk=(idx,combo)=>{
+    if(idx===remaining.length){tryCombo(combo);return;}
+    for(const c of candsFor(remaining[idx]))walk(idx+1,[...combo,c]);
+  };
+  walk(0,[]);
+  const notes=[...placed,...(bestCombo||[])].sort((a,b)=>a.midi-b.midi);
+  // derived, then asserted: three tones, the chord's pcs exactly, window taken
+  if(notes.length!==3)throw new Error("lineVoicing: expected three notes");
+  const pcs=new Set(notes.map(n=>n.midi%12));
+  for(const pc of t)if(!pcs.has(((pc%12)+12)%12))
+    throw new Error("lineVoicing: chord tone lost in placement");
+  const inv=t.indexOf(notes[0].midi%12);
+  return {notes,inv:inv<0?0:inv};
+}
 function chooseVoicings(seq){
+  // placement: GRIP weights the isolation zone — the ratified first-class
+  // voicing constraint (roadmap §4) — FREE releases it and lets pure
+  // voice-leading choose; both are pinned byte-identical to the pre-note-list
+  // behaviour. LINE places tones freely along the set by the §6.1.2 rule.
+  if(st.placement==="line")return seq.map(ch=>lineVoicing(ch));
   const s=st.setLowHigh, pi=s.indexOf(st.pivotString);
   const pmin=Math.min(...st.pivotFrets), pmax=Math.max(...st.pivotFrets);
   const pmean=(pmin+pmax)/2;
-  // placement: GRIP weights the isolation zone — the ratified first-class
-  // voicing constraint (roadmap §4) — FREE releases it and lets pure
-  // voice-leading choose. Grip is the default and the pinned behaviour.
-  // (LINE draws from a different candidate space entirely — voicingsFor is
-  // one-note-per-string — and waits on the note-event refactor.)
   const pivotW=st.placement==="free"?0:4;
   const anchorW=st.placement==="free"?0:0.5;
   let prev=null; const out=[];
@@ -1446,12 +1506,12 @@ function chooseVoicings(seq){
     const cands=voicingsFor(ch,s);
     let best=null,bc=1e9;
     for(const v of cands){
-      const pf=v.frets[pi];
+      const pf=v.notes[pi].fret;
       const pivotCost = st.pivotFrets.includes(pf)?0:
         (pf>=pmin&&pf<=pmax?1.5:Math.min(Math.abs(pf-pmin),Math.abs(pf-pmax)));
       let cost=pivotW*pivotCost;
-      if(prev){ for(let i=0;i<3;i++) cost+=Math.abs(v.frets[i]-prev.frets[i]); }
-      else cost+=Math.abs(v.frets[pi]-pmean)*anchorW;
+      if(prev){ for(let i=0;i<3;i++) cost+=Math.abs(v.notes[i].fret-prev.notes[i].fret); }
+      else cost+=Math.abs(v.notes[pi].fret-pmean)*anchorW;
       if(cost<bc){bc=cost;best=v;}
     }
     out.push(best); prev=best;
@@ -1558,8 +1618,21 @@ function patText(pattern){
   const s=st.setLowHigh;
   return pattern.map(sn=>"LMH"[s.indexOf(sn)]).join("-");
 }
-/* what the boards draw: the pattern unless playback is Block */
-function displayPattern(){ return st.playback==="block"?null:st.arpPattern; }
+/* what the boards draw: the pattern unless playback is Block. Under Line
+   the H-M-L shape field is out of play (a slot is no longer a bijection when
+   two notes share a string — the named rule, said in the hint), so the
+   placement's own ascending order is the sequence. */
+function displayPattern(){
+  if(st.playback==="block"||st.placement==="line")return null;
+  return st.arpPattern;
+}
+function orderedNotes(v){
+  if(!v)return null;
+  if(st.placement==="line")return st.playback==="block"?null:[...v.notes];
+  const dp=displayPattern(); if(!dp)return null;
+  const byStr={}; v.notes.forEach(n=>byStr[n.string]=n);
+  return dp.map(sn=>byStr[sn]);
+}
 function parseArp(text){
   // "H-M-L", "hml", and the pre-v0.6.13 "2-3-1"/"231" all parse; letters are
   // slots against the CURRENT set, digits must belong to it. Old muscle memory
@@ -1594,6 +1667,15 @@ function subdivisionName(beats,L){
   return nm+" "+(L===3?"triplet":L+"-tuplet")+" ("+L+" over "+beats+" beats)";
 }
 function arpHintText(){
+  if(st.placement==="line"){
+    const per=[...new Set(pattern())].map(b=>b+" beats → "+subdivisionName(b,3)).join(" · ");
+    if(st.playback==="block")
+      return "Line + Block — the three tones are SOUNDED together (a line is not a grip; "+
+        "two notes may share a string).";
+    return "Line plays its notes in placement order, low to high — "+per+
+      ". The H-M-L shape field applies to Grip and Free; tones-mode patterns arrive "+
+      "with the motion grammar.";
+  }
   if(st.playback==="block")
     return"Block playback — the harmony sounds together at each change"+
       (st.arpPattern?"; the pattern is kept for when you switch back":"")+".";
@@ -1605,7 +1687,7 @@ function arpHintText(){
 }
 function syncArpIn(){
   const inp=document.getElementById("arpIn");
-  if(inp)inp.value=patText(st.arpPattern);
+  if(inp){inp.value=patText(st.arpPattern);inp.disabled=st.placement==="line";}
   const h=document.getElementById("arpHint"); if(h)h.textContent=arpHintText();
   const e=document.getElementById("arpErr"); if(e)e.textContent="";
 }
@@ -1639,7 +1721,8 @@ function rebuild(){
   st.cur=Math.min(st.cur,SEQ.length-1);
   const s=st.setLowHigh;
   let lo=Math.min(...st.pivotFrets), hi=Math.max(...st.pivotFrets);
-  for(const v of VOIC){ if(!v)continue; lo=Math.min(lo,...v.frets); hi=Math.max(hi,...v.frets); }
+  for(const v of VOIC){ if(!v)continue;
+    for(const n of v.notes){ lo=Math.min(lo,n.fret); hi=Math.max(hi,n.fret); } }
   BOX={fLo:lo,fHi:hi,strings:s};
   defaultArpIfStale();
   renderAll();
@@ -1789,35 +1872,37 @@ function mergeLog(existing,incoming){
    figure, not a step in it — can be filtered by meaning, not by view.
    NOTE: durations are release tails and may ring past the chord span (the
    shipped legato behaviour of strum, pinned by tests); onsets stay inside it. */
-function arpOnsets(voicing,setLowHigh,pattern,bassMidi,durBeats,bpm){
-  const byStr={};
-  voicing.frets.forEach((f,k)=>{byStr[setLowHigh[k]]={midi:OPEN[setLowHigh[k]]+f,fret:f};});
+function arpOnsets(voicing,order,bassMidi,durBeats,bpm){
+  // v0.7 first slice: the voicing is a note list; `order` is the sounding
+  // sequence as an array of its notes, or null for a block strum. Every order
+  // entry must BE one of the voicing's notes — identity, not lookup.
   const out=[];
   if(bassMidi!==null&&bassMidi!==undefined)
     out.push({midi:bassMidi,string:null,fret:null,role:"bass",offset:0,dur:1.0});
-  const order=pattern||setLowHigh;
-  for(const sn of order)
-    if(!(sn in byStr)) throw new Error("arpOnsets: string "+sn+" outside the set");
+  const seq=order||voicing.notes;
+  for(const n of seq)
+    if(!voicing.notes.includes(n))
+      throw new Error("arpOnsets: ordered note is not one of the voicing's notes");
   const span=(durBeats||2)*(60/bpm);
-  if(!pattern){
-    order.forEach((sn,k)=>out.push({midi:byStr[sn].midi,string:sn,fret:byStr[sn].fret,
+  if(!order){
+    seq.forEach((n,k)=>out.push({midi:n.midi,string:n.string,fret:n.fret,
       role:"chord",offset:k*0.028,dur:0.85}));
   }else{
-    const step=span/order.length;
-    order.forEach((sn,k)=>out.push({midi:byStr[sn].midi,string:sn,fret:byStr[sn].fret,
+    const step=span/seq.length;
+    seq.forEach((n,k)=>out.push({midi:n.midi,string:n.string,fret:n.fret,
       role:"chord",offset:k*step,dur:Math.min(0.9,step*1.6)}));
   }
   // structural assertions — derived, then checked, before anyone consumes it
   const chord=out.filter(e=>e.role==="chord");
-  if(chord.length!==order.length) throw new Error("arpOnsets: onset count != pattern length");
+  if(chord.length!==seq.length) throw new Error("arpOnsets: onset count != sequence length");
   for(let k=0;k<chord.length;k++){
     if(k>0&&chord[k].offset<=chord[k-1].offset)
       throw new Error("arpOnsets: onsets not strictly increasing");
     if(chord[k].offset<0||chord[k].offset>=span)
       throw new Error("arpOnsets: onset outside the chord span");
     if(!(chord[k].dur>0)) throw new Error("arpOnsets: non-positive duration");
-    if(!setLowHigh.includes(chord[k].string))
-      throw new Error("arpOnsets: onset on a string outside the set");
+    if(!Number.isInteger(chord[k].string)||chord[k].string<1||chord[k].string>6)
+      throw new Error("arpOnsets: onset carries no real string");
   }
   return out;
 }
@@ -1877,10 +1962,7 @@ function click(when,level){
 }
 function orderedMidis(i){
   const v=VOIC[i]; if(!v)return{notes:[],bass:null};
-  const s=st.setLowHigh;
-  const byStr={}; v.frets.forEach((f,k)=>byStr[s[k]]=OPEN[s[k]]+f);
-  const order=displayPattern()||s;
-  const notes=order.map(x=>byStr[x]);
+  const notes=(orderedNotes(v)||v.notes).map(n=>n.midi);
   const b=bassPcFor(SEQ[i]); let bass=null;
   if(b!==null){ const low=Math.min(...notes);
     bass=low-(((low-b)%12)+12)%12; if(bass>=low)bass-=12; if(bass<28)bass+=12; }
@@ -1893,11 +1975,12 @@ function onsetsFor(i,durBeats){
   // stands — this function only composes its calls.
   const v=VOIC[i]; if(!v)return[];
   const {bass}=orderedMidis(i);
-  if(st.playback==="block"||!st.arpPattern)
-    return arpOnsets(v,st.setLowHigh,null,bass,durBeats,st.bpm);
-  const line=arpOnsets(v,st.setLowHigh,st.arpPattern,bass,durBeats,st.bpm);
+  const order=orderedNotes(v);
+  if(!order)
+    return arpOnsets(v,null,bass,durBeats,st.bpm);
+  const line=arpOnsets(v,order,bass,durBeats,st.bpm);
   if(st.playback!=="both")return line;
-  const strumChord=arpOnsets(v,st.setLowHigh,null,null,durBeats,st.bpm)
+  const strumChord=arpOnsets(v,null,null,durBeats,st.bpm)
     .map(ev=>({...ev,dur:Math.min(ev.dur,0.5),strum:true})); // harmony context, not steps
   return [...strumChord,...line];
 }
@@ -1933,7 +2016,8 @@ function schedulePulses(i,when,durBeats){
 function firePulse(ev){
   if(!etude.on)return;               // stopped between scheduling and firing
   // arpeggio mode: one ring alive at a time; block chords read as one gesture
-  if(st.arpPattern)document.querySelectorAll("#fret .pulse, #kbd .pulse").forEach(n=>n.remove());
+  if(st.placement==="line"||st.arpPattern)
+    document.querySelectorAll("#fret .pulse, #kbd .pulse").forEach(n=>n.remove());
   const fl=document.querySelector("#fret #pulseLayer");
   if(fl&&ev.string!==null)ringPulse(fl,fx(ev.fret),fy(ev.string),14,"#212126",ev);
   const kl=document.querySelector("#kbd #kbdPulse"), g=kbdGeom(ev.midi);
@@ -2329,29 +2413,28 @@ function renderScore(){
     }else if(ch.roman||relabel){
       const r=el("text",{x:x+3,y:28,"font-size":"9.5",fill:"#73737A"},svg);
       r.textContent=relabel?(ch.label+(ch.roman?" · "+ch.roman:"")):ch.roman;}
-    const v=VOIC[i], s=st.setLowHigh;
+    const v=VOIC[i];
     if(v){
       const bass=bassPcFor(ch), ref=bass!==null?bass:ch.rootPc;
-      const byStr={}; v.frets.forEach((f,k)=>byStr[s[k]]=OPEN[s[k]]+f);
       const noteInfo=m=>{const sp=spelled(m);
         const {lab,fam}=ivlOf(((m%12)+12)%12,ref,ch.q); return {...sp,lab,fam};};
-      const dp=displayPattern();
-      if(!dp){
+      const seqNotes=orderedNotes(v);
+      if(!seqNotes){
         // block chord: stacked heads at slot start, one stem
-        const ms=s.map(x2=>byStr[x2]);
         const open=beats>=2, xh=x+16;
         let yTop=1e9,yLow=-1e9;
-        for(const m of ms){const n=noteInfo(m);const y=head(xh,n.name,n.oct,n.fam,n.lab,open);
+        for(const nn of v.notes){const n=noteInfo(nn.midi);
+          const y=head(xh,n.name,n.oct,n.fam,n.lab,open);
           yTop=Math.min(yTop,y);yLow=Math.max(yLow,y);}
         if(beats<4) el("line",{x1:xh+6,y1:yLow,x2:xh+6,y2:yTop-26,stroke:"#212126","stroke-width":1.2},svg);
       }else{
-        const L=dp.length, d=beats/L;
+        const L=seqNotes.length, d=beats/L;
         const dyadic=[4,2,1,0.5,0.25].includes(d);
         const wv=dyadic?d:writtenValue(d);      // the value the notes are WRITTEN as
         const open=wv>=2;
         const xs=[],ys=[];
-        dp.forEach((str,k)=>{
-          const m=byStr[str], n=noteInfo(m);
+        seqNotes.forEach((nn,k)=>{
+          const n=noteInfo(nn.midi);
           const xk=x+(k+0.5)*(w/L);
           const y=head(xk,n.name,n.oct,n.fam,n.lab,open);
           xs.push(xk); ys.push(y);
@@ -2494,9 +2577,9 @@ function renderActive(){
       }
     }
   }
-  const order=displayPattern();
-  for(let i=0;i<3;i++){
-    const f=v.frets[i],s2=s[i],pc=(OPEN[s2]+f)%12;
+  const order=orderedNotes(v);
+  for(const n of v.notes){
+    const f=n.fret,s2=n.string,pc=n.midi%12;
     const {lab,fam}=ivlOf(pc,ref,ch.q);
     const g=el("g",{},layer);
     el("circle",{cx:fx(f),cy:fy(s2),r:14,fill:FAM_COLOR[fam],stroke:"#fff","stroke-width":2},g);
@@ -2504,7 +2587,7 @@ function renderActive(){
       fill:FAM_TEXT[fam],class:"dot-label"},g);
     t.textContent=lab;
     if(order){
-      const ks=order.map((x,k)=>x===s2?k+1:0).filter(Boolean);
+      const ks=order.map((x,k)=>x===n?k+1:0).filter(Boolean);
       if(ks.length){
         const txt=ks.join(","), w=Math.max(13,txt.length*5.4+7);
         el("rect",{x:fx(f)+6,y:fy(s2)-18.5,width:w,height:13,rx:6.5,fill:"#fff",
@@ -2830,7 +2913,7 @@ function applyRaw(c){
     // v0.6.14 renames placement's stored values: box → grip, and — the trap —
     // linear → FREE (it was the unanchored grip), NEVER "line", which is new
     // and has no stored history. Unknown values land on grip.
-    placement:({box:"grip",linear:"free",grip:"grip",free:"free"})[c.placement]??"grip",
+    placement:({box:"grip",linear:"free",grip:"grip",free:"free",line:"line"})[c.placement]??"grip",
     playback:c.playback??(c.arpPattern?"arpeggiated":"block"),
     bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0,
     // pre-v0.6 entries carry no harmony panel — they were all build-up études
@@ -3202,8 +3285,10 @@ function initControls(){
   }
   const vs=voicingsFor({rootPc:0,q:"maj"},[3,2,1]);
   for(const v of vs){
-    const ms=v.frets.map((fr,i)=>OPEN[[3,2,1][i]]+fr);
+    const ms=v.notes.map(n=>n.midi);
     if(!(ms[0]<ms[1]&&ms[1]<ms[2]))console.error("TEST: voicing not ascending",v);
+    for(const n of v.notes)if(n.midi!==OPEN[n.string]+n.fret)
+      console.error("TEST: note carries a wrong midi",n);
   }
   eq(parseArp("2-3-3-1").pattern.join(","),"2,3,3,1","arp parse dashes");
   eq(parseArp("2331").pattern.join(","),"2,3,3,1","arp parse bare digits");
@@ -3255,14 +3340,16 @@ function initControls(){
   eq(STRSETS.translatePattern([3,4,2,2],[2,3,4],[3,4,5]).join("-"),"4-5-3-3",
     "3-4-2-2 on 2-3-4 = mid,low,high,high = 4-5-3-3 on 3-4-5");
   eq(STRSETS.slotsOf([3,4,2,2],[2,3,4]).join(","),"1,0,2,2","worked case slots");
-  // v0.6.5 arpOnsets: pure onset seed — count, order, roles, span
+  // v0.6.5 arpOnsets: pure onset seed — count, order, roles, span (v0.7: note list)
   (function(){
-    const v={frets:[5,5,3]}, s=[3,2,1];
-    const arp=arpOnsets(v,s,[2,3,3,1],null,2,72);
-    eq(arp.length,4,"arp onsets: one per pattern note");
+    const v={notes:[{string:3,fret:5,midi:60},{string:2,fret:5,midi:64},
+      {string:1,fret:3,midi:67}],inv:0};
+    const ord=[v.notes[1],v.notes[0],v.notes[0],v.notes[2]];   // M-L-L-H
+    const arp=arpOnsets(v,ord,null,2,72);
+    eq(arp.length,4,"arp onsets: one per sequence note");
     eq(arp.every(e=>e.role==="chord"),true,"no bass, no bass onset");
     eq(arp[1].offset>arp[0].offset,true,"onsets increase");
-    const blk=arpOnsets(v,s,null,40,2,72);
+    const blk=arpOnsets(v,null,40,2,72);
     eq(blk.length,4,"block: bass + three notes");
     eq(blk[0].role,"bass","bass first, offset 0");
     eq(blk[0].offset,0,"bass at the attack");
