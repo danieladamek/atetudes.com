@@ -18,6 +18,9 @@ engine/
 ├── upper-structure.mjs  parsed chord → ranked upper-structure triads + auto bass,
 │                        by named rule (pure) — Triadetudes break-down mode / ST-2
 ├── metronome.mjs        metronome core: beat grid, tempo bends, tap tempo (pure)
+├── note-events.mjs      the note-event producer: one {midi,string,fret,role,slot,
+│                        onset,dur} list per chord, every renderer a consumer (pure)
+├── string-sets.mjs      slot/degree translation across string sets (pure)
 ├── atchart.mjs          .atchart.md v1 parser + serializer (pure)     [spec: docs/atchart-format.md]
 └── tests/
     ├── chord.test.mjs

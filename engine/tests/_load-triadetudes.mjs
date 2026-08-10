@@ -26,7 +26,7 @@ const HARVEST = [
   "pivotContext", "changeSet", "changeKey", "changeScale",
   "fmtWhen", "logToMarkdown", "parseLogExport", "mergeLog",
   "keyFor", "keysFor", "CHORD", "UPPER", "STRSETS", "splitFor",
-  "setLabel", "patText", "displayPattern",
+  "setLabel", "patText", "displayPattern", "orderedNotes",
   "voiceLeadCost", "placementCost", "meanFret", "movementTotal",
   "st", "SCALES", "SPLITS", "OPEN", "NFRETS", "KEYS", "IVL_LABEL", "IVL_FAMILY",
 ];

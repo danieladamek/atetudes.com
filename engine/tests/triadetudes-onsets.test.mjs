@@ -49,7 +49,7 @@ test("equivalence pin: arpOnsets reproduces strum()'s previous inline scheduling
             assert.equal(now.length, old.length, `chord ${i}: same event count`);
             now.forEach((ev, k) => {
               assert.equal(ev.midi, old[k].midi, `chord ${i} ev ${k}: midi`);
-              assert.ok(close(ev.offset, old[k].offset), `chord ${i} ev ${k}: offset`);
+              assert.ok(close(ev.onset, old[k].offset), `chord ${i} ev ${k}: onset`);
               assert.ok(close(ev.dur, old[k].dur), `chord ${i} ev ${k}: dur`);
             });
           }
@@ -63,7 +63,7 @@ test("roles: bass first when present, chord onsets carry (string,fret) from the 
   const pat = [2, 3, 3, 1].map((sn) => voic[0].notes.find((n) => n.string === sn));
   const evs = unwrap(e.arpOnsets(voic[0], pat, 38, 2, 72));
   assert.equal(evs[0].role, "bass");
-  assert.equal(evs[0].offset, 0);
+  assert.equal(evs[0].onset, 0);
   assert.equal(evs[0].string, null, "the bass is a pedal, not a fretted step");
   const chord = evs.filter((ev) => ev.role === "chord");
   assert.equal(chord.length, 4);
@@ -101,8 +101,10 @@ test("invariants across every meter split × arp on/off × both harmony modes", 
                 `${cfg.mode} chord ${i}: one onset per pattern note`);
               const span = durBeats * (60 / 72);
               chord.forEach((ev, k) => {
-                if (k) assert.ok(ev.offset > chord[k - 1].offset, "strictly increasing");
-                assert.ok(ev.offset >= 0 && ev.offset < span, "onset inside the chord span");
+                if (k) assert.ok(ev.onset > chord[k - 1].onset, "strictly increasing");
+                assert.ok(ev.onset >= 0 && ev.onset < span, "onset inside the chord span");
+                assert.ok(Number.isInteger(ev.slot) && ev.slot >= 0 && ev.slot <= 2,
+                  "slot travels with the event");
                 assert.ok(ev.dur > 0, "positive duration");
               });
             });

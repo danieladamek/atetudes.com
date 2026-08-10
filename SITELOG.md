@@ -5,6 +5,36 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes v0.7.2: the note-event refactor completes (v0.7 arc phase 2, Daniel's dispatch)
+
+- **One list per chord, every consumer reading it.** The producer is
+  **`engine/note-events.mjs`** (new family module, hand-inlined with a verbatim
+  anti-drift pin): `{midi, string, fret, role, slot, onset, dur}` — grown from
+  v0.6.5's `arpOnsets`, which lives on as the alias. `role` makes an approach tone
+  expressible (phase 3's consumer); `slot` is the relative-state invariant carried
+  from the voicing note's birth (`string`/`fret` the derived coordinate — asserted);
+  `onset`/`dur` are the single source of the subdivision arithmetic the audio path
+  and the score used to compute independently.
+- **All four renderers consume the list; none re-derives a note.** Audio (`strum`),
+  the sounding-note pulse, the fretboard's order badges, the score (noteheads, beams
+  and the bass-clef pedal), and the keyboard's active markers all read `onsetsFor()`'s
+  one composition — `orderedMidis` retired, its bass register rule extracted verbatim
+  into `bassMidiFor()`. The score's slot layout stays even-division by design; the
+  onset-proportional layout arrives with the grammar's uneven figures.
+- **Behaviour-preserving, proven twice as the item demanded, pin-first**: (1) the
+  event lists a renderer consumes were frozen from the pre-refactor composition
+  across six placement/playback configs × three chords and now live as a golden test
+  the producer must reproduce number for number; (2) a byte-level DOM diff of all
+  three visual renderers — 42 hashes across 14 config permutations spanning every
+  placement, every playback, four meters and break-down mode — came back identical
+  before vs after. Nothing a user can see moved.
+- Verified per doctrine: engine suite 174/174 (golden event lists, full-shape and
+  slot-honesty assertions, note-events anti-drift pin; every prior pin untouched);
+  zero console/page errors across the capture matrix and the interactive pass;
+  `rawCfg()` untouched — events are derived musical data and are never stored
+  (charter §7); rendered and inspected at 1280/390 px at fast and slow tempo — and
+  looking identical is, this time, the success criterion. Update Log 260810.7.
+
 ## 2026-08-10 — Triadetudes v0.7.1: the two costs, and Free gets a logic (v0.7 arc phase 1, Daniel's dispatch)
 
 - **Free's opening chord is no longer decided by array emission order.** Per Daniel's

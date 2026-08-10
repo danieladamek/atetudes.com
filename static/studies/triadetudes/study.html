@@ -138,7 +138,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.1</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.2</div>
 </header>
 
 <div class="cards">
@@ -369,7 +369,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.7.1 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.7.2 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -900,6 +900,74 @@ function pivotWindow(notes, startDegree, nearFret) {
     throw new Error("string-sets: the worked case must translate to 4-5-3-3");
 }
 return { lowToHigh, slotsOf, stringsOf, translatePattern, translateString, pivotWindow, MAX_PATTERN };
+})();
+/* ============ note-event engine — shared component v1 ============
+   Canonical source: engine/note-events.mjs (same anti-drift discipline). */
+const NOTE_EVENTS = (() => {
+/* note-events.mjs — the note-event producer (component v1).
+ *
+ * Roadmap §1.4's keystone: one event list per chord, consumed identically by
+ * the fretboard, score, keyboard and audio — the same figure must not be able
+ * to sound one way and print another. Pure timing/pitch math, no DOM, no
+ * audio, no globals; apps bind it themselves.
+ *
+ * Event shape (the family's shared drill-layer vocabulary — Tetradetudes and
+ * Substitute Teacher inherit this):
+ *
+ *   { midi, string, fret, role: "chord" | "approach" | "bass", slot, onset, dur }
+ *
+ * - role is what makes an approach tone expressible (the grammar's consumer);
+ * - slot is the STORED INVARIANT of the relative-state doctrine, carried from
+ *   the voicing note (index into the set, 0 = lowest-pitched string); string
+ *   and fret are the derived coordinate;
+ * - onset/dur are seconds from the chord attack — the single source of the
+ *   subdivision arithmetic the renderers used to compute independently.
+ *
+ * Grew out of Triadetudes' arpOnsets (v0.6.5, the sounding-note pulse), whose
+ * scheduling numbers are pinned by an equivalence oracle: block strums stagger
+ * 28 ms at 0.85 s; sequenced events divide the chord span evenly with a
+ * legato tail of min(0.9, step × 1.6); the bass is a 1.0 s pedal at the
+ * attack. Grown, not rewritten — the pin still passes.
+ */
+
+function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
+  // voicing: {notes:[{string,fret,midi,slot}]} — order: the sounding sequence
+  // as an array of the voicing's own notes (identity, not lookup), or null
+  // for a block strum of the whole voicing.
+  const out = [];
+  if (bassMidi !== null && bassMidi !== undefined)
+    out.push({ midi: bassMidi, string: null, fret: null, role: "bass",
+      slot: null, onset: 0, dur: 1.0 });
+  const seq = order || voicing.notes;
+  for (const n of seq)
+    if (!voicing.notes.includes(n))
+      throw new Error("noteEvents: ordered note is not one of the voicing's notes");
+  const span = (durBeats || 2) * (60 / bpm);
+  if (!order) {
+    seq.forEach((n, k) => out.push({ midi: n.midi, string: n.string, fret: n.fret,
+      role: "chord", slot: n.slot ?? null, onset: k * 0.028, dur: 0.85 }));
+  } else {
+    const step = span / seq.length;
+    seq.forEach((n, k) => out.push({ midi: n.midi, string: n.string, fret: n.fret,
+      role: "chord", slot: n.slot ?? null, onset: k * step,
+      dur: Math.min(0.9, step * 1.6) }));
+  }
+  // structural assertions — derived, then checked, before anyone consumes it
+  const chord = out.filter((e) => e.role === "chord");
+  if (chord.length !== seq.length)
+    throw new Error("noteEvents: event count != sequence length");
+  for (let k = 0; k < chord.length; k++) {
+    if (k > 0 && chord[k].onset <= chord[k - 1].onset)
+      throw new Error("noteEvents: onsets not strictly increasing");
+    if (chord[k].onset < 0 || chord[k].onset >= span)
+      throw new Error("noteEvents: onset outside the chord span");
+    if (!(chord[k].dur > 0)) throw new Error("noteEvents: non-positive duration");
+    if (!Number.isInteger(chord[k].string) || chord[k].string < 1 || chord[k].string > 6)
+      throw new Error("noteEvents: event carries no real string");
+  }
+  return out;
+}
+return { noteEvents };
 })();
 /* ============ upper-structure engine — shared component v1 ============
    Canonical source: engine/upper-structure.mjs (same anti-drift discipline). */
@@ -1432,7 +1500,7 @@ function voicingsFor(chord,s){
         frets.push(f);
       }
       if(ok) res.push({
-        notes:frets.map((f,i)=>({string:s[i],fret:f,midi:OPEN[s[i]]+f})),
+        notes:frets.map((f,i)=>({string:s[i],fret:f,midi:OPEN[s[i]]+f,slot:i})),
         inv:oi});
     }
   }
@@ -1482,7 +1550,8 @@ function lineVoicing(chord){
     for(const c of candsFor(remaining[idx]))walk(idx+1,[...combo,c]);
   };
   walk(0,[]);
-  const notes=[...placed,...(bestCombo||[])].sort((a,b)=>a.midi-b.midi);
+  const notes=[...placed,...(bestCombo||[])].sort((a,b)=>a.midi-b.midi)
+    .map(n=>({...n,slot:st.setLowHigh.indexOf(n.string)}));
   // derived, then asserted: three tones, the chord's pcs exactly, window taken
   if(notes.length!==3)throw new Error("lineVoicing: expected three notes");
   const pcs=new Set(notes.map(n=>n.midi%12));
@@ -1917,50 +1986,12 @@ function mergeLog(existing,incoming){
   return {list,added};
 }
 
-/* ---- onset derivation: the note-event seed ----
-   Pure: (voicing on a string set, arp pattern, bass midi, span, bpm) → ordered
-   onset list {midi,string,fret,role,offset,dur}. These are v0.7 §1.4's note-event
-   field names minus `slot`; when the note-event refactor lands, THIS function is
-   absorbed into it — do not build a second one. Both strum() (audio) and the
-   pulse subscriber (visual) consume this list, so play-along mode (chords muted)
-   still gets the visual cue; `role` exists so the bass — a pedal under the
-   figure, not a step in it — can be filtered by meaning, not by view.
-   NOTE: durations are release tails and may ring past the chord span (the
-   shipped legato behaviour of strum, pinned by tests); onsets stay inside it. */
-function arpOnsets(voicing,order,bassMidi,durBeats,bpm){
-  // v0.7 first slice: the voicing is a note list; `order` is the sounding
-  // sequence as an array of its notes, or null for a block strum. Every order
-  // entry must BE one of the voicing's notes — identity, not lookup.
-  const out=[];
-  if(bassMidi!==null&&bassMidi!==undefined)
-    out.push({midi:bassMidi,string:null,fret:null,role:"bass",offset:0,dur:1.0});
-  const seq=order||voicing.notes;
-  for(const n of seq)
-    if(!voicing.notes.includes(n))
-      throw new Error("arpOnsets: ordered note is not one of the voicing's notes");
-  const span=(durBeats||2)*(60/bpm);
-  if(!order){
-    seq.forEach((n,k)=>out.push({midi:n.midi,string:n.string,fret:n.fret,
-      role:"chord",offset:k*0.028,dur:0.85}));
-  }else{
-    const step=span/seq.length;
-    seq.forEach((n,k)=>out.push({midi:n.midi,string:n.string,fret:n.fret,
-      role:"chord",offset:k*step,dur:Math.min(0.9,step*1.6)}));
-  }
-  // structural assertions — derived, then checked, before anyone consumes it
-  const chord=out.filter(e=>e.role==="chord");
-  if(chord.length!==seq.length) throw new Error("arpOnsets: onset count != sequence length");
-  for(let k=0;k<chord.length;k++){
-    if(k>0&&chord[k].offset<=chord[k-1].offset)
-      throw new Error("arpOnsets: onsets not strictly increasing");
-    if(chord[k].offset<0||chord[k].offset>=span)
-      throw new Error("arpOnsets: onset outside the chord span");
-    if(!(chord[k].dur>0)) throw new Error("arpOnsets: non-positive duration");
-    if(!Number.isInteger(chord[k].string)||chord[k].string<1||chord[k].string>6)
-      throw new Error("arpOnsets: onset carries no real string");
-  }
-  return out;
-}
+/* ---- onset derivation ----
+   The producer lives in engine/note-events.mjs (inlined above): one event
+   list per chord — {midi,string,fret,role,slot,onset,dur} — consumed
+   identically by audio, pulse, fretboard, score and keyboard. arpOnsets is
+   the historical name, kept as the alias the harness and self-tests use. */
+const arpOnsets=NOTE_EVENTS.noteEvents;
 
 /* ============ audio ============ */
 let AC=null;
@@ -2015,21 +2046,23 @@ function click(when,level){
     o.connect(g); o.start(t); o.stop(t+v.dur+0.01);
   }
 }
-function orderedMidis(i){
-  const v=VOIC[i]; if(!v)return{notes:[],bass:null};
-  const notes=(orderedNotes(v)||v.notes).map(n=>n.midi);
-  const b=bassPcFor(SEQ[i]); let bass=null;
-  if(b!==null){ const low=Math.min(...notes);
-    bass=low-(((low-b)%12)+12)%12; if(bass>=low)bass-=12; if(bass<28)bass+=12; }
-  return {notes,bass};
+function bassMidiFor(i){
+  // the bass register rule, verbatim from the shipped orderedMidis: seat the
+  // pedal below the voicing's lowest note, never below midi 28
+  const ch=SEQ[i], v=VOIC[i]; if(!ch||!v)return null;
+  const b=bassPcFor(ch); if(b===null)return null;
+  const low=Math.min(...v.notes.map(n=>n.midi));
+  let bass=low-(((low-b)%12)+12)%12; if(bass>=low)bass-=12; if(bass<28)bass+=12;
+  return bass;
 }
 function onsetsFor(i,durBeats){
-  // playback is a named axis (v0.6.13): Block sounds the harmony whatever the
-  // pattern says; Arpeggiated runs the pattern; Both strums the harmony under
-  // the line's downbeat. arpOnsets itself is untouched — the equivalence pin
-  // stands — this function only composes its calls.
+  // THE one producer call per chord (v0.7 phase 2): playback composes here —
+  // Block sounds the harmony whatever the pattern says, Arpeggiated runs the
+  // sequence, Both strums the harmony under the line's downbeat — and every
+  // consumer (audio, pulse, fretboard badges, score, keyboard) reads this
+  // list. No renderer re-derives a note.
   const v=VOIC[i]; if(!v)return[];
-  const {bass}=orderedMidis(i);
+  const bass=bassMidiFor(i);
   const order=orderedNotes(v);
   if(!order)
     return arpOnsets(v,null,bass,durBeats,st.bpm);
@@ -2042,7 +2075,7 @@ function onsetsFor(i,durBeats){
 function strum(i,when,durBeats){
   const ac=ctx(); if(!ac)return;
   const t=when||ac.currentTime+0.02;
-  for(const ev of onsetsFor(i,durBeats)) playNote(ev.midi,t+ev.offset,ev.dur,0.2);
+  for(const ev of onsetsFor(i,durBeats)) playNote(ev.midi,t+ev.onset,ev.dur,0.2);
 }
 
 /* ---- the sounding-note pulse (v0.6.5) ----
@@ -2064,7 +2097,7 @@ function schedulePulses(i,when,durBeats){
   const ac=ctx(); if(!ac)return;
   for(const ev of onsetsFor(i,durBeats)){
     if(ev.role!=="chord"||ev.strum)continue;   // pedals and harmony strums are not steps
-    const delay=Math.max(0,(when-ac.currentTime+ev.offset)*1000);
+    const delay=Math.max(0,(when-ac.currentTime+ev.onset)*1000);
     PULSE.timers.push(setTimeout(()=>firePulse(ev),delay));
   }
 }
@@ -2473,23 +2506,24 @@ function renderScore(){
       const bass=bassPcFor(ch), ref=bass!==null?bass:ch.rootPc;
       const noteInfo=m=>{const sp=spelled(m);
         const {lab,fam}=ivlOf(((m%12)+12)%12,ref,ch.q); return {...sp,lab,fam};};
-      const seqNotes=orderedNotes(v);
-      if(!seqNotes){
+      const events=onsetsFor(i,beats);
+      const seqEvents=orderedNotes(v)?events.filter(ev=>ev.role==="chord"&&!ev.strum):null;
+      if(!seqEvents){
         // block chord: stacked heads at slot start, one stem
         const open=beats>=2, xh=x+16;
         let yTop=1e9,yLow=-1e9;
-        for(const nn of v.notes){const n=noteInfo(nn.midi);
+        for(const ev of events)if(ev.role==="chord"){const n=noteInfo(ev.midi);
           const y=head(xh,n.name,n.oct,n.fam,n.lab,open);
           yTop=Math.min(yTop,y);yLow=Math.max(yLow,y);}
         if(beats<4) el("line",{x1:xh+6,y1:yLow,x2:xh+6,y2:yTop-26,stroke:"#212126","stroke-width":1.2},svg);
       }else{
-        const L=seqNotes.length, d=beats/L;
+        const L=seqEvents.length, d=beats/L;
         const dyadic=[4,2,1,0.5,0.25].includes(d);
         const wv=dyadic?d:writtenValue(d);      // the value the notes are WRITTEN as
         const open=wv>=2;
         const xs=[],ys=[];
-        seqNotes.forEach((nn,k)=>{
-          const n=noteInfo(nn.midi);
+        seqEvents.forEach((ev,k)=>{
+          const n=noteInfo(ev.midi);
           const xk=x+(k+0.5)*(w/L);
           const y=head(xk,n.name,n.oct,n.fam,n.lab,open);
           xs.push(xk); ys.push(y);
@@ -2522,8 +2556,9 @@ function renderScore(){
           }
         }
       }
-      // extension bass in the bass clef
-      const {bass:bm}=orderedMidis(i);
+      // extension bass in the bass clef, from the same event list
+      const bassEv=events.find(ev=>ev.role==="bass");
+      const bm=bassEv?bassEv.midi:null;
       if(bm!==null){
         const sp=spelled(bm), y=head(x+16,sp.name,sp.oct,"R","R",beats>=2);
         if(beats<4) el("line",{x1:x+16-6,y1:y,x2:x+16-6,y2:y+24,stroke:"#212126","stroke-width":1.2},svg);
@@ -2632,7 +2667,9 @@ function renderActive(){
       }
     }
   }
-  const order=orderedNotes(v);
+  const seqEvents=orderedNotes(v)
+    ?onsetsFor(st.cur,beatsOf(st.cur)).filter(ev=>ev.role==="chord"&&!ev.strum)
+    :null;
   for(const n of v.notes){
     const f=n.fret,s2=n.string,pc=n.midi%12;
     const {lab,fam}=ivlOf(pc,ref,ch.q);
@@ -2641,8 +2678,8 @@ function renderActive(){
     const t=el("text",{x:fx(f),y:fy(s2)+4,"text-anchor":"middle","font-size":lab.length>1?"10":"12",
       fill:FAM_TEXT[fam],class:"dot-label"},g);
     t.textContent=lab;
-    if(order){
-      const ks=order.map((x,k)=>x===n?k+1:0).filter(Boolean);
+    if(seqEvents){
+      const ks=seqEvents.map((ev,k)=>ev.string===n.string&&ev.fret===n.fret?k+1:0).filter(Boolean);
       if(ks.length){
         const txt=ks.join(","), w=Math.max(13,txt.length*5.4+7);
         el("rect",{x:fx(f)+6,y:fy(s2)-18.5,width:w,height:13,rx:6.5,fill:"#fff",
@@ -2699,11 +2736,9 @@ function renderKbd(){
   const ch=SEQ[st.cur], v=VOIC[st.cur];
   if(ch&&v){
     const bass=bassPcFor(ch), ref=bass!==null?bass:ch.rootPc;
-    const {notes,bass:bm}=orderedMidis(st.cur);
-    const all=bm!==null?[bm,...notes]:notes;
-    for(const m of all){
-      const {lab,fam}=ivlOf(((m%12)+12)%12,ref,ch.q);
-      act.set(m,{fam,lab});
+    for(const ev of onsetsFor(st.cur,beatsOf(st.cur))){
+      const {lab,fam}=ivlOf(((ev.midi%12)+12)%12,ref,ch.q);
+      act.set(ev.midi,{fam,lab});
     }
   }
   for(const m of whites){
@@ -3429,17 +3464,17 @@ function initControls(){
   eq(STRSETS.slotsOf([3,4,2,2],[2,3,4]).join(","),"1,0,2,2","worked case slots");
   // v0.6.5 arpOnsets: pure onset seed — count, order, roles, span (v0.7: note list)
   (function(){
-    const v={notes:[{string:3,fret:5,midi:60},{string:2,fret:5,midi:64},
-      {string:1,fret:3,midi:67}],inv:0};
+    const v={notes:[{string:3,fret:5,midi:60,slot:0},{string:2,fret:5,midi:64,slot:1},
+      {string:1,fret:3,midi:67,slot:2}],inv:0};
     const ord=[v.notes[1],v.notes[0],v.notes[0],v.notes[2]];   // M-L-L-H
     const arp=arpOnsets(v,ord,null,2,72);
     eq(arp.length,4,"arp onsets: one per sequence note");
     eq(arp.every(e=>e.role==="chord"),true,"no bass, no bass onset");
-    eq(arp[1].offset>arp[0].offset,true,"onsets increase");
+    eq(arp[1].onset>arp[0].onset,true,"onsets increase");
     const blk=arpOnsets(v,null,40,2,72);
     eq(blk.length,4,"block: bass + three notes");
-    eq(blk[0].role,"bass","bass first, offset 0");
-    eq(blk[0].offset,0,"bass at the attack");
+    eq(blk[0].role,"bass","bass first, onset 0");
+    eq(blk[0].onset,0,"bass at the attack");
     eq(blk.filter(e=>e.role==="chord").length,3,"three chord onsets");
   })();
 })();
