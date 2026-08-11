@@ -22,11 +22,16 @@ engine/
 │                        onset,dur} list per chord, every renderer a consumer (pure)
 ├── string-sets.mjs      slot/degree translation across string sets (pure)
 ├── atchart.mjs          .atchart.md v1 parser + serializer (pure)     [spec: docs/atchart-format.md]
+├── markdown.mjs         the notepad's markdown engine: CommonMark subset that
+│                        builds DOM nodes (no HTML-string sinks — greped), refuses
+│                        raw HTML, sanitizes links by allow-list; parseMarkdown /
+│                        renderTo / applyEdit (the toolbar + palette seam) (pure)
 └── tests/
     ├── chord.test.mjs
     ├── upper-structure.test.mjs      roadmap §3.1's decomposition table as corpus
     ├── metronome.test.mjs            includes the study-inline anti-drift pin
     ├── atchart.test.mjs
+    ├── markdown.test.mjs             the grep, the refusal corpus, the caret contract
     ├── triadetudes-engine.test.mjs   characterization of the shipped study's engine
     └── _load-triadetudes.mjs         extracts the study's <script> for headless testing
 ```

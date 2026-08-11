@@ -5,6 +5,41 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Notepad child 1: the markdown engine (Daniel's dispatch)
+
+- **`engine/markdown.mjs`** — the notepad arc's one piece of genuinely new engineering,
+  written in-house because its two guarantees cannot be imported. (1) **No HTML-string
+  sinks anywhere in the module** — the renderer builds the tree with createElement /
+  createTextNode / textContent only, and the test suite greps the module source for all
+  four banned sinks (the guarantee is so literal that the module's own comments may not
+  name them). (2) **No HTML passthrough** — a typed `<script>` is text and renders as
+  the visible characters, a documented and tested divergence from CommonMark, said so
+  in the module header. Charter §7 made structural instead of defensive.
+- **The subset and nothing more**: ATX headings · paragraphs · em/strong · bullet and
+  ordered lists (one nesting level) · blockquotes · code spans · fenced blocks with
+  info strings · --- rules · [text](url) · hard line breaks. Fences are OPAQUE nodes —
+  info string and body byte-identical through parse, rendered as preformatted text,
+  never interpreted: the hook the payload convention and the `chart` block hang on,
+  with engine/atchart.mjs staying the only reader of a chart fence.
+- **Links sanitize by scheme allow-list at render** (http, https, mailto, #fragment);
+  `javascript:` and `data:` (and vbscript:, file:, case/space variants) have explicit
+  refusal tests and render as the literal source text — inert AND nothing lost.
+  **Unknown syntax degrades to text, never throws**: unclosed fence (stays literal —
+  typing a fence in live preview never swallows the rest of the note), ragged table,
+  stray brackets, 40-deep quotes, and a nasty-string corpus all pass with zero throws.
+  **Round-trip is not claimed** — renderer, not formatter; the source stays canonical.
+- **`applyEdit(src, sel, op)` is the toolbar's seam** (and the palette's, via
+  `{type:"insert"}`): a pure string+selection transform. Wrapping ops toggle rather
+  than nest; line ops apply across every selected line and toggle off only when all
+  carry the marker; ordered renumbers 1..n and converts bullets. **The caret contract
+  is tested per op** — empty selection, multi-line selection, toggle-off — with exact
+  selection assertions and no DOM anywhere in the tests.
+- Self-contained per the dispatch: no host wiring, no .atchart.md, no UI. Inline-
+  readiness verified two ways — the family transform loads in a DOM-free vm, and a
+  scratch page with the module inlined runs from `file://` with the network disabled,
+  zero console errors, safe-anchor/refusal/fence probes green. engine/README.md
+  updated. Suite 227/227 (15 new tests). Update Log 260811.5.
+
 ## 2026-08-11 — Triadetudes: the clock row — Harmony becomes a strip (Daniel's dispatch; family pattern)
 
 - **The page sorts by category.** Harmony leaves the config row and becomes a
