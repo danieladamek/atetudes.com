@@ -5,6 +5,37 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes: the chip row above the neck renders in both harmony modes (Daniel's dispatch)
+
+- **The strip exposed it; the fix names it.** The chord chip row above the fretboard was
+  treated as a Build-up artifact and vanished in Break down. It is not a Build-up
+  feature — it is the **position indicator for the board** (which chord is sounding,
+  where you are in the cycle), and that job is identical in both modes. v0.6.7's "one
+  strip, two homes" moving element is superseded by **two elements with two roles over
+  one dataset**: the read-only position row stays above the neck in both modes
+  (`#chips` in `#chipsHome`), and the editor chips (`#bdChips` in the Harmony card's
+  dock) exist only in Break down — the same split the app already makes between
+  Transport BPM and Metronome BPM.
+- **Labels are always the chords of the progression**, so the row means one thing
+  everywhere: Build up → the triads (unchanged); Break down → the typed changes
+  (`Dm7 G7 Cmaj7 D7#9 Dm6`), never the derived slash triads — the neck header already
+  answers *what am I playing over it* ("F over D = Dm7 · 1st inv. …"); the row answers
+  *which change am I on*.
+- **Every editor affordance untouched**: tap opens the chip editor, `+` appends, `▾`
+  marks multi-candidate chords, long-press deletes, drag reorders — all verified live,
+  including the editor popover's re-anchoring after re-render (now against `#bdChips`).
+  Editing the changes field updates the position row live; the row's chips still jump
+  the position; the sounding chord highlights in both rows in time.
+- **Quiet degradation**: an all-unparsed changes field hides the position row entirely
+  (no empty chrome above the neck) while the editor chips keep showing the unreadable
+  tokens with their ⚠ — that is their job, not the row's. An empty field falls back to
+  the named default progression (existing behavior) and the row shows it.
+- Verified per doctrine: engine suite 211/211 untouched; 20 interactive Playwright
+  checks from `file://` offline across both modes, zero console/page errors; rendered
+  and inspected at 1280/390 px with an eight-chord Break down progression — the row
+  wraps to two lines on the phone and the fretboard stays in reach. Zero
+  document-level key listeners, still. Update Log 260810.12.
+
 ## 2026-08-10 — Triadetudes: Shape & Motion becomes a strip above the neck (Daniel's dispatch; closes spec §7.4)
 
 - **Layout only, reversible in one commit.** The Shape & Motion card leaves the config

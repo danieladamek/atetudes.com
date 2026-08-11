@@ -236,9 +236,10 @@
     <div id="breakBlock" style="display:none">
       <label>The changes (chords or romans: <i>Dm7 G7 Cmaj7</i> · <i>ii7 V7 Imaj7</i> · <i>G7alt</i> · <i>F/G</i>)</label>
       <input type="text" id="breakIn" spellcheck="false" style="width:100%">
-      <!-- in break-down the chip row docks HERE, beside the field that writes the
-           same data; in build-up it lives at its stage position (#chipsHome) -->
-      <div id="chipsDock"></div>
+      <!-- the EDITOR chips dock here in break-down, beside the field that writes
+           the same data. The position row above the neck (#chips) is a separate
+           element with a separate job and renders in both modes. -->
+      <div id="chipsDock"><div class="chips" id="bdChips"></div></div>
       <div class="hint">Type the progression you actually face, or grow it chip by chip
       with +. The app derives the upper-structure triad on your string set and grounds
       it on the chord's root in the bass. Tap a chip to edit it — where a chord holds
@@ -3509,22 +3510,33 @@ function renderKbd(){
   if(keepPulse)svg.appendChild(keepPulse); else el("g",{id:"kbdPulse"},svg);
 }
 function renderChips(){
+  // TWO roles over one dataset (the item's law, supersedes v0.6.7's moving
+  // element): the row above the neck is the POSITION INDICATOR — which chord
+  // is sounding, where you are in the cycle — and renders in BOTH harmony
+  // modes; the dock chips are the EDITORS and exist only in break-down. Same
+  // split the app already makes between Transport BPM and Metronome BPM.
+  renderPosRow(); renderEditorChips();
+}
+function renderPosRow(){
   const div=document.getElementById("chips");
-  // one strip, two homes (v0.6.7): in break-down the chips ARE the input and
-  // dock beside the changes field; in build-up they are a position display and
-  // live at the stage. The element MOVES — one row, one render path, never two.
-  const host=document.getElementById(st.harmonyMode==="break"?"chipsDock":"chipsHome");
-  if(host&&div.parentElement!==host)host.appendChild(div);
   div.innerHTML="";
-  if(st.harmonyMode!=="break"){
-    SEQ.forEach((ch,i)=>{
-      const b=document.createElement("button");
-      b.textContent=ch.label; if(i===st.cur)b.className="cur";
-      b.addEventListener("click",()=>{st.cur=i;renderActive();strum(i);});
-      div.appendChild(b);
-    });
-    return;
-  }
+  // labels are always the chords OF THE PROGRESSION: build-up's triads, or
+  // break-down's typed changes (Dm7 G7 Cmaj7) — never the derived slash
+  // triads, which the neck header already carries. Empty or unparsed
+  // break-down degrades quietly: no empty chrome above the neck.
+  div.style.display=SEQ.length?"flex":"none";
+  SEQ.forEach((ch,i)=>{
+    const b=document.createElement("button");
+    b.textContent=st.harmonyMode==="break"?(ch.srcSymbol||ch.label):ch.label;
+    if(i===st.cur)b.className="cur";
+    b.addEventListener("click",()=>{st.cur=i;renderActive();strum(i);});
+    div.appendChild(b);
+  });
+}
+function renderEditorChips(){
+  const div=document.getElementById("bdChips");
+  div.innerHTML="";
+  if(st.harmonyMode!=="break")return;
   // break-down: chips are the writable progression (§3.2). Tap = edit, drag =
   // reorder, long-press = delete, "+" = append. Big triad, small "= symbol".
   BREAK.forEach((b,i)=>{
@@ -3560,7 +3572,7 @@ function renderChips(){
       if(moved)return;
       if(b.seqIndex!==null){ st.cur=b.seqIndex; renderActive(); strum(st.cur); }
       // renderActive re-renders the chips — anchor to the live button, not this one
-      const fresh=document.querySelectorAll("#chips button.bd")[i]||btn;
+      const fresh=document.querySelectorAll("#bdChips button.bd")[i]||btn;
       openChipEditor(i,fresh);
     });
     btn.addEventListener("dragstart",e=>{ cancelLp(); closeChipEditor();
@@ -3628,7 +3640,7 @@ function openChipEditor(i,anchor){
   const rootName=b.parsed?b.parsed.root.name:(b.sym.match(/^[A-G](#{1,2}|b{1,2})?/)||[""])[0];
   const tail=b.parsed?b.shownSym.slice(rootName.length):b.sym.slice(rootName.length);
   const setSym=(sym)=>{ st.breakProg[i]={sym,us:null}; breakChanged();
-    const chips=document.querySelectorAll("#chips button.bd");
+    const chips=document.querySelectorAll("#bdChips button.bd");
     if(chips[i])openChipEditor(i,chips[i]); };
   const h=(t)=>{const e2=document.createElement("h3");e2.textContent=t;ed.appendChild(e2);};
   if(b.err){ const e2=document.createElement("div");e2.className="err";
@@ -3664,7 +3676,7 @@ function openChipEditor(i,anchor){
       cb.addEventListener("click",()=>{
         st.breakProg[i].us=UPPER.candidateKey(c);
         breakChanged();
-        const chips=document.querySelectorAll("#chips button.bd");
+        const chips=document.querySelectorAll("#bdChips button.bd");
         if(chips[i])openChipEditor(i,chips[i]);
       });
       ul.appendChild(cb);
