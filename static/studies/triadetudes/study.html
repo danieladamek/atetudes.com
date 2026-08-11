@@ -2891,7 +2891,7 @@ function syncMeterUI(){
   const b=document.getElementById("meterSel2"); if(b)b.value=String(st.meter);
 }
 /* st.bpm: one state, two sliders (Metronome card + Transport mirror) */
-function changeBpm(b){ st.bpm=b; METRO.setBpm(b); syncBpmUI(); collapseSummaries(); }
+function changeBpm(b){ st.bpm=b; METRO.setBpm(b); syncBpmUI(); renderCfg(); }
 function syncBpmUI(){
   for(const [r,v] of [["bpmRange","bpmVal"],["bpmRange2","bpmVal2"]]){
     const R=document.getElementById(r); if(R)R.value=st.bpm;
@@ -3841,7 +3841,8 @@ function cfgObj(){
     progression:{type:st.harmonyMode==="break"?"break-down":st.prog,
       start:SCALES[st.scaleType].roman[st.startDeg],
       custom:st.prog==="custom"?st.custom:undefined,chords:SEQ.map(c=>c.label)},
-    motion:{pattern:patText(st.arpPattern)||"none",placement:st.placement,playback:st.playback,
+    motion:{figure:motionSource()||"none",mode:st.motionMode,
+      pattern:patText(st.arpPattern)||"none",placement:st.placement,playback:st.playback,
       subdivision:displayPattern()?[...new Set(pattern())].map(b=>b+" beats: "+subdivisionName(b,displayPattern().length)).join("; "):"block"},
     display:{roots:st.roots,extension:st.ext},
     transport:{bpm:st.bpm,meter:st.meter+"/4",barSplit:pattern().join("+"),chordsMuted:st.metroOnly,
@@ -3982,7 +3983,7 @@ function summaryText(){
     :progLabel()+(st.prog==="custom"?" ("+st.custom+")":"");
   return st.key+" "+SCALES[st.scaleType].label+" · strings "+st.set.join("-")+
     " · pivots "+piv+" on string "+st.pivotString+" · "+how+
-    " · arp "+(patText(st.arpPattern)||"none")+" · "+st.playback+
+    " · arp "+(motionSource()||"none")+" · "+st.playback+
     (st.placement!=="grip"?" · "+st.placement:"")+
     " · "+st.meter+"/4 split "+pattern().join("+")+" · "+st.bpm+" bpm"+
     (st.harmonyMode!=="break"&&st.ext!=="none"?" · over bass ("+st.ext+")":"")+

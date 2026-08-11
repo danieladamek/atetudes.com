@@ -5,6 +5,23 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Triadetudes: the render-dependency audit — the fixes (Daniel's dispatch)
+
+- The three gaps the table found, closed — all one family (the config **display**
+  predates a value it should show; `rawCfg()` storage was correct throughout):
+  1. **`changeBpm` → `renderCfg()`** (was: sliders + collapsed lines only). A BPM drag
+     now updates the cfg JSON and the notebook summary line as it moves.
+  2. **`cfgObj().motion` gains `figure` (= `motionSource()`) and `mode`** — the "Full
+     configuration (JSON)" had been silent about a tones figure since v0.7.3.
+  3. **`summaryText()`'s arp clause shows `motionSource()`** — under a tones figure the
+     notebook summary read a stale shape pattern; it now reads the figure itself
+     (shape mode still shows the slot letters through the same clause).
+- No behaviour beyond the missing refreshes: engine suite 211/211 untouched; `rawCfg()`
+  round-trips byte-identical with no new keys and no `v:` bump (display config ≠
+  storage, asserted); 9 Playwright checks confirm each gap closed, folded and unfolded;
+  the changed surface (the notebook summary line) inspected at 1280/390 px. Zero
+  console/page errors; zero document-level key listeners, still. Update Log 260811.2.
+
 ## 2026-08-11 — Triadetudes: the render-dependency audit — the table (Daniel's dispatch)
 
 - **The deliverable is the table**: `notes/specs/render-dependencies.md` — one row per
