@@ -5,6 +5,42 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Triadetudes: the Practice Log saves rawCfg() — the fact, one fix, one flag (Daniel's dispatch)
+
+- **The fact, established before touching anything**: all four Log paths use the
+  confirmed-correct serialiser. Save stores `rawCfg()` (`currentEntry().cfg`); Restore
+  is `applyRaw(en.cfg)`; Export embeds the stored cfg verbatim in each entry's fenced
+  JSON; Import's `looksLikeCfg` gate checks the rawCfg shape. **No entry saved since
+  v0.7.3 lost the figure or mode; restore was always exact; exported .md files on disk
+  are complete.** The item's worst case is disconfirmed.
+- **One disagreement found, exactly as the dispatch predicted**: the **Copy
+  configuration** button copied `cfgObj()` — the display JSON — which the app's own
+  import gate refuses ("not a Triadetudes config"). Copy → import could never round-trip.
+  Fixed: copy emits `rawCfg()`, the importable étude; the "Full configuration (JSON)"
+  disclosure still shows the readable display form.
+- **The corroborating tell was real but display-frozen**: `en.summary` is
+  `summaryText()` at save time, so entries saved v0.7.3–260811.2 with a tones figure
+  carry a stored row text whose arp clause misdescribes their own complete cfg. Detect,
+  don't rewrite: the history row now derives a flag from the entry's own cfg — "⚠ saved
+  before summaries named figures — this étude carries (-1,+2)[1]… (tones); Restore
+  rebuilds it exactly." Pre-v0.7.3 entries (no motion keys) restore figureless via
+  applyRaw's named defaults and are NOT flagged — flagging them would be a false alarm.
+- **The round-trip that matters, asserted with the values that went missing from the
+  display**: a tones figure + non-default mode through save→restore (byte-identical
+  rawCfg, figure on the boards) and through export→import (cfg deep-equal through
+  logToMarkdown→parseLogExport→merge, headless and in the DOM). A default-config test
+  proves nothing here and was not the test.
+- **Housekeeping folded in**: `render-dependencies.md` moved from `notes/specs/` to
+  **`docs/`** (Daniel's call — it describes code; in docs/ it appears in diffs), gaining
+  the per-path serialiser table above and the probe lesson (length-based fingerprints
+  false-alarmed six times; content-based separated real gaps from honest no-ops — start
+  content-based). Canonical verification doctrine lives in CLAUDE.md, which is
+  governance-owned — the lesson is recorded beside the audit table it belongs to.
+- Verified per doctrine: suite 212/212 (new export→import figure round-trip); 13
+  Playwright checks incl. both round-trips, the copy/import agreement, the flag firing
+  on the stale row and staying silent on the pre-grammar row; flag inspected at
+  1280/390 px. `rawCfg()` unchanged, no `v:` bump. Update Log 260811.3.
+
 ## 2026-08-11 — Triadetudes: the render-dependency audit — the fixes (Daniel's dispatch)
 
 - The three gaps the table found, closed — all one family (the config **display**

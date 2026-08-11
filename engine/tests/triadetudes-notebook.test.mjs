@@ -115,3 +115,35 @@ test("import never deletes: merging a subset leaves the rest untouched", () => {
   const { list } = unwrap(e.mergeLog(ENTRIES, [ENTRIES[1]]));
   assert.equal(list.length, 2);
 });
+
+test("the Log round-trips the FIGURE: tones mode + motionSrc through export→import (260811.3)", () => {
+  // the values the 260811 audit found missing from the DISPLAY config — a
+  // default-config round-trip proves nothing here; this entry carries them
+  const e = loadTriadetudesEngine();
+  const cfg = {
+    v: 1, key: "C", scaleType: "major", set: [1, 2, 3], pivotString: 2,
+    pivotFrets: [5, 6, 8], prog: "cycle4", startDeg: 0, chromLen: 6, custom: "",
+    arpPattern: null, roots: false, ext: "none",
+    placement: "grip", playback: "arpeggiated",
+    motionMode: "tones",                                     // non-default (default is shape)
+    motionSrc: "(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]",       // the spec's enclosure
+    harmonyMode: "build",
+    breakProg: [{ sym: "Dm7", us: null }],
+    bpm: 96, meter: 4, splitIdx: 0,
+    clickOn: true, clickVol: 0.8, clickAccent: true,
+    clickSub: 1, clickVoice: "beep", countIn: false,
+  };
+  const entry = { id: "fig-1", savedAt: "2026-08-11T10:00:00.000Z", minutes: 12,
+    title: "C · Cycling 4ths · C major", summary: "C major · … · arp (-1,+2)[1] …",
+    intention: "", accomplished: "", cfg };
+  const md = e.logToMarkdown([entry], "8/11/2026");
+  const back = unwrap(e.parseLogExport(md, "2026-08-11T11:00:00.000Z"));
+  assert.equal(back.entries.length, 1);
+  assert.deepEqual(back.entries[0].cfg, cfg,
+    "cfg byte-equal through export→import — figure and mode survive");
+  assert.equal(back.entries[0].cfg.motionMode, "tones");
+  assert.equal(back.entries[0].cfg.motionSrc, "(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]");
+  // and merge carries it untouched
+  const merged = unwrap(e.mergeLog([], back.entries));
+  assert.deepEqual(merged.list[0].cfg, cfg);
+});

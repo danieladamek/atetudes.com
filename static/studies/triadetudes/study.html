@@ -4018,6 +4018,16 @@ function renderHist(){
     w.textContent=fmtWhen(en.savedAt)+(en.minutes?" · ~"+en.minutes+" min":""); hd.appendChild(w);
     div.appendChild(hd);
     const s=document.createElement("div"); s.className="sum"; s.textContent=en.summary; div.appendChild(s);
+    // entries saved v0.7.3–260811.2 froze a summary whose arp clause predated
+    // the figure: the cfg is complete (rawCfg always carried it) but the row's
+    // text misdescribes it. Detect and say so, derived from the entry's own
+    // cfg at render time — the stored record is never rewritten.
+    if(en.cfg&&en.cfg.motionSrc&&!(en.summary||"").includes(en.cfg.motionSrc)){
+      const fl=document.createElement("div"); fl.className="note";
+      fl.textContent="⚠ saved before summaries named figures — this étude carries "+
+        en.cfg.motionSrc+" ("+(en.cfg.motionMode||"tones")+"); Restore rebuilds it exactly";
+      div.appendChild(fl);
+    }
     if(en.intention){const i=document.createElement("div");i.className="note";i.textContent="→ "+en.intention;div.appendChild(i);}
     if(en.accomplished){const a=document.createElement("div");a.className="note";a.textContent="✓ "+en.accomplished;div.appendChild(a);}
     const acts=document.createElement("div"); acts.className="acts";
@@ -4363,7 +4373,10 @@ function initControls(){
     e.target.value="";
   });
   document.getElementById("copyBtn").addEventListener("click",async()=>{
-    try{await navigator.clipboard.writeText(JSON.stringify(cfgObj(),null,2));
+    // the copied JSON must round-trip through Import (which reads the rawCfg
+    // shape) — copying the display JSON produced a config the app's own
+    // import refused. The disclosure still SHOWS the readable cfgObj().
+    try{await navigator.clipboard.writeText(JSON.stringify(rawCfg(),null,2));
       document.getElementById("copyMsg").textContent="copied";
       setTimeout(()=>document.getElementById("copyMsg").textContent="",1500);}
     catch(e){}
