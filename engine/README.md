@@ -9,6 +9,16 @@ Substitute Teacher ST-0 both.
 pitch-class math and named rules, asserted before use. Nothing in this directory touches
 the DOM; everything is testable headless.
 
+**Grep assertions are comment-blind by design — state the contract in the test, not in
+module prose.** Several suites grep raw module source for banned tokens (markdown.mjs's
+four HTML-string sinks; the music palette's "no literal progression strings"; v0.6's
+decomposition-table rule against hand-written lookup tables). These scans deliberately do
+NOT strip comments: a comment-stripper is a small parser that fails permissive, and a
+permissive failure silently weakens a charter §7 guarantee while the assertion still
+passes. The accepted cost is that such a module cannot name its own banned tokens in
+prose — a guarantee comment that names them will fail the grep, which is the assertion
+working, not breaking. Document the contract beside the grep in the test file.
+
 ## Layout
 
 ```

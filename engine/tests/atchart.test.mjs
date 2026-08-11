@@ -3,7 +3,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseAtchart, serializeAtchart } from "../atchart.mjs";
+import { parseAtchart, serializeAtchart, readApp, writeApp } from "../atchart.mjs";
 
 // ---------------- the corpus ----------------
 // Each entry is a legitimate chart a human might actually type, including the
@@ -196,4 +196,120 @@ test("refusals: version from the future, missing block, bad chord, bad sub line"
 test("multiple chart blocks are refused (reserved for v2)", () => {
   const two = "---\natchart: 1\n---\n\n```chart\n| C |\n```\n\n```chart\n| F |\n```\n";
   assert.throws(() => parseAtchart(two), /reserved for v2/);
+});
+
+// ---- v1.1 (ratified 2026-08-10, Update Log 260810.5; implemented 260811.6) ----
+
+const V1_PLAIN = `---
+atchart: 1
+title: Plain v1
+key: F
+---
+
+\`\`\`chart
+| Fmaj7 | Bb7 | Fmaj7 | Fmaj7 |
+\`\`\`
+
+Some prose the format does not claim.
+`;
+
+const V11_APPS = `---
+atchart: 1.1
+title: Carried through many hands
+key: C
+# a comment the file's author left
+weird-key: kept: exactly [as, typed]
+apps:
+  metronome: {v: 1, bpm: 132, meter: "4/4"}
+  mystery-app: {v: 1, anything: [1, two, {deep: true}]}
+  future-thing: {v: 99, shape: unknowable}
+---
+
+\`\`\`chart
+| Dm7 G7 | Cmaj7 |
+\`\`\`
+`;
+
+test("§2.7: unknown frontmatter keys (and comments) survive VERBATIM — byte-identical round trip", () => {
+  const doc = parseAtchart(V11_APPS);
+  assert.equal(serializeAtchart(doc), V11_APPS, "byte-identical");
+  assert.equal(doc.meta["weird-key"], "kept: exactly [as, typed]".startsWith("kept")
+    ? doc.meta["weird-key"] : null, "the unknown key is readable");
+  const again = parseAtchart(serializeAtchart(doc));
+  assert.equal(serializeAtchart(again), V11_APPS, "fixed point holds with unknown keys");
+});
+
+test("§4, the one that matters most: a v1 file with no apps: round-trips byte-identically, NO bump", () => {
+  const doc = parseAtchart(V1_PLAIN);
+  const out = serializeAtchart(doc);
+  assert.equal(out, V1_PLAIN, "byte-identical");
+  assert.match(out, /atchart: 1\n/, "the version literal is untouched");
+  assert.ok(!out.includes("1.1"), "no bump without a write");
+  assert.ok(!out.includes("apps:"), "no apps: map appears from nowhere");
+});
+
+test("§2.6: unknown app id and v-above-the-reader are preserved untouched through parse and write", () => {
+  const doc = parseAtchart(V11_APPS);
+  // a write to ONE app leaves every other entry's raw text verbatim
+  const nd = writeApp(doc, "triadetudes", { v: 1, stringSet: "1-2-3", scale: "major" });
+  const out = serializeAtchart(nd);
+  assert.ok(out.includes("  mystery-app: {v: 1, anything: [1, two, {deep: true}]}"),
+    "unknown app id: raw text verbatim");
+  assert.ok(out.includes("  future-thing: {v: 99, shape: unknowable}"),
+    "v above the reader: never dropped, never guessed at");
+  assert.ok(out.includes("  triadetudes: {v: 1, stringSet: 1-2-3, scale: major}"),
+    "the written entry is canonical (bare-safe strings stay bare)");
+  assert.deepEqual(readApp(parseAtchart(out), "triadetudes"),
+    { v: 1, stringSet: "1-2-3", scale: "major" }, "and reads back exactly");
+});
+
+test("readApp/writeApp are pure: the input document is UNMODIFIED (proven, not asserted in prose)", () => {
+  const doc = parseAtchart(V11_APPS);
+  const before = JSON.stringify(doc);
+  const got = readAppProbe(doc);
+  assert.equal(JSON.stringify(doc), before, "readApp mutated nothing");
+  const nd = writeApp(doc, "metronome", { v: 2, bpm: 60 });
+  assert.equal(JSON.stringify(doc), before, "writeApp mutated nothing");
+  assert.notEqual(serializeAtchart(nd), serializeAtchart(doc), "the NEW doc differs");
+  // and the object readApp hands back is FRESH — editing it touches nothing
+  got.bpm = 999;
+  assert.equal(readApp(doc, "metronome").bpm, 132);
+});
+function readAppProbe(doc) { return readApp(doc, "metronome"); }
+
+test("readApp materializes the entry; unknown id and unparseable entries are null, never a throw", () => {
+  const doc = parseAtchart(V11_APPS);
+  assert.deepEqual(readApp(doc, "metronome"), { v: 1, bpm: 132, meter: "4/4" });
+  assert.deepEqual(readApp(doc, "mystery-app"),
+    { v: 1, anything: [1, "two", { deep: true }] }, "bare words read as strings");
+  assert.equal(readApp(doc, "absent-app"), null);
+  assert.equal(readApp(parseAtchart(V1_PLAIN), "metronome"), null, "no apps: at all");
+});
+
+test("the version literal: writeApp on a v1 doc bumps 1 → 1.1; an existing 1.1 stays; read round-trips", () => {
+  const doc = parseAtchart(V1_PLAIN);
+  const nd = writeApp(doc, "metronome", { v: 1, bpm: 96 });
+  const out = serializeAtchart(nd);
+  assert.match(out, /atchart: 1\.1\n/, "writing an apps: map is the one thing that bumps");
+  assert.ok(out.includes("apps:\n  metronome: {v: 1, bpm: 96}"));
+  const again = parseAtchart(out);
+  assert.deepEqual(readApp(again, "metronome"), { v: 1, bpm: 96 },
+    "readApp(writeApp(...)) round-trips through the file");
+  assert.equal(serializeAtchart(again), out, "and stays a fixed point");
+  const doc11 = parseAtchart(V11_APPS);
+  const nd11 = writeApp(doc11, "metronome", { v: 1, bpm: 60 });
+  assert.match(serializeAtchart(nd11), /atchart: 1\.1\n/, "1.1 stays 1.1, no re-bump games");
+});
+
+test("writeApp replaces only its own entry, twice is idempotent in content", () => {
+  const doc = parseAtchart(V11_APPS);
+  const a = writeApp(doc, "metronome", { v: 1, bpm: 60 });
+  const b = writeApp(a, "metronome", { v: 1, bpm: 60 });
+  assert.equal(serializeAtchart(a), serializeAtchart(b));
+  assert.equal((serializeAtchart(a).match(/metronome:/g) || []).length, 1, "one entry, replaced");
+});
+
+test("higher MAJOR still refuses (unchanged §2.1 rule); 1.1 parses", () => {
+  assert.throws(() => parseAtchart(V1_PLAIN.replace("atchart: 1", "atchart: 2")), /newer/);
+  assert.equal(parseAtchart(V11_APPS).meta.atchart, 1.1);
 });

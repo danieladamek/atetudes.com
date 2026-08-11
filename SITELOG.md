@@ -5,6 +5,39 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — The .atchart.md v1.1 rules land in the engine (Daniel's dispatch)
+
+- **§2.7 first, and independently — the load-bearing half.** The frontmatter layer now
+  keeps every line as a raw segment in original order, and the serializer REPLAYS the
+  raw text for anything the caller has not changed: unknown top-level keys, comments,
+  odd spacing all round-trip **byte-identically** instead of being re-normalized (the
+  old serializer re-quoted and re-ordered — exactly the unspecified behaviour that
+  forced the amendment). Landed even though nothing writes an `apps:` map yet.
+- **§2.6 — the apps accessor.** `readApp(doc, id)` materializes one entry on demand
+  (fresh object each call); `writeApp(doc, id, cfg)` returns a NEW document with only
+  that app's entry replaced by a canonical flow serialization. **Purity is proven by
+  test, not asserted in prose**: the input document's JSON is compared before/after
+  both calls, and mutating readApp's returned object touches nothing. Entries are
+  opaque — carried, round-tripped, never interpreted, never validated. **No schema, no
+  validator, on purpose**: an unknown app id and an entry with `v: 99` both replay
+  verbatim through a write to a different app.
+- **The version literal.** `atchart: 1.1` parses and writes; `1` stays readable and is
+  never rewritten on round trip; `writeApp` on a v1 doc is the one thing that bumps
+  1 → 1.1 (an existing 1.1 stays put). Higher-major refusal unchanged.
+- **§4 corpus extended**, including the test that matters most: a v1 file with no
+  `apps:` round-trips **byte-identically and does not acquire a bump** — which required
+  one real design move: parse-time defaults (key, meter) are no longer appended to the
+  serialization of files that never wrote them.
+- **Doctrine folded in** (from the grep-assertions note, both deliverables): the
+  comment beside markdown.test.mjs's grep now states it is DELIBERATELY comment-blind
+  (a comment-stripper fails permissive and would silently weaken a §7 guarantee), and
+  engine/README.md carries the generalised rule — grep assertions are comment-blind by
+  design; state the contract in the test, not module prose — naming the palette and
+  decomposition-table greps as the other instances of the shape.
+- Unblocks the notepad's shared component without letting it grow a format
+  implementation inside itself. Suite 235/235 (8 new v1.1 tests; every existing v1
+  fixture untouched and green). Update Log 260811.6.
+
 ## 2026-08-11 — Notepad child 1: the markdown engine (Daniel's dispatch)
 
 - **`engine/markdown.mjs`** — the notepad arc's one piece of genuinely new engineering,
