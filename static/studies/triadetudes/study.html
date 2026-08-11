@@ -72,7 +72,22 @@
          min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tlbar button:hover{border-color:var(--line);background:#fff}
   .tlbar button.cur{border-color:var(--red);color:var(--red);font-weight:bold;background:#fff}
-  #timeline .mini{position:static;flex:0 0 auto}
+  #timeline .mini{position:static;flex:0 0 auto;margin-right:26px}
+  /* expand/collapse (session-only, deliberately not persisted — a shared
+     étude opens the author's way, not with the recipient's panels folded).
+     Collapsed = header + a one-line summary of current settings: the summary
+     is the product, same discipline as describe(). */
+  .card{position:relative}
+  .clpsBtn{position:absolute;top:8px;right:10px;font:inherit;font-size:11px;
+    padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
+    cursor:pointer;color:var(--gray);z-index:6}
+  .clpsBtn:hover{border-color:var(--ink);color:var(--ink)}
+  .card.metro .clpsBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
+  .clpsSum{display:none;font-size:12px;color:var(--gray);margin:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:34px}
+  .clpsd .clpsSum{display:block}
+  .clpsd>*:not(h2):not(.clpsBtn):not(.clpsSum){display:none!important}
+  .clpsd h2{margin-bottom:2px}
   .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
   .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
@@ -2876,7 +2891,7 @@ function syncMeterUI(){
   const b=document.getElementById("meterSel2"); if(b)b.value=String(st.meter);
 }
 /* st.bpm: one state, two sliders (Metronome card + Transport mirror) */
-function changeBpm(b){ st.bpm=b; METRO.setBpm(b); syncBpmUI(); }
+function changeBpm(b){ st.bpm=b; METRO.setBpm(b); syncBpmUI(); collapseSummaries(); }
 function syncBpmUI(){
   for(const [r,v] of [["bpmRange","bpmVal"],["bpmRange2","bpmVal2"]]){
     const R=document.getElementById(r); if(R)R.value=st.bpm;
@@ -2977,6 +2992,65 @@ function syncPlayUI(){
 }
 /* mini transports — the same four moves on every board, so the stand never
    needs the Transport card mid-practice */
+/* ---- expand/collapse on every panel (session-only by design) ----
+   State lives in the DOM class only: NOT persisted, NOT in rawCfg(), no v:
+   bump — a shared étude must open the way the author's étude sounds. The
+   collapsed line derives from current state and refreshes with renderCfg/
+   renderActive, so a collapsed panel never shows stale settings. */
+const CLPS_SUMS={
+  metro:()=>{
+    const sub={1:"beats",2:"8ths",3:"triplets",4:"16ths"}[st.clickSub]||"beats";
+    return st.bpm+" BPM · "+st.meter+"/4 · "+sub+" · "+st.clickVoice+" · "+(st.clickOn?"on":"off");
+  },
+  harmony:()=>{
+    const key=st.key+" "+SCALES[st.scaleType].label;
+    if(st.harmonyMode==="break")
+      return key+" · Break down · "+st.breakProg.length+" change"+(st.breakProg.length===1?"":"s");
+    const prog=document.getElementById("progSel"),start=document.getElementById("startSel");
+    return key+" · Build up · "+(prog&&prog.selectedOptions[0]?prog.selectedOptions[0].textContent:"")+
+      (start&&start.selectedOptions[0]?" · from "+start.selectedOptions[0].textContent:"");
+  },
+  transport:()=>st.bpm+" BPM · "+st.meter+"/4 · "+pattern().join("+")+
+    " · metronome "+(st.clickOn?"on":"off"),
+  shape:()=>{
+    const sel=document.getElementById("figSel");
+    const preset=sel&&sel.selectedOptions[0]?sel.selectedOptions[0].textContent.replace("…",""):"";
+    const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
+    return setLabel(st.set)+" · "+preset+" · "+(motionSource()||"—")+
+      " · "+cap(st.placement)+" · "+cap(st.playback);
+  },
+  timeline:()=>SEQ.length?("Timeline · "+(SEQ[st.cur]?SEQ[st.cur].label:"")+
+    " · "+(st.cur+1)+" of "+SEQ.length+" · "+pattern().join("+")):"Timeline",
+};
+function collapseSummaries(){
+  document.querySelectorAll(".clpsd .clpsSum").forEach(e2=>{
+    const f=CLPS_SUMS[e2.dataset.panel]; if(f)e2.textContent=f();
+  });
+}
+function initCollapse(){
+  const panels=[
+    ["metro",document.querySelector(".card.metro")],
+    ["harmony",document.getElementById("progSel")?.closest(".card")],
+    ["transport",document.getElementById("splitSel")?.closest(".card")],
+    ["shape",document.getElementById("shapeStrip")],
+    ["timeline",document.getElementById("timeline")],
+  ];
+  for(const [key,root] of panels){
+    if(!root)continue;
+    const sum=document.createElement("div");
+    sum.className="clpsSum"; sum.dataset.panel=key;
+    const h2=root.querySelector("h2");
+    if(h2)h2.after(sum); else root.appendChild(sum);
+    const btn=document.createElement("button");
+    btn.className="clpsBtn"; btn.textContent="▾"; btn.title="collapse";
+    btn.addEventListener("click",()=>{
+      const on=root.classList.toggle("clpsd");
+      btn.textContent=on?"▸":"▾"; btn.title=on?"expand":"collapse";
+      collapseSummaries();
+    });
+    root.appendChild(btn);
+  }
+}
 function buildMinis(){
   document.querySelectorAll(".mini").forEach(m=>{
     m.innerHTML="";
@@ -3429,6 +3503,7 @@ function renderActive(){
     }
   }
   renderReadout(); renderKbd(); renderChips(); renderCfg(); highlightScore();
+  collapseSummaries();
 }
 function renderReadout(){
   const ch=SEQ[st.cur];
@@ -3773,7 +3848,7 @@ function cfgObj(){
       metronome:{sound:st.clickOn,voice:st.clickVoice,volume:Math.round(st.clickVol*100),accents:st.clickAccent,
         subdivision:{1:"beats",2:"8ths",3:"triplets",4:"16ths"}[st.clickSub],countIn:st.countIn}}};
 }
-function renderCfg(){ document.getElementById("cfgPre").textContent=JSON.stringify(cfgObj(),null,1); renderSummary(); }
+function renderCfg(){ document.getElementById("cfgPre").textContent=JSON.stringify(cfgObj(),null,1); renderSummary(); collapseSummaries(); }
 /* ---- the placement readout: what each mode is doing and what it costs ----
    (v0.7 phase 1, per v0.6.8's doctrine). Movement totals are DERIVED per
    render — total voice-leading distance in semitones across the cycle, a
@@ -4270,7 +4345,7 @@ function initControls(){
     st.clickVol=+e.target.value/100;
     document.getElementById("clickVolVal").textContent=e.target.value;});
   document.getElementById("clickVolR").addEventListener("change",()=>renderCfg());
-  buildMinis();
+  buildMinis(); initCollapse();
   syncClickUI(); renderLamp(); syncPlayUI();
   document.getElementById("figSel").addEventListener("change",e=>{
     // choosing a preset WRITES ITS GRAMMAR STRING into the visible field —

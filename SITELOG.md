@@ -5,6 +5,33 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes: expand and collapse on every panel (Daniel's dispatch)
+
+- **Every card and strip folds** — Metronome, Harmony, Transport, Shape & Motion, and
+  the timeline — via a chevron in the same top-right position on each. **Collapsed
+  shows the header plus a one-line summary of current settings** (the item's law: a
+  collapsed panel showing only its title is worse than no panel), and the line derives
+  live from state — change BPM while the Metronome is folded and its line follows;
+  step the étude and the folded timeline's "4 of 8" follows. Same discipline as
+  describe(): the summary is the product.
+    - Metronome — `72 BPM · 4/4 · beats · beep · on`
+    - Harmony — `C major · Build up · Cycling 4ths · from I` (Break down: `· N changes`)
+    - Transport — `72 BPM · 4/4 · 2+2 · metronome on`
+    - Shape & Motion — `E-B-G · Pivot first · M-L-H · Grip · Arpeggiated`
+    - Timeline — `Timeline · C · 1 of 8 · 2+2`
+- **Session-only, on purpose**: state lives in a DOM class, is not persisted, and is
+  not in `rawCfg()` — a shared étude opens the way the author's étude sounds, not with
+  the recipient's panels folded. Round-trip asserted byte-identical, with no collapse
+  key anywhere in the config.
+- **390 px first, where collapse earns its keep**: folding all five panels drops the
+  fretboard from ~1750 px down the page to ~420 px — the neck arrives almost at the
+  top. At 1280 the collapsed grid stays clean (three summary cards in a row, two slim
+  strip lines) with no reflow breakage.
+- Verified per doctrine: engine suite 211/211 untouched; 16 interactive Playwright
+  checks (fold/unfold all panels, live summaries, round-trip, grid integrity), zero
+  console/page errors; inspected at 390 and 1280 px. Zero document-level key
+  listeners, still. Update Log 260810.14.
+
 ## 2026-08-10 — Triadetudes: the chord timeline strip (Daniel's dispatch; spec §10)
 
 - **Bars, not chords — the floating pills are gone.** The position row becomes the
