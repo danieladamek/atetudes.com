@@ -47,6 +47,16 @@
     border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
   .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .seg button:disabled{opacity:.45;cursor:not-allowed}
+  /* Shape & Motion as a full-width strip above the neck (layout experiment,
+     reversible in one commit): the chip row's slot and shape, second instance.
+     Groups read left → right: what shape · what figure · how it sounds; the
+     readout lines below are prose and take the full width. */
+  .card.strip{margin-bottom:12px}
+  .striprow{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-start}
+  .striprow .grp{flex:0 1 auto;min-width:170px}
+  .striprow .figgrp{flex:1 1 320px;max-width:560px}
+  .striprow #arpIn{width:100%;box-sizing:border-box}
+  .striprow details.hint{max-width:340px}
   .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
   .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
@@ -238,52 +248,6 @@
   </div>
 
   <div class="card">
-    <h2>Shape & Motion</h2>
-    <label>String set (triads live here, high → low)</label>
-    <div class="seg" id="setSeg"></div>
-    <label>Motion follows</label>
-    <div class="seg" id="motionSeg">
-      <button data-mm="shape" class="on" title="the figure fixes the contour — H·M·L slots; tones fall out of the voicing">the shape</button>
-      <button data-mm="tones" title="the figure fixes the tones — [1]·[b3]·[5] degrees; contour varies with the inversion">the tones</button>
-    </div>
-    <label>Figure</label>
-    <select id="figSel"></select>
-    <label id="arpLabel">Figure (H·M·L slots; approaches in parens: (-1,+2)H)</label>
-    <input type="text" id="arpIn" size="14" spellcheck="false" placeholder="e.g. M-L-H">
-    <span id="arpErr" style="color:var(--red);font-size:11.5px"></span>
-    <div class="hint" id="sketchNote"></div>
-    <div class="hint" id="arpHint"></div>
-    <div class="row2">
-      <div><label>Placement</label>
-        <div class="seg" id="placeSeg">
-          <button data-place="grip" class="on" title="one note per string, playable as a chord, anchored to your pivots">Grip</button>
-          <button data-place="line" title="notes placed freely along the set, up to three per string, preferring the pivot window — playable in sequence, not as a chord">Line</button>
-          <button data-place="free" title="the grip chosen by smoothest voice-leading, pivot anchor released">Free</button>
-        </div></div>
-      <div><label>Playback</label>
-        <div class="seg" id="playbackSeg">
-          <button data-pb="arpeggiated" class="on">Arpeggiated</button>
-          <button data-pb="block">Block</button>
-          <button data-pb="both">Both</button>
-        </div></div>
-    </div>
-    <div class="hint" id="placeHint"></div>
-    <label class="chk"><input type="checkbox" id="rootsChk"> Show root notes on lower strings</label>
-    <details class="hint"><summary style="cursor:pointer">? pivots, placement, and the badges</summary>
-    Pivots: click any scale note on a string of the set — that note and the next two scale
-    notes up the same string become your pivots (dashed rings). Placement decides where the
-    figure's notes live: <b>Grip</b> — one note per string, playable as a chord, anchored to
-    your pivots; <b>Line</b> — notes placed freely
-    along the set, up to three per string, preferring the pivot window, playable in
-    sequence rather than as a chord; <b>Free</b> — the
-    grip chosen by smoothest voice-leading, anchor released. The dashed box simply draws
-    where the figure ended up living — a consequence of the placement, not a setting.
-    Changing set, key or scale carries your pattern and pivots along — same figure, same
-    degrees, new context. Order badges on the sounding notes show each string's position(s)
-    in the pattern.</details>
-  </div>
-
-  <div class="card">
     <h2>Transport</h2>
     <div class="transport">
       <button id="prevBtn" title="previous chord">◀</button>
@@ -314,6 +278,62 @@
     running; the metronome's Stop stops everything — it owns the clock. Mute chords: the
     changes still animate in time — play-along, you supply the triads.</div>
   </div>
+</div>
+
+<div class="card strip" id="shapeStrip">
+  <h2>Shape & Motion</h2>
+  <div class="striprow">
+    <div class="grp">
+      <label>String set (triads live here, high → low)</label>
+      <div class="seg" id="setSeg"></div>
+      <details class="hint"><summary style="cursor:pointer">? pivots, placement, and the badges</summary>
+      Pivots: click any scale note on a string of the set — that note and the next two scale
+      notes up the same string become your pivots (dashed rings). Placement decides where the
+      figure's notes live: <b>Grip</b> — one note per string, playable as a chord, anchored to
+      your pivots; <b>Line</b> — notes placed freely
+      along the set, up to three per string, preferring the pivot window, playable in
+      sequence rather than as a chord; <b>Free</b> — the
+      grip chosen by smoothest voice-leading, anchor released. The dashed box simply draws
+      where the figure ended up living — a consequence of the placement, not a setting.
+      Changing set, key or scale carries your pattern and pivots along — same figure, same
+      degrees, new context. Order badges on the sounding notes show each string's position(s)
+      in the pattern.</details>
+    </div>
+    <div class="grp figgrp">
+      <div class="row2 alignEnd">
+        <div style="flex:0 1 auto"><label>Motion follows</label>
+          <div class="seg" id="motionSeg">
+            <button data-mm="shape" class="on" title="the figure fixes the contour — H·M·L slots; tones fall out of the voicing">the shape</button>
+            <button data-mm="tones" title="the figure fixes the tones — [1]·[b3]·[5] degrees; contour varies with the inversion">the tones</button>
+          </div></div>
+        <div style="flex:0 1 auto"><label>Figure</label>
+          <select id="figSel"></select></div>
+      </div>
+      <label id="arpLabel">Figure (H·M·L slots; approaches in parens: (-1,+2)H)</label>
+      <input type="text" id="arpIn" spellcheck="false" placeholder="e.g. M-L-H">
+      <span id="arpErr" style="color:var(--red);font-size:11.5px"></span>
+    </div>
+    <div class="grp">
+      <div class="row2">
+        <div style="flex:0 1 auto"><label>Placement</label>
+          <div class="seg" id="placeSeg">
+            <button data-place="grip" class="on" title="one note per string, playable as a chord, anchored to your pivots">Grip</button>
+            <button data-place="line" title="notes placed freely along the set, up to three per string, preferring the pivot window — playable in sequence, not as a chord">Line</button>
+            <button data-place="free" title="the grip chosen by smoothest voice-leading, pivot anchor released">Free</button>
+          </div></div>
+        <div style="flex:0 1 auto"><label>Playback</label>
+          <div class="seg" id="playbackSeg">
+            <button data-pb="arpeggiated" class="on">Arpeggiated</button>
+            <button data-pb="block">Block</button>
+            <button data-pb="both">Both</button>
+          </div></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="rootsChk"> Show root notes on lower strings</label>
+    </div>
+  </div>
+  <div class="hint" id="sketchNote"></div>
+  <div class="hint" id="arpHint"></div>
+  <div class="hint" id="placeHint"></div>
 </div>
 
 <div id="chipsHome"><div class="chips" id="chips"></div></div>

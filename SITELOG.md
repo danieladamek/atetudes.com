@@ -5,6 +5,33 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes: Shape & Motion becomes a strip above the neck (Daniel's dispatch; closes spec §7.4)
+
+- **Layout only, reversible in one commit.** The Shape & Motion card leaves the config
+  grid and becomes a full-width horizontal strip immediately above the fretboard region —
+  the slot and shape the chord chip row already uses (a second instance of an existing
+  element, not a new primitive). Order: config grid → strip → chord chips → fretboard;
+  the chips stay against the neck, where their sounding-chord highlight works as the
+  neck's position indicator. **No split** — the card stays one unit; §7.4's question is
+  closed the way that makes the split unnecessary.
+- **Inside the strip**, the controls read left → right as *what shape · what figure ·
+  how it sounds*: string set + the "?" pivots disclosure · motion mode + figure picker +
+  the figure field at real width (holds `(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]` without
+  truncation, asserted) · Placement + Playback + show-roots. The readout, the sketch
+  line and the placement prose take full-width lines beneath the controls — they are
+  prose, not controls.
+- **390 px checked first**, per the item's stated risk: the strip reflows to stacked;
+  full-page height 2887 px vs 2879 before (a wash), and Shape & Motion lands adjacent
+  to the neck on the phone too — mobile is no worse, arguably better. Desktop height
+  2045 vs 2008. Before/after screenshots at both widths are in the scrum note for the
+  keep-or-revert call.
+- **Nothing but DOM position and CSS moved.** No state change, `rawCfg()` untouched, no
+  `v:` bump — round-trip and the pre-grammar/linear→free restore corpus re-asserted in
+  the browser; engine suite 211/211 untouched; 12 interactive Playwright checks confirm
+  every strip control still works after the move (mode switch, picker, placement, live
+  neck sketch). Zero console/page errors; zero document-level key listeners, still.
+  No neighbouring board touched. Update Log 260810.11.
+
 ## 2026-08-10 — Triadetudes v0.7.5–v0.7.8: the figure system completes, one pass (Daniel's dispatch, four interlocking items)
 
 - **v0.7.6 — a target is a chord tone.** Target legality decides by PITCH CLASS against
