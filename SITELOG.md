@@ -5,6 +5,33 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Triadetudes: the clock row — Harmony becomes a strip (Daniel's dispatch; family pattern)
+
+- **The page sorts by category.** Harmony leaves the config row and becomes a
+  collapsible full-width strip immediately above Shape & Motion; **Metronome and
+  Transport sit side by side** — the two cards that both carry a BPM and a time
+  signature, now adjacent so the "who owns the clock" paragraph has adjacency doing
+  part of its work. Band order, deliberate, reads as a pipeline: **clock row →
+  Harmony (what chords) → Shape & Motion (what shapes) → timeline (where am I) →
+  boards.** This is the family clock-row pattern (notes/specs/at-etudes-app-family.md);
+  no per-app deviation introduced.
+- **Harmony gains from the width**: Build up groups key · scale · mode · progression ·
+  start on · extension across one row; Break down gives the changes field REAL width —
+  a seven-chord progression fits with all its editor chips and the `+` beside it,
+  nothing wrapping into a cramped third-of-a-row column. The strip keeps the collapse
+  control and the established summary line (`C major · Build up · Cycling 4ths ·
+  from I`), still updating while folded (five panels total — Harmony's control moved
+  with it).
+- **Checked at 390 px first**: the clock row stacks Metronome then Transport (same
+  heights as before, collapse available), Harmony stacks beneath — no taller than the
+  old card column. At 1280 the two clock cards split the row fully; nothing looks
+  empty.
+- Layout only: DOM position + CSS reuse (the strip primitive, third instance). No
+  state moved; `rawCfg()` round-trips byte-identical; no `v:` bump; one-commit revert.
+  Suite 212/212; 16 interactive Playwright checks (band order, both harmony modes,
+  chip editor affordances, folded summaries following); zero console/page errors;
+  inspected at both widths. Update Log 260811.4.
+
 ## 2026-08-11 — Triadetudes: the Practice Log saves rawCfg() — the fact, one fix, one flag (Daniel's dispatch)
 
 - **The fact, established before touching anything**: all four Log paths use the

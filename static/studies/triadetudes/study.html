@@ -221,65 +221,6 @@
   </div>
 
   <div class="card">
-    <h2>Harmony</h2>
-    <div class="row2">
-      <div><label>Key</label><select id="keySel"></select></div>
-      <div><label>Scale</label>
-        <select id="scaleSel">
-          <option value="major">Major</option>
-          <option value="harm">Harmonic minor</option>
-          <option value="mel">Melodic minor</option>
-        </select></div>
-    </div>
-    <div class="seg" id="modeSeg" style="margin-top:8px">
-      <button data-mode="build" class="on">Build up</button>
-      <button data-mode="break">Break down</button>
-    </div>
-    <div id="buildBlock">
-      <label>Progression</label>
-      <select id="progSel">
-        <option value="cycle4">Cycling 4ths</option>
-        <option value="cycle6">Cycling 6ths</option>
-        <option value="cycle3">Cycling 3rds</option>
-        <option value="scaleUp">Scalar up</option>
-        <option value="scaleDown">Scalar down</option>
-        <option value="chromUp">Chromatic up</option>
-        <option value="chromDown">Chromatic down</option>
-        <option value="custom">Custom…</option>
-      </select>
-      <div class="row2">
-        <div><label>Start on</label><select id="startSel"></select></div>
-        <div id="lenWrap" style="display:none"><label>Steps</label>
-          <select id="lenSel"><option>4</option><option selected>6</option><option>8</option><option>12</option></select></div>
-      </div>
-      <span id="customWrap" style="display:none"><label>Custom (romans or chords: <i>ii V i</i> · <i>Dm G7 C</i>)</label>
-        <input type="text" id="customIn" size="24" value="ii V I vi"></span>
-      <label>Hear the triads over a bass (extension)</label>
-      <select id="extSel">
-        <option value="none">none — plain triad</option>
-        <option value="root">the root — triad grounded on its own bass</option>
-        <option value="third">diatonic 3rd below → seventh chord</option>
-        <option value="fifth">diatonic 5th below → bigger color</option>
-      </select>
-      <div class="hint">Triads first, meaning added underneath: with a bass, every dot is
-      relabeled relative to the new root — the same shape changes meaning.</div>
-    </div>
-    <div id="breakBlock" style="display:none">
-      <label>The changes (chords or romans: <i>Dm7 G7 Cmaj7</i> · <i>ii7 V7 Imaj7</i> · <i>G7alt</i> · <i>F/G</i>)</label>
-      <input type="text" id="breakIn" spellcheck="false" style="width:100%">
-      <!-- the EDITOR chips dock here in break-down, beside the field that writes
-           the same data. The position row above the neck (#chips) is a separate
-           element with a separate job and renders in both modes. -->
-      <div id="chipsDock"><div class="chips" id="bdChips"></div></div>
-      <div class="hint">Type the progression you actually face, or grow it chip by chip
-      with +. The app derives the upper-structure triad on your string set and grounds
-      it on the chord's root in the bass. Tap a chip to edit it — where a chord holds
-      more than one honest triad the chip grows a ▾. Romans resolve in the selected
-      key.</div>
-    </div>
-  </div>
-
-  <div class="card">
     <h2>Transport</h2>
     <div class="transport">
       <button id="prevBtn" title="previous chord">◀</button>
@@ -309,6 +250,77 @@
     (count-in adds one clicked bar first). Stopping the étude leaves a self-started metronome
     running; the metronome's Stop stops everything — it owns the clock. Mute chords: the
     changes still animate in time — play-along, you supply the triads.</div>
+  </div>
+</div>
+
+<!-- Harmony as a material strip (family clock-row pattern, 2026-08-11):
+     the clock row above holds Metronome + Transport — the two cards that both
+     carry a BPM, adjacent so the "who owns the clock" question answers itself.
+     Material strips stack beneath: what chords → what shapes → where am I. -->
+<div class="card strip" id="harmonyStrip">
+  <h2>Harmony</h2>
+  <div class="striprow">
+    <div class="grp">
+      <div class="row2">
+        <div style="flex:0 1 auto"><label>Key</label><select id="keySel"></select></div>
+        <div style="flex:0 1 auto"><label>Scale</label>
+          <select id="scaleSel">
+            <option value="major">Major</option>
+            <option value="harm">Harmonic minor</option>
+            <option value="mel">Melodic minor</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="grp">
+      <label>Harmony mode</label>
+      <div class="seg" id="modeSeg">
+        <button data-mode="build" class="on">Build up</button>
+        <button data-mode="break">Break down</button>
+      </div>
+    </div>
+    <div class="grp" style="flex:1 1 420px;max-width:none">
+      <div id="buildBlock">
+        <div class="row2 alignEnd">
+          <div style="flex:0 1 auto"><label>Progression</label>
+            <select id="progSel">
+              <option value="cycle4">Cycling 4ths</option>
+              <option value="cycle6">Cycling 6ths</option>
+              <option value="cycle3">Cycling 3rds</option>
+              <option value="scaleUp">Scalar up</option>
+              <option value="scaleDown">Scalar down</option>
+              <option value="chromUp">Chromatic up</option>
+              <option value="chromDown">Chromatic down</option>
+              <option value="custom">Custom…</option>
+            </select></div>
+          <div style="flex:0 1 auto"><label>Start on</label><select id="startSel"></select></div>
+          <div id="lenWrap" style="display:none;flex:0 1 auto"><label>Steps</label>
+            <select id="lenSel"><option>4</option><option selected>6</option><option>8</option><option>12</option></select></div>
+          <div style="flex:0 1 auto"><label>Hear the triads over a bass (extension)</label>
+            <select id="extSel">
+              <option value="none">none — plain triad</option>
+              <option value="root">the root — triad grounded on its own bass</option>
+              <option value="third">diatonic 3rd below → seventh chord</option>
+              <option value="fifth">diatonic 5th below → bigger color</option>
+            </select></div>
+        </div>
+        <span id="customWrap" style="display:none"><label>Custom (romans or chords: <i>ii V i</i> · <i>Dm G7 C</i>)</label>
+          <input type="text" id="customIn" size="24" value="ii V I vi"></span>
+        <div class="hint">Triads first, meaning added underneath: with a bass, every dot is
+        relabeled relative to the new root — the same shape changes meaning.</div>
+      </div>
+      <div id="breakBlock" style="display:none">
+        <label>The changes (chords or romans: <i>Dm7 G7 Cmaj7</i> · <i>ii7 V7 Imaj7</i> · <i>G7alt</i> · <i>F/G</i>)</label>
+        <input type="text" id="breakIn" spellcheck="false" style="width:100%">
+        <!-- the EDITOR chips dock here in break-down, beside the field that writes
+             the same data. The position row above the neck is the timeline. -->
+        <div id="chipsDock"><div class="chips" id="bdChips"></div></div>
+        <div class="hint">Type the progression you actually face, or grow it chip by chip
+        with +. The app derives the upper-structure triad on your string set and grounds
+        it on the chord's root in the bass. Tap a chip to edit it — where a chord holds
+        more than one honest triad the chip grows a ▾. Romans resolve in the selected
+        key.</div>
+      </div>
+    </div>
   </div>
 </div>
 
