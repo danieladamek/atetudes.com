@@ -57,6 +57,22 @@
   .striprow .figgrp{flex:1 1 320px;max-width:560px}
   .striprow #arpIn{width:100%;box-sizing:border-box}
   .striprow details.hint{max-width:340px}
+  /* the chord timeline (spec §10): bars, not chords. Slot width grows with
+     the slot's beats, so bar split is visible, not prose. */
+  #timeline{padding:8px 12px}
+  .tlrow{display:flex;align-items:center;gap:12px}
+  .tlscroll{display:flex;flex:1 1 auto;overflow-x:auto;align-items:stretch;
+            scrollbar-width:thin;padding:2px 0}
+  .tlbar{display:flex;flex:1 0 auto;align-items:center;gap:4px;
+         border-left:2px solid #B9B9BF;padding:3px 8px;min-width:88px;border-radius:2px}
+  .tlbar:last-child{border-right:2px solid #B9B9BF}
+  .tlbar.curbar{background:#E9E9EC}
+  .tlbar button{font:inherit;font-size:12.5px;padding:4px 6px;border:1.4px solid transparent;
+         border-radius:999px;background:transparent;cursor:pointer;color:var(--ink);
+         min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tlbar button:hover{border-color:var(--line);background:#fff}
+  .tlbar button.cur{border-color:var(--red);color:var(--red);font-weight:bold;background:#fff}
+  #timeline .mini{position:static;flex:0 0 auto}
   .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
   .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
@@ -337,10 +353,18 @@
   <div class="hint" id="placeHint"></div>
 </div>
 
-<div id="chipsHome"><div class="chips" id="chips"></div></div>
+<!-- the chord timeline (spec §10): position, in bars. Bar lines derive from
+     time signature × bar split — the strip is the visible form of a setting
+     that is otherwise prose in the Transport card. The step controls live at
+     its right because they step through changes and the changes are here. -->
+<div class="card strip" id="timeline">
+  <div class="tlrow">
+    <div class="tlscroll" id="tlBars"></div>
+    <span class="mini"></span>
+  </div>
+</div>
 
 <div class="board">
-  <span class="mini"></span>
   <div class="readout" id="readout"></div>
   <svg id="fret" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
 </div>
@@ -2845,6 +2869,7 @@ function changeMeter(m){
   }
   renderLamp(); refreshSplitSel(); syncMeterUI();
   renderScore(); syncArpIn(); renderCfg();
+  renderTimeline();   // the bar divisions ARE this setting made visible
 }
 function syncMeterUI(){
   const a=document.getElementById("meterSel"); if(a)a.value=String(st.meter);
@@ -2953,7 +2978,7 @@ function syncPlayUI(){
 /* mini transports — the same four moves on every board, so the stand never
    needs the Transport card mid-practice */
 function buildMinis(){
-  document.querySelectorAll(".board .mini").forEach(m=>{
+  document.querySelectorAll(".mini").forEach(m=>{
     m.innerHTML="";
     const mk=(g,title,fn,role)=>{const b=document.createElement("button");
       b.textContent=g; b.title=title; if(role)b.dataset.role=role;
@@ -3515,23 +3540,45 @@ function renderChips(){
   // is sounding, where you are in the cycle — and renders in BOTH harmony
   // modes; the dock chips are the EDITORS and exist only in break-down. Same
   // split the app already makes between Transport BPM and Metronome BPM.
-  renderPosRow(); renderEditorChips();
+  renderTimeline(); renderEditorChips();
 }
-function renderPosRow(){
-  const div=document.getElementById("chips");
+function renderTimeline(){
+  // the timeline (spec §10): position, in BARS. Chords sit in their bar's
+  // slots per time signature × bar split, slot width grows with the slot's
+  // beats — the bar-split setting made visible. Labels are always the chords
+  // OF THE PROGRESSION (break-down: the typed changes, never the derived
+  // slash triads — the neck header carries those). Empty or unparsed input
+  // degrades quietly: no empty chrome above the neck.
+  const wrap=document.getElementById("timeline");
+  const div=document.getElementById("tlBars");
+  if(!wrap||!div)return;
   div.innerHTML="";
-  // labels are always the chords OF THE PROGRESSION: build-up's triads, or
-  // break-down's typed changes (Dm7 G7 Cmaj7) — never the derived slash
-  // triads, which the neck header already carries. Empty or unparsed
-  // break-down degrades quietly: no empty chrome above the neck.
-  div.style.display=SEQ.length?"flex":"none";
-  SEQ.forEach((ch,i)=>{
-    const b=document.createElement("button");
-    b.textContent=st.harmonyMode==="break"?(ch.srcSymbol||ch.label):ch.label;
-    if(i===st.cur)b.className="cur";
-    b.addEventListener("click",()=>{st.cur=i;renderActive();strum(i);});
-    div.appendChild(b);
-  });
+  wrap.style.display=SEQ.length?"":"none";
+  if(!SEQ.length)return;
+  const pat=pattern();                 // beats per chord slot, one bar
+  const L=pat.length;                  // chords per bar
+  let curBar=null;
+  for(let i0=0;i0<SEQ.length;i0+=L){
+    const bd=document.createElement("div");
+    bd.className="tlbar";
+    for(let k=0;k<L&&i0+k<SEQ.length;k++){
+      const i=i0+k, ch=SEQ[i];
+      const b=document.createElement("button");
+      b.textContent=st.harmonyMode==="break"?(ch.srcSymbol||ch.label):ch.label;
+      b.style.flexGrow=String(pat[k]); // slot width = its beats
+      b.title=pat[k]+(pat[k]===1?" beat":" beats");
+      if(i===st.cur){b.className="cur";bd.classList.add("curbar");curBar=bd;}
+      b.addEventListener("click",()=>{st.cur=i;renderActive();strum(i);});
+      bd.appendChild(b);
+    }
+    div.appendChild(bd);
+  }
+  if(curBar){ // keep the sounding bar in view — scroll the strip, never the page
+    const dr=div.getBoundingClientRect(),cr=curBar.getBoundingClientRect();
+    const r=cr.left-dr.left+div.scrollLeft,w=cr.width;
+    if(r<div.scrollLeft)div.scrollLeft=r-8;
+    else if(r+w>div.scrollLeft+div.clientWidth)div.scrollLeft=r+w-div.clientWidth+8;
+  }
 }
 function renderEditorChips(){
   const div=document.getElementById("bdChips");
@@ -4209,7 +4256,8 @@ function initControls(){
   syncMeterUI();
   refreshSplitSel();
   document.getElementById("splitSel").addEventListener("change",e=>{
-    st.splitIdx=+e.target.value; renderScore(); syncArpIn(); renderCfg();});
+    st.splitIdx=+e.target.value; renderScore(); syncArpIn(); renderCfg();
+    renderTimeline();});  // bar split legible: the divisions redraw with it
   document.getElementById("metroChk").addEventListener("change",e=>{st.metroOnly=e.target.checked;renderCfg();});
   document.getElementById("clickTgl").addEventListener("click",toggleClick);
   document.getElementById("clickChk2").addEventListener("change",e=>{

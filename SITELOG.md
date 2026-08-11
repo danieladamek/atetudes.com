@@ -5,6 +5,33 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes: the chord timeline strip (Daniel's dispatch; spec §10)
+
+- **Bars, not chords — the floating pills are gone.** The position row becomes the
+  timeline: a strip in the same primitive as Shape & Motion, immediately above the
+  fretboard, divided by real **bar lines** derived from time signature × bar split.
+  At 4/4 `2+2` a bar holds two chords; each chord slot's width grows with its beats
+  (5/4 `2+3`: the 3-beat slot is visibly wider). The Transport card's most abstract
+  setting is now something you see — and the divisions **redraw live** when bar split
+  or meter changes (`splitSel`/`changeMeter` now re-render the timeline; previously
+  nothing above the neck answered to them).
+- **The transport moved, not multiplied**: `⏮ ▶ ⏹ ⏭` left the fretboard header for
+  the right end of the strip — they step through changes and the changes are here.
+  The fretboard header keeps its identity line and carries no buttons; the score and
+  keyboard minis are untouched. Transport card = the clock; timeline = position.
+- **Both harmony modes**, chords of the progression in each (Break down: the typed
+  changes, never the derived slash triads). Sounding chord AND its bar highlight, in
+  time, verified under a running transport. Unparsed input hides the strip — no empty
+  chrome above the neck.
+- **Overflow: horizontal scroll, not a second row** (judged on screen; a second row
+  pushes the neck down). Eight bars fit at 1280 px; a 16-bar progression scrolls with
+  the sounding bar kept in view at both ends — the strip scrolls, never the page
+  (rect-based arithmetic; `offsetLeft` answers to the wrong parent and was fixed).
+- Verified per doctrine: engine suite 211/211 untouched; 27 interactive Playwright
+  checks across both modes, meters and splits, zero console/page errors; inspected at
+  1280/390 px — at 390 the strip stays one row tall and the fretboard stays in reach.
+  Zero document-level key listeners, still. Update Log 260810.13.
+
 ## 2026-08-10 — Triadetudes: the chip row above the neck renders in both harmony modes (Daniel's dispatch)
 
 - **The strip exposed it; the fix names it.** The chord chip row above the fretboard was
