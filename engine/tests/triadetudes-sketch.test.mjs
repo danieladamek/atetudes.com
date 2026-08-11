@@ -23,56 +23,70 @@ test("classification derives by named rule: chord-tone pc → target with its de
   assert.equal(e.classifyClick(60, null).role, "approach");
 });
 
-test("the promoted-target rule names the degree against the click-time chord root", () => {
+test("promotion to target is the same predicate as typing: chord tones only (v0.7.6)", () => {
   const e = loadTriadetudesEngine();
-  assert.equal(e.degTextFor(61, 0), "b2");       // Db over C
-  assert.equal(e.degTextFor(70, 0), "b7");       // Bb over C
-  assert.equal(e.degTextFor(60, 2), "b7");       // C over D — the OTHER root, not the key
-  assert.equal(e.degTextFor(66, 2), "3");        // F# over D
+  // the one predicate, callable with a midi (mod12 inside)
+  assert.equal(e.MOTION.classify(61, [0, 4, 7]).role, "approach",
+    "Db can never be a target on C — no hand-promotion escape hatch");
+  assert.deepEqual(unwrap(e.MOTION.classify(64, [0, 4, 7])),
+    { role: "target", degText: "3" });
+  // and the grammar's own resolve refuses the non-chord-tone target, teaching
+  const fig = e.MOTION.parse("[b2]", "tones");
+  assert.throws(() => e.MOTION.resolve(fig, {
+    chordPcs: [0, 4, 7], rootPc: 0, chordLabel: "C",
+    voicing: { notes: [{ midi: 60, string: 3, fret: 5, slot: 0 },
+      { midi: 64, string: 2, fret: 5, slot: 1 }, { midi: 67, string: 1, fret: 3, slot: 2 }] },
+    scalePcs: [0, 2, 4, 5, 7, 9, 11], tonicPc: 0,
+    open: { 1: 64, 2: 59, 3: 55 }, nfrets: 15, set: [1, 2, 3], setLowHigh: [3, 2, 1] }),
+    (er) => er.teach === true && /not a chord tone of C/.test(er.message));
 });
 
 test("parse(emit(buffer)) ≡ the buffer's degrees and approach relationships", () => {
   const e = loadTriadetudesEngine();
   // the spec's enclosure, clicked: enclosure of the root, the third plain,
-  // the fifth approached from F below — 2 semitones, so the emitter's named
-  // precedence (semitone form when |d| ≤ 2) writes (-2), never -s
+  // the fifth approached from F below. B, D and F are all adjacent scale
+  // tones, so the v0.7.5 precedence (scale-adjacency FIRST) writes the
+  // invariant forms — the figure follows a key or scale change
   const buffer = [
-    { midi: 59, role: "approach", degText: null },   // B, −1 under C
-    { midi: 62, role: "approach", degText: null },   // D, +2 over C
+    { midi: 59, role: "approach", degText: null },   // B, the scale tone under C
+    { midi: 62, role: "approach", degText: null },   // D, the scale tone over C
     { midi: 60, role: "target", degText: "1" },
     { midi: 64, role: "target", degText: "3" },
-    { midi: 65, role: "approach", degText: null },   // F, −2 under G
+    { midi: 65, role: "approach", degText: null },   // F, the scale tone under G
     { midi: 67, role: "target", degText: "5" },
   ];
   const r = unwrap(e.MOTION.emitFromClicks(buffer, CMAJ_CTX));
   assert.ok(!r.error, r.error);
-  assert.equal(r.src, "(-1,+2)[1] - [3] - (-2)[5]");
+  assert.equal(r.src, "(-s,+s)[1] - [3] - (-s)[5]");
   assert.match(r.discarded, /octave and placement dropped/);
   const p = e.MOTION.parse(r.src, "tones");
   assert.ok(!p.error);
   const figs = unwrap(p.figures);
   // degrees survive
   assert.deepEqual(figs.map((f) => [f.target.deg, f.target.acc]), [[1, 0], [3, 0], [5, 0]]);
-  // relationships survive: signed semitone distances and the scale step
-  assert.deepEqual(figs[0].approaches, [{ kind: "semi", delta: -1 }, { kind: "semi", delta: 2 }]);
-  assert.deepEqual(figs[2].approaches, [{ kind: "semi", delta: -2 }]);
+  // relationships survive, in the invariant form (v0.7.5)
+  assert.deepEqual(figs[0].approaches, [{ kind: "scale", delta: -1 }, { kind: "scale", delta: 1 }]);
+  assert.deepEqual(figs[2].approaches, [{ kind: "scale", delta: -1 }]);
   // and pitches/octaves do NOT: the same buffer an octave up emits identically
   const up = buffer.map((c) => ({ ...c, midi: c.midi + 12 }));
   assert.equal(unwrap(e.MOTION.emitFromClicks(up, CMAJ_CTX)).src, r.src);
 });
 
-test("a hand-promoted chromatic target round-trips as its absolute chord degree", () => {
+test("the tap override survives emission: -s ↔ -n round-trips through the buffer (v0.7.5)", () => {
   const e = loadTriadetudesEngine();
+  // F under G reads both ways; the form flag picks the coordinate reading
   const buffer = [
-    { midi: 60, role: "target", degText: "1" },
-    { midi: 61, role: "target", degText: e.degTextFor(61, 0) },  // Db promoted by tap
+    { midi: 65, role: "approach", degText: null, form: "semi" },
+    { midi: 67, role: "target", degText: "5" },
   ];
-  const r = unwrap(e.MOTION.emitFromClicks(buffer, CMAJ_CTX));
-  assert.ok(!r.error, r.error);
-  assert.equal(r.src, "[1] - [b2]");
-  const p = e.MOTION.parse(r.src, "tones");
-  assert.deepEqual(unwrap(p.figures).map((f) => [f.target.deg, f.target.acc]),
-    [[1, 0], [2, -1]]);
+  assert.equal(unwrap(e.MOTION.emitFromClicks(buffer, CMAJ_CTX)).src, "(-2)[5]");
+  buffer[0].form = null;   // the default is the invariant
+  assert.equal(unwrap(e.MOTION.emitFromClicks(buffer, CMAJ_CTX)).src, "(-s)[5]");
+  // approachForms names when the tap is offered: both readings must exist
+  assert.deepEqual(unwrap(e.MOTION.approachForms(65, 67, CMAJ_CTX.scalePcs)),
+    { scale: true, semi: true });
+  assert.deepEqual(unwrap(e.MOTION.approachForms(61, 60, CMAJ_CTX.scalePcs)),
+    { scale: false, semi: true }, "a chromatic click has one reading — no tap");
 });
 
 test("a trailing approach is an error stated plainly, never silently dropped", () => {

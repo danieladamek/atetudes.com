@@ -41,6 +41,21 @@ if (DEG_SEMIS[9] % 12 !== DEG_SEMIS[2] || DEG_SEMIS[11] % 12 !== DEG_SEMIS[4] ||
 
 export function degreeSemis(deg, acc) { return DEG_SEMIS[deg] + (acc || 0); }
 
+// ---------- the classifier: ONE predicate for clicking and typing ----------
+
+/**
+ * classify(pc, chordPcs) → {role:"target", degText:"1"|"3"|"5"} | {role:"approach", degText:null}
+ * The rule (spec §3, ratified 2026-08-10): a pitch class is a TARGET iff it is
+ * a chord tone of the sounding chord; anything else is an approach. This is the
+ * sketchpad's click classifier AND the grammar's target-legality rule — the
+ * same sentence, one predicate, so clicking and typing cannot drift.
+ */
+export function classify(pc, chordPcs) {
+  const ix = chordPcs.indexOf(mod12(pc));
+  return ix >= 0 ? { role: "target", degText: String([1, 3, 5][ix]) }
+                 : { role: "approach", degText: null };
+}
+
 // ---------- parse ----------
 
 const err = (pos, message, figures) => ({ error: { pos, message }, figures });
@@ -234,28 +249,38 @@ export function resolve(parsed, ctx) {
         " is not a bijection here — shape mode needs one note per string");
       tNote = { ...tNote };
     } else {
+      // target legality (spec §3, v0.7.6): a bare 1/3/5 names the chord's own
+      // root/third/fifth (quality-aware); any other spelling resolves to a
+      // pitch class and is legal ONLY if the chord contains it — [b3] on a
+      // minor chord is legal by derivation, [2] on any triad is refused, and
+      // the refusal teaches the construct that was wanted. Every legal target
+      // is therefore in the voicing: resolve() never invents a position and no
+      // figure can escape the isolation zone.
       const t = fig.target;
-      const pc = (t.acc === 0 && t.deg === 1) ? ctx.chordPcs[0]
-        : (t.acc === 0 && t.deg === 3) ? ctx.chordPcs[1]
-        : (t.acc === 0 && t.deg === 5) ? ctx.chordPcs[2]
+      const pc = (t.acc === 0 && (t.deg === 1 || t.deg === 3 || t.deg === 5))
+        ? ctx.chordPcs[{ 1: 0, 3: 1, 5: 2 }[t.deg]]
         : mod12(ctx.rootPc + degreeSemis(t.deg, t.acc));
-      const inVoicing = ctx.voicing.notes.find((n) => mod12(n.midi) === pc);
-      if (inVoicing) tNote = { ...inVoicing };
-      else {
-        const near = prevFret ?? ctx.voicing.notes.reduce((a, n) => a + n.fret, 0) /
-          ctx.voicing.notes.length;
-        // any octave of the pc on the set, nearest the reference position
+      if (classify(pc, ctx.chordPcs).role !== "target") {
+        // the teaching refusal: suggest the nearest chord tone (upper on ties)
         let best = null;
-        for (const sn of ctx.set)
-          for (let f = 0; f <= ctx.nfrets + 2; f++)
-            if (mod12(ctx.open[sn] + f) === pc) {
-              const d = Math.abs(f - near);
-              if (!best || d < best.d) best = { string: sn, fret: f, d };
-            }
-        if (!best) throw new Error("motion: target pc " + pc + " unplaceable on the set");
-        tNote = { midi: ctx.open[best.string] + best.fret, string: best.string,
-          fret: best.fret, slot: ctx.setLowHigh.indexOf(best.string) };
+        for (let k = 0; k < 3; k++) {
+          const up = mod12(ctx.chordPcs[k] - pc), down = mod12(pc - ctx.chordPcs[k]);
+          const d = Math.min(up, down);
+          if (!best || d < best.d || (d === best.d && up < best.up))
+            best = { k, d, up };
+        }
+        const tok = itemText(t);
+        const e = new Error("[" + tok + "] is not a chord tone of " +
+          (ctx.chordLabel || "the chord") + " — write (" + tok + ")[" +
+          [1, 3, 5][best.k] + "] and it becomes an approach to " +
+          ["the root", "the third", "the fifth"][best.k] + ".");
+        e.teach = true;
+        throw e;
       }
+      const inVoicing = ctx.voicing.notes.find((n) => mod12(n.midi) === pc);
+      if (!inVoicing)
+        throw new Error("motion: chord tone pc " + pc + " missing from the voicing — voicing dishonest");
+      tNote = { ...inVoicing };
     }
     // approaches, in written order, target last
     for (const it of fig.approaches) {
@@ -305,13 +330,37 @@ export function resolve(parsed, ctx) {
 // ---------- the sketchpad's emitter (the grammar's first external producer) ----------
 
 /**
+ * approachForms(midi, targetMidi, scalePcs) → {scale:boolean, semi:boolean}
+ * Which readings exist for a click: scale iff the click is the adjacent scale
+ * tone in its direction; semi iff within two semitones. Both true = the form
+ * is tap-switchable in the sketch (v0.7.5); a click cannot reveal intent.
+ */
+export function approachForms(midi, targetMidi, scalePcs) {
+  const d = midi - targetMidi;
+  if (d === 0) return { scale: false, semi: false };
+  const dir = d < 0 ? -1 : 1;
+  let m2 = targetMidi, hit = null;
+  for (let k = 1; k <= 12; k++) {
+    m2 += dir;
+    if (scalePcs.includes(mod12(m2))) { hit = m2; break; }
+  }
+  return { scale: hit === midi, semi: Math.abs(d) <= 2 };
+}
+
+/**
  * emitFromClicks(clicks, ctx) → { src, discarded } | { error }
- * clicks: [{midi, role:"target"|"approach", degText?}] in click order (= playing
- * order). Classification happens at click time against the then-current chord
- * (the honest reading — see the item); this function only serialises.
+ * clicks: [{midi, role:"target"|"approach", degText?, form?}] in click order
+ * (= playing order). Classification happens at click time against the
+ * then-current chord (the honest reading); this function only serialises.
  * Emission is deliberately LOSSY: degrees and relationships survive; octave and
  * placement are discarded — a figure is a design, not a fingering.
- * ctx: { scalePcs, tonicPc } for approach-form selection.
+ *
+ * Approach precedence (spec §4.1, v0.7.5): SCALE-ADJACENCY FIRST, semitone
+ * fallback, absolute degree last. -s stores an invariant, -2 stores a
+ * coordinate; the default is the reading that survives a key or scale change
+ * (v0.6.6 at the level of the figure). `form: "semi"|"scale"` overrides the
+ * default when that reading exists — the tap in the sketch.
+ * ctx: { scalePcs, tonicPc }.
  */
 export function emitFromClicks(clicks, ctx) {
   const figures = [];
@@ -324,15 +373,12 @@ export function emitFromClicks(clicks, ctx) {
         acc: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0, text: m[0] };
       const approaches = pending.map((a) => {
         const d = a.midi - c.midi;
-        if (d !== 0 && Math.abs(d) <= 2) return { kind: "semi", delta: d };
-        // one scale step away → ±s
         const dir = d < 0 ? -1 : 1;
-        let m2 = c.midi, hit = null;
-        for (let k = 1; k <= 12; k++) {
-          m2 += dir;
-          if (ctx.scalePcs.includes(mod12(m2))) { hit = m2; break; }
-        }
-        if (hit === a.midi) return { kind: "scale", delta: dir };
+        const forms = approachForms(a.midi, c.midi, ctx.scalePcs);
+        if (a.form === "semi" && forms.semi) return { kind: "semi", delta: d };
+        if (a.form === "scale" && forms.scale) return { kind: "scale", delta: dir };
+        if (forms.scale) return { kind: "scale", delta: dir };
+        if (forms.semi) return { kind: "semi", delta: d };
         // otherwise the absolute key degree of the clicked pitch class
         const rel = mod12(a.midi - ctx.tonicPc);
         const NAMES = { 0: [1, 0], 1: [2, -1], 2: [2, 0], 3: [3, -1], 4: [3, 0],
@@ -380,4 +426,21 @@ export function emitFromClicks(clicks, ctx) {
   const over = parse(Array(9).fill("(-1)[1]").join("-"), "tones");
   if (!over.error || !/ceiling/.test(over.error.message))
     throw new Error("motion: the event ceiling must refuse by name");
+  // the classifier is one predicate: chord tone → target with its degree
+  const CM = [0, 4, 7];
+  if (classify(4, CM).degText !== "3" || classify(2, CM).role !== "approach")
+    throw new Error("motion: the classifier predicate broke");
+  // emitter precedence (spec §4.1, v0.7.5): scale-adjacency FIRST
+  const CMAJ = [0, 2, 4, 5, 7, 9, 11];
+  const probe = (clicks, want) => {
+    const r = emitFromClicks(clicks, { scalePcs: CMAJ, tonicPc: 0 });
+    if (r.src !== want)
+      throw new Error("motion: emitter precedence broke — got " + (r.src || r.error));
+  };
+  probe([{ midi: 65, role: "approach" }, { midi: 67, role: "target", degText: "5" }],
+    "(-s)[5]");                          // diatonic whole step → the invariant
+  probe([{ midi: 61, role: "approach" }, { midi: 60, role: "target", degText: "1" }],
+    "(+1)[1]");                          // chromatic half step → the coordinate
+  probe([{ midi: 65, role: "approach", form: "semi" },
+    { midi: 67, role: "target", degText: "5" }], "(-2)[5]");  // the tap override
 }

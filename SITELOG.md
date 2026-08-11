@@ -5,6 +5,58 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-10 — Triadetudes v0.7.5–v0.7.8: the figure system completes, one pass (Daniel's dispatch, four interlocking items)
+
+- **v0.7.6 — a target is a chord tone.** Target legality decides by PITCH CLASS against
+  the sounding chord: bare `1`/`3`/`5` name the chord's own root/third/fifth
+  (quality-aware, as before); any other spelling resolves to a pc and is legal only if
+  the chord contains it — `[b3]` on a minor chord is now legal by derivation, provably
+  the same path as `[3]`, and `[2]` on any triad is refused. **The refusal teaches**:
+  "[2] is not a chord tone of Em — write (2)[3] and it becomes an approach to the
+  third." — surfaced at input time by a trial-resolve so no chord ever silently plays
+  nothing; the figure state is untouched on refusal. The non-voicing placement branch is
+  **deleted**, not bypassed — every legal target is in the voicing, so no figure can
+  escape the isolation zone. The sketch classifier and the grammar's rule are ONE
+  predicate: `MOTION.classify`, called by clicking and typing alike.
+- **v0.7.5 — the sketch emits the invariant.** The emitter's precedence reorders per
+  spec §4.1: **scale-adjacency first**, semitone fallback, absolute degree last. A
+  diatonic neighbour now emits `-s` (the invariant that follows a key or scale change —
+  v0.6.6 at figure level, asserted: a figure sketched in C major re-resolved in C minor
+  plays B♭, not B); a chromatic click still emits `-1`/`-2`; the harmonic-minor
+  augmented second still emits `-s` (regression-pinned). The form is **tap-switchable**
+  on the neck mark where both readings exist (`approachForms` names when), and the
+  readout re-narrates — "the scale tone below" ↔ "a whole step below".
+- **v0.7.7 — the figure gets a picker.** A named-preset `<select>` per mode plus
+  Custom, following progSel: five tones presets (all bare chord-tone targets, asserted
+  at load with parse checks — a preset typo cannot ship), four shape presets with
+  **"Pivot first" derived from the current pivot**, never a stored literal (it follows
+  when the pivot moves, verified). **Choosing a preset writes its grammar string into
+  the visible field** — the picker is the on-ramp to the language. Switching mode
+  selects that mode's first preset, so text can never reach the other parser — the
+  mode-switch parse error is gone by construction. **The selection DERIVES from the
+  figure source** after every writer — typing, the picker, restore, and every neck
+  click — all four verified; typing a preset's own text derives that preset. `rawCfg()`
+  stores the source, never a preset name; every existing entry restores identically.
+- **v0.7.8 — sketch on the neck, and the staff goes.** The sketch panel, the echo
+  staff, `renderStaff()` and the emit button are **removed** — one board fewer.
+  Clicking a fretboard or keyboard note appends to the figure, draws in the Spec §2.6
+  marks **through the étude's own rendering path** (the emitted part IS the rendered
+  figure; only waiting approaches draw at their clicked position, same hollow 0.6
+  mark), and **fills the field live** — clicking is typing, the readout narrates
+  continuously, and the sketch line **names the chord the classification ran against**
+  ("1 approach waiting, classified against C — click a chord tone of C (C, E, G)…").
+  Tap cycles the mark's reading (target → approach → the other form → target;
+  promotion only for chord tones — the same predicate); double-tap removes. The
+  16-event ceiling refuses by name at the click. Playback still writes nothing to the
+  buffer (asserted under a running transport); classifier, emitter and the
+  parse(emit(buffer)) round-trip law pass unchanged.
+- Verified per doctrine: engine suite 211/211 (motion contract updated to the two new
+  laws + regression pins; new picker-derivation tests; every other pin untouched); 43
+  interactive Playwright checks from `file://` offline plus real-click sanity, zero
+  console/page errors; rendered and inspected at 1280/390 px at slow and fast tempo.
+  Zero document-level key listeners, still; no bindings on digits or Space. `rawCfg()`
+  round-trips with no `v:` bump. Update Log 260810.10.
+
 ## 2026-08-10 — Triadetudes v0.7.4: the echo staff becomes the way into the grammar (Daniel's dispatch)
 
 - **The orphan gets the job the grammar created.** The echo staff — the app's only

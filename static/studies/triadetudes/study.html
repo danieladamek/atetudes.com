@@ -138,7 +138,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.4</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.8</div>
 </header>
 
 <div class="cards">
@@ -246,9 +246,12 @@
       <button data-mm="shape" class="on" title="the figure fixes the contour — H·M·L slots; tones fall out of the voicing">the shape</button>
       <button data-mm="tones" title="the figure fixes the tones — [1]·[b3]·[5] degrees; contour varies with the inversion">the tones</button>
     </div>
+    <label>Figure</label>
+    <select id="figSel"></select>
     <label id="arpLabel">Figure (H·M·L slots; approaches in parens: (-1,+2)H)</label>
     <input type="text" id="arpIn" size="14" spellcheck="false" placeholder="e.g. M-L-H">
     <span id="arpErr" style="color:var(--red);font-size:11.5px"></span>
+    <div class="hint" id="sketchNote"></div>
     <div class="hint" id="arpHint"></div>
     <div class="row2">
       <div><label>Placement</label>
@@ -332,13 +335,6 @@
   <svg id="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>
 </div>
 
-<details class="board" style="padding:10px 14px">
-  <summary style="cursor:pointer;font-size:12.5px;color:var(--gray)">Sketch a figure — click notes, then load them as a note sequence</summary>
-  <div class="bh" style="margin-top:6px"><span id="echoMsg" style="text-transform:none;letter-spacing:0;font-weight:normal;color:var(--gray)"></span>
-    <span style="white-space:nowrap"><button id="echoEmit">use as note sequence</button> <button id="echoClear">clear</button></span></div>
-  <svg id="staff" viewBox="0 0 1160 190" aria-label="echo staff"></svg>
-</details>
-
 <div class="board">
   <div class="bh"><span>Practice notebook</span>
     <span id="storeNote" style="text-transform:none;letter-spacing:0;font-weight:normal"></span></div>
@@ -375,7 +371,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.7.4 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.7.8 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -953,6 +949,21 @@ if (DEG_SEMIS[9] % 12 !== DEG_SEMIS[2] || DEG_SEMIS[11] % 12 !== DEG_SEMIS[4] ||
 
 function degreeSemis(deg, acc) { return DEG_SEMIS[deg] + (acc || 0); }
 
+// ---------- the classifier: ONE predicate for clicking and typing ----------
+
+/**
+ * classify(pc, chordPcs) → {role:"target", degText:"1"|"3"|"5"} | {role:"approach", degText:null}
+ * The rule (spec §3, ratified 2026-08-10): a pitch class is a TARGET iff it is
+ * a chord tone of the sounding chord; anything else is an approach. This is the
+ * sketchpad's click classifier AND the grammar's target-legality rule — the
+ * same sentence, one predicate, so clicking and typing cannot drift.
+ */
+function classify(pc, chordPcs) {
+  const ix = chordPcs.indexOf(mod12(pc));
+  return ix >= 0 ? { role: "target", degText: String([1, 3, 5][ix]) }
+                 : { role: "approach", degText: null };
+}
+
 // ---------- parse ----------
 
 const err = (pos, message, figures) => ({ error: { pos, message }, figures });
@@ -1146,28 +1157,38 @@ function resolve(parsed, ctx) {
         " is not a bijection here — shape mode needs one note per string");
       tNote = { ...tNote };
     } else {
+      // target legality (spec §3, v0.7.6): a bare 1/3/5 names the chord's own
+      // root/third/fifth (quality-aware); any other spelling resolves to a
+      // pitch class and is legal ONLY if the chord contains it — [b3] on a
+      // minor chord is legal by derivation, [2] on any triad is refused, and
+      // the refusal teaches the construct that was wanted. Every legal target
+      // is therefore in the voicing: resolve() never invents a position and no
+      // figure can escape the isolation zone.
       const t = fig.target;
-      const pc = (t.acc === 0 && t.deg === 1) ? ctx.chordPcs[0]
-        : (t.acc === 0 && t.deg === 3) ? ctx.chordPcs[1]
-        : (t.acc === 0 && t.deg === 5) ? ctx.chordPcs[2]
+      const pc = (t.acc === 0 && (t.deg === 1 || t.deg === 3 || t.deg === 5))
+        ? ctx.chordPcs[{ 1: 0, 3: 1, 5: 2 }[t.deg]]
         : mod12(ctx.rootPc + degreeSemis(t.deg, t.acc));
-      const inVoicing = ctx.voicing.notes.find((n) => mod12(n.midi) === pc);
-      if (inVoicing) tNote = { ...inVoicing };
-      else {
-        const near = prevFret ?? ctx.voicing.notes.reduce((a, n) => a + n.fret, 0) /
-          ctx.voicing.notes.length;
-        // any octave of the pc on the set, nearest the reference position
+      if (classify(pc, ctx.chordPcs).role !== "target") {
+        // the teaching refusal: suggest the nearest chord tone (upper on ties)
         let best = null;
-        for (const sn of ctx.set)
-          for (let f = 0; f <= ctx.nfrets + 2; f++)
-            if (mod12(ctx.open[sn] + f) === pc) {
-              const d = Math.abs(f - near);
-              if (!best || d < best.d) best = { string: sn, fret: f, d };
-            }
-        if (!best) throw new Error("motion: target pc " + pc + " unplaceable on the set");
-        tNote = { midi: ctx.open[best.string] + best.fret, string: best.string,
-          fret: best.fret, slot: ctx.setLowHigh.indexOf(best.string) };
+        for (let k = 0; k < 3; k++) {
+          const up = mod12(ctx.chordPcs[k] - pc), down = mod12(pc - ctx.chordPcs[k]);
+          const d = Math.min(up, down);
+          if (!best || d < best.d || (d === best.d && up < best.up))
+            best = { k, d, up };
+        }
+        const tok = itemText(t);
+        const e = new Error("[" + tok + "] is not a chord tone of " +
+          (ctx.chordLabel || "the chord") + " — write (" + tok + ")[" +
+          [1, 3, 5][best.k] + "] and it becomes an approach to " +
+          ["the root", "the third", "the fifth"][best.k] + ".");
+        e.teach = true;
+        throw e;
       }
+      const inVoicing = ctx.voicing.notes.find((n) => mod12(n.midi) === pc);
+      if (!inVoicing)
+        throw new Error("motion: chord tone pc " + pc + " missing from the voicing — voicing dishonest");
+      tNote = { ...inVoicing };
     }
     // approaches, in written order, target last
     for (const it of fig.approaches) {
@@ -1217,13 +1238,37 @@ function resolve(parsed, ctx) {
 // ---------- the sketchpad's emitter (the grammar's first external producer) ----------
 
 /**
+ * approachForms(midi, targetMidi, scalePcs) → {scale:boolean, semi:boolean}
+ * Which readings exist for a click: scale iff the click is the adjacent scale
+ * tone in its direction; semi iff within two semitones. Both true = the form
+ * is tap-switchable in the sketch (v0.7.5); a click cannot reveal intent.
+ */
+function approachForms(midi, targetMidi, scalePcs) {
+  const d = midi - targetMidi;
+  if (d === 0) return { scale: false, semi: false };
+  const dir = d < 0 ? -1 : 1;
+  let m2 = targetMidi, hit = null;
+  for (let k = 1; k <= 12; k++) {
+    m2 += dir;
+    if (scalePcs.includes(mod12(m2))) { hit = m2; break; }
+  }
+  return { scale: hit === midi, semi: Math.abs(d) <= 2 };
+}
+
+/**
  * emitFromClicks(clicks, ctx) → { src, discarded } | { error }
- * clicks: [{midi, role:"target"|"approach", degText?}] in click order (= playing
- * order). Classification happens at click time against the then-current chord
- * (the honest reading — see the item); this function only serialises.
+ * clicks: [{midi, role:"target"|"approach", degText?, form?}] in click order
+ * (= playing order). Classification happens at click time against the
+ * then-current chord (the honest reading); this function only serialises.
  * Emission is deliberately LOSSY: degrees and relationships survive; octave and
  * placement are discarded — a figure is a design, not a fingering.
- * ctx: { scalePcs, tonicPc } for approach-form selection.
+ *
+ * Approach precedence (spec §4.1, v0.7.5): SCALE-ADJACENCY FIRST, semitone
+ * fallback, absolute degree last. -s stores an invariant, -2 stores a
+ * coordinate; the default is the reading that survives a key or scale change
+ * (v0.6.6 at the level of the figure). `form: "semi"|"scale"` overrides the
+ * default when that reading exists — the tap in the sketch.
+ * ctx: { scalePcs, tonicPc }.
  */
 function emitFromClicks(clicks, ctx) {
   const figures = [];
@@ -1236,15 +1281,12 @@ function emitFromClicks(clicks, ctx) {
         acc: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0, text: m[0] };
       const approaches = pending.map((a) => {
         const d = a.midi - c.midi;
-        if (d !== 0 && Math.abs(d) <= 2) return { kind: "semi", delta: d };
-        // one scale step away → ±s
         const dir = d < 0 ? -1 : 1;
-        let m2 = c.midi, hit = null;
-        for (let k = 1; k <= 12; k++) {
-          m2 += dir;
-          if (ctx.scalePcs.includes(mod12(m2))) { hit = m2; break; }
-        }
-        if (hit === a.midi) return { kind: "scale", delta: dir };
+        const forms = approachForms(a.midi, c.midi, ctx.scalePcs);
+        if (a.form === "semi" && forms.semi) return { kind: "semi", delta: d };
+        if (a.form === "scale" && forms.scale) return { kind: "scale", delta: dir };
+        if (forms.scale) return { kind: "scale", delta: dir };
+        if (forms.semi) return { kind: "semi", delta: d };
         // otherwise the absolute key degree of the clicked pitch class
         const rel = mod12(a.midi - ctx.tonicPc);
         const NAMES = { 0: [1, 0], 1: [2, -1], 2: [2, 0], 3: [3, -1], 4: [3, 0],
@@ -1292,8 +1334,25 @@ function emitFromClicks(clicks, ctx) {
   const over = parse(Array(9).fill("(-1)[1]").join("-"), "tones");
   if (!over.error || !/ceiling/.test(over.error.message))
     throw new Error("motion: the event ceiling must refuse by name");
+  // the classifier is one predicate: chord tone → target with its degree
+  const CM = [0, 4, 7];
+  if (classify(4, CM).degText !== "3" || classify(2, CM).role !== "approach")
+    throw new Error("motion: the classifier predicate broke");
+  // emitter precedence (spec §4.1, v0.7.5): scale-adjacency FIRST
+  const CMAJ = [0, 2, 4, 5, 7, 9, 11];
+  const probe = (clicks, want) => {
+    const r = emitFromClicks(clicks, { scalePcs: CMAJ, tonicPc: 0 });
+    if (r.src !== want)
+      throw new Error("motion: emitter precedence broke — got " + (r.src || r.error));
+  };
+  probe([{ midi: 65, role: "approach" }, { midi: 67, role: "target", degText: "5" }],
+    "(-s)[5]");                          // diatonic whole step → the invariant
+  probe([{ midi: 61, role: "approach" }, { midi: 60, role: "target", degText: "1" }],
+    "(+1)[1]");                          // chromatic half step → the coordinate
+  probe([{ midi: 65, role: "approach", form: "semi" },
+    { midi: 67, role: "target", degText: "5" }], "(-2)[5]");  // the tap override
 }
-return { parse, serialize, describe, resolve, emitFromClicks, MAX_EVENTS, degreeSemis };
+return { parse, serialize, describe, resolve, emitFromClicks, approachForms, classify, MAX_EVENTS, degreeSemis };
 })();
 /* ============ note-event engine — shared component v1 ============
    Canonical source: engine/note-events.mjs (same anti-drift discipline). */
@@ -2183,10 +2242,12 @@ function figureEntries(v,ch){
   const sd=scaleData();
   try{
     return MOTION.resolve(fig,{
-      chordPcs:triadPcs(ch.rootPc,ch.q), rootPc:ch.rootPc,
+      chordPcs:triadPcs(ch.rootPc,ch.q), rootPc:ch.rootPc, chordLabel:ch.label,
       voicing:v, scalePcs:sd.pcs, tonicPc:pcOf(st.key),
       open:OPEN, nfrets:NFRETS, set:st.set, setLowHigh:st.setLowHigh});
   }catch(e){ return null; }   // a figure a chord cannot host: that chord plays nothing figured
+    // (target-legality refusals never reach here — applyMotionInput trial-
+    // resolves at input time so the refusal can teach, v0.7.6)
 }
 function orderedEntries(v,ch){
   // THE playing order, role-tagged: figured motion when a figure is active,
@@ -2269,12 +2330,39 @@ function syncArpIn(){
   if(h){
     if(st.figureError){
       const fe=st.figureError;
-      h.innerHTML=(fe.partial?escapeHtml(fe.partial)+" …":"…")+
+      if(fe.pos===null){
+        // a teaching refusal (target legality): the message IS the sentence —
+        // no caret, since the token parsed and the chord refused it
+        h.textContent=fe.message;
+      }else h.innerHTML=(fe.partial?escapeHtml(fe.partial)+" …":"…")+
         '<br><span style="font-family:ui-monospace,monospace">'+
         escapeHtml(fe.src)+"<br>"+"&nbsp;".repeat(fe.pos)+"^</span> "+
         escapeHtml(fe.message);
     }else h.textContent=arpHintText();
   }
+  figSelSync();
+}
+function figSelSync(){
+  // the picker's selection DERIVES from the figure source — never from which
+  // control wrote last (golden rule 1 in its interface form, v0.7.7). Every
+  // writer funnels through syncArpIn, so every writer lands here.
+  const sel=document.getElementById("figSel"); if(!sel)return;
+  const mode=st.motionMode;
+  if(sel.dataset.mode!==mode){
+    sel.innerHTML="";
+    FIG_PRESETS[mode].forEach((p,i)=>{const o=document.createElement("option");
+      o.value=String(i);o.textContent=p[0];sel.appendChild(o);});
+    const o=document.createElement("option");o.value="custom";o.textContent="Custom…";
+    sel.appendChild(o);
+    sel.dataset.mode=mode;
+  }
+  const cur=canonFig(motionSource(),mode);
+  let pick="custom";
+  FIG_PRESETS[mode].forEach((p,i)=>{
+    if(pick==="custom"&&cur!==null&&canonFig(presetSrc(mode,i),mode)===cur)pick=String(i);
+  });
+  sel.value=pick;
+  sel.disabled=st.placement==="line"&&mode==="shape";
 }
 function bassPcFor(ch){
   if(ch.bassPc!==undefined) return ch.bassPc;   // break-down: the chord root, always
@@ -2454,29 +2542,61 @@ function mergeLog(existing,incoming){
    the historical name, kept as the alias the harness and self-tests use. */
 const arpOnsets=NOTE_EVENTS.noteEvents;
 
-/* ---- the sketchpad's classifier (v0.7.4) ----
-   A clicked note is a TARGET or an APPROACH, derived by named rule from the
-   then-current chord — never asked (golden rule 1). The rule (the item's "real
-   design problem"): pc ∈ the chord's own triad → target, carrying its triad
-   degree; anything else → approach, attaching to the next target in the
-   buffer. Manual override exists (tap in the staff) but the derivation is the
-   default. Emission drops octave and placement — charter §7: the click is the
-   user's data; everything derived from it passes the suite. */
+/* ---- the sketchpad's classifier ----
+   v0.7.6: ONE predicate with the grammar — MOTION.classify is both the click
+   classifier and resolve()'s target-legality rule, so clicking and typing
+   cannot drift. A clicked note is a TARGET iff its pitch class is a chord
+   tone of the then-current chord; anything else is an APPROACH. Derived,
+   never asked (golden rule 1). */
 function classifyClick(midi,ch){
-  const pc=((midi%12)+12)%12;
   if(!ch)return {role:"approach",degText:null};
-  const pcs=triadPcs(ch.rootPc,ch.q);
-  const ix=pcs.indexOf(pc);
-  return ix>=0?{role:"target",degText:String([1,3,5][ix])}
-              :{role:"approach",degText:null};
+  return MOTION.classify(((midi%12)+12)%12,triadPcs(ch.rootPc,ch.q));
 }
-function degTextFor(midi,rootPc){
-  // the promoted-target rule: a non-chord tone raised to target by hand is
-  // named as a degree of the CHORD root (tones-mode targets resolve against
-  // the chord), flat spellings — the same table the emitter's absolute
-  // key-degree form uses, aimed at the other root
-  const rel=((((midi%12)+12)%12)-rootPc+12)%12;
-  return {0:"1",1:"b2",2:"2",3:"b3",4:"3",5:"4",6:"b5",7:"5",8:"b6",9:"6",10:"b7",11:"7"}[rel];
+
+/* ---- figure presets (v0.7.7) ----
+   A table of SOURCE STRINGS, not of notes — everything still derives at
+   resolve time (golden rule 1); the table is load-asserted below: every
+   preset parses in its own mode, and tones presets carry only bare chord-tone
+   targets so the picker can never drift from the v0.7.6 legality rule.
+   "Pivot first" is DERIVED from the current pivot, never a stored literal —
+   it follows the pivot when it moves. The picker's SELECTION is derived from
+   the figure source after every write (typing, the picker, restore, a neck
+   click), never set by whichever control wrote last. */
+const FIG_PRESETS={
+  tones:[
+    ["Root position","[1] - [3] - [5]"],
+    ["Descending","[5] - [3] - [1]"],
+    ["Enclosed root","(-1,+2)[1] - [3] - [5]"],
+    ["Every tone enclosed","(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]"],
+    ["Chromatic from below","(-1)[1] - (-1)[3] - (-1)[5]"],
+  ],
+  shape:[
+    ["Pivot first",null],           // derived: pivotFirstSrc()
+    ["Low to high","L-M-H"],
+    ["High to low","H-M-L"],
+    ["Up and back","L-M-H-M"],
+  ],
+};
+function pivotFirstSrc(){
+  const pat=[st.pivotString,...st.setLowHigh.filter(x=>x!==st.pivotString)];
+  return pat.map(sn=>"LMH"[st.setLowHigh.indexOf(sn)]).join("-");
+}
+function presetSrc(mode,i){ const p=FIG_PRESETS[mode][i]; return p[1]??pivotFirstSrc(); }
+function canonFig(src,mode){
+  if(!src)return null;
+  const p=MOTION.parse(src,mode);
+  return p.error?null:MOTION.serialize(p);
+}
+{ // load assertions: a typo in a preset must be impossible to ship
+  for(const mode of ["tones","shape"])
+    FIG_PRESETS[mode].forEach((p,i)=>{
+      const q=MOTION.parse(presetSrc(mode,i),mode);
+      if(q.error)throw new Error("figure preset does not parse: "+p[0]);
+      if(mode==="tones")
+        for(const f of q.figures)
+          if(!(f.target.acc===0&&[1,3,5].includes(f.target.deg)))
+            throw new Error("tones preset carries a non-chord-tone target: "+p[0]);
+    });
 }
 
 /* ============ audio ============ */
@@ -2834,114 +2954,97 @@ function spelled(midi){
   if(name.startsWith("B#"))oct-=1;
   return {name,oct};
 }
-function echoAdd(note){
-  // widened v0.7.3 (forward-compat, Daniel): callers pass {midi, string, fret},
-  // string/fret absent for keyboard clicks — a later input layer must not have
-  // to re-plumb every call site. Nothing consumes the extra fields yet.
+/* ---- the sketch (v0.7.8: on the neck, the staff is gone) ----
+   Clicking a fretboard or keyboard note appends to the figure, draws it in
+   the §2.6 marks the étude itself uses, and fills the field LIVE — no emit
+   button; clicking IS typing. The buffer, the classifier, the emitter and
+   the parse(emit(buffer)) round-trip law from v0.7.4 stand unchanged behind
+   the new surface. Role derives at click time against the then-current chord
+   (v0.7.6: MOTION.classify, the grammar's own legality predicate), and the
+   chord rides along so the readout can NAME what classification ran against.
+   Playback never writes here — clicks only. All listeners element-scoped. */
+function sketchNote(t){ const e=document.getElementById("sketchNote"); if(e)e.textContent=t; }
+function sketchReset(){ if(ECHO.length){ ECHO=[]; sketchNote(""); } }
+function sketchCtx(){ return {scalePcs:[...scaleData().pcs],tonicPc:pcOf(st.key)}; }
+function sketchLastTarget(){ let t=-1; ECHO.forEach((n,i)=>{if(n.role==="target")t=i;}); return t; }
+function sketchClick(note){
   const midi=typeof note==="number"?note:note.midi;
-  const src={string:typeof note==="object"?note.string??null:null,
-             fret:typeof note==="object"?note.fret??null:null};
   const ch=SEQ[st.cur];
-  const ref=ch?(bassPcFor(ch)??ch.rootPc):pcOf(st.key);
-  const q=ch?ch.q:"maj";
-  const {lab,fam}=ivlOf(((midi%12)+12)%12,ref,q);
-  const sp=spelled(midi);
-  // v0.7.4: role derives at click time against the then-current chord (the
-  // honest reading — the chord you heard when you clicked), and the chord's
-  // root rides along so a later hand-promotion names its degree against the
-  // same root, not whatever chord is current by then
+  if(ECHO.length>=MOTION.MAX_EVENTS){
+    sketchNote(MOTION.MAX_EVENTS+" notes is the ceiling — the click was not added");
+    return;
+  }
   const cls=classifyClick(midi,ch);
-  ECHO.push({midi,name:sp.name,oct:sp.oct,lab,fam,string:src.string,fret:src.fret,
-    role:cls.role,degText:cls.degText,rootPc:ch?ch.rootPc:pcOf(st.key)});
-  if(ECHO.length>14){ECHO.shift();echoMsg("sketch full — oldest note dropped");}
-  else echoMsg("");
-  renderStaff();
+  ECHO.push({midi,string:note.string??null,fret:note.fret??null,
+    role:cls.role,degText:cls.degText,form:null,
+    rootPc:ch?ch.rootPc:pcOf(st.key),chQ:ch?ch.q:"maj",
+    chLabel:ch?ch.label:st.key});
+  sketchSync();
 }
-function echoMsg(t){ const e=document.getElementById("echoMsg"); if(e)e.textContent=t; }
+function sketchSync(){
+  // re-emit the whole buffer and fill the field live; a trailing approach is
+  // a sketch IN PROGRESS, not an error — the complete prefix plays, the
+  // waiting notes stay visible on the neck and the readout says what's owed
+  if(!ECHO.length){ sketchNote(""); renderActive(); return; }
+  const clicks=ECHO.map(n=>({midi:n.midi,role:n.role,degText:n.degText,form:n.form}));
+  const r=MOTION.emitFromClicks(clicks,sketchCtx());
+  const against=[...new Set(ECHO.map(n=>n.chLabel))].join(", ");
+  if(r.src){
+    st.motionMode="tones"; syncMotionUI();
+    applyMotionInput(r.src,{fromSketch:true});
+    sketchNote("sketch: "+ECHO.length+" notes, classified against "+against+
+      " — tap a mark to switch its reading; double-tap removes it");
+  }else{
+    const lastT=sketchLastTarget();
+    if(lastT>=0){
+      const pre=MOTION.emitFromClicks(clicks.slice(0,lastT+1),sketchCtx());
+      if(pre.src){ st.motionMode="tones"; syncMotionUI();
+        applyMotionInput(pre.src,{fromSketch:true}); }
+    }
+    const nPend=ECHO.length-1-lastT;
+    const ch=SEQ[st.cur];
+    const tones=ch?triadPcs(ch.rootPc,ch.q).map(pc=>pcName(pc,st.key)).join(", "):"";
+    sketchNote(nPend+(nPend>1?" approaches":" approach")+" waiting, classified against "+
+      against+" — click a chord tone"+(ch?" of "+ch.label+" ("+tones+")":"")+
+      " to finish the figure");
+  }
+  renderActive();
+}
+let skTapTimer=null;
+function sketchTap(i){
+  // one tap cycles the mark's READING: target → approach (default form) →
+  // approach (the other form, where both exist: v0.7.5's -s ↔ -n) → target.
+  // Promotion to target is legal only for chord tones of the click-time
+  // chord — the same predicate as everywhere (v0.7.6).
+  const n=ECHO[i]; if(!n)return;
+  const pcs=triadPcs(n.rootPc,n.chQ);
+  const canTarget=MOTION.classify(n.midi,pcs).role==="target";
+  let tMidi=null;
+  for(let k=i+1;k<ECHO.length;k++)if(ECHO[k].role==="target"){tMidi=ECHO[k].midi;break;}
+  const forms=tMidi!==null?MOTION.approachForms(n.midi,tMidi,sketchCtx().scalePcs)
+    :{scale:false,semi:false};
+  const both=forms.scale&&forms.semi;
+  if(n.role==="target"){ n.role="approach"; n.form=null; }
+  else if(n.form===null&&both){ n.form=forms.scale?"semi":"scale"; }
+  else if(canTarget){ n.role="target"; n.form=null;
+    n.degText=MOTION.classify(n.midi,pcs).degText; }
+  else{ n.form=null;
+    if(!both){ sketchNote(pcName(((n.midi%12)+12)%12,st.key)+" is not a chord tone of "+
+      n.chLabel+" — it stays an approach"); renderActive(); return; } }
+  sketchSync();
+}
+function sketchRemove(i){ if(ECHO[i]){ ECHO.splice(i,1); sketchSync(); } }
+function sketchHit(parent,x,y,i,r){
+  const hit=el("circle",{cx:x,cy:y,r:r||16,fill:"transparent",
+    style:"cursor:pointer","data-sk":String(i)},parent);
+  hit.addEventListener("click",()=>{
+    clearTimeout(skTapTimer); skTapTimer=setTimeout(()=>sketchTap(i),260); });
+  hit.addEventListener("dblclick",()=>{ clearTimeout(skTapTimer); sketchRemove(i); });
+  return hit;
+}
 const SVGNS="http://www.w3.org/2000/svg";
 function el(n,attrs,parent){ const e=document.createElementNS(SVGNS,n);
   for(const k in attrs)e.setAttribute(k,attrs[k]); if(parent)parent.appendChild(e); return e; }
-function renderStaff(){
-  const svg=document.getElementById("staff"); svg.innerHTML="";
-  const HS=5.5;                       // half line spacing
-  const yF5=34;                       // treble top line (F5)
-  const stepOf=(name,oct)=>oct*7+LETTERS.indexOf(name[0]);
-  const yOf=(name,oct)=>yF5+(stepOf("F",5)-stepOf(name,oct))*HS;
-  // staves
-  for(let i=0;i<5;i++){
-    el("line",{x1:30,y1:yF5+i*2*HS,x2:1130,y2:yF5+i*2*HS,stroke:"#B9B9BF","stroke-width":1},svg);
-    el("line",{x1:30,y1:yOf("A",3)+ (2-i)*0 + (i*2*HS)+ (yOf("A",3)-yOf("A",3)),x2:30,y2:0,stroke:"none"},svg);
-  }
-  const yA3=yOf("A",3); // bass top line
-  for(let i=0;i<5;i++){
-    el("line",{x1:30,y1:yA3+i*2*HS,x2:1130,y2:yA3+i*2*HS,stroke:"#B9B9BF","stroke-width":1},svg);
-  }
-  el("line",{x1:30,y1:yF5,x2:30,y2:yA3+8*HS,stroke:"#73737A","stroke-width":1.4},svg);
-  const tc=el("text",{x:36,y:yOf("G",4)+HS*2.1,"font-size":String(HS*8),fill:"#212126",
-    "font-family":"serif"},svg); tc.textContent="\u{1D11E}";
-  const bc=el("text",{x:38,y:yOf("F",3)+HS*2.4,"font-size":String(HS*5),fill:"#212126",
-    "font-family":"serif"},svg); bc.textContent="\u{1D122}";
-  if(!ECHO.length){
-    const t=el("text",{x:580,y:(yF5+yA3)/2+14,"text-anchor":"middle","font-size":"12",
-      fill:"#B9B9BF"},svg);
-    t.textContent="click keys or fretboard notes and they appear here, spelled in "+st.key+" "+SCALES[st.scaleType].label;
-    return;
-  }
-  const x0=110, dx=Math.min(74,(1130-x0-30)/Math.max(ECHO.length,1));
-  ECHO.forEach((n,i)=>{
-    const x=x0+i*dx+dx/2;
-    const y=yOf(n.name,n.oct);
-    // ledger lines
-    const s=stepOf(n.name[0]==="C"&&n.name.startsWith("Cb")?"B":n.name,n.oct); // approximation safe here
-    const step=stepOf(n.name,n.oct);
-    const topT=stepOf("F",5), botT=stepOf("E",4), topB=stepOf("A",3), botB=stepOf("G",2);
-    const led=[];
-    for(let q2=step;q2>topT;q2--) if((q2-topT)%1===0&&(q2%2===topT%2)) led.push(q2);
-    for(let q2=step;q2<botB;q2++) if(q2%2===botB%2) led.push(q2);
-    if(step<topB&&step>botT){ // between staves: middle C region ledger
-      if(step%2===stepOf("C",4)%2&&Math.abs(step-stepOf("C",4))<2) led.push(stepOf("C",4));
-    }
-    for(const L of new Set(led)){
-      const ly=yF5+(topT-L)*HS;
-      el("line",{x1:x-11,y1:ly,x2:x+11,y2:ly,stroke:"#73737A","stroke-width":1},svg);
-    }
-    const acc=n.name.slice(1);
-    if(acc){
-      const a=el("text",{x:x-16,y:y+4,"text-anchor":"middle","font-size":"13",fill:"#212126"},svg);
-      a.textContent=acc.replace(/#/g,"♯").replace(/b/g,"♭");
-    }
-    // v0.7.4 — role in the weight channel, §2.6 verbatim: a target is the full
-    // solid head with its label; an approach is hollow at 0.6 radius, no label,
-    // degree color when diatonic, violet when chromatic (outside the scale)
-    if(n.role==="approach"){
-      const sd=scaleData();
-      const chrom=!sd.pcs.includes(((n.midi%12)+12)%12);
-      el("ellipse",{cx:x,cy:y,rx:7*0.6,ry:5.4*0.6,fill:"#fff",
-        stroke:chrom?"#7847A8":FAM_COLOR[n.fam],"stroke-width":1.6,
-        transform:`rotate(-14 ${x} ${y})`},svg);
-    }else{
-      el("ellipse",{cx:x,cy:y,rx:7,ry:5.4,fill:FAM_COLOR[n.fam],transform:`rotate(-14 ${x} ${y})`},svg);
-      const t=el("text",{x:x,y:y+2.6,"text-anchor":"middle","font-size":"6.5",
-        fill:FAM_TEXT[n.fam],class:"dot-label"},svg);
-      t.textContent=n.lab;
-    }
-    const nm=el("text",{x:x,y:yA3+8*HS+16,"text-anchor":"middle","font-size":"9.5",fill:"#73737A"},svg);
-    nm.textContent=n.name+n.oct;
-    // the override: tapping switches target ↔ approach — the derivation is the
-    // default, never the only path (element-scoped listener; no document keys)
-    const hit=el("rect",{x:x-dx/2,y:y-16,width:dx,height:32,fill:"transparent",
-      style:"cursor:pointer","data-echo":String(i)},svg);
-    hit.addEventListener("click",()=>{
-      if(n.role==="approach"){ n.role="target"; n.degText=n.degText??degTextFor(n.midi,n.rootPc); }
-      else n.role="approach";
-      renderStaff();
-    });
-  });
-  const cap=el("text",{x:1130,y:yA3+8*HS+16,"text-anchor":"end","font-size":"9.5",
-    fill:"#B9B9BF"},svg);
-  cap.textContent="solid = target · hollow = approach · tap a note to switch";
-}
-
 /* ============ full-étude score ============ */
 let SCORE_X=[];
 function beatsOf(i){ const pat=pattern(); return pat[i%pat.length]; }
@@ -3167,7 +3270,7 @@ function renderFret(){
         fill:FAM_TEXT[fam],class:"dot-label"},g);
       t.textContent=fam==="R"?"R":String(di+1);
       g.addEventListener("click",()=>{
-        playNote(OPEN[s2]+f); echoAdd({midi:OPEN[s2]+f,string:s2,fret:f});
+        playNote(OPEN[s2]+f); sketchClick({midi:OPEN[s2]+f,string:s2,fret:f});
         if(st.set.includes(s2)){
           const sf=scaleFretsOnString(s2), i=sf.indexOf(f);
           if(i>=0){ st.pivotString=s2;
@@ -3236,6 +3339,28 @@ function renderActive(){
       el("circle",{cx:fx(ev.fret),cy:fy(ev.string),r:14*0.6,fill:"#fff",
         stroke:col,"stroke-width":1.6},layer);
     });
+    // ---- the sketch on the neck (v0.7.8) ----
+    // the EMITTED part of the sketch is the figure drawn just above — the
+    // étude's own §2.6 rendering, one code path, which is the point. Here we
+    // add only (a) tap/remove hit areas mapping each figure event to its
+    // buffer note, and (b) the waiting not-yet-emitted approaches at their
+    // clicked positions — the same hollow 0.6 mark, because that is what
+    // they are; the readout narrates the waiting state.
+    if(ECHO.length){
+      const lastT=sketchLastTarget();
+      const fe=activeFigure()?figureEntries(v,ch):null;
+      if(fe&&fe.length===lastT+1)
+        fe.forEach((en,k)=>sketchHit(layer,fx(en.fret),fy(en.string),k));
+      for(let i=lastT+1;i<ECHO.length;i++){
+        const n=ECHO[i];
+        if(n.string===null)continue;   // keyboard clicks appear on the keyboard
+        const chrom=!sdPcs.includes(((n.midi%12)+12)%12);
+        const col=chrom?"#7847A8":FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref,ch.q).fam];
+        el("circle",{cx:fx(n.fret),cy:fy(n.string),r:14*0.6,fill:"#fff",
+          stroke:col,"stroke-width":1.6},layer);
+        sketchHit(layer,fx(n.fret),fy(n.string),i);
+      }
+    }
   }
   for(const n of v.notes){
     const f=n.fret,s2=n.string,pc=n.midi%12;
@@ -3315,7 +3440,7 @@ function renderKbd(){
   for(const m of whites){
     const r=el("rect",{x:xOf[m],y:0,width:WK,height:WH,fill:"#fff",stroke:"#D8D8DC",
       "stroke-width":0.8,cursor:"pointer"},svg);
-    r.addEventListener("click",()=>{playNote(m);echoAdd({midi:m});});
+    r.addEventListener("click",()=>{playNote(m);sketchClick({midi:m});});
     if(m%12===0){const t=el("text",{x:xOf[m]+WK/2,y:WH-4,"text-anchor":"middle",
       "font-size":"7.5",fill:"#B9B9BF","pointer-events":"none"},svg);t.textContent="C"+(Math.floor(m/12)-1);}
     if(act.has(m)){const a=act.get(m), g=kbdGeom(m);
@@ -3333,7 +3458,7 @@ function renderKbd(){
     if(nb<=HI&&!isW(nb)){
       const bx=xOf[m]+WK-BW/2;
       const r=el("rect",{x:bx,y:0,width:BW,height:BH,fill:"#212126",cursor:"pointer"},svg);
-      r.addEventListener("click",()=>{playNote(nb);echoAdd({midi:nb});});
+      r.addEventListener("click",()=>{playNote(nb);sketchClick({midi:nb});});
       if(act.has(nb)){const a=act.get(nb), g=kbdGeom(nb);
         if(a.appr){
           el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:"#212126",
@@ -3344,6 +3469,21 @@ function renderKbd(){
           "stroke-width":1.2,"pointer-events":"none"},svg);
         const t=el("text",{x:g.x,y:g.y+2.8,"text-anchor":"middle","font-size":"6",
           fill:FAM_TEXT[a.fam],class:"dot-label"},svg);t.textContent=a.lab;}}
+    }
+  }
+  // waiting sketch clicks made ON the keyboard (v0.7.8): the same hollow 0.6
+  // §2.6 mark at the clicked key; tap/remove gestures work here too
+  if(ECHO.length){
+    const lastT=sketchLastTarget();
+    const bass2=ch?bassPcFor(ch):null, ref2=ch?(bass2!==null?bass2:ch.rootPc):null;
+    for(let i=lastT+1;i<ECHO.length;i++){
+      const n=ECHO[i]; if(n.string!==null)continue;
+      const g=kbdGeom(n.midi); if(!g)continue;
+      const chrom=!scaleData().pcs.includes(((n.midi%12)+12)%12);
+      const col=chrom?"#7847A8":(ch?FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref2,ch.q).fam]:"#73737A");
+      el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:g.black?"#212126":"#fff",
+        stroke:col,"stroke-width":1.1,"pointer-events":"none"},svg);
+      sketchHit(svg,g.x,g.y,i,10);
     }
   }
   if(keepPulse)svg.appendChild(keepPulse); else el("g",{id:"kbdPulse"},svg);
@@ -3587,7 +3727,7 @@ function renderPlaceHint(){
   const d=document.getElementById("placeHint");
   if(d)d.textContent=placeHintText();
 }
-function renderAll(){ renderFret(); renderScore(); renderStaff(); syncArpIn(); renderPlaceHint(); }
+function renderAll(){ renderFret(); renderScore(); syncArpIn(); renderPlaceHint(); }
 
 /* ============ practice notebook ============ */
 const LOG_KEY="triadetudes.v1.log";
@@ -3607,6 +3747,9 @@ function rawCfg(){
     clickSub:st.clickSub,clickVoice:st.clickVoice,countIn:st.countIn};
 }
 function applyRaw(c){
+  // restore is a WRITER (v0.7.7): it replaces the sketch-in-progress like any
+  // other writer; the picker's selection re-derives from the restored source
+  sketchReset();
   // saved keys are spelled strings; normalize by pitch class to the canonical
   // spelling for the entry's scale — same sounding key, always reachable
   Object.assign(st,{key:keyFor(pcOf(c.key),c.scaleType),scaleType:c.scaleType,set:[...c.set],pivotString:c.pivotString,
@@ -3802,7 +3945,11 @@ function exportLog(){
 }
 
 /* ============ controls ============ */
-function applyMotionInput(text){
+function applyMotionInput(text,opts){
+  // every writer lands here: typing, the picker, restore, and the sketch's
+  // live emission. The sketch is itself a writer, so any OTHER writer resets
+  // it (a typed or picked figure replaces the sketch-in-progress, named rule)
+  if(!(opts&&opts.fromSketch))sketchReset();
   const errEl=document.getElementById("arpErr");
   const t=(text||"").trim();
   st.figureError=null;
@@ -3831,6 +3978,26 @@ function applyMotionInput(text){
       partial:fig.figures.length?MOTION.describe({figures:fig.figures}):""};
     if(errEl)errEl.textContent=fig.error.message;
     syncArpIn(); return;
+  }
+  // target legality is checked at INPUT time (v0.7.6): trial-resolve against
+  // every chord so the refusal can TEACH — "[2] is not a chord tone of Em —
+  // write (2)[3]..." — instead of a chord silently playing nothing. The
+  // figure state is left untouched on refusal (the failure convention).
+  if(st.motionMode==="tones"){
+    for(let i=0;i<SEQ.length;i++){
+      if(!VOIC[i])continue;
+      try{ MOTION.resolve(fig,{
+        chordPcs:triadPcs(SEQ[i].rootPc,SEQ[i].q), rootPc:SEQ[i].rootPc,
+        chordLabel:SEQ[i].label, voicing:VOIC[i], scalePcs:scaleData().pcs,
+        tonicPc:pcOf(st.key), open:OPEN, nfrets:NFRETS,
+        set:st.set, setLowHigh:st.setLowHigh}); }
+      catch(e){
+        if(!e.teach)continue;  // hosting problems stay per-chord (named rule)
+        st.figureError={src:t,pos:null,message:e.message,partial:""};
+        if(errEl)errEl.textContent=e.message;
+        syncArpIn(); return;
+      }
+    }
   }
   if(errEl)errEl.textContent="";
   const bare=st.motionMode==="shape"&&fig.figures.every(f=>!f.approaches.length);
@@ -3954,10 +4121,12 @@ function initControls(){
   document.getElementById("arpIn").addEventListener("change",e=>applyMotionInput(e.target.value));
   document.querySelectorAll("#motionSeg button").forEach(b=>{
     b.addEventListener("click",()=>{
-      if(b.disabled)return;
+      if(b.disabled||b.dataset.mm===st.motionMode)return;
       st.motionMode=b.dataset.mm;
-      // the typed text re-parses under the new mode — never silently converted
-      applyMotionInput(document.getElementById("arpIn").value);
+      // switching mode selects that mode's FIRST PRESET (v0.7.7): the field
+      // is populated by a selection, never carried across the switch — text
+      // can no longer reach the other mode's parser, by construction
+      applyMotionInput(presetSrc(st.motionMode,0));
       syncMotionUI();
     });
   });
@@ -3967,7 +4136,8 @@ function initControls(){
       st.placement=b.dataset.place;
       if(st.placement==="line"&&st.motionMode==="shape"){
         st.motionMode="tones";   // a line is defined by its tones — named rule,
-        st.motionSrc=null;       // stated in the hint; shape mode disables
+        syncMotionUI();          // stated in the hint; shape mode disables.
+        applyMotionInput(presetSrc("tones",0));  // tones' first preset (v0.7.7)
       }
       syncMotionUI(); syncShapeUI(); rebuild();});
   });
@@ -4022,20 +4192,11 @@ function initControls(){
   document.getElementById("clickVolR").addEventListener("change",()=>renderCfg());
   buildMinis();
   syncClickUI(); renderLamp(); syncPlayUI();
-  document.getElementById("echoClear").addEventListener("click",()=>{ECHO=[];echoMsg("");renderStaff();});
-  document.getElementById("echoEmit").addEventListener("click",()=>{
-    // the sketch becomes a figure: the engine's emitter derives the grammar
-    // string (lossy by design — degrees and relationships survive; octave and
-    // placement do not) and it enters the SAME pipeline as typed input
-    const r=MOTION.emitFromClicks(
-      ECHO.map(n=>({midi:n.midi,role:n.role,degText:n.degText})),
-      {scalePcs:[...scaleData().pcs],tonicPc:pcOf(st.key)});
-    if(r.error){echoMsg(r.error);return;}
-    st.motionMode="tones";     // a sketched figure names degrees, not strings — said out loud
-    syncMotionUI();
-    applyMotionInput(r.src);
-    if(st.figureError){echoMsg("the emitted figure did not parse — "+st.figureError.message);return;}
-    echoMsg("loaded as a note sequence — the field is now in tones mode; "+r.discarded);
+  document.getElementById("figSel").addEventListener("change",e=>{
+    // choosing a preset WRITES ITS GRAMMAR STRING into the visible field —
+    // the picker is how the language gets learned (v0.7.7)
+    if(e.target.value==="custom"){ figSelSync(); document.getElementById("arpIn").focus(); return; }
+    applyMotionInput(presetSrc(st.motionMode,+e.target.value));
   });
   document.getElementById("saveEntry").addEventListener("click",saveEntry);
   document.getElementById("exportLog").addEventListener("click",exportLog);

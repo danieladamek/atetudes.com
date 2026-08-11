@@ -112,12 +112,45 @@ test("resolve: absolute-degree approaches take the key degree nearest the target
   assert.ok(Math.abs(evs[0].midi - 60) <= 6, "octave nearest the target");
 });
 
-test("resolve: shape targets take the slot; tones targets beyond the voicing derive a place", () => {
+test("resolve: shape targets take the slot; a target's pc must be a chord tone (v0.7.6)", () => {
   const shape = resolve(parse("H - M - L", "shape"), CTX);
   assert.deepEqual(shape.map((e) => e.midi), [67, 64, 60]);
-  const nine = resolve(parse("[9]", "tones"), CTX);
-  assert.equal(nine[0].midi % 12, 2, "compound 9 reduces mod 7 to the 2 for pitch");
-  assert.equal(CTX.open[nine[0].string] + nine[0].fret, nine[0].midi);
+  // [2] on any triad is refused, and the refusal TEACHES the construct wanted
+  const em = { ...CTX, chordPcs: [4, 7, 11], rootPc: 4, chordLabel: "Em",
+    voicing: { notes: [
+      { midi: 64, string: 3, fret: 9, slot: 0 },
+      { midi: 67, string: 2, fret: 8, slot: 1 },
+      { midi: 71, string: 1, fret: 7, slot: 2 }] } };
+  assert.throws(() => resolve(parse("[2]", "tones"), em),
+    (e) => e.teach === true &&
+      /\[2\] is not a chord tone of Em — write \(2\)\[3\] and it becomes an approach to the third\./.test(e.message));
+  // [9] reduces to the 2 and is refused the same way — no numeral special case
+  assert.throws(() => resolve(parse("[9]", "tones"), em), (e) => e.teach === true);
+  // and (2)[3] — the taught construct — resolves fine
+  const taught = resolve(parse("(2)[3]", "tones"), em);
+  assert.equal(taught[1].midi, 67, "[3] on Em is G, quality-aware");
+  assert.equal(taught[0].midi % 12, 2, "(2) is the key degree, an approach");
+});
+
+test("resolve: [b3] and [3] take the same path on a minor chord — derivation, not coincidence", () => {
+  const dm = { ...CTX, chordPcs: [2, 5, 9], rootPc: 2, chordLabel: "Dm",
+    voicing: { notes: [
+      { midi: 62, string: 3, fret: 7, slot: 0 },
+      { midi: 65, string: 2, fret: 6, slot: 1 },
+      { midi: 69, string: 1, fret: 5, slot: 2 }] } };
+  const bare = resolve(parse("[3]", "tones"), dm);
+  const flat = resolve(parse("[b3]", "tones"), dm);
+  assert.deepEqual([flat[0].midi, flat[0].string, flat[0].fret],
+    [bare[0].midi, bare[0].string, bare[0].fret], "identical, by the one legality rule");
+  // [3] on Dm must NOT be F# (the old chromatic-interval fallthrough is gone)
+  assert.equal(bare[0].midi, 65, "the chord's own third");
+  // and no legal target is ever outside the voicing — the placement branch is deleted
+  for (const src of ["[1]", "[3]", "[b3]", "[5]"]) {
+    const evs = resolve(parse(src, "tones"), dm);
+    assert.ok(dm.voicing.notes.some((n) => n.midi === evs[0].midi &&
+      n.string === evs[0].string && n.fret === evs[0].fret),
+      src + " placed inside the voicing");
+  }
 });
 
 test("resolve: refuses by name over the ceiling and off the set", () => {
@@ -139,36 +172,69 @@ test("emit: chord tones become targets, near notes signed, far notes key degrees
   ];
   const r = emitFromClicks(clicks, { scalePcs: CTX.scalePcs, tonicPc: 0 });
   assert.ok(!r.error, r.error);
-  assert.equal(r.src, "(-1,+2)[1] - (+2)[3]");
+  // B and D are C's adjacent scale tones, F# is chromatic: the invariant forms
+  // carry the diatonic neighbours, the coordinate carries the chromatic one
+  assert.equal(r.src, "(-s,+s)[1] - (+2)[3]");
   assert.match(r.discarded, /octave and placement/);
   // the round-trip is on DEGREES AND RELATIONSHIPS, never pitches or frets
   const p = parse(r.src, "tones");
   assert.ok(!p.error);
   assert.deepEqual(p.figures.map((f) => f.target.deg), [1, 3]);
-  assert.deepEqual(p.figures[0].approaches.map((a) => a.delta), [-1, 2]);
+  assert.deepEqual(p.figures[0].approaches.map((a) => a.kind), ["scale", "scale"]);
+  assert.deepEqual(p.figures[1].approaches, [{ kind: "semi", delta: 2 }]);
 });
 
-test("emit precedence: semitones ≤2 win, then one scale step, then absolute key degree", () => {
-  // F under G is BOTH a whole step and a scale step: the exact-distance form
-  // wins (the click's own geometry — the named precedence, item order)
+test("emit precedence (v0.7.5): scale-adjacency FIRST, semitone fallback, degree last", () => {
+  // F under G is both a whole step and the adjacent scale tone: -s wins — it
+  // stores the invariant, and the figure follows a key or scale change
   const near = emitFromClicks([
     { midi: 65, role: "approach" },
     { midi: 67, role: "target", degText: "5" },
   ], { scalePcs: CTX.scalePcs, tonicPc: 0 });
-  assert.equal(near.src, "(-2)[5]");
-  // C harmonic minor's augmented 2nd: Ab is the scale tone below B at THREE
-  // semitones — beyond the semitone forms, so ±s carries it
+  assert.equal(near.src, "(-s)[5]");
+  // a chromatic approach is NOT scale-adjacent: the semitone form still carries it
+  const chrom = emitFromClicks([
+    { midi: 61, role: "approach" },            // Db under... above C
+    { midi: 60, role: "target", degText: "1" },
+  ], { scalePcs: CTX.scalePcs, tonicPc: 0 });
+  assert.equal(chrom.src, "(+1)[1]");
+  // C harmonic minor's augmented 2nd: Ab under B — must NOT regress
   const harm = emitFromClicks([
     { midi: 68, role: "approach" },            // Ab
     { midi: 71, role: "target", degText: "7" }, // B natural
   ], { scalePcs: [0, 2, 3, 5, 7, 8, 11], tonicPc: 0 });
   assert.equal(harm.src, "(-s)[7]");
-  // and a non-scale distant note falls through to the absolute key degree
+  // a non-scale distant note still falls through to the absolute key degree
   const far = emitFromClicks([
     { midi: 56, role: "approach" },            // Ab in C MAJOR: not diatonic, far
     { midi: 60, role: "target", degText: "1" },
   ], { scalePcs: CTX.scalePcs, tonicPc: 0 });
   assert.equal(far.src, "(b6)[1]");
+  // the tap override picks the other reading where it exists, and only there
+  const forced = emitFromClicks([
+    { midi: 65, role: "approach", form: "semi" },
+    { midi: 67, role: "target", degText: "5" },
+  ], { scalePcs: CTX.scalePcs, tonicPc: 0 });
+  assert.equal(forced.src, "(-2)[5]");
+  const impossible = emitFromClicks([
+    { midi: 61, role: "approach", form: "scale" },  // Db is no scale tone: ignored
+    { midi: 60, role: "target", degText: "1" },
+  ], { scalePcs: CTX.scalePcs, tonicPc: 0 });
+  assert.equal(impossible.src, "(+1)[1]");
+});
+
+test("a figure sketched in one scale keeps its scale-relative approaches in another (v0.6.6 at figure level)", () => {
+  // sketched in C major: B approaches C from below → -s (the invariant)
+  const r = emitFromClicks([
+    { midi: 59, role: "approach" },
+    { midi: 60, role: "target", degText: "1" },
+  ], { scalePcs: CTX.scalePcs, tonicPc: 0 });
+  assert.equal(r.src, "(-s)[1]");
+  // resolved in C natural minor: the same figure now plays Bb, not B
+  const minorCtx = { ...CTX, scalePcs: [0, 2, 3, 5, 7, 8, 10] };
+  const evs = resolve(parse(r.src, "tones"), minorCtx);
+  assert.equal(evs[0].midi, 58, "the approach followed the scale change to Bb");
+  // had it emitted -1 (the coordinate), it would still play B — outside the key
 });
 
 test("emit: a trailing approach refuses by name; an empty sketch refuses by name", () => {

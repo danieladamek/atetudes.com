@@ -28,7 +28,7 @@ const HARVEST = [
   "keyFor", "keysFor", "CHORD", "UPPER", "STRSETS", "splitFor",
   "setLabel", "patText", "displayPattern", "orderedNotes",
   "MOTION", "motionSource", "parsedFigure", "activeFigure", "figureEntries", "orderedEntries",
-  "classifyClick", "degTextFor",
+  "classifyClick", "FIG_PRESETS", "pivotFirstSrc", "presetSrc", "canonFig",
   "voiceLeadCost", "placementCost", "meanFret", "movementTotal",
   "st", "SCALES", "SPLITS", "OPEN", "NFRETS", "KEYS", "IVL_LABEL", "IVL_FAMILY",
 ];
