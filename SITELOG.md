@@ -5,6 +5,40 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Triadetudes: the render-dependency audit — the table (Daniel's dispatch)
+
+- **The deliverable is the table**: `notes/specs/render-dependencies.md` — one row per
+  control across all five panels (Metronome, Harmony, Transport, Shape & Motion,
+  timeline, plus notebook restore), one column per view (fretboard · score · keyboard ·
+  timeline · collapsed summary line · describe() readout · cfg/rawCfg). Every cell
+  verified live: each control changed **with all panels folded**, every dependent view
+  fingerprinted before/after (content-based — innerHTML and per-chip classNames, after
+  length-based fingerprints produced false alarms). The table records the render
+  chains a ✓ rides on, and every deliberate non-dependency with its reason — a
+  documented "no, this correctly does not refresh that" being as load-bearing as a fix.
+  (The table lives in `notes/` per repo policy — the vault layer is untracked — so this
+  entry is its record in git.)
+- **Result: the collapsed summary lines shipped correct.** All of 260810.14's lines
+  follow their controls while folded — BPM, meter, split, key, scale, mode, progression,
+  set, figure, placement, playback, position — because they ride `renderCfg()`/
+  `renderActive()`, which every mutating handler already reaches. The known instances
+  from the dispatch (splitSel/changeMeter above the neck; changeBpm's collapsed line)
+  are confirmed fixed.
+- **Three gaps found, one family — the config DISPLAY predates a value it should show**
+  (the storage, `rawCfg()`, was correct throughout): (1) `changeBpm` skips
+  `renderCfg()`, so the cfg JSON + notebook summary sit stale after a BPM drag;
+  (2) `cfgObj().motion` carries only the shape pattern — no figure, no mode — silent
+  about a tones figure since v0.7.3; (3) `summaryText()`'s "arp" clause shows the stale
+  shape pattern under a tones figure. Fixes follow as their own commit, per the
+  dispatch.
+- Deliberate non-dependencies worth naming: audio-only values (subdivision, voice,
+  accents, vol, count-in, mute) touch no board; bar split re-renders score + timeline
+  but not the fretboard/keyboard (marks encode order and role, not beats); progression
+  edits leave the fretboard fingerprint identical when the current chord survives (the
+  board draws `SEQ[st.cur]`, refreshed but honestly unchanged); a set change can leave
+  score/keyboard identical (same pitches, different strings); refusal branches leave
+  the figure state untouched by convention. Update Log 260811.1.
+
 ## 2026-08-10 — Triadetudes: expand and collapse on every panel (Daniel's dispatch)
 
 - **Every card and strip folds** — Metronome, Harmony, Transport, Shape & Motion, and
