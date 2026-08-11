@@ -18,6 +18,10 @@
 import { parseChord } from "./chord.mjs";
 
 export const ATCHART_VERSION = 1;
+// the body-skeleton slot markers (§2.5 preservation): exported so consumers
+// building documents THROUGH this engine (engine/notepad.mjs) can place the
+// chart slot without copying the literal
+export const CHART_SLOT = "\x00CHART\x00";
 
 const DEFAULTS = { key: "C", meter: "4/4" };
 const FM_ORDER = ["atchart", "title", "composer", "key", "meter", "tempo", "form", "sections"];
@@ -402,7 +406,7 @@ export function parseAtchart(text) {
       sawChart = true;
       chartLines = [];
       mode = "chart";
-      body.push(" CHART ");
+      body.push(CHART_SLOT);
       continue;
     }
     if (/^##\s+Substitutions\s*$/i.test(line)) {
@@ -441,7 +445,7 @@ export function serializeAtchart(doc) {
   out.push(serializeFrontmatter(doc.meta, doc._fm));
   out.push("---");
   for (const line of doc.body) {
-    if (line === " CHART ") {
+    if (line === CHART_SLOT) {
       out.push("```chart");
       out.push(serializeChartBlock(doc.sections));
       out.push("```");

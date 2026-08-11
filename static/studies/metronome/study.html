@@ -50,6 +50,30 @@
   .row2>div{flex:1 1 90px}
   textarea{font:inherit;font-size:13px;padding:8px 9px;border:1px solid var(--line);
     border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:130px}
+  /* the notepad surface (decision 1): source + live preview, never-editable pane */
+  .padtools{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+  .padtools button{font:inherit;font-size:11.5px;padding:2px 8px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
+  .padtools button:hover{border-color:var(--ink)}
+  .padwrap{display:flex;gap:10px;align-items:stretch}
+  .padwrap>*{flex:1 1 0;min-width:0}
+  #padView{border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;
+    overflow:auto;min-height:130px;max-height:320px;background:#fff}
+  #padView h1,#padView h2,#padView h3{font-size:15px;margin:8px 0 4px}
+  #padView p{margin:5px 0}
+  #padView pre{background:var(--ground);border-radius:6px;padding:6px 8px;overflow:auto;font-size:12px}
+  #padView code{font-family:ui-monospace,monospace;font-size:12px}
+  #padView blockquote{margin:5px 0;padding-left:9px;border-left:3px solid var(--line);color:var(--gray)}
+  .padtabs{display:none;gap:6px;margin-bottom:6px}
+  @media (max-width:719px){
+    .padwrap{flex-direction:column}
+    .padtabs{display:flex}
+    .padwrap.editing #padView{display:none}
+    .padwrap:not(.editing) #pad{display:none}
+  }
+  .note .txt{white-space:normal}
+  .note .txt p{margin:4px 0}
+  .note .txt pre{background:var(--ground);border-radius:6px;padding:5px 7px;overflow:auto;font-size:11.5px}
   .note{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
   .note .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
   .note .when{color:var(--gray);font-size:11.5px;white-space:nowrap}
@@ -66,7 +90,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.0.1</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.1.0</div>
 </header>
 
 <div class="cards">
@@ -108,16 +132,27 @@
 
   <div class="card">
     <h2>Notepad</h2>
-    <textarea id="pad" placeholder="The idea that arrived at this tempo — a lick, a groove, a tune fragment, a thing to practice. Autosaves as you type."></textarea>
+    <div class="padtabs">
+      <button id="tabEdit" class="on">Edit</button><button id="tabView">Preview</button>
+    </div>
+    <div class="padtools" id="padTools"></div>
+    <div class="padwrap editing" id="padWrap">
+      <textarea id="pad" placeholder="The idea that arrived at this tempo — markdown welcome. Autosaves as you type; the preview renders live."></textarea>
+      <div id="padView"></div>
+    </div>
     <div class="transport" style="margin-top:10px">
       <button id="saveNote" class="primary">Save note</button>
-      <button id="exportBtn">Export (.md)</button>
+      <button id="exportBtn">Export (.atchart.md)</button>
+      <button id="copyBtn">Copy</button>
+      <button id="importBtn">Import</button>
+      <input type="file" id="importFile" accept=".md,.atchart.md,.txt" style="display:none">
       <span id="saveMsg" class="hint" style="margin:0"></span>
     </div>
     <div class="hint">Saving stamps the note with the metronome's current settings — an idea
     remembers the tempo it came at, and <b>Apply</b> on any note sets the metronome back to
-    that moment. Export writes pad + notes as markdown, settings included. (This notepad is
-    a pattern: it will grow idea-development features and reach the other apps.)</div>
+    that moment. Export writes one <b>.atchart.md</b> file — pad, notes and settings — that
+    any At-Etudes app can open; Import merges one back; Copy puts the same file on the
+    clipboard. The file is the handoff channel: nothing leaves this machine.</div>
   </div>
 </div>
 
@@ -126,10 +161,11 @@
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.0.1 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.1.0 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
-autosaves locally; Export keeps a markdown copy with each note's metronome settings as
-data. Everything runs in this file, offline.</footer>
+is the shared At-Etudes component: markdown with live preview, notes carrying settings
+as data, one .atchart.md file any sibling app can open. Everything runs in this file,
+offline.</footer>
 </div>
 
 <script>
@@ -197,6 +233,1599 @@ function createTapTempo(o={}){
     return Math.round(Math.min(200,Math.max(30,60/iv)));
   };
 }
+/* ============ shared engine modules (hand-inlined, anti-drift pinned) ============
+   Canonical sources: engine/chord.mjs · engine/atchart.mjs · engine/markdown.mjs ·
+   engine/notepad.mjs. The notepad serializes THROUGH the format engine — no rival
+   writer lives in this file. metronome.test.mjs pins these inlines verbatim. */
+const CHORD = (() => {
+/* chord.mjs — the shared chord-symbol parser.
+ *
+ * Pure function: chord symbol string → structured chord. No DOM, no state.
+ * Built once for Triadetudes' break-down mode (roadmap §3.1) and the .atchart.md
+ * format (Substitute Teacher PRD §3) — the single largest piece of shared code
+ * in the family, per the family note.
+ *
+ * Doctrine: every quality is a NAMED RULE deriving an interval set from pitch-class
+ * math; the module asserts structural sanity of every rule at load (root present,
+ * ascending, unique). Nothing is hand-placed per chord.
+ */
+
+// ---------- pitch-class primitives (mirrors the shipped Triadetudes core) ----------
+
+const LETTER_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+
+function accOf(name) {
+  let a = 0;
+  for (const ch of name.slice(1)) a += ch === "#" ? 1 : ch === "b" ? -1 : 0;
+  return a;
+}
+
+function pcOf(name) {
+  return (((LETTER_PC[name[0]] + accOf(name)) % 12) + 12) % 12;
+}
+
+const mod12 = (n) => ((n % 12) + 12) % 12;
+
+// ---------- named quality rules ----------
+// Base triads + seventh/sixth structures as interval sets from the root.
+// deg maps chord-degree → interval so alterations are transforms, not new tables.
+
+const DEG = { 1: 0, 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21 };
+
+const TRIADS = {
+  maj: [DEG[1], DEG[3], DEG[5]],
+  min: [DEG[1], DEG[3] - 1, DEG[5]],
+  dim: [DEG[1], DEG[3] - 1, DEG[5] - 1],
+  aug: [DEG[1], DEG[3], DEG[5] + 1],
+  sus4: [DEG[1], DEG[4], DEG[5]],
+  sus2: [DEG[1], DEG[2], DEG[5]],
+};
+
+// seventh-family rules: triad + the named seventh/sixth
+const SEVENTHS = {
+  maj7: { triad: "maj", add: DEG[7] },
+  7: { triad: "maj", add: DEG[7] - 1 },
+  m7: { triad: "min", add: DEG[7] - 1 },
+  m7b5: { triad: "dim", add: DEG[7] - 1 },
+  dim7: { triad: "dim", add: DEG[7] - 2 },
+  mMaj7: { triad: "min", add: DEG[7] },
+  6: { triad: "maj", add: DEG[6] },
+  m6: { triad: "min", add: DEG[6] },
+  "7sus4": { triad: "sus4", add: DEG[7] - 1 },
+};
+
+// extension degrees stack on top of a seventh structure
+const EXT_DEGREES = { 9: DEG[9], 11: DEG[11], 13: DEG[13] };
+
+// ---------- load-time structural assertions (golden rule 1, site form) ----------
+
+function assertRule(name, ivs) {
+  if (ivs[0] !== 0) throw new Error(`rule ${name}: no root`);
+  for (let i = 1; i < ivs.length; i++)
+    if (ivs[i] <= ivs[i - 1]) throw new Error(`rule ${name}: not ascending`);
+  if (new Set(ivs.map(mod12)).size !== ivs.length)
+    throw new Error(`rule ${name}: duplicate pitch class`);
+}
+for (const [n, ivs] of Object.entries(TRIADS)) assertRule(n, ivs);
+for (const [n, r] of Object.entries(SEVENTHS))
+  assertRule(n, [...TRIADS[r.triad], r.add]);
+
+// ---------- tokenizer ----------
+
+const ROOT_RE = /^([A-G])(#{1,2}|b{1,2})?/;
+
+const QUALITY_TOKENS = [
+  // order matters: longest / most specific first
+  ["maj13", { seventh: "maj7", exts: [9, 13] }],
+  ["maj11", { seventh: "maj7", exts: [9, 11] }],
+  ["maj9", { seventh: "maj7", exts: [9] }],
+  ["maj7", { seventh: "maj7" }],
+  ["Δ7", { seventh: "maj7" }],
+  ["Δ", { seventh: "maj7" }],
+  ["mMaj7", { seventh: "mMaj7" }],
+  ["mM7", { seventh: "mMaj7" }],
+  ["minMaj7", { seventh: "mMaj7" }],
+  ["m13", { seventh: "m7", exts: [9, 13] }],
+  ["m11", { seventh: "m7", exts: [9, 11] }],
+  ["m9", { seventh: "m7", exts: [9] }],
+  ["m7b5", { seventh: "m7b5" }],
+  ["ø7", { seventh: "m7b5" }],
+  ["ø", { seventh: "m7b5" }],
+  ["m7", { seventh: "m7" }],
+  ["m6", { seventh: "m6" }],
+  ["min7", { seventh: "m7" }],
+  ["min", { triad: "min" }],
+  ["m", { triad: "min" }],
+  ["-7", { seventh: "m7" }],
+  ["-", { triad: "min" }],
+  ["dim7", { seventh: "dim7" }],
+  ["°7", { seventh: "dim7" }],
+  ["o7", { seventh: "dim7" }],
+  ["dim", { triad: "dim" }],
+  ["°", { triad: "dim" }],
+  ["aug", { triad: "aug" }],
+  ["+", { triad: "aug" }],
+  ["13sus4", { seventh: "7sus4", exts: [9, 13] }],
+  ["9sus4", { seventh: "7sus4", exts: [9] }],
+  ["7sus4", { seventh: "7sus4" }],
+  ["7sus", { seventh: "7sus4" }],
+  ["sus4", { triad: "sus4" }],
+  ["sus2", { triad: "sus2" }],
+  ["sus", { triad: "sus4" }],
+  ["13", { seventh: "7", exts: [9, 13] }],
+  ["11", { seventh: "7", exts: [9, 11] }],
+  ["9", { seventh: "7", exts: [9] }],
+  ["7", { seventh: "7" }],
+  ["6", { seventh: "6" }],
+];
+
+const ALTER_RE = /^(b5|#5|b9|#9|#11|b13|alt|add9|add11|add13|no3|no5)/;
+
+// the named rule for "alt": b9 #9 #5 over a dominant — the tritone-sub hearing
+const ALT_SET = ["b9", "#9", "#5"];
+
+const ALTER_APPLY = {
+  b5: (ivs) => replaceDeg(ivs, DEG[5], DEG[5] - 1),
+  "#5": (ivs) => replaceDeg(ivs, DEG[5], DEG[5] + 1),
+  b9: (ivs) => addIv(ivs, DEG[9] - 1),
+  "#9": (ivs) => addIv(ivs, DEG[9] + 1),
+  "#11": (ivs) => addIv(ivs, DEG[11] + 1),
+  b13: (ivs) => addIv(ivs, DEG[13] - 1),
+  add9: (ivs) => addIv(ivs, DEG[9]),
+  add11: (ivs) => addIv(ivs, DEG[11]),
+  add13: (ivs) => addIv(ivs, DEG[13]),
+  no3: (ivs) => ivs.filter((iv) => mod12(iv) !== 4 && mod12(iv) !== 3),
+  no5: (ivs) => ivs.filter((iv) => mod12(iv) !== 7),
+};
+
+function replaceDeg(ivs, from, to) {
+  return ivs.map((iv) => (iv === from ? to : iv));
+}
+function addIv(ivs, iv) {
+  return ivs.includes(iv) ? ivs : [...ivs, iv];
+}
+
+// ---------- the parser ----------
+
+/**
+ * parseChord("Dm7") →
+ * { input, root:{name,pc}, bass:{name,pc}|null, triad:"min", seventh:"m7"|null,
+ *   extensions:[9,...], alterations:["b9",...], intervals:[0,3,7,10], pcs:[2,5,9,0],
+ *   symbol: canonical re-spelling }
+ * Throws on unparseable input (callers present the message; bad user text is data,
+ * not a crash — see ST PRD §8.2).
+ */
+function parseChord(input) {
+  if (typeof input !== "string") throw new Error("chord symbol must be a string");
+  const src = input.trim();
+  if (!src) throw new Error("empty chord symbol");
+
+  // slash bass: split on the LAST slash whose right side parses as a note
+  let head = src,
+    bassName = null;
+  const slash = src.lastIndexOf("/");
+  if (slash > 0) {
+    const right = src.slice(slash + 1).trim();
+    if (ROOT_RE.test(right) && right.replace(ROOT_RE, "") === "") {
+      head = src.slice(0, slash).trim();
+      bassName = right;
+    }
+  }
+
+  const rm = head.match(ROOT_RE);
+  if (!rm) throw new Error(`no root in "${input}"`);
+  const rootName = rm[1] + (rm[2] || "");
+  let rest = head.slice(rm[0].length);
+
+  // quality token (longest match wins by table order)
+  let triad = "maj",
+    seventh = null,
+    exts = [];
+  for (const [tok, spec] of QUALITY_TOKENS) {
+    if (rest.startsWith(tok)) {
+      // "m" must not swallow the m of "maj" (table order already guards; belt+braces)
+      rest = rest.slice(tok.length);
+      if (spec.seventh) {
+        seventh = spec.seventh;
+        triad = SEVENTHS[seventh].triad;
+      } else triad = spec.triad;
+      exts = [...(spec.exts || [])];
+      break;
+    }
+  }
+
+  // alterations, in written order; parens transparent
+  const alterations = [];
+  let guard = 0;
+  while (rest.length) {
+    if (++guard > 12) throw new Error(`unparseable tail "${rest}" in "${input}"`);
+    if (rest[0] === "(" || rest[0] === ")" || rest[0] === " ") {
+      rest = rest.slice(1);
+      continue;
+    }
+    const am = rest.match(ALTER_RE);
+    if (!am) throw new Error(`unrecognized "${rest}" in "${input}"`);
+    alterations.push(am[1]);
+    rest = rest.slice(am[1].length);
+  }
+
+  // "alt" expands to the named rule, and implies a plain dominant if none given
+  let alts = alterations.flatMap((a) => (a === "alt" ? ALT_SET : [a]));
+  if (alterations.includes("alt") && !seventh) {
+    seventh = "7";
+    triad = "maj";
+  }
+
+  // derive intervals: triad → seventh add → extensions → alteration transforms
+  let intervals = [...TRIADS[triad]];
+  if (seventh) intervals = [...TRIADS[SEVENTHS[seventh].triad], SEVENTHS[seventh].add];
+  for (const e of exts) intervals = addIv(intervals, EXT_DEGREES[e]);
+  for (const a of alts) {
+    const fn = ALTER_APPLY[a];
+    if (!fn) throw new Error(`no rule for alteration "${a}"`);
+    intervals = fn(intervals);
+  }
+  intervals = [...intervals].sort((a, b) => a - b);
+
+  // structural assertions on the derived result — never ship an unasserted chord
+  if (intervals[0] !== 0 && !alterations.includes("no3"))
+    if (!intervals.includes(0)) throw new Error(`derived chord lost its root: "${input}"`);
+  const pcs = intervals.map((iv) => mod12(pcOf(rootName) + iv));
+  if (new Set(pcs).size !== pcs.length)
+    throw new Error(`derived duplicate pitch class in "${input}"`);
+
+  return {
+    input: src,
+    root: { name: rootName, pc: pcOf(rootName) },
+    bass: bassName ? { name: bassName, pc: pcOf(bassName) } : null,
+    triad,
+    seventh,
+    extensions: exts,
+    alterations,
+    intervals,
+    pcs,
+    symbol: canonicalSymbol(rootName, triad, seventh, exts, alterations, bassName),
+  };
+}
+
+// ---------- canonical re-spelling (the serializer's half of round-trip) ----------
+
+function canonicalSymbol(root, triad, seventh, exts, alterations, bass) {
+  let q;
+  const top = exts.length ? Math.max(...exts) : null;
+  if (seventh === "maj7") q = top ? `maj${top}` : "maj7";
+  else if (seventh === "7") q = top ? String(top) : "7";
+  else if (seventh === "m7") q = top ? `m${top}` : "m7";
+  else if (seventh === "m7b5") q = "m7b5";
+  else if (seventh === "dim7") q = "dim7";
+  else if (seventh === "mMaj7") q = "mMaj7";
+  else if (seventh === "6") q = "6";
+  else if (seventh === "m6") q = "m6";
+  else if (seventh === "7sus4") q = top ? `${top}sus4` : "7sus4";
+  else
+    q = { maj: "", min: "m", dim: "dim", aug: "aug", sus4: "sus4", sus2: "sus2" }[triad];
+  const alt = alterations.filter((a) => a !== "alt").join("");
+  const altTag = alterations.includes("alt") ? "alt" : alt;
+  return root + q + altTag + (bass ? "/" + bass : "");
+}
+
+// ---------- roman-numeral tokens (parsed, not resolved — resolution needs a key) ----------
+
+const ROMAN_RE = /^(b|#)?(VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)(°|o|ø|\+)?(maj7|m7b5|7|maj9|9|6)?$/;
+const ROMAN_DEG = { i: 0, ii: 1, iii: 2, iv: 3, v: 4, vi: 5, vii: 6 };
+
+/** parseRoman("iim7") → {degree:1, lowered:false, caseQuality:"min", seventh:"m7"} or null */
+function parseRoman(tok) {
+  const m = tok.trim().match(ROMAN_RE);
+  if (!m) return null;
+  const numeral = m[2];
+  const lower = numeral === numeral.toLowerCase();
+  let caseQuality = lower ? "min" : "maj";
+  if (m[3] === "°" || m[3] === "o") caseQuality = "dim";
+  if (m[3] === "ø") caseQuality = "dim";
+  if (m[3] === "+") caseQuality = "aug";
+  return {
+    degree: ROMAN_DEG[numeral.toLowerCase()],
+    accidental: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0,
+    caseQuality,
+    halfDim: m[3] === "ø",
+    seventh: m[4] || null,
+  };
+}
+
+// ---------- roman-numeral RESOLUTION (needs a key — the consumer's half) ----------
+// Triadetudes v0.6 break-down mode resolves "ii7 V7 Imaj7" against the étude's
+// selected key and scale. Scale steps are named rules asserted at load, exactly
+// like the quality rules above; the resolved symbol is re-parsed by parseChord,
+// so every resolution passes the parser's own structural assertions.
+
+const SCALE_LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+
+const SCALE_STEPS = {
+  major: [2, 2, 1, 2, 2, 2, 1],
+  harm: [2, 1, 2, 2, 1, 3, 1],
+  mel: [2, 1, 2, 2, 2, 2, 1],
+};
+for (const [n, steps] of Object.entries(SCALE_STEPS)) {
+  if (steps.length !== 7) throw new Error(`scale ${n}: needs 7 steps`);
+  if (steps.reduce((a, b) => a + b, 0) !== 12)
+    throw new Error(`scale ${n}: steps must sum to an octave`);
+}
+
+/** scaleNotes("Eb","major") → 7 spelled degrees [{name,pc},…] — one per letter */
+function scaleNotes(tonic, scaleType = "major") {
+  const steps = SCALE_STEPS[scaleType];
+  if (!steps) throw new Error(`unknown scale type "${scaleType}"`);
+  let idx = SCALE_LETTERS.indexOf(tonic[0]);
+  if (idx < 0) throw new Error(`bad tonic "${tonic}"`);
+  const notes = [{ name: tonic, pc: pcOf(tonic) }];
+  for (let i = 0; i < 6; i++) {
+    idx = (idx + 1) % 7;
+    const L = SCALE_LETTERS[idx];
+    const target = mod12(notes[notes.length - 1].pc + steps[i]);
+    let alt = (target - LETTER_PC[L]) % 12;
+    if (alt > 6) alt -= 12;
+    if (alt < -6) alt += 12;
+    notes.push({
+      name: L + (alt === 1 ? "#" : alt === 2 ? "##" : alt === -1 ? "b" : alt === -2 ? "bb" : ""),
+      pc: target,
+    });
+  }
+  return notes;
+}
+
+// the numeral's case and figures name the quality — the user's numeral wins
+// over the key's diatonic default ("iv" in major is a borrowed minor chord)
+function romanQualitySuffix(r) {
+  if (r.seventh === "maj7") return r.caseQuality === "min" ? "mMaj7" : "maj7";
+  if (r.seventh === "maj9") return r.caseQuality === "min" ? "mMaj7" : "maj9";
+  if (r.seventh === "7")
+    return r.halfDim ? "m7b5"
+      : r.caseQuality === "dim" ? "dim7"
+      : r.caseQuality === "min" ? "m7"
+      : r.caseQuality === "aug" ? "7#5"
+      : "7";
+  if (r.seventh === "9") return r.halfDim ? "m7b5" : r.caseQuality === "min" ? "m9" : "9";
+  if (r.seventh === "6") return r.caseQuality === "min" ? "m6" : "6";
+  if (r.halfDim) return "m7b5"; // ø with no figure still implies the seventh
+  return { maj: "", min: "m", dim: "dim", aug: "aug" }[r.caseQuality];
+}
+
+/**
+ * resolveRoman("ii7","C") → { symbol:"Dm7", parsed:<parseChord result> }.
+ * Returns null when the token is not a roman numeral (callers then try
+ * parseChord directly). The degree comes from the key's spelled scale; a
+ * leading b/# bends the spelled note, not the pitch class table (bVII in
+ * Eb major is Db, not C#).
+ */
+function resolveRoman(tok, key, scaleType = "major") {
+  const r = parseRoman(tok);
+  if (!r) return null;
+  const base = scaleNotes(key, scaleType)[r.degree];
+  let name = base.name;
+  if (r.accidental) {
+    const acc = accOf(name) + r.accidental;
+    if (Math.abs(acc) > 2)
+      throw new Error(`"${tok}" in ${key}: spelling needs ${Math.abs(acc)} accidentals`);
+    name = name[0] + (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc));
+  }
+  const symbol = name + romanQualitySuffix(r);
+  return { symbol, parsed: parseChord(symbol) };
+}
+return { parseChord, resolveRoman, scaleNotes, pcOf, accOf };
+})();
+const ATCHART = (() => {
+const { parseChord } = CHORD;
+/* atchart.mjs — parser + serializer for the .atchart.md format (v1 + v1.1).
+ * Spec: docs/atchart-format.md (v1 ratified 2026-08-08; v1.1 ratified
+ * 2026-08-10 — §2.6 app namespaces, §2.7 unknown frontmatter keys, §5 the
+ * handoff channel; Update Log 260810.5). Pure, no DOM.
+ *
+ * Round-trip law (§4): parse→serialize→parse identical; serialize is a fixed
+ * point; and — v1.1 — unknown frontmatter keys and apps: entries replay
+ * VERBATIM, so a file can pass through several applications and come back
+ * whole. A v1 file with no apps: round-trips byte-identically and never
+ * acquires a version bump; `atchart: 1.1` becomes writable only when
+ * something actually writes an apps: map (writeApp).
+ *
+ * §2.6 is deliberately schema-free: entries are opaque — carried,
+ * round-tripped, never interpreted, never validated. A validator here would
+ * be the bug: opacity is the mechanism that keeps unknown app ids and
+ * higher-v entries intact across readers.
+ */
+
+const ATCHART_VERSION = 1;
+// the body-skeleton slot markers (§2.5 preservation): exported so consumers
+// building documents THROUGH this engine (engine/notepad.mjs) can place the
+// chart slot without copying the literal
+const CHART_SLOT = "\x00CHART\x00";
+
+const DEFAULTS = { key: "C", meter: "4/4" };
+const FM_ORDER = ["atchart", "title", "composer", "key", "meter", "tempo", "form", "sections"];
+
+// ---------- frontmatter ----------
+// Deliberately tiny YAML subset: scalar lines + [a, b] lists + ONE nested
+// block, apps: (§2.6). v1.1 §2.7: every line is kept as a raw segment in
+// original order, and the serializer REPLAYS the raw text for anything the
+// caller has not changed — unknown keys, comments, odd spacing and apps:
+// entries all round-trip byte-identically instead of being re-normalized.
+
+function parseScalar(val) {
+  if (val.startsWith("[") && val.endsWith("]"))
+    return val.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean);
+  if ((val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'")))
+    return val.slice(1, -1);
+  return /^-?\d+(\.\d+)?$/.test(val) ? Number(val) : val;
+}
+
+function canonLine(k, v) {
+  if (Array.isArray(v)) return `${k}: [${v.join(", ")}]`;
+  if (typeof v === "string" && /[:#\[\]]/.test(v)) return `${k}: "${v}"`;
+  if (typeof v === "string" && v !== v.trim()) return `${k}: "${v}"`;
+  return `${k}: ${v}`;
+}
+
+function parseFrontmatter(lines) {
+  const meta = {};
+  const fm = []; // ordered raw segments: {kind:"key"|"verbatim"|"apps", ...}
+  let i = 0;
+  while (i < lines.length) {
+    const raw = lines[i];
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) { fm.push({ kind: "verbatim", raw }); i++; continue; }
+    if (/^\s/.test(raw)) { // indentation outside an apps: block: not ours, keep it
+      fm.push({ kind: "verbatim", raw }); i++; continue;
+    }
+    const ci = line.indexOf(":");
+    if (ci < 1) throw new Error(`bad frontmatter line: "${raw}"`);
+    const key = line.slice(0, ci).trim();
+    const rest = line.slice(ci + 1).trim();
+    if (key === "apps" && rest === "") {
+      // §2.6: entries are RAW — carried, round-tripped, never interpreted
+      const entries = [];
+      i++;
+      while (i < lines.length && /^\s+\S/.test(lines[i])) {
+        const el = lines[i];
+        const em = el.trim().match(/^([A-Za-z0-9_-]+):/);
+        if (em) entries.push({ id: em[1], raw: el });
+        else if (entries.length) entries[entries.length - 1].raw += "\n" + el;
+        else entries.push({ id: null, raw: el });
+        i++;
+      }
+      fm.push({ kind: "apps", entries });
+      continue;
+    }
+    const value = parseScalar(rest);
+    fm.push({ kind: "key", key, raw, value });
+    meta[key] = value;
+    i++;
+  }
+  return { meta, fm };
+}
+
+const valEq = (a, b) =>
+  Array.isArray(a) && Array.isArray(b) ? a.join("\u0000") === b.join("\u0000") : a === b;
+
+function serializeFrontmatter(meta, fm) {
+  if (!fm) { // programmatically-built doc: canonical order, canonical lines
+    const keys = [...FM_ORDER.filter((k) => k in meta),
+      ...Object.keys(meta).filter((k) => !FM_ORDER.includes(k))];
+    return keys.map((k) => canonLine(k, meta[k])).join("\n");
+  }
+  const out = [];
+  const seen = new Set();
+  for (const seg of fm) {
+    if (seg.kind === "verbatim") { out.push(seg.raw); continue; }
+    if (seg.kind === "apps") {
+      seen.add("apps");
+      out.push("apps:");
+      for (const e of seg.entries) out.push(e.raw);
+      continue;
+    }
+    seen.add(seg.key);
+    if (!(seg.key in meta)) continue;              // deleted by the caller
+    if (valEq(meta[seg.key], seg.value)) out.push(seg.raw); // untouched: VERBATIM
+    else out.push(canonLine(seg.key, meta[seg.key]));       // changed: canonical
+  }
+  for (const k of Object.keys(meta)) {
+    if (seen.has(k) || k === "apps") continue;
+    // defaults injected at parse are not the file's text — appending them
+    // would break §4's byte-identity for files that never wrote them
+    if (k in DEFAULTS && valEq(meta[k], DEFAULTS[k])) continue;
+    out.push(canonLine(k, meta[k]));
+  }
+  return out.join("\n");
+}
+
+// ---------- §2.6: the apps accessor ----------
+// The format claims the key `apps` and NOTHING inside it. Entries are opaque
+// at parse; readApp materializes ONE entry on demand for its own app;
+// writeApp replaces ONE entry with a canonical serialization. Both return
+// new documents / fresh objects and never mutate their input. There is no
+// schema and no validator, on purpose — a helpful validator here would be
+// the bug, because opacity is what lets one file pass through several apps
+// (unknown ids, higher payload v) and come back whole.
+
+function parseFlow(src) {
+  let i = 0;
+  const s = String(src);
+  const fail = () => { throw new Error("flow"); };
+  const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+  function scalarEnd(stops) {
+    let j = i;
+    while (j < s.length && !stops.includes(s[j])) j++;
+    return j;
+  }
+  function value() {
+    ws();
+    const c = s[i];
+    if (c === "{") {
+      i++; const o = {}; ws();
+      if (s[i] === "}") { i++; return o; }
+      for (;;) {
+        ws();
+        const m = s.slice(i).match(/^([A-Za-z0-9_.-]+)\s*:/) || fail();
+        i += m[0].length;
+        o[m[1]] = value();
+        ws();
+        if (s[i] === ",") { i++; continue; }
+        if (s[i] === "}") { i++; return o; }
+        fail();
+      }
+    }
+    if (c === "[") {
+      i++; const a = []; ws();
+      if (s[i] === "]") { i++; return a; }
+      for (;;) {
+        a.push(value()); ws();
+        if (s[i] === ",") { i++; continue; }
+        if (s[i] === "]") { i++; return a; }
+        fail();
+      }
+    }
+    if (c === '"' || c === "'") {
+      const q = c; let out = ""; i++;
+      while (i < s.length && s[i] !== q) {
+        if (s[i] === "\\" && i + 1 < s.length) { out += s[i + 1]; i += 2; }
+        else { out += s[i]; i++; }
+      }
+      if (s[i] !== q) fail();
+      i++; return out;
+    }
+    const j = scalarEnd([",", "}", "]"]);
+    const tok = s.slice(i, j).trim();
+    i = j;
+    if (tok === "") fail();
+    if (tok === "true") return true;
+    if (tok === "false") return false;
+    if (tok === "null") return null;
+    if (/^-?\d+(\.\d+)?$/.test(tok)) return Number(tok);
+    return tok; // bare word = string (the spec's own example: `scale: major`)
+  }
+  const v = value(); ws();
+  if (i < s.length) fail();
+  return v;
+}
+
+function serializeFlow(v) {
+  if (v === null) return "null";
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (typeof v === "string")
+    return /^[A-Za-z0-9_.-]+$/.test(v) && !/^-?\d+(\.\d+)?$/.test(v) &&
+      !["true", "false", "null"].includes(v)
+      ? v : JSON.stringify(v);
+  if (Array.isArray(v)) return "[" + v.map(serializeFlow).join(", ") + "]";
+  if (typeof v === "object")
+    return "{" + Object.entries(v)
+      .map(([k, x]) => `${k}: ${serializeFlow(x)}`).join(", ") + "}";
+  return JSON.stringify(String(v));
+}
+
+/** readApp(doc, id) → the app's own entry as a fresh object, or null.
+ * Never mutates doc; never validates the entry (no schema — see above). */
+function readApp(doc, id) {
+  const seg = (doc && doc._fm || []).find((x) => x.kind === "apps");
+  if (!seg) return null;
+  const e = seg.entries.find((x) => x.id === id);
+  if (!e) return null;
+  const m = e.raw.trim().match(/^[A-Za-z0-9_-]+:\s*([\s\S]*)$/);
+  try { return parseFlow(m ? m[1] : ""); }
+  catch { return null; } // an unreadable entry is absent to its app, never a throw
+}
+
+/** writeApp(doc, id, cfg) → a NEW document with only this app's entry
+ * replaced (canonical flow serialization). Every other entry's raw text —
+ * unknown app ids, higher payload v — replays verbatim. Writing an apps:
+ * map is the one thing that turns `atchart: 1` into `atchart: 1.1`. */
+function writeApp(doc, id, cfg) {
+  if (!/^[A-Za-z0-9_-]+$/.test(String(id)))
+    throw new Error(`writeApp: app id "${id}" is not a slug`);
+  const nd = JSON.parse(JSON.stringify(doc));
+  if (!nd._fm) {
+    nd._fm = [];
+    const keys = [...FM_ORDER.filter((k) => k in nd.meta),
+      ...Object.keys(nd.meta).filter((k) => !FM_ORDER.includes(k))];
+    for (const k of keys) {
+      if (k in DEFAULTS && valEq(nd.meta[k], DEFAULTS[k])) continue;
+      nd._fm.push({ kind: "key", key: k, raw: canonLine(k, nd.meta[k]), value: nd.meta[k] });
+    }
+  }
+  let seg = nd._fm.find((x) => x.kind === "apps");
+  if (!seg) { seg = { kind: "apps", entries: [] }; nd._fm.push(seg); }
+  const line = `  ${id}: ${serializeFlow(cfg)}`;
+  const at = seg.entries.findIndex((x) => x.id === id);
+  if (at >= 0) seg.entries[at] = { id, raw: line };
+  else seg.entries.push({ id, raw: line });
+  if (Number(nd.meta.atchart) === 1) nd.meta.atchart = 1.1;
+  return nd;
+}
+
+// ---------- the chart block ----------
+
+function parseChartBlock(lines) {
+  const sections = [];
+  let cur = null;
+  const openSection = (name) => {
+    cur = { name, bars: [], melody: [] };
+    sections.push(cur);
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    let rest = line;
+    const secM = rest.match(/^@(\S+)\s*/);
+    if (secM) {
+      openSection(secM[1]);
+      rest = rest.slice(secM[0].length);
+      if (!rest) continue;
+    }
+    if (/^melody:/.test(rest)) {
+      if (!cur) openSection("A");
+      cur.melody.push(rest.replace(/^melody:\s*/, ""));
+      continue;
+    }
+    if (!cur) openSection("A");
+    parseBarLine(rest, cur);
+  }
+  return sections;
+}
+
+function parseBarLine(text, section) {
+  // tokenize on bar separators, tracking |: and :|
+  let i = 0;
+  let pendingRepeatStart = false;
+  let bar = null;
+  const flush = () => {
+    if (bar && (bar.chords.length || bar.repeatStart || bar.repeatEnd)) section.bars.push(bar);
+    bar = null;
+  };
+  // humans type "|Bbmaj7|G7#5|" — split on bar tokens directly, longest first,
+  // so :|: never decomposes into :| + : or | + :
+  const tokens = text
+    .split(/(:\|:|\|:|:\|(?!:)|\|)/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .flatMap((s) => (/^(:\|:|\|:|:\||\|)$/.test(s) ? [s] : s.split(/\s+/)));
+  for (const tok of tokens) {
+    if (tok === "|:") {
+      flush();
+      pendingRepeatStart = true;
+    } else if (tok === ":|") {
+      if (bar) bar.repeatEnd = true;
+      flush();
+    } else if (tok === "|") {
+      flush();
+    } else if (tok === ":|:") {
+      if (bar) bar.repeatEnd = true;
+      flush();
+      pendingRepeatStart = true;
+    } else {
+      if (!bar) {
+        bar = { chords: [], repeatStart: pendingRepeatStart, repeatEnd: false };
+        pendingRepeatStart = false;
+      }
+      // chord symbols validate through the shared parser — bad text is an error
+      // with a message naming the token, never a silently-wrong chart
+      const parsed = parseChord(tok);
+      bar.chords.push({ symbol: tok, parsed });
+    }
+    i++;
+  }
+  flush();
+}
+
+function serializeChartBlock(sections) {
+  const lines = [];
+  const multi = sections.length > 1 || sections[0]?.name !== "A";
+  for (const sec of sections) {
+    const parts = [];
+    for (const bar of sec.bars) {
+      parts.push(bar.repeatStart ? "|:" : "|");
+      parts.push(bar.chords.map((c) => c.symbol).join(" "));
+      if (bar.repeatEnd) {
+        parts.push(":|");
+      }
+    }
+    if (parts.length && parts[parts.length - 1] !== ":|") parts.push("|");
+    const head = multi ? `@${sec.name}  ` : "";
+    lines.push(head + parts.join(" "));
+    for (const m of sec.melody) lines.push((multi ? "     " : "") + "melody: " + m);
+  }
+  return lines.join("\n");
+}
+
+// ---------- substitutions ----------
+
+const SUB_RE = /^-\s+(\S+?)\.b(\d+)\s+(.+?)\s+(?:->|→)\s+(.+?)\s*(?:\[(.+?)\])?\s*$/;
+
+function parseSubLine(line) {
+  const m = line.match(SUB_RE);
+  if (!m) return null;
+  const parseSide = (s) => s.split(/\s+/).filter(Boolean).map((sym) => ({ symbol: sym, parsed: parseChord(sym) }));
+  return {
+    section: m[1],
+    bar: Number(m[2]),
+    original: parseSide(m[3]),
+    replacement: parseSide(m[4]),
+    name: m[5] || null,
+  };
+}
+
+function serializeSub(sub) {
+  const side = (cs) => cs.map((c) => c.symbol).join(" ");
+  return `- ${sub.section}.b${sub.bar}  ${side(sub.original)}  ->  ${side(sub.replacement)}${sub.name ? `  [${sub.name}]` : ""}`;
+}
+
+// ---------- the whole document ----------
+
+/**
+ * parseAtchart(text) → { meta, sections, substitutions, practiceLog, body }
+ * `body` is the document skeleton with placeholders, so serialization preserves
+ * every line the format doesn't claim (spec §2.5).
+ */
+function parseAtchart(text) {
+  if (typeof text !== "string") throw new Error("atchart source must be a string");
+  const lines = text.split(/\r?\n/);
+
+  // frontmatter
+  if (lines[0] !== "---") throw new Error("missing frontmatter (--- on line 1)");
+  const fmEnd = lines.indexOf("---", 1);
+  if (fmEnd < 0) throw new Error("unterminated frontmatter");
+  const { meta: fmMeta, fm } = parseFrontmatter(lines.slice(1, fmEnd));
+  const meta = { ...DEFAULTS, ...fmMeta };
+  if (meta.atchart === undefined) throw new Error("frontmatter must declare: atchart: 1");
+  if (Math.floor(Number(meta.atchart)) > ATCHART_VERSION)
+    throw new Error(`atchart version ${meta.atchart} is newer than this parser (v${ATCHART_VERSION})`);
+
+  // walk the body: extract the chart block and the two claimed sections,
+  // keep everything else verbatim
+  const body = [];
+  let chartLines = null;
+  const sections = [];
+  const substitutions = [];
+  const practiceLog = [];
+  let mode = "prose"; // prose | chart | subs | log
+  let sawChart = false;
+
+  for (let i = fmEnd + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (mode === "chart") {
+      if (/^```\s*$/.test(line)) {
+        sections.push(...parseChartBlock(chartLines));
+        chartLines = null;
+        mode = "prose";
+      } else chartLines.push(line);
+      continue;
+    }
+    if (/^```chart\s*$/.test(line)) {
+      if (sawChart) throw new Error("multiple chart blocks are reserved for v2");
+      sawChart = true;
+      chartLines = [];
+      mode = "chart";
+      body.push(CHART_SLOT);
+      continue;
+    }
+    if (/^##\s+Substitutions\s*$/i.test(line)) {
+      mode = "subs";
+      body.push(" SUBS ");
+      continue;
+    }
+    if (/^##\s+Practice log\s*$/i.test(line)) {
+      mode = "log";
+      body.push(" LOG ");
+      continue;
+    }
+    if (/^##?\s+/.test(line) && (mode === "subs" || mode === "log")) mode = "prose";
+
+    if (mode === "subs") {
+      const sub = line.trim() ? parseSubLine(line) : null;
+      if (sub) substitutions.push(sub);
+      else if (line.trim()) throw new Error(`bad substitution line: "${line}"`);
+      continue;
+    }
+    if (mode === "log") {
+      if (line.trim()) practiceLog.push(line.replace(/^-\s*/, ""));
+      continue;
+    }
+    body.push(line);
+  }
+  if (mode === "chart") throw new Error("unterminated chart block");
+  if (!sawChart) throw new Error("no ```chart block found");
+
+  return { meta, sections, substitutions, practiceLog, body, _fm: fm };
+}
+
+function serializeAtchart(doc) {
+  const out = [];
+  out.push("---");
+  out.push(serializeFrontmatter(doc.meta, doc._fm));
+  out.push("---");
+  for (const line of doc.body) {
+    if (line === CHART_SLOT) {
+      out.push("```chart");
+      out.push(serializeChartBlock(doc.sections));
+      out.push("```");
+    } else if (line === " SUBS ") {
+      out.push("## Substitutions");
+      out.push("");
+      for (const s of doc.substitutions) out.push(serializeSub(s));
+    } else if (line === " LOG ") {
+      out.push("## Practice log");
+      out.push("");
+      for (const l of doc.practiceLog) out.push("- " + l);
+    } else out.push(line);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").replace(/\n+$/, "") + "\n";
+}
+return { parseAtchart, serializeAtchart, readApp, writeApp, CHART_SLOT, ATCHART_VERSION };
+})();
+const MD = (() => {
+/* markdown.mjs — the notepad's markdown engine (component v1).
+ *
+ * A CommonMark SUBSET that builds DOM nodes, written in-house because the two
+ * guarantees below cannot be imported (notepad item, charter §7, web contract
+ * §5 — every dependency must pass the inline test):
+ *
+ *   1. None of the four HTML-string sinks (the grep test in
+ *      markdown.test.mjs names them) appears anywhere in this module. The
+ *      renderer builds the tree with createElement / createTextNode /
+ *      textContent only, so user input being data-not-code is STRUCTURAL,
+ *      not a sanitizer's promise.
+ *   2. NO HTML PASSTHROUGH. CommonMark permits raw inline and block HTML;
+ *      this subset REFUSES it: a typed `<script>` is text and renders as the
+ *      visible characters `<script>`. This is a documented, tested divergence
+ *      from CommonMark — not an oversight to be "fixed" later.
+ *
+ * The subset (what a musician writing practice notes actually types):
+ * ATX headings · paragraphs · *em* / **strong** · bullet + ordered lists (ONE
+ * nesting level) · > blockquotes · `code spans` · fenced blocks with info
+ * strings · --- rules · [text](url) · hard line breaks (two trailing spaces).
+ * Deliberately out: tables, footnotes, task lists, wiki-links, autolinks,
+ * setext headings, deeper nesting, syntax highlighting inside fences.
+ *
+ * Load-bearing choices:
+ * - Fenced blocks are OPAQUE: the node carries {info, body} byte-identically
+ *   and the renderer shows them as preformatted text, never interpreting
+ *   them. This is the hook the payload convention and the `chart` block hang
+ *   on — engine/atchart.mjs stays the only thing that reads a chart fence.
+ * - An UNCLOSED fence is not a fence: the ``` line renders as the literal
+ *   characters typed and parsing continues — good for live preview (typing a
+ *   fence never swallows the rest of the note) and no content is ever lost.
+ * - Links sanitize by scheme allow-list AT RENDER: http, https, mailto, and
+ *   same-document # fragments. Anything else (javascript:, data:, vbscript:,
+ *   file:) renders as the literal source text — inert AND nothing lost.
+ * - Unknown/malformed syntax degrades to text, NEVER throws. There is no
+ *   error path that loses content.
+ * - ROUND-TRIP IS NOT CLAIMED. This is a renderer, not a formatter: the
+ *   textarea source stays canonical, there is no serializer and no
+ *   fixed-point law here (that law lives in engine/atchart.mjs).
+ *
+ * applyEdit(src, sel, op) is the toolbar's seam — a pure string+selection
+ * transform (the palette inserts through the same seam via {type:"insert"}).
+ * Wrapping ops toggle rather than nest; line ops apply across every line the
+ * selection touches; the returned selection is the contract that the caret
+ * survives every op.
+ *
+ * Pure module: no DOM globals at parse time; renderTo reaches the document
+ * only through el.ownerDocument, so tests run against a stub.
+ */
+
+// ---------- parse ----------
+
+const FENCE_OPEN = /^```(.*)$/;
+const FENCE_CLOSE = /^```\s*$/;
+const HEADING = /^(#{1,6})\s+(.*)$/;
+const RULE = /^-{3,}\s*$/;
+const BULLET = /^(\s*)([-*+])\s+(.*)$/;
+const ORDERED = /^(\s*)(\d{1,9})[.)]\s+(.*)$/;
+const MAX_DEPTH = 8; // quotes-in-quotes beyond this degrade to text, never throw
+
+function parseMarkdown(src) {
+  const s = typeof src === "string" ? src : String(src ?? "");
+  return { type: "doc", children: parseBlocks(s.split("\n"), 0) };
+}
+
+function matchListLine(line) {
+  let m = line.match(BULLET);
+  if (m) return { indent: m[1].length, ordered: false, num: null, text: m[3] };
+  m = line.match(ORDERED);
+  if (m) return { indent: m[1].length, ordered: true, num: +m[2], text: m[3] };
+  return null;
+}
+
+function isBlockStart(line) {
+  return HEADING.test(line) || RULE.test(line) || /^>/.test(line) ||
+    FENCE_OPEN.test(line) || (matchListLine(line)?.indent === 0);
+}
+
+function parseBlocks(lines, depth) {
+  if (depth > MAX_DEPTH)
+    return [{ type: "para", children: [{ type: "text", text: lines.join("\n") }] }];
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^\s*$/.test(line)) { i++; continue; }
+
+    const f = line.match(FENCE_OPEN);
+    if (f) {
+      let close = -1;
+      for (let j = i + 1; j < lines.length; j++)
+        if (FENCE_CLOSE.test(lines[j])) { close = j; break; }
+      if (close >= 0) {
+        // opaque node; info string and body byte-identical through parse
+        out.push({ type: "fence", info: f[1].trim(),
+          body: lines.slice(i + 1, close).join("\n") });
+        i = close + 1; continue;
+      }
+      // unclosed fence: the literal characters typed, parsing continues
+      out.push({ type: "para", children: [{ type: "text", text: line }] });
+      i++; continue;
+    }
+
+    const h = line.match(HEADING);
+    if (h) {
+      out.push({ type: "heading", level: h[1].length,
+        children: parseInline(h[2].replace(/\s+#+\s*$/, "")) });
+      i++; continue;
+    }
+
+    if (RULE.test(line)) { out.push({ type: "rule" }); i++; continue; }
+
+    if (/^>/.test(line)) {
+      const q = [];
+      while (i < lines.length && /^>/.test(lines[i])) {
+        q.push(lines[i].replace(/^> ?/, "")); i++;
+      }
+      out.push({ type: "quote", children: parseBlocks(q, depth + 1) });
+      continue;
+    }
+
+    const li = matchListLine(line);
+    if (li && li.indent === 0) {
+      const [node, next] = parseList(lines, i);
+      out.push(node); i = next; continue;
+    }
+
+    // paragraph: gather until a blank line or another block starts
+    const para = [];
+    while (i < lines.length && !/^\s*$/.test(lines[i]) && !isBlockStart(lines[i])) {
+      para.push(lines[i]); i++;
+    }
+    if (!para.length) { // a block-start we cannot consume (defensive; unreachable)
+      para.push(lines[i]); i++;
+    }
+    const children = [];
+    para.forEach((ln, k) => {
+      const hard = /\S {2,}$/.test(ln); // two+ trailing spaces = hard break
+      children.push(...parseInline(ln.replace(/\s+$/, "")));
+      if (k < para.length - 1)
+        children.push(hard ? { type: "br" } : { type: "text", text: " " });
+    });
+    out.push({ type: "para", children });
+  }
+  return out;
+}
+
+function parseList(lines, i) {
+  const first = matchListLine(lines[i]);
+  const ordered = first.ordered;
+  const items = [];
+  while (i < lines.length) {
+    const m = matchListLine(lines[i]);
+    if (!m || m.indent !== 0 || m.ordered !== ordered) break;
+    const item = { children: parseInline(m.text), sub: null };
+    i++;
+    // ONE nesting level: an immediately following indented run is the sub-list;
+    // anything deeper is flattened into it (deeper nesting is out of the subset)
+    const subItems = [];
+    let subOrdered = null;
+    while (i < lines.length) {
+      const sm = matchListLine(lines[i]);
+      if (!sm || sm.indent === 0) break;
+      if (subOrdered === null) subOrdered = sm.ordered;
+      subItems.push({ children: parseInline(sm.text), sub: null });
+      i++;
+    }
+    if (subItems.length)
+      item.sub = { type: "list", ordered: subOrdered, start: 1, items: subItems };
+    items.push(item);
+  }
+  return [{ type: "list", ordered, start: first.num ?? 1, items }, i];
+}
+
+function parseInline(s, depth) {
+  depth = depth || 0;
+  const out = [];
+  let buf = "", i = 0;
+  const flush = () => { if (buf) { out.push({ type: "text", text: buf }); buf = ""; } };
+  if (depth > MAX_DEPTH) return [{ type: "text", text: s }];
+  while (i < s.length) {
+    const c = s[i];
+    if (c === "`") {
+      const end = s.indexOf("`", i + 1);
+      if (end > i + 1) { flush(); out.push({ type: "code", text: s.slice(i + 1, end) }); i = end + 1; continue; }
+      buf += c; i++; continue;
+    }
+    if (s.startsWith("**", i)) {
+      const end = s.indexOf("**", i + 2);
+      if (end > i + 2) {
+        flush();
+        out.push({ type: "strong", children: parseInline(s.slice(i + 2, end), depth + 1) });
+        i = end + 2; continue;
+      }
+      buf += "*"; i++; continue; // lone markers are the literal characters typed
+    }
+    if (c === "*") {
+      const end = s.indexOf("*", i + 1);
+      if (end > i + 1) {
+        flush();
+        out.push({ type: "em", children: parseInline(s.slice(i + 1, end), depth + 1) });
+        i = end + 1; continue;
+      }
+      buf += c; i++; continue;
+    }
+    if (c === "[") {
+      const close = s.indexOf("]", i + 1);
+      if (close > i && s[close + 1] === "(") {
+        const rp = s.indexOf(")", close + 2);
+        if (rp >= 0) {
+          flush();
+          out.push({ type: "link", href: s.slice(close + 2, rp),
+            children: parseInline(s.slice(i + 1, close), depth + 1) });
+          i = rp + 1; continue;
+        }
+      }
+      buf += c; i++; continue; // stray [ is the literal character typed
+    }
+    buf += c; i++;
+  }
+  flush();
+  return out;
+}
+
+// ---------- render: DOM nodes only, no HTML-string sinks ----------
+
+const SAFE_SCHEME = /^(https?:|mailto:)/i;
+
+/** null = refuse: the construct renders as literal source text (inert AND
+ * nothing lost). Allow-list, not deny-list: http, https, mailto, #fragment. */
+function safeHref(href) {
+  const t = String(href ?? "").trim();
+  if (t.startsWith("#")) return t;
+  if (SAFE_SCHEME.test(t)) return t;
+  return null;
+}
+
+function plainText(children) {
+  let t = "";
+  for (const n of children || []) {
+    if (n.type === "text") t += n.text;
+    else if (n.type === "code") t += "`" + n.text + "`";
+    else if (n.type === "br") t += "\n";
+    else t += plainText(n.children);
+  }
+  return t;
+}
+
+function renderTo(el, ast) {
+  const doc = el.ownerDocument;
+  while (el.firstChild) el.removeChild(el.firstChild);
+  for (const b of (ast && ast.children) || []) el.appendChild(blockNode(doc, b));
+  return el;
+}
+
+function blockNode(doc, b) {
+  switch (b.type) {
+    case "heading": {
+      const h = doc.createElement("h" + Math.min(6, Math.max(1, b.level)));
+      appendInline(doc, h, b.children); return h;
+    }
+    case "para": {
+      const p = doc.createElement("p");
+      appendInline(doc, p, b.children); return p;
+    }
+    case "rule": return doc.createElement("hr");
+    case "quote": {
+      const q = doc.createElement("blockquote");
+      for (const c of b.children) q.appendChild(blockNode(doc, c));
+      return q;
+    }
+    case "fence": {
+      // opaque: preformatted text; the info string rides as data-info for
+      // consumers (the chart block's reader lives elsewhere, by design)
+      const pre = doc.createElement("pre");
+      const code = doc.createElement("code");
+      if (b.info) code.setAttribute("data-info", b.info);
+      code.textContent = b.body;
+      pre.appendChild(code); return pre;
+    }
+    case "list": {
+      const l = doc.createElement(b.ordered ? "ol" : "ul");
+      if (b.ordered && b.start !== 1) l.setAttribute("start", String(b.start));
+      for (const it of b.items) {
+        const li = doc.createElement("li");
+        appendInline(doc, li, it.children);
+        if (it.sub) li.appendChild(blockNode(doc, it.sub));
+        l.appendChild(li);
+      }
+      return l;
+    }
+    default: { // unknown node type: its text content, never a throw
+      const p = doc.createElement("p");
+      p.textContent = plainText(b.children);
+      return p;
+    }
+  }
+}
+
+function appendInline(doc, el, children) {
+  for (const n of children || []) {
+    switch (n.type) {
+      case "text": el.appendChild(doc.createTextNode(n.text)); break;
+      case "br": el.appendChild(doc.createElement("br")); break;
+      case "code": {
+        const c = doc.createElement("code");
+        c.textContent = n.text; el.appendChild(c); break;
+      }
+      case "em": case "strong": {
+        const e = doc.createElement(n.type);
+        appendInline(doc, e, n.children); el.appendChild(e); break;
+      }
+      case "link": {
+        const href = safeHref(n.href);
+        if (href === null) {
+          // refused scheme: the literal source text, visible and inert
+          el.appendChild(doc.createTextNode(
+            "[" + plainText(n.children) + "](" + n.href + ")"));
+        } else {
+          const a = doc.createElement("a");
+          a.setAttribute("href", href);
+          a.setAttribute("rel", "noopener noreferrer");
+          appendInline(doc, a, n.children);
+          el.appendChild(a);
+        }
+        break;
+      }
+      default: el.appendChild(doc.createTextNode(plainText([n])));
+    }
+  }
+}
+
+// ---------- applyEdit: the toolbar's (and the palette's) seam ----------
+
+/**
+ * applyEdit(src, sel, op) → { src, selection:{start,end} }
+ * sel: {start,end} string indices (clamped, ordered; never throws).
+ * ops: {type:"insert",text} · {type:"strong"|"em"|"code"} ·
+ *      {type:"link"} · {type:"heading",level} ·
+ *      {type:"bullet"|"ordered"|"quote"}
+ * Wrapping ops TOGGLE rather than nest (already-wrapped selection unwraps,
+ * markers around the selection unwrap). Line ops apply across every line the
+ * selection touches, and toggle off only when EVERY non-blank line already
+ * carries the marker. The returned selection is exact — the caret's survival
+ * is the contract.
+ */
+function applyEdit(src, sel, op) {
+  const s = typeof src === "string" ? src : String(src ?? "");
+  let start = Math.max(0, Math.min(s.length, (sel && sel.start) | 0));
+  let end = Math.max(0, Math.min(s.length, (sel && sel.end) | 0));
+  if (end < start) [start, end] = [end, start];
+  if (!op || typeof op.type !== "string")
+    return { src: s, selection: { start, end } };
+
+  switch (op.type) {
+    case "insert": {
+      const t = String(op.text ?? "");
+      const out = s.slice(0, start) + t + s.slice(end);
+      const caret = start + t.length;
+      return { src: out, selection: { start: caret, end: caret } };
+    }
+    case "strong": return wrapToggle(s, start, end, "**");
+    case "em": return wrapToggle(s, start, end, "*");
+    case "code": return wrapToggle(s, start, end, "`");
+    case "link": {
+      if (start === end) {
+        const t = "[text](url)";
+        return { src: s.slice(0, start) + t + s.slice(end),
+          selection: { start: start + 1, end: start + 5 } }; // "text" selected
+      }
+      const inner = s.slice(start, end);
+      const out = s.slice(0, start) + "[" + inner + "](url)" + s.slice(end);
+      const u = start + 1 + inner.length + 2;
+      return { src: out, selection: { start: u, end: u + 3 } }; // "url" selected
+    }
+    case "heading": {
+      const level = Math.min(6, Math.max(1, op.level | 0 || 1));
+      const marker = "#".repeat(level) + " ";
+      return lineOp(s, start, end,
+        (line) => {
+          const cur = line.match(/^(#{1,6})\s+/);
+          return !!(cur && cur[1].length === level);
+        },
+        (line) => { // apply
+          const cur = line.match(/^(#{1,6})\s+/);
+          return marker + (cur ? line.slice(cur[0].length) : line);
+        },
+        (line) => line.replace(/^(#{1,6})\s+/, "")); // remove
+    }
+    case "quote":
+      return lineOp(s, start, end,
+        (line) => /^> /.test(line),
+        (line) => /^> /.test(line) ? line : "> " + line,
+        (line) => line.replace(/^> ?/, ""));
+    case "bullet":
+      return lineOp(s, start, end,
+        (line) => /^[-*+] /.test(line),
+        (line) => /^[-*+] /.test(line) ? line
+          : "- " + line.replace(/^(\d{1,9})[.)]\s+/, ""),
+        (line) => line.replace(/^[-*+]\s+/, ""));
+    case "ordered": {
+      let n = 0;
+      return lineOp(s, start, end,
+        (line) => /^\d{1,9}[.)] /.test(line),
+        (line) => (++n) + ". " +
+          line.replace(/^[-*+]\s+/, "").replace(/^\d{1,9}[.)]\s+/, ""),
+        (line) => line.replace(/^\d{1,9}[.)]\s+/, ""));
+    }
+    default: // unknown op: a no-op, never a throw — content is data
+      return { src: s, selection: { start, end } };
+  }
+}
+
+function wrapToggle(s, start, end, m) {
+  const L = m.length;
+  if (start === end) {
+    // empty selection: open a pair, caret between the markers
+    const out = s.slice(0, start) + m + m + s.slice(end);
+    return { src: out, selection: { start: start + L, end: start + L } };
+  }
+  const inner = s.slice(start, end);
+  if (inner.length >= 2 * L && inner.startsWith(m) && inner.endsWith(m)) {
+    // selection includes the markers: unwrap, select the bare text
+    const bare = inner.slice(L, inner.length - L);
+    return { src: s.slice(0, start) + bare + s.slice(end),
+      selection: { start, end: start + bare.length } };
+  }
+  if (s.slice(start - L, start) === m && s.slice(end, end + L) === m) {
+    // markers surround the selection: unwrap, selection shifts left
+    return { src: s.slice(0, start - L) + inner + s.slice(end + L),
+      selection: { start: start - L, end: end - L } };
+  }
+  const out = s.slice(0, start) + m + inner + m + s.slice(end);
+  return { src: out, selection: { start: start + L, end: end + L } };
+}
+
+function lineOp(s, start, end, has, add, remove) {
+  const ls = s.lastIndexOf("\n", start - 1) + 1;
+  let le = s.indexOf("\n", end);
+  if (le < 0) le = s.length;
+  const seg = s.slice(ls, le);
+  const lines = seg.split("\n");
+  const marked = lines.filter((l) => l.trim() !== "");
+  const allHave = marked.length > 0 && marked.every(has);
+  const outLines = lines.map((l) => l.trim() === "" ? l : (allHave ? remove(l) : add(l)));
+  const newSeg = outLines.join("\n");
+  const out = s.slice(0, ls) + newSeg + s.slice(le);
+  if (start === end && lines.length === 1) {
+    // single-line caret: it rides the line's prefix change, clamped to the line
+    const delta = outLines[0].length - lines[0].length;
+    const caret = Math.max(ls, Math.min(ls + outLines[0].length, start + delta));
+    return { src: out, selection: { start: caret, end: caret } };
+  }
+  // multi-line (or ranged) selection: select the whole transformed range
+  return { src: out, selection: { start: ls, end: ls + newSeg.length } };
+}
+
+// ---------- load-time assertions (golden rule 1, site form) ----------
+
+{
+  const probe = parseMarkdown("# h\n\n**b** *i* `c` [t](https://x)\n\n```chart\nX\n```\n");
+  if (probe.children.length !== 3 || probe.children[2].info !== "chart" ||
+      probe.children[2].body !== "X")
+    throw new Error("markdown: the probe document must parse to its three blocks");
+  if (safeHref("javascript:alert(1)") !== null || safeHref("data:text/html,x") !== null)
+    throw new Error("markdown: unsafe schemes must refuse");
+  if (safeHref("https://a.b") === null || safeHref("#top") === null)
+    throw new Error("markdown: safe schemes must pass");
+  const e1 = applyEdit("ab", { start: 0, end: 2 }, { type: "strong" });
+  if (e1.src !== "**ab**" || e1.selection.start !== 2 || e1.selection.end !== 4)
+    throw new Error("markdown: wrap must preserve the selection");
+  const e2 = applyEdit(e1.src, e1.selection, { type: "strong" });
+  if (e2.src !== "ab") throw new Error("markdown: wrap must toggle, not nest");
+  if (JSON.stringify(parseMarkdown("<b>x</b>").children[0].children[0]) !==
+      JSON.stringify({ type: "text", text: "<b>x</b>" }))
+    throw new Error("markdown: raw HTML must be text, not markup");
+}
+return { parseMarkdown, renderTo, applyEdit, safeHref };
+})();
+const NOTEPAD = (() => {
+const { parseAtchart, serializeAtchart, CHART_SLOT } = ATCHART;
+/* notepad.mjs — the shared notepad model (component v1).
+ *
+ * The notepad pattern's child 2 (decisions 1, 2, 6, 7): one document model,
+ * one per-app payload slot, one file any sibling app can open. Pure module:
+ * no DOM, no storage, no audio — the HOST wires those through the adapter
+ * seam {app, version, snapshot(), apply(payload), summarize(payload)}.
+ *
+ * Document = { pad, entries, _at? }
+ *   pad      free markdown, the user's (charter §7: data, never code)
+ *   entries  [{id, savedAt, heading, text, payload}]
+ *   payload  {app, v, data} — data is OPAQUE to this module. The host
+ *            supplies it (adapter.snapshot()) and the host reads it
+ *            (adapter.apply / adapter.summarize). An unrecognized app or a
+ *            v above the reader's is carried untouched — never dropped,
+ *            never guessed at. summarize() output is DERIVED, never stored:
+ *            a stored summary field is the bug class 260811.3 flagged.
+ *   _at      the parsed engine/atchart.mjs document a foreign file arrived
+ *            as — chart block, substitutions, practice log and §2.7
+ *            frontmatter all replay through the ENGINE on write. This
+ *            module never grows a rival format implementation; that split
+ *            is the point (260811.6).
+ *
+ * File shape (.atchart.md): frontmatter · chart block (empty for a pure
+ * notepad file; real charts from sibling apps replay verbatim) · the pad's
+ * markdown · "## Notes" · one "### <savedAt>" span per entry, prose then a
+ * fenced ```json ENVELOPE {app, v, id, savedAt, data}. The envelope is what
+ * makes an entry an entry; a user's own fenced block — even a ```json one
+ * without an envelope shape — is prose and stays prose. Fences pair top to
+ * bottom; an unclosed opener is literal text (the same rule the markdown
+ * engine renders by), so a stray ``` in a note can never swallow a payload.
+ *
+ * No derived musical data is stored (§7): entries carry what the user typed
+ * and the host's CONFIG choice; anything derivable recomputes on load.
+ * The file is the handoff channel (§5): storage is a per-app cache, and
+ * this module never touches either.
+ */
+
+// ---------- ids and construction ----------
+
+function makeEntry(fields) {
+  const f = fields || {};
+  return {
+    id: String(f.id ?? entryId()),
+    savedAt: f.savedAt === undefined ? null : f.savedAt,
+    heading: f.heading === undefined ? null : f.heading,
+    text: String(f.text ?? ""),
+    payload: f.payload === undefined ? null : f.payload,
+  };
+}
+function entryId() {
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+}
+
+function emptyDoc() { return { pad: "", entries: [] }; }
+
+// ---------- pure entry operations (every one returns a NEW document) ----------
+
+function addEntry(doc, entry) {
+  return { ...doc, entries: [...doc.entries, makeEntry(entry)] };
+}
+function editEntry(doc, id, patch) {
+  return { ...doc, entries: doc.entries.map((e) =>
+    e.id === id ? makeEntry({ ...e, ...patch, id: e.id }) : e) };
+}
+function deleteEntry(doc, id) {
+  return { ...doc, entries: doc.entries.filter((e) => e.id !== id) };
+}
+function reorderEntry(doc, id, toIndex) {
+  const from = doc.entries.findIndex((e) => e.id === id);
+  if (from < 0) return { ...doc, entries: [...doc.entries] };
+  const entries = [...doc.entries];
+  const [m] = entries.splice(from, 1);
+  entries.splice(Math.max(0, Math.min(entries.length, toIndex | 0)), 0, m);
+  return { ...doc, entries };
+}
+
+// ---------- the v1.0 Metronome migration (before any UI — the pin) ----------
+
+/** fromMetronomeV1(pad, log) → doc. The shipped v1.0 shapes are the
+ * characterization pin: pad was a bare string (metronome.v1.pad), log was
+ * [{id, savedAt, text, metro}] (metronome.v1.log). Nothing is lost: every
+ * field maps, the metro config becomes the opaque payload data. */
+function fromMetronomeV1(pad, log) {
+  const entries = (Array.isArray(log) ? log : []).map((en) => makeEntry({
+    id: en.id, savedAt: en.savedAt ?? null, text: en.text ?? "",
+    payload: { app: "metronome", v: 1, data: en.metro ?? null },
+  }));
+  return { pad: String(pad ?? ""), entries };
+}
+
+// ---------- fence pairing (shared by parse; the unclosed rule) ----------
+
+function pairFences(lines) {
+  // returns [{open, close, info}] for CLOSED fences only: an opener may carry
+  // an info string, only a BARE ``` closes (the markdown engine's rule), and
+  // an opener with no closer is not a fence — it is literal text
+  const out = [];
+  let open = -1, info = "";
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^```(.*)$/);
+    if (!m) continue;
+    if (open < 0) { open = i; info = m[1].trim(); }
+    else if (m[1].trim() === "") { out.push({ open, close: i, info }); open = -1; }
+    // an info-carrying ``` line inside an open fence is content, not a closer
+  }
+  return out;
+}
+
+function envelopeOf(lines, fence) {
+  if (fence.info !== "json") return null;
+  try {
+    const o = JSON.parse(lines.slice(fence.open + 1, fence.close).join("\n"));
+    if (o && typeof o === "object" && !Array.isArray(o) &&
+        typeof o.app === "string" && typeof o.id === "string" && "data" in o)
+      return o;
+  } catch { /* a user's own json block: prose stays prose */ }
+  return null;
+}
+
+// ---------- to / from .atchart.md, THROUGH engine/atchart.mjs ----------
+
+
+const NOTES_HEAD = /^##\s+Notes\s*$/;
+
+/** toAtchart(doc, meta) → .atchart.md source. meta merges into frontmatter
+ * (atchart version and defaults handled by the engine). A foreign file's
+ * chart, substitutions, practice log and unknown frontmatter replay through
+ * the engine untouched; a pure notepad file carries an empty chart block. */
+const CHART_OPENER = /^```chart\s*$/;
+
+function toAtchart(doc, meta) {
+  // the format's one-chart law (spec §2.2, multiples reserved for v2): a
+  // ```chart fence typed into the pad or a note would be claimed by the
+  // FORMAT at parse and make the written file unparseable. Refuse by name —
+  // the content stays in the model and storage; nothing is lost or mangled.
+  const offends = (t) => String(t ?? "").split("\n").some((l) => CHART_OPENER.test(l));
+  if (offends(doc.pad) || doc.entries.some((e) => offends(e.text)))
+    throw new Error("a ```chart fence belongs in the file's chart block — " +
+      "the format holds one chart per file (v1); use a plain ``` fence in notes");
+  const at = doc._at
+    ? JSON.parse(JSON.stringify(doc._at))
+    : { meta: { atchart: 1, ...(meta || {}) },
+        sections: [], substitutions: [], practiceLog: [], body: [] };
+  if (doc._at && meta) at.meta = { ...at.meta, ...meta };
+
+  const body = [CHART_SLOT];
+  const pad = String(doc.pad ?? "").replace(/\n+$/, "");
+  if (pad) { body.push(""); body.push(...pad.split("\n")); }
+  if (doc.entries.length) {
+    body.push("");
+    body.push("## Notes");
+    for (const e of doc.entries) {
+      body.push("");
+      body.push("### " + (e.heading ?? (e.savedAt || "note")));
+      const text = String(e.text ?? "").replace(/\n+$/, "");
+      if (text) { body.push(""); body.push(...text.split("\n")); }
+      if (e.payload) {
+        body.push("");
+        body.push("```json");
+        body.push(JSON.stringify({ app: e.payload.app, v: e.payload.v,
+          id: e.id, savedAt: e.savedAt, data: e.payload.data }));
+        body.push("```");
+      }
+    }
+  }
+  at.body = body;
+  return serializeAtchart(at);
+}
+
+/** fromAtchart(src) → doc. Parses THROUGH the engine (charts, §2.7, apps:
+ * maps all intact in _at), then reads the notepad's own section: pad = the
+ * prose before "## Notes" (fence-aware — a "## Notes" inside a fenced block
+ * is prose); entries = "### " spans after it. A span with an envelope fence
+ * is a payload entry; a span without one is a payloadless entry (foreign
+ * prose is carried, never dropped). Throws only what parseAtchart throws —
+ * a non-atchart file is refused by the format, not mangled by this module. */
+function fromAtchart(src) {
+  const at = parseAtchart(src);
+  const body = at.body;
+  const fences = pairFences(body);
+  const inFence = (i) => fences.some((f) => f.open < i && i < f.close);
+
+  let notesAt = -1;
+  for (let i = 0; i < body.length; i++)
+    if (NOTES_HEAD.test(body[i]) && !inFence(i)) { notesAt = i; break; }
+
+  const padLines = (notesAt < 0 ? body : body.slice(0, notesAt))
+    .filter((l) => l !== CHART_SLOT);
+  const pad = padLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
+
+  const entries = [];
+  if (notesAt >= 0) {
+    const tail = body.slice(notesAt + 1);
+    const tailFences = pairFences(tail);
+    const inTailFence = (i) => tailFences.some((f) => f.open < i && i < f.close);
+    const heads = [];
+    for (let i = 0; i < tail.length; i++)
+      if (/^###\s+/.test(tail[i]) && !inTailFence(i) &&
+          !tailFences.some((f) => f.open === i || f.close === i)) heads.push(i);
+    heads.forEach((h, k) => {
+      const end = k + 1 < heads.length ? heads[k + 1] : tail.length;
+      const span = tail.slice(h + 1, end);
+      // the payload envelope is END-ANCHORED: the serializer writes it as the
+      // span's last block, so parse trims trailing blanks and looks for a
+      // closing ``` whose nearest ```json opener above holds an envelope.
+      // Anything above that block — including the user's own fences, closed
+      // or stray — is text, verbatim. A mid-span envelope in a foreign file
+      // is prose by this rule (carried, not interpreted).
+      let last = span.length - 1;
+      while (last >= 0 && span[last].trim() === "") last--;
+      let env = null, envFence = null;
+      if (last >= 0 && /^```\s*$/.test(span[last])) {
+        for (let j = last - 1; j >= 0; j--) {
+          if (/^```json\s*$/.test(span[j])) {
+            const cand = { open: j, close: last, info: "json" };
+            env = envelopeOf(span, cand);
+            if (env) envFence = cand;
+            break;
+          }
+          if (/^```/.test(span[j])) break; // a different fence intervenes
+        }
+      }
+      const textLines = envFence === null ? span
+        : [...span.slice(0, envFence.open), ...span.slice(envFence.close + 1)];
+      const text = textLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
+      const heading = tail[h].replace(/^###\s+/, "");
+      if (env) entries.push(makeEntry({
+        id: env.id, savedAt: env.savedAt ?? null,
+        heading: heading === (env.savedAt || "note") ? null : heading,
+        text, payload: { app: env.app, v: env.v, data: env.data } }));
+      else entries.push(makeEntry({
+        id: "x-" + hashStr(tail.slice(h, end).join("\n")),
+        savedAt: null, heading, text, payload: null }));
+    });
+  }
+  return { pad, entries, _at: at };
+}
+
+function hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+// ---------- load-time assertions (golden rule 1, site form) ----------
+
+{
+  const d0 = addEntry(emptyDoc(), { id: "a", savedAt: "2026-08-11T10:00:00.000Z",
+    text: "an idea", payload: { app: "metronome", v: 1, data: { bpm: 132 } } });
+  const src = toAtchart({ ...d0, pad: "free prose" }, { title: "probe" });
+  const d1 = fromAtchart(src);
+  if (d1.pad !== "free prose" || d1.entries.length !== 1 ||
+      d1.entries[0].id !== "a" || d1.entries[0].payload.data.bpm !== 132)
+    throw new Error("notepad: the probe must round-trip its entry");
+  if (toAtchart(d1) !== src)
+    throw new Error("notepad: toAtchart must be a byte-level fixed point");
+  const mig = fromMetronomeV1("p", [{ id: "1", savedAt: "s", text: "t", metro: { bpm: 60 } }]);
+  if (mig.entries[0].payload.data.bpm !== 60)
+    throw new Error("notepad: the v1.0 migration must carry the config");
+}
+return { makeEntry, emptyDoc, addEntry, editEntry, deleteEntry, reorderEntry,
+  fromMetronomeV1, toAtchart, fromAtchart };
+})();
+
 const SUB_OFFSETS={1:[],2:[0.5],3:[1/3,2/3],4:[0.25,0.5,0.75]};
 
 /* ============ appliance state (persisted) ============ */
@@ -309,41 +1938,102 @@ function metroToggle(){
   document.getElementById("metroBtn").textContent=METRO.running?"Stop":"Start";
 }
 
-/* ============ notepad ============ */
-function loadLog(){ try{return JSON.parse(localStorage.getItem(LOG_KEY)||"[]");}catch(e){return null;} }
-function saveLog(l){ try{localStorage.setItem(LOG_KEY,JSON.stringify(l));return true;}catch(e){return false;} }
-function fmtWhen(iso){ const d=new Date(iso);
+/* ============ notepad (v1.1.0: the shared component, hosted here) ============
+   engine/notepad.mjs owns the model; this host wires storage, DOM and the
+   adapter. The v1.0 keys are migrated ONCE and left in place; the new key
+   holds the whole document. Storage-denied keeps working in memory and says
+   so, steering to Export (the file is the handoff channel, not storage). */
+const DOC_KEY="metronome.v2.notepad";
+const HOST={app:"metronome",version:1,
+  snapshot:()=>cfgSnapshot(),
+  apply:(data)=>applyCfg(data||{}),
+  summarize:(data)=>cfgLine(data||{})};   // DERIVED at render, never stored
+let DOC=null, storageOK=true;
+
+function loadDoc(){
+  try{
+    const v2=localStorage.getItem(DOC_KEY);
+    if(v2){ const d=JSON.parse(v2); return {pad:String(d.pad??""),entries:(d.entries||[]).map(NOTEPAD.makeEntry)}; }
+    // one-time migration from the shipped v1.0 shape (the characterization
+    // pin) — old keys are left untouched as a fallback copy
+    const pad=localStorage.getItem(PAD_KEY)||"";
+    let log=[]; try{log=JSON.parse(localStorage.getItem(LOG_KEY)||"[]")||[];}catch(e){}
+    const doc=NOTEPAD.fromMetronomeV1(pad,log);
+    localStorage.setItem(DOC_KEY,JSON.stringify({pad:doc.pad,entries:doc.entries}));
+    return doc;
+  }catch(e){ storageOK=false; return NOTEPAD.emptyDoc(); }
+}
+function saveDoc(){
+  if(!storageOK)return false;
+  try{ localStorage.setItem(DOC_KEY,JSON.stringify({pad:DOC.pad,entries:DOC.entries})); return true; }
+  catch(e){ storageOK=false; return false; }
+}
+function storageNote(){
+  return storageOK?"":"storage unavailable here — your work lives in this tab only; use Export";
+}
+function fmtWhen(iso){ if(!iso)return""; const d=new Date(iso);
   return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+
          d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); }
-function makeNote(text){
-  return {id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
-    savedAt:new Date().toISOString(), text:text, metro:cfgSnapshot()};
+
+function exportText(){
+  return NOTEPAD.toAtchart(DOC,{title:"Metronome notepad"});
+}
+function importText(text){
+  // merge, never delete: entries dedup by id; an incoming pad appends below
+  // a rule when both sides have prose (named rule — nothing is overwritten)
+  const inc=NOTEPAD.fromAtchart(text);
+  const have=new Set(DOC.entries.map(e=>e.id));
+  const added=inc.entries.filter(e=>!have.has(e.id));
+  let pad=DOC.pad;
+  if(inc.pad.trim()&&!pad.trim())pad=inc.pad;
+  else if(inc.pad.trim()&&pad.trim()&&!pad.includes(inc.pad))pad=pad+"\n\n---\n\n"+inc.pad;
+  DOC={...DOC,pad,entries:[...DOC.entries,...added]};
+  saveDoc();
+  return added.length;
+}
+
+function renderPad(){
+  const view=document.getElementById("padView");
+  if(view)MD.renderTo(view,MD.parseMarkdown(DOC.pad));
 }
 function renderNotes(){
-  const list=loadLog(), wrap=document.getElementById("noteList"),
+  const wrap=document.getElementById("noteList"),
         cnt=document.getElementById("noteCount");
   if(!wrap)return;
-  if(list===null){ wrap.textContent="storage unavailable — use Export"; cnt.textContent="0"; return; }
-  cnt.textContent=String(list.length);
+  cnt.textContent=String(DOC.entries.length);
   wrap.innerHTML="";
-  if(!list.length){
+  const sn=storageNote();
+  if(sn){const p=document.createElement("div");p.className="hint";p.textContent=sn;wrap.appendChild(p);}
+  if(!DOC.entries.length){
     const p=document.createElement("div"); p.className="hint";
     p.textContent="No notes yet. Tap a tempo, catch an idea, save it — the note keeps the settings.";
     wrap.appendChild(p); return;
   }
-  [...list].reverse().forEach(en=>{
+  [...DOC.entries].reverse().forEach(en=>{
     const div=document.createElement("div"); div.className="note";
     const hd=document.createElement("div"); hd.className="hd";
-    const c=document.createElement("span"); c.className="cfgline"; c.textContent=cfgLine(en.metro); hd.appendChild(c);
+    const c=document.createElement("span"); c.className="cfgline";
+    // the summary line DERIVES from the payload through the adapter — a
+    // foreign app's payload is named and carried, never interpreted
+    const p=en.payload;
+    c.textContent=!p?"note":
+      p.app===HOST.app?HOST.summarize(p.data)
+      :p.app+" · v"+p.v+" (another app's settings — carried untouched)";
+    hd.appendChild(c);
     const w=document.createElement("span"); w.className="when"; w.textContent=fmtWhen(en.savedAt); hd.appendChild(w);
     div.appendChild(hd);
-    const tx=document.createElement("div"); tx.className="txt"; tx.textContent=en.text; div.appendChild(tx);
+    const tx=document.createElement("div"); tx.className="txt";
+    MD.renderTo(tx,MD.parseMarkdown(en.text));
+    div.appendChild(tx);
     const acts=document.createElement("div"); acts.className="acts";
-    const ab=document.createElement("button"); ab.textContent="Apply settings";
-    ab.addEventListener("click",()=>{applyCfg(en.metro);window.scrollTo({top:0,behavior:"smooth"});});
+    if(p&&p.app===HOST.app){
+      const ab=document.createElement("button"); ab.textContent="Apply settings";
+      ab.addEventListener("click",()=>{HOST.apply(p.data);window.scrollTo({top:0,behavior:"smooth"});});
+      acts.appendChild(ab);
+    }
     const db=document.createElement("button"); db.textContent="Delete"; db.className="danger";
-    db.addEventListener("click",()=>{const l=loadLog()||[];saveLog(l.filter(x=>x.id!==en.id));renderNotes();});
-    acts.appendChild(ab); acts.appendChild(db); div.appendChild(acts);
+    db.addEventListener("click",()=>{DOC=NOTEPAD.deleteEntry(DOC,en.id);saveDoc();renderNotes();});
+    acts.appendChild(db); div.appendChild(acts);
     wrap.appendChild(div);
   });
 }
@@ -351,31 +2041,19 @@ function saveNote(){
   const pad=document.getElementById("pad"), msg=document.getElementById("saveMsg");
   const text=pad.value.trim();
   if(!text){ msg.textContent="nothing to save"; setTimeout(()=>msg.textContent="",1500); return; }
-  const list=loadLog();
-  if(list===null||!saveLog([...list,makeNote(text)])){
-    msg.textContent="couldn't save here — use Export"; return;
-  }
-  msg.textContent="saved"; setTimeout(()=>msg.textContent="",1500);
+  DOC=NOTEPAD.addEntry(DOC,{savedAt:new Date().toISOString(),text,
+    payload:{app:HOST.app,v:HOST.version,data:HOST.snapshot()}});
+  msg.textContent=saveDoc()?"saved":"saved in this tab — use Export to keep it";
+  setTimeout(()=>msg.textContent="",2200);
   renderNotes();
 }
-function exportMd(){
-  const list=loadLog()||[], pad=document.getElementById("pad").value;
-  let md="# Metronome notepad — At-Etudes\n\nExported "+new Date().toLocaleString()+"\n";
-  if(pad.trim()) md+="\n## Pad\n\n"+pad.trim()+"\n";
-  if(list.length){
-    md+="\n## Notes\n";
-    for(const en of list){
-      md+="\n### "+fmtWhen(en.savedAt)+" — "+cfgLine(en.metro)+"\n\n"+en.text+"\n\n";
-      md+="```json\n"+JSON.stringify({metronome:en.metro},null,1)+"\n```\n";
-    }
-  }
-  return md;
-}
 function exportDownload(){
-  const blob=new Blob([exportMd()],{type:"text/markdown"});
+  const msg=document.getElementById("saveMsg");
+  let text; try{text=exportText();}catch(e){msg.textContent=e.message;return;}
+  const blob=new Blob([text],{type:"text/markdown"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="metronome-notepad.md";
+  a.download="metronome-notepad.atchart.md";
   a.click(); URL.revokeObjectURL(a.href);
 }
 
@@ -415,35 +2093,88 @@ function initControls(){
     document.getElementById("clickVolVal").textContent=e.target.value;});
   document.getElementById("clickVolR").addEventListener("change",saveCfg);
   const pad=document.getElementById("pad");
-  try{pad.value=localStorage.getItem(PAD_KEY)||"";}catch(e){}
+  pad.value=DOC.pad;
   let padT=null;
-  const savePad=()=>{try{localStorage.setItem(PAD_KEY,pad.value);}catch(e){}};
-  pad.addEventListener("input",()=>{clearTimeout(padT);padT=setTimeout(savePad,300);});
-  pad.addEventListener("change",savePad);
+  pad.addEventListener("input",()=>{
+    DOC={...DOC,pad:pad.value};
+    renderPad();                       // decision 1: preview renders live
+    clearTimeout(padT); padT=setTimeout(saveDoc,300);   // autosave is the host's
+  });
+  pad.addEventListener("change",saveDoc);
+  // the toolbar: pure applyEdit ops; selection and scroll survive every one
+  const OPS=[["B",{type:"strong"},"bold"],["I",{type:"em"},"italic"],
+    ["<>",{type:"code"},"code"],["[a]",{type:"link"},"link"],
+    ["H2",{type:"heading",level:2},"heading"],["•",{type:"bullet"},"bullet list"],
+    ["1.",{type:"ordered"},"numbered list"],["❝",{type:"quote"},"quote"]];
+  const tools=document.getElementById("padTools");
+  for(const [lab,op,title] of OPS){
+    const b=document.createElement("button"); b.textContent=lab; b.title=title;
+    b.addEventListener("click",()=>{
+      const scroll=pad.scrollTop;
+      const r=MD.applyEdit(pad.value,{start:pad.selectionStart,end:pad.selectionEnd},op);
+      pad.value=r.src; DOC={...DOC,pad:r.src};
+      pad.setSelectionRange(r.selection.start,r.selection.end);
+      pad.scrollTop=scroll; pad.focus();
+      renderPad(); saveDoc();
+    });
+    tools.appendChild(b);
+  }
+  // narrow viewports: Edit/Preview tabs (the split needs no control on wide)
+  const wrapEl=document.getElementById("padWrap");
+  document.getElementById("tabEdit").addEventListener("click",()=>wrapEl.classList.add("editing"));
+  document.getElementById("tabView").addEventListener("click",()=>wrapEl.classList.remove("editing"));
   document.getElementById("saveNote").addEventListener("click",saveNote);
   document.getElementById("exportBtn").addEventListener("click",exportDownload);
+  document.getElementById("copyBtn").addEventListener("click",async()=>{
+    const msg=document.getElementById("saveMsg");
+    let text; try{text=exportText();}catch(e){msg.textContent=e.message;return;}
+    try{await navigator.clipboard.writeText(text);
+      msg.textContent="copied — one .atchart.md, ready to paste";
+      setTimeout(()=>msg.textContent="",2000);}catch(e){msg.textContent="clipboard unavailable — use Export";}
+  });
+  document.getElementById("importBtn").addEventListener("click",
+    ()=>document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change",async e=>{
+    const msg=document.getElementById("saveMsg");
+    if(!(e.target.files&&e.target.files[0]))return;
+    try{
+      const n=importText(await e.target.files[0].text());
+      document.getElementById("pad").value=DOC.pad;
+      renderPad(); renderNotes();
+      msg.textContent="imported "+n+" new note"+(n===1?"":"s");
+      setTimeout(()=>msg.textContent="",2500);
+    }catch(err){ msg.textContent="import failed: "+err.message; }
+    e.target.value="";
+  });
 }
+
 
 loadCfg();
 
 /* ============ self-tests (console.error only on failure) ============ */
 (function tests(){
   const eq=(a,b,m)=>{if(a!==b)console.error("TEST:",m,a,"!==",b);};
-  const n=makeNote("idea");
-  eq(typeof n.id,"string","note id");
-  eq(n.text,"idea","note text");
-  eq(n.metro.bpm,st.bpm,"note carries bpm");
   eq(cfgLine({bpm:120,meter:4,clickSub:1,clickVoice:"beep"}),"♩=120 · 4/4 · beats · beep","cfg line");
   const before=JSON.stringify(cfgSnapshot());
   applyCfg(JSON.parse(before));
   eq(JSON.stringify(cfgSnapshot()),before,"cfg snapshot/apply round-trip");
-  const md=exportMd();
-  eq(md.startsWith("# Metronome notepad"),true,"export header");
+  // the shared component, exercised in-page: model → file → model, bytes stable
+  const probe=NOTEPAD.addEntry(NOTEPAD.emptyDoc(),{id:"t1",savedAt:"2026-08-11T00:00:00.000Z",
+    text:"idea",payload:{app:HOST.app,v:HOST.version,data:cfgSnapshot()}});
+  const src=NOTEPAD.toAtchart(probe,{title:"probe"});
+  const back=NOTEPAD.fromAtchart(src);
+  eq(back.entries[0].payload.data.bpm,cfgSnapshot().bpm,"payload survives the file");
+  eq(NOTEPAD.toAtchart(back),src,"toAtchart fixed point in-page");
+  const mig=NOTEPAD.fromMetronomeV1("p",[{id:"1",savedAt:"s",text:"t",metro:{bpm:60}}]);
+  eq(mig.entries[0].payload.data.bpm,60,"v1.0 migration carries the config");
+  eq(typeof ATCHART.parseAtchart(src).meta.title,"string","the format engine reads our file");
 })();
 
+DOC=loadDoc();
 initControls();
+
 METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
-syncUI(); renderLamp(); renderNotes();
+syncUI(); renderLamp(); renderNotes(); renderPad();
 </script>
 </body>
 </html>

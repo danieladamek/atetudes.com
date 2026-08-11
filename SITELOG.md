@@ -5,6 +5,53 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Notepad child 2: the shared component, hosted in Metronome v1.1.0 (Daniel's dispatch)
+
+- **Migration before UI, as dispatched.** `engine/notepad.mjs` opens with
+  `fromMetronomeV1(pad, log)` — the shipped v1.0 localStorage shapes are the
+  characterization pin, mapped field-for-field with a no-loss test (ids kept for merge
+  identity, the metro config becoming the opaque payload data) BEFORE any surface work.
+  In the app, migration runs once, writes the new `metronome.v2.notepad` key, and
+  leaves the v1.0 keys untouched as a fallback copy — verified live with seeded v1.0
+  data.
+- **The model is pure and the seam is host-shaped**: Document = pad + entries
+  `{id, savedAt, heading, text, payload}`; payload `{app, v, data}` with data OPAQUE.
+  Pure add/edit/delete/reorder (input documents proven unmutated). The host adapter is
+  exactly the dispatched shape — `{app, version, snapshot, apply, summarize}` — and
+  Metronome's is its old `cfgSnapshot/applyCfg/cfgLine` renamed. **summarize() derives
+  at render, never stored** (the 260811.3 bug class, fixed by construction: the fence
+  envelope carries app, v, id, savedAt, data and provably no summary field).
+- **Serialization goes THROUGH engine/atchart.mjs** — `toAtchart`/`fromAtchart` build
+  and read the format engine's own document (the CHART_SLOT export added rather than
+  copying a literal); no rival writer exists here. Round-trip asserted ON BYTES over
+  the corpus: unknown app id + payload v:99 carried whole; awkward prose with a
+  "## Notes" lookalike inside a fence (the split is fence-aware); **an entry whose text
+  contains fenced blocks of its own** — the payload envelope is END-ANCHORED so a
+  user's ```js and non-envelope ```json fences stay prose byte-intact, and an UNCLOSED
+  fence in a note cannot swallow the payload (the markdown engine's stays-literal rule,
+  applied at the file layer). Two findings the corpus forced: (1) a ```chart fence
+  typed in a note would make the written file violate the format's one-chart law — so
+  toAtchart REFUSES it by name (content stays in the model; export surfaces the
+  message) rather than emitting a file the format itself cannot parse; (2) fence
+  pairing must treat only a bare ``` as a closer, per the markdown engine.
+- **Metronome v1.1.0 ships on the component with no user-visible regression**: same
+  cards, same Save-note flow, Apply/Delete intact — plus the decision-1 surface
+  (source textarea, live preview built by the markdown engine's DOM-only renderer,
+  toolbar riding `applyEdit` with selection and scroll surviving, Edit/Preview tabs at
+  390 px), and the handoff paths: Export downloads one `.atchart.md`, Copy puts the
+  same file on the clipboard, Import merges entries by id (never deletes). A foreign
+  app's entry renders named and inert — "future-app · v1 (another app's settings —
+  carried untouched)" — with no Apply button, and re-exports byte-identical.
+- **The §5/§6/§7 constraints verified live, offline**: everything from `file://` with
+  the network disabled, zero console errors; export text re-parses byte-identically in
+  the format engine IN THE PAGE; the storage-denied path (localStorage throwing) still
+  loads, still saves in-memory, SAYS SO steering to Export, and still exports. No
+  derived musical data stored anywhere; no upload, no share, no server.
+- Suite 246/246 (11 new notepad tests incl. the verbatim anti-drift pin on Metronome's
+  four inlined modules: chord, atchart, markdown, notepad). 24 Playwright checks.
+  Decision 7 honored: nothing in engine/notepad.mjs knows Metronome — Triadetudes'
+  adapter is a rename away. Update Log 260811.7.
+
 ## 2026-08-11 — The .atchart.md v1.1 rules land in the engine (Daniel's dispatch)
 
 - **§2.7 first, and independently — the load-bearing half.** The frontmatter layer now
