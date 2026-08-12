@@ -411,12 +411,12 @@ export function parseAtchart(text) {
     }
     if (/^##\s+Substitutions\s*$/i.test(line)) {
       mode = "subs";
-      body.push(" SUBS ");
+      body.push("\x00SUBS\x00");
       continue;
     }
     if (/^##\s+Practice log\s*$/i.test(line)) {
       mode = "log";
-      body.push(" LOG ");
+      body.push("\x00LOG\x00");
       continue;
     }
     if (/^##?\s+/.test(line) && (mode === "subs" || mode === "log")) mode = "prose";
@@ -449,11 +449,11 @@ export function serializeAtchart(doc) {
       out.push("```chart");
       out.push(serializeChartBlock(doc.sections));
       out.push("```");
-    } else if (line === " SUBS ") {
+    } else if (line === "\x00SUBS\x00") {
       out.push("## Substitutions");
       out.push("");
       for (const s of doc.substitutions) out.push(serializeSub(s));
-    } else if (line === " LOG ") {
+    } else if (line === "\x00LOG\x00") {
       out.push("## Practice log");
       out.push("");
       for (const l of doc.practiceLog) out.push("- " + l);

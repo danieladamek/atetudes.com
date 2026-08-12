@@ -147,3 +147,39 @@ test("the Log round-trips the FIGURE: tones mode + motionSrc through export→im
   const merged = unwrap(e.mergeLog([], back.entries));
   assert.deepEqual(merged.list[0].cfg, cfg);
 });
+
+test("summarizeCfg derives the row label from the PAYLOAD, pure of st (v0.8.0, replaces stored summaries)", () => {
+  const e = loadTriadetudesEngine();
+  const cfg = { v: 1, key: "Eb", scaleType: "harm", set: [1, 2, 3], pivotString: 2,
+    pivotFrets: [5, 6, 8], prog: "cycle4", startDeg: 0, chromLen: 6, custom: "",
+    arpPattern: null, roots: false, ext: "none", placement: "grip",
+    playback: "arpeggiated", motionMode: "tones", motionSrc: "(-1)[1] - [5]",
+    harmonyMode: "build", breakProg: [], bpm: 96, meter: 4, splitIdx: 0,
+    clickOn: true, clickVol: 0.8, clickAccent: true, clickSub: 1,
+    clickVoice: "beep", countIn: false };
+  const line = e.summarizeCfg(cfg);
+  assert.equal(line,
+    "Eb harmonic minor · strings 1-2-3 · Cycling 4ths · arp (-1)[1] - [5] · arpeggiated · 4/4 split 4 · 96 bpm");
+  // st is NOT consulted: mutate the live state, the label must not move
+  const was = e.st.key; e.st.key = "G";
+  assert.equal(e.summarizeCfg(cfg), line, "pure of st — a row describes ITS OWN config");
+  e.st.key = was;
+  // shape-mode pattern renders as slot letters against the CFG's own set
+  const shape = e.summarizeCfg({ ...cfg, motionSrc: null, arpPattern: [2, 3, 1] });
+  assert.ok(shape.includes("arp M-L-H"), shape);
+  // break-down names the changes; a missing payload names itself
+  const bd = e.summarizeCfg({ ...cfg, harmonyMode: "break",
+    breakProg: [{ sym: "Dm7" }, { sym: "G7" }] });
+  assert.ok(bd.includes("break down (Dm7 G7)"), bd);
+  assert.equal(e.summarizeCfg(null), "no étude attached");
+});
+
+test("the journal migration corpus rides the study's own engine slice (NOTEPAD inlined)", () => {
+  const e = loadTriadetudesEngine();
+  const doc = e.NOTEPAD.fromTriadetudesV1([{ id: "a", savedAt: "2026-08-11T07:02:00.000Z",
+    minutes: 3, title: "T", summary: "S", intention: "i", accomplished: "a2",
+    cfg: { v: 1, key: "C" } }]);
+  assert.equal(doc.entries[0].text, "→ i\n\n✓ a2\n\n~3 min");
+  assert.equal(doc.entries[0].payload.app, "triadetudes");
+  assert.ok(!JSON.stringify(doc).includes('"S"'), "stored summary dropped in the slice too");
+});

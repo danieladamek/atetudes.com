@@ -158,8 +158,30 @@
     border-radius:6px;background:#fff;cursor:pointer}
   textarea{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);
     border-radius:6px;width:100%;resize:vertical;color:var(--ink)}
-  .nb2{display:flex;gap:18px;flex-wrap:wrap}
-  .nb2>div{flex:1 1 340px;min-width:300px}
+  /* the journal (v0.8.0): Log LEFT, note RIGHT; a drag handle between; both
+     columns fold (the collapse the notebook never got in 260810.14); at 390
+     they stack with the NOTE first — the note is written before you play. */
+  .nb2j{display:flex;align-items:stretch}
+  .jcol{min-width:0;position:relative}
+  #logCol{flex:0 1 auto;width:50%;padding-right:12px}
+  #noteCol{flex:1 1 0;padding-left:12px}
+  #dragBar{flex:0 0 8px;cursor:col-resize;border-left:2px solid var(--line);
+    border-radius:2px;touch-action:none}
+  #dragBar:hover{border-left-color:var(--ink)}
+  .colhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--gray);font-weight:bold;margin:0 0 8px}
+  #journalIn{min-height:210px}
+  .hist .note.md{white-space:normal}
+  .hist .note.md p{margin:4px 0}
+  .hist .note.md pre{background:var(--ground);border-radius:6px;padding:5px 7px;
+    overflow:auto;font-size:11.5px}
+  .hist .note.md code{font-family:ui-monospace,monospace;font-size:11.5px}
+  @media (max-width:719px){
+    .nb2j{flex-direction:column}
+    #dragBar{display:none}
+    #logCol{width:auto;padding-right:0;order:2}
+    #noteCol{padding-left:0;order:1;margin-bottom:12px}
+  }
   #cfgSummary{font-size:12px;color:var(--ink);line-height:1.55;background:var(--ground);
     border-radius:6px;padding:7px 10px;margin-bottom:2px}
   .hist{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
@@ -179,7 +201,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.7.8</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.0</div>
 </header>
 
 <div class="cards">
@@ -408,47 +430,50 @@
 </div>
 
 <div class="board">
-  <div class="bh"><span>Practice notebook</span>
+  <div class="bh"><span>Practice journal</span>
     <span id="storeNote" style="text-transform:none;letter-spacing:0;font-weight:normal"></span></div>
-  <div class="nb2">
-    <div>
-      <div id="cfgSummary"></div>
-      <label>Intention — what am I working toward this session?</label>
-      <textarea id="intentIn" rows="3" placeholder="e.g. clean pivot changes through the whole cycle at 90 bpm, eyes off the neck"></textarea>
-      <label>Accomplished — what actually happened?</label>
-      <textarea id="accompIn" rows="3" placeholder="fill in when you stop"></textarea>
-      <div class="transport" style="margin-top:10px">
-        <button id="saveEntry" class="primary">Save entry</button>
-        <button id="exportLog">Export log (.md)</button>
-        <button id="importBtn">Import (.md/.json)</button>
-        <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json"
-          style="display:none">
-        <span id="saveMsg" class="hint" style="margin:0"></span>
-      </div>
+  <div class="nb2j" id="nbWrap">
+    <div class="jcol" id="logCol">
+      <div class="colhd">Practice log — <span id="histCount">0</span> saved</div>
+      <!-- the grey box is the CURRENT étude — a header for Save, not history.
+           Noted (dispatch): it belongs with the Save control when Save moves;
+           left in place this pass. -->
+      <div id="cfgSummary" title="the current étude — what Save entry will capture"></div>
+      <div id="histList"></div>
       <span id="importMsg" class="hint"></span>
-      <div class="hint">Saving captures this étude's full configuration with your notes —
-      restoring an entry later rebuilds the exercise exactly. Export writes the whole log
-      as a markdown file (config JSON included); Import merges an exported log back in —
-      nothing is deleted, duplicates are skipped — or loads a single étude config (.json)
-      as the current étude.</div>
       <details style="margin-top:10px"><summary style="cursor:pointer">Full configuration (JSON)</summary>
         <pre id="cfgPre"></pre>
         <button id="copyBtn">Copy configuration</button> <span id="copyMsg"></span>
       </details>
     </div>
-    <div>
-      <label style="margin-top:0">History — <span id="histCount">0</span> saved</label>
-      <div id="histList"></div>
+    <div id="dragBar" title="drag to resize"></div>
+    <div class="jcol" id="noteCol">
+      <div class="colhd">Note — the session in your words</div>
+      <textarea id="journalIn" placeholder="What you're working toward, what happened, what's next — one note, plain prose (it's markdown underneath). Autosaves as you type; Save entry stamps it with this étude."></textarea>
+      <div class="transport" style="margin-top:10px">
+        <button id="saveEntry" class="primary">Save entry</button>
+        <button id="exportLog">Export (.atchart.md)</button>
+        <button id="importBtn">Import</button>
+        <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json"
+          style="display:none">
+        <span id="saveMsg" class="hint" style="margin:0"></span>
+      </div>
+      <div class="hint">Saving stamps the note with this étude's full configuration —
+      Restore on any row rebuilds that exercise exactly. Export writes one .atchart.md
+      (your notes, then one section per entry, each with its own config); Import merges
+      one back — nothing is deleted, duplicates are skipped. Old exported logs import
+      too, and a bare étude config (.json) loads as the current étude.</div>
     </div>
   </div>
 </div>
 
-<footer>Triadetudes v0.7.8 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.0 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
-note or key to hear it. The practice notebook saves each étude's full configuration with your
-intention and outcome — history lives in this browser; Export keeps a markdown copy.</footer>
+note or key to hear it. The practice journal saves each étude's full configuration with one
+note — history lives in this browser; Export writes one .atchart.md any At-Etudes app can
+open.</footer>
 </div>
 
 <script>
@@ -974,6 +999,1244 @@ function pivotWindow(notes, startDegree, nearFret) {
     throw new Error("string-sets: the worked case must translate to 4-5-3-3");
 }
 return { lowToHigh, slotsOf, stringsOf, translatePattern, translateString, pivotWindow, MAX_PATTERN };
+})();
+/* ============ shared engine modules for the journal (anti-drift pinned) ============
+   Canonical sources: engine/atchart.mjs · engine/markdown.mjs · engine/notepad.mjs.
+   The journal serializes THROUGH the format engine — no rival writer here. */
+const ATCHART = (() => {
+const { parseChord } = CHORD;
+/* atchart.mjs — parser + serializer for the .atchart.md format (v1 + v1.1).
+ * Spec: docs/atchart-format.md (v1 ratified 2026-08-08; v1.1 ratified
+ * 2026-08-10 — §2.6 app namespaces, §2.7 unknown frontmatter keys, §5 the
+ * handoff channel; Update Log 260810.5). Pure, no DOM.
+ *
+ * Round-trip law (§4): parse→serialize→parse identical; serialize is a fixed
+ * point; and — v1.1 — unknown frontmatter keys and apps: entries replay
+ * VERBATIM, so a file can pass through several applications and come back
+ * whole. A v1 file with no apps: round-trips byte-identically and never
+ * acquires a version bump; `atchart: 1.1` becomes writable only when
+ * something actually writes an apps: map (writeApp).
+ *
+ * §2.6 is deliberately schema-free: entries are opaque — carried,
+ * round-tripped, never interpreted, never validated. A validator here would
+ * be the bug: opacity is the mechanism that keeps unknown app ids and
+ * higher-v entries intact across readers.
+ */
+
+const ATCHART_VERSION = 1;
+// the body-skeleton slot markers (§2.5 preservation): exported so consumers
+// building documents THROUGH this engine (engine/notepad.mjs) can place the
+// chart slot without copying the literal
+const CHART_SLOT = "\x00CHART\x00";
+
+const DEFAULTS = { key: "C", meter: "4/4" };
+const FM_ORDER = ["atchart", "title", "composer", "key", "meter", "tempo", "form", "sections"];
+
+// ---------- frontmatter ----------
+// Deliberately tiny YAML subset: scalar lines + [a, b] lists + ONE nested
+// block, apps: (§2.6). v1.1 §2.7: every line is kept as a raw segment in
+// original order, and the serializer REPLAYS the raw text for anything the
+// caller has not changed — unknown keys, comments, odd spacing and apps:
+// entries all round-trip byte-identically instead of being re-normalized.
+
+function parseScalar(val) {
+  if (val.startsWith("[") && val.endsWith("]"))
+    return val.slice(1, -1).split(",").map((s) => s.trim()).filter(Boolean);
+  if ((val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'")))
+    return val.slice(1, -1);
+  return /^-?\d+(\.\d+)?$/.test(val) ? Number(val) : val;
+}
+
+function canonLine(k, v) {
+  if (Array.isArray(v)) return `${k}: [${v.join(", ")}]`;
+  if (typeof v === "string" && /[:#\[\]]/.test(v)) return `${k}: "${v}"`;
+  if (typeof v === "string" && v !== v.trim()) return `${k}: "${v}"`;
+  return `${k}: ${v}`;
+}
+
+function parseFrontmatter(lines) {
+  const meta = {};
+  const fm = []; // ordered raw segments: {kind:"key"|"verbatim"|"apps", ...}
+  let i = 0;
+  while (i < lines.length) {
+    const raw = lines[i];
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) { fm.push({ kind: "verbatim", raw }); i++; continue; }
+    if (/^\s/.test(raw)) { // indentation outside an apps: block: not ours, keep it
+      fm.push({ kind: "verbatim", raw }); i++; continue;
+    }
+    const ci = line.indexOf(":");
+    if (ci < 1) throw new Error(`bad frontmatter line: "${raw}"`);
+    const key = line.slice(0, ci).trim();
+    const rest = line.slice(ci + 1).trim();
+    if (key === "apps" && rest === "") {
+      // §2.6: entries are RAW — carried, round-tripped, never interpreted
+      const entries = [];
+      i++;
+      while (i < lines.length && /^\s+\S/.test(lines[i])) {
+        const el = lines[i];
+        const em = el.trim().match(/^([A-Za-z0-9_-]+):/);
+        if (em) entries.push({ id: em[1], raw: el });
+        else if (entries.length) entries[entries.length - 1].raw += "\n" + el;
+        else entries.push({ id: null, raw: el });
+        i++;
+      }
+      fm.push({ kind: "apps", entries });
+      continue;
+    }
+    const value = parseScalar(rest);
+    fm.push({ kind: "key", key, raw, value });
+    meta[key] = value;
+    i++;
+  }
+  return { meta, fm };
+}
+
+const valEq = (a, b) =>
+  Array.isArray(a) && Array.isArray(b) ? a.join("\u0000") === b.join("\u0000") : a === b;
+
+function serializeFrontmatter(meta, fm) {
+  if (!fm) { // programmatically-built doc: canonical order, canonical lines
+    const keys = [...FM_ORDER.filter((k) => k in meta),
+      ...Object.keys(meta).filter((k) => !FM_ORDER.includes(k))];
+    return keys.map((k) => canonLine(k, meta[k])).join("\n");
+  }
+  const out = [];
+  const seen = new Set();
+  for (const seg of fm) {
+    if (seg.kind === "verbatim") { out.push(seg.raw); continue; }
+    if (seg.kind === "apps") {
+      seen.add("apps");
+      out.push("apps:");
+      for (const e of seg.entries) out.push(e.raw);
+      continue;
+    }
+    seen.add(seg.key);
+    if (!(seg.key in meta)) continue;              // deleted by the caller
+    if (valEq(meta[seg.key], seg.value)) out.push(seg.raw); // untouched: VERBATIM
+    else out.push(canonLine(seg.key, meta[seg.key]));       // changed: canonical
+  }
+  for (const k of Object.keys(meta)) {
+    if (seen.has(k) || k === "apps") continue;
+    // defaults injected at parse are not the file's text — appending them
+    // would break §4's byte-identity for files that never wrote them
+    if (k in DEFAULTS && valEq(meta[k], DEFAULTS[k])) continue;
+    out.push(canonLine(k, meta[k]));
+  }
+  return out.join("\n");
+}
+
+// ---------- §2.6: the apps accessor ----------
+// The format claims the key `apps` and NOTHING inside it. Entries are opaque
+// at parse; readApp materializes ONE entry on demand for its own app;
+// writeApp replaces ONE entry with a canonical serialization. Both return
+// new documents / fresh objects and never mutate their input. There is no
+// schema and no validator, on purpose — a helpful validator here would be
+// the bug, because opacity is what lets one file pass through several apps
+// (unknown ids, higher payload v) and come back whole.
+
+function parseFlow(src) {
+  let i = 0;
+  const s = String(src);
+  const fail = () => { throw new Error("flow"); };
+  const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+  function scalarEnd(stops) {
+    let j = i;
+    while (j < s.length && !stops.includes(s[j])) j++;
+    return j;
+  }
+  function value() {
+    ws();
+    const c = s[i];
+    if (c === "{") {
+      i++; const o = {}; ws();
+      if (s[i] === "}") { i++; return o; }
+      for (;;) {
+        ws();
+        const m = s.slice(i).match(/^([A-Za-z0-9_.-]+)\s*:/) || fail();
+        i += m[0].length;
+        o[m[1]] = value();
+        ws();
+        if (s[i] === ",") { i++; continue; }
+        if (s[i] === "}") { i++; return o; }
+        fail();
+      }
+    }
+    if (c === "[") {
+      i++; const a = []; ws();
+      if (s[i] === "]") { i++; return a; }
+      for (;;) {
+        a.push(value()); ws();
+        if (s[i] === ",") { i++; continue; }
+        if (s[i] === "]") { i++; return a; }
+        fail();
+      }
+    }
+    if (c === '"' || c === "'") {
+      const q = c; let out = ""; i++;
+      while (i < s.length && s[i] !== q) {
+        if (s[i] === "\\" && i + 1 < s.length) { out += s[i + 1]; i += 2; }
+        else { out += s[i]; i++; }
+      }
+      if (s[i] !== q) fail();
+      i++; return out;
+    }
+    const j = scalarEnd([",", "}", "]"]);
+    const tok = s.slice(i, j).trim();
+    i = j;
+    if (tok === "") fail();
+    if (tok === "true") return true;
+    if (tok === "false") return false;
+    if (tok === "null") return null;
+    if (/^-?\d+(\.\d+)?$/.test(tok)) return Number(tok);
+    return tok; // bare word = string (the spec's own example: `scale: major`)
+  }
+  const v = value(); ws();
+  if (i < s.length) fail();
+  return v;
+}
+
+function serializeFlow(v) {
+  if (v === null) return "null";
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (typeof v === "string")
+    return /^[A-Za-z0-9_.-]+$/.test(v) && !/^-?\d+(\.\d+)?$/.test(v) &&
+      !["true", "false", "null"].includes(v)
+      ? v : JSON.stringify(v);
+  if (Array.isArray(v)) return "[" + v.map(serializeFlow).join(", ") + "]";
+  if (typeof v === "object")
+    return "{" + Object.entries(v)
+      .map(([k, x]) => `${k}: ${serializeFlow(x)}`).join(", ") + "}";
+  return JSON.stringify(String(v));
+}
+
+/** readApp(doc, id) → the app's own entry as a fresh object, or null.
+ * Never mutates doc; never validates the entry (no schema — see above). */
+function readApp(doc, id) {
+  const seg = (doc && doc._fm || []).find((x) => x.kind === "apps");
+  if (!seg) return null;
+  const e = seg.entries.find((x) => x.id === id);
+  if (!e) return null;
+  const m = e.raw.trim().match(/^[A-Za-z0-9_-]+:\s*([\s\S]*)$/);
+  try { return parseFlow(m ? m[1] : ""); }
+  catch { return null; } // an unreadable entry is absent to its app, never a throw
+}
+
+/** writeApp(doc, id, cfg) → a NEW document with only this app's entry
+ * replaced (canonical flow serialization). Every other entry's raw text —
+ * unknown app ids, higher payload v — replays verbatim. Writing an apps:
+ * map is the one thing that turns `atchart: 1` into `atchart: 1.1`. */
+function writeApp(doc, id, cfg) {
+  if (!/^[A-Za-z0-9_-]+$/.test(String(id)))
+    throw new Error(`writeApp: app id "${id}" is not a slug`);
+  const nd = JSON.parse(JSON.stringify(doc));
+  if (!nd._fm) {
+    nd._fm = [];
+    const keys = [...FM_ORDER.filter((k) => k in nd.meta),
+      ...Object.keys(nd.meta).filter((k) => !FM_ORDER.includes(k))];
+    for (const k of keys) {
+      if (k in DEFAULTS && valEq(nd.meta[k], DEFAULTS[k])) continue;
+      nd._fm.push({ kind: "key", key: k, raw: canonLine(k, nd.meta[k]), value: nd.meta[k] });
+    }
+  }
+  let seg = nd._fm.find((x) => x.kind === "apps");
+  if (!seg) { seg = { kind: "apps", entries: [] }; nd._fm.push(seg); }
+  const line = `  ${id}: ${serializeFlow(cfg)}`;
+  const at = seg.entries.findIndex((x) => x.id === id);
+  if (at >= 0) seg.entries[at] = { id, raw: line };
+  else seg.entries.push({ id, raw: line });
+  if (Number(nd.meta.atchart) === 1) nd.meta.atchart = 1.1;
+  return nd;
+}
+
+// ---------- the chart block ----------
+
+function parseChartBlock(lines) {
+  const sections = [];
+  let cur = null;
+  const openSection = (name) => {
+    cur = { name, bars: [], melody: [] };
+    sections.push(cur);
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    let rest = line;
+    const secM = rest.match(/^@(\S+)\s*/);
+    if (secM) {
+      openSection(secM[1]);
+      rest = rest.slice(secM[0].length);
+      if (!rest) continue;
+    }
+    if (/^melody:/.test(rest)) {
+      if (!cur) openSection("A");
+      cur.melody.push(rest.replace(/^melody:\s*/, ""));
+      continue;
+    }
+    if (!cur) openSection("A");
+    parseBarLine(rest, cur);
+  }
+  return sections;
+}
+
+function parseBarLine(text, section) {
+  // tokenize on bar separators, tracking |: and :|
+  let i = 0;
+  let pendingRepeatStart = false;
+  let bar = null;
+  const flush = () => {
+    if (bar && (bar.chords.length || bar.repeatStart || bar.repeatEnd)) section.bars.push(bar);
+    bar = null;
+  };
+  // humans type "|Bbmaj7|G7#5|" — split on bar tokens directly, longest first,
+  // so :|: never decomposes into :| + : or | + :
+  const tokens = text
+    .split(/(:\|:|\|:|:\|(?!:)|\|)/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .flatMap((s) => (/^(:\|:|\|:|:\||\|)$/.test(s) ? [s] : s.split(/\s+/)));
+  for (const tok of tokens) {
+    if (tok === "|:") {
+      flush();
+      pendingRepeatStart = true;
+    } else if (tok === ":|") {
+      if (bar) bar.repeatEnd = true;
+      flush();
+    } else if (tok === "|") {
+      flush();
+    } else if (tok === ":|:") {
+      if (bar) bar.repeatEnd = true;
+      flush();
+      pendingRepeatStart = true;
+    } else {
+      if (!bar) {
+        bar = { chords: [], repeatStart: pendingRepeatStart, repeatEnd: false };
+        pendingRepeatStart = false;
+      }
+      // chord symbols validate through the shared parser — bad text is an error
+      // with a message naming the token, never a silently-wrong chart
+      const parsed = parseChord(tok);
+      bar.chords.push({ symbol: tok, parsed });
+    }
+    i++;
+  }
+  flush();
+}
+
+function serializeChartBlock(sections) {
+  const lines = [];
+  const multi = sections.length > 1 || sections[0]?.name !== "A";
+  for (const sec of sections) {
+    const parts = [];
+    for (const bar of sec.bars) {
+      parts.push(bar.repeatStart ? "|:" : "|");
+      parts.push(bar.chords.map((c) => c.symbol).join(" "));
+      if (bar.repeatEnd) {
+        parts.push(":|");
+      }
+    }
+    if (parts.length && parts[parts.length - 1] !== ":|") parts.push("|");
+    const head = multi ? `@${sec.name}  ` : "";
+    lines.push(head + parts.join(" "));
+    for (const m of sec.melody) lines.push((multi ? "     " : "") + "melody: " + m);
+  }
+  return lines.join("\n");
+}
+
+// ---------- substitutions ----------
+
+const SUB_RE = /^-\s+(\S+?)\.b(\d+)\s+(.+?)\s+(?:->|→)\s+(.+?)\s*(?:\[(.+?)\])?\s*$/;
+
+function parseSubLine(line) {
+  const m = line.match(SUB_RE);
+  if (!m) return null;
+  const parseSide = (s) => s.split(/\s+/).filter(Boolean).map((sym) => ({ symbol: sym, parsed: parseChord(sym) }));
+  return {
+    section: m[1],
+    bar: Number(m[2]),
+    original: parseSide(m[3]),
+    replacement: parseSide(m[4]),
+    name: m[5] || null,
+  };
+}
+
+function serializeSub(sub) {
+  const side = (cs) => cs.map((c) => c.symbol).join(" ");
+  return `- ${sub.section}.b${sub.bar}  ${side(sub.original)}  ->  ${side(sub.replacement)}${sub.name ? `  [${sub.name}]` : ""}`;
+}
+
+// ---------- the whole document ----------
+
+/**
+ * parseAtchart(text) → { meta, sections, substitutions, practiceLog, body }
+ * `body` is the document skeleton with placeholders, so serialization preserves
+ * every line the format doesn't claim (spec §2.5).
+ */
+function parseAtchart(text) {
+  if (typeof text !== "string") throw new Error("atchart source must be a string");
+  const lines = text.split(/\r?\n/);
+
+  // frontmatter
+  if (lines[0] !== "---") throw new Error("missing frontmatter (--- on line 1)");
+  const fmEnd = lines.indexOf("---", 1);
+  if (fmEnd < 0) throw new Error("unterminated frontmatter");
+  const { meta: fmMeta, fm } = parseFrontmatter(lines.slice(1, fmEnd));
+  const meta = { ...DEFAULTS, ...fmMeta };
+  if (meta.atchart === undefined) throw new Error("frontmatter must declare: atchart: 1");
+  if (Math.floor(Number(meta.atchart)) > ATCHART_VERSION)
+    throw new Error(`atchart version ${meta.atchart} is newer than this parser (v${ATCHART_VERSION})`);
+
+  // walk the body: extract the chart block and the two claimed sections,
+  // keep everything else verbatim
+  const body = [];
+  let chartLines = null;
+  const sections = [];
+  const substitutions = [];
+  const practiceLog = [];
+  let mode = "prose"; // prose | chart | subs | log
+  let sawChart = false;
+
+  for (let i = fmEnd + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (mode === "chart") {
+      if (/^```\s*$/.test(line)) {
+        sections.push(...parseChartBlock(chartLines));
+        chartLines = null;
+        mode = "prose";
+      } else chartLines.push(line);
+      continue;
+    }
+    if (/^```chart\s*$/.test(line)) {
+      if (sawChart) throw new Error("multiple chart blocks are reserved for v2");
+      sawChart = true;
+      chartLines = [];
+      mode = "chart";
+      body.push(CHART_SLOT);
+      continue;
+    }
+    if (/^##\s+Substitutions\s*$/i.test(line)) {
+      mode = "subs";
+      body.push("\x00SUBS\x00");
+      continue;
+    }
+    if (/^##\s+Practice log\s*$/i.test(line)) {
+      mode = "log";
+      body.push("\x00LOG\x00");
+      continue;
+    }
+    if (/^##?\s+/.test(line) && (mode === "subs" || mode === "log")) mode = "prose";
+
+    if (mode === "subs") {
+      const sub = line.trim() ? parseSubLine(line) : null;
+      if (sub) substitutions.push(sub);
+      else if (line.trim()) throw new Error(`bad substitution line: "${line}"`);
+      continue;
+    }
+    if (mode === "log") {
+      if (line.trim()) practiceLog.push(line.replace(/^-\s*/, ""));
+      continue;
+    }
+    body.push(line);
+  }
+  if (mode === "chart") throw new Error("unterminated chart block");
+  if (!sawChart) throw new Error("no ```chart block found");
+
+  return { meta, sections, substitutions, practiceLog, body, _fm: fm };
+}
+
+function serializeAtchart(doc) {
+  const out = [];
+  out.push("---");
+  out.push(serializeFrontmatter(doc.meta, doc._fm));
+  out.push("---");
+  for (const line of doc.body) {
+    if (line === CHART_SLOT) {
+      out.push("```chart");
+      out.push(serializeChartBlock(doc.sections));
+      out.push("```");
+    } else if (line === "\x00SUBS\x00") {
+      out.push("## Substitutions");
+      out.push("");
+      for (const s of doc.substitutions) out.push(serializeSub(s));
+    } else if (line === "\x00LOG\x00") {
+      out.push("## Practice log");
+      out.push("");
+      for (const l of doc.practiceLog) out.push("- " + l);
+    } else out.push(line);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").replace(/\n+$/, "") + "\n";
+}
+return { parseAtchart, serializeAtchart, readApp, writeApp, CHART_SLOT, ATCHART_VERSION };
+})();
+const MD = (() => {
+/* markdown.mjs — the notepad's markdown engine (component v1).
+ *
+ * A CommonMark SUBSET that builds DOM nodes, written in-house because the two
+ * guarantees below cannot be imported (notepad item, charter §7, web contract
+ * §5 — every dependency must pass the inline test):
+ *
+ *   1. None of the four HTML-string sinks (the grep test in
+ *      markdown.test.mjs names them) appears anywhere in this module. The
+ *      renderer builds the tree with createElement / createTextNode /
+ *      textContent only, so user input being data-not-code is STRUCTURAL,
+ *      not a sanitizer's promise.
+ *   2. NO HTML PASSTHROUGH. CommonMark permits raw inline and block HTML;
+ *      this subset REFUSES it: a typed `<script>` is text and renders as the
+ *      visible characters `<script>`. This is a documented, tested divergence
+ *      from CommonMark — not an oversight to be "fixed" later.
+ *
+ * The subset (what a musician writing practice notes actually types):
+ * ATX headings · paragraphs · *em* / **strong** · bullet + ordered lists (ONE
+ * nesting level) · > blockquotes · `code spans` · fenced blocks with info
+ * strings · --- rules · [text](url) · hard line breaks (two trailing spaces).
+ * Deliberately out: tables, footnotes, task lists, wiki-links, autolinks,
+ * setext headings, deeper nesting, syntax highlighting inside fences.
+ *
+ * Load-bearing choices:
+ * - Fenced blocks are OPAQUE: the node carries {info, body} byte-identically
+ *   and the renderer shows them as preformatted text, never interpreting
+ *   them. This is the hook the payload convention and the `chart` block hang
+ *   on — engine/atchart.mjs stays the only thing that reads a chart fence.
+ * - An UNCLOSED fence is not a fence: the ``` line renders as the literal
+ *   characters typed and parsing continues — good for live preview (typing a
+ *   fence never swallows the rest of the note) and no content is ever lost.
+ * - Links sanitize by scheme allow-list AT RENDER: http, https, mailto, and
+ *   same-document # fragments. Anything else (javascript:, data:, vbscript:,
+ *   file:) renders as the literal source text — inert AND nothing lost.
+ * - Unknown/malformed syntax degrades to text, NEVER throws. There is no
+ *   error path that loses content.
+ * - ROUND-TRIP IS NOT CLAIMED. This is a renderer, not a formatter: the
+ *   textarea source stays canonical, there is no serializer and no
+ *   fixed-point law here (that law lives in engine/atchart.mjs).
+ *
+ * applyEdit(src, sel, op) is the toolbar's seam — a pure string+selection
+ * transform (the palette inserts through the same seam via {type:"insert"}).
+ * Wrapping ops toggle rather than nest; line ops apply across every line the
+ * selection touches; the returned selection is the contract that the caret
+ * survives every op.
+ *
+ * Pure module: no DOM globals at parse time; renderTo reaches the document
+ * only through el.ownerDocument, so tests run against a stub.
+ */
+
+// ---------- parse ----------
+
+const FENCE_OPEN = /^```(.*)$/;
+const FENCE_CLOSE = /^```\s*$/;
+const HEADING = /^(#{1,6})\s+(.*)$/;
+const RULE = /^-{3,}\s*$/;
+const BULLET = /^(\s*)([-*+])\s+(.*)$/;
+const ORDERED = /^(\s*)(\d{1,9})[.)]\s+(.*)$/;
+const MAX_DEPTH = 8; // quotes-in-quotes beyond this degrade to text, never throw
+
+function parseMarkdown(src) {
+  const s = typeof src === "string" ? src : String(src ?? "");
+  return { type: "doc", children: parseBlocks(s.split("\n"), 0) };
+}
+
+function matchListLine(line) {
+  let m = line.match(BULLET);
+  if (m) return { indent: m[1].length, ordered: false, num: null, text: m[3] };
+  m = line.match(ORDERED);
+  if (m) return { indent: m[1].length, ordered: true, num: +m[2], text: m[3] };
+  return null;
+}
+
+function isBlockStart(line) {
+  return HEADING.test(line) || RULE.test(line) || /^>/.test(line) ||
+    FENCE_OPEN.test(line) || (matchListLine(line)?.indent === 0);
+}
+
+function parseBlocks(lines, depth) {
+  if (depth > MAX_DEPTH)
+    return [{ type: "para", children: [{ type: "text", text: lines.join("\n") }] }];
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^\s*$/.test(line)) { i++; continue; }
+
+    const f = line.match(FENCE_OPEN);
+    if (f) {
+      let close = -1;
+      for (let j = i + 1; j < lines.length; j++)
+        if (FENCE_CLOSE.test(lines[j])) { close = j; break; }
+      if (close >= 0) {
+        // opaque node; info string and body byte-identical through parse
+        out.push({ type: "fence", info: f[1].trim(),
+          body: lines.slice(i + 1, close).join("\n") });
+        i = close + 1; continue;
+      }
+      // unclosed fence: the literal characters typed, parsing continues
+      out.push({ type: "para", children: [{ type: "text", text: line }] });
+      i++; continue;
+    }
+
+    const h = line.match(HEADING);
+    if (h) {
+      out.push({ type: "heading", level: h[1].length,
+        children: parseInline(h[2].replace(/\s+#+\s*$/, "")) });
+      i++; continue;
+    }
+
+    if (RULE.test(line)) { out.push({ type: "rule" }); i++; continue; }
+
+    if (/^>/.test(line)) {
+      const q = [];
+      while (i < lines.length && /^>/.test(lines[i])) {
+        q.push(lines[i].replace(/^> ?/, "")); i++;
+      }
+      out.push({ type: "quote", children: parseBlocks(q, depth + 1) });
+      continue;
+    }
+
+    const li = matchListLine(line);
+    if (li && li.indent === 0) {
+      const [node, next] = parseList(lines, i);
+      out.push(node); i = next; continue;
+    }
+
+    // paragraph: gather until a blank line or another block starts
+    const para = [];
+    while (i < lines.length && !/^\s*$/.test(lines[i]) && !isBlockStart(lines[i])) {
+      para.push(lines[i]); i++;
+    }
+    if (!para.length) { // a block-start we cannot consume (defensive; unreachable)
+      para.push(lines[i]); i++;
+    }
+    const children = [];
+    para.forEach((ln, k) => {
+      const hard = /\S {2,}$/.test(ln); // two+ trailing spaces = hard break
+      children.push(...parseInline(ln.replace(/\s+$/, "")));
+      if (k < para.length - 1)
+        children.push(hard ? { type: "br" } : { type: "text", text: " " });
+    });
+    out.push({ type: "para", children });
+  }
+  return out;
+}
+
+function parseList(lines, i) {
+  const first = matchListLine(lines[i]);
+  const ordered = first.ordered;
+  const items = [];
+  while (i < lines.length) {
+    const m = matchListLine(lines[i]);
+    if (!m || m.indent !== 0 || m.ordered !== ordered) break;
+    const item = { children: parseInline(m.text), sub: null };
+    i++;
+    // ONE nesting level: an immediately following indented run is the sub-list;
+    // anything deeper is flattened into it (deeper nesting is out of the subset)
+    const subItems = [];
+    let subOrdered = null;
+    while (i < lines.length) {
+      const sm = matchListLine(lines[i]);
+      if (!sm || sm.indent === 0) break;
+      if (subOrdered === null) subOrdered = sm.ordered;
+      subItems.push({ children: parseInline(sm.text), sub: null });
+      i++;
+    }
+    if (subItems.length)
+      item.sub = { type: "list", ordered: subOrdered, start: 1, items: subItems };
+    items.push(item);
+  }
+  return [{ type: "list", ordered, start: first.num ?? 1, items }, i];
+}
+
+function parseInline(s, depth) {
+  depth = depth || 0;
+  const out = [];
+  let buf = "", i = 0;
+  const flush = () => { if (buf) { out.push({ type: "text", text: buf }); buf = ""; } };
+  if (depth > MAX_DEPTH) return [{ type: "text", text: s }];
+  while (i < s.length) {
+    const c = s[i];
+    if (c === "`") {
+      const end = s.indexOf("`", i + 1);
+      if (end > i + 1) { flush(); out.push({ type: "code", text: s.slice(i + 1, end) }); i = end + 1; continue; }
+      buf += c; i++; continue;
+    }
+    if (s.startsWith("**", i)) {
+      const end = s.indexOf("**", i + 2);
+      if (end > i + 2) {
+        flush();
+        out.push({ type: "strong", children: parseInline(s.slice(i + 2, end), depth + 1) });
+        i = end + 2; continue;
+      }
+      buf += "*"; i++; continue; // lone markers are the literal characters typed
+    }
+    if (c === "*") {
+      const end = s.indexOf("*", i + 1);
+      if (end > i + 1) {
+        flush();
+        out.push({ type: "em", children: parseInline(s.slice(i + 1, end), depth + 1) });
+        i = end + 1; continue;
+      }
+      buf += c; i++; continue;
+    }
+    if (c === "[") {
+      const close = s.indexOf("]", i + 1);
+      if (close > i && s[close + 1] === "(") {
+        const rp = s.indexOf(")", close + 2);
+        if (rp >= 0) {
+          flush();
+          out.push({ type: "link", href: s.slice(close + 2, rp),
+            children: parseInline(s.slice(i + 1, close), depth + 1) });
+          i = rp + 1; continue;
+        }
+      }
+      buf += c; i++; continue; // stray [ is the literal character typed
+    }
+    buf += c; i++;
+  }
+  flush();
+  return out;
+}
+
+// ---------- render: DOM nodes only, no HTML-string sinks ----------
+
+const SAFE_SCHEME = /^(https?:|mailto:)/i;
+
+/** null = refuse: the construct renders as literal source text (inert AND
+ * nothing lost). Allow-list, not deny-list: http, https, mailto, #fragment. */
+function safeHref(href) {
+  const t = String(href ?? "").trim();
+  if (t.startsWith("#")) return t;
+  if (SAFE_SCHEME.test(t)) return t;
+  return null;
+}
+
+function plainText(children) {
+  let t = "";
+  for (const n of children || []) {
+    if (n.type === "text") t += n.text;
+    else if (n.type === "code") t += "`" + n.text + "`";
+    else if (n.type === "br") t += "\n";
+    else t += plainText(n.children);
+  }
+  return t;
+}
+
+function renderTo(el, ast) {
+  const doc = el.ownerDocument;
+  while (el.firstChild) el.removeChild(el.firstChild);
+  for (const b of (ast && ast.children) || []) el.appendChild(blockNode(doc, b));
+  return el;
+}
+
+function blockNode(doc, b) {
+  switch (b.type) {
+    case "heading": {
+      const h = doc.createElement("h" + Math.min(6, Math.max(1, b.level)));
+      appendInline(doc, h, b.children); return h;
+    }
+    case "para": {
+      const p = doc.createElement("p");
+      appendInline(doc, p, b.children); return p;
+    }
+    case "rule": return doc.createElement("hr");
+    case "quote": {
+      const q = doc.createElement("blockquote");
+      for (const c of b.children) q.appendChild(blockNode(doc, c));
+      return q;
+    }
+    case "fence": {
+      // opaque: preformatted text; the info string rides as data-info for
+      // consumers (the chart block's reader lives elsewhere, by design)
+      const pre = doc.createElement("pre");
+      const code = doc.createElement("code");
+      if (b.info) code.setAttribute("data-info", b.info);
+      code.textContent = b.body;
+      pre.appendChild(code); return pre;
+    }
+    case "list": {
+      const l = doc.createElement(b.ordered ? "ol" : "ul");
+      if (b.ordered && b.start !== 1) l.setAttribute("start", String(b.start));
+      for (const it of b.items) {
+        const li = doc.createElement("li");
+        appendInline(doc, li, it.children);
+        if (it.sub) li.appendChild(blockNode(doc, it.sub));
+        l.appendChild(li);
+      }
+      return l;
+    }
+    default: { // unknown node type: its text content, never a throw
+      const p = doc.createElement("p");
+      p.textContent = plainText(b.children);
+      return p;
+    }
+  }
+}
+
+function appendInline(doc, el, children) {
+  for (const n of children || []) {
+    switch (n.type) {
+      case "text": el.appendChild(doc.createTextNode(n.text)); break;
+      case "br": el.appendChild(doc.createElement("br")); break;
+      case "code": {
+        const c = doc.createElement("code");
+        c.textContent = n.text; el.appendChild(c); break;
+      }
+      case "em": case "strong": {
+        const e = doc.createElement(n.type);
+        appendInline(doc, e, n.children); el.appendChild(e); break;
+      }
+      case "link": {
+        const href = safeHref(n.href);
+        if (href === null) {
+          // refused scheme: the literal source text, visible and inert
+          el.appendChild(doc.createTextNode(
+            "[" + plainText(n.children) + "](" + n.href + ")"));
+        } else {
+          const a = doc.createElement("a");
+          a.setAttribute("href", href);
+          a.setAttribute("rel", "noopener noreferrer");
+          appendInline(doc, a, n.children);
+          el.appendChild(a);
+        }
+        break;
+      }
+      default: el.appendChild(doc.createTextNode(plainText([n])));
+    }
+  }
+}
+
+// ---------- applyEdit: the toolbar's (and the palette's) seam ----------
+
+/**
+ * applyEdit(src, sel, op) → { src, selection:{start,end} }
+ * sel: {start,end} string indices (clamped, ordered; never throws).
+ * ops: {type:"insert",text} · {type:"strong"|"em"|"code"} ·
+ *      {type:"link"} · {type:"heading",level} ·
+ *      {type:"bullet"|"ordered"|"quote"}
+ * Wrapping ops TOGGLE rather than nest (already-wrapped selection unwraps,
+ * markers around the selection unwrap). Line ops apply across every line the
+ * selection touches, and toggle off only when EVERY non-blank line already
+ * carries the marker. The returned selection is exact — the caret's survival
+ * is the contract.
+ */
+function applyEdit(src, sel, op) {
+  const s = typeof src === "string" ? src : String(src ?? "");
+  let start = Math.max(0, Math.min(s.length, (sel && sel.start) | 0));
+  let end = Math.max(0, Math.min(s.length, (sel && sel.end) | 0));
+  if (end < start) [start, end] = [end, start];
+  if (!op || typeof op.type !== "string")
+    return { src: s, selection: { start, end } };
+
+  switch (op.type) {
+    case "insert": {
+      const t = String(op.text ?? "");
+      const out = s.slice(0, start) + t + s.slice(end);
+      const caret = start + t.length;
+      return { src: out, selection: { start: caret, end: caret } };
+    }
+    case "strong": return wrapToggle(s, start, end, "**");
+    case "em": return wrapToggle(s, start, end, "*");
+    case "code": return wrapToggle(s, start, end, "`");
+    case "link": {
+      if (start === end) {
+        const t = "[text](url)";
+        return { src: s.slice(0, start) + t + s.slice(end),
+          selection: { start: start + 1, end: start + 5 } }; // "text" selected
+      }
+      const inner = s.slice(start, end);
+      const out = s.slice(0, start) + "[" + inner + "](url)" + s.slice(end);
+      const u = start + 1 + inner.length + 2;
+      return { src: out, selection: { start: u, end: u + 3 } }; // "url" selected
+    }
+    case "heading": {
+      const level = Math.min(6, Math.max(1, op.level | 0 || 1));
+      const marker = "#".repeat(level) + " ";
+      return lineOp(s, start, end,
+        (line) => {
+          const cur = line.match(/^(#{1,6})\s+/);
+          return !!(cur && cur[1].length === level);
+        },
+        (line) => { // apply
+          const cur = line.match(/^(#{1,6})\s+/);
+          return marker + (cur ? line.slice(cur[0].length) : line);
+        },
+        (line) => line.replace(/^(#{1,6})\s+/, "")); // remove
+    }
+    case "quote":
+      return lineOp(s, start, end,
+        (line) => /^> /.test(line),
+        (line) => /^> /.test(line) ? line : "> " + line,
+        (line) => line.replace(/^> ?/, ""));
+    case "bullet":
+      return lineOp(s, start, end,
+        (line) => /^[-*+] /.test(line),
+        (line) => /^[-*+] /.test(line) ? line
+          : "- " + line.replace(/^(\d{1,9})[.)]\s+/, ""),
+        (line) => line.replace(/^[-*+]\s+/, ""));
+    case "ordered": {
+      let n = 0;
+      return lineOp(s, start, end,
+        (line) => /^\d{1,9}[.)] /.test(line),
+        (line) => (++n) + ". " +
+          line.replace(/^[-*+]\s+/, "").replace(/^\d{1,9}[.)]\s+/, ""),
+        (line) => line.replace(/^\d{1,9}[.)]\s+/, ""));
+    }
+    default: // unknown op: a no-op, never a throw — content is data
+      return { src: s, selection: { start, end } };
+  }
+}
+
+function wrapToggle(s, start, end, m) {
+  const L = m.length;
+  if (start === end) {
+    // empty selection: open a pair, caret between the markers
+    const out = s.slice(0, start) + m + m + s.slice(end);
+    return { src: out, selection: { start: start + L, end: start + L } };
+  }
+  const inner = s.slice(start, end);
+  if (inner.length >= 2 * L && inner.startsWith(m) && inner.endsWith(m)) {
+    // selection includes the markers: unwrap, select the bare text
+    const bare = inner.slice(L, inner.length - L);
+    return { src: s.slice(0, start) + bare + s.slice(end),
+      selection: { start, end: start + bare.length } };
+  }
+  if (s.slice(start - L, start) === m && s.slice(end, end + L) === m) {
+    // markers surround the selection: unwrap, selection shifts left
+    return { src: s.slice(0, start - L) + inner + s.slice(end + L),
+      selection: { start: start - L, end: end - L } };
+  }
+  const out = s.slice(0, start) + m + inner + m + s.slice(end);
+  return { src: out, selection: { start: start + L, end: end + L } };
+}
+
+function lineOp(s, start, end, has, add, remove) {
+  const ls = s.lastIndexOf("\n", start - 1) + 1;
+  let le = s.indexOf("\n", end);
+  if (le < 0) le = s.length;
+  const seg = s.slice(ls, le);
+  const lines = seg.split("\n");
+  const marked = lines.filter((l) => l.trim() !== "");
+  const allHave = marked.length > 0 && marked.every(has);
+  const outLines = lines.map((l) => l.trim() === "" ? l : (allHave ? remove(l) : add(l)));
+  const newSeg = outLines.join("\n");
+  const out = s.slice(0, ls) + newSeg + s.slice(le);
+  if (start === end && lines.length === 1) {
+    // single-line caret: it rides the line's prefix change, clamped to the line
+    const delta = outLines[0].length - lines[0].length;
+    const caret = Math.max(ls, Math.min(ls + outLines[0].length, start + delta));
+    return { src: out, selection: { start: caret, end: caret } };
+  }
+  // multi-line (or ranged) selection: select the whole transformed range
+  return { src: out, selection: { start: ls, end: ls + newSeg.length } };
+}
+
+// ---------- load-time assertions (golden rule 1, site form) ----------
+
+{
+  const probe = parseMarkdown("# h\n\n**b** *i* `c` [t](https://x)\n\n```chart\nX\n```\n");
+  if (probe.children.length !== 3 || probe.children[2].info !== "chart" ||
+      probe.children[2].body !== "X")
+    throw new Error("markdown: the probe document must parse to its three blocks");
+  if (safeHref("javascript:alert(1)") !== null || safeHref("data:text/html,x") !== null)
+    throw new Error("markdown: unsafe schemes must refuse");
+  if (safeHref("https://a.b") === null || safeHref("#top") === null)
+    throw new Error("markdown: safe schemes must pass");
+  const e1 = applyEdit("ab", { start: 0, end: 2 }, { type: "strong" });
+  if (e1.src !== "**ab**" || e1.selection.start !== 2 || e1.selection.end !== 4)
+    throw new Error("markdown: wrap must preserve the selection");
+  const e2 = applyEdit(e1.src, e1.selection, { type: "strong" });
+  if (e2.src !== "ab") throw new Error("markdown: wrap must toggle, not nest");
+  if (JSON.stringify(parseMarkdown("<b>x</b>").children[0].children[0]) !==
+      JSON.stringify({ type: "text", text: "<b>x</b>" }))
+    throw new Error("markdown: raw HTML must be text, not markup");
+}
+return { parseMarkdown, renderTo, applyEdit, safeHref };
+})();
+const NOTEPAD = (() => {
+const { parseAtchart, serializeAtchart, CHART_SLOT } = ATCHART;
+/* notepad.mjs — the shared notepad model (component v1).
+ *
+ * The notepad pattern's child 2 (decisions 1, 2, 6, 7, 8): one document model,
+ * one per-app payload slot, one file any sibling app can open. Pure module:
+ * no DOM, no storage, no audio — the HOST wires those through the adapter
+ * seam {app, version, snapshot(), apply(payload), summarize(payload)}.
+ *
+ * Document = { pad, entries, _at? }
+ *   pad      free markdown, the user's (charter §7: data, never code)
+ *   entries  [{id, savedAt, heading, text, payload}]
+ *   payload  {app, v, data} — data is OPAQUE to this module. The host
+ *            supplies it (adapter.snapshot()) and the host reads it
+ *            (adapter.apply / adapter.summarize). An unrecognized app or a
+ *            v above the reader's is carried untouched — never dropped,
+ *            never guessed at. summarize() output is DERIVED, never stored:
+ *            a stored summary field is the bug class 260811.3 flagged.
+ *   _at      the parsed engine/atchart.mjs document a foreign file arrived
+ *            as — chart block, substitutions, practice log and §2.7
+ *            frontmatter all replay through the ENGINE on write. This
+ *            module never grows a rival format implementation; that split
+ *            is the point (260811.6).
+ *
+ * File shape (.atchart.md): frontmatter · chart block (empty for a pure
+ * notepad file; real charts from sibling apps replay verbatim) · the pad's
+ * markdown · "## Notes" · one "### <savedAt>" span per entry, prose then a
+ * fenced ```json ENVELOPE {app, v, id, savedAt, data}. The envelope is what
+ * makes an entry an entry; a user's own fenced block — even a ```json one
+ * without an envelope shape — is prose and stays prose. Fences pair top to
+ * bottom; an unclosed opener is literal text (the same rule the markdown
+ * engine renders by), so a stray ``` in a note can never swallow a payload.
+ *
+ * No derived musical data is stored (§7): entries carry what the user typed
+ * and the host's CONFIG choice; anything derivable recomputes on load.
+ * The file is the handoff channel (§5): storage is a per-app cache, and
+ * this module never touches either.
+ */
+
+// ---------- ids and construction ----------
+
+function makeEntry(fields) {
+  const f = fields || {};
+  return {
+    id: String(f.id ?? entryId()),
+    savedAt: f.savedAt === undefined ? null : f.savedAt,
+    heading: f.heading === undefined ? null : f.heading,
+    text: String(f.text ?? ""),
+    payload: f.payload === undefined ? null : f.payload,
+  };
+}
+function entryId() {
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+}
+
+function emptyDoc() { return { pad: "", entries: [] }; }
+
+// ---------- pure entry operations (every one returns a NEW document) ----------
+
+function addEntry(doc, entry) {
+  return { ...doc, entries: [...doc.entries, makeEntry(entry)] };
+}
+function editEntry(doc, id, patch) {
+  return { ...doc, entries: doc.entries.map((e) =>
+    e.id === id ? makeEntry({ ...e, ...patch, id: e.id }) : e) };
+}
+function deleteEntry(doc, id) {
+  return { ...doc, entries: doc.entries.filter((e) => e.id !== id) };
+}
+function reorderEntry(doc, id, toIndex) {
+  const from = doc.entries.findIndex((e) => e.id === id);
+  if (from < 0) return { ...doc, entries: [...doc.entries] };
+  const entries = [...doc.entries];
+  const [m] = entries.splice(from, 1);
+  entries.splice(Math.max(0, Math.min(entries.length, toIndex | 0)), 0, m);
+  return { ...doc, entries };
+}
+
+// ---------- the v1.0 Metronome migration (before any UI — the pin) ----------
+
+/** fromMetronomeV1(pad, log) → doc. The shipped v1.0 shapes are the
+ * characterization pin: pad was a bare string (metronome.v1.pad), log was
+ * [{id, savedAt, text, metro}] (metronome.v1.log). Nothing is lost: every
+ * field maps, the metro config becomes the opaque payload data. */
+function fromMetronomeV1(pad, log) {
+  const entries = (Array.isArray(log) ? log : []).map((en) => makeEntry({
+    id: en.id, savedAt: en.savedAt ?? null, text: en.text ?? "",
+    payload: { app: "metronome", v: 1, data: en.metro ?? null },
+  }));
+  return { pad: String(pad ?? ""), entries };
+}
+
+/** fromTriadetudesV1(log) → doc. The shipped Practice Log shape is the pin:
+ * [{id, savedAt, minutes, title, summary, intention, accomplished, cfg}]
+ * (triadetudes.v1.log). The cfg is a complete rawCfg() snapshot (established
+ * 260811.3) and becomes the opaque payload data BYTE-IDENTICAL. Note text
+ * merges the two prose fields under their old row markers (→ intention,
+ * ✓ accomplished) so the distinction survives as visible text; the duration
+ * joins the note as a trailing line — a fact of the session, kept visible.
+ * title and summary are DROPPED: both are derived values (summary is the
+ * stale-cache bug 260811.3 flagged; the label now derives at render via
+ * adapter.summarize). Supersedes "Stop storing en.summary". */
+function fromTriadetudesV1(log) {
+  const entries = (Array.isArray(log) ? log : []).map((en) => {
+    const parts = [];
+    if (en.intention) parts.push("\u2192 " + en.intention);
+    if (en.accomplished) parts.push("\u2713 " + en.accomplished);
+    if (en.minutes) parts.push("~" + en.minutes + " min");
+    return makeEntry({
+      id: en.id, savedAt: en.savedAt ?? null, text: parts.join("\n\n"),
+      payload: { app: "triadetudes", v: 1, data: en.cfg ?? null },
+    });
+  });
+  return { pad: "", entries };
+}
+
+// ---------- fence pairing (shared by parse; the unclosed rule) ----------
+
+function pairFences(lines) {
+  // returns [{open, close, info}] for CLOSED fences only: an opener may carry
+  // an info string, only a BARE ``` closes (the markdown engine's rule), and
+  // an opener with no closer is not a fence — it is literal text
+  const out = [];
+  let open = -1, info = "";
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^```(.*)$/);
+    if (!m) continue;
+    if (open < 0) { open = i; info = m[1].trim(); }
+    else if (m[1].trim() === "") { out.push({ open, close: i, info }); open = -1; }
+    // an info-carrying ``` line inside an open fence is content, not a closer
+  }
+  return out;
+}
+
+function envelopeOf(lines, fence) {
+  if (fence.info !== "json") return null;
+  try {
+    const o = JSON.parse(lines.slice(fence.open + 1, fence.close).join("\n"));
+    if (o && typeof o === "object" && !Array.isArray(o) &&
+        typeof o.app === "string" && typeof o.id === "string" && "data" in o)
+      return o;
+  } catch { /* a user's own json block: prose stays prose */ }
+  return null;
+}
+
+// ---------- to / from .atchart.md, THROUGH engine/atchart.mjs ----------
+
+
+const NOTES_HEAD = /^##\s+Notes\s*$/;
+
+/** toAtchart(doc, meta) → .atchart.md source. meta merges into frontmatter
+ * (atchart version and defaults handled by the engine). A foreign file's
+ * chart, substitutions, practice log and unknown frontmatter replay through
+ * the engine untouched; a pure notepad file carries an empty chart block. */
+const CHART_OPENER = /^```chart\s*$/;
+
+function toAtchart(doc, meta) {
+  // the format's one-chart law (spec §2.2, multiples reserved for v2): a
+  // ```chart fence typed into the pad or a note would be claimed by the
+  // FORMAT at parse and make the written file unparseable. Refuse by name —
+  // the content stays in the model and storage; nothing is lost or mangled.
+  const offends = (t) => String(t ?? "").split("\n").some((l) => CHART_OPENER.test(l));
+  if (offends(doc.pad) || doc.entries.some((e) => offends(e.text)))
+    throw new Error("a ```chart fence belongs in the file's chart block — " +
+      "the format holds one chart per file (v1); use a plain ``` fence in notes");
+  const at = doc._at
+    ? JSON.parse(JSON.stringify(doc._at))
+    : { meta: { atchart: 1, ...(meta || {}) },
+        sections: [], substitutions: [], practiceLog: [], body: [] };
+  if (doc._at && meta) at.meta = { ...at.meta, ...meta };
+
+  const body = [CHART_SLOT];
+  const pad = String(doc.pad ?? "").replace(/\n+$/, "");
+  if (pad) { body.push(""); body.push(...pad.split("\n")); }
+  if (doc.entries.length) {
+    body.push("");
+    body.push("## Notes");
+    for (const e of doc.entries) {
+      body.push("");
+      body.push("### " + (e.heading ?? (e.savedAt || "note")));
+      const text = String(e.text ?? "").replace(/\n+$/, "");
+      if (text) { body.push(""); body.push(...text.split("\n")); }
+      if (e.payload) {
+        body.push("");
+        body.push("```json");
+        body.push(JSON.stringify({ app: e.payload.app, v: e.payload.v,
+          id: e.id, savedAt: e.savedAt, data: e.payload.data }));
+        body.push("```");
+      }
+    }
+  }
+  at.body = body;
+  return serializeAtchart(at);
+}
+
+/** fromAtchart(src) → doc. Parses THROUGH the engine (charts, §2.7, apps:
+ * maps all intact in _at), then reads the notepad's own section: pad = the
+ * prose before "## Notes" (fence-aware — a "## Notes" inside a fenced block
+ * is prose); entries = "### " spans after it. A span with an envelope fence
+ * is a payload entry; a span without one is a payloadless entry (foreign
+ * prose is carried, never dropped). Throws only what parseAtchart throws —
+ * a non-atchart file is refused by the format, not mangled by this module. */
+function fromAtchart(src) {
+  const at = parseAtchart(src);
+  const body = at.body;
+  const fences = pairFences(body);
+  const inFence = (i) => fences.some((f) => f.open < i && i < f.close);
+
+  let notesAt = -1;
+  for (let i = 0; i < body.length; i++)
+    if (NOTES_HEAD.test(body[i]) && !inFence(i)) { notesAt = i; break; }
+
+  const padLines = (notesAt < 0 ? body : body.slice(0, notesAt))
+    .filter((l) => l !== CHART_SLOT);
+  const pad = padLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
+
+  const entries = [];
+  if (notesAt >= 0) {
+    const tail = body.slice(notesAt + 1);
+    const tailFences = pairFences(tail);
+    const inTailFence = (i) => tailFences.some((f) => f.open < i && i < f.close);
+    const heads = [];
+    for (let i = 0; i < tail.length; i++)
+      if (/^###\s+/.test(tail[i]) && !inTailFence(i) &&
+          !tailFences.some((f) => f.open === i || f.close === i)) heads.push(i);
+    heads.forEach((h, k) => {
+      const end = k + 1 < heads.length ? heads[k + 1] : tail.length;
+      const span = tail.slice(h + 1, end);
+      // the payload envelope is END-ANCHORED: the serializer writes it as the
+      // span's last block, so parse trims trailing blanks and looks for a
+      // closing ``` whose nearest ```json opener above holds an envelope.
+      // Anything above that block — including the user's own fences, closed
+      // or stray — is text, verbatim. A mid-span envelope in a foreign file
+      // is prose by this rule (carried, not interpreted).
+      let last = span.length - 1;
+      while (last >= 0 && span[last].trim() === "") last--;
+      let env = null, envFence = null;
+      if (last >= 0 && /^```\s*$/.test(span[last])) {
+        for (let j = last - 1; j >= 0; j--) {
+          if (/^```json\s*$/.test(span[j])) {
+            const cand = { open: j, close: last, info: "json" };
+            env = envelopeOf(span, cand);
+            if (env) envFence = cand;
+            break;
+          }
+          if (/^```/.test(span[j])) break; // a different fence intervenes
+        }
+      }
+      const textLines = envFence === null ? span
+        : [...span.slice(0, envFence.open), ...span.slice(envFence.close + 1)];
+      const text = textLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
+      const heading = tail[h].replace(/^###\s+/, "");
+      if (env) entries.push(makeEntry({
+        id: env.id, savedAt: env.savedAt ?? null,
+        heading: heading === (env.savedAt || "note") ? null : heading,
+        text, payload: { app: env.app, v: env.v, data: env.data } }));
+      else entries.push(makeEntry({
+        id: "x-" + hashStr(tail.slice(h, end).join("\n")),
+        savedAt: null, heading, text, payload: null }));
+    });
+  }
+  return { pad, entries, _at: at };
+}
+
+function hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+// ---------- load-time assertions (golden rule 1, site form) ----------
+
+{
+  const d0 = addEntry(emptyDoc(), { id: "a", savedAt: "2026-08-11T10:00:00.000Z",
+    text: "an idea", payload: { app: "metronome", v: 1, data: { bpm: 132 } } });
+  const src = toAtchart({ ...d0, pad: "free prose" }, { title: "probe" });
+  const d1 = fromAtchart(src);
+  if (d1.pad !== "free prose" || d1.entries.length !== 1 ||
+      d1.entries[0].id !== "a" || d1.entries[0].payload.data.bpm !== 132)
+    throw new Error("notepad: the probe must round-trip its entry");
+  if (toAtchart(d1) !== src)
+    throw new Error("notepad: toAtchart must be a byte-level fixed point");
+  const mig = fromMetronomeV1("p", [{ id: "1", savedAt: "s", text: "t", metro: { bpm: 60 } }]);
+  if (mig.entries[0].payload.data.bpm !== 60)
+    throw new Error("notepad: the v1.0 migration must carry the config");
+}
+return { makeEntry, emptyDoc, addEntry, editEntry, deleteEntry, reorderEntry,
+  fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart };
 })();
 /* ============ motion grammar — shared component v1 ============
    Canonical source: engine/motion.mjs (same anti-drift discipline). */
@@ -2671,6 +3934,30 @@ function canonFig(src,mode){
     });
 }
 
+/* ---- the journal adapter's summarize (v0.8.0) ----
+   DERIVED from the payload, never stored (the stored en.summary was
+   260811.3's stale cache — this replaces it by construction), and a pure
+   function of the cfg, never of st — a history row must describe ITS OWN
+   config, not whatever is current. */
+const PROG_LABEL={cycle4:"Cycling 4ths",cycle6:"Cycling 6ths",cycle3:"Cycling 3rds",
+  scaleUp:"Scalar up",scaleDown:"Scalar down",chromUp:"Chromatic up",
+  chromDown:"Chromatic down",custom:"Custom"};
+function summarizeCfg(c){
+  if(!c)return "no étude attached";
+  const scale=SCALES[c.scaleType]?SCALES[c.scaleType].label:String(c.scaleType||"");
+  const split=(SPLITS[c.meter]&&SPLITS[c.meter][c.splitIdx])
+    ?SPLITS[c.meter][c.splitIdx].join("+"):"";
+  const how=c.harmonyMode==="break"
+    ?"break down ("+(c.breakProg||[]).map(e=>e.sym).join(" ")+")"
+    :(PROG_LABEL[c.prog]||String(c.prog||""))+(c.prog==="custom"&&c.custom?" ("+c.custom+")":"");
+  const lh=[...(c.set||[])].sort((a,b)=>OPEN[a]-OPEN[b]);
+  const arp=c.motionSrc||(c.arpPattern
+    ?c.arpPattern.map(sn=>"LMH"[lh.indexOf(sn)]??"?").join("-"):"none");
+  return c.key+" "+scale+" · strings "+(c.set||[]).join("-")+" · "+how+
+    " · arp "+arp+" · "+(c.playback||"")+
+    (c.placement&&c.placement!=="grip"?" · "+c.placement:"")+
+    " · "+c.meter+"/4 split "+split+" · "+c.bpm+" bpm";
+}
 /* ============ audio ============ */
 let AC=null;
 function ctx(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
@@ -3033,6 +4320,11 @@ const CLPS_SUMS={
   },
   timeline:()=>SEQ.length?("Timeline · "+(SEQ[st.cur]?SEQ[st.cur].label:"")+
     " · "+(st.cur+1)+" of "+SEQ.length+" · "+pattern().join("+")):"Timeline",
+  log:()=>{const n=J?J.entries.length:0;
+    const last=J&&J.entries.length?J.entries[J.entries.length-1]:null;
+    return "Log · "+n+" saved"+(last&&last.savedAt?" · last "+fmtWhen(last.savedAt):"");},
+  journal:()=>{const first=((J&&J.pad)||"").split("\n").find(l=>l.trim())||"";
+    return "Note · "+(first||"empty");},
 };
 function collapseSummaries(){
   document.querySelectorAll(".clpsd .clpsSum").forEach(e2=>{
@@ -3046,6 +4338,8 @@ function initCollapse(){
     ["transport",document.getElementById("splitSel")?.closest(".card")],
     ["shape",document.getElementById("shapeStrip")],
     ["timeline",document.getElementById("timeline")],
+    ["log",document.getElementById("logCol")],
+    ["journal",document.getElementById("noteCol")],
   ];
   for(const [key,root] of panels){
     if(!root)continue;
@@ -3898,9 +5192,63 @@ function renderAll(){ renderFret(); renderScore(); syncArpIn(); renderPlaceHint(
 
 /* ============ practice notebook ============ */
 const LOG_KEY="triadetudes.v1.log";
-let T0=Date.now();
 function loadLog(){ try{return JSON.parse(localStorage.getItem(LOG_KEY)||"[]");}catch(e){return null;} }
 function saveLog(list){ try{localStorage.setItem(LOG_KEY,JSON.stringify(list));return true;}catch(e){return false;} }
+/* ---- the journal (v0.8.0): Triadetudes as the notepad's second proving host ----
+   engine/notepad.mjs owns the model; this host wires storage, DOM and the
+   adapter. Migration ran before any UI existed (the dispatch's order): the
+   v1.0 log entries carry complete rawCfg() snapshots (260811.3), so the move
+   is field-for-field — cfg byte-identical, prose kept under its old row
+   markers, duration kept in the text, and the STORED summary dropped (the
+   stale cache 260811.3 flagged; labels now derive via HOST.summarize).
+   Supersedes "Stop storing en.summary". Old keys stay as a fallback copy. */
+const JKEY="triadetudes.v2.journal";
+const HOST={app:"triadetudes",version:1,
+  snapshot:()=>rawCfg(),
+  apply:(data)=>{ if(data)applyRaw(data); },
+  summarize:(data)=>summarizeCfg(data)};   // DERIVED at render, never stored
+let J=null, journalStorageOK=true;
+
+function loadJournal(){
+  try{
+    const v2=localStorage.getItem(JKEY);
+    if(v2){ const d=JSON.parse(v2);
+      return {pad:String(d.pad??""),entries:(d.entries||[]).map(NOTEPAD.makeEntry)}; }
+    const legacy=loadLog();
+    if(legacy===null){ journalStorageOK=false; return NOTEPAD.emptyDoc(); }
+    const doc=NOTEPAD.fromTriadetudesV1(legacy);
+    localStorage.setItem(JKEY,JSON.stringify({pad:doc.pad,entries:doc.entries}));
+    return doc;
+  }catch(e){ journalStorageOK=false; return NOTEPAD.emptyDoc(); }
+}
+function saveJournal(){
+  if(!journalStorageOK)return false;
+  try{ localStorage.setItem(JKEY,JSON.stringify({pad:J.pad,entries:J.entries})); return true; }
+  catch(e){ journalStorageOK=false; return false; }
+}
+function exportText(){
+  return NOTEPAD.toAtchart(J,{title:"Triadetudes journal"});
+}
+function importJournalText(text){
+  // merge, never delete: entries dedup by id; an incoming pad appends below a
+  // rule when both sides hold prose. Legacy files (the old log export) fall
+  // back to parseLogExport + the migration — old .md files on disk still open.
+  let inc;
+  try{ inc=NOTEPAD.fromAtchart(text); }
+  catch(e){
+    const res=parseLogExport(text,new Date().toISOString());
+    if(!res.entries.length)throw new Error("not a journal file (and no legacy entries found)");
+    inc=NOTEPAD.fromTriadetudesV1(res.entries);
+  }
+  const have=new Set(J.entries.map(x=>x.id));
+  const added=inc.entries.filter(x=>!have.has(x.id));
+  let pad=J.pad;
+  if(inc.pad.trim()&&!pad.trim())pad=inc.pad;
+  else if(inc.pad.trim()&&pad.trim()&&!pad.includes(inc.pad))pad=pad+"\n\n---\n\n"+inc.pad;
+  J={...J,pad,entries:[...J.entries,...added]};
+  saveJournal();
+  return added.length;
+}
 function rawCfg(){
   return {v:1,key:st.key,scaleType:st.scaleType,set:[...st.set],pivotString:st.pivotString,
     pivotFrets:[...st.pivotFrets],prog:st.prog,startDeg:st.startDeg,chromLen:st.chromLen,
@@ -4008,65 +5356,64 @@ function entryTitle(){
   return SEQ.length?SEQ[0].label+" · "+progLabel()+" · "+st.key+" "+SCALES[st.scaleType].label:"étude";
 }
 function renderHist(){
-  const list=loadLog(), wrap=document.getElementById("histList"),
+  const wrap=document.getElementById("histList"),
         cnt=document.getElementById("histCount"), note=document.getElementById("storeNote");
   if(!wrap)return;
-  if(list===null){
-    if(note)note.textContent="storage unavailable here — use Export to keep your log";
-    wrap.innerHTML=""; cnt.textContent="0"; return;
-  }
-  cnt.textContent=String(list.length);
+  if(!journalStorageOK&&note)
+    note.textContent="storage unavailable here — your journal lives in this tab only; use Export";
+  cnt.textContent=String(J.entries.length);
   wrap.innerHTML="";
-  if(!list.length){
+  if(!J.entries.length){
     const p=document.createElement("div"); p.className="hint";
-    p.textContent="No entries yet. Design an étude, note your intention, practice, then save.";
+    p.textContent="No entries yet. Design an étude, jot the note, then save.";
     wrap.appendChild(p); return;
   }
-  [...list].reverse().forEach(en=>{
+  [...J.entries].reverse().forEach(en=>{
     const div=document.createElement("div"); div.className="hist";
     const hd=document.createElement("div"); hd.className="hd";
-    const b=document.createElement("b"); b.textContent=en.title; hd.appendChild(b);
+    const b=document.createElement("b");
+    // the row label DERIVES from the entry's own payload through the adapter —
+    // never stored, so it can never go stale (260811.3, by construction).
+    // A foreign app's payload is named and carried, never interpreted.
+    const p=en.payload;
+    b.textContent=!p?"note":
+      p.app===HOST.app?HOST.summarize(p.data)
+      :p.app+" · v"+p.v+" (another app's settings — carried untouched)";
+    hd.appendChild(b);
     const w=document.createElement("span"); w.className="when";
-    w.textContent=fmtWhen(en.savedAt)+(en.minutes?" · ~"+en.minutes+" min":""); hd.appendChild(w);
+    w.textContent=fmtWhen(en.savedAt)||""; hd.appendChild(w);
     div.appendChild(hd);
-    const s=document.createElement("div"); s.className="sum"; s.textContent=en.summary; div.appendChild(s);
-    // entries saved v0.7.3–260811.2 froze a summary whose arp clause predated
-    // the figure: the cfg is complete (rawCfg always carried it) but the row's
-    // text misdescribes it. Detect and say so, derived from the entry's own
-    // cfg at render time — the stored record is never rewritten.
-    if(en.cfg&&en.cfg.motionSrc&&!(en.summary||"").includes(en.cfg.motionSrc)){
-      const fl=document.createElement("div"); fl.className="note";
-      fl.textContent="⚠ saved before summaries named figures — this étude carries "+
-        en.cfg.motionSrc+" ("+(en.cfg.motionMode||"tones")+"); Restore rebuilds it exactly";
-      div.appendChild(fl);
+    if(en.text){
+      const tx=document.createElement("div"); tx.className="note md";
+      MD.renderTo(tx,MD.parseMarkdown(en.text));   // notes render where READ
+      div.appendChild(tx);
     }
-    if(en.intention){const i=document.createElement("div");i.className="note";i.textContent="→ "+en.intention;div.appendChild(i);}
-    if(en.accomplished){const a=document.createElement("div");a.className="note";a.textContent="✓ "+en.accomplished;div.appendChild(a);}
     const acts=document.createElement("div"); acts.className="acts";
-    const rb=document.createElement("button"); rb.textContent="Restore étude";
-    rb.addEventListener("click",()=>{applyRaw(en.cfg);
-      document.getElementById("intentIn").value=en.intention||"";
-      document.getElementById("accompIn").value=en.accomplished||"";
-      window.scrollTo({top:0,behavior:"smooth"});});
+    if(p&&p.app===HOST.app&&p.data){
+      const rb=document.createElement("button"); rb.textContent="Restore étude";
+      rb.addEventListener("click",()=>{
+        HOST.apply(p.data);
+        const ta=document.getElementById("journalIn");
+        if(ta){ ta.value=en.text||""; J={...J,pad:ta.value}; saveJournal(); }
+        window.scrollTo({top:0,behavior:"smooth"});});
+      acts.appendChild(rb);
+    }
     const db=document.createElement("button"); db.textContent="Delete"; db.className="danger";
-    db.addEventListener("click",()=>{const l=loadLog()||[];saveLog(l.filter(x=>x.id!==en.id));renderHist();});
-    acts.appendChild(rb); acts.appendChild(db); div.appendChild(acts);
+    db.addEventListener("click",()=>{J=NOTEPAD.deleteEntry(J,en.id);saveJournal();renderHist();collapseSummaries();});
+    acts.appendChild(db); div.appendChild(acts);
     wrap.appendChild(div);
   });
 }
-function currentEntry(){
-  return {id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
-    savedAt:new Date().toISOString(),
-    minutes:Math.max(1,Math.round((Date.now()-T0)/60000)),
-    title:entryTitle(), summary:summaryText(),
-    intention:document.getElementById("intentIn").value.trim(),
-    accomplished:document.getElementById("accompIn").value.trim(),
-    cfg:rawCfg()};
+function saveEntry(){
+  const ta=document.getElementById("journalIn"), msg=document.getElementById("saveMsg");
+  const text=(ta?ta.value:"").trim();
+  if(!text){ msg.textContent="nothing to save — jot the note first"; setTimeout(()=>msg.textContent="",2000); return; }
+  J=NOTEPAD.addEntry(J,{savedAt:new Date().toISOString(),text,
+    payload:{app:HOST.app,v:HOST.version,data:HOST.snapshot()}});
+  msg.textContent=saveJournal()?"saved":"saved in this tab — use Export to keep it";
+  setTimeout(()=>{if(msg.textContent.startsWith("saved"))msg.textContent="";},2200);
+  renderHist(); collapseSummaries();
 }
-/* ---- import: the round-trip's other half (v0.6.9). Files are user-supplied
-   runtime data (charter §7 boundary clause): validated, defaulted, surfaced —
-   never trusted, never a crash. A .md log merges; a bare .json cfg applies as
-   the current étude with restore semantics (nothing saved until the user saves). */
 function importMsgSet(t){
   const m=document.getElementById("importMsg");
   if(m){ m.textContent=t; if(t)setTimeout(()=>{ if(m.textContent===t)m.textContent=""; },8000); }
@@ -4086,38 +5433,20 @@ async function importLogFile(file){
       importMsgSet("étude loaded — save an entry to keep it");
       return;
     }
-    const res=parseLogExport(text,new Date().toISOString());
-    if(!res.entries.length)
-      throw new Error("no entries found"+(res.skipped?" ("+res.skipped+" unreadable)":""));
-    const list=loadLog();
-    if(list===null){importMsgSet("storage unavailable here — can't hold an imported log");return;}
-    const m=mergeLog(list,res.entries);
-    if(!saveLog(m.list)){importMsgSet("couldn't save in this browser");return;}
-    renderHist();
-    importMsgSet("imported "+m.added+" new entr"+(m.added===1?"y":"ies")+
-      (res.entries.length-m.added?" · "+(res.entries.length-m.added)+" already here":"")+
-      (res.degraded?" · "+res.degraded+" from an older export (dates approximate)":"")+
-      (res.skipped?" · "+res.skipped+" unreadable skipped":""));
+    const n=importJournalText(text);
+    const ta=document.getElementById("journalIn"); if(ta)ta.value=J.pad;
+    renderHist(); collapseSummaries();
+    importMsgSet("imported "+n+" new entr"+(n===1?"y":"ies")+
+      (n===0?" — everything was already here":""));
   }catch(e){ importMsgSet("import failed: "+e.message); }
 }
-function saveEntry(){
-  const msg=document.getElementById("saveMsg"), list=loadLog();
-  const en=currentEntry();
-  if(list===null||!saveLog([...list,en])){
-    msg.textContent="couldn't save in this browser — use Export instead"; return;
-  }
-  T0=Date.now();
-  msg.textContent="saved"; setTimeout(()=>{msg.textContent="";},1800);
-  renderHist();
-}
-function exportLog(){
-  const list=loadLog()||[], cur=currentEntry(), all=[...list];
-  if(cur.intention||cur.accomplished||!all.length) all.push(cur);
-  const md=logToMarkdown(all,new Date().toLocaleString());
-  const blob=new Blob([md],{type:"text/markdown"});
+function exportDownload(){
+  const msg=document.getElementById("saveMsg");
+  let text; try{text=exportText();}catch(e){msg.textContent=e.message;return;}
+  const blob=new Blob([text],{type:"text/markdown"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="triadetudes-log-"+new Date().toISOString().slice(0,10)+".md";
+  a.download="triadetudes-journal-"+new Date().toISOString().slice(0,10)+".atchart.md";
   a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
 
@@ -4377,7 +5706,31 @@ function initControls(){
     applyMotionInput(presetSrc(st.motionMode,+e.target.value));
   });
   document.getElementById("saveEntry").addEventListener("click",saveEntry);
-  document.getElementById("exportLog").addEventListener("click",exportLog);
+  document.getElementById("exportLog").addEventListener("click",exportDownload);
+  // the note: one plain textarea (decision 8) — autosave is the host's
+  const jTa=document.getElementById("journalIn");
+  if(jTa){
+    jTa.value=J.pad;
+    let jT=null;
+    jTa.addEventListener("input",()=>{
+      J={...J,pad:jTa.value};
+      clearTimeout(jT); jT=setTimeout(()=>{saveJournal();collapseSummaries();},300);});
+    jTa.addEventListener("change",()=>{saveJournal();collapseSummaries();});
+  }
+  // the drag handle: pointer capture keeps every event on the bar itself —
+  // element-scoped, no document-level listeners (standing constraint)
+  const bar=document.getElementById("dragBar"), nbW=document.getElementById("nbWrap"),
+        logC=document.getElementById("logCol");
+  if(bar){
+    let dragging=false;
+    bar.addEventListener("pointerdown",e=>{dragging=true;bar.setPointerCapture(e.pointerId);});
+    bar.addEventListener("pointermove",e=>{
+      if(!dragging)return;
+      const r=nbW.getBoundingClientRect();
+      const w=Math.max(200,Math.min(r.width-240,e.clientX-r.left));
+      logC.style.width=w+"px";});
+    bar.addEventListener("pointerup",e=>{dragging=false;bar.releasePointerCapture(e.pointerId);});
+  }
   document.getElementById("importBtn").addEventListener("click",
     ()=>document.getElementById("importFile").click());
   document.getElementById("importFile").addEventListener("change",e=>{
@@ -4484,6 +5837,7 @@ function initControls(){
   })();
 })();
 
+J=loadJournal();
 initControls();
 syncHarmonyUI();
 defaultPivots();

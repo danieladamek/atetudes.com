@@ -1,6 +1,6 @@
 /* notepad.mjs — the shared notepad model (component v1).
  *
- * The notepad pattern's child 2 (decisions 1, 2, 6, 7): one document model,
+ * The notepad pattern's child 2 (decisions 1, 2, 6, 7, 8): one document model,
  * one per-app payload slot, one file any sibling app can open. Pure module:
  * no DOM, no storage, no audio — the HOST wires those through the adapter
  * seam {app, version, snapshot(), apply(payload), summarize(payload)}.
@@ -86,6 +86,30 @@ export function fromMetronomeV1(pad, log) {
     payload: { app: "metronome", v: 1, data: en.metro ?? null },
   }));
   return { pad: String(pad ?? ""), entries };
+}
+
+/** fromTriadetudesV1(log) → doc. The shipped Practice Log shape is the pin:
+ * [{id, savedAt, minutes, title, summary, intention, accomplished, cfg}]
+ * (triadetudes.v1.log). The cfg is a complete rawCfg() snapshot (established
+ * 260811.3) and becomes the opaque payload data BYTE-IDENTICAL. Note text
+ * merges the two prose fields under their old row markers (→ intention,
+ * ✓ accomplished) so the distinction survives as visible text; the duration
+ * joins the note as a trailing line — a fact of the session, kept visible.
+ * title and summary are DROPPED: both are derived values (summary is the
+ * stale-cache bug 260811.3 flagged; the label now derives at render via
+ * adapter.summarize). Supersedes "Stop storing en.summary". */
+export function fromTriadetudesV1(log) {
+  const entries = (Array.isArray(log) ? log : []).map((en) => {
+    const parts = [];
+    if (en.intention) parts.push("\u2192 " + en.intention);
+    if (en.accomplished) parts.push("\u2713 " + en.accomplished);
+    if (en.minutes) parts.push("~" + en.minutes + " min");
+    return makeEntry({
+      id: en.id, savedAt: en.savedAt ?? null, text: parts.join("\n\n"),
+      payload: { app: "triadetudes", v: 1, data: en.cfg ?? null },
+    });
+  });
+  return { pad: "", entries };
 }
 
 // ---------- fence pairing (shared by parse; the unclosed rule) ----------

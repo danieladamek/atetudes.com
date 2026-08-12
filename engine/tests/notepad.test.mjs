@@ -8,7 +8,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { emptyDoc, makeEntry, addEntry, editEntry, deleteEntry, reorderEntry,
-  fromMetronomeV1, toAtchart, fromAtchart } from "../notepad.mjs";
+  fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart } from "../notepad.mjs";
 import { parseAtchart, serializeAtchart, readApp } from "../atchart.mjs";
 import { readFileSync } from "node:fs";
 
@@ -191,14 +191,52 @@ test("no derived musical data: the module stores exactly what it was handed, not
 
 // ---- anti-drift: the Metronome host's inlined copies match the modules ----
 
-test("metronome/study.html carries chord, atchart, markdown and notepad verbatim (no drift)", () => {
+test("metronome and triadetudes carry atchart, markdown and notepad verbatim (no drift)", () => {
   const here2 = new URL(".", import.meta.url).pathname;
   const inlineForm = (file) =>
     readFileSync(here2 + "../" + file, "utf8")
       .split("\n").filter((l) => !l.startsWith("import ")).join("\n")
       .replace(/^export /gm, "").replace(/^\n+/, "").replace(/\n+$/, "\n");
-  const src = readFileSync(here2 + "../../static/studies/metronome/study.html", "utf8");
-  for (const file of ["chord.mjs", "atchart.mjs", "markdown.mjs", "notepad.mjs"])
-    assert.ok(src.includes(inlineForm(file)),
-      `metronome/study.html has drifted from engine/${file} — re-inline it`);
+  const CARRIERS = { metronome: ["chord.mjs", "atchart.mjs", "markdown.mjs", "notepad.mjs"],
+    triadetudes: ["atchart.mjs", "markdown.mjs", "notepad.mjs"] };
+  for (const [slug, files] of Object.entries(CARRIERS)) {
+    const src = readFileSync(here2 + "../../static/studies/" + slug + "/study.html", "utf8");
+    for (const file of files)
+      assert.ok(src.includes(inlineForm(file)),
+        slug + "/study.html has drifted from engine/" + file + " — re-inline it");
+  }
+});
+
+// ---- the Triadetudes migration: real entries, the second proving host ----
+
+test("Triadetudes v1 migration: cfg byte-identical, prose intact, duration kept, derived fields dropped", () => {
+  const cfg = { v: 1, key: "Eb", scaleType: "harm", set: [1, 2, 3], pivotString: 2,
+    pivotFrets: [5, 6, 8], prog: "cycle4", startDeg: 0, chromLen: 6, custom: "",
+    arpPattern: null, roots: false, ext: "none", placement: "grip",
+    playback: "arpeggiated", motionMode: "tones",
+    motionSrc: "(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]", harmonyMode: "build",
+    breakProg: [{ sym: "Dm7", us: null }], bpm: 96, meter: 4, splitIdx: 0,
+    clickOn: true, clickVol: 0.8, clickAccent: true, clickSub: 1,
+    clickVoice: "beep", countIn: false };
+  const log = [{ id: "e-1", savedAt: "2026-08-11T07:02:00.000Z", minutes: 12,
+    title: "Ebm · Cycling 4ths · Eb harmonic minor",   // derived — must drop
+    summary: "Eb harm · arp M-L-H · STALE",            // the 260811.3 cache — must drop
+    intention: "Some notes", accomplished: "it went fine", cfg }];
+  const doc = fromTriadetudesV1(log);
+  const e = doc.entries[0];
+  assert.equal(e.id, "e-1");
+  assert.equal(e.savedAt, "2026-08-11T07:02:00.000Z");
+  assert.equal(JSON.stringify(e.payload.data), JSON.stringify(cfg),
+    "the rawCfg snapshot is byte-identical — restore rebuilds the same étude");
+  assert.equal(e.payload.app, "triadetudes");
+  assert.equal(e.text, "→ Some notes\n\n✓ it went fine\n\n~12 min",
+    "both prose fields and the duration survive, marked");
+  assert.ok(!JSON.stringify(e).includes("STALE"), "the stored summary is DROPPED");
+  assert.ok(!JSON.stringify(e).includes("title"), "no derived title field");
+  // the migrated doc survives the file round trip like any other
+  assertRoundTrip(doc, "migrated triadetudes log");
+  // degenerate entries: no prose, no minutes, missing cfg
+  const bare = fromTriadetudesV1([{ id: "x", savedAt: null }]).entries[0];
+  assert.equal(bare.text, "");
+  assert.deepEqual(bare.payload, { app: "triadetudes", v: 1, data: null });
 });

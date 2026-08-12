@@ -5,6 +5,54 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Triadetudes v0.8.0: the Journal becomes the Notepad (Daniel's dispatch; decision 7's second proving host)
+
+- **Migration first, before any UI, on real data shapes.** `engine/notepad.mjs` gains
+  `fromTriadetudesV1`: every stored Practice Log entry maps field-for-field — the
+  `rawCfg()` snapshot rides as the opaque payload **byte-identical** (asserted), the
+  Intention/Accomplished prose survives under its old row markers (→ / ✓), the
+  duration joins the note text (~N min), and **`en.summary` is DROPPED** — the stale
+  cache 260811.3 flagged never crosses; labels now derive at render. This supersedes
+  the "Stop storing en.summary" item. In the app the migration runs once, writes
+  `triadetudes.v2.journal`, and leaves the v1 key untouched as a fallback copy.
+  Restore rebuilds the same étude it did before — verified with a seeded log whose
+  restored `rawCfg()` equals the stored snapshot exactly.
+- **The adapter is the dispatched rename**: `{app:"triadetudes", version:1,
+  snapshot: rawCfg, apply: applyRaw, summarize: summarizeCfg}` — with one real piece
+  of work the seam exposed: `summaryText()` reads live state, so **`summarizeCfg(c)`
+  is new — a pure function of the payload**, never of `st` (tested: mutating the live
+  key does not move a row's label; a history row describes ITS OWN config). Nothing in
+  `engine/notepad.mjs` needed to know either host — the seam held, which was the point
+  of the second host.
+- **The surface (decision 8)**: Practice Log LEFT, one plain textarea RIGHT — no
+  preview, no toolbar, no mode. Intention/Accomplished are gone; the note is the
+  session. A **drag handle** resizes the columns (pointer capture — element-scoped, no
+  document listeners); **both columns fold** with the collapse the notebook never got
+  at 260810.14 — `Log · 5 saved · last Aug 11 07:02` and `Note · <first line>` /
+  `Note · empty`, live while folded. At 390 px the columns stack **note first** and the
+  handle disappears. Rows render note markdown where it is READ (em renders; a typed
+  raw tag stays literal).
+- **The file is the handoff channel**: Export writes one `.atchart.md` — free notes,
+  then one `###` section per entry, **each with its own fenced payload** (two entries
+  a minute apart are two independent configs); the export byte-fixed-points through the
+  format engine in-page. Import merges by id, never deletes; a foreign app's entry is
+  named, inert, Restore-less, and re-exports untouched; **old exported logs import
+  too** (legacy parse → the migration); a bare cfg JSON still loads as the current
+  étude. A ```chart fence in a note refuses export by name.
+- **The two screenshot bugs, investigated as dispatched**: the doubled helper
+  paragraph does NOT reproduce (five widths, empty and populated — and this rebuild
+  replaces that markup wholesale); the `→ Som e notes` row survived a full
+  save→restore→export→import round trip byte-identical, so the pipeline is exonerated
+  — a display/screenshot artifact or a typo in the stored text, which migration
+  rightly preserves as typed. The grey box is noted in the markup as the CURRENT
+  étude — Save's header — and left in place this pass.
+- Suite 249/249 (the migration pin, the pure-of-st summarize tests, the in-slice
+  NOTEPAD corpus; the anti-drift pin now covers both carriers). 26 Playwright checks
+  offline from `file://`, zero console errors, both widths inspected. `rawCfg()`
+  byte-identical, no new keys. Also: `engine/atchart.mjs`'s slot sentinels converted
+  from raw NUL bytes to escape sequences — inlining had turned two study files binary;
+  runtime identical, both carriers re-inlined and re-verified. Update Log 260811.9.
+
 ## 2026-08-11 — Metronome v1.2.0: the notepad surface becomes capture-only (decision 8)
 
 - **Decision 8 reverses decision 1's preview half**: the notepad's job is capture, not

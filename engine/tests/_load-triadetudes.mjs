@@ -29,6 +29,7 @@ const HARVEST = [
   "setLabel", "patText", "displayPattern", "orderedNotes",
   "MOTION", "motionSource", "parsedFigure", "activeFigure", "figureEntries", "orderedEntries",
   "classifyClick", "FIG_PRESETS", "pivotFirstSrc", "presetSrc", "canonFig",
+  "summarizeCfg", "ATCHART", "MD", "NOTEPAD",
   "voiceLeadCost", "placementCost", "meanFret", "movementTotal",
   "st", "SCALES", "SPLITS", "OPEN", "NFRETS", "KEYS", "IVL_LABEL", "IVL_FAMILY",
 ];
