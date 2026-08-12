@@ -2246,6 +2246,286 @@ function hashStr(s) {
 return { makeEntry, emptyDoc, addEntry, editEntry, deleteEntry, reorderEntry,
   fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart };
 })();
+const NPSURF = (() => {
+const { emptyDoc, makeEntry, addEntry, deleteEntry, toAtchart, fromAtchart } = NOTEPAD;
+const { parseMarkdown, renderTo } = MD;
+/* notepad-surface.mjs — the notepad's shared SURFACE (component v1).
+ *
+ * engine/notepad.mjs shares the model; this module shares the BEHAVIOUR —
+ * save semantics, clear semantics, import/export/clipboard, autosave
+ * debouncing, the storage-denied path, and saved-row rendering. It exists
+ * because every behavioural fix was landing twice, and the second host was
+ * always late (Metronome shipped decision 8 but not save-clears).
+ *
+ * TRIADETUDES' CORRECTED BEHAVIOUR IS CANONICAL (v0.8.1): every correction
+ * came from real use there. Hosts consume this behaviour; none re-implements
+ * it, and none gets a choice about:
+ *   - Save files the note, CLEARS the pad, no prompt, no toast — the emptied
+ *     pad is the confirmation. An empty pad still saves (config capture).
+ *   - Clear confirms; "Save and clear" is the PRIMARY action, Discard second.
+ *   - The pad is PERSISTENT UNCOMMITTED SCRATCH: autosaved on a debounce, it
+ *     survives a reload and clears on save.
+ *   - Storage-denied keeps working in memory AND SAYS SO, steering to Export.
+ *   - Saved rows render their note markdown via renderTo (reading surface);
+ *     labels DERIVE via adapter.summarize (never stored); a foreign app's
+ *     payload is named, inert and carried untouched.
+ *
+ * SHARE BEHAVIOUR, NOT LAYOUT: the host provides the elements (its page, its
+ * grammar, its placement); this module only wires them and builds row nodes
+ * inside the list element. No document/window globals — everything reaches
+ * the DOM through the provided elements' ownerDocument, so the whole surface
+ * runs headless against a stub (the both-hosts save-clears test lives there).
+ *
+ * createNotepadSurface({
+ *   adapter:  {app, version, snapshot(), apply(data), summarize(data)}
+ *   storage:  {load():string|null, save(string):void}   // thin; MAY THROW —
+ *             denial is handled (and messaged) here, not in the host
+ *   migrate:  () => doc|null      // host's v1 shape → model, once, no v2 yet
+ *   els: {
+ *     pad, saveBtn, clearBtn, confirmRoot, confirmSave, confirmDiscard,
+ *     confirmCancel, exportBtn?, copyBtn?, importBtn?, importFile?,
+ *     msg, importMsg?, list, count?, storeNote?
+ *   }
+ *   file:     {title, name():string}                    // export identity
+ *   applyLabel: "Restore étude" | "Apply settings" | …  // host wording
+ *   importFallback?: (text) => entries[]|null           // legacy log formats
+ *   jsonImport?: (parsedJson) => boolean                // bare-config files
+ *   onChange?: ()=>{}   onApplied?: ()=>{}              // host hooks (fold
+ *             lines, scroll) — presentation, never behaviour
+ * }) → { getDoc, setDoc, save, clearConfirmShow, exportText, importText,
+ *        renderRows, storageOK }
+ */
+
+
+function createNotepadSurface(opts) {
+  const { adapter, storage, els, file } = opts;
+  const migrate = opts.migrate || (() => null);
+  const onChange = opts.onChange || (() => {});
+  const onApplied = opts.onApplied || (() => {});
+  const applyLabel = opts.applyLabel || "Apply settings";
+  let doc = emptyDoc();
+  let storageOK = true;
+  let padTimer = null;
+
+  // ---- storage (denial handled HERE, and said out loud) ----
+  function loadDoc() {
+    try {
+      const raw = storage.load();
+      if (raw) {
+        const d = JSON.parse(raw);
+        return { pad: String(d.pad ?? ""), entries: (d.entries || []).map(makeEntry) };
+      }
+      const migrated = migrate();
+      if (migrated) { trySave(migrated); return migrated; }
+      return emptyDoc();
+    } catch (e) { storageOK = false; return emptyDoc(); }
+  }
+  function trySave(d) {
+    if (!storageOK) return false;
+    try { storage.save(JSON.stringify({ pad: d.pad, entries: d.entries })); return true; }
+    catch (e) { storageOK = false; return false; }
+  }
+  function persist() { return trySave(doc); }
+
+  function msgSet(t, sticky) {
+    if (!els.msg) return;
+    els.msg.textContent = t;
+    if (t && !sticky) setTimeout(() => {
+      if (els.msg.textContent === t) els.msg.textContent = "";
+    }, 2200);
+  }
+
+  // ---- save: file the note, CLEAR the pad, no prompt, no toast ----
+  function save() {
+    clearConfirmShow(false);
+    const text = String(els.pad.value ?? "").trim();
+    doc = addEntry(doc, { savedAt: new Date().toISOString(), text,
+      payload: { app: adapter.app, v: adapter.version, data: adapter.snapshot() } });
+    doc = { ...doc, pad: "" };
+    els.pad.value = "";
+    const ok = persist();
+    if (!ok) msgSet("saved in this tab only — use Export to keep it", true);
+    else if (!text) msgSet("captured without a note"); // something must confirm
+    renderRows(); onChange();
+  }
+
+  // ---- clear: destructive, so it CONFIRMS; Save-and-clear is primary ----
+  function clearConfirmShow(on) {
+    if (els.confirmRoot) els.confirmRoot.style.display = on ? "flex" : "none";
+  }
+  function discard() {
+    clearConfirmShow(false);
+    els.pad.value = "";
+    doc = { ...doc, pad: "" };
+    persist(); onChange();
+  }
+
+  // ---- export / import / clipboard: the file is the handoff channel ----
+  function exportText() { return toAtchart(doc, { title: file.title }); }
+  function importText(text) {
+    let inc;
+    try { inc = fromAtchart(text); }
+    catch (e) {
+      const legacy = opts.importFallback ? opts.importFallback(text) : null;
+      if (!legacy || !legacy.length)
+        throw new Error("not a notepad file (and no legacy entries found)");
+      inc = { pad: "", entries: legacy.map(makeEntry) };
+    }
+    const have = new Set(doc.entries.map((x) => x.id));
+    const added = inc.entries.filter((x) => !have.has(x.id));
+    let pad = doc.pad;
+    if (inc.pad.trim() && !pad.trim()) pad = inc.pad;
+    else if (inc.pad.trim() && pad.trim() && !pad.includes(inc.pad))
+      pad = pad + "\n\n---\n\n" + inc.pad;
+    doc = { ...doc, pad, entries: [...doc.entries, ...added] };
+    els.pad.value = doc.pad;
+    persist();
+    return added.length;
+  }
+  function importMsg(t) {
+    const m = els.importMsg || els.msg;
+    if (!m) return;
+    m.textContent = t;
+    if (t) setTimeout(() => { if (m.textContent === t) m.textContent = ""; }, 8000);
+  }
+  async function importFile(f) {
+    try {
+      const text = await f.text();
+      if (/^\s*\{/.test(text) && opts.jsonImport) {
+        let data; try { data = JSON.parse(text); }
+        catch (e) { throw new Error("not valid JSON"); }
+        if (opts.jsonImport(data)) return; // host consumed a bare config
+        throw new Error("not a recognized config");
+      }
+      const n = importText(text);
+      renderRows(); onChange();
+      importMsg("imported " + n + " new entr" + (n === 1 ? "y" : "ies") +
+        (n === 0 ? " — everything was already here" : ""));
+    } catch (e) { importMsg("import failed: " + e.message); }
+  }
+  function download() {
+    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    const docm = els.pad.ownerDocument, win = docm.defaultView;
+    const blob = new win.Blob([text], { type: "text/markdown" });
+    const a = docm.createElement("a");
+    a.href = win.URL.createObjectURL(blob);
+    a.download = file.name();
+    a.click();
+    setTimeout(() => win.URL.revokeObjectURL(a.href), 2000);
+  }
+  async function copy() {
+    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    const win = els.pad.ownerDocument.defaultView;
+    try {
+      await win.navigator.clipboard.writeText(text);
+      msgSet("copied — one .atchart.md, ready to paste");
+    } catch (e) { msgSet("clipboard unavailable — use Export", true); }
+  }
+
+  // ---- the rows: read-surface rendering, derived labels, inert foreigners ----
+  function fmtWhen(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " +
+      d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  }
+  function renderRows() {
+    const wrap = els.list;
+    if (!wrap) return;
+    const docm = wrap.ownerDocument;
+    if (els.count) els.count.textContent = String(doc.entries.length);
+    if (!storageOK && els.storeNote)
+      els.storeNote.textContent =
+        "storage unavailable here — your notes live in this tab only; use Export";
+    while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
+    if (!doc.entries.length) {
+      const p = docm.createElement("div"); p.className = "hint";
+      p.textContent = opts.emptyHint ||
+        "No entries yet. Jot the note, then save — it files with the settings.";
+      wrap.appendChild(p); return;
+    }
+    [...doc.entries].reverse().forEach((en) => {
+      const div = docm.createElement("div"); div.className = "hist";
+      const hd = docm.createElement("div"); hd.className = "hd";
+      const b = docm.createElement("b");
+      const p = en.payload;
+      b.textContent = !p ? "note" :
+        p.app === adapter.app ? adapter.summarize(p.data)
+        : p.app + " · v" + p.v + " (another app's settings — carried untouched)";
+      hd.appendChild(b);
+      const w = docm.createElement("span"); w.className = "when";
+      w.textContent = fmtWhen(en.savedAt); hd.appendChild(w);
+      div.appendChild(hd);
+      if (en.text) {
+        const tx = docm.createElement("div"); tx.className = "note md";
+        renderTo(tx, parseMarkdown(en.text));
+        div.appendChild(tx);
+      }
+      const acts = docm.createElement("div"); acts.className = "acts";
+      if (p && p.app === adapter.app && p.data) {
+        const rb = docm.createElement("button"); rb.textContent = applyLabel;
+        rb.addEventListener("click", () => {
+          adapter.apply(p.data);
+          els.pad.value = en.text || "";           // canonical: the note returns
+          doc = { ...doc, pad: els.pad.value };    // as uncommitted scratch
+          persist(); onChange(); onApplied();
+        });
+        acts.appendChild(rb);
+      }
+      const db = docm.createElement("button");
+      db.textContent = "Delete"; db.className = "danger";
+      db.addEventListener("click", () => {
+        doc = deleteEntry(doc, en.id); persist(); renderRows(); onChange();
+      });
+      acts.appendChild(db);
+      div.appendChild(acts);
+      wrap.appendChild(div);
+    });
+  }
+
+  // ---- mount ----
+  doc = loadDoc();
+  els.pad.value = doc.pad;   // persistent uncommitted scratch: survives reload
+  els.pad.addEventListener("input", () => {
+    doc = { ...doc, pad: els.pad.value };
+    if (padTimer) clearTimeout(padTimer);
+    padTimer = setTimeout(() => { persist(); onChange(); }, 300);
+  });
+  els.pad.addEventListener("change", () => { persist(); onChange(); });
+  els.saveBtn.addEventListener("click", save);
+  if (els.clearBtn) els.clearBtn.addEventListener("click", () => {
+    if (!String(els.pad.value ?? "").trim()) { discard(); return; }
+    clearConfirmShow(true);
+  });
+  if (els.confirmSave) els.confirmSave.addEventListener("click", save);
+  if (els.confirmDiscard) els.confirmDiscard.addEventListener("click", discard);
+  if (els.confirmCancel) els.confirmCancel.addEventListener("click",
+    () => clearConfirmShow(false));
+  if (els.exportBtn) els.exportBtn.addEventListener("click", download);
+  if (els.copyBtn) els.copyBtn.addEventListener("click", copy);
+  if (els.importBtn && els.importFile) {
+    els.importBtn.addEventListener("click", () => els.importFile.click());
+    els.importFile.addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) importFile(f);
+      e.target.value = "";
+    });
+  }
+  if (!storageOK && els.storeNote)
+    els.storeNote.textContent =
+      "storage unavailable here — your notes live in this tab only; use Export";
+  renderRows();
+
+  return {
+    getDoc: () => doc,
+    setDoc: (d) => { doc = { pad: String(d.pad ?? ""), entries: (d.entries || []).map(makeEntry) };
+      els.pad.value = doc.pad; persist(); renderRows(); onChange(); },
+    save, clearConfirmShow, exportText, importText, renderRows,
+    get storageOK() { return storageOK; },
+  };
+}
+return { createNotepadSurface };
+})();
 /* ============ motion grammar — shared component v1 ============
    Canonical source: engine/motion.mjs (same anti-drift discipline). */
 const MOTION = (() => {
@@ -4328,10 +4608,10 @@ const CLPS_SUMS={
   },
   timeline:()=>SEQ.length?("Timeline · "+(SEQ[st.cur]?SEQ[st.cur].label:"")+
     " · "+(st.cur+1)+" of "+SEQ.length+" · "+pattern().join("+")):"Timeline",
-  log:()=>{const n=J?J.entries.length:0;
-    const last=J&&J.entries.length?J.entries[J.entries.length-1]:null;
+  log:()=>{const d=JOURNAL?JOURNAL.getDoc():null;const n=d?d.entries.length:0;
+    const last=d&&d.entries.length?d.entries[d.entries.length-1]:null;
     return "Log · "+n+" saved"+(last&&last.savedAt?" · last "+fmtWhen(last.savedAt):"");},
-  journal:()=>{const first=((J&&J.pad)||"").split("\n").find(l=>l.trim())||"";
+  journal:()=>{const first=((JOURNAL?JOURNAL.getDoc().pad:"")||"").split("\n").find(l=>l.trim())||"";
     return "Note · "+(first||"empty");},
 };
 function collapseSummaries(){
@@ -5202,61 +5482,105 @@ function renderAll(){ renderFret(); renderScore(); syncArpIn(); renderPlaceHint(
 const LOG_KEY="triadetudes.v1.log";
 function loadLog(){ try{return JSON.parse(localStorage.getItem(LOG_KEY)||"[]");}catch(e){return null;} }
 function saveLog(list){ try{localStorage.setItem(LOG_KEY,JSON.stringify(list));return true;}catch(e){return false;} }
-/* ---- the journal (v0.8.0): Triadetudes as the notepad's second proving host ----
-   engine/notepad.mjs owns the model; this host wires storage, DOM and the
-   adapter. Migration ran before any UI existed (the dispatch's order): the
-   v1.0 log entries carry complete rawCfg() snapshots (260811.3), so the move
-   is field-for-field — cfg byte-identical, prose kept under its old row
-   markers, duration kept in the text, and the STORED summary dropped (the
-   stale cache 260811.3 flagged; labels now derive via HOST.summarize).
-   Supersedes "Stop storing en.summary". Old keys stay as a fallback copy. */
+/* ---- the journal: Triadetudes hosts the SHARED SURFACE ----
+   engine/notepad-surface.mjs owns the behaviour (save-clears, the Clear
+   confirm, import/export/clipboard, autosave, storage-denied, row
+   rendering) — Triadetudes' corrected v0.8.1 semantics, now canonical for
+   every host. This block supplies only what is genuinely host: the adapter,
+   the storage key, the migration, the legacy-import fallback, the bare-cfg
+   import, and presentation hooks (fold lines, scroll). Layout stays here. */
 const JKEY="triadetudes.v2.journal";
 const HOST={app:"triadetudes",version:1,
   snapshot:()=>rawCfg(),
   apply:(data)=>{ if(data)applyRaw(data); },
   summarize:(data)=>summarizeCfg(data)};   // DERIVED at render, never stored
-let J=null, journalStorageOK=true;
+let JOURNAL=null;
 
-function loadJournal(){
-  try{
-    const v2=localStorage.getItem(JKEY);
-    if(v2){ const d=JSON.parse(v2);
-      return {pad:String(d.pad??""),entries:(d.entries||[]).map(NOTEPAD.makeEntry)}; }
-    const legacy=loadLog();
-    if(legacy===null){ journalStorageOK=false; return NOTEPAD.emptyDoc(); }
-    const doc=NOTEPAD.fromTriadetudesV1(legacy);
-    localStorage.setItem(JKEY,JSON.stringify({pad:doc.pad,entries:doc.entries}));
-    return doc;
-  }catch(e){ journalStorageOK=false; return NOTEPAD.emptyDoc(); }
+function initJournal(){
+  JOURNAL=NPSURF.createNotepadSurface({
+    adapter:HOST,
+    storage:{load:()=>localStorage.getItem(JKEY),
+             save:(str)=>localStorage.setItem(JKEY,str)},
+    migrate:()=>NOTEPAD.fromTriadetudesV1(loadLog()||[]),
+    els:{pad:document.getElementById("journalIn"),
+      saveBtn:document.getElementById("saveEntry"),
+      clearBtn:document.getElementById("clearPad"),
+      confirmRoot:document.getElementById("clearConfirm"),
+      confirmSave:document.getElementById("clearSave"),
+      confirmDiscard:document.getElementById("clearDiscard"),
+      confirmCancel:document.getElementById("clearCancel"),
+      exportBtn:document.getElementById("exportLog"),
+      importBtn:document.getElementById("importBtn"),
+      importFile:document.getElementById("importFile"),
+      msg:document.getElementById("saveMsg"),
+      importMsg:document.getElementById("importMsg"),
+      list:document.getElementById("histList"),
+      count:document.getElementById("histCount"),
+      storeNote:document.getElementById("storeNote")},
+    file:{title:"Triadetudes journal",
+      name:()=>"triadetudes-journal-"+new Date().toISOString().slice(0,10)+".atchart.md"},
+    applyLabel:"Restore étude",
+    emptyHint:"No entries yet. Design an étude, jot the note, then save.",
+    importFallback:(text)=>{
+      const res=parseLogExport(text,new Date().toISOString());
+      return res.entries.length?NOTEPAD.fromTriadetudesV1(res.entries).entries:null;
+    },
+    jsonImport:(data)=>{
+      const cfg=data&&data.cfg&&data.id!==undefined?data.cfg:data; // entry or bare cfg
+      if(!looksLikeCfg(cfg))return false;
+      applyRaw(cfg);
+      importMsgSet("étude loaded — save an entry to keep it");
+      return true;
+    },
+    onChange:()=>collapseSummaries(),
+    onApplied:()=>window.scrollTo({top:0,behavior:"smooth"}),
+  });
 }
-function saveJournal(){
-  if(!journalStorageOK)return false;
-  try{ localStorage.setItem(JKEY,JSON.stringify({pad:J.pad,entries:J.entries})); return true; }
-  catch(e){ journalStorageOK=false; return false; }
+// thin aliases: the in-page self-tests and render chain use these names
+function renderHist(){ if(JOURNAL)JOURNAL.renderRows(); }
+function exportText(){ return JOURNAL.exportText(); }
+function importJournalText(t){ const n=JOURNAL.importText(t); JOURNAL.renderRows(); return n; }
+function importMsgSet(t){
+  const m=document.getElementById("importMsg");
+  if(m){ m.textContent=t; if(t)setTimeout(()=>{ if(m.textContent===t)m.textContent=""; },8000); }
 }
-function exportText(){
-  return NOTEPAD.toAtchart(J,{title:"Triadetudes journal"});
+function looksLikeCfg(o){
+  return o&&typeof o==="object"&&o.v!==undefined&&typeof o.key==="string"&&
+    Array.isArray(o.set)&&Array.isArray(o.pivotFrets);
 }
-function importJournalText(text){
-  // merge, never delete: entries dedup by id; an incoming pad appends below a
-  // rule when both sides hold prose. Legacy files (the old log export) fall
-  // back to parseLogExport + the migration — old .md files on disk still open.
-  let inc;
-  try{ inc=NOTEPAD.fromAtchart(text); }
-  catch(e){
-    const res=parseLogExport(text,new Date().toISOString());
-    if(!res.entries.length)throw new Error("not a journal file (and no legacy entries found)");
-    inc=NOTEPAD.fromTriadetudesV1(res.entries);
-  }
-  const have=new Set(J.entries.map(x=>x.id));
-  const added=inc.entries.filter(x=>!have.has(x.id));
-  let pad=J.pad;
-  if(inc.pad.trim()&&!pad.trim())pad=inc.pad;
-  else if(inc.pad.trim()&&pad.trim()&&!pad.includes(inc.pad))pad=pad+"\n\n---\n\n"+inc.pad;
-  J={...J,pad,entries:[...J.entries,...added]};
-  saveJournal();
-  return added.length;
+function fmtWhen(iso){ if(!iso)return""; const d=new Date(iso);
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+
+         d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); }
+
+
+/* ---- restored verbatim from HEAD (collateral of the journal cut) ---- */
+function progLabel(){
+  const o=document.querySelector("#progSel option:checked");
+  return o?o.textContent:st.prog;
 }
+
+function summaryText(){
+  const piv=st.pivotFrets.map(f=>spelled(OPEN[st.pivotString]+f).name).join(" ");
+  const how=st.harmonyMode==="break"
+    ?"break down ("+st.breakProg.map(e=>e.sym).join(" ")+")"
+    :progLabel()+(st.prog==="custom"?" ("+st.custom+")":"");
+  return st.key+" "+SCALES[st.scaleType].label+" · strings "+st.set.join("-")+
+    " · pivots "+piv+" on string "+st.pivotString+" · "+how+
+    " · arp "+(motionSource()||"none")+" · "+st.playback+
+    (st.placement!=="grip"?" · "+st.placement:"")+
+    " · "+st.meter+"/4 split "+pattern().join("+")+" · "+st.bpm+" bpm"+
+    (st.harmonyMode!=="break"&&st.ext!=="none"?" · over bass ("+st.ext+")":"")+
+    " — "+SEQ.map(c=>c.srcSymbol&&c.srcSymbol!==c.label?c.label+"="+c.srcSymbol:c.label).join("  ");
+}
+
+function renderSummary(){ const d=document.getElementById("cfgSummary"); if(d)d.textContent=summaryText(); }
+
+function entryTitle(){
+  if(st.harmonyMode==="break")
+    return SEQ.length?SEQ[0].srcSymbol+"… break-down · "+st.key+" "+SCALES[st.scaleType].label:"étude";
+  return SEQ.length?SEQ[0].label+" · "+progLabel()+" · "+st.key+" "+SCALES[st.scaleType].label:"étude";
+}
+
 function rawCfg(){
   return {v:1,key:st.key,scaleType:st.scaleType,set:[...st.set],pivotString:st.pivotString,
     pivotFrets:[...st.pivotFrets],prog:st.prog,startDeg:st.startDeg,chromLen:st.chromLen,
@@ -5269,6 +5593,7 @@ function rawCfg(){
     clickOn:st.clickOn,clickVol:st.clickVol,clickAccent:st.clickAccent,
     clickSub:st.clickSub,clickVoice:st.clickVoice,countIn:st.countIn};
 }
+
 function applyRaw(c){
   // restore is a WRITER (v0.7.7): it replaces the sketch-in-progress like any
   // other writer; the picker's selection re-derives from the restored source
@@ -5324,7 +5649,9 @@ function applyRaw(c){
   syncClickUI();
   rebuild();
 }
+
 function toggleClick(){ st.clickOn=!st.clickOn; syncClickUI(); renderCfg(); }
+
 function syncClickUI(){
   const b=document.getElementById("clickTgl");
   if(b){b.textContent="Sound: "+(st.clickOn?"on":"off");
@@ -5339,136 +5666,6 @@ function syncClickUI(){
   const v=document.getElementById("clickVolR");
   if(v){v.value=Math.round(st.clickVol*100);
     document.getElementById("clickVolVal").textContent=Math.round(st.clickVol*100);}
-}
-function progLabel(){
-  const o=document.querySelector("#progSel option:checked");
-  return o?o.textContent:st.prog;
-}
-function summaryText(){
-  const piv=st.pivotFrets.map(f=>spelled(OPEN[st.pivotString]+f).name).join(" ");
-  const how=st.harmonyMode==="break"
-    ?"break down ("+st.breakProg.map(e=>e.sym).join(" ")+")"
-    :progLabel()+(st.prog==="custom"?" ("+st.custom+")":"");
-  return st.key+" "+SCALES[st.scaleType].label+" · strings "+st.set.join("-")+
-    " · pivots "+piv+" on string "+st.pivotString+" · "+how+
-    " · arp "+(motionSource()||"none")+" · "+st.playback+
-    (st.placement!=="grip"?" · "+st.placement:"")+
-    " · "+st.meter+"/4 split "+pattern().join("+")+" · "+st.bpm+" bpm"+
-    (st.harmonyMode!=="break"&&st.ext!=="none"?" · over bass ("+st.ext+")":"")+
-    " — "+SEQ.map(c=>c.srcSymbol&&c.srcSymbol!==c.label?c.label+"="+c.srcSymbol:c.label).join("  ");
-}
-function renderSummary(){ const d=document.getElementById("cfgSummary"); if(d)d.textContent=summaryText(); }
-function entryTitle(){
-  if(st.harmonyMode==="break")
-    return SEQ.length?SEQ[0].srcSymbol+"… break-down · "+st.key+" "+SCALES[st.scaleType].label:"étude";
-  return SEQ.length?SEQ[0].label+" · "+progLabel()+" · "+st.key+" "+SCALES[st.scaleType].label:"étude";
-}
-function renderHist(){
-  const wrap=document.getElementById("histList"),
-        cnt=document.getElementById("histCount"), note=document.getElementById("storeNote");
-  if(!wrap)return;
-  if(!journalStorageOK&&note)
-    note.textContent="storage unavailable here — your journal lives in this tab only; use Export";
-  cnt.textContent=String(J.entries.length);
-  wrap.innerHTML="";
-  if(!J.entries.length){
-    const p=document.createElement("div"); p.className="hint";
-    p.textContent="No entries yet. Design an étude, jot the note, then save.";
-    wrap.appendChild(p); return;
-  }
-  [...J.entries].reverse().forEach(en=>{
-    const div=document.createElement("div"); div.className="hist";
-    const hd=document.createElement("div"); hd.className="hd";
-    const b=document.createElement("b");
-    // the row label DERIVES from the entry's own payload through the adapter —
-    // never stored, so it can never go stale (260811.3, by construction).
-    // A foreign app's payload is named and carried, never interpreted.
-    const p=en.payload;
-    b.textContent=!p?"note":
-      p.app===HOST.app?HOST.summarize(p.data)
-      :p.app+" · v"+p.v+" (another app's settings — carried untouched)";
-    hd.appendChild(b);
-    const w=document.createElement("span"); w.className="when";
-    w.textContent=fmtWhen(en.savedAt)||""; hd.appendChild(w);
-    div.appendChild(hd);
-    if(en.text){
-      const tx=document.createElement("div"); tx.className="note md";
-      MD.renderTo(tx,MD.parseMarkdown(en.text));   // notes render where READ
-      div.appendChild(tx);
-    }
-    const acts=document.createElement("div"); acts.className="acts";
-    if(p&&p.app===HOST.app&&p.data){
-      const rb=document.createElement("button"); rb.textContent="Restore étude";
-      rb.addEventListener("click",()=>{
-        HOST.apply(p.data);
-        const ta=document.getElementById("journalIn");
-        if(ta){ ta.value=en.text||""; J={...J,pad:ta.value}; saveJournal(); }
-        window.scrollTo({top:0,behavior:"smooth"});});
-      acts.appendChild(rb);
-    }
-    const db=document.createElement("button"); db.textContent="Delete"; db.className="danger";
-    db.addEventListener("click",()=>{J=NOTEPAD.deleteEntry(J,en.id);saveJournal();renderHist();collapseSummaries();});
-    acts.appendChild(db); div.appendChild(acts);
-    wrap.appendChild(div);
-  });
-}
-function saveEntry(){
-  // the pad is the ENTRY NOTE, not the document's running prose (the model
-  // collision behind duplicate-on-every-save — resolved host-side; the
-  // engine's pad slot simply goes unpopulated here). Save files the note and
-  // CLEARS, no prompt: the text moved to the row beside the pad, and the
-  // emptied pad IS the confirmation — no toast. An empty pad still saves;
-  // capturing a configuration with no comment is a real use.
-  const ta=document.getElementById("journalIn"), msg=document.getElementById("saveMsg");
-  const text=(ta?ta.value:"").trim();
-  J=NOTEPAD.addEntry(J,{savedAt:new Date().toISOString(),text,
-    payload:{app:HOST.app,v:HOST.version,data:HOST.snapshot()}});
-  J={...J,pad:""};
-  if(ta)ta.value="";
-  const okS=saveJournal();
-  if(!okS)msg.textContent="saved in this tab only — use Export to keep it";
-  else if(!text){msg.textContent="étude captured without a note";
-    setTimeout(()=>{if(msg.textContent==="étude captured without a note")msg.textContent="";},2200);}
-  renderHist(); collapseSummaries();
-}
-function clearConfirmShow(on){
-  const c=document.getElementById("clearConfirm");
-  if(c)c.style.display=on?"flex":"none";
-}
-function importMsgSet(t){
-  const m=document.getElementById("importMsg");
-  if(m){ m.textContent=t; if(t)setTimeout(()=>{ if(m.textContent===t)m.textContent=""; },8000); }
-}
-function looksLikeCfg(o){
-  return o&&typeof o==="object"&&o.v!==undefined&&typeof o.key==="string"&&
-    Array.isArray(o.set)&&Array.isArray(o.pivotFrets);
-}
-async function importLogFile(file){
-  try{
-    const text=await file.text();
-    if(/^\s*\{/.test(text)){
-      let data; try{data=JSON.parse(text);}catch(e){throw new Error("not valid JSON");}
-      const cfg=data&&data.cfg&&data.id!==undefined?data.cfg:data;   // full entry or bare cfg
-      if(!looksLikeCfg(cfg))throw new Error("not a Triadetudes config");
-      applyRaw(cfg);
-      importMsgSet("étude loaded — save an entry to keep it");
-      return;
-    }
-    const n=importJournalText(text);
-    const ta=document.getElementById("journalIn"); if(ta)ta.value=J.pad;
-    renderHist(); collapseSummaries();
-    importMsgSet("imported "+n+" new entr"+(n===1?"y":"ies")+
-      (n===0?" — everything was already here":""));
-  }catch(e){ importMsgSet("import failed: "+e.message); }
-}
-function exportDownload(){
-  const msg=document.getElementById("saveMsg");
-  let text; try{text=exportText();}catch(e){msg.textContent=e.message;return;}
-  const blob=new Blob([text],{type:"text/markdown"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="triadetudes-journal-"+new Date().toISOString().slice(0,10)+".atchart.md";
-  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
 
 /* ============ controls ============ */
@@ -5726,32 +5923,8 @@ function initControls(){
     if(e.target.value==="custom"){ figSelSync(); document.getElementById("arpIn").focus(); return; }
     applyMotionInput(presetSrc(st.motionMode,+e.target.value));
   });
-  document.getElementById("saveEntry").addEventListener("click",()=>{clearConfirmShow(false);saveEntry();});
-  // Clear CONFIRMS, because that text is filed nowhere. The primary action is
-  // Save and clear — usually what was meant; Discard is the deliberate loss.
-  document.getElementById("clearPad").addEventListener("click",()=>{
-    const ta=document.getElementById("journalIn");
-    if(!ta.value.trim()){ta.value="";J={...J,pad:""};saveJournal();return;}
-    clearConfirmShow(true);
-  });
-  document.getElementById("clearSave").addEventListener("click",()=>{clearConfirmShow(false);saveEntry();});
-  document.getElementById("clearDiscard").addEventListener("click",()=>{
-    clearConfirmShow(false);
-    const ta=document.getElementById("journalIn");
-    ta.value=""; J={...J,pad:""}; saveJournal(); collapseSummaries();
-  });
-  document.getElementById("clearCancel").addEventListener("click",()=>clearConfirmShow(false));
-  document.getElementById("exportLog").addEventListener("click",exportDownload);
-  // the note: one plain textarea (decision 8) — autosave is the host's
-  const jTa=document.getElementById("journalIn");
-  if(jTa){
-    jTa.value=J.pad;
-    let jT=null;
-    jTa.addEventListener("input",()=>{
-      J={...J,pad:jTa.value};
-      clearTimeout(jT); jT=setTimeout(()=>{saveJournal();collapseSummaries();},300);});
-    jTa.addEventListener("change",()=>{saveJournal();collapseSummaries();});
-  }
+  // journal buttons + pad + import/export: wired by the shared surface
+  // the pad: wired by the shared surface (autosave, persistence, clearing)
   // the drag handle: pointer capture keeps every event on the bar itself —
   // element-scoped, no document-level listeners (standing constraint)
   const bar=document.getElementById("dragBar"), nbW=document.getElementById("nbWrap"),
@@ -5766,12 +5939,6 @@ function initControls(){
       logC.style.width=w+"px";});
     bar.addEventListener("pointerup",e=>{dragging=false;bar.releasePointerCapture(e.pointerId);});
   }
-  document.getElementById("importBtn").addEventListener("click",
-    ()=>document.getElementById("importFile").click());
-  document.getElementById("importFile").addEventListener("change",e=>{
-    if(e.target.files&&e.target.files[0])importLogFile(e.target.files[0]);
-    e.target.value="";
-  });
   document.getElementById("copyBtn").addEventListener("click",async()=>{
     // the copied JSON must round-trip through Import (which reads the rawCfg
     // shape) — copying the display JSON produced a config the app's own
@@ -5872,8 +6039,8 @@ function initControls(){
   })();
 })();
 
-J=loadJournal();
 initControls();
+initJournal();
 syncHarmonyUI();
 defaultPivots();
 defaultArpPattern();

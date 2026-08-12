@@ -197,8 +197,8 @@ test("metronome and triadetudes carry atchart, markdown and notepad verbatim (no
     readFileSync(here2 + "../" + file, "utf8")
       .split("\n").filter((l) => !l.startsWith("import ")).join("\n")
       .replace(/^export /gm, "").replace(/^\n+/, "").replace(/\n+$/, "\n");
-  const CARRIERS = { metronome: ["chord.mjs", "atchart.mjs", "markdown.mjs", "notepad.mjs"],
-    triadetudes: ["atchart.mjs", "markdown.mjs", "notepad.mjs"] };
+  const CARRIERS = { metronome: ["chord.mjs", "atchart.mjs", "markdown.mjs", "notepad.mjs", "notepad-surface.mjs"],
+    triadetudes: ["atchart.mjs", "markdown.mjs", "notepad.mjs", "notepad-surface.mjs"] };
   for (const [slug, files] of Object.entries(CARRIERS)) {
     const src = readFileSync(here2 + "../../static/studies/" + slug + "/study.html", "utf8");
     for (const file of files)

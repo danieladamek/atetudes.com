@@ -54,18 +54,19 @@
      textarea, no preview pane, no mode. renderTo is for where a note is READ
      (the saved-notes rows below); applyEdit is the palette's seam, not a
      toolbar's. Markdown stays the storage format and costs the typist nothing. */
-  .note .txt{white-space:normal}
-  .note .txt p{margin:4px 0}
-  .note .txt pre{background:var(--ground);border-radius:6px;padding:5px 7px;overflow:auto;font-size:11.5px}
-  .note{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
-  .note .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-  .note .when{color:var(--gray);font-size:11.5px;white-space:nowrap}
-  .note .cfgline{color:var(--gray);font-size:11.5px;margin:2px 0}
-  .note .txt{white-space:pre-wrap;margin:4px 0}
-  .note .acts{display:flex;gap:6px;margin-top:6px}
-  .note .acts button{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
+  /* saved rows are built by the shared surface with its canonical classes */
+  .hist{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
+  .hist .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .hist .hd b{color:var(--gray);font-size:11.5px;font-weight:normal}
+  .hist .when{color:var(--gray);font-size:11.5px;white-space:nowrap}
+  .hist .note.md{margin:4px 0}
+  .hist .note.md p{margin:4px 0}
+  .hist .note.md pre{background:var(--ground);border-radius:6px;padding:5px 7px;overflow:auto;font-size:11.5px}
+  .hist .acts{display:flex;gap:6px;margin-top:6px}
+  .hist .acts button{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
     border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-  .note .acts button.danger{color:var(--red)}
+  .hist .acts button.danger{color:var(--red)}
+  /* old per-host row styles removed — the shared surface renders .hist rows */
   footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 </style>
 </head>
@@ -73,7 +74,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.2.0</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.3.0</div>
 </header>
 
 <div class="cards">
@@ -118,26 +119,35 @@
     <textarea id="pad" placeholder="The idea that arrived at this tempo — a lick, a groove, a thing to practice. Plain prose is fine (it's markdown underneath). Autosaves as you type."></textarea>
     <div class="transport" style="margin-top:10px">
       <button id="saveNote" class="primary">Save note</button>
+      <button id="clearPad">Clear</button>
       <button id="exportBtn">Export (.atchart.md)</button>
       <button id="copyBtn">Copy</button>
       <button id="importBtn">Import</button>
       <input type="file" id="importFile" accept=".md,.atchart.md,.txt" style="display:none">
       <span id="saveMsg" class="hint" style="margin:0"></span>
     </div>
-    <div class="hint">Saving stamps the note with the metronome's current settings — an idea
-    remembers the tempo it came at, and <b>Apply</b> on any note sets the metronome back to
-    that moment. Export writes one <b>.atchart.md</b> file — pad, notes and settings — that
-    any At-Etudes app can open; Import merges one back; Copy puts the same file on the
-    clipboard. The file is the handoff channel: nothing leaves this machine.</div>
+    <div class="transport" id="clearConfirm" style="display:none;margin-top:6px">
+      <span class="hint" style="margin:0">that note is filed nowhere —</span>
+      <button id="clearSave" class="primary">Save and clear</button>
+      <button id="clearDiscard">Discard</button>
+      <button id="clearCancel">keep writing</button>
+    </div>
+    <div class="hint">Save note files the idea with the metronome's current settings and
+    clears the pad — the emptied pad is the confirmation, and <b>Apply</b> on any saved
+    note sets the metronome back to that moment. Export writes one <b>.atchart.md</b>:
+    anything still in the pad rides on top as uncommitted scratch, saved notes are
+    committed. Import merges one back; Copy puts the same file on the clipboard. The
+    file is the handoff channel: nothing leaves this machine.</div>
   </div>
 </div>
 
 <div class="card" style="min-width:0">
-  <h2>Saved notes — <span id="noteCount">0</span></h2>
+  <h2>Saved notes — <span id="noteCount">0</span>
+    <span id="storeNote" style="text-transform:none;letter-spacing:0;font-weight:normal;color:var(--gray)"></span></h2>
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.2.0 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.3.0 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
@@ -1825,6 +1835,286 @@ function hashStr(s) {
 return { makeEntry, emptyDoc, addEntry, editEntry, deleteEntry, reorderEntry,
   fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart };
 })();
+const NPSURF = (() => {
+const { emptyDoc, makeEntry, addEntry, deleteEntry, toAtchart, fromAtchart } = NOTEPAD;
+const { parseMarkdown, renderTo } = MD;
+/* notepad-surface.mjs — the notepad's shared SURFACE (component v1).
+ *
+ * engine/notepad.mjs shares the model; this module shares the BEHAVIOUR —
+ * save semantics, clear semantics, import/export/clipboard, autosave
+ * debouncing, the storage-denied path, and saved-row rendering. It exists
+ * because every behavioural fix was landing twice, and the second host was
+ * always late (Metronome shipped decision 8 but not save-clears).
+ *
+ * TRIADETUDES' CORRECTED BEHAVIOUR IS CANONICAL (v0.8.1): every correction
+ * came from real use there. Hosts consume this behaviour; none re-implements
+ * it, and none gets a choice about:
+ *   - Save files the note, CLEARS the pad, no prompt, no toast — the emptied
+ *     pad is the confirmation. An empty pad still saves (config capture).
+ *   - Clear confirms; "Save and clear" is the PRIMARY action, Discard second.
+ *   - The pad is PERSISTENT UNCOMMITTED SCRATCH: autosaved on a debounce, it
+ *     survives a reload and clears on save.
+ *   - Storage-denied keeps working in memory AND SAYS SO, steering to Export.
+ *   - Saved rows render their note markdown via renderTo (reading surface);
+ *     labels DERIVE via adapter.summarize (never stored); a foreign app's
+ *     payload is named, inert and carried untouched.
+ *
+ * SHARE BEHAVIOUR, NOT LAYOUT: the host provides the elements (its page, its
+ * grammar, its placement); this module only wires them and builds row nodes
+ * inside the list element. No document/window globals — everything reaches
+ * the DOM through the provided elements' ownerDocument, so the whole surface
+ * runs headless against a stub (the both-hosts save-clears test lives there).
+ *
+ * createNotepadSurface({
+ *   adapter:  {app, version, snapshot(), apply(data), summarize(data)}
+ *   storage:  {load():string|null, save(string):void}   // thin; MAY THROW —
+ *             denial is handled (and messaged) here, not in the host
+ *   migrate:  () => doc|null      // host's v1 shape → model, once, no v2 yet
+ *   els: {
+ *     pad, saveBtn, clearBtn, confirmRoot, confirmSave, confirmDiscard,
+ *     confirmCancel, exportBtn?, copyBtn?, importBtn?, importFile?,
+ *     msg, importMsg?, list, count?, storeNote?
+ *   }
+ *   file:     {title, name():string}                    // export identity
+ *   applyLabel: "Restore étude" | "Apply settings" | …  // host wording
+ *   importFallback?: (text) => entries[]|null           // legacy log formats
+ *   jsonImport?: (parsedJson) => boolean                // bare-config files
+ *   onChange?: ()=>{}   onApplied?: ()=>{}              // host hooks (fold
+ *             lines, scroll) — presentation, never behaviour
+ * }) → { getDoc, setDoc, save, clearConfirmShow, exportText, importText,
+ *        renderRows, storageOK }
+ */
+
+
+function createNotepadSurface(opts) {
+  const { adapter, storage, els, file } = opts;
+  const migrate = opts.migrate || (() => null);
+  const onChange = opts.onChange || (() => {});
+  const onApplied = opts.onApplied || (() => {});
+  const applyLabel = opts.applyLabel || "Apply settings";
+  let doc = emptyDoc();
+  let storageOK = true;
+  let padTimer = null;
+
+  // ---- storage (denial handled HERE, and said out loud) ----
+  function loadDoc() {
+    try {
+      const raw = storage.load();
+      if (raw) {
+        const d = JSON.parse(raw);
+        return { pad: String(d.pad ?? ""), entries: (d.entries || []).map(makeEntry) };
+      }
+      const migrated = migrate();
+      if (migrated) { trySave(migrated); return migrated; }
+      return emptyDoc();
+    } catch (e) { storageOK = false; return emptyDoc(); }
+  }
+  function trySave(d) {
+    if (!storageOK) return false;
+    try { storage.save(JSON.stringify({ pad: d.pad, entries: d.entries })); return true; }
+    catch (e) { storageOK = false; return false; }
+  }
+  function persist() { return trySave(doc); }
+
+  function msgSet(t, sticky) {
+    if (!els.msg) return;
+    els.msg.textContent = t;
+    if (t && !sticky) setTimeout(() => {
+      if (els.msg.textContent === t) els.msg.textContent = "";
+    }, 2200);
+  }
+
+  // ---- save: file the note, CLEAR the pad, no prompt, no toast ----
+  function save() {
+    clearConfirmShow(false);
+    const text = String(els.pad.value ?? "").trim();
+    doc = addEntry(doc, { savedAt: new Date().toISOString(), text,
+      payload: { app: adapter.app, v: adapter.version, data: adapter.snapshot() } });
+    doc = { ...doc, pad: "" };
+    els.pad.value = "";
+    const ok = persist();
+    if (!ok) msgSet("saved in this tab only — use Export to keep it", true);
+    else if (!text) msgSet("captured without a note"); // something must confirm
+    renderRows(); onChange();
+  }
+
+  // ---- clear: destructive, so it CONFIRMS; Save-and-clear is primary ----
+  function clearConfirmShow(on) {
+    if (els.confirmRoot) els.confirmRoot.style.display = on ? "flex" : "none";
+  }
+  function discard() {
+    clearConfirmShow(false);
+    els.pad.value = "";
+    doc = { ...doc, pad: "" };
+    persist(); onChange();
+  }
+
+  // ---- export / import / clipboard: the file is the handoff channel ----
+  function exportText() { return toAtchart(doc, { title: file.title }); }
+  function importText(text) {
+    let inc;
+    try { inc = fromAtchart(text); }
+    catch (e) {
+      const legacy = opts.importFallback ? opts.importFallback(text) : null;
+      if (!legacy || !legacy.length)
+        throw new Error("not a notepad file (and no legacy entries found)");
+      inc = { pad: "", entries: legacy.map(makeEntry) };
+    }
+    const have = new Set(doc.entries.map((x) => x.id));
+    const added = inc.entries.filter((x) => !have.has(x.id));
+    let pad = doc.pad;
+    if (inc.pad.trim() && !pad.trim()) pad = inc.pad;
+    else if (inc.pad.trim() && pad.trim() && !pad.includes(inc.pad))
+      pad = pad + "\n\n---\n\n" + inc.pad;
+    doc = { ...doc, pad, entries: [...doc.entries, ...added] };
+    els.pad.value = doc.pad;
+    persist();
+    return added.length;
+  }
+  function importMsg(t) {
+    const m = els.importMsg || els.msg;
+    if (!m) return;
+    m.textContent = t;
+    if (t) setTimeout(() => { if (m.textContent === t) m.textContent = ""; }, 8000);
+  }
+  async function importFile(f) {
+    try {
+      const text = await f.text();
+      if (/^\s*\{/.test(text) && opts.jsonImport) {
+        let data; try { data = JSON.parse(text); }
+        catch (e) { throw new Error("not valid JSON"); }
+        if (opts.jsonImport(data)) return; // host consumed a bare config
+        throw new Error("not a recognized config");
+      }
+      const n = importText(text);
+      renderRows(); onChange();
+      importMsg("imported " + n + " new entr" + (n === 1 ? "y" : "ies") +
+        (n === 0 ? " — everything was already here" : ""));
+    } catch (e) { importMsg("import failed: " + e.message); }
+  }
+  function download() {
+    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    const docm = els.pad.ownerDocument, win = docm.defaultView;
+    const blob = new win.Blob([text], { type: "text/markdown" });
+    const a = docm.createElement("a");
+    a.href = win.URL.createObjectURL(blob);
+    a.download = file.name();
+    a.click();
+    setTimeout(() => win.URL.revokeObjectURL(a.href), 2000);
+  }
+  async function copy() {
+    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    const win = els.pad.ownerDocument.defaultView;
+    try {
+      await win.navigator.clipboard.writeText(text);
+      msgSet("copied — one .atchart.md, ready to paste");
+    } catch (e) { msgSet("clipboard unavailable — use Export", true); }
+  }
+
+  // ---- the rows: read-surface rendering, derived labels, inert foreigners ----
+  function fmtWhen(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " +
+      d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  }
+  function renderRows() {
+    const wrap = els.list;
+    if (!wrap) return;
+    const docm = wrap.ownerDocument;
+    if (els.count) els.count.textContent = String(doc.entries.length);
+    if (!storageOK && els.storeNote)
+      els.storeNote.textContent =
+        "storage unavailable here — your notes live in this tab only; use Export";
+    while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
+    if (!doc.entries.length) {
+      const p = docm.createElement("div"); p.className = "hint";
+      p.textContent = opts.emptyHint ||
+        "No entries yet. Jot the note, then save — it files with the settings.";
+      wrap.appendChild(p); return;
+    }
+    [...doc.entries].reverse().forEach((en) => {
+      const div = docm.createElement("div"); div.className = "hist";
+      const hd = docm.createElement("div"); hd.className = "hd";
+      const b = docm.createElement("b");
+      const p = en.payload;
+      b.textContent = !p ? "note" :
+        p.app === adapter.app ? adapter.summarize(p.data)
+        : p.app + " · v" + p.v + " (another app's settings — carried untouched)";
+      hd.appendChild(b);
+      const w = docm.createElement("span"); w.className = "when";
+      w.textContent = fmtWhen(en.savedAt); hd.appendChild(w);
+      div.appendChild(hd);
+      if (en.text) {
+        const tx = docm.createElement("div"); tx.className = "note md";
+        renderTo(tx, parseMarkdown(en.text));
+        div.appendChild(tx);
+      }
+      const acts = docm.createElement("div"); acts.className = "acts";
+      if (p && p.app === adapter.app && p.data) {
+        const rb = docm.createElement("button"); rb.textContent = applyLabel;
+        rb.addEventListener("click", () => {
+          adapter.apply(p.data);
+          els.pad.value = en.text || "";           // canonical: the note returns
+          doc = { ...doc, pad: els.pad.value };    // as uncommitted scratch
+          persist(); onChange(); onApplied();
+        });
+        acts.appendChild(rb);
+      }
+      const db = docm.createElement("button");
+      db.textContent = "Delete"; db.className = "danger";
+      db.addEventListener("click", () => {
+        doc = deleteEntry(doc, en.id); persist(); renderRows(); onChange();
+      });
+      acts.appendChild(db);
+      div.appendChild(acts);
+      wrap.appendChild(div);
+    });
+  }
+
+  // ---- mount ----
+  doc = loadDoc();
+  els.pad.value = doc.pad;   // persistent uncommitted scratch: survives reload
+  els.pad.addEventListener("input", () => {
+    doc = { ...doc, pad: els.pad.value };
+    if (padTimer) clearTimeout(padTimer);
+    padTimer = setTimeout(() => { persist(); onChange(); }, 300);
+  });
+  els.pad.addEventListener("change", () => { persist(); onChange(); });
+  els.saveBtn.addEventListener("click", save);
+  if (els.clearBtn) els.clearBtn.addEventListener("click", () => {
+    if (!String(els.pad.value ?? "").trim()) { discard(); return; }
+    clearConfirmShow(true);
+  });
+  if (els.confirmSave) els.confirmSave.addEventListener("click", save);
+  if (els.confirmDiscard) els.confirmDiscard.addEventListener("click", discard);
+  if (els.confirmCancel) els.confirmCancel.addEventListener("click",
+    () => clearConfirmShow(false));
+  if (els.exportBtn) els.exportBtn.addEventListener("click", download);
+  if (els.copyBtn) els.copyBtn.addEventListener("click", copy);
+  if (els.importBtn && els.importFile) {
+    els.importBtn.addEventListener("click", () => els.importFile.click());
+    els.importFile.addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) importFile(f);
+      e.target.value = "";
+    });
+  }
+  if (!storageOK && els.storeNote)
+    els.storeNote.textContent =
+      "storage unavailable here — your notes live in this tab only; use Export";
+  renderRows();
+
+  return {
+    getDoc: () => doc,
+    setDoc: (d) => { doc = { pad: String(d.pad ?? ""), entries: (d.entries || []).map(makeEntry) };
+      els.pad.value = doc.pad; persist(); renderRows(); onChange(); },
+    save, clearConfirmShow, exportText, importText, renderRows,
+    get storageOK() { return storageOK; },
+  };
+}
+return { createNotepadSurface };
+})();
 
 const SUB_OFFSETS={1:[],2:[0.5],3:[1/3,2/3],4:[0.25,0.5,0.75]};
 
@@ -1938,120 +2228,55 @@ function metroToggle(){
   document.getElementById("metroBtn").textContent=METRO.running?"Stop":"Start";
 }
 
-/* ============ notepad (v1.1.0: the shared component, hosted here) ============
-   engine/notepad.mjs owns the model; this host wires storage, DOM and the
-   adapter. The v1.0 keys are migrated ONCE and left in place; the new key
-   holds the whole document. Storage-denied keeps working in memory and says
-   so, steering to Export (the file is the handoff channel, not storage). */
+/* ============ notepad (v1.3.0: the SHARED SURFACE, hosted here) ============
+   engine/notepad-surface.mjs owns the behaviour — Triadetudes' corrected
+   v0.8.1 semantics are canonical, and this brings Metronome UP to them:
+   save now CLEARS the pad (the duplicate-on-every-save bug fixed here too),
+   a Clear control exists and confirms, the pad is persistent uncommitted
+   scratch. This block supplies only what is host: adapter, storage key,
+   the v1.0 migration, file identity. Layout stays in this page's HTML. */
 const DOC_KEY="metronome.v2.notepad";
 const HOST={app:"metronome",version:1,
   snapshot:()=>cfgSnapshot(),
   apply:(data)=>applyCfg(data||{}),
   summarize:(data)=>cfgLine(data||{})};   // DERIVED at render, never stored
-let DOC=null, storageOK=true;
-
-function loadDoc(){
-  try{
-    const v2=localStorage.getItem(DOC_KEY);
-    if(v2){ const d=JSON.parse(v2); return {pad:String(d.pad??""),entries:(d.entries||[]).map(NOTEPAD.makeEntry)}; }
-    // one-time migration from the shipped v1.0 shape (the characterization
-    // pin) — old keys are left untouched as a fallback copy
-    const pad=localStorage.getItem(PAD_KEY)||"";
-    let log=[]; try{log=JSON.parse(localStorage.getItem(LOG_KEY)||"[]")||[];}catch(e){}
-    const doc=NOTEPAD.fromMetronomeV1(pad,log);
-    localStorage.setItem(DOC_KEY,JSON.stringify({pad:doc.pad,entries:doc.entries}));
-    return doc;
-  }catch(e){ storageOK=false; return NOTEPAD.emptyDoc(); }
-}
-function saveDoc(){
-  if(!storageOK)return false;
-  try{ localStorage.setItem(DOC_KEY,JSON.stringify({pad:DOC.pad,entries:DOC.entries})); return true; }
-  catch(e){ storageOK=false; return false; }
-}
-function storageNote(){
-  return storageOK?"":"storage unavailable here — your work lives in this tab only; use Export";
-}
-function fmtWhen(iso){ if(!iso)return""; const d=new Date(iso);
-  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+
-         d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); }
-
-function exportText(){
-  return NOTEPAD.toAtchart(DOC,{title:"Metronome notepad"});
-}
-function importText(text){
-  // merge, never delete: entries dedup by id; an incoming pad appends below
-  // a rule when both sides have prose (named rule — nothing is overwritten)
-  const inc=NOTEPAD.fromAtchart(text);
-  const have=new Set(DOC.entries.map(e=>e.id));
-  const added=inc.entries.filter(e=>!have.has(e.id));
-  let pad=DOC.pad;
-  if(inc.pad.trim()&&!pad.trim())pad=inc.pad;
-  else if(inc.pad.trim()&&pad.trim()&&!pad.includes(inc.pad))pad=pad+"\n\n---\n\n"+inc.pad;
-  DOC={...DOC,pad,entries:[...DOC.entries,...added]};
-  saveDoc();
-  return added.length;
-}
-
-function renderNotes(){
-  const wrap=document.getElementById("noteList"),
-        cnt=document.getElementById("noteCount");
-  if(!wrap)return;
-  cnt.textContent=String(DOC.entries.length);
-  wrap.innerHTML="";
-  const sn=storageNote();
-  if(sn){const p=document.createElement("div");p.className="hint";p.textContent=sn;wrap.appendChild(p);}
-  if(!DOC.entries.length){
-    const p=document.createElement("div"); p.className="hint";
-    p.textContent="No notes yet. Tap a tempo, catch an idea, save it — the note keeps the settings.";
-    wrap.appendChild(p); return;
-  }
-  [...DOC.entries].reverse().forEach(en=>{
-    const div=document.createElement("div"); div.className="note";
-    const hd=document.createElement("div"); hd.className="hd";
-    const c=document.createElement("span"); c.className="cfgline";
-    // the summary line DERIVES from the payload through the adapter — a
-    // foreign app's payload is named and carried, never interpreted
-    const p=en.payload;
-    c.textContent=!p?"note":
-      p.app===HOST.app?HOST.summarize(p.data)
-      :p.app+" · v"+p.v+" (another app's settings — carried untouched)";
-    hd.appendChild(c);
-    const w=document.createElement("span"); w.className="when"; w.textContent=fmtWhen(en.savedAt); hd.appendChild(w);
-    div.appendChild(hd);
-    const tx=document.createElement("div"); tx.className="txt";
-    MD.renderTo(tx,MD.parseMarkdown(en.text));
-    div.appendChild(tx);
-    const acts=document.createElement("div"); acts.className="acts";
-    if(p&&p.app===HOST.app){
-      const ab=document.createElement("button"); ab.textContent="Apply settings";
-      ab.addEventListener("click",()=>{HOST.apply(p.data);window.scrollTo({top:0,behavior:"smooth"});});
-      acts.appendChild(ab);
-    }
-    const db=document.createElement("button"); db.textContent="Delete"; db.className="danger";
-    db.addEventListener("click",()=>{DOC=NOTEPAD.deleteEntry(DOC,en.id);saveDoc();renderNotes();});
-    acts.appendChild(db); div.appendChild(acts);
-    wrap.appendChild(div);
+let NOTE=null;
+function initNotepad(){
+  NOTE=NPSURF.createNotepadSurface({
+    adapter:HOST,
+    storage:{load:()=>localStorage.getItem(DOC_KEY),
+             save:(str)=>localStorage.setItem(DOC_KEY,str)},
+    migrate:()=>{
+      // the shipped v1.0 shapes, migrated once; old keys stay as a fallback
+      let pad=""; let log=[];
+      try{pad=localStorage.getItem(PAD_KEY)||"";}catch(e){}
+      try{log=JSON.parse(localStorage.getItem(LOG_KEY)||"[]")||[];}catch(e){}
+      return NOTEPAD.fromMetronomeV1(pad,log);
+    },
+    els:{pad:document.getElementById("pad"),
+      saveBtn:document.getElementById("saveNote"),
+      clearBtn:document.getElementById("clearPad"),
+      confirmRoot:document.getElementById("clearConfirm"),
+      confirmSave:document.getElementById("clearSave"),
+      confirmDiscard:document.getElementById("clearDiscard"),
+      confirmCancel:document.getElementById("clearCancel"),
+      exportBtn:document.getElementById("exportBtn"),
+      copyBtn:document.getElementById("copyBtn"),
+      importBtn:document.getElementById("importBtn"),
+      importFile:document.getElementById("importFile"),
+      msg:document.getElementById("saveMsg"),
+      list:document.getElementById("noteList"),
+      count:document.getElementById("noteCount"),
+      storeNote:document.getElementById("storeNote")},
+    file:{title:"Metronome notepad",name:()=>"metronome-notepad.atchart.md"},
+    applyLabel:"Apply settings",
+    emptyHint:"No notes yet. Tap a tempo, catch an idea, save it — the note keeps the settings.",
+    onApplied:()=>window.scrollTo({top:0,behavior:"smooth"}),
   });
 }
-function saveNote(){
-  const pad=document.getElementById("pad"), msg=document.getElementById("saveMsg");
-  const text=pad.value.trim();
-  if(!text){ msg.textContent="nothing to save"; setTimeout(()=>msg.textContent="",1500); return; }
-  DOC=NOTEPAD.addEntry(DOC,{savedAt:new Date().toISOString(),text,
-    payload:{app:HOST.app,v:HOST.version,data:HOST.snapshot()}});
-  msg.textContent=saveDoc()?"saved":"saved in this tab — use Export to keep it";
-  setTimeout(()=>msg.textContent="",2200);
-  renderNotes();
-}
-function exportDownload(){
-  const msg=document.getElementById("saveMsg");
-  let text; try{text=exportText();}catch(e){msg.textContent=e.message;return;}
-  const blob=new Blob([text],{type:"text/markdown"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="metronome-notepad.atchart.md";
-  a.click(); URL.revokeObjectURL(a.href);
-}
+// thin aliases for the in-page self-tests
+function exportText(){ return NOTE.exportText(); }
+function importText(t){ const n=NOTE.importText(t); NOTE.renderRows(); return n; }
 
 /* ============ UI wiring ============ */
 function syncUI(){
@@ -2088,41 +2313,7 @@ function initControls(){
     st.clickVol=+e.target.value/100;
     document.getElementById("clickVolVal").textContent=e.target.value;});
   document.getElementById("clickVolR").addEventListener("change",saveCfg);
-  const pad=document.getElementById("pad");
-  pad.value=DOC.pad;
-  let padT=null;
-  pad.addEventListener("input",()=>{
-    DOC={...DOC,pad:pad.value};
-    clearTimeout(padT); padT=setTimeout(saveDoc,300);   // autosave is the host's
-  });
-  pad.addEventListener("change",saveDoc);
-  // decision 8: no formatting toolbar, no preview, no tabs — capture only.
-  // MD.applyEdit remains inlined as the palette's insert-at-cursor seam
-  // (child 3); MD.renderTo renders the saved-notes rows below, where notes
-  // are READ, never while one is being typed.
-  document.getElementById("saveNote").addEventListener("click",saveNote);
-  document.getElementById("exportBtn").addEventListener("click",exportDownload);
-  document.getElementById("copyBtn").addEventListener("click",async()=>{
-    const msg=document.getElementById("saveMsg");
-    let text; try{text=exportText();}catch(e){msg.textContent=e.message;return;}
-    try{await navigator.clipboard.writeText(text);
-      msg.textContent="copied — one .atchart.md, ready to paste";
-      setTimeout(()=>msg.textContent="",2000);}catch(e){msg.textContent="clipboard unavailable — use Export";}
-  });
-  document.getElementById("importBtn").addEventListener("click",
-    ()=>document.getElementById("importFile").click());
-  document.getElementById("importFile").addEventListener("change",async e=>{
-    const msg=document.getElementById("saveMsg");
-    if(!(e.target.files&&e.target.files[0]))return;
-    try{
-      const n=importText(await e.target.files[0].text());
-      document.getElementById("pad").value=DOC.pad;
-      renderPad(); renderNotes();
-      msg.textContent="imported "+n+" new note"+(n===1?"":"s");
-      setTimeout(()=>msg.textContent="",2500);
-    }catch(err){ msg.textContent="import failed: "+err.message; }
-    e.target.value="";
-  });
+  // notepad pad + buttons + import/export: wired by the shared surface
 }
 
 
@@ -2147,11 +2338,11 @@ loadCfg();
   eq(typeof ATCHART.parseAtchart(src).meta.title,"string","the format engine reads our file");
 })();
 
-DOC=loadDoc();
 initControls();
+initNotepad();
 
 METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
-syncUI(); renderLamp(); renderNotes();
+syncUI(); renderLamp();
 </script>
 </body>
 </html>

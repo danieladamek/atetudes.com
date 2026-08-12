@@ -5,6 +5,45 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-12 — Notepad: the surface is extracted, and Metronome v1.3.0 is brought up to canonical (Daniel's dispatch)
+
+- **The root cause, fixed once**: `engine/notepad.mjs` shared only the MODEL, so every
+  behavioural fix landed twice and the second was always late — Metronome still had the
+  save-doesn't-clear duplicate bug fixed in Triadetudes at v0.8.1, and no Clear control.
+  **`engine/notepad-surface.mjs`** now owns the behaviour — save-clears semantics, the
+  Clear confirm (Save-and-clear primary), import/export/clipboard, autosave debouncing,
+  the storage-denied path, and saved-row rendering via renderTo — while hosts keep their
+  layout entirely: the surface mounts into elements the host provides and reaches the
+  DOM only through their ownerDocument, so the whole layer runs headless against a stub.
+- **Triadetudes' corrected v0.8.1 behaviour is canonical, verbatim.** Both hosts now
+  consume it; neither re-implements a line of it. The pad question is settled the
+  dispatched way for both: **persistent uncommitted scratch** — autosaved on a debounce,
+  survives a reload (verified with a real browser reload), clears on save.
+- **THE TEST THAT STOPS THIS RECURRING**: `notepad-surface.test.mjs` runs
+  save-then-inspect-leaves-the-pad-empty against BOTH host configurations through the
+  one surface — plus the clear branches, persistence-across-reload, storage-denied and
+  the migrate-once hook, all headless. Before the extraction that assertion needed two
+  hand-built DOMs; that awkwardness was the item's predicted finding, and it is gone.
+- **Metronome v1.3.0** is brought UP: save now clears the pad, the Clear control exists
+  and confirms with Save-and-clear primary, rows render through the surface with derived
+  labels, and the storage-denied path did not regress (loads clean, says so, still saves
+  in memory and exports). Alignment note: Apply on a saved row now also returns the
+  note text to the pad as uncommitted scratch — the canonical Restore semantics.
+  Triadetudes keeps v0.8.1 behaviour bit-for-bit through the swap (migration, derived
+  labels, Restore, legacy import, fold lines, rawCfg round-trip — all re-verified) and
+  keeps its version, since nothing user-visible moved there.
+- **Two build findings worth recording**: (1) the extraction surgery initially swallowed
+  eight bystander functions (rawCfg, applyRaw, summaryText, toggleClick…) — caught by
+  the harvest suite's syntax gate and Playwright's zero-errors gate, restored verbatim
+  from HEAD; (2) a multi-line `import` in the new module silently defeated the
+  line-based inline transform — the family transform stays deliberately dumb, so
+  imports are now single-line, and the anti-drift pin covers the surface module in both
+  carriers. Also removed: Metronome's dead per-host row CSS, which was colliding with
+  the surface's `note md` class and boxing note text.
+- Suite 259/259 (10 new surface tests); 21 Playwright checks across both studies from
+  `file://` offline, zero console errors; both widths inspected. `rawCfg()` unchanged.
+  Update Log 260812.1.
+
 ## 2026-08-11 — Triadetudes v0.8.1: the pad is the entry note, and Save clears it (Daniel's dispatch)
 
 - **The model collision, resolved host-side as dispatched**: engine/notepad.mjs models
