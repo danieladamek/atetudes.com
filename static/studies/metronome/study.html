@@ -50,27 +50,10 @@
   .row2>div{flex:1 1 90px}
   textarea{font:inherit;font-size:13px;padding:8px 9px;border:1px solid var(--line);
     border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:130px}
-  /* the notepad surface (decision 1): source + live preview, never-editable pane */
-  .padtools{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
-  .padtools button{font:inherit;font-size:11.5px;padding:2px 8px;border:1px solid var(--line);
-    border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-  .padtools button:hover{border-color:var(--ink)}
-  .padwrap{display:flex;gap:10px;align-items:stretch}
-  .padwrap>*{flex:1 1 0;min-width:0}
-  #padView{border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;
-    overflow:auto;min-height:130px;max-height:320px;background:#fff}
-  #padView h1,#padView h2,#padView h3{font-size:15px;margin:8px 0 4px}
-  #padView p{margin:5px 0}
-  #padView pre{background:var(--ground);border-radius:6px;padding:6px 8px;overflow:auto;font-size:12px}
-  #padView code{font-family:ui-monospace,monospace;font-size:12px}
-  #padView blockquote{margin:5px 0;padding-left:9px;border-left:3px solid var(--line);color:var(--gray)}
-  .padtabs{display:none;gap:6px;margin-bottom:6px}
-  @media (max-width:719px){
-    .padwrap{flex-direction:column}
-    .padtabs{display:flex}
-    .padwrap.editing #padView{display:none}
-    .padwrap:not(.editing) #pad{display:none}
-  }
+  /* the notepad surface (decision 8): capture, not authoring — ONE plain
+     textarea, no preview pane, no mode. renderTo is for where a note is READ
+     (the saved-notes rows below); applyEdit is the palette's seam, not a
+     toolbar's. Markdown stays the storage format and costs the typist nothing. */
   .note .txt{white-space:normal}
   .note .txt p{margin:4px 0}
   .note .txt pre{background:var(--ground);border-radius:6px;padding:5px 7px;overflow:auto;font-size:11.5px}
@@ -90,7 +73,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.1.0</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.2.0</div>
 </header>
 
 <div class="cards">
@@ -132,14 +115,7 @@
 
   <div class="card">
     <h2>Notepad</h2>
-    <div class="padtabs">
-      <button id="tabEdit" class="on">Edit</button><button id="tabView">Preview</button>
-    </div>
-    <div class="padtools" id="padTools"></div>
-    <div class="padwrap editing" id="padWrap">
-      <textarea id="pad" placeholder="The idea that arrived at this tempo — markdown welcome. Autosaves as you type; the preview renders live."></textarea>
-      <div id="padView"></div>
-    </div>
+    <textarea id="pad" placeholder="The idea that arrived at this tempo — a lick, a groove, a thing to practice. Plain prose is fine (it's markdown underneath). Autosaves as you type."></textarea>
     <div class="transport" style="margin-top:10px">
       <button id="saveNote" class="primary">Save note</button>
       <button id="exportBtn">Export (.atchart.md)</button>
@@ -161,11 +137,11 @@
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.1.0 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.2.0 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
-is the shared At-Etudes component: markdown with live preview, notes carrying settings
-as data, one .atchart.md file any sibling app can open. Everything runs in this file,
-offline.</footer>
+is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
+valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
+can open. Everything runs in this file, offline.</footer>
 </div>
 
 <script>
@@ -1992,10 +1968,6 @@ function importText(text){
   return added.length;
 }
 
-function renderPad(){
-  const view=document.getElementById("padView");
-  if(view)MD.renderTo(view,MD.parseMarkdown(DOC.pad));
-}
 function renderNotes(){
   const wrap=document.getElementById("noteList"),
         cnt=document.getElementById("noteCount");
@@ -2097,32 +2069,13 @@ function initControls(){
   let padT=null;
   pad.addEventListener("input",()=>{
     DOC={...DOC,pad:pad.value};
-    renderPad();                       // decision 1: preview renders live
     clearTimeout(padT); padT=setTimeout(saveDoc,300);   // autosave is the host's
   });
   pad.addEventListener("change",saveDoc);
-  // the toolbar: pure applyEdit ops; selection and scroll survive every one
-  const OPS=[["B",{type:"strong"},"bold"],["I",{type:"em"},"italic"],
-    ["<>",{type:"code"},"code"],["[a]",{type:"link"},"link"],
-    ["H2",{type:"heading",level:2},"heading"],["•",{type:"bullet"},"bullet list"],
-    ["1.",{type:"ordered"},"numbered list"],["❝",{type:"quote"},"quote"]];
-  const tools=document.getElementById("padTools");
-  for(const [lab,op,title] of OPS){
-    const b=document.createElement("button"); b.textContent=lab; b.title=title;
-    b.addEventListener("click",()=>{
-      const scroll=pad.scrollTop;
-      const r=MD.applyEdit(pad.value,{start:pad.selectionStart,end:pad.selectionEnd},op);
-      pad.value=r.src; DOC={...DOC,pad:r.src};
-      pad.setSelectionRange(r.selection.start,r.selection.end);
-      pad.scrollTop=scroll; pad.focus();
-      renderPad(); saveDoc();
-    });
-    tools.appendChild(b);
-  }
-  // narrow viewports: Edit/Preview tabs (the split needs no control on wide)
-  const wrapEl=document.getElementById("padWrap");
-  document.getElementById("tabEdit").addEventListener("click",()=>wrapEl.classList.add("editing"));
-  document.getElementById("tabView").addEventListener("click",()=>wrapEl.classList.remove("editing"));
+  // decision 8: no formatting toolbar, no preview, no tabs — capture only.
+  // MD.applyEdit remains inlined as the palette's insert-at-cursor seam
+  // (child 3); MD.renderTo renders the saved-notes rows below, where notes
+  // are READ, never while one is being typed.
   document.getElementById("saveNote").addEventListener("click",saveNote);
   document.getElementById("exportBtn").addEventListener("click",exportDownload);
   document.getElementById("copyBtn").addEventListener("click",async()=>{
@@ -2174,7 +2127,7 @@ DOC=loadDoc();
 initControls();
 
 METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
-syncUI(); renderLamp(); renderNotes(); renderPad();
+syncUI(); renderLamp(); renderNotes();
 </script>
 </body>
 </html>

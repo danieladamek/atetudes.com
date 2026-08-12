@@ -5,6 +5,31 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Metronome v1.2.0: the notepad surface becomes capture-only (decision 8)
+
+- **Decision 8 reverses decision 1's preview half**: the notepad's job is capture, not
+  authoring, and a split pane costs attention at exactly the moment an idea is most
+  likely to evaporate. Metronome v1.1.0 (260811.7) shipped hours earlier with the
+  decision-1 surface; this revision **removes — not hides — the live preview pane, the
+  wide-viewport split, the Edit/Preview tabs, and the formatting toolbar**. What
+  remains is ONE plain textarea plus Save note · Export (.atchart.md) · Copy · Import.
+  Verified structurally: one textarea in the document, no preview/toolbar/tab element
+  exists.
+- **Nothing under the surface moved, by design and by test.** engine/notepad.mjs,
+  engine/markdown.mjs and the atchart wiring are byte-identical to 260811.7 (the
+  anti-drift pin still passes): markdown stays the storage format — plain prose IS
+  valid markdown and the typist never needs a marker; `renderTo` now renders only
+  where a note is READ (the saved-notes rows show *em* as emphasis and a typed
+  `<b>` as literal text, re-verified); `applyEdit` stays inlined as the palette's
+  insert-at-cursor seam — no longer wired to any button, and now the only structured
+  way anything will enter a note (child 3).
+- **Everything the dispatch re-asserts re-verified on the new surface**: the v1.0
+  migration (seeded keys arrive, old keys kept), derived summary lines, export
+  parsing + byte fixed-pointing in the format engine IN THE PAGE, import merging by
+  id with foreign payloads named + inert + Apply-less, the storage-denied path still
+  working and saying so — all from `file://` with the network disabled, zero console
+  errors, 15 checks, both widths. Suite 246/246 untouched. Update Log 260811.8.
+
 ## 2026-08-11 — Notepad child 2: the shared component, hosted in Metronome v1.1.0 (Daniel's dispatch)
 
 - **Migration before UI, as dispatched.** `engine/notepad.mjs` opens with
