@@ -5,6 +5,37 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-11 — Triadetudes v0.8.1: the pad is the entry note, and Save clears it (Daniel's dispatch)
+
+- **The model collision, resolved host-side as dispatched**: engine/notepad.mjs models
+  the pad as the document's running free markdown; the Triadetudes surface treats it as
+  THE ENTRY'S NOTE and was stamping it onto every save without clearing — both
+  defensible, both at once is what duplicated. Triadetudes now simply doesn't populate
+  the document's free-prose slot: **Save entry files the note and CLEARS the pad, no
+  prompt, no toast** — the text moved to the row beside the pad, and the emptied pad IS
+  the confirmation. The engine's model is untouched (Metronome may still keep a pad).
+- **Clear is the destructive one, so it confirms**: a new Clear control on a non-empty
+  pad asks — "that note is filed nowhere —" with **Save and clear** as the primary
+  action (usually what was meant), Discard second, keep-writing to cancel. Clear on an
+  empty pad needs no ceremony. **Saving with an empty pad still works** — capturing a
+  configuration with no comment is a real use — with one small honest message, since
+  nothing else visibly changes.
+- **Export keeps the safety net**: anything still in the pad rides on top of the
+  .atchart.md as the document's leading prose, so an unsaved note never evaporates —
+  and the helper text now says it plainly: the top section is uncommitted scratch, the
+  entries are committed.
+- **The screenshot's three checks**: the `---` divider — established from the code
+  that **Save injects nothing**; the only divider writer is the import merge joining
+  two non-empty scratch pads (reasonable, kept, documented) — so the screenshot's rule
+  came from an import or was typed. The label `NOTE — THE SESSION IN YOUR WORDS`
+  (decision 8's removed model) → **`NOTE — WHAT JUST HAPPENED`**. The three nested
+  titles reduced to two: the board header IS now the Log's title (`PRACTICE LOG —
+  N SAVED`), the log column's own heading is gone, the note column keeps its one.
+- Verified: 19 Playwright checks offline — save-clears with no duplication and no
+  injected divider across consecutive saves, all three Clear branches, empty-pad
+  capture, export carrying the scratch, titles — zero console errors, both widths.
+  Suite 249/249 untouched; `rawCfg()` byte-identical. Update Log 260811.10.
+
 ## 2026-08-11 — Triadetudes v0.8.0: the Journal becomes the Notepad (Daniel's dispatch; decision 7's second proving host)
 
 - **Migration first, before any UI, on real data shapes.** `engine/notepad.mjs` gains

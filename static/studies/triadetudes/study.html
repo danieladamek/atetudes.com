@@ -201,7 +201,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.0</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.1</div>
 </header>
 
 <div class="cards">
@@ -430,11 +430,10 @@
 </div>
 
 <div class="board">
-  <div class="bh"><span>Practice journal</span>
+  <div class="bh"><span>Practice log — <span id="histCount">0</span> saved</span>
     <span id="storeNote" style="text-transform:none;letter-spacing:0;font-weight:normal"></span></div>
   <div class="nb2j" id="nbWrap">
     <div class="jcol" id="logCol">
-      <div class="colhd">Practice log — <span id="histCount">0</span> saved</div>
       <!-- the grey box is the CURRENT étude — a header for Save, not history.
            Noted (dispatch): it belongs with the Save control when Save moves;
            left in place this pass. -->
@@ -448,26 +447,35 @@
     </div>
     <div id="dragBar" title="drag to resize"></div>
     <div class="jcol" id="noteCol">
-      <div class="colhd">Note — the session in your words</div>
-      <textarea id="journalIn" placeholder="What you're working toward, what happened, what's next — one note, plain prose (it's markdown underneath). Autosaves as you type; Save entry stamps it with this étude."></textarea>
+      <div class="colhd">Note — what just happened</div>
+      <textarea id="journalIn" placeholder="The note for this take — plain prose (it's markdown underneath). Autosaves as you type; Save entry files it with this étude and clears the pad for the next one."></textarea>
       <div class="transport" style="margin-top:10px">
         <button id="saveEntry" class="primary">Save entry</button>
+        <button id="clearPad">Clear</button>
         <button id="exportLog">Export (.atchart.md)</button>
         <button id="importBtn">Import</button>
         <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json"
           style="display:none">
         <span id="saveMsg" class="hint" style="margin:0"></span>
       </div>
-      <div class="hint">Saving stamps the note with this étude's full configuration —
-      Restore on any row rebuilds that exercise exactly. Export writes one .atchart.md
-      (your notes, then one section per entry, each with its own config); Import merges
-      one back — nothing is deleted, duplicates are skipped. Old exported logs import
-      too, and a bare étude config (.json) loads as the current étude.</div>
+      <div class="transport" id="clearConfirm" style="display:none;margin-top:6px">
+        <span class="hint" style="margin:0">that note is filed nowhere —</span>
+        <button id="clearSave" class="primary">Save and clear</button>
+        <button id="clearDiscard">Discard</button>
+        <button id="clearCancel">keep writing</button>
+      </div>
+      <div class="hint">Save entry files the note with this étude's full configuration
+      and clears the pad — the emptied pad is the confirmation, and the entry appears in
+      the log beside it; Restore on any row rebuilds that exercise exactly. Saving with
+      an empty pad is fine — it captures the étude alone. Export writes one .atchart.md:
+      anything still in the pad rides on top as uncommitted scratch, the entries below it
+      are committed. Import merges — nothing deleted, duplicates skipped; old exported
+      logs and bare étude configs (.json) still open.</div>
     </div>
   </div>
 </div>
 
-<footer>Triadetudes v0.8.0 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.1 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -5405,14 +5413,27 @@ function renderHist(){
   });
 }
 function saveEntry(){
+  // the pad is the ENTRY NOTE, not the document's running prose (the model
+  // collision behind duplicate-on-every-save — resolved host-side; the
+  // engine's pad slot simply goes unpopulated here). Save files the note and
+  // CLEARS, no prompt: the text moved to the row beside the pad, and the
+  // emptied pad IS the confirmation — no toast. An empty pad still saves;
+  // capturing a configuration with no comment is a real use.
   const ta=document.getElementById("journalIn"), msg=document.getElementById("saveMsg");
   const text=(ta?ta.value:"").trim();
-  if(!text){ msg.textContent="nothing to save — jot the note first"; setTimeout(()=>msg.textContent="",2000); return; }
   J=NOTEPAD.addEntry(J,{savedAt:new Date().toISOString(),text,
     payload:{app:HOST.app,v:HOST.version,data:HOST.snapshot()}});
-  msg.textContent=saveJournal()?"saved":"saved in this tab — use Export to keep it";
-  setTimeout(()=>{if(msg.textContent.startsWith("saved"))msg.textContent="";},2200);
+  J={...J,pad:""};
+  if(ta)ta.value="";
+  const okS=saveJournal();
+  if(!okS)msg.textContent="saved in this tab only — use Export to keep it";
+  else if(!text){msg.textContent="étude captured without a note";
+    setTimeout(()=>{if(msg.textContent==="étude captured without a note")msg.textContent="";},2200);}
   renderHist(); collapseSummaries();
+}
+function clearConfirmShow(on){
+  const c=document.getElementById("clearConfirm");
+  if(c)c.style.display=on?"flex":"none";
 }
 function importMsgSet(t){
   const m=document.getElementById("importMsg");
@@ -5705,7 +5726,21 @@ function initControls(){
     if(e.target.value==="custom"){ figSelSync(); document.getElementById("arpIn").focus(); return; }
     applyMotionInput(presetSrc(st.motionMode,+e.target.value));
   });
-  document.getElementById("saveEntry").addEventListener("click",saveEntry);
+  document.getElementById("saveEntry").addEventListener("click",()=>{clearConfirmShow(false);saveEntry();});
+  // Clear CONFIRMS, because that text is filed nowhere. The primary action is
+  // Save and clear — usually what was meant; Discard is the deliberate loss.
+  document.getElementById("clearPad").addEventListener("click",()=>{
+    const ta=document.getElementById("journalIn");
+    if(!ta.value.trim()){ta.value="";J={...J,pad:""};saveJournal();return;}
+    clearConfirmShow(true);
+  });
+  document.getElementById("clearSave").addEventListener("click",()=>{clearConfirmShow(false);saveEntry();});
+  document.getElementById("clearDiscard").addEventListener("click",()=>{
+    clearConfirmShow(false);
+    const ta=document.getElementById("journalIn");
+    ta.value=""; J={...J,pad:""}; saveJournal(); collapseSummaries();
+  });
+  document.getElementById("clearCancel").addEventListener("click",()=>clearConfirmShow(false));
   document.getElementById("exportLog").addEventListener("click",exportDownload);
   // the note: one plain textarea (decision 8) — autosave is the host's
   const jTa=document.getElementById("journalIn");
