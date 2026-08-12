@@ -5,6 +5,37 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-12 — The music palette: Metronome v1.4.0 · Triadetudes v0.8.3 (Update Log 260812.4)
+
+- **The notepad arc's child 3 — palette output that is valid app input by construction.**
+  A `Palette` button now sits in both notepads' control rows (a declared surface
+  capability, so the §4.3 conformance suite asserts it in every host). The panel offers:
+  tier 1 glyphs (♭ ♯ ♮ ° ø △ • | |: :| ->, typographic only — **no notation font**, per
+  the 2026-08-09 decision; the U+1D1xx block is not offered at all); tier 2 a chord
+  chooser whose whole 12-root × 17-quality matrix is load-asserted through `parseChord`;
+  tier 3 structures (ii–V–I, minor ii–V–i, turnaround, twelve-bar blues, rhythm changes A,
+  cycle of fourths) inserted **in any key** as `.atchart.md` chart blocks; tier 4 changes
+  lines, figure snippets and slot patterns — each canonical through the target field's own
+  parser (`engine/motion.mjs` parse→serialize fixed points; slot patterns derived by
+  permutation, never listed).
+- **Nothing is hand-typed**: structures live once as roman degree patterns and transpose
+  through `engine/chord.mjs`'s `resolveRoman` (enharmonics spelled per key — Fm7 B♭7 E♭maj7
+  in E♭, G♯m7 C♯7 F♯maj7 in F♯); chart bodies are canonicalized through the format engine
+  itself. Grep tests forbid literal progression strings in both new modules.
+- **The chart lift**: a chart fence the palette (or the user) puts in the pad becomes the
+  file's chart block on export — positioned where typed, rendered back on import, byte
+  fixed-point pinned. One chart per file still refuses by name where it must.
+- Inserts go through `applyEdit`; cursor, selection, scroll and focus survive every insert
+  (tested headless and in Chromium — the failure mode that makes palettes useless).
+- **Size delta, attributable entirely to code (no webfont)**: metronome/study.html
+  101,423 → 140,256 bytes (+38.8 KB: gains the motion grammar, structures, palette);
+  triadetudes/study.html 283,108 → 301,730 bytes (+18.6 KB: structures, palette).
+- Verified: engine suite 291/291 (structures 12-key corpus, palette caret contract, lift
+  byte fixed-points, conformance with the new capability); Playwright offline `file://`
+  both hosts × 1280/390 px, zero console errors, palette exercised end-to-end (glyph,
+  chord, chart block, figure, pattern, persistence, lift through export); visual
+  inspection of the open panel at both widths; `hugo` + `tools/check_site.py` green.
+
 ## 2026-08-12 — The host conformance suite (Daniel's dispatch; family spec §4.3)
 
 - **§4.3 implemented as one small suite, not a framework**:

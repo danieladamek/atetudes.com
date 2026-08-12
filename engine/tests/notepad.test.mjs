@@ -126,8 +126,44 @@ test("a ```chart fence in a NOTE is refused by name — the format holds one cha
   const doc = addEntry(emptyDoc(), { id: "c1", savedAt: "2026-08-11T11:30:00.000Z",
     text: "a chart in prose\n```chart\n| Dm7 |\n```", payload: null });
   assert.throws(() => toAtchart(doc), /one chart per file/);
-  assert.throws(() => toAtchart({ ...emptyDoc(), pad: "```chart\n| C |\n```" }),
-    /one chart per file/);
+});
+
+// ---- the chart LIFT (child 3, tier 3): the pad's single fence IS the chart ----
+
+test("the lift: a chart fence in the pad becomes the FILE's chart block, positioned where typed", () => {
+  const doc = { ...emptyDoc(),
+    pad: "warming up\n\n```chart\n| Dm7 G7 | Cmaj7 |\n```\n\nfour choruses" };
+  const src = toAtchart(doc);
+  const at = parseAtchart(src);
+  assert.equal(at.sections.length, 1, "the fence was lifted into sections");
+  assert.equal(at.sections[0].bars.length, 2);
+  assert.equal((src.match(/```chart/g) || []).length, 1, "exactly one chart in the file");
+  const back = fromAtchart(src);
+  assert.ok(back.pad.startsWith("warming up"), "prose above the fence stays above");
+  assert.ok(back.pad.includes("```chart\n| Dm7 G7 | Cmaj7 |\n```"),
+    "the fence renders back into the pad, engine-canonical");
+  assert.ok(back.pad.endsWith("four choruses"), "prose below stays below");
+  assert.equal(toAtchart(back), src, "and the write is a byte fixed-point");
+});
+
+test("the lift, gated: two fences, an unclosed opener, or a file already carrying a chart refuse by name", () => {
+  assert.throws(() => toAtchart({ ...emptyDoc(),
+    pad: "```chart\n| C |\n```\n\n```chart\n| F |\n```" }), /one chart per file/);
+  assert.throws(() => toAtchart({ ...emptyDoc(),
+    pad: "```chart\n| C |\nstill typing" }), /cannot be written/);
+  const carrying = fromAtchart(
+    "---\natchart: 1\n---\n```chart\n| Fmaj7 |\n```\n\nexisting file\n");
+  carrying.pad += "\n\n```chart\n| C |\n```";
+  assert.throws(() => toAtchart(carrying), /already carries a chart/);
+});
+
+test("the lift, back-compat: a file whose chart sits at the top (the classic layout) is untouched by the rule", () => {
+  const src = "---\natchart: 1\n---\n```chart\n| Gm7 C7 | Fmaj7 |\n```\n\nnotes here\n";
+  const back = fromAtchart(src);
+  assert.ok(!back.pad.includes("```chart"),
+    "a top-of-file chart is file-level, not pad content");
+  assert.equal(back.pad, "notes here");
+  assert.equal(toAtchart(back), src, "byte fixed-point preserved");
 });
 
 test("corpus: an UNCLOSED fence in entry text cannot swallow the payload (the markdown rule, here)", () => {
@@ -197,8 +233,10 @@ test("metronome and triadetudes carry atchart, markdown and notepad verbatim (no
     readFileSync(here2 + "../" + file, "utf8")
       .split("\n").filter((l) => !l.startsWith("import ")).join("\n")
       .replace(/^export /gm, "").replace(/^\n+/, "").replace(/\n+$/, "\n");
-  const CARRIERS = { metronome: ["chord.mjs", "atchart.mjs", "markdown.mjs", "notepad.mjs", "notepad-surface.mjs"],
-    triadetudes: ["atchart.mjs", "markdown.mjs", "notepad.mjs", "notepad-surface.mjs"] };
+  const CARRIERS = { metronome: ["chord.mjs", "atchart.mjs", "markdown.mjs",
+      "motion.mjs", "notepad.mjs", "structures.mjs", "palette.mjs", "notepad-surface.mjs"],
+    triadetudes: ["atchart.mjs", "markdown.mjs", "motion.mjs", "notepad.mjs",
+      "structures.mjs", "palette.mjs", "notepad-surface.mjs"] };
   for (const [slug, files] of Object.entries(CARRIERS)) {
     const src = readFileSync(here2 + "../../static/studies/" + slug + "/study.html", "utf8");
     for (const file of files)

@@ -68,13 +68,24 @@
   .hist .acts button.danger{color:var(--red)}
   /* old per-host row styles removed — the shared surface renders .hist rows */
   footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
+  /* the music palette (notepad surface capability, child 3) — neutral chrome only */
+  .palette{flex-basis:100%;display:flex;flex-direction:column;gap:6px;margin-top:6px;
+    border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--ground)}
+  .palette .prow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .palette .plab{color:var(--gray);font-size:11px;min-width:62px;text-transform:uppercase;
+    letter-spacing:.4px}
+  .palette select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);
+    border-radius:6px;background:var(--card);color:var(--ink)}
+  .palette button.pbtn{font:inherit;font-size:13px;padding:4px 10px;border:1px solid var(--line);
+    border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
+  .palette button.pbtn:hover{border-color:var(--gray)}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.3.1</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.0</div>
 </header>
 
 <div class="cards">
@@ -150,7 +161,7 @@
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.3.1 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.4.0 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
@@ -1706,12 +1717,15 @@ const NOTES_HEAD = /^##\s+Notes\s*$/;
 const CHART_OPENER = /^```chart\s*$/;
 
 function toAtchart(doc, meta) {
-  // the format's one-chart law (spec §2.2, multiples reserved for v2): a
-  // ```chart fence typed into the pad or a note would be claimed by the
-  // FORMAT at parse and make the written file unparseable. Refuse by name —
-  // the content stays in the model and storage; nothing is lost or mangled.
+  // the format's one-chart law (spec §2.2, multiples reserved for v2).
+  // ENTRIES refuse a ```chart fence by name — a note is a per-take record,
+  // not the document's chart. The PAD is different: its single chart fence
+  // IS the document's chart (tier 3 — the palette inserts structures here),
+  // so it is LIFTED into the file's chart block, positioned where the user
+  // typed it. Two fences, an unclosed opener, or a fence when the file
+  // already carries a chart all refuse by name; nothing is lost or mangled.
   const offends = (t) => String(t ?? "").split("\n").some((l) => CHART_OPENER.test(l));
-  if (offends(doc.pad) || doc.entries.some((e) => offends(e.text)))
+  if (doc.entries.some((e) => offends(e.text)))
     throw new Error("a ```chart fence belongs in the file's chart block — " +
       "the format holds one chart per file (v1); use a plain ``` fence in notes");
   const at = doc._at
@@ -1720,9 +1734,36 @@ function toAtchart(doc, meta) {
         sections: [], substitutions: [], practiceLog: [], body: [] };
   if (doc._at && meta) at.meta = { ...at.meta, ...meta };
 
-  const body = [CHART_SLOT];
   const pad = String(doc.pad ?? "").replace(/\n+$/, "");
-  if (pad) { body.push(""); body.push(...pad.split("\n")); }
+  let padLines = pad ? pad.split("\n") : [];
+  const chartFences = pairFences(padLines).filter((f) => f.info === "chart");
+  const strayOpeners = padLines.filter((l) => CHART_OPENER.test(l)).length;
+  if (chartFences.length > 1 ||
+      (chartFences.length === 0 && strayOpeners > 0) ||
+      (chartFences.length === 1 && strayOpeners > 1))
+    throw new Error("the pad holds " + (strayOpeners || chartFences.length) +
+      " ```chart openers — the format holds one chart per file (v1), " +
+      "and an unclosed chart fence cannot be written");
+  let body;
+  // where does the stored file keep its chart? slot at body[0] = file-level
+  // (the classic layout); slot deeper in = the pad owns it (a prior lift)
+  const storedSlot = doc._at ? doc._at.body.indexOf(CHART_SLOT) : -1;
+  if (chartFences.length === 1) {
+    if (at.sections.length && storedSlot === 0)
+      throw new Error("the file already carries a chart block — one per " +
+        "file (v1); edit the existing chart or remove the pad's fence");
+    const f = chartFences[0];
+    // parse the fence THROUGH the format engine — its assertions gate the write
+    const probe = parseAtchart("---\natchart: 1\n---\n```chart\n" +
+      padLines.slice(f.open + 1, f.close).join("\n") + "\n```\n");
+    at.sections = probe.sections;
+    padLines = [...padLines.slice(0, f.open), CHART_SLOT,
+      ...padLines.slice(f.close + 1)];
+    body = [];
+  } else {
+    body = [CHART_SLOT];
+  }
+  if (padLines.length) { if (body.length) body.push(""); body.push(...padLines); }
   if (doc.entries.length) {
     body.push("");
     body.push("## Notes");
@@ -1761,8 +1802,22 @@ function fromAtchart(src) {
   for (let i = 0; i < body.length; i++)
     if (NOTES_HEAD.test(body[i]) && !inFence(i)) { notesAt = i; break; }
 
-  const padLines = (notesAt < 0 ? body : body.slice(0, notesAt))
-    .filter((l) => l !== CHART_SLOT);
+  const padRegion = notesAt < 0 ? body : body.slice(0, notesAt);
+  const chartFenceText = () => {
+    // the file's chart, re-rendered engine-canonically for the pad
+    const mini = serializeAtchart({ meta: { atchart: 1 }, sections: at.sections,
+      substitutions: [], practiceLog: [], body: [CHART_SLOT] });
+    const a = mini.indexOf("```chart");
+    return mini.slice(a, mini.indexOf("\n```", a) + 4);
+  };
+  const padLines = [];
+  padRegion.forEach((l, i) => {
+    if (l !== CHART_SLOT) { padLines.push(l); return; }
+    // slot at the very top of the body = a file-level chart (the classic
+    // notepad layout); a slot further down was LIFTED from the pad and
+    // renders back into it, where the user put it
+    if (i > 0) padLines.push(...chartFenceText().split("\n"));
+  });
   const pad = padLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
 
   const entries = [];
@@ -1797,8 +1852,9 @@ function fromAtchart(src) {
           if (/^```/.test(span[j])) break; // a different fence intervenes
         }
       }
-      const textLines = envFence === null ? span
-        : [...span.slice(0, envFence.open), ...span.slice(envFence.close + 1)];
+      const textLines = (envFence === null ? span
+        : [...span.slice(0, envFence.open), ...span.slice(envFence.close + 1)])
+        .filter((l) => l !== CHART_SLOT);
       const text = textLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
       const heading = tail[h].replace(/^###\s+/, "");
       if (env) entries.push(makeEntry({
@@ -1838,9 +1894,769 @@ function hashStr(s) {
 return { makeEntry, emptyDoc, addEntry, editEntry, deleteEntry, reorderEntry,
   fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart };
 })();
+/* ============ motion grammar — shared component v1 ============
+   Canonical source: engine/motion.mjs (same anti-drift discipline). */
+const MOTION = (() => {
+/* motion.mjs — the motion grammar (component v1).
+ *
+ * The shared drill layer's figure language (spec: notes/specs/motion-grammar.md;
+ * Triadetudes v0.7 phase 3 is the first consumer; Tetradetudes and Substitute
+ * Teacher inherit it). Pure: no DOM, no audio, no globals.
+ *
+ *   tones mode :  (-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]
+ *   shape mode :  (-1,+2)H   - M          - (-s)L
+ *
+ * Targets: [deg] in tones mode (degrees 1–7 and compound 9/11/13, accidentals
+ * b/#; compounds reduce mod 7 for pitch, keep their spelling for the readout);
+ * H/M/L in shape mode (H = the set's highest-pitched string). Approach items,
+ * in parens before their target, played in written order, target last:
+ * a LEADING SIGN means distance from the target (-1 half step below, +2 whole
+ * step above, -s the next scale tone below, +2s two scale steps); an UNSIGNED
+ * token is an absolute degree of the étude's KEY (b9, 2, #9) taken in the
+ * octave nearest the target. `s` means the étude's selected scale — chord-
+ * scales are a v0.8+ question and are not improvised here (spec §4.4).
+ *
+ * describe() is the deliverable, not documentation (spec §5): it names the
+ * idiom by DERIVATION from the figure's shape — enclosed / a run from /
+ * approached from — never a lookup of figures. Parse failures surface as the
+ * sentence refusing to finish plus a caret position; no color anywhere.
+ *
+ * MAX_EVENTS refuses by name; nothing truncates.
+ */
+
+const mod12 = (n) => ((n % 12) + 12) % 12;
+
+const MAX_EVENTS = 16; // the family's figure ceiling (parseArp's, shared)
+
+// degree → semitones above the root/tonic (chord.mjs's DEG arithmetic, restated
+// and load-asserted; compounds reduce mod 7 for pitch, spelling kept aside)
+const DEG_SEMIS = { 1: 0, 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21 };
+const DEGREES = [1, 2, 3, 4, 5, 6, 7, 9, 11, 13];
+for (const d of DEGREES)
+  if (!(d in DEG_SEMIS)) throw new Error(`motion: degree ${d} has no interval`);
+if (DEG_SEMIS[9] % 12 !== DEG_SEMIS[2] || DEG_SEMIS[11] % 12 !== DEG_SEMIS[4] ||
+    DEG_SEMIS[13] % 12 !== DEG_SEMIS[6])
+  throw new Error("motion: compound degrees must reduce mod 7");
+
+function degreeSemis(deg, acc) { return DEG_SEMIS[deg] + (acc || 0); }
+
+// ---------- the classifier: ONE predicate for clicking and typing ----------
+
+/**
+ * classify(pc, chordPcs) → {role:"target", degText:"1"|"3"|"5"} | {role:"approach", degText:null}
+ * The rule (spec §3, ratified 2026-08-10): a pitch class is a TARGET iff it is
+ * a chord tone of the sounding chord; anything else is an approach. This is the
+ * sketchpad's click classifier AND the grammar's target-legality rule — the
+ * same sentence, one predicate, so clicking and typing cannot drift.
+ */
+function classify(pc, chordPcs) {
+  const ix = chordPcs.indexOf(mod12(pc));
+  return ix >= 0 ? { role: "target", degText: String([1, 3, 5][ix]) }
+                 : { role: "approach", degText: null };
+}
+
+// ---------- parse ----------
+
+const err = (pos, message, figures) => ({ error: { pos, message }, figures });
+
+/**
+ * parse("( -1,+2 )[1] - [3]", "tones") →
+ *   { mode, figures: [ { approaches:[item…], target } … ], n }
+ * or { error: { pos, message }, figures: <parsed so far> }.
+ *
+ * item: {kind:"semi",delta:±n} | {kind:"scale",delta:±k}
+ *     | {kind:"degree",deg,acc,text}
+ * target (tones): {kind:"degree",deg,acc,text} · (shape): {kind:"slot",slot}
+ */
+function parse(src, mode) {
+  if (typeof src !== "string") return err(0, "not a string", []);
+  const figures = [];
+  let i = 0, n = 0;
+  const ws = () => { while (i < src.length && /\s/.test(src[i])) i++; };
+  const parseDegreeToken = () => {
+    const m = src.slice(i).match(/^([b#]?)(13|11|9|[1-7])/);
+    if (!m) return null;
+    i += m[0].length;
+    return { kind: "degree", deg: +m[2], acc: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0,
+      text: m[0] };
+  };
+  const parseItem = () => {
+    const m = src.slice(i).match(/^([+-])(\d*)(s?)/);
+    if (m && (m[2] || m[3])) {
+      i += m[0].length;
+      const sign = m[1] === "-" ? -1 : 1;
+      if (m[3] === "s") return { kind: "scale", delta: sign * (m[2] ? +m[2] : 1) };
+      return { kind: "semi", delta: sign * +m[2] };
+    }
+    if (m) return "sign-without-distance";
+    return parseDegreeToken();
+  };
+  while (i < src.length) {
+    ws();
+    if (i >= src.length) break;
+    const approaches = [];
+    if (src[i] === "(") {
+      i++;
+      for (;;) {
+        ws();
+        if (src[i] === ")") { i++; break; }
+        const item = parseItem();
+        if (item === "sign-without-distance")
+          return err(i, "a sign needs a distance: -1, +2, -s, +2s", figures);
+        if (!item)
+          return err(i, "expected an approach: -1, +2, -s, +2s, or a degree like b9", figures);
+        approaches.push(item);
+        ws();
+        if (src[i] === ",") { i++; continue; }
+        if (src[i] === ")") { i++; break; }
+        return err(i, 'expected "," or ")" in the approach figure', figures);
+      }
+      ws();
+    }
+    let target = null;
+    if (mode === "shape") {
+      const c = (src[i] || "").toUpperCase();
+      if (c === "H" || c === "M" || c === "L") { target = { kind: "slot", slot: c }; i++; }
+      else return err(i, "expected a slot target: H, M or L", figures);
+    } else {
+      if (src[i] === "[") {
+        i++;
+        const d = parseDegreeToken();
+        if (!d) return err(i, "expected a degree inside [ ]", figures);
+        if (src[i] !== "]") return err(i, 'expected "]"', figures);
+        i++;
+        target = d;
+      } else return err(i, "expected a target like [1] or [b3]", figures);
+    }
+    figures.push({ approaches, target });
+    n += approaches.length + 1;
+    if (n > MAX_EVENTS)
+      return err(i, `${n} notes per chord — ${MAX_EVENTS} is the ceiling; split the figure`,
+        figures);
+    ws();
+    if (i >= src.length) break;
+    if (src[i] === "-") { i++; continue; }
+    return err(i, 'expected "-" between figures', figures);
+  }
+  if (!figures.length) return err(0, "empty figure", figures);
+  return { mode, figures, n };
+}
+
+// ---------- serialize (idempotent normal form) ----------
+
+const itemText = (it) =>
+  it.kind === "semi" ? (it.delta < 0 ? String(it.delta) : "+" + it.delta) :
+  it.kind === "scale" ? ((it.delta < 0 ? "-" : "+") +
+    (Math.abs(it.delta) === 1 ? "" : Math.abs(it.delta)) + "s") :
+  (it.acc === -1 ? "b" : it.acc === 1 ? "#" : "") + it.deg;
+
+function serialize(parsed) {
+  return parsed.figures.map((f) => {
+    const t = f.target.kind === "slot" ? f.target.slot
+      : "[" + itemText(f.target) + "]";
+    return (f.approaches.length ? "(" + f.approaches.map(itemText).join(",") + ")" : "") + t;
+  }).join(" - ");
+}
+
+// ---------- describe: the idiom, named by derivation ----------
+
+const ORDINAL = { 1: "root", 2: "2nd", 3: "3rd", 4: "4th", 5: "5th", 6: "6th",
+  7: "7th", 9: "9th", 11: "11th", 13: "13th" };
+const SLOT_NAME = { H: "high string", M: "middle string", L: "low string" };
+
+function targetName(t) {
+  if (t.kind === "slot") return "the " + SLOT_NAME[t.slot];
+  const acc = t.acc === -1 ? "♭" : t.acc === 1 ? "♯" : "";
+  return "the " + acc + ORDINAL[t.deg];
+}
+function itemName(it) {
+  if (it.kind === "semi") {
+    const n = Math.abs(it.delta), side = it.delta < 0 ? "below" : "above";
+    const dist = n === 1 ? "a half step" : n === 2 ? "a whole step" : n + " semitones";
+    return dist + " " + side;
+  }
+  if (it.kind === "scale") {
+    const k = Math.abs(it.delta), side = it.delta < 0 ? "below" : "above";
+    return (k === 1 ? "the scale tone" : k + " scale steps") + " " + side;
+  }
+  const acc = it.acc === -1 ? "♭" : it.acc === 1 ? "♯" : "";
+  return "the " + acc + it.deg;
+}
+function sideOf(it) { // signed items only; absolute degrees have no side until resolved
+  return it.kind === "degree" ? null : it.delta < 0 ? -1 : 1;
+}
+
+function describe(parsed) {
+  return parsed.figures.map((f) => {
+    const t = targetName(f.target);
+    const a = f.approaches;
+    if (!a.length) return t.charAt(0).toUpperCase() + t.slice(1) + ".";
+    const names = a.map(itemName);
+    const list = names.length === 1 ? names[0] :
+      names.slice(0, -1).join(", ") + ", then " + names[names.length - 1];
+    const sides = a.map(sideOf);
+    let idiom;
+    if (a.length === 1) idiom = "approached from " + list;
+    else if (a.length === 2 && sides[0] !== null && sides[1] !== null &&
+             sides[0] !== sides[1]) idiom = "enclosed — " + list;
+    else if (sides.every((s2) => s2 !== null) &&
+             sides.every((s2) => s2 === sides[0]))
+      idiom = "approached by a run from " + list;
+    else idiom = "approached — " + list;
+    const T = t.charAt(0).toUpperCase() + t.slice(1);
+    return T + ", " + idiom + ".";
+  }).join(" ");
+}
+
+// ---------- resolve: figures + a chord context → role-tagged note entries ----------
+
+/**
+ * ctx: {
+ *   chordPcs: [r,t,f],           // the chord's own tones (root first)
+ *   rootPc,                      // for degree targets beyond the triad
+ *   voicing: {notes:[{midi,string,fret,slot}]},
+ *   scalePcs: [7 pcs],           // the étude's selected scale
+ *   tonicPc,                     // for absolute-degree approaches
+ *   open: {string→midi}, nfrets,
+ *   set: [strings], setLowHigh: [low→high]
+ * }
+ * Returns entries [{midi,string,fret,slot,role}...] in playing order.
+ * Every derivation is asserted before return (spec §8).
+ */
+function resolve(parsed, ctx) {
+  const out = [];
+  const placeOnSet = (midi, nearFret, preferString) => {
+    // nearest playable position to nearFret; prefer the target's own string
+    let best = null;
+    for (const sn of ctx.set) {
+      const f = midi - ctx.open[sn];
+      if (f < 0 || f > ctx.nfrets + 2) continue;
+      const d = Math.abs(f - nearFret) + (sn === preferString ? 0 : 0.25);
+      if (!best || d < best.d) best = { string: sn, fret: f, d };
+    }
+    if (!best) throw new Error("motion: no playable position for midi " + midi);
+    return best;
+  };
+  let prevFret = null;
+  for (const fig of parsed.figures) {
+    // target first — approaches are relative to it
+    let tNote = null;
+    if (fig.target.kind === "slot") {
+      const slot = { L: 0, M: 1, H: 2 }[fig.target.slot];
+      tNote = ctx.voicing.notes.find((n) => n.slot === slot);
+      if (!tNote) throw new Error("motion: slot " + fig.target.slot +
+        " is not a bijection here — shape mode needs one note per string");
+      tNote = { ...tNote };
+    } else {
+      // target legality (spec §3, v0.7.6): a bare 1/3/5 names the chord's own
+      // root/third/fifth (quality-aware); any other spelling resolves to a
+      // pitch class and is legal ONLY if the chord contains it — [b3] on a
+      // minor chord is legal by derivation, [2] on any triad is refused, and
+      // the refusal teaches the construct that was wanted. Every legal target
+      // is therefore in the voicing: resolve() never invents a position and no
+      // figure can escape the isolation zone.
+      const t = fig.target;
+      const pc = (t.acc === 0 && (t.deg === 1 || t.deg === 3 || t.deg === 5))
+        ? ctx.chordPcs[{ 1: 0, 3: 1, 5: 2 }[t.deg]]
+        : mod12(ctx.rootPc + degreeSemis(t.deg, t.acc));
+      if (classify(pc, ctx.chordPcs).role !== "target") {
+        // the teaching refusal: suggest the nearest chord tone (upper on ties)
+        let best = null;
+        for (let k = 0; k < 3; k++) {
+          const up = mod12(ctx.chordPcs[k] - pc), down = mod12(pc - ctx.chordPcs[k]);
+          const d = Math.min(up, down);
+          if (!best || d < best.d || (d === best.d && up < best.up))
+            best = { k, d, up };
+        }
+        const tok = itemText(t);
+        const e = new Error("[" + tok + "] is not a chord tone of " +
+          (ctx.chordLabel || "the chord") + " — write (" + tok + ")[" +
+          [1, 3, 5][best.k] + "] and it becomes an approach to " +
+          ["the root", "the third", "the fifth"][best.k] + ".");
+        e.teach = true;
+        throw e;
+      }
+      const inVoicing = ctx.voicing.notes.find((n) => mod12(n.midi) === pc);
+      if (!inVoicing)
+        throw new Error("motion: chord tone pc " + pc + " missing from the voicing — voicing dishonest");
+      tNote = { ...inVoicing };
+    }
+    // approaches, in written order, target last
+    for (const it of fig.approaches) {
+      let midi;
+      if (it.kind === "semi") midi = tNote.midi + it.delta;
+      else if (it.kind === "scale") {
+        const dir = it.delta < 0 ? -1 : 1;
+        let m = tNote.midi, steps = Math.abs(it.delta);
+        while (steps > 0) {
+          m += dir;
+          if (ctx.scalePcs.includes(mod12(m))) steps--;
+          if (Math.abs(m - tNote.midi) > 24)
+            throw new Error("motion: scale walk ran away — scale context broken");
+        }
+        midi = m;
+      } else {
+        const pc = mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc));
+        // the octave nearest the target
+        const base = tNote.midi - mod12(tNote.midi) + pc;
+        const cands = [base - 12, base, base + 12];
+        midi = cands.reduce((a, b) =>
+          Math.abs(b - tNote.midi) < Math.abs(a - tNote.midi) ? b : a);
+      }
+      const pos = placeOnSet(midi, tNote.fret, tNote.string);
+      const ev = { midi, string: pos.string, fret: pos.fret,
+        slot: ctx.setLowHigh.indexOf(pos.string), role: "approach" };
+      // derived, then asserted (spec §8)
+      if (it.kind === "semi" && ev.midi - tNote.midi !== it.delta)
+        throw new Error("motion: approach is not its written distance from the target");
+      if (it.kind === "scale" && !ctx.scalePcs.includes(mod12(ev.midi)))
+        throw new Error("motion: scale approach left the scale");
+      if (it.kind === "degree" &&
+          mod12(ev.midi) !== mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc)))
+        throw new Error("motion: degree approach missed its pitch class");
+      if (ctx.open[ev.string] + ev.fret !== ev.midi)
+        throw new Error("motion: approach placement dishonest");
+      out.push(ev);
+    }
+    out.push({ ...tNote, role: "chord" });
+    prevFret = tNote.fret;
+  }
+  if (out.length > MAX_EVENTS)
+    throw new Error("motion: " + out.length + " notes — " + MAX_EVENTS + " is the ceiling");
+  return out;
+}
+
+// ---------- the sketchpad's emitter (the grammar's first external producer) ----------
+
+/**
+ * approachForms(midi, targetMidi, scalePcs) → {scale:boolean, semi:boolean}
+ * Which readings exist for a click: scale iff the click is the adjacent scale
+ * tone in its direction; semi iff within two semitones. Both true = the form
+ * is tap-switchable in the sketch (v0.7.5); a click cannot reveal intent.
+ */
+function approachForms(midi, targetMidi, scalePcs) {
+  const d = midi - targetMidi;
+  if (d === 0) return { scale: false, semi: false };
+  const dir = d < 0 ? -1 : 1;
+  let m2 = targetMidi, hit = null;
+  for (let k = 1; k <= 12; k++) {
+    m2 += dir;
+    if (scalePcs.includes(mod12(m2))) { hit = m2; break; }
+  }
+  return { scale: hit === midi, semi: Math.abs(d) <= 2 };
+}
+
+/**
+ * emitFromClicks(clicks, ctx) → { src, discarded } | { error }
+ * clicks: [{midi, role:"target"|"approach", degText?, form?}] in click order
+ * (= playing order). Classification happens at click time against the
+ * then-current chord (the honest reading); this function only serialises.
+ * Emission is deliberately LOSSY: degrees and relationships survive; octave and
+ * placement are discarded — a figure is a design, not a fingering.
+ *
+ * Approach precedence (spec §4.1, v0.7.5): SCALE-ADJACENCY FIRST, semitone
+ * fallback, absolute degree last. -s stores an invariant, -2 stores a
+ * coordinate; the default is the reading that survives a key or scale change
+ * (v0.6.6 at the level of the figure). `form: "semi"|"scale"` overrides the
+ * default when that reading exists — the tap in the sketch.
+ * ctx: { scalePcs, tonicPc }.
+ */
+function emitFromClicks(clicks, ctx) {
+  const figures = [];
+  let pending = [];
+  for (const c of clicks) {
+    if (c.role === "target") {
+      const m = (c.degText || "").match(/^([b#]?)(13|11|9|[1-7])$/);
+      if (!m) return { error: 'a target needs a degree — got "' + (c.degText || "") + '"' };
+      const target = { kind: "degree", deg: +m[2],
+        acc: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0, text: m[0] };
+      const approaches = pending.map((a) => {
+        const d = a.midi - c.midi;
+        const dir = d < 0 ? -1 : 1;
+        const forms = approachForms(a.midi, c.midi, ctx.scalePcs);
+        if (a.form === "semi" && forms.semi) return { kind: "semi", delta: d };
+        if (a.form === "scale" && forms.scale) return { kind: "scale", delta: dir };
+        if (forms.scale) return { kind: "scale", delta: dir };
+        if (forms.semi) return { kind: "semi", delta: d };
+        // otherwise the absolute key degree of the clicked pitch class
+        const rel = mod12(a.midi - ctx.tonicPc);
+        const NAMES = { 0: [1, 0], 1: [2, -1], 2: [2, 0], 3: [3, -1], 4: [3, 0],
+          5: [4, 0], 6: [5, -1], 7: [5, 0], 8: [6, -1], 9: [6, 0], 10: [7, -1], 11: [7, 0] };
+        const [deg, acc] = NAMES[rel];
+        return { kind: "degree", deg, acc };
+      });
+      figures.push({ approaches, target });
+      pending = [];
+    } else pending.push(c);
+  }
+  if (pending.length)
+    return { error: pending.length +
+      " trailing approach note(s) with no target to resolve to — click a chord tone last" };
+  if (!figures.length) return { error: "nothing to emit — the sketch is empty" };
+  const parsed = { mode: "tones", figures,
+    n: figures.reduce((a, f) => a + f.approaches.length + 1, 0) };
+  if (parsed.n > MAX_EVENTS)
+    return { error: parsed.n + " notes — " + MAX_EVENTS + " is the ceiling" };
+  return { src: serialize(parsed),
+    discarded: "octave and placement dropped — a figure is a design, not a fingering" };
+}
+
+// ---------- load-time assertions (golden rule 1, site form) ----------
+
+{
+  // the fixed-point property on a probe corpus: serialize ∘ parse is idempotent
+  const probes = [
+    ["tones", "(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]"],
+    ["tones", "[1]-[3]-[5]"],
+    ["tones", "(b9,-1)[1]"],
+    ["shape", "(-1,+2)H - M - (-s)L"],
+    ["shape", "H-M-L"],
+  ];
+  for (const [mode, src] of probes) {
+    const p1 = parse(src, mode);
+    if (p1.error) throw new Error("motion: probe failed to parse: " + src);
+    const s1 = serialize(p1);
+    const p2 = parse(s1, mode);
+    if (p2.error || serialize(p2) !== s1)
+      throw new Error("motion: serialize∘parse is not a fixed point for " + src);
+    if (!describe(p1)) throw new Error("motion: describe incomplete for " + src);
+  }
+  if (!parse("x", "tones").error) throw new Error("motion: garbage must refuse");
+  const over = parse(Array(9).fill("(-1)[1]").join("-"), "tones");
+  if (!over.error || !/ceiling/.test(over.error.message))
+    throw new Error("motion: the event ceiling must refuse by name");
+  // the classifier is one predicate: chord tone → target with its degree
+  const CM = [0, 4, 7];
+  if (classify(4, CM).degText !== "3" || classify(2, CM).role !== "approach")
+    throw new Error("motion: the classifier predicate broke");
+  // emitter precedence (spec §4.1, v0.7.5): scale-adjacency FIRST
+  const CMAJ = [0, 2, 4, 5, 7, 9, 11];
+  const probe = (clicks, want) => {
+    const r = emitFromClicks(clicks, { scalePcs: CMAJ, tonicPc: 0 });
+    if (r.src !== want)
+      throw new Error("motion: emitter precedence broke — got " + (r.src || r.error));
+  };
+  probe([{ midi: 65, role: "approach" }, { midi: 67, role: "target", degText: "5" }],
+    "(-s)[5]");                          // diatonic whole step → the invariant
+  probe([{ midi: 61, role: "approach" }, { midi: 60, role: "target", degText: "1" }],
+    "(+1)[1]");                          // chromatic half step → the coordinate
+  probe([{ midi: 65, role: "approach", form: "semi" },
+    { midi: 67, role: "target", degText: "5" }], "(-2)[5]");  // the tap override
+}
+return { parse, serialize, describe, resolve, emitFromClicks, approachForms, classify, MAX_EVENTS, degreeSemis };
+})();
+/* ============ structures — shared component v1 ============
+   Canonical source: engine/structures.mjs (same anti-drift discipline). */
+const STRUCT = (() => {
+const { parseChord, resolveRoman } = CHORD;
+const { parseAtchart, serializeAtchart } = ATCHART;
+/* structures.mjs — the palette's structure catalog (component v1).
+ *
+ * The notepad arc's child 3, tier 2/3/4 derivations — shared family code
+ * (the v0.6 harmony panel and Substitute Teacher's substitution lab are its
+ * later consumers). Pure: no DOM, no audio.
+ *
+ * THE LOAD-BEARING CONSTRAINT (golden rule 1): a structure is defined ONCE
+ * as a degree pattern — roman numerals with qualities — and transposed into
+ * the requested key by pitch-class math through engine/chord.mjs's
+ * resolveRoman (consumer #2 of the v0.6 resolution path; no parallel one).
+ * A table of twelve hand-typed ii–V–I progressions would be a spec violation
+ * even with identical output — and the grep test asserts no quoted absolute
+ * chord symbol exists anywhere in this module's source. Enharmonic spelling
+ * per key is resolveRoman's named rule (Db in the flat keys, C# in the sharp
+ * ones, double accidentals where the arithmetic demands them), re-parsed by
+ * parseChord so every resolution passes the parser's structural assertions.
+ *
+ * Everything this module emits is VALID APP INPUT BY CONSTRUCTION:
+ * chart bodies parse as .atchart.md chart blocks; changes lines parse
+ * symbol-by-symbol through parseChord; the chord chooser's whole matrix is
+ * load-asserted through the parser.
+ */
+
+
+// ---------- the catalog: degree patterns, bar groupings ----------
+
+const STRUCTURES = [
+  { id: "ii-V-I", name: "ii–V–I",
+    bars: [["ii7", "V7"], ["Imaj7"]] },
+  { id: "ii-V-i", name: "ii–V–i (minor)",
+    bars: [["iiø7", "V7"], ["i7"]] },
+  { id: "turnaround", name: "turnaround (I–vi–ii–V)",
+    bars: [["Imaj7", "vi7"], ["ii7", "V7"]] },
+  { id: "blues-12", name: "twelve-bar blues",
+    bars: [["I7"], ["IV7"], ["I7"], ["I7"], ["IV7"], ["IV7"], ["I7"], ["I7"],
+      ["V7"], ["IV7"], ["I7"], ["V7"]] },
+  { id: "rhythm-a", name: "rhythm changes — A section",
+    bars: [["Imaj7", "vi7"], ["ii7", "V7"], ["Imaj7", "vi7"], ["ii7", "V7"],
+      ["I7"], ["IV7"], ["Imaj7", "V7"], ["Imaj7"]] },
+  { id: "cycle-4ths", name: "cycle of fourths",
+    bars: [["I"], ["IV"], ["bVII"], ["bIII"], ["bVI"], ["bII"], ["bV"],
+      ["VII"], ["III"], ["VI"], ["II"], ["V"]] },
+];
+
+/** The chooser's twelve roots — flats preferred where ambiguous, every one
+ * parseChord-valid (asserted at load). These are pitch NAMES, not chords:
+ * the grep forbids quoted root+quality combinations, not bare roots. */
+const CHORD_ROOTS =
+  ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+
+/** The chooser's qualities — exactly what parseChord accepts (load-asserted;
+ * suffix strings, no roots attached). */
+const CHORD_QUALITIES =
+  ["", "m", "7", "maj7", "m7", "m7b5", "dim7", "6", "m6", "9", "maj9", "m9",
+   "sus4", "aug", "7#5", "7b9", "mMaj7"];
+
+/** Tier 1 — the typographic glyph set (decision 5: no notation font; the
+ * U+1D1xx block is not offered at all). Every glyph renders everywhere with
+ * no font shipped. */
+const GLYPHS =
+  ["♭", "♯", "♮", "°", "ø", "△", "•",
+   "|", "|:", ":|", "->"];
+
+// ---------- derivation ----------
+
+/** resolveStructure(id, key) → { id, name, key, bars:[[symbol,…],…] } —
+ * every symbol derived through resolveRoman and re-parsed by parseChord. */
+function resolveStructure(id, key) {
+  const st = STRUCTURES.find((s) => s.id === id);
+  if (!st) throw new Error('structures: unknown structure "' + id + '"');
+  const bars = st.bars.map((bar) => bar.map((roman) => {
+    const r = resolveRoman(roman, key);
+    if (!r) throw new Error('structures: "' + roman + '" did not resolve in ' + key);
+    parseChord(r.symbol); // the parser's own assertions gate every emission
+    return r.symbol;
+  }));
+  return { id: st.id, name: st.name, key, bars };
+}
+
+/** chartBody(id, key) → the chart-block body in the format engine's
+ * CANONICAL form: the derived bars are round-tripped through parseAtchart/
+ * serializeAtchart, so what the palette inserts is byte-for-byte what the
+ * format itself would write — fixed-point by construction, not imitation. */
+function chartBody(id, key) {
+  const { bars } = resolveStructure(id, key);
+  const raw = "| " + bars.map((b) => b.join(" ")).join(" | ") + " |";
+  const doc = "---\natchart: 1\n---\n```chart\n" + raw + "\n```\n";
+  const out = serializeAtchart(parseAtchart(doc));
+  return out.slice(out.indexOf("```chart\n") + 9, out.lastIndexOf("\n```"));
+}
+
+/** chartFence(id, key) → the fenced block the notepad inserts (tier 3);
+ * engine/atchart.mjs reads it and sibling apps can act on it. */
+function chartFence(id, key) {
+  return "```chart\n" + chartBody(id, key) + "\n```";
+}
+
+/** changesLine(id, key) → the flat symbol sequence (tier 4): valid input for
+ * Triadetudes' Break-down changes field by construction — every token is a
+ * parseChord-valid symbol. */
+function changesLine(id, key) {
+  return resolveStructure(id, key).bars.flat().join(" ");
+}
+
+/** chordSymbol(root, quality) → the chooser's output, gated by the parser. */
+function chordSymbol(root, quality) {
+  const symbol = root + quality;
+  parseChord(symbol);
+  return symbol;
+}
+
+// ---------- load-time assertions (golden rule 1, site form) ----------
+
+{
+  // the whole chooser matrix parses — a chooser that can emit an unparseable
+  // symbol is broken at build time, not at paste time
+  for (const r of CHORD_ROOTS)
+    for (const q of CHORD_QUALITIES) parseChord(r + q);
+  // every structure resolves and re-parses in the probe key
+  for (const st of STRUCTURES) resolveStructure(st.id, "C");
+  // and the derived ii–V–I is what the degree pattern says it is
+  const p = resolveStructure("ii-V-I", "C");
+  if (p.bars.flat().join(" ") !== ["ii7", "V7", "Imaj7"]
+    .map((t) => resolveRoman(t, "C").symbol).join(" "))
+    throw new Error("structures: derivation must go through resolveRoman");
+}
+return { STRUCTURES, CHORD_ROOTS, CHORD_QUALITIES, GLYPHS, resolveStructure, chartBody, chartFence, changesLine, chordSymbol };
+})();
+/* ============ music palette — shared component v1 ============
+   Canonical source: engine/palette.mjs (same anti-drift discipline). */
+const PALETTE = (() => {
+const { GLYPHS, CHORD_ROOTS, CHORD_QUALITIES, STRUCTURES, chordSymbol, chartFence, changesLine } = STRUCT;
+const { applyEdit } = MD;
+const { parse: parseMotion, serialize: serializeMotion } = MOTION;
+/* palette.mjs — the notepad's music palette (component v1, child 3 of 3).
+ *
+ * Tier 1: the typographic glyph set (decision 5: no notation font — the
+ * U+1D1xx block is not offered at all). Tier 2: the chord chooser, every
+ * emission parseChord-gated. Tier 3: structures inserted in any key as
+ * .atchart.md chart blocks, derived through engine/structures.mjs. Tier 4:
+ * app-input syntaxes — changes lines, figure snippets, slot patterns —
+ * VALID FIELD INPUT BY CONSTRUCTION: every figure source is canonicalized
+ * through the motion grammar's own parse→serialize at load (a hand-maintained
+ * snippet list that drifts from the parser is the same spec violation as a
+ * hand-typed ii–V–I table), and slot patterns are DERIVED by permutation of
+ * the slot alphabet, each gated through the shape parser.
+ *
+ * The palette writes TEXT through applyEdit — the markdown toolbar's pure
+ * string+selection seam — never DOM, and has no privileged path into the
+ * document. Cursor, selection and scroll survive every insert; focus returns
+ * to the pad (the failure mode that makes palettes useless is tested, not
+ * assumed). All DOM reached through the given elements' ownerDocument, so
+ * the whole panel runs headless against the shared stub.
+ */
+
+
+// ---------- tier 4: figure snippets, canonical through the grammar ----------
+
+/* Sources are written in the figure grammar itself (degree-relative and
+ * key-independent — the grammar IS the abstraction, as roman numerals are for
+ * structures). Each is parsed by the field's own parser and re-serialized;
+ * the canonical text is what the palette inserts, and load asserts the
+ * round-trip is a fixed point. A source the parser refuses kills the build. */
+const FIGURE_SOURCES = [
+  { id: "enclosure-1", name: "enclosure of the root", src: "(-1,+2)[1]" },
+  { id: "enclosure-3", name: "enclosure of the 3rd", src: "(+2,-1)[3]" },
+  { id: "chromatic-3", name: "chromatic below the 3rd", src: "(-1)[3]" },
+  { id: "scale-5", name: "scale step above the 5th", src: "(+s)[5]" },
+  { id: "double-chrom-1", name: "double chromatic to the root", src: "(-2,-1)[1]" },
+  { id: "line-135", name: "arpeggio line 1–3–5", src: "[1] - [3] - [5]" },
+  { id: "enclose-cell", name: "two-figure cell (root, then 3rd)",
+    src: "(-1,+2)[1] - (+2,-1)[3]" },
+];
+
+const FIGURES = FIGURE_SOURCES.map((f) => {
+  const p = parseMotion(f.src, "tones");
+  if (p.error)
+    throw new Error('palette: figure source "' + f.src + '" refused by the ' +
+      "grammar at " + p.error.pos + ": " + p.error.message);
+  const text = serializeMotion(p);
+  const p2 = parseMotion(text, "tones");
+  if (p2.error || serializeMotion(p2) !== text)
+    throw new Error('palette: "' + f.src + '" is not a serialize fixed point');
+  return { id: f.id, name: f.name, text };
+});
+
+/** Slot patterns: every permutation of the slot alphabet, derived — never
+ * listed — and each gated through the shape parser. Valid for EVERY string
+ * set by construction (that is what slots are for). */
+const SLOT_PATTERNS = (function permute(a) {
+  if (a.length <= 1) return [a];
+  return a.flatMap((x, i) =>
+    permute([...a.slice(0, i), ...a.slice(i + 1)]).map((r) => [x, ...r]));
+})(["L", "M", "H"]).map((p) => {
+  const text = p.join("-");
+  const g = parseMotion(text, "shape");
+  if (g.error) throw new Error('palette: slot pattern "' + text + '" refused');
+  if (g.figures.map((f) => f.target.slot).join("-") !== text)
+    throw new Error('palette: slot pattern "' + text + '" did not round-trip');
+  return text;
+});
+
+// ---------- the insert seam: applyEdit, with the caret's survival ----------
+
+/** padInsert(pad, text, {block}) — insert at the pad's cursor through
+ * applyEdit. block:true guarantees the text sits on its own lines (a chart
+ * fence next to prose must still pair). Selection lands after the insert,
+ * scroll is preserved, focus returns to the pad. */
+function padInsert(pad, text, opts) {
+  const src = String(pad.value ?? "");
+  let start = pad.selectionStart | 0, end = pad.selectionEnd | 0;
+  if (start > src.length) start = src.length;
+  if (end > src.length) end = src.length;
+  let t = String(text);
+  if (opts && opts.block) {
+    if (start > 0 && src[start - 1] !== "\n") t = "\n" + t;
+    if (end < src.length && src[end] !== "\n") t = t + "\n";
+  }
+  const scroll = pad.scrollTop;
+  const r = applyEdit(src, { start, end }, { type: "insert", text: t });
+  pad.value = r.src;
+  pad.selectionStart = r.selection.start;
+  pad.selectionEnd = r.selection.end;
+  pad.scrollTop = scroll;
+  if (typeof pad.focus === "function") pad.focus();
+  return r.selection;
+}
+
+// ---------- the panel ----------
+
+/** createPalette({root, pad, onInsert}) — build the palette into root.
+ * The host styles it; this module only structures it. Every control is a
+ * native button or select (keyboard-reachable for free). onInsert fires
+ * after every insert so the surface can persist the pad. */
+function createPalette(opts) {
+  const { root, pad } = opts;
+  const onInsert = opts.onInsert || (() => {});
+  const docm = root.ownerDocument;
+  const el = (tag, cls, text) => {
+    const n = docm.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const insert = (text, block) => { padInsert(pad, text, { block }); onInsert(); };
+  const row = (label) => {
+    const r = el("div", "prow");
+    r.appendChild(el("span", "plab", label));
+    root.appendChild(r);
+    return r;
+  };
+  const select = (parent, items, label) => {
+    const s = el("select");
+    s.setAttribute("aria-label", label);
+    for (const it of items) {
+      const o = el("option", null, it.name);
+      o.value = it.value;
+      s.appendChild(o);
+    }
+    parent.appendChild(s);
+    return s;
+  };
+  const btn = (parent, label, fn) => {
+    const b = el("button", "pbtn", label);
+    b.setAttribute("type", "button");
+    b.addEventListener("click", fn);
+    parent.appendChild(b);
+    return b;
+  };
+
+  // tier 1 — glyphs, plain inline text
+  {
+    const r = row("Symbols");
+    for (const g of GLYPHS) btn(r, g, () => insert(g, false));
+  }
+  // tier 2 — the chord chooser (root × quality, parseChord-gated)
+  {
+    const r = row("Chord");
+    const root$ = select(r, CHORD_ROOTS.map((x) => ({ name: x, value: x })), "chord root");
+    const qual$ = select(r, CHORD_QUALITIES.map((q) =>
+      ({ name: q === "" ? "major (bare)" : q, value: q })), "chord quality");
+    btn(r, "Insert chord", () => insert(chordSymbol(root$.value, qual$.value), false));
+  }
+  // tier 3 — structures in any key, as chart blocks; tier 4 — as changes lines
+  {
+    const r = row("Structure");
+    const st$ = select(r, STRUCTURES.map((s) => ({ name: s.name, value: s.id })), "structure");
+    const key$ = select(r, CHORD_ROOTS.map((k) => ({ name: "in " + k, value: k })), "key");
+    btn(r, "Chart block", () => insert(chartFence(st$.value, key$.value), true));
+    btn(r, "Changes line", () => insert(changesLine(st$.value, key$.value), false));
+  }
+  // tier 4 — figure snippets and slot patterns (the arp/figure field's grammars)
+  {
+    const r = row("Figure");
+    const fig$ = select(r, FIGURES.map((f) => ({ name: f.name, value: f.text })), "figure");
+    btn(r, "Insert figure", () => insert(fig$.value, false));
+    const pat$ = select(r, SLOT_PATTERNS.map((p) => ({ name: p, value: p })), "slot pattern");
+    btn(r, "Insert pattern", () => insert(pat$.value, false));
+  }
+  return { insert: (text, block) => insert(text, block) };
+}
+return { FIGURES, SLOT_PATTERNS, padInsert, createPalette };
+})();
 const NPSURF = (() => {
 const { emptyDoc, makeEntry, addEntry, deleteEntry, toAtchart, fromAtchart } = NOTEPAD;
 const { parseMarkdown, renderTo } = MD;
+const { createPalette } = PALETTE;
 /* notepad-surface.mjs — the notepad's shared SURFACE (component v1).
  *
  * engine/notepad.mjs shares the model; this module shares the BEHAVIOUR —
@@ -1902,8 +2718,10 @@ const { parseMarkdown, renderTo } = MD;
  */
 
 
-/** The declared capability set — identical in every host, by construction. */
-const CAPABILITIES = ["save", "clear", "export", "import", "copy"];
+/** The declared capability set — identical in every host, by construction.
+ * "palette" (child 3): the music palette is a capability of the SURFACE, so
+ * both hosts carry it and the conformance suite asserts it like any other. */
+const CAPABILITIES = ["save", "clear", "export", "import", "copy", "palette"];
 
 function createNotepadSurface(opts) {
   const { adapter, storage, els, file } = opts;
@@ -1914,7 +2732,8 @@ function createNotepadSurface(opts) {
   const itemNoun = nouns.item || "note";
   const applyLabel = nouns.apply || "Apply settings";
   const LABELS = { save: "Save " + itemNoun, clear: "Clear",
-    export: "Export (.atchart.md)", import: "Import", copy: "Copy" };
+    export: "Export (.atchart.md)", import: "Import", copy: "Copy",
+    palette: "Palette" };
   let doc = emptyDoc();
   let storageOK = true;
   let padTimer = null;
@@ -2149,6 +2968,29 @@ function createNotepadSurface(opts) {
       const f = e.target.files && e.target.files[0];
       if (f) importFile(f);
       e.target.value = "";
+    });
+  });
+  mountCap("palette", (b) => {
+    // the panel: explicit placement (els.paletteRoot) or auto-appended after
+    // the controls — placement is the host's, existence is not. Hidden until
+    // toggled; the toggle never steals the pad's content or selection.
+    let panel = els.paletteRoot;
+    if (!panel) {
+      panel = els.pad.ownerDocument.createElement("div");
+      (els.controls || els.pad).appendChild(panel);
+    }
+    panel.className = (panel.className ? panel.className + " " : "") + "palette";
+    panel.setAttribute("data-cap", "palette-panel");
+    panel.style.display = "none";
+    createPalette({ root: panel, pad: els.pad, onInsert: () => {
+      doc = { ...doc, pad: els.pad.value };
+      persist(); onChange();
+    } });
+    b.setAttribute("aria-expanded", "false");
+    b.addEventListener("click", () => {
+      const on = panel.style.display === "none";
+      panel.style.display = on ? "" : "none";
+      b.setAttribute("aria-expanded", on ? "true" : "false");
     });
   });
   // the handoff guarantee: emitted by the surface, in EVERY host

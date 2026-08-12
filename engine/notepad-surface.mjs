@@ -60,9 +60,12 @@
 
 import { emptyDoc, makeEntry, addEntry, deleteEntry, toAtchart, fromAtchart } from "./notepad.mjs";
 import { parseMarkdown, renderTo } from "./markdown.mjs";
+import { createPalette } from "./palette.mjs";
 
-/** The declared capability set — identical in every host, by construction. */
-export const CAPABILITIES = ["save", "clear", "export", "import", "copy"];
+/** The declared capability set — identical in every host, by construction.
+ * "palette" (child 3): the music palette is a capability of the SURFACE, so
+ * both hosts carry it and the conformance suite asserts it like any other. */
+export const CAPABILITIES = ["save", "clear", "export", "import", "copy", "palette"];
 
 export function createNotepadSurface(opts) {
   const { adapter, storage, els, file } = opts;
@@ -73,7 +76,8 @@ export function createNotepadSurface(opts) {
   const itemNoun = nouns.item || "note";
   const applyLabel = nouns.apply || "Apply settings";
   const LABELS = { save: "Save " + itemNoun, clear: "Clear",
-    export: "Export (.atchart.md)", import: "Import", copy: "Copy" };
+    export: "Export (.atchart.md)", import: "Import", copy: "Copy",
+    palette: "Palette" };
   let doc = emptyDoc();
   let storageOK = true;
   let padTimer = null;
@@ -308,6 +312,29 @@ export function createNotepadSurface(opts) {
       const f = e.target.files && e.target.files[0];
       if (f) importFile(f);
       e.target.value = "";
+    });
+  });
+  mountCap("palette", (b) => {
+    // the panel: explicit placement (els.paletteRoot) or auto-appended after
+    // the controls — placement is the host's, existence is not. Hidden until
+    // toggled; the toggle never steals the pad's content or selection.
+    let panel = els.paletteRoot;
+    if (!panel) {
+      panel = els.pad.ownerDocument.createElement("div");
+      (els.controls || els.pad).appendChild(panel);
+    }
+    panel.className = (panel.className ? panel.className + " " : "") + "palette";
+    panel.setAttribute("data-cap", "palette-panel");
+    panel.style.display = "none";
+    createPalette({ root: panel, pad: els.pad, onInsert: () => {
+      doc = { ...doc, pad: els.pad.value };
+      persist(); onChange();
+    } });
+    b.setAttribute("aria-expanded", "false");
+    b.addEventListener("click", () => {
+      const on = panel.style.display === "none";
+      panel.style.display = on ? "" : "none";
+      b.setAttribute("aria-expanded", on ? "true" : "false");
     });
   });
   // the handoff guarantee: emitted by the surface, in EVERY host

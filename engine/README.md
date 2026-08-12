@@ -44,6 +44,12 @@ engine/
 ├── notepad-surface.mjs  the notepad's shared SURFACE: declared capabilities,
 │                        canonical save/clear semantics, import/export/clipboard,
 │                        storage-denied, row rendering — hosts place, never choose
+├── structures.mjs       the palette's structure catalog: degree patterns resolved
+│                        per key through resolveRoman, chart bodies canonicalized
+│                        through atchart.mjs — greped for literal progressions (pure)
+├── palette.mjs          the music palette: glyphs, the chord chooser, structure
+│                        inserts, figure/slot-pattern snippets canonical through the
+│                        motion grammar; padInsert = the caret-preserving seam
 └── tests/
     ├── chord.test.mjs
     ├── upper-structure.test.mjs      roadmap §3.1's decomposition table as corpus
@@ -52,6 +58,8 @@ engine/
     ├── markdown.test.mjs             the grep, the refusal corpus, the caret contract
     ├── notepad.test.mjs              byte round-trips, migrations, the inline pins
     ├── notepad-surface.test.mjs      the capability law + both-hosts save-clears
+    ├── structures.test.mjs           the 12-key × catalog matrix + the grep
+    ├── palette.test.mjs              valid-input-by-construction + the caret's survival
     ├── host-conformance.test.mjs     family spec §4.3: one host list, same assertions
     ├── triadetudes-engine.test.mjs   characterization of the shipped study's engine
     └── _load-triadetudes.mjs         extracts the study's <script> for headless testing

@@ -154,12 +154,15 @@ const NOTES_HEAD = /^##\s+Notes\s*$/;
 const CHART_OPENER = /^```chart\s*$/;
 
 export function toAtchart(doc, meta) {
-  // the format's one-chart law (spec §2.2, multiples reserved for v2): a
-  // ```chart fence typed into the pad or a note would be claimed by the
-  // FORMAT at parse and make the written file unparseable. Refuse by name —
-  // the content stays in the model and storage; nothing is lost or mangled.
+  // the format's one-chart law (spec §2.2, multiples reserved for v2).
+  // ENTRIES refuse a ```chart fence by name — a note is a per-take record,
+  // not the document's chart. The PAD is different: its single chart fence
+  // IS the document's chart (tier 3 — the palette inserts structures here),
+  // so it is LIFTED into the file's chart block, positioned where the user
+  // typed it. Two fences, an unclosed opener, or a fence when the file
+  // already carries a chart all refuse by name; nothing is lost or mangled.
   const offends = (t) => String(t ?? "").split("\n").some((l) => CHART_OPENER.test(l));
-  if (offends(doc.pad) || doc.entries.some((e) => offends(e.text)))
+  if (doc.entries.some((e) => offends(e.text)))
     throw new Error("a ```chart fence belongs in the file's chart block — " +
       "the format holds one chart per file (v1); use a plain ``` fence in notes");
   const at = doc._at
@@ -168,9 +171,36 @@ export function toAtchart(doc, meta) {
         sections: [], substitutions: [], practiceLog: [], body: [] };
   if (doc._at && meta) at.meta = { ...at.meta, ...meta };
 
-  const body = [CHART_SLOT];
   const pad = String(doc.pad ?? "").replace(/\n+$/, "");
-  if (pad) { body.push(""); body.push(...pad.split("\n")); }
+  let padLines = pad ? pad.split("\n") : [];
+  const chartFences = pairFences(padLines).filter((f) => f.info === "chart");
+  const strayOpeners = padLines.filter((l) => CHART_OPENER.test(l)).length;
+  if (chartFences.length > 1 ||
+      (chartFences.length === 0 && strayOpeners > 0) ||
+      (chartFences.length === 1 && strayOpeners > 1))
+    throw new Error("the pad holds " + (strayOpeners || chartFences.length) +
+      " ```chart openers — the format holds one chart per file (v1), " +
+      "and an unclosed chart fence cannot be written");
+  let body;
+  // where does the stored file keep its chart? slot at body[0] = file-level
+  // (the classic layout); slot deeper in = the pad owns it (a prior lift)
+  const storedSlot = doc._at ? doc._at.body.indexOf(CHART_SLOT) : -1;
+  if (chartFences.length === 1) {
+    if (at.sections.length && storedSlot === 0)
+      throw new Error("the file already carries a chart block — one per " +
+        "file (v1); edit the existing chart or remove the pad's fence");
+    const f = chartFences[0];
+    // parse the fence THROUGH the format engine — its assertions gate the write
+    const probe = parseAtchart("---\natchart: 1\n---\n```chart\n" +
+      padLines.slice(f.open + 1, f.close).join("\n") + "\n```\n");
+    at.sections = probe.sections;
+    padLines = [...padLines.slice(0, f.open), CHART_SLOT,
+      ...padLines.slice(f.close + 1)];
+    body = [];
+  } else {
+    body = [CHART_SLOT];
+  }
+  if (padLines.length) { if (body.length) body.push(""); body.push(...padLines); }
   if (doc.entries.length) {
     body.push("");
     body.push("## Notes");
@@ -209,8 +239,22 @@ export function fromAtchart(src) {
   for (let i = 0; i < body.length; i++)
     if (NOTES_HEAD.test(body[i]) && !inFence(i)) { notesAt = i; break; }
 
-  const padLines = (notesAt < 0 ? body : body.slice(0, notesAt))
-    .filter((l) => l !== CHART_SLOT);
+  const padRegion = notesAt < 0 ? body : body.slice(0, notesAt);
+  const chartFenceText = () => {
+    // the file's chart, re-rendered engine-canonically for the pad
+    const mini = serializeAtchart({ meta: { atchart: 1 }, sections: at.sections,
+      substitutions: [], practiceLog: [], body: [CHART_SLOT] });
+    const a = mini.indexOf("```chart");
+    return mini.slice(a, mini.indexOf("\n```", a) + 4);
+  };
+  const padLines = [];
+  padRegion.forEach((l, i) => {
+    if (l !== CHART_SLOT) { padLines.push(l); return; }
+    // slot at the very top of the body = a file-level chart (the classic
+    // notepad layout); a slot further down was LIFTED from the pad and
+    // renders back into it, where the user put it
+    if (i > 0) padLines.push(...chartFenceText().split("\n"));
+  });
   const pad = padLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
 
   const entries = [];
@@ -245,8 +289,9 @@ export function fromAtchart(src) {
           if (/^```/.test(span[j])) break; // a different fence intervenes
         }
       }
-      const textLines = envFence === null ? span
-        : [...span.slice(0, envFence.open), ...span.slice(envFence.close + 1)];
+      const textLines = (envFence === null ? span
+        : [...span.slice(0, envFence.open), ...span.slice(envFence.close + 1)])
+        .filter((l) => l !== CHART_SLOT);
       const text = textLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
       const heading = tail[h].replace(/^###\s+/, "");
       if (env) entries.push(makeEntry({
