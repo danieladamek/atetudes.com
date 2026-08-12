@@ -31,17 +31,28 @@ engine/
 ├── note-events.mjs      the note-event producer: one {midi,string,fret,role,slot,
 │                        onset,dur} list per chord, every renderer a consumer (pure)
 ├── string-sets.mjs      slot/degree translation across string sets (pure)
-├── atchart.mjs          .atchart.md v1 parser + serializer (pure)     [spec: docs/atchart-format.md]
+├── motion.mjs           the motion grammar: figures, approaches, resolution against
+│                        a chord context; the sketchpad's emitter (pure)
+├── atchart.mjs          .atchart.md v1.1 parser + serializer + the apps accessor
+│                        (pure)                                        [spec: docs/atchart-format.md]
 ├── markdown.mjs         the notepad's markdown engine: CommonMark subset that
 │                        builds DOM nodes (no HTML-string sinks — greped), refuses
 │                        raw HTML, sanitizes links by allow-list; parseMarkdown /
 │                        renderTo / applyEdit (the toolbar + palette seam) (pure)
+├── notepad.mjs          the notepad model: pad + opaque-payload entries, host
+│                        migrations, to/from .atchart.md through atchart.mjs (pure)
+├── notepad-surface.mjs  the notepad's shared SURFACE: declared capabilities,
+│                        canonical save/clear semantics, import/export/clipboard,
+│                        storage-denied, row rendering — hosts place, never choose
 └── tests/
     ├── chord.test.mjs
     ├── upper-structure.test.mjs      roadmap §3.1's decomposition table as corpus
     ├── metronome.test.mjs            includes the study-inline anti-drift pin
     ├── atchart.test.mjs
     ├── markdown.test.mjs             the grep, the refusal corpus, the caret contract
+    ├── notepad.test.mjs              byte round-trips, migrations, the inline pins
+    ├── notepad-surface.test.mjs      the capability law + both-hosts save-clears
+    ├── host-conformance.test.mjs     family spec §4.3: one host list, same assertions
     ├── triadetudes-engine.test.mjs   characterization of the shipped study's engine
     └── _load-triadetudes.mjs         extracts the study's <script> for headless testing
 ```
@@ -67,3 +78,10 @@ test blocks deploy.
   extracted engine must produce identical output before the study file is regenerated.
 - **No frameworks, no installs** (CLAUDE.md guardrail + the single-file charter promise).
   If a test needs a library, the design is wrong.
+- **Consistency is asserted, not remembered** (family spec §4.3,
+  `notes/specs/at-etudes-app-family.md`): a module with more than one host carries a
+  conformance suite (`host-conformance.test.mjs`) that runs the same assertions against
+  every host from one list — capability set, guarantee statements, behavioural contract —
+  reading what RENDERS, not what the code registers. Adding a host is one list entry;
+  an unwired host fails naming what is missing. This README's own module inventory is
+  CI-asserted against `engine/*.mjs` by that suite — derived or asserted, never retyped.

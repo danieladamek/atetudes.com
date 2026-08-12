@@ -5,6 +5,40 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-12 — The host conformance suite (Daniel's dispatch; family spec §4.3)
+
+- **§4.3 implemented as one small suite, not a framework**:
+  `engine/tests/host-conformance.test.mjs` declares a host list per shared module and
+  runs the SAME assertions against every entry. Adding a host is one list entry; an
+  unwired host fails with messages that ARE the wiring specification — "[triadetudes]
+  mount \"saveBtn\" expects #saveEntry in the page — add the element, or update this
+  host list if it moved" / "no mount for declared capability \"export\" — provide
+  els.exportBtn or els.controls" — tested by mounting a bare third host and pinning the
+  named failure.
+- **Everything asserts on the artifact**: the ids present in the shipped pages, the
+  adapter nouns declared in the page source, and the controls that actually RENDER when
+  the shared surface mounts over exactly the elements each page provides (the stub is
+  built from the host list's mounts, so Triadetudes' Copy arrives by auto-append there
+  exactly as it does live). Per host: identical rendered capability set, the §5/§6
+  handoff guarantee text, and the behavioural contract (save clears the pad, the note
+  files, the label composes from the nouns).
+- **The suite caught its first real divergence on its first run**: the two carriers
+  stated the metronome's shared-component guarantee in DIFFERENT WORDS ("The same
+  metronome every At-Etudes study carries…" vs "every At-Etudes app carries this
+  metronome, first block, this look"). Unified on the family wording; the metronome
+  widening asserts the control inventory (12 ids) and the guarantee line in both
+  carriers from the same one-line-per-host list.
+- **The README inventory is now asserted, never retyped**: engine/README.md was missing
+  motion.mjs, notepad.mjs and notepad-surface.mjs — the exact defect §4.3 exists to
+  prevent, in the document describing the engine. The layout now lists all ten modules,
+  the suite CI-asserts every engine/*.mjs appears in the README (failure names the
+  missing module), and the Rules section points at §4.3. The test stubs themselves were
+  deduplicated into `_dom-stub.mjs` — one source per fact, applied to the suite's own
+  scaffolding.
+- Suite 271/271 (7 conformance tests); both studies re-verified rendering from
+  `file://` offline with zero console errors (the guarantee-wording fix touched
+  Metronome's page). Update Log 260812.3.
+
 ## 2026-08-12 — Notepad: the surface declares capabilities, the host places them (Daniel's dispatch)
 
 - **The extraction's rule had a gap, fixed at the right level**: "share behaviour, not
