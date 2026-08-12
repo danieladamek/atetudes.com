@@ -19,9 +19,21 @@
  *     labels DERIVE via adapter.summarize (never stored); a foreign app's
  *     payload is named, inert and carried untouched.
  *
- * SHARE BEHAVIOUR, NOT LAYOUT: the host provides the elements (its page, its
- * grammar, its placement); this module only wires them and builds row nodes
- * inside the list element. No document/window globals — everything reaches
+ * THE SURFACE DECLARES THE CAPABILITY SET; THE HOST CHOOSES PLACEMENT,
+ * NEVER EXISTENCE. "Share behaviour, not layout" collapsed two axes and let
+ * Triadetudes silently lose Copy: a capability is WHAT exists (declared
+ * here, identical in every host); layout is WHERE it sits (the host's). A
+ * host mounts a declared capability explicitly (els.<cap>Btn), or provides
+ * els.controls and the control is auto-appended — and a host that provides
+ * neither FAILS LOUDLY by capability name. Never silent omission. Labels
+ * come from the adapter's declared nouns ({item, apply}) — no save or apply
+ * verb is hand-written in any page. The paragraph-level handoff guarantee
+ * ("the file is the handoff channel: nothing leaves this machine", web
+ * contract sections 5/6) is emitted by the surface in every host: it is a
+ * charter guarantee, not helper prose.
+ *
+ * The host still provides the elements (its page, its grammar, its
+ * placement); this module wires them and builds row nodes inside the list. No document/window globals — everything reaches
  * the DOM through the provided elements' ownerDocument, so the whole surface
  * runs headless against a stub (the both-hosts save-clears test lives there).
  *
@@ -36,7 +48,8 @@
  *     msg, importMsg?, list, count?, storeNote?
  *   }
  *   file:     {title, name():string}                    // export identity
- *   applyLabel: "Restore étude" | "Apply settings" | …  // host wording
+ *   adapter.nouns: {item: "entry"|"note"|…, apply: "Restore étude"|…} —
+ *             the host's vocabulary; the surface composes every label
  *   importFallback?: (text) => entries[]|null           // legacy log formats
  *   jsonImport?: (parsedJson) => boolean                // bare-config files
  *   onChange?: ()=>{}   onApplied?: ()=>{}              // host hooks (fold
@@ -48,12 +61,19 @@
 import { emptyDoc, makeEntry, addEntry, deleteEntry, toAtchart, fromAtchart } from "./notepad.mjs";
 import { parseMarkdown, renderTo } from "./markdown.mjs";
 
+/** The declared capability set — identical in every host, by construction. */
+export const CAPABILITIES = ["save", "clear", "export", "import", "copy"];
+
 export function createNotepadSurface(opts) {
   const { adapter, storage, els, file } = opts;
   const migrate = opts.migrate || (() => null);
   const onChange = opts.onChange || (() => {});
   const onApplied = opts.onApplied || (() => {});
-  const applyLabel = opts.applyLabel || "Apply settings";
+  const nouns = (adapter && adapter.nouns) || {};
+  const itemNoun = nouns.item || "note";
+  const applyLabel = nouns.apply || "Apply settings";
+  const LABELS = { save: "Save " + itemNoun, clear: "Clear",
+    export: "Export (.atchart.md)", import: "Import", copy: "Copy" };
   let doc = emptyDoc();
   let storageOK = true;
   let padTimer = null;
@@ -166,8 +186,8 @@ export function createNotepadSurface(opts) {
   }
   async function copy() {
     let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
-    const win = els.pad.ownerDocument.defaultView;
     try {
+      const win = els.pad.ownerDocument.defaultView;
       await win.navigator.clipboard.writeText(text);
       msgSet("copied — one .atchart.md, ready to paste");
     } catch (e) { msgSet("clipboard unavailable — use Export", true); }
@@ -234,7 +254,23 @@ export function createNotepadSurface(opts) {
     });
   }
 
-  // ---- mount ----
+  // ---- mount: every declared capability renders a control — an explicit
+  // mount, an auto-append into els.controls, or a LOUD failure naming the
+  // capability. Placement is the host's; existence is not. ----
+  function mountCap(cap, wire) {
+    let btn = els[cap + "Btn"];
+    if (!btn) {
+      if (!els.controls)
+        throw new Error('notepad-surface: no mount for declared capability "' +
+          cap + '" — provide els.' + cap + "Btn or els.controls");
+      btn = els.controls.ownerDocument.createElement("button");
+      els.controls.appendChild(btn);
+    }
+    btn.setAttribute("data-cap", cap);
+    btn.textContent = LABELS[cap];   // the adapter's vocabulary, composed here
+    wire(btn);
+    return btn;
+  }
   doc = loadDoc();
   els.pad.value = doc.pad;   // persistent uncommitted scratch: survives reload
   els.pad.addEventListener("input", () => {
@@ -243,24 +279,48 @@ export function createNotepadSurface(opts) {
     padTimer = setTimeout(() => { persist(); onChange(); }, 300);
   });
   els.pad.addEventListener("change", () => { persist(); onChange(); });
-  els.saveBtn.addEventListener("click", save);
-  if (els.clearBtn) els.clearBtn.addEventListener("click", () => {
+  mountCap("save", (b) => b.addEventListener("click", save));
+  mountCap("clear", (b) => b.addEventListener("click", () => {
     if (!String(els.pad.value ?? "").trim()) { discard(); return; }
     clearConfirmShow(true);
-  });
-  if (els.confirmSave) els.confirmSave.addEventListener("click", save);
-  if (els.confirmDiscard) els.confirmDiscard.addEventListener("click", discard);
-  if (els.confirmCancel) els.confirmCancel.addEventListener("click",
-    () => clearConfirmShow(false));
-  if (els.exportBtn) els.exportBtn.addEventListener("click", download);
-  if (els.copyBtn) els.copyBtn.addEventListener("click", copy);
-  if (els.importBtn && els.importFile) {
-    els.importBtn.addEventListener("click", () => els.importFile.click());
+  }));
+  if (!els.confirmRoot || !els.confirmSave || !els.confirmDiscard || !els.confirmCancel)
+    throw new Error("notepad-surface: the clear capability needs its confirm " +
+      "row — provide els.confirmRoot/confirmSave/confirmDiscard/confirmCancel");
+  els.confirmSave.addEventListener("click", save);
+  els.confirmDiscard.addEventListener("click", discard);
+  els.confirmCancel.addEventListener("click", () => clearConfirmShow(false));
+  els.confirmSave.setAttribute("data-cap", "clear-save");
+  els.confirmDiscard.setAttribute("data-cap", "clear-discard");
+  mountCap("export", (b) => b.addEventListener("click", download));
+  mountCap("copy", (b) => b.addEventListener("click", copy));
+  mountCap("import", (b) => {
+    if (!els.importFile) {
+      const inp = b.ownerDocument.createElement("input");
+      inp.setAttribute("type", "file");
+      inp.setAttribute("accept", ".md,.json,text/markdown,application/json");
+      inp.style.display = "none";
+      (els.controls || els.pad).appendChild(inp);
+      els.importFile = inp;
+    }
+    b.addEventListener("click", () => els.importFile.click());
     els.importFile.addEventListener("change", (e) => {
       const f = e.target.files && e.target.files[0];
       if (f) importFile(f);
       e.target.value = "";
     });
+  });
+  // the handoff guarantee: emitted by the surface, in EVERY host
+  {
+    const docm = els.pad.ownerDocument;
+    let h = els.handoff;
+    if (!h) {
+      h = docm.createElement("div");
+      h.className = "hint";
+      (els.controls || els.pad).appendChild(h);
+    }
+    h.setAttribute("data-cap", "handoff");
+    h.textContent = "The file is the handoff channel: nothing leaves this machine.";
   }
   if (!storageOK && els.storeNote)
     els.storeNote.textContent =

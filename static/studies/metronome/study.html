@@ -74,7 +74,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.3.0</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.3.1</div>
 </header>
 
 <div class="cards">
@@ -117,12 +117,14 @@
   <div class="card">
     <h2>Notepad</h2>
     <textarea id="pad" placeholder="The idea that arrived at this tempo — a lick, a groove, a thing to practice. Plain prose is fine (it's markdown underneath). Autosaves as you type."></textarea>
-    <div class="transport" style="margin-top:10px">
-      <button id="saveNote" class="primary">Save note</button>
-      <button id="clearPad">Clear</button>
-      <button id="exportBtn">Export (.atchart.md)</button>
-      <button id="copyBtn">Copy</button>
-      <button id="importBtn">Import</button>
+    <!-- labels composed by the surface from the adapter's nouns; the Copy
+         mount is explicit here (Triadetudes exercises the auto-append path) -->
+    <div class="transport" id="padControls" style="margin-top:10px">
+      <button id="saveNote" class="primary"></button>
+      <button id="clearPad"></button>
+      <button id="exportBtn"></button>
+      <button id="copyBtn"></button>
+      <button id="importBtn"></button>
       <input type="file" id="importFile" accept=".md,.atchart.md,.txt" style="display:none">
       <span id="saveMsg" class="hint" style="margin:0"></span>
     </div>
@@ -136,8 +138,8 @@
     clears the pad — the emptied pad is the confirmation, and <b>Apply</b> on any saved
     note sets the metronome back to that moment. Export writes one <b>.atchart.md</b>:
     anything still in the pad rides on top as uncommitted scratch, saved notes are
-    committed. Import merges one back; Copy puts the same file on the clipboard. The
-    file is the handoff channel: nothing leaves this machine.</div>
+    committed. Import merges one back; Copy puts the same file on the clipboard.</div>
+    <div class="hint" id="handoffNote"></div>
   </div>
 </div>
 
@@ -147,7 +149,7 @@
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.3.0 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.3.1 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
@@ -1859,9 +1861,21 @@ const { parseMarkdown, renderTo } = MD;
  *     labels DERIVE via adapter.summarize (never stored); a foreign app's
  *     payload is named, inert and carried untouched.
  *
- * SHARE BEHAVIOUR, NOT LAYOUT: the host provides the elements (its page, its
- * grammar, its placement); this module only wires them and builds row nodes
- * inside the list element. No document/window globals — everything reaches
+ * THE SURFACE DECLARES THE CAPABILITY SET; THE HOST CHOOSES PLACEMENT,
+ * NEVER EXISTENCE. "Share behaviour, not layout" collapsed two axes and let
+ * Triadetudes silently lose Copy: a capability is WHAT exists (declared
+ * here, identical in every host); layout is WHERE it sits (the host's). A
+ * host mounts a declared capability explicitly (els.<cap>Btn), or provides
+ * els.controls and the control is auto-appended — and a host that provides
+ * neither FAILS LOUDLY by capability name. Never silent omission. Labels
+ * come from the adapter's declared nouns ({item, apply}) — no save or apply
+ * verb is hand-written in any page. The paragraph-level handoff guarantee
+ * ("the file is the handoff channel: nothing leaves this machine", web
+ * contract sections 5/6) is emitted by the surface in every host: it is a
+ * charter guarantee, not helper prose.
+ *
+ * The host still provides the elements (its page, its grammar, its
+ * placement); this module wires them and builds row nodes inside the list. No document/window globals — everything reaches
  * the DOM through the provided elements' ownerDocument, so the whole surface
  * runs headless against a stub (the both-hosts save-clears test lives there).
  *
@@ -1876,7 +1890,8 @@ const { parseMarkdown, renderTo } = MD;
  *     msg, importMsg?, list, count?, storeNote?
  *   }
  *   file:     {title, name():string}                    // export identity
- *   applyLabel: "Restore étude" | "Apply settings" | …  // host wording
+ *   adapter.nouns: {item: "entry"|"note"|…, apply: "Restore étude"|…} —
+ *             the host's vocabulary; the surface composes every label
  *   importFallback?: (text) => entries[]|null           // legacy log formats
  *   jsonImport?: (parsedJson) => boolean                // bare-config files
  *   onChange?: ()=>{}   onApplied?: ()=>{}              // host hooks (fold
@@ -1886,12 +1901,19 @@ const { parseMarkdown, renderTo } = MD;
  */
 
 
+/** The declared capability set — identical in every host, by construction. */
+const CAPABILITIES = ["save", "clear", "export", "import", "copy"];
+
 function createNotepadSurface(opts) {
   const { adapter, storage, els, file } = opts;
   const migrate = opts.migrate || (() => null);
   const onChange = opts.onChange || (() => {});
   const onApplied = opts.onApplied || (() => {});
-  const applyLabel = opts.applyLabel || "Apply settings";
+  const nouns = (adapter && adapter.nouns) || {};
+  const itemNoun = nouns.item || "note";
+  const applyLabel = nouns.apply || "Apply settings";
+  const LABELS = { save: "Save " + itemNoun, clear: "Clear",
+    export: "Export (.atchart.md)", import: "Import", copy: "Copy" };
   let doc = emptyDoc();
   let storageOK = true;
   let padTimer = null;
@@ -2004,8 +2026,8 @@ function createNotepadSurface(opts) {
   }
   async function copy() {
     let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
-    const win = els.pad.ownerDocument.defaultView;
     try {
+      const win = els.pad.ownerDocument.defaultView;
       await win.navigator.clipboard.writeText(text);
       msgSet("copied — one .atchart.md, ready to paste");
     } catch (e) { msgSet("clipboard unavailable — use Export", true); }
@@ -2072,7 +2094,23 @@ function createNotepadSurface(opts) {
     });
   }
 
-  // ---- mount ----
+  // ---- mount: every declared capability renders a control — an explicit
+  // mount, an auto-append into els.controls, or a LOUD failure naming the
+  // capability. Placement is the host's; existence is not. ----
+  function mountCap(cap, wire) {
+    let btn = els[cap + "Btn"];
+    if (!btn) {
+      if (!els.controls)
+        throw new Error('notepad-surface: no mount for declared capability "' +
+          cap + '" — provide els.' + cap + "Btn or els.controls");
+      btn = els.controls.ownerDocument.createElement("button");
+      els.controls.appendChild(btn);
+    }
+    btn.setAttribute("data-cap", cap);
+    btn.textContent = LABELS[cap];   // the adapter's vocabulary, composed here
+    wire(btn);
+    return btn;
+  }
   doc = loadDoc();
   els.pad.value = doc.pad;   // persistent uncommitted scratch: survives reload
   els.pad.addEventListener("input", () => {
@@ -2081,24 +2119,48 @@ function createNotepadSurface(opts) {
     padTimer = setTimeout(() => { persist(); onChange(); }, 300);
   });
   els.pad.addEventListener("change", () => { persist(); onChange(); });
-  els.saveBtn.addEventListener("click", save);
-  if (els.clearBtn) els.clearBtn.addEventListener("click", () => {
+  mountCap("save", (b) => b.addEventListener("click", save));
+  mountCap("clear", (b) => b.addEventListener("click", () => {
     if (!String(els.pad.value ?? "").trim()) { discard(); return; }
     clearConfirmShow(true);
-  });
-  if (els.confirmSave) els.confirmSave.addEventListener("click", save);
-  if (els.confirmDiscard) els.confirmDiscard.addEventListener("click", discard);
-  if (els.confirmCancel) els.confirmCancel.addEventListener("click",
-    () => clearConfirmShow(false));
-  if (els.exportBtn) els.exportBtn.addEventListener("click", download);
-  if (els.copyBtn) els.copyBtn.addEventListener("click", copy);
-  if (els.importBtn && els.importFile) {
-    els.importBtn.addEventListener("click", () => els.importFile.click());
+  }));
+  if (!els.confirmRoot || !els.confirmSave || !els.confirmDiscard || !els.confirmCancel)
+    throw new Error("notepad-surface: the clear capability needs its confirm " +
+      "row — provide els.confirmRoot/confirmSave/confirmDiscard/confirmCancel");
+  els.confirmSave.addEventListener("click", save);
+  els.confirmDiscard.addEventListener("click", discard);
+  els.confirmCancel.addEventListener("click", () => clearConfirmShow(false));
+  els.confirmSave.setAttribute("data-cap", "clear-save");
+  els.confirmDiscard.setAttribute("data-cap", "clear-discard");
+  mountCap("export", (b) => b.addEventListener("click", download));
+  mountCap("copy", (b) => b.addEventListener("click", copy));
+  mountCap("import", (b) => {
+    if (!els.importFile) {
+      const inp = b.ownerDocument.createElement("input");
+      inp.setAttribute("type", "file");
+      inp.setAttribute("accept", ".md,.json,text/markdown,application/json");
+      inp.style.display = "none";
+      (els.controls || els.pad).appendChild(inp);
+      els.importFile = inp;
+    }
+    b.addEventListener("click", () => els.importFile.click());
     els.importFile.addEventListener("change", (e) => {
       const f = e.target.files && e.target.files[0];
       if (f) importFile(f);
       e.target.value = "";
     });
+  });
+  // the handoff guarantee: emitted by the surface, in EVERY host
+  {
+    const docm = els.pad.ownerDocument;
+    let h = els.handoff;
+    if (!h) {
+      h = docm.createElement("div");
+      h.className = "hint";
+      (els.controls || els.pad).appendChild(h);
+    }
+    h.setAttribute("data-cap", "handoff");
+    h.textContent = "The file is the handoff channel: nothing leaves this machine.";
   }
   if (!storageOK && els.storeNote)
     els.storeNote.textContent =
@@ -2113,7 +2175,7 @@ function createNotepadSurface(opts) {
     get storageOK() { return storageOK; },
   };
 }
-return { createNotepadSurface };
+return { createNotepadSurface, CAPABILITIES };
 })();
 
 const SUB_OFFSETS={1:[],2:[0.5],3:[1/3,2/3],4:[0.25,0.5,0.75]};
@@ -2237,7 +2299,8 @@ function metroToggle(){
    the v1.0 migration, file identity. Layout stays in this page's HTML. */
 const DOC_KEY="metronome.v2.notepad";
 const HOST={app:"metronome",version:1,
-  snapshot:()=>cfgSnapshot(),
+  nouns:{item:"note",apply:"Apply settings"},   // the host's vocabulary — the
+  snapshot:()=>cfgSnapshot(),                   // surface composes the labels
   apply:(data)=>applyCfg(data||{}),
   summarize:(data)=>cfgLine(data||{})};   // DERIVED at render, never stored
 let NOTE=null;
@@ -2267,9 +2330,10 @@ function initNotepad(){
       msg:document.getElementById("saveMsg"),
       list:document.getElementById("noteList"),
       count:document.getElementById("noteCount"),
-      storeNote:document.getElementById("storeNote")},
+      storeNote:document.getElementById("storeNote"),
+      controls:document.getElementById("padControls"),
+      handoff:document.getElementById("handoffNote")},
     file:{title:"Metronome notepad",name:()=>"metronome-notepad.atchart.md"},
-    applyLabel:"Apply settings",
     emptyHint:"No notes yet. Tap a tempo, catch an idea, save it — the note keeps the settings.",
     onApplied:()=>window.scrollTo({top:0,behavior:"smooth"}),
   });

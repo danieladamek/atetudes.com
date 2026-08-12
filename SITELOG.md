@@ -5,6 +5,39 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-12 — Notepad: the surface declares capabilities, the host places them (Daniel's dispatch)
+
+- **The extraction's rule had a gap, fixed at the right level**: "share behaviour, not
+  layout" collapsed two axes and let Triadetudes silently lose Copy — a capability the
+  component spec named from the start. The corrected law: **the surface declares the
+  capability set (save, clear, export, import, copy); the host chooses placement, never
+  existence.** A host mounts a capability explicitly, or provides a controls container
+  and the control is auto-appended — and a host that provides neither **fails loudly by
+  capability name** ("no mount for declared capability \"copy\" — provide els.copyBtn
+  or els.controls"), tested exactly as dispatched: remove the mount, assert the named
+  failure. Triadetudes v0.8.2 gains Copy through the auto-append path, exercised live;
+  Metronome v1.3.1 keeps its explicit mount — both mechanisms proven in production
+  pages.
+- **Labels compose from the adapter's declared nouns** — `nouns:{item, apply}` —
+  "Save entry"/"Restore étude" vs "Save note"/"Apply settings" remain legitimate host
+  vocabulary, but no save or apply verb is hand-written in any page: the HTML buttons
+  are empty and the surface fills them (a planted "HAND-WRITTEN RELIC" is overwritten,
+  tested). A new verb is one line in one adapter.
+- **The handoff sentence is a charter guarantee, not helper prose**: "The file is the
+  handoff channel: nothing leaves this machine." is now emitted by the surface in every
+  host into a host-placed mount, stamped `data-cap="handoff"` — Triadetudes had been
+  missing it entirely; Metronome's hand-typed copy is removed in favour of the emitted
+  one.
+- **The divergence-stopper asserts on the artifact**: both headless (the stub DOM walks
+  `data-cap` stamps across both host configurations) and in the real pages (Playwright
+  enumerates rendered `[data-cap]` controls in both studies and asserts the identical
+  set: clear, clear-discard, clear-save, copy, export, handoff, import, save) — what
+  actually renders, not what the code registers, the same discipline as the
+  byte-identity and content-fingerprint rules.
+- Suite 264/264 (5 new capability-law tests; the loud-failure fixture pins the message
+  by name); 13 Playwright checks across both studies offline, zero console errors;
+  save-clears re-verified through the reworked mounts. Update Log 260812.2.
+
 ## 2026-08-12 — Notepad: the surface is extracted, and Metronome v1.3.0 is brought up to canonical (Daniel's dispatch)
 
 - **The root cause, fixed once**: `engine/notepad.mjs` shared only the MODEL, so every

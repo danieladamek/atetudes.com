@@ -6,7 +6,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createNotepadSurface } from "../notepad-surface.mjs";
+import { createNotepadSurface, CAPABILITIES } from "../notepad-surface.mjs";
 
 // ---- a stub DOM rich enough to host the surface: elements carry value,
 // style, listeners and a click() that dispatches them. No innerHTML exists.
@@ -40,9 +40,22 @@ function makeDoc() {
 function makeEls() {
   const d = makeDoc();
   const mk = () => d.createElement("div");
+  // controls = the host's button row: capabilities without an explicit mount
+  // auto-append here (the copy control in these fixtures arrives that way)
   return { pad: d.createElement("textarea"), saveBtn: mk(), clearBtn: mk(),
     confirmRoot: mk(), confirmSave: mk(), confirmDiscard: mk(), confirmCancel: mk(),
-    msg: mk(), importMsg: mk(), list: mk(), count: mk(), storeNote: mk() };
+    msg: mk(), importMsg: mk(), list: mk(), count: mk(), storeNote: mk(),
+    controls: mk() };
+}
+function capsOf(els) {
+  // enumerate what actually RENDERED — the artifact, not the intent
+  const found = [];
+  (function walk(n) {
+    if (n.attributes && n.attributes["data-cap"]) found.push(n.attributes["data-cap"]);
+    (n.childNodes || []).forEach(walk);
+  })({ childNodes: [els.saveBtn, els.clearBtn, els.controls,
+       els.exportBtn, els.copyBtn, els.importBtn].filter(Boolean) });
+  return found.sort();
 }
 function memStorage(denied) {
   let held = null;
@@ -56,10 +69,12 @@ function memStorage(denied) {
 // the two REAL host configurations, side by side — one behaviour, no choice
 const HOSTS = [
   { name: "metronome", adapter: { app: "metronome", version: 1,
+      nouns: { item: "note", apply: "Apply settings" },
       snapshot: () => ({ bpm: 72, meter: 4 }),
       apply: () => {}, summarize: (d) => "♩=" + d.bpm },
     file: { title: "Metronome notepad", name: () => "m.atchart.md" } },
   { name: "triadetudes", adapter: { app: "triadetudes", version: 1,
+      nouns: { item: "entry", apply: "Restore étude" },
       snapshot: () => ({ v: 1, key: "C", bpm: 96 }),
       apply: () => {}, summarize: (d) => d.key + " · " + d.bpm + " bpm" },
     file: { title: "Triadetudes journal", name: () => "t.atchart.md" } },
@@ -167,7 +182,7 @@ test("migration hook runs once when storage holds no v2 doc", () => {
 test("rows: derived labels via the adapter; foreign payloads named, inert, apply-less", () => {
   const els = makeEls();
   const s = createNotepadSurface({ adapter: HOSTS[1].adapter, storage: memStorage(false),
-    els, file: HOSTS[1].file, applyLabel: "Restore étude" });
+    els, file: HOSTS[1].file });
   s.setDoc({ pad: "", entries: [
     { id: "a", savedAt: "2026-08-11T10:00:00.000Z", text: "*mine*",
       payload: { app: "triadetudes", v: 1, data: { v: 1, key: "Eb", bpm: 96 } } },
@@ -189,4 +204,75 @@ test("rows: derived labels via the adapter; foreign payloads named, inert, apply
   let em = null;
   (function walk(n) { if (n.tagName === "EM") em = n; (n.childNodes || []).forEach(walk); })(mine);
   assert.ok(em && em.textContent === "mine", "renderTo built the reading view");
+});
+
+// ---- the capability law (this item): declared set, loud failure, composed labels ----
+
+test("BOTH hosts render the SAME capability set — enumerated from the DOM, not the code", () => {
+  const rendered = HOSTS.map((host) => {
+    const els = makeEls();
+    createNotepadSurface({ adapter: host.adapter, storage: memStorage(false),
+      els, file: host.file });
+    return { name: host.name, caps: capsOf(els).filter((c) => CAPABILITIES.includes(c)) };
+  });
+  assert.deepEqual(rendered[0].caps, [...CAPABILITIES].sort(),
+    rendered[0].name + " renders the full declared set");
+  assert.deepEqual(rendered[0].caps, rendered[1].caps,
+    "the two hosts render IDENTICAL capability sets — the divergence-stopper");
+});
+
+test("a missing mount FAILS LOUDLY by capability name — never silent omission", () => {
+  const els = makeEls();
+  // give every OTHER capability an explicit mount, then remove copy's only
+  // path (no copyBtn, no controls): the failure must name COPY exactly
+  const d = els.pad.ownerDocument;
+  els.exportBtn = d.createElement("button");
+  els.importBtn = d.createElement("button");
+  els.importFile = d.createElement("input");
+  delete els.controls;
+  assert.throws(() => createNotepadSurface({ adapter: HOSTS[0].adapter,
+    storage: memStorage(false), els, file: HOSTS[0].file }),
+    /declared capability "copy".*copyBtn or els\.controls/);
+  // and the same for a missing confirm row
+  const els2 = makeEls();
+  delete els2.confirmRoot;
+  assert.throws(() => createNotepadSurface({ adapter: HOSTS[0].adapter,
+    storage: memStorage(false), els: els2, file: HOSTS[0].file }),
+    /confirm/);
+});
+
+test("auto-append: a host with els.controls but no copy mount still gets a working Copy", () => {
+  const els = makeEls();
+  const s = createNotepadSurface({ adapter: HOSTS[1].adapter,
+    storage: memStorage(false), els, file: HOSTS[1].file });
+  const copyBtn = els.controls.childNodes.find(
+    (n) => n.attributes && n.attributes["data-cap"] === "copy");
+  assert.ok(copyBtn, "the control was appended, not omitted");
+  assert.equal(copyBtn.textContent, "Copy");
+  copyBtn.click();   // no clipboard in the stub: the honest message, no throw
+  assert.match(els.msg.textContent, /clipboard unavailable.*Export/);
+});
+
+test("labels compose from the adapter's nouns — no hand-written verbs survive", () => {
+  for (const host of HOSTS) {
+    const els = makeEls();
+    els.saveBtn.textContent = "HAND-WRITTEN RELIC";   // the surface overwrites
+    createNotepadSurface({ adapter: host.adapter, storage: memStorage(false),
+      els, file: host.file });
+    assert.equal(els.saveBtn.textContent, "Save " + host.adapter.nouns.item);
+    assert.equal(els.clearBtn.textContent, "Clear");
+  }
+});
+
+test("the handoff guarantee is emitted by the surface in every host", () => {
+  for (const host of HOSTS) {
+    const els = makeEls();
+    createNotepadSurface({ adapter: host.adapter, storage: memStorage(false),
+      els, file: host.file });
+    const h = els.controls.childNodes.find(
+      (n) => n.attributes && n.attributes["data-cap"] === "handoff");
+    assert.ok(h, host.name + " carries the sentence");
+    assert.equal(h.textContent,
+      "The file is the handoff channel: nothing leaves this machine.");
+  }
 });
