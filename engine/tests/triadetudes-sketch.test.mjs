@@ -133,3 +133,82 @@ test("the emitted string is a real figure: it resolves to events against the ét
   assert.equal(entries[1].midi, entries[2].midi + 2);
   e.st.motionSrc = null; e.st.motionMode = "shape";
 });
+
+// ---- 260812.6: the sketch emits invariants, never coordinates ----
+// (the bug item: mode coercion, orphan conscription, the degree fallback)
+
+test("corpus grep: no emitted figure carries an unsigned degree in an approach position", () => {
+  const e = loadTriadetudesEngine();
+  const scales = [
+    [0, 2, 4, 5, 7, 9, 11],        // C major
+    [0, 2, 3, 5, 7, 8, 11],        // C harmonic minor (the augmented 2nd)
+    [2, 4, 6, 7, 9, 11, 1],        // D major
+  ];
+  const signed = /^[+-]\d*s?$/;
+  let emits = 0, refusals = 0;
+  for (const scalePcs of scales)
+    for (const targetMidi of [60, 64, 67, 62])
+      for (const apMidi of [55, 56, 58, 59, 61, 62, 63, 65, 66, 69, 72]) {
+        const r = unwrap(e.MOTION.emitFromClicks([
+          { midi: apMidi, role: "approach", degText: null },
+          { midi: targetMidi, role: "target", degText: "1" },
+        ], { scalePcs, tonicPc: scalePcs[0] }));
+        if (r.error) {
+          refusals++;
+          assert.equal(r.at, 0, "a refusal names which click");
+          continue;
+        }
+        emits++;
+        for (const m of r.src.matchAll(/\(([^)]*)\)/g))
+          for (const item of m[1].split(","))
+            assert.match(item.trim(), signed,
+              `"${item}" in "${r.src}" is not a signed relative form — ` +
+              "a coordinate leaked into an approach slot");
+        const p = unwrap(e.MOTION.parse(r.src, "tones"));
+        for (const f of p.figures)
+          for (const a of f.approaches)
+            assert.notEqual(a.kind, "degree", "structurally: no degree approaches");
+      }
+  assert.ok(emits > 20 && refusals > 5,
+    `the corpus must exercise both outcomes (emits ${emits}, refusals ${refusals})`);
+});
+
+test("a key or scale change TRANSLATES every sketch-emitted figure (v0.7.5's property, on sketch output)", () => {
+  const e = loadTriadetudesEngine();
+  const buffers = [
+    [{ midi: 59, role: "approach", degText: null },
+     { midi: 62, role: "approach", degText: null },
+     { midi: 60, role: "target", degText: "1" }],
+    [{ midi: 66, role: "approach", degText: null },
+     { midi: 64, role: "target", degText: "3" },
+     { midi: 67, role: "target", degText: "5" }],
+  ];
+  const homes = { scalePcs: [0, 2, 4, 5, 7, 9, 11], tonicPc: 0 };
+  for (const buffer of buffers) {
+    const r = unwrap(e.MOTION.emitFromClicks(buffer, homes));
+    assert.ok(!r.error, r.error);
+    const p = e.MOTION.parse(r.src, "tones");
+    // the figure must RESOLVE, approaches intact, in foreign keys and scales —
+    // a coordinate would refuse or land on the same absolute pitch class
+    for (const [rootPc, scalePcs] of [
+      [3, [3, 5, 7, 8, 10, 0, 2]],           // Eb major
+      [9, [9, 11, 0, 2, 4, 5, 8]],           // A harmonic minor
+    ]) {
+      const chordPcs = [rootPc, (rootPc + 4) % 12, (rootPc + 7) % 12];
+      const open = { 1: 64, 2: 59, 3: 55, 4: 50, 5: 45, 6: 40 };
+      const voicing = { notes: chordPcs.map((pc, i) => {
+        const string = 3 - i, base = open[string];
+        const fret = ((pc - base) % 12 + 12) % 12;
+        return { midi: base + fret, string, fret, slot: i };
+      }) };
+      const out = unwrap(e.MOTION.resolve(p, { rootPc, chordPcs, scalePcs,
+        tonicPc: scalePcs[0], voicing, open, nfrets: 15,
+        set: [1, 2, 3], setLowHigh: [3, 2, 1] }));
+      assert.ok(!out.error, "translates without refusal: " + JSON.stringify(out.error || ""));
+      const approaches = out.filter((x) => x.role === "approach");
+      assert.equal(approaches.length,
+        p.figures.reduce((a, f) => a + f.approaches.length, 0),
+        "every approach survives the move — nothing pinned to the old key");
+    }
+  }
+});

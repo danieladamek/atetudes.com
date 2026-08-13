@@ -212,7 +212,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.4</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.5</div>
 </header>
 
 <div class="cards">
@@ -497,7 +497,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.4 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.5 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -2674,39 +2674,45 @@ function approachForms(midi, targetMidi, scalePcs) {
  * placement are discarded — a figure is a design, not a fingering.
  *
  * Approach precedence (spec §4.1, v0.7.5): SCALE-ADJACENCY FIRST, semitone
- * fallback, absolute degree last. -s stores an invariant, -2 stores a
- * coordinate; the default is the reading that survives a key or scale change
- * (v0.6.6 at the level of the figure). `form: "semi"|"scale"` overrides the
- * default when that reading exists — the tap in the sketch.
+ * fallback — and NO third form (ratified 2026-08-11, the palette's rule,
+ * asserted here 2026-08-12): EMIT INVARIANTS, NEVER COORDINATES. A bare
+ * degree in an approach slot is absolute against the key and stops following
+ * a key or scale change; where no relative reading exists the emitter
+ * REFUSES, returning { error, at } with `at` the index of the offending
+ * click, so the caller can hold that click out by name rather than guess.
+ * (The GRAMMAR still parses hand-typed degree approaches — user input is the
+ * user's; this rule binds what the sketch emits.) `form: "semi"|"scale"`
+ * overrides the default when that reading exists — the tap in the sketch.
  * ctx: { scalePcs, tonicPc }.
  */
 function emitFromClicks(clicks, ctx) {
   const figures = [];
   let pending = [];
-  for (const c of clicks) {
+  for (let ci = 0; ci < clicks.length; ci++) {
+    const c = clicks[ci];
     if (c.role === "target") {
       const m = (c.degText || "").match(/^([b#]?)(13|11|9|[1-7])$/);
       if (!m) return { error: 'a target needs a degree — got "' + (c.degText || "") + '"' };
       const target = { kind: "degree", deg: +m[2],
         acc: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0, text: m[0] };
-      const approaches = pending.map((a) => {
-        const d = a.midi - c.midi;
+      const approaches = [];
+      for (const p of pending) {
+        const a = p.click, d = a.midi - c.midi;
         const dir = d < 0 ? -1 : 1;
         const forms = approachForms(a.midi, c.midi, ctx.scalePcs);
-        if (a.form === "semi" && forms.semi) return { kind: "semi", delta: d };
-        if (a.form === "scale" && forms.scale) return { kind: "scale", delta: dir };
-        if (forms.scale) return { kind: "scale", delta: dir };
-        if (forms.semi) return { kind: "semi", delta: d };
-        // otherwise the absolute key degree of the clicked pitch class
-        const rel = mod12(a.midi - ctx.tonicPc);
-        const NAMES = { 0: [1, 0], 1: [2, -1], 2: [2, 0], 3: [3, -1], 4: [3, 0],
-          5: [4, 0], 6: [5, -1], 7: [5, 0], 8: [6, -1], 9: [6, 0], 10: [7, -1], 11: [7, 0] };
-        const [deg, acc] = NAMES[rel];
-        return { kind: "degree", deg, acc };
-      });
+        if (a.form === "semi" && forms.semi) { approaches.push({ kind: "semi", delta: d }); continue; }
+        if (a.form === "scale" && forms.scale) { approaches.push({ kind: "scale", delta: dir }); continue; }
+        if (forms.scale) { approaches.push({ kind: "scale", delta: dir }); continue; }
+        if (forms.semi) { approaches.push({ kind: "semi", delta: d }); continue; }
+        // no relative reading exists: REFUSE — a bare degree here would be a
+        // coordinate stored where the app stores invariants (v0.6.6's failure)
+        return { error: "an approach has no relative reading against its " +
+          "target — not scale-adjacent, more than two semitones. Invariants " +
+          "only: the click is refused, not renamed", at: p.at };
+      }
       figures.push({ approaches, target });
       pending = [];
-    } else pending.push(c);
+    } else pending.push({ click: c, at: ci });
   }
   if (pending.length)
     return { error: pending.length +
@@ -5278,31 +5284,68 @@ function sketchClick(note){
     chLabel:ch?ch.label:st.key});
   sketchSync();
 }
+function sketchEmit(clicks,base){
+  // the emitter refuses coordinates (260812.6: invariants only) and names
+  // WHICH click by index; the sketch answers by HOLDING that click out —
+  // never conscripting it into a reading it was not chosen for — and keeps
+  // emitting the rest. Returns the emitter result plus the held ECHO indices.
+  const held=[];
+  const idx=clicks.map((_,i)=>i);
+  for(;;){
+    const r=MOTION.emitFromClicks(idx.map(i=>clicks[i]),sketchCtx());
+    if(r.error!==undefined&&r.at!==undefined){
+      held.push(base+idx[r.at]); idx.splice(r.at,1); continue;
+    }
+    return {...r,held};
+  }
+}
 function sketchSync(){
   // re-emit the whole buffer and fill the field live; a trailing approach is
   // a sketch IN PROGRESS, not an error — the complete prefix plays, the
-  // waiting notes stay visible on the neck and the readout says what's owed
+  // waiting notes stay visible on the neck and the readout says what's owed.
+  // Two manners rules (260812.6): the mode toggle is never reversed without
+  // the readout SAYING SO, and a click's reading is stated when it is taken —
+  // a pending approach is announced as held-until-target, and one that gets
+  // no relative reading is held OUT by name, never renamed to a coordinate.
   if(!ECHO.length){ sketchNote(""); renderActive(); return; }
+  ECHO.forEach(n=>{n.heldOut=false;});   // readings re-derive on every sync
   const clicks=ECHO.map(n=>({midi:n.midi,role:n.role,degText:n.degText,form:n.form}));
-  const r=MOTION.emitFromClicks(clicks,sketchCtx());
+  const modeMsg=()=>{
+    if(st.motionMode!=="tones"){
+      st.motionMode="tones"; syncMotionUI();
+      return "approaches need the tones — Motion switched from Shape. ";
+    }
+    return "";
+  };
+  const heldMsg=(held)=>{
+    if(!held.length)return "";
+    held.forEach(i=>{ECHO[i].heldOut=true;});
+    const names=held.map(i=>pcName(((ECHO[i].midi%12)+12)%12,st.key)).join(", ");
+    return names+(held.length>1?" have":" has")+" no relative reading against "+
+      "the target (not scale-adjacent, more than two semitones) — held out of "+
+      "the figure, not renamed; double-tap to remove. ";
+  };
+  const r=sketchEmit(clicks,0);
   const against=[...new Set(ECHO.map(n=>n.chLabel))].join(", ");
   if(r.src){
-    st.motionMode="tones"; syncMotionUI();
+    const said=modeMsg()+heldMsg(r.held);
     applyMotionInput(r.src,{fromSketch:true});
-    sketchNote("sketch: "+ECHO.length+" notes, classified against "+against+
-      " — tap a mark to switch its reading; double-tap removes it");
+    sketchNote(said+"sketch: "+(ECHO.length-r.held.length)+" notes, classified against "+
+      against+" — tap a mark to switch its reading; double-tap removes it");
   }else{
     const lastT=sketchLastTarget();
+    let said="";
     if(lastT>=0){
-      const pre=MOTION.emitFromClicks(clicks.slice(0,lastT+1),sketchCtx());
-      if(pre.src){ st.motionMode="tones"; syncMotionUI();
+      const pre=sketchEmit(clicks.slice(0,lastT+1),0);
+      if(pre.src){ said=modeMsg()+heldMsg(pre.held);
         applyMotionInput(pre.src,{fromSketch:true}); }
     }
-    const nPend=ECHO.length-1-lastT;
+    const nPend=ECHO.filter((n,i)=>i>lastT&&!n.heldOut).length;
     const ch=SEQ[st.cur];
     const tones=ch?triadPcs(ch.rootPc,ch.q).map(pc=>pcName(pc,st.key)).join(", "):"";
-    sketchNote(nPend+(nPend>1?" approaches":" approach")+" waiting, classified against "+
-      against+" — click a chord tone"+(ch?" of "+ch.label+" ("+tones+")":"")+
+    sketchNote(said+nPend+(nPend===1?" approach":" approaches")+" held until you "+
+      "click "+(nPend===1?"its":"their")+" target — the reading locks then, "+
+      "not before. Click a chord tone"+(ch?" of "+ch.label+" ("+tones+")":"")+
       " to finish the figure");
   }
   renderActive();
@@ -5645,16 +5688,22 @@ function renderActive(){
     // they are; the readout narrates the waiting state.
     if(ECHO.length){
       const lastT=sketchLastTarget();
+      // the emitted prefix excludes held-out notes (260812.6), so the
+      // figure-event → buffer-note mapping goes through the emitted list
+      const emitted=[];
+      ECHO.forEach((n,i)=>{if(i<=lastT&&!n.heldOut)emitted.push(i);});
       const fe=activeFigure()?figureEntries(v,ch):null;
-      if(fe&&fe.length===lastT+1)
-        fe.forEach((en,k)=>sketchHit(layer,fx(en.fret),fy(en.string),k));
-      for(let i=lastT+1;i<ECHO.length;i++){
+      if(fe&&fe.length===emitted.length)
+        fe.forEach((en,k)=>sketchHit(layer,fx(en.fret),fy(en.string),emitted[k]));
+      for(let i=0;i<ECHO.length;i++){
+        if(i<=lastT&&!ECHO[i].heldOut)continue;   // drawn by the figure itself
         const n=ECHO[i];
         if(n.string===null)continue;   // keyboard clicks appear on the keyboard
         const chrom=!sdPcs.includes(((n.midi%12)+12)%12);
         const col=chrom?"#7847A8":FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref,ch.q).fam];
         el("circle",{cx:fx(n.fret),cy:fy(n.string),r:14*0.6,fill:"#fff",
-          stroke:col,"stroke-width":1.6},layer);
+          stroke:col,"stroke-width":1.6,
+          ...(n.heldOut?{"stroke-dasharray":"2.5 2.5",opacity:0.55}:{})},layer);
         sketchHit(layer,fx(n.fret),fy(n.string),i);
       }
     }
@@ -5774,13 +5823,15 @@ function renderKbd(){
   if(ECHO.length){
     const lastT=sketchLastTarget();
     const bass2=ch?bassPcFor(ch):null, ref2=ch?(bass2!==null?bass2:ch.rootPc):null;
-    for(let i=lastT+1;i<ECHO.length;i++){
+    for(let i=0;i<ECHO.length;i++){
       const n=ECHO[i]; if(n.string!==null)continue;
+      if(i<=lastT&&!n.heldOut)continue;   // in the emitted figure already
       const g=kbdGeom(n.midi); if(!g)continue;
       const chrom=!scaleData().pcs.includes(((n.midi%12)+12)%12);
       const col=chrom?"#7847A8":(ch?FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref2,ch.q).fam]:"#73737A");
       el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:g.black?"#212126":"#fff",
-        stroke:col,"stroke-width":1.1,"pointer-events":"none"},svg);
+        stroke:col,"stroke-width":1.1,"pointer-events":"none",
+        ...(n.heldOut?{"stroke-dasharray":"2.5 2.5",opacity:0.55}:{})},svg);
       sketchHit(svg,g.x,g.y,i,10);
     }
   }

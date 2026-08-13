@@ -162,7 +162,7 @@ test("resolve: refuses by name over the ceiling and off the set", () => {
 
 // ---- the sketchpad emitter: parse(emit(clicks)) round-trips on degrees + relationships ----
 
-test("emit: chord tones become targets, near notes signed, far notes key degrees", () => {
+test("emit: chord tones become targets, near notes signed — invariant forms only", () => {
   const clicks = [
     { midi: 59, role: "approach" },            // B, half step below C
     { midi: 62, role: "approach" },            // D, whole step above C
@@ -172,8 +172,9 @@ test("emit: chord tones become targets, near notes signed, far notes key degrees
   ];
   const r = emitFromClicks(clicks, { scalePcs: CTX.scalePcs, tonicPc: 0 });
   assert.ok(!r.error, r.error);
-  // B and D are C's adjacent scale tones, F# is chromatic: the invariant forms
-  // carry the diatonic neighbours, the coordinate carries the chromatic one
+  // B and D are C's adjacent scale tones (-s/+s); F# is chromatic but within
+  // two semitones of E, so the SIGNED semitone form carries it — relative
+  // either way, never a bare degree
   assert.equal(r.src, "(-s,+s)[1] - (+2)[3]");
   assert.match(r.discarded, /octave and placement/);
   // the round-trip is on DEGREES AND RELATIONSHIPS, never pitches or frets
@@ -184,7 +185,7 @@ test("emit: chord tones become targets, near notes signed, far notes key degrees
   assert.deepEqual(p.figures[1].approaches, [{ kind: "semi", delta: 2 }]);
 });
 
-test("emit precedence (v0.7.5): scale-adjacency FIRST, semitone fallback, degree last", () => {
+test("emit precedence (v0.7.5, amended 260812.6): scale-adjacency FIRST, semitone fallback, NO third form", () => {
   // F under G is both a whole step and the adjacent scale tone: -s wins — it
   // stores the invariant, and the figure follows a key or scale change
   const near = emitFromClicks([
@@ -204,12 +205,15 @@ test("emit precedence (v0.7.5): scale-adjacency FIRST, semitone fallback, degree
     { midi: 71, role: "target", degText: "7" }, // B natural
   ], { scalePcs: [0, 2, 3, 5, 7, 8, 11], tonicPc: 0 });
   assert.equal(harm.src, "(-s)[7]");
-  // a non-scale distant note still falls through to the absolute key degree
+  // a non-scale distant note has NO relative reading: the emitter REFUSES,
+  // naming the click — a bare degree here would be a coordinate stored where
+  // the app stores invariants (the palette's ratified rule, asserted 260812.6)
   const far = emitFromClicks([
     { midi: 56, role: "approach" },            // Ab in C MAJOR: not diatonic, far
     { midi: 60, role: "target", degText: "1" },
   ], { scalePcs: CTX.scalePcs, tonicPc: 0 });
-  assert.equal(far.src, "(b6)[1]");
+  assert.ok(far.error && /no relative reading/.test(far.error), "refusal, not fallback");
+  assert.equal(far.at, 0, "the refusal names WHICH click by index");
   // the tap override picks the other reading where it exists, and only there
   const forced = emitFromClicks([
     { midi: 65, role: "approach", form: "semi" },

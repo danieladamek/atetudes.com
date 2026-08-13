@@ -5,6 +5,32 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-12 — Triadetudes v0.8.5: the sketch bug — coercion speaks, orphans hold, invariants only (Update Log 260812.6)
+
+- **Daniel's field report against v0.8.4** ("Shape mode… switches to tones and adds sometimes
+  very odd approach notes") — three defects, fixed at their own layers:
+- **The coercion now speaks.** Sketching still moves Motion to tones — shape has no
+  vocabulary for approaches, the substance was right — but the readout announces it
+  ("approaches need the tones — Motion switched from Shape"), and an orphan click alone no
+  longer flips the toggle: the mode changes only when a figure actually reaches the field.
+- **Orphan clicks are no longer conscripted.** At click time the readout says what a pending
+  approach was taken to mean: held until you click its target — the reading locks then, not
+  before. When the target arrives, a pending click with no relative reading against it is
+  **held out by name** ("F# has no relative reading against the target — held out of the
+  figure, not renamed"), drawn dashed at reduced opacity, still removable by double-tap.
+  The tap/remove hit mapping now routes through the emitted list, so held-outs don't shift it.
+- **The emitter refuses coordinates.** `emitFromClicks`'s absolute-degree fallback is gone:
+  a bare degree in an approach slot is absolute against the key and silently stops following
+  a key or scale change — v0.7.5's defect in another path. Where no relative form exists the
+  emitter returns `{error, at}` naming the click. The grammar still parses hand-typed degree
+  approaches — user input is the user's (charter §7 boundary clause).
+- Asserted: a 132-case emit corpus greps clean of unsigned degrees in approach positions;
+  key/scale changes translate every sketch-emitted figure (v0.7.5's property, on sketch
+  output specifically); Daniel's exact sequence and its far-orphan variant pinned in
+  Playwright; rawCfg byte-unchanged, `heldOut` never serialized. MOTION re-inlined in both
+  carriers (metronome verified clean). Suite 300/300; offline `file://` at 1280/390 px,
+  zero console errors.
+
 ## 2026-08-12 — Triadetudes v0.8.4: the voice table, and a bass of its own (Update Log 260812.5)
 
 - **Roadmap §2 Sound, pulled forward — and it ships ready-to-play, not done: no assertion

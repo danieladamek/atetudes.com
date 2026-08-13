@@ -2255,39 +2255,45 @@ function approachForms(midi, targetMidi, scalePcs) {
  * placement are discarded — a figure is a design, not a fingering.
  *
  * Approach precedence (spec §4.1, v0.7.5): SCALE-ADJACENCY FIRST, semitone
- * fallback, absolute degree last. -s stores an invariant, -2 stores a
- * coordinate; the default is the reading that survives a key or scale change
- * (v0.6.6 at the level of the figure). `form: "semi"|"scale"` overrides the
- * default when that reading exists — the tap in the sketch.
+ * fallback — and NO third form (ratified 2026-08-11, the palette's rule,
+ * asserted here 2026-08-12): EMIT INVARIANTS, NEVER COORDINATES. A bare
+ * degree in an approach slot is absolute against the key and stops following
+ * a key or scale change; where no relative reading exists the emitter
+ * REFUSES, returning { error, at } with `at` the index of the offending
+ * click, so the caller can hold that click out by name rather than guess.
+ * (The GRAMMAR still parses hand-typed degree approaches — user input is the
+ * user's; this rule binds what the sketch emits.) `form: "semi"|"scale"`
+ * overrides the default when that reading exists — the tap in the sketch.
  * ctx: { scalePcs, tonicPc }.
  */
 function emitFromClicks(clicks, ctx) {
   const figures = [];
   let pending = [];
-  for (const c of clicks) {
+  for (let ci = 0; ci < clicks.length; ci++) {
+    const c = clicks[ci];
     if (c.role === "target") {
       const m = (c.degText || "").match(/^([b#]?)(13|11|9|[1-7])$/);
       if (!m) return { error: 'a target needs a degree — got "' + (c.degText || "") + '"' };
       const target = { kind: "degree", deg: +m[2],
         acc: m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0, text: m[0] };
-      const approaches = pending.map((a) => {
-        const d = a.midi - c.midi;
+      const approaches = [];
+      for (const p of pending) {
+        const a = p.click, d = a.midi - c.midi;
         const dir = d < 0 ? -1 : 1;
         const forms = approachForms(a.midi, c.midi, ctx.scalePcs);
-        if (a.form === "semi" && forms.semi) return { kind: "semi", delta: d };
-        if (a.form === "scale" && forms.scale) return { kind: "scale", delta: dir };
-        if (forms.scale) return { kind: "scale", delta: dir };
-        if (forms.semi) return { kind: "semi", delta: d };
-        // otherwise the absolute key degree of the clicked pitch class
-        const rel = mod12(a.midi - ctx.tonicPc);
-        const NAMES = { 0: [1, 0], 1: [2, -1], 2: [2, 0], 3: [3, -1], 4: [3, 0],
-          5: [4, 0], 6: [5, -1], 7: [5, 0], 8: [6, -1], 9: [6, 0], 10: [7, -1], 11: [7, 0] };
-        const [deg, acc] = NAMES[rel];
-        return { kind: "degree", deg, acc };
-      });
+        if (a.form === "semi" && forms.semi) { approaches.push({ kind: "semi", delta: d }); continue; }
+        if (a.form === "scale" && forms.scale) { approaches.push({ kind: "scale", delta: dir }); continue; }
+        if (forms.scale) { approaches.push({ kind: "scale", delta: dir }); continue; }
+        if (forms.semi) { approaches.push({ kind: "semi", delta: d }); continue; }
+        // no relative reading exists: REFUSE — a bare degree here would be a
+        // coordinate stored where the app stores invariants (v0.6.6's failure)
+        return { error: "an approach has no relative reading against its " +
+          "target — not scale-adjacent, more than two semitones. Invariants " +
+          "only: the click is refused, not renamed", at: p.at };
+      }
       figures.push({ approaches, target });
       pending = [];
-    } else pending.push(c);
+    } else pending.push({ click: c, at: ci });
   }
   if (pending.length)
     return { error: pending.length +
