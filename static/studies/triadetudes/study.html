@@ -212,7 +212,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.3</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.4</div>
 </header>
 
 <div class="cards">
@@ -276,6 +276,12 @@
         <input type="checkbox" id="clickChk2"> metronome</label>
       <label class="chk" style="margin:0"><input type="checkbox" id="countChk"> count-in</label>
       <label class="chk" style="margin:0"><input type="checkbox" id="metroChk"> mute chords</label>
+      <label class="chk" style="margin:0" title="triad voice — tone (today's), pluck (plucked string), sustain (notes hold to the chord change)">voice
+        <select id="noteVoiceSel">
+          <option value="tone">tone</option>
+          <option value="pluck">pluck</option>
+          <option value="sustain">sustain</option>
+        </select></label>
     </div>
     <div class="hint">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord
     2 beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next
@@ -491,7 +497,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.3 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.4 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -4208,6 +4214,7 @@ const st={
   roots:false, ext:"none",
   bpm:72, meter:4, splitIdx:1, metroOnly:false,
   clickOn:true, clickVol:0.8, clickAccent:true, clickSub:1, clickVoice:"beep", countIn:false,
+  noteVoice:"tone",
   cur:0,
 };
 let SEQ=[], VOIC=[], BOX=null, ECHO=[], BREAK=[];
@@ -4702,21 +4709,138 @@ function summarizeCfg(c){
     (c.placement&&c.placement!=="grip"?" · "+c.placement:"")+
     " · "+c.meter+"/4 split "+split+" · "+c.bpm+" bpm";
 }
+/* ---- the voice schedule (v0.8.4) ----
+   The timing law, made assertable: a voice changes TIMBRE, never TIMING.
+   Count, order, onsets and roles pass through from onsetsFor untouched (the
+   v0.6.5 seam — voices consume arpOnsets, they never re-derive it); only DUR
+   is voice-dependent. tone keeps every event's own dur — the anti-drift
+   baseline. pluck rings to the chord change, capped (a struck string decays
+   on its own). sustain holds; SUSTAIN_HOLD picks which meaning. Strummed
+   harmony-context events (Both mode) keep their short dur in every voice,
+   and the bass pedal holds with the sustain voice. */
+const NOTE_VOICE_NAMES=["tone","pluck","sustain"];
+const SUSTAIN_HOLD="chord"; // the (a)/(b) switch, one word, decided by ear:
+                            // "chord" = (a) hold to the chord change, the triad accumulates;
+                            // "slot"  = (b) legato to the next onset, no accumulation.
+function voiceSchedule(evs,voice,durBeats,bpm){
+  const span=(durBeats||2)*(60/bpm);
+  return evs.map((ev,i)=>{
+    let dur=ev.dur;
+    if(!ev.strum){
+      if(voice==="pluck")dur=Math.min(1.1,Math.max(ev.dur,span-ev.onset));
+      if(voice==="sustain"){
+        if(SUSTAIN_HOLD==="slot"&&ev.role!=="bass"){
+          const next=evs.slice(i+1).find(e=>!e.strum&&e.role!=="bass"&&e.onset>ev.onset);
+          dur=(next?next.onset:span)-ev.onset;
+        }else dur=span-ev.onset;
+      }
+    }
+    return {...ev,dur};
+  });
+}
 /* ============ audio ============ */
 let AC=null;
 function ctx(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
   if(AC&&AC.state==="suspended")AC.resume(); return AC; }
-function playNote(midi,when,dur=0.7,vel=0.24){
-  const ac=ctx(); if(!ac)return;
-  const t=when||ac.currentTime;
+/* ---- the note-voice table (v0.8.4) ----
+   Same shape as CLICK_VOICES, one level up: a named map, each entry building
+   a node graph terminating at destination. tone is the shipped voice,
+   verbatim — the anti-drift baseline; existing études sound identical.
+   pluck is Karplus-Strong rendered SYNCHRONOUSLY into a cached AudioBuffer
+   (deterministic, no worklet, no async load — the file:// zero-errors gate
+   stays honest). sustain is drawbar-ish additive partials held to the
+   schedule's dur with a short release. Every source is counted in LIVE and
+   its whole chain disconnects on ended — the node ceiling is asserted in
+   the worst case, not hoped. */
+let LIVE=0;
+function chain(src,nodes,t0,t1){
+  src.start(t0); src.stop(t1); LIVE++;
+  src.onended=()=>{LIVE--; src.disconnect(); for(const n of nodes)n.disconnect();};
+}
+function liveNodes(){return LIVE;}
+const PLUCK_BUFS=new Map();
+function pluckBuf(ac,midi){
+  let b=PLUCK_BUFS.get(midi); if(b)return b;
+  const freq=440*Math.pow(2,(midi-69)/12), sr=ac.sampleRate;
+  const N=Math.max(2,Math.round(sr/freq)), len=Math.floor(sr*1.2);
+  b=ac.createBuffer(1,len,sr);
+  const d=b.getChannelData(0), ring=new Float32Array(N);
+  let seed=(midi*2654435761)>>>0;             // deterministic per pitch — testable
+  for(let i=0;i<N;i++){seed=(seed*1664525+1013904223)>>>0; ring[i]=seed/2147483648-1;}
+  let idx=0;
+  for(let i=0;i<len;i++){
+    const cur=ring[idx], nxt=ring[(idx+1)%N];
+    d[i]=cur;
+    ring[idx]=0.996*0.5*(cur+nxt);            // the lowpass in the feedback path
+    idx=(idx+1)%N;
+  }
+  PLUCK_BUFS.set(midi,b); return b;
+}
+let SUSTAIN_WAVE=null;
+function sustainWave(ac){
+  if(!SUSTAIN_WAVE){
+    const amps=Float32Array.from([0,1,0.45,0.22,0.10,0.05]); // drawbar-ish partials
+    SUSTAIN_WAVE=ac.createPeriodicWave(new Float32Array(amps.length),amps);
+  }
+  return SUSTAIN_WAVE;
+}
+const NOTE_VOICES={
+  tone:{make(ac,midi,t,dur,vel){
+    const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+    o.type="triangle"; o.frequency.value=440*Math.pow(2,(midi-69)/12);
+    f.type="lowpass"; f.frequency.value=2200; f.Q.value=.4;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(vel,t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+    o.connect(f).connect(g).connect(ac.destination);
+    chain(o,[f,g],t,t+dur+0.05);
+  }},
+  pluck:{make(ac,midi,t,dur,vel){
+    const s=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
+    s.buffer=pluckBuf(ac,midi);
+    f.type="lowpass"; f.frequency.value=3400; f.Q.value=.2;
+    g.gain.setValueAtTime(vel*1.5,t);
+    g.gain.setValueAtTime(vel*1.5,t+Math.max(0.01,dur-0.08));
+    g.gain.linearRampToValueAtTime(0,t+dur);
+    s.connect(f).connect(g).connect(ac.destination);
+    chain(s,[f,g],t,t+dur+0.02);
+  }},
+  sustain:{make(ac,midi,t,dur,vel){
+    const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+    o.setPeriodicWave(sustainWave(ac));
+    o.frequency.value=440*Math.pow(2,(midi-69)/12);
+    f.type="lowpass"; f.frequency.value=2600; f.Q.value=.3;
+    const a=Math.min(0.03,dur*0.3), r=Math.min(0.09,dur*0.4);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(vel*0.85,t+a);
+    g.gain.setValueAtTime(vel*0.85,t+Math.max(a,dur-r));
+    g.gain.linearRampToValueAtTime(0,t+dur);
+    o.connect(f).connect(g).connect(ac.destination);
+    chain(o,[f,g],t,t+dur+0.05);
+  }},
+};
+const BASS_VOICE={make(ac,midi,t,dur,vel){
+  // a bass of its own (roadmap §2): mellower, darker filter — the pedal no
+  // longer smears into the triads' register
   const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
   o.type="triangle"; o.frequency.value=440*Math.pow(2,(midi-69)/12);
-  f.type="lowpass"; f.frequency.value=2200; f.Q.value=.4;
+  f.type="lowpass"; f.frequency.value=520; f.Q.value=.5;
+  const r=Math.min(0.12,dur*0.4);
   g.gain.setValueAtTime(0,t);
-  g.gain.linearRampToValueAtTime(vel,t+0.008);
-  g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+  g.gain.linearRampToValueAtTime(vel,t+0.012);
+  g.gain.setValueAtTime(vel,t+Math.max(0.012,dur-r));
+  g.gain.linearRampToValueAtTime(0,t+dur);
   o.connect(f).connect(g).connect(ac.destination);
-  o.start(t); o.stop(t+dur+0.05);
+  chain(o,[f,g],t,t+dur+0.05);
+}};
+function playNote(midi,when,dur=0.7,vel=0.24,voice){
+  const ac=ctx(); if(!ac)return;
+  const v=NOTE_VOICES[voice||st.noteVoice]||NOTE_VOICES.tone;
+  v.make(ac,midi,when||ac.currentTime,dur,vel);
+}
+function playBass(midi,when,dur,vel=0.3){
+  const ac=ctx(); if(!ac)return;
+  BASS_VOICE.make(ac,midi,when||ac.currentTime,dur,vel);
 }
 /* metronome voices — three synthesized clicks, zero assets. Accent character is
    per-voice (frequency/filter + gain per level); level 2=bar,1=chord,0=beat,-1=sub */
@@ -4784,7 +4908,10 @@ function onsetsFor(i,durBeats){
 function strum(i,when,durBeats){
   const ac=ctx(); if(!ac)return;
   const t=when||ac.currentTime+0.02;
-  for(const ev of onsetsFor(i,durBeats)) playNote(ev.midi,t+ev.onset,ev.dur,0.2);
+  for(const ev of voiceSchedule(onsetsFor(i,durBeats),st.noteVoice,durBeats,st.bpm)){
+    if(ev.role==="bass")playBass(ev.midi,t+ev.onset,ev.dur);
+    else playNote(ev.midi,t+ev.onset,ev.dur,0.2,st.noteVoice);
+  }
 }
 
 /* ---- the sounding-note pulse (v0.6.5) ----
@@ -6049,7 +6176,8 @@ function rawCfg(){
     breakProg:st.breakProg.map(e=>({sym:e.sym,us:e.us})),
     bpm:st.bpm,meter:st.meter,splitIdx:st.splitIdx,
     clickOn:st.clickOn,clickVol:st.clickVol,clickAccent:st.clickAccent,
-    clickSub:st.clickSub,clickVoice:st.clickVoice,countIn:st.countIn};
+    clickSub:st.clickSub,clickVoice:st.clickVoice,countIn:st.countIn,
+    noteVoice:st.noteVoice};
 }
 
 function applyRaw(c){
@@ -6077,7 +6205,9 @@ function applyRaw(c){
       .map(e=>({sym:e.sym,us:e.us??null})),
     // metronome fields default for entries saved before v0.5.1 — old études restore intact
     clickOn:c.clickOn??true,clickVol:c.clickVol??0.8,clickAccent:c.clickAccent??true,
-    clickSub:c.clickSub??1,clickVoice:c.clickVoice??"beep",countIn:c.countIn??false});
+    clickSub:c.clickSub??1,clickVoice:c.clickVoice??"beep",countIn:c.countIn??false,
+    // pre-item entries default exactly as clickVoice does — old études restore on tone
+    noteVoice:c.noteVoice??"tone"});
   // foreign/imported configs may be internally inconsistent — a pivot string
   // outside the set re-seats to the default before anything derives from it
   if(!st.set.includes(st.pivotString))defaultPivots();
@@ -6119,6 +6249,7 @@ function syncClickUI(){
   const a=document.getElementById("accChk"); if(a)a.checked=st.clickAccent;
   const s=document.getElementById("subSel"); if(s)s.value=String(st.clickSub);
   const vc=document.getElementById("voiceSel"); if(vc)vc.value=st.clickVoice;
+  const nv=document.getElementById("noteVoiceSel"); if(nv)nv.value=st.noteVoice;
   const c=document.getElementById("countChk"); if(c)c.checked=st.countIn;
   const m=document.getElementById("metroChk"); if(m)m.checked=st.metroOnly;
   const v=document.getElementById("clickVolR");
@@ -6368,6 +6499,7 @@ function initControls(){
   document.getElementById("accChk").addEventListener("change",e=>{st.clickAccent=e.target.checked;renderCfg();});
   document.getElementById("subSel").addEventListener("change",e=>{st.clickSub=+e.target.value;renderCfg();});
   document.getElementById("voiceSel").addEventListener("change",e=>{st.clickVoice=e.target.value;click();renderCfg();});
+  document.getElementById("noteVoiceSel").addEventListener("change",e=>{st.noteVoice=e.target.value;playNote(57);renderCfg();});
   document.getElementById("countChk").addEventListener("change",e=>{st.countIn=e.target.checked;renderCfg();});
   document.getElementById("clickVolR").addEventListener("input",e=>{
     st.clickVol=+e.target.value/100;

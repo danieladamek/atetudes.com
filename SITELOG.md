@@ -5,6 +5,33 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-12 — Triadetudes v0.8.4: the voice table, and a bass of its own (Update Log 260812.5)
+
+- **Roadmap §2 Sound, pulled forward — and it ships ready-to-play, not done: no assertion
+  can tell you a voice sounds good, so the item stays open until Daniel has heard it.**
+- `NOTE_VOICES`, the CLICK_VOICES pattern one level up: **tone** (today's triangle voice,
+  verbatim, still the default — existing études sound identical), **pluck** (Karplus-Strong,
+  noise burst into a lowpassed feedback delay, rendered synchronously into cached
+  AudioBuffers from a deterministic seed — no worklet, no async load, charter §5 intact:
+  zero assets), **sustain** (drawbar-ish additive partials; notes hold to the chord change,
+  so the common tone audibly holds while one voice moves — the thing the app teaches, which
+  the fast decay was hiding). The **bass has its own voice** regardless of the picker:
+  triangle into a 520 Hz lowpass, a pedal that no longer smears into the triads.
+- **The (a)/(b) decision**: shipped (a), hold-to-the-chord-change, bass pedal included. The
+  switch is the one-word const `SUSTAIN_HOLD` in study.html (search for it; `"chord"` → (a),
+  `"slot"` → (b) legato). Daniel decides by playing, not by reading.
+- The timing law is asserted, not promised: `voiceSchedule` consumes the v0.6.5 onset seam
+  and varies only duration — note count, onsets, midis and roles pinned identical across
+  every voice; tone's schedule byte-equal to the raw event list (anti-drift). Selector in
+  the Transport card beside *mute chords*; `noteVoice` serialized with `?? "tone"` so
+  pre-item notebook entries restore unchanged (asserted byte-identical in-browser).
+- Node hygiene: every source counted, whole chain disconnected on ended. Worst case
+  (160 bpm, 16-note pattern, sustain voice, bass sounding) peaked at **34 live nodes**
+  against an asserted ceiling of 64, and drained to 0 after stop.
+- Verified: suite 298/298 (new triadetudes-voices.test.mjs; all characterization pins
+  green); Playwright offline `file://` at 1280/390 px, zero console errors, voice-select ↔
+  voice-table drift guard, rawCfg round-trips; Transport card inspected at both widths.
+
 ## 2026-08-12 — The music palette: Metronome v1.4.0 · Triadetudes v0.8.3 (Update Log 260812.4)
 
 - **The notepad arc's child 3 — palette output that is valid app input by construction.**
