@@ -254,3 +254,48 @@ test("degreeSemis is chord.mjs's arithmetic, not a second table", () => {
   assert.equal(degreeSemis(9, -1), 13);
   assert.equal(degreeSemis(13, 0) % 12, degreeSemis(6, 0), "compounds reduce mod 7");
 });
+
+// ---- 260812.7: the emitter speaks shape too — the mode is the caller's ----
+
+test("shape emission: chord-tone clicks with slots become a slot pattern that round-trips", () => {
+  const r = emitFromClicks([
+    { midi: 67, role: "target", degText: "5", slot: "H" },
+    { midi: 60, role: "target", degText: "1", slot: "L" },
+    { midi: 64, role: "target", degText: "3", slot: "M" },
+  ], { scalePcs: CTX.scalePcs, tonicPc: 0, mode: "shape" });
+  assert.ok(!r.error, r.error);
+  assert.equal(r.src, "H - L - M");
+  const p = parse(r.src, "shape");
+  assert.ok(!p.error);
+  assert.deepEqual(p.figures.map((f) => f.target.slot), ["H", "L", "M"]);
+  assert.equal(serialize(p), r.src, "parse → serialize fixed point in shape too");
+});
+
+test("shape emission refuses an approach by index — it never decides to switch modes", () => {
+  const r = emitFromClicks([
+    { midi: 60, role: "target", degText: "1", slot: "L" },
+    { midi: 61, role: "approach", degText: null },
+    { midi: 64, role: "target", degText: "3", slot: "M" },
+  ], { scalePcs: CTX.scalePcs, tonicPc: 0, mode: "shape" });
+  assert.match(r.error, /shape has no approaches — switch to the tones/);
+  assert.equal(r.at, 1, "the refusal names WHICH click");
+});
+
+test("shape emission refuses a slotless chord tone by index", () => {
+  const r = emitFromClicks([
+    { midi: 60, role: "target", degText: "1", slot: null },
+  ], { scalePcs: CTX.scalePcs, tonicPc: 0, mode: "shape" });
+  assert.match(r.error, /no slot/);
+  assert.equal(r.at, 0);
+});
+
+test("absent ctx.mode is the pre-260812.7 tones contract — characterization pin", () => {
+  const clicks = [
+    { midi: 59, role: "approach", degText: null, slot: "M" },   // slot present and IGNORED in tones
+    { midi: 60, role: "target", degText: "1", slot: "L" },
+  ];
+  const bare = emitFromClicks(clicks, { scalePcs: CTX.scalePcs, tonicPc: 0 });
+  const tones = emitFromClicks(clicks, { scalePcs: CTX.scalePcs, tonicPc: 0, mode: "tones" });
+  assert.equal(bare.src, "(-s)[1]", "byte-unchanged from v0.8.5");
+  assert.equal(tones.src, bare.src, "explicit tones = default");
+});

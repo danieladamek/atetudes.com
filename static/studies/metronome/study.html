@@ -2247,12 +2247,21 @@ function approachForms(midi, targetMidi, scalePcs) {
 }
 
 /**
- * emitFromClicks(clicks, ctx) → { src, discarded } | { error }
- * clicks: [{midi, role:"target"|"approach", degText?, form?}] in click order
- * (= playing order). Classification happens at click time against the
+ * emitFromClicks(clicks, ctx) → { src, discarded } | { error, at? }
+ * clicks: [{midi, role:"target"|"approach", degText?, form?, slot?}] in click
+ * order (= playing order). Classification happens at click time against the
  * then-current chord (the honest reading); this function only serialises.
  * Emission is deliberately LOSSY: degrees and relationships survive; octave and
  * placement are discarded — a figure is a design, not a fingering.
+ *
+ * THE SKETCH SPEAKS BOTH LANGUAGES (260812.7): ctx.mode picks the output
+ * grammar. "shape" emits a slot pattern — every click must be a chord tone
+ * (role target) carrying a slot letter (H/M/L, the caller's string-set rule);
+ * an approach or a slotless click refuses with { error, at } naming it, since
+ * shape has no approach vocabulary and a pattern is made of slots. "tones"
+ * (the default — absent ctx.mode is the pre-260812.7 contract, pinned) emits
+ * degree figures exactly as before. The emitter never chooses the mode; the
+ * caller's toggle does. That is the whole point.
  *
  * Approach precedence (spec §4.1, v0.7.5): SCALE-ADJACENCY FIRST, semitone
  * fallback — and NO third form (ratified 2026-08-11, the palette's rule,
@@ -2267,6 +2276,24 @@ function approachForms(midi, targetMidi, scalePcs) {
  * ctx: { scalePcs, tonicPc }.
  */
 function emitFromClicks(clicks, ctx) {
+  if (ctx.mode === "shape") {
+    const figures = [];
+    for (let ci = 0; ci < clicks.length; ci++) {
+      const c = clicks[ci];
+      if (c.role !== "target")
+        return { error: "shape has no approaches — switch to the tones to " +
+          "use this note", at: ci };
+      if (!c.slot)
+        return { error: "no slot — the click is not on the set's strings " +
+          "(or the grip's notes)", at: ci };
+      figures.push({ approaches: [], target: { kind: "slot", slot: c.slot } });
+    }
+    if (!figures.length) return { error: "nothing to emit — the sketch is empty" };
+    if (figures.length > MAX_EVENTS)
+      return { error: figures.length + " notes — " + MAX_EVENTS + " is the ceiling" };
+    return { src: serialize({ mode: "shape", figures, n: figures.length }),
+      discarded: "octave and placement dropped — a figure is a design, not a fingering" };
+  }
   const figures = [];
   let pending = [];
   for (let ci = 0; ci < clicks.length; ci++) {

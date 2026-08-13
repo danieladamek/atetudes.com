@@ -212,7 +212,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.5</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.6</div>
 </header>
 
 <div class="cards">
@@ -415,6 +415,7 @@
     </div>
   </div>
   <div class="hint" id="sketchNote"></div>
+  <div class="hint" id="sketchHelp" style="margin-top:2px"></div>
   <div class="hint" id="arpHint"></div>
   <div class="hint" id="placeHint"></div>
 </div>
@@ -497,7 +498,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.5 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.6 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -2666,12 +2667,21 @@ function approachForms(midi, targetMidi, scalePcs) {
 }
 
 /**
- * emitFromClicks(clicks, ctx) → { src, discarded } | { error }
- * clicks: [{midi, role:"target"|"approach", degText?, form?}] in click order
- * (= playing order). Classification happens at click time against the
+ * emitFromClicks(clicks, ctx) → { src, discarded } | { error, at? }
+ * clicks: [{midi, role:"target"|"approach", degText?, form?, slot?}] in click
+ * order (= playing order). Classification happens at click time against the
  * then-current chord (the honest reading); this function only serialises.
  * Emission is deliberately LOSSY: degrees and relationships survive; octave and
  * placement are discarded — a figure is a design, not a fingering.
+ *
+ * THE SKETCH SPEAKS BOTH LANGUAGES (260812.7): ctx.mode picks the output
+ * grammar. "shape" emits a slot pattern — every click must be a chord tone
+ * (role target) carrying a slot letter (H/M/L, the caller's string-set rule);
+ * an approach or a slotless click refuses with { error, at } naming it, since
+ * shape has no approach vocabulary and a pattern is made of slots. "tones"
+ * (the default — absent ctx.mode is the pre-260812.7 contract, pinned) emits
+ * degree figures exactly as before. The emitter never chooses the mode; the
+ * caller's toggle does. That is the whole point.
  *
  * Approach precedence (spec §4.1, v0.7.5): SCALE-ADJACENCY FIRST, semitone
  * fallback — and NO third form (ratified 2026-08-11, the palette's rule,
@@ -2686,6 +2696,24 @@ function approachForms(midi, targetMidi, scalePcs) {
  * ctx: { scalePcs, tonicPc }.
  */
 function emitFromClicks(clicks, ctx) {
+  if (ctx.mode === "shape") {
+    const figures = [];
+    for (let ci = 0; ci < clicks.length; ci++) {
+      const c = clicks[ci];
+      if (c.role !== "target")
+        return { error: "shape has no approaches — switch to the tones to " +
+          "use this note", at: ci };
+      if (!c.slot)
+        return { error: "no slot — the click is not on the set's strings " +
+          "(or the grip's notes)", at: ci };
+      figures.push({ approaches: [], target: { kind: "slot", slot: c.slot } });
+    }
+    if (!figures.length) return { error: "nothing to emit — the sketch is empty" };
+    if (figures.length > MAX_EVENTS)
+      return { error: figures.length + " notes — " + MAX_EVENTS + " is the ceiling" };
+    return { src: serialize({ mode: "shape", figures, n: figures.length }),
+      discarded: "octave and placement dropped — a figure is a design, not a fingering" };
+  }
   const figures = [];
   let pending = [];
   for (let ci = 0; ci < clicks.length; ci++) {
@@ -5267,9 +5295,28 @@ function spelled(midi){
    chord rides along so the readout can NAME what classification ran against.
    Playback never writes here — clicks only. All listeners element-scoped. */
 function sketchNote(t){ const e=document.getElementById("sketchNote"); if(e)e.textContent=t; }
-function sketchReset(){ if(ECHO.length){ ECHO=[]; sketchNote(""); } }
+function sketchReset(){ if(ECHO.length){ ECHO=[]; sketchNote(""); sketchHelp(false); } }
 function sketchCtx(){ return {scalePcs:[...scaleData().pcs],tonicPc:pcOf(st.key)}; }
 function sketchLastTarget(){ let t=-1; ECHO.forEach((n,i)=>{if(n.role==="target")t=i;}); return t; }
+function slotOfClick(note){
+  // the slot is derived at click time by the set's own rule: a fretboard
+  // click takes its string's place in setLowHigh (L/M/H); a keyboard click
+  // takes the slot of the grip note with the same midi. No match = no slot,
+  // and shape emission will hold the click out by name rather than guess.
+  if(note.string!=null){
+    const k=st.setLowHigh.indexOf(note.string);
+    return k<0?null:"LMH"[k];
+  }
+  const v=VOIC[st.cur];
+  const hit=v&&v.notes.find(n=>n.midi===note.midi);
+  if(!hit)return null;
+  const k2=st.setLowHigh.indexOf(hit.string);
+  return k2<0?null:"LMH"[k2];
+}
+function sketchHelp(on){
+  const e=document.getElementById("sketchHelp");
+  if(e)e.textContent=on?"tap a mark to switch its reading; double-tap removes it":"";
+}
 function sketchClick(note){
   const midi=typeof note==="number"?note:note.midi;
   const ch=SEQ[st.cur];
@@ -5279,65 +5326,71 @@ function sketchClick(note){
   }
   const cls=classifyClick(midi,ch);
   ECHO.push({midi,string:note.string??null,fret:note.fret??null,
+    slot:slotOfClick(note),
     role:cls.role,degText:cls.degText,form:null,
     rootPc:ch?ch.rootPc:pcOf(st.key),chQ:ch?ch.q:"maj",
     chLabel:ch?ch.label:st.key});
   sketchSync();
 }
-function sketchEmit(clicks,base){
-  // the emitter refuses coordinates (260812.6: invariants only) and names
-  // WHICH click by index; the sketch answers by HOLDING that click out —
-  // never conscripting it into a reading it was not chosen for — and keeps
-  // emitting the rest. Returns the emitter result plus the held ECHO indices.
+function sketchEmit(clicks,base,mode){
+  // the emitter refuses what the mode cannot say (260812.6 tones: no
+  // coordinates; 260812.7 shape: no approaches, no slotless clicks) and
+  // names WHICH click by index; the sketch answers by HOLDING that click
+  // out — never conscripting or renaming it — and keeps emitting the rest.
+  // Returns the emitter result plus [{i, reason}] for every held click.
   const held=[];
   const idx=clicks.map((_,i)=>i);
   for(;;){
-    const r=MOTION.emitFromClicks(idx.map(i=>clicks[i]),sketchCtx());
+    const r=MOTION.emitFromClicks(idx.map(i=>clicks[i]),{...sketchCtx(),mode});
     if(r.error!==undefined&&r.at!==undefined){
-      held.push(base+idx[r.at]); idx.splice(r.at,1); continue;
+      held.push({i:base+idx[r.at],reason:r.error}); idx.splice(r.at,1); continue;
     }
     return {...r,held};
   }
 }
 function sketchSync(){
-  // re-emit the whole buffer and fill the field live; a trailing approach is
-  // a sketch IN PROGRESS, not an error — the complete prefix plays, the
-  // waiting notes stay visible on the neck and the readout says what's owed.
-  // Two manners rules (260812.6): the mode toggle is never reversed without
-  // the readout SAYING SO, and a click's reading is stated when it is taken —
-  // a pending approach is announced as held-until-target, and one that gets
-  // no relative reading is held OUT by name, never renamed to a coordinate.
-  if(!ECHO.length){ sketchNote(""); renderActive(); return; }
+  // re-emit the whole buffer and fill the field live, IN THE MODE THE USER
+  // SET (260812.7): the sketch speaks both languages and NEVER changes the
+  // toggle. Shape: chord-tone clicks become a slot pattern; an approach or a
+  // slotless click is held out with the reason (switching to the tones is
+  // the user's move, and the sketch survives the switch). Tones: exactly the
+  // 260812.6 behaviour — trailing approaches wait, unresolvables hold out.
+  // The readout is STATUS; the always-true help line lives in #sketchHelp.
+  if(!ECHO.length){ sketchNote(""); sketchHelp(false); renderActive(); return; }
   ECHO.forEach(n=>{n.heldOut=false;});   // readings re-derive on every sync
-  const clicks=ECHO.map(n=>({midi:n.midi,role:n.role,degText:n.degText,form:n.form}));
-  const modeMsg=()=>{
-    if(st.motionMode!=="tones"){
-      st.motionMode="tones"; syncMotionUI();
-      return "approaches need the tones — Motion switched from Shape. ";
-    }
-    return "";
-  };
+  sketchHelp(true);
+  const clicks=ECHO.map(n=>({midi:n.midi,role:n.role,degText:n.degText,form:n.form,slot:n.slot}));
+  const against=[...new Set(ECHO.map(n=>n.chLabel))].join(", ");
   const heldMsg=(held)=>{
     if(!held.length)return "";
-    held.forEach(i=>{ECHO[i].heldOut=true;});
-    const names=held.map(i=>pcName(((ECHO[i].midi%12)+12)%12,st.key)).join(", ");
-    return names+(held.length>1?" have":" has")+" no relative reading against "+
-      "the target (not scale-adjacent, more than two semitones) — held out of "+
-      "the figure, not renamed; double-tap to remove. ";
+    held.forEach(h=>{ECHO[h.i].heldOut=true;});
+    const names=held.map(h=>pcName(((ECHO[h.i].midi%12)+12)%12,st.key)).join(", ");
+    const reasons=[...new Set(held.map(h=>h.reason))].join("; ");
+    return names+" held out — "+reasons+"; double-tap to remove. ";
   };
-  const r=sketchEmit(clicks,0);
-  const against=[...new Set(ECHO.map(n=>n.chLabel))].join(", ");
+  if(st.motionMode==="shape"){
+    const r=sketchEmit(clicks,0,"shape");
+    const said=heldMsg(r.held);
+    if(r.src){
+      applyMotionInput(r.src,{fromSketch:true});
+      sketchNote(said+"pattern: "+r.src.split(" ").join("")+" — "+
+        (ECHO.length-r.held.length)+" notes on "+against);
+    }else{
+      sketchNote(said||"the sketch is empty");
+    }
+    renderActive(); return;
+  }
+  const r=sketchEmit(clicks,0,"tones");
   if(r.src){
-    const said=modeMsg()+heldMsg(r.held);
+    const said=heldMsg(r.held);
     applyMotionInput(r.src,{fromSketch:true});
-    sketchNote(said+"sketch: "+(ECHO.length-r.held.length)+" notes, classified against "+
-      against+" — tap a mark to switch its reading; double-tap removes it");
+    sketchNote(said+"sketch: "+(ECHO.length-r.held.length)+" notes, classified against "+against);
   }else{
     const lastT=sketchLastTarget();
     let said="";
     if(lastT>=0){
-      const pre=sketchEmit(clicks.slice(0,lastT+1),0);
-      if(pre.src){ said=modeMsg()+heldMsg(pre.held);
+      const pre=sketchEmit(clicks.slice(0,lastT+1),0,"tones");
+      if(pre.src){ said=heldMsg(pre.held);
         applyMotionInput(pre.src,{fromSketch:true}); }
     }
     const nPend=ECHO.filter((n,i)=>i>lastT&&!n.heldOut).length;
@@ -5696,9 +5749,12 @@ function renderActive(){
       if(fe&&fe.length===emitted.length)
         fe.forEach((en,k)=>sketchHit(layer,fx(en.fret),fy(en.string),emitted[k]));
       for(let i=0;i<ECHO.length;i++){
-        if(i<=lastT&&!ECHO[i].heldOut)continue;   // drawn by the figure itself
+        const committed=i<=lastT&&!ECHO[i].heldOut;
+        if(committed&&st.motionMode!=="shape")continue;  // tones: the figure draws it
         const n=ECHO[i];
         if(n.string===null)continue;   // keyboard clicks appear on the keyboard
+        if(committed){ sketchHit(layer,fx(n.fret),fy(n.string),i); continue; }
+        // shape: the grip dot IS the mark — only the tap/remove surface is added
         const chrom=!sdPcs.includes(((n.midi%12)+12)%12);
         const col=chrom?"#7847A8":FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref,ch.q).fam];
         el("circle",{cx:fx(n.fret),cy:fy(n.string),r:14*0.6,fill:"#fff",
@@ -5825,8 +5881,10 @@ function renderKbd(){
     const bass2=ch?bassPcFor(ch):null, ref2=ch?(bass2!==null?bass2:ch.rootPc):null;
     for(let i=0;i<ECHO.length;i++){
       const n=ECHO[i]; if(n.string!==null)continue;
-      if(i<=lastT&&!n.heldOut)continue;   // in the emitted figure already
+      const committed=i<=lastT&&!n.heldOut;
+      if(committed&&st.motionMode!=="shape")continue;  // tones: the figure draws it
       const g=kbdGeom(n.midi); if(!g)continue;
+      if(committed){ sketchHit(svg,g.x,g.y,i,10); continue; }
       const chrom=!scaleData().pcs.includes(((n.midi%12)+12)%12);
       const col=chrom?"#7847A8":(ch?FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref2,ch.q).fam]:"#73737A");
       el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:g.black?"#212126":"#fff",
@@ -6487,6 +6545,10 @@ function initControls(){
     b.addEventListener("click",()=>{
       if(b.disabled||b.dataset.mm===st.motionMode)return;
       st.motionMode=b.dataset.mm;
+      // a live sketch SURVIVES the switch and re-emits in the new language
+      // (260812.7) — the buffer re-speaks, no text ever crosses the parsers,
+      // so v0.7.7's rule holds. With no sketch, the mode's first preset loads.
+      if(ECHO.length){ syncMotionUI(); sketchSync(); return; }
       // switching mode selects that mode's FIRST PRESET (v0.7.7): the field
       // is populated by a selection, never carried across the switch — text
       // can no longer reach the other mode's parser, by construction

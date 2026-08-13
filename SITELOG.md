@@ -5,6 +5,32 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-12 — Triadetudes v0.8.6: the sketch speaks shape (Update Log 260812.7)
+
+- **Daniel on v0.8.5: "The bug is still there." He was right** — v0.8.5 fixed the manners
+  and left the bug. `emitFromClicks` hardcoded `mode:"tones"`; there was no shape path, so
+  the switch was never a judgement about approaches — it was unconditional, and the v0.8.5
+  announcement made a limitation look like a decision.
+- **The emitter now speaks both languages.** `ctx.mode:"shape"` emits a slot pattern (H/M/L)
+  from chord-tone clicks — click three chord tones in Shape mode and you get exactly a slot
+  pattern, and **the mode never changes**: no switch, no announcement, nothing to forgive.
+  The slot is derived at click time (the string was being dropped at `sketchSync`): a
+  fretboard click takes its string's place in the set, a keyboard click the grip note with
+  the same midi.
+- **A non-chord-tone in shape mode is the user's decision.** It is held out with the reason
+  — "shape has no approaches — switch to the tones to use this note" — and if they switch,
+  **the sketch survives the toggle and re-speaks in the new language** (the buffer re-emits;
+  no text ever crosses the parsers, so v0.7.7's rule holds). Tones mode is byte-unchanged
+  from v0.8.5 — characterization-pinned.
+- **The readout split by lifetime**: status stays in `#sketchNote`; the always-true help
+  line ("tap a mark…") moved to its own `#sketchHelp`; the event message class no longer
+  exists because nothing switches automatically anymore. Both elements asserted wrapping,
+  never clipping, at 1280 and 390 px.
+- Verified: suite 304/304 (shape emission parse→serialize fixed points, refusals named by
+  index, the absent-ctx.mode tones pin); Playwright regression at both widths — Daniel's
+  chord-tones-only sequence stays in Shape start to finish, asserted on the mode itself;
+  rawCfg round-trips with slot/heldOut never serialized; MOTION re-inlined in both carriers.
+
 ## 2026-08-12 — Triadetudes v0.8.5: the sketch bug — coercion speaks, orphans hold, invariants only (Update Log 260812.6)
 
 - **Daniel's field report against v0.8.4** ("Shape mode… switches to tones and adds sometimes
