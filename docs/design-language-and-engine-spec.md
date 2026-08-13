@@ -7,7 +7,7 @@ date: 2026-08-05
 type: spec
 status: active
 reviewed: true
-doc_version: v1.1
+doc_version: v1.3
 tags: [Etudes, knowledge-base, specification, design-language, canonical]
 ---
 
@@ -61,6 +61,14 @@ feature, deliberately exploited (e.g., relative-major/minor rows, guide-tone han
 v1.0 pairs 2/6 and 3/4 were lightness-twins differing only in adjacent hues, which collapse
 at small render sizes. Deliberation record in `🛠 Working/`; see Update Log 260806.1.)*
 
+*(v1.2, 2026-08-09: §2.5 added for the interactive studies' chord-symbol grammar; golden
+rule 8 generalizes §2.3's reserved-palette principle. Degree colors themselves unchanged.
+See Update Log 260809.8.)*
+
+*(v1.3, 2026-08-10: §2.6 added for approach-tone and role marks in derived material; the
+reserved violet is spent on chromatic approach tones. Degree colors themselves unchanged.
+See Update Log 260810.4.)*
+
 Rules:
 - Flats and sharps share their family's color (b3 = blue, #11 = silver, b9 = green, o7/bb7 = amber).
 - Amber was chosen over yellow for visibility on white paper and white piano keys.
@@ -68,7 +76,7 @@ Rules:
 - The 5th is the deliberate "neutral" — black — because it carries the least harmonic information.
 - The 4th extends that principle: **the perfect intervals are the achromatic family** — the 5th its black pillar, the 4th (its inversion) the light silver shade. The 4th's frequent avoid-tone role is the connotation: it wears no color, and a sus4 resolving to 3 visibly *gains* color. Accepted leakage: #11 inherits silver despite being a Lydian color tone — the same trade already accepted for b5/#5 sharing the 5th's black.
 - Silver 4/11 sits between the annotation gray (0.45) and the bar-line light gray (0.80); keep it in that band so it neither collides with dashed loops/annotations below nor washes into bar furniture above.
-- Violet #7847A8 is retired from the degree palette and reserved for a possible future annotation channel (e.g., chromatic passing tones).
+- Violet #7847A8 is outside the degree palette. **Spent at v1.3** on chromatic approach tones (§2.6); it is an annotation channel and never denotes a degree.
 - Supporting grays: ink #212126 (lines, names), gray (0.45,0.45,0.48) (annotations), light (0.80,0.80,0.82) (bar lines, tags).
 
 ### 2.2 Shape code (scale/mode charts)
@@ -90,6 +98,8 @@ Rules:
   below (vocabulary/reference pages only, not tune pages).
 - Moving-voice annotation (cycle pages): neutral dark ring around the note about to move
   ("ringed note" — never a colored ring, which would collide with the degree palette).
+- Approach-tone marks (interactive studies): see §2.6 — reduced size, hollow, no interval
+  label, no ring.
 
 **Piano keyboards** (horizontal strips):
 - Range auto-fits the voicing (min 2 octaves), C keys labeled ("C3", "C4"…).
@@ -112,6 +122,74 @@ colored by degree; proper key signatures per tune/key.
   with the form explained in the footer.
 - Consistency beats cleverness: when one page type invents a convention (bar labels, set
   tags, inversion tags below diagrams), every page type adopts it.
+
+### 2.5 Chord-symbol grammar for derived material (interactive studies)
+
+The interactive studies derive triads from chord symbols and display both identities at
+once. That display is part of the design language and is fixed here.
+
+**Triad quality suffixes.** major = *(none)* · minor = `m` · diminished = `°` ·
+augmented = `+`. These are the only four triad qualities the family's engines play.
+
+**Symmetric structures.** Augmented triads and °7 chords have more than one equally valid
+reading of the same pitch classes — three rotations for an augmented triad (major thirds),
+four for °7 (minor thirds). **Every rotation is an honest candidate and must be offered to
+the player**, not silently discarded. The one shown by default is derived, never arbitrary:
+
+> **Default rotation rule.** Rank first the rotation rooted on the *lowest degree of the
+> rootless stack* — the 3 in major and dominant families, the ♭3 in minor families.
+
+Worked: Cmaj7 → Em (3) · G7 → B° (3) · Dm7 → F (♭3) · Cm7♭5 → E♭m (♭3) ·
+CmMaj7 → E♭+ (♭3) · DmMaj7 → F+ (♭3). One rule, no table.
+
+**Root spelling.** A triad's root is spelled from its degree relative to the chord root,
+falling back to plain pitch-class names wherever that spelling would require a double
+accidental.
+
+**The upper-structure sentence.** An upper structure is not equal to the chord it
+completes; it becomes that chord only over its bass. Therefore:
+
+> **Every prefix of a displayed identity must be true on its own.**
+
+Permitted forms — `‹triad› over ‹bass› = ‹symbol›` where there is room for prose,
+`‹triad›/‹bass› = ‹symbol›` where there is not (slash notation is also the studies' own
+input syntax). **Forbidden** — `‹triad› = ‹symbol› over ‹bass›`, whose leading clause reads
+as a false equality.
+
+**Quality corpus.** The interactive studies accept the chip editor's full quality menu
+(sixths, ninths, thirteenths, altered and sus dominants, mMaj7, and the four bare triads).
+The print generators remain at maj7 / m7 / 7 / m7♭5 / °7 per §3.4; the two corpora are
+allowed to differ and this is the record of that.
+
+### 2.6 Role marks in derived material (interactive studies)
+
+A derived note event carries a **role** — `chord` (a tone of the sounding harmony),
+`approach` (an ornament resolving to a chord tone), or `bass`. Role and function are
+separate facts and are drawn in separate channels.
+
+- **Role is weight, never color.** Chord tones draw at full marker size, solid. Approach
+  tones draw at **0.6 of the host marker's radius**, hollow — the color becomes the stroke
+  on an unfilled mark, with stroke weight scaling from the marker. This is golden rule 8's
+  "emphasis is weight and neutral ink" applied to the ornament/target distinction. The
+  **ratio** is law; the exact value may be tuned within 0.55–0.7 at render inspection, since
+  the same treatment hosts on r-14 fretboard dots and r-6/7.5 keyboard circles.
+- **Function is still color.** A **diatonic** approach tone is a scale degree and keeps its
+  §2.1 color. A **chromatic** approach tone — pitch class outside the current scale — takes
+  **violet #7847A8**, spending the annotation channel §2.1 reserved for this case. Violet
+  never denotes a degree and never enters the degree palette.
+- **No new ring.** Rings are fully allocated: dashed = pivot and isolation zone; neutral
+  dark = the moving voice (§2.3). Approach tones add none.
+- **No interval label.** §2.3's "interval label inside every dot" does not apply to approach
+  tones: at 0.6 radius the glyph is illegible, and an ornament's identity is its motion, not
+  its name. This is the one stated exception to that rule.
+- **Connection.** An approach figure joins its target with a slur in annotation gray
+  (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots — the same under-draw convention as
+  §2.2's dashed loops.
+- **Engraved notation.** Approach tones render as cue-size noteheads under the same color
+  rules.
+- Role marks **derive** from the note event's `role` and its pitch class against the current
+  scale. A hand-assigned role mark is a golden rule 1 violation even where the output
+  matches.
 
 ---
 
@@ -243,6 +321,16 @@ clipping, off-page elements) don't throw assertions.
 > 7. Voice-leading engines available: cycling 4ths (hold R+3, drop 5→R and 7→3), cycling
 >    6ths (7 falls to new R), cycling 3rds (R rises to new 7), guide-tone swap, and
 >    DP-optimized tune etudes (min voice movement + position continuity, one string set).
+> 8. **The degree palette is reserved.** The §2.1 colors encode function and nothing else —
+>    never status, selection, error, or emphasis. §2.3 already states the special case
+>    ("never a colored ring, which would collide with the degree palette"); this is the
+>    general form. In interactive studies, emphasis is **weight and neutral ink**, and alarm
+>    states use a hue that is not in the palette.
+
+*(Rule 8 adopted with v1.2, 2026-08-09, as a forward-looking rule. Material predating the
+amendment may not conform; known non-conformances are tracked as backlog items rather than
+grandfathered — as of ratification, Triadetudes' `--red` is `#B82929`, the Root color, and
+also serves its Play button, danger actions, and selection and error states.)*
 
 ---
 

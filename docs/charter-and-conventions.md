@@ -24,7 +24,7 @@ Extend the programmatic music-chart framework: new volumes, voicing systems, key
 
 1. **Source of truth = scripts.** Publications are rebuilds (`section scripts → assembly script`), never hand edits. A style change is applied at generator level and re-rendered everywhere.
 2. **Verification before rendering.** Every generator asserts: ascending stacks, chord-tone membership, exact voice-movement counts, scale-window pitch-class sets. Derived data printed for human review. PNG render + visual inspection before any delivery.
-3. **The Spec governs the visual language.** Color = function vs. current root (never absolute pitch); the degree palette, shape grammar, and page grammar change only by approved amendment to doc 4 (logged in the Update Log).
+3. **The Spec governs the visual language.** Color = function vs. current root (never absolute pitch); the degree palette, shape grammar, and page grammar change only by approved amendment to doc 4 (logged in the Update Log). **The palette is reserved** (Spec golden rule 8, ratified 2026-08-09): degree colors never encode status, selection, error, or emphasis, in either craft. In the interactive studies, emphasis is weight and neutral ink; alarm states use a hue outside the palette. Adopted forward-looking — non-conforming material predating the rule is tracked as backlog items, not grandfathered.
 4. **Advisory gate** on structure and canon: propose → approval → apply → log.
 
 ## Web application contracts (ratified 2026-08-08)
@@ -53,9 +53,12 @@ The site's interactive studies operate under the Contracts above, plus:
    same assertion suite as generated content, and no derived musical data is ever
    stored — it is recomputed from the source every time.
 8. **The chart interchange format is law.** `.atchart.md` is specified in
-   `docs/atchart-format.md` (v1 ratified 2026-08-08). The version field only moves
-   forward; parse → serialize → parse identity is CI-enforced; the format governs both
-   crafts — Python generators may emit it, the apps read and write it.
+   `docs/atchart-format.md` (v1 ratified 2026-08-08; **v1.1 ratified 2026-08-10** — app
+   namespaces, unknown-frontmatter preservation, and the handoff rule). The version field
+   only moves forward; parse → serialize → parse identity is CI-enforced; the format governs
+   both crafts — Python generators may emit it, the apps read and write it. **The file is
+   the only supported handoff channel between applications** (format §5); browser storage is
+   a per-app cache and never a transport.
 
 ## Project conventions
 
