@@ -212,7 +212,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.6</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.7</div>
 </header>
 
 <div class="cards">
@@ -283,12 +283,24 @@
           <option value="sustain">sustain</option>
         </select></label>
     </div>
+    <div class="bpmrow" title="the mixer: triads level — mute chords is this slider at zero">
+      <span style="font-size:12px;color:var(--gray);width:36px">triads</span>
+      <input type="range" id="triadVolR" min="0" max="100" value="100">
+      <span id="triadVolVal" style="font-size:13px;width:30px;text-align:right">100</span>
+    </div>
+    <div class="bpmrow" title="the mixer: bass level — triads at zero, bass up: the app holds the floor and the beat, you supply the triads">
+      <span style="font-size:12px;color:var(--gray);width:36px">bass</span>
+      <input type="range" id="bassVolR" min="0" max="100" value="100">
+      <span id="bassVolVal" style="font-size:13px;width:30px;text-align:right">100</span>
+    </div>
     <div class="hint">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord
     2 beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next
     bar</b> — the click you already hear is your count-in. If it isn't, Play starts it
     (count-in adds one clicked bar first). Stopping the étude leaves a self-started metronome
-    running; the metronome's Stop stops everything — it owns the clock. Mute chords: the
-    changes still animate in time — play-along, you supply the triads.</div>
+    running; the metronome's Stop stops everything — it owns the clock. Mute chords is the
+    triads level at zero — bass and click keep sounding and the changes still animate in
+    time: play-along, you supply the triads. The click's own level lives in the Metronome
+    card — the metronome owns its sound.</div>
   </div>
 </div>
 
@@ -498,7 +510,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.6 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.7 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -4246,9 +4258,13 @@ const st={
   // is the bare shape pattern already stored in arpPattern (legacy-identical).
   motionMode:"shape", motionSrc:null,
   roots:false, ext:"none",
-  bpm:72, meter:4, splitIdx:1, metroOnly:false,
+  bpm:72, meter:4, splitIdx:1,
   clickOn:true, clickVol:0.8, clickAccent:true, clickSub:1, clickVoice:"beep", countIn:false,
   noteVoice:"tone",
+  // the mixer (v0.8.7): two levels, triads and bass, unity by default — the
+  // buses are transparent at 1, so pre-mixer entries sound identical. Mute
+  // chords is NOT a state key: it is st.triadVol===0, one state with two views.
+  triadVol:1, bassVol:1,
   cur:0,
 };
 let SEQ=[], VOIC=[], BOX=null, ECHO=[], BREAK=[];
@@ -4776,6 +4792,28 @@ function voiceSchedule(evs,voice,durBeats,bpm){
 let AC=null;
 function ctx(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
   if(AC&&AC.state==="suspended")AC.resume(); return AC; }
+/* ---- the mixer (v0.8.7): two levels, each a gain node on an existing path ----
+   TRIAD_BUS sits between every NOTE_VOICES chain and the destination; BASS_BUS
+   between BASS_VOICE and the destination. Nothing else changes: same voices,
+   same schedules, one multiply. The click never routes here — its level is
+   st.clickVol with its one control in the Metronome card (the shared component
+   owns its own sound). Mute chords is the triads level at zero: bass + click
+   with the triads out is the play-along mode this mixer exists for. */
+let TRIAD_BUS=null,BASS_BUS=null,MIX_STASH=1; // stash: the level "mute chords" un-mutes to
+function triadBus(ac){
+  if(!TRIAD_BUS){TRIAD_BUS=ac.createGain();TRIAD_BUS.gain.value=st.triadVol;
+    TRIAD_BUS.connect(ac.destination);}
+  return TRIAD_BUS;
+}
+function bassBus(ac){
+  if(!BASS_BUS){BASS_BUS=ac.createGain();BASS_BUS.gain.value=st.bassVol;
+    BASS_BUS.connect(ac.destination);}
+  return BASS_BUS;
+}
+function syncBuses(){ // short ramp, not a step — a level move mid-note must not click
+  if(TRIAD_BUS)TRIAD_BUS.gain.setTargetAtTime(st.triadVol,AC.currentTime,0.02);
+  if(BASS_BUS)BASS_BUS.gain.setTargetAtTime(st.bassVol,AC.currentTime,0.02);
+}
 /* ---- the note-voice table (v0.8.4) ----
    Same shape as CLICK_VOICES, one level up: a named map, each entry building
    a node graph terminating at destination. tone is the shipped voice,
@@ -4826,7 +4864,7 @@ const NOTE_VOICES={
     g.gain.setValueAtTime(0,t);
     g.gain.linearRampToValueAtTime(vel,t+0.008);
     g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
-    o.connect(f).connect(g).connect(ac.destination);
+    o.connect(f).connect(g).connect(triadBus(ac));
     chain(o,[f,g],t,t+dur+0.05);
   }},
   pluck:{make(ac,midi,t,dur,vel){
@@ -4836,7 +4874,7 @@ const NOTE_VOICES={
     g.gain.setValueAtTime(vel*1.5,t);
     g.gain.setValueAtTime(vel*1.5,t+Math.max(0.01,dur-0.08));
     g.gain.linearRampToValueAtTime(0,t+dur);
-    s.connect(f).connect(g).connect(ac.destination);
+    s.connect(f).connect(g).connect(triadBus(ac));
     chain(s,[f,g],t,t+dur+0.02);
   }},
   sustain:{make(ac,midi,t,dur,vel){
@@ -4849,7 +4887,7 @@ const NOTE_VOICES={
     g.gain.linearRampToValueAtTime(vel*0.85,t+a);
     g.gain.setValueAtTime(vel*0.85,t+Math.max(a,dur-r));
     g.gain.linearRampToValueAtTime(0,t+dur);
-    o.connect(f).connect(g).connect(ac.destination);
+    o.connect(f).connect(g).connect(triadBus(ac));
     chain(o,[f,g],t,t+dur+0.05);
   }},
 };
@@ -4864,7 +4902,7 @@ const BASS_VOICE={make(ac,midi,t,dur,vel){
   g.gain.linearRampToValueAtTime(vel,t+0.012);
   g.gain.setValueAtTime(vel,t+Math.max(0.012,dur-r));
   g.gain.linearRampToValueAtTime(0,t+dur);
-  o.connect(f).connect(g).connect(ac.destination);
+  o.connect(f).connect(g).connect(bassBus(ac));
   chain(o,[f,g],t,t+dur+0.05);
 }};
 function playNote(midi,when,dur=0.7,vel=0.24,voice){
@@ -5126,10 +5164,12 @@ function pumpBeats(){
       for(const o of SUB_OFFSETS[st.clickSub]) click(ev.time+o*spb,-1);
     }
     if(rel>=0){
-      // cursor advance belongs to the transport, not the audio: "mute chords"
-      // is play-along — changes animate, the player supplies the triads
+      // cursor advance belongs to the transport, not the audio. The strum is
+      // always scheduled; the mixer buses decide what sounds — triads at zero
+      // is play-along: changes animate, the bass holds, the player supplies
+      // the triads (and raising the level mid-bar is audible at once).
       if(attack){
-        if(!st.metroOnly) strum(idx,ev.time,pattern()[etude.patPos]);
+        strum(idx,ev.time,pattern()[etude.patPos]);
         // the pulse is the transport's, not the audio's: it fires in play-along too
         schedulePulses(idx,ev.time,pattern()[etude.patPos]);
         setTimeout(()=>{st.cur=idx;renderActive();},Math.max(0,(ev.time-ac.currentTime)*1000));
@@ -6131,7 +6171,8 @@ function cfgObj(){
       pattern:patText(st.arpPattern)||"none",placement:st.placement,playback:st.playback,
       subdivision:displayPattern()?[...new Set(pattern())].map(b=>b+" beats: "+subdivisionName(b,displayPattern().length)).join("; "):"block"},
     display:{roots:st.roots,extension:st.ext},
-    transport:{bpm:st.bpm,meter:st.meter+"/4",barSplit:pattern().join("+"),chordsMuted:st.metroOnly,
+    transport:{bpm:st.bpm,meter:st.meter+"/4",barSplit:pattern().join("+"),
+      levels:{triads:Math.round(st.triadVol*100),bass:Math.round(st.bassVol*100)},
       metronome:{sound:st.clickOn,voice:st.clickVoice,volume:Math.round(st.clickVol*100),accents:st.clickAccent,
         subdivision:{1:"beats",2:"8ths",3:"triplets",4:"16ths"}[st.clickSub],countIn:st.countIn}}};
 }
@@ -6286,7 +6327,8 @@ function rawCfg(){
     bpm:st.bpm,meter:st.meter,splitIdx:st.splitIdx,
     clickOn:st.clickOn,clickVol:st.clickVol,clickAccent:st.clickAccent,
     clickSub:st.clickSub,clickVoice:st.clickVoice,countIn:st.countIn,
-    noteVoice:st.noteVoice};
+    noteVoice:st.noteVoice,
+    triadVol:st.triadVol,bassVol:st.bassVol};
 }
 
 function applyRaw(c){
@@ -6316,7 +6358,10 @@ function applyRaw(c){
     clickOn:c.clickOn??true,clickVol:c.clickVol??0.8,clickAccent:c.clickAccent??true,
     clickSub:c.clickSub??1,clickVoice:c.clickVoice??"beep",countIn:c.countIn??false,
     // pre-item entries default exactly as clickVoice does — old études restore on tone
-    noteVoice:c.noteVoice??"tone"});
+    noteVoice:c.noteVoice??"tone",
+    // pre-mixer entries default to unity: a gain of 1 is transparent, so they
+    // restore and SOUND identical — the same ?? pattern as noteVoice/clickVoice
+    triadVol:c.triadVol??1,bassVol:c.bassVol??1});
   // foreign/imported configs may be internally inconsistent — a pivot string
   // outside the set re-seats to the default before anything derives from it
   if(!st.set.includes(st.pivotString))defaultPivots();
@@ -6360,10 +6405,17 @@ function syncClickUI(){
   const vc=document.getElementById("voiceSel"); if(vc)vc.value=st.clickVoice;
   const nv=document.getElementById("noteVoiceSel"); if(nv)nv.value=st.noteVoice;
   const c=document.getElementById("countChk"); if(c)c.checked=st.countIn;
-  const m=document.getElementById("metroChk"); if(m)m.checked=st.metroOnly;
+  // mute chords is the triads level at zero — the checkbox renders the level
+  const m=document.getElementById("metroChk"); if(m)m.checked=st.triadVol===0;
   const v=document.getElementById("clickVolR");
   if(v){v.value=Math.round(st.clickVol*100);
     document.getElementById("clickVolVal").textContent=Math.round(st.clickVol*100);}
+  for(const [r,key] of [["triadVolR","triadVol"],["bassVolR","bassVol"]]){
+    const el=document.getElementById(r);
+    if(el){el.value=Math.round(st[key]*100);
+      document.getElementById(r.replace("R","Val")).textContent=Math.round(st[key]*100);}
+  }
+  syncBuses();
 }
 
 /* ============ controls ============ */
@@ -6605,7 +6657,24 @@ function initControls(){
   document.getElementById("splitSel").addEventListener("change",e=>{
     st.splitIdx=+e.target.value; renderScore(); syncArpIn(); renderCfg();
     renderTimeline();});  // bar split legible: the divisions redraw with it
-  document.getElementById("metroChk").addEventListener("change",e=>{st.metroOnly=e.target.checked;renderCfg();});
+  document.getElementById("metroChk").addEventListener("change",e=>{
+    // one piece of state: checking writes the triads level to zero, unchecking
+    // restores the last non-zero level (MIX_STASH; 1 if it was never touched)
+    if(e.target.checked){ if(st.triadVol>0)MIX_STASH=st.triadVol; st.triadVol=0; }
+    else st.triadVol=MIX_STASH;
+    syncClickUI(); renderCfg();
+  });
+  for(const [r,key] of [["triadVolR","triadVol"],["bassVolR","bassVol"]]){
+    const el=document.getElementById(r);
+    el.addEventListener("input",e=>{
+      st[key]=+e.target.value/100;
+      if(key==="triadVol"&&st.triadVol>0)MIX_STASH=st.triadVol;
+      document.getElementById(r.replace("R","Val")).textContent=e.target.value;
+      const m=document.getElementById("metroChk"); if(m)m.checked=st.triadVol===0;
+      syncBuses();
+    });
+    el.addEventListener("change",()=>renderCfg());
+  }
   document.getElementById("clickTgl").addEventListener("click",toggleClick);
   document.getElementById("clickChk2").addEventListener("change",e=>{
     st.clickOn=e.target.checked; syncClickUI(); renderCfg();});

@@ -5,6 +5,30 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-14 — Triadetudes v0.8.7: the mixer — triads and bass, one mute (Update Log 260814.2)
+
+- **Two level sliders in the Transport card — triads and bass** — each a gain bus spliced
+  into an existing voice path (`NOTE_VOICES` → `TRIAD_BUS`, `BASS_VOICE` → `BASS_BUS`).
+  **No click level added**: `st.clickVol` keeps its one control in the Metronome card — the
+  metronome is the shared family component and owns its own sound.
+- **Why it is a feature, not polish:** bass + click with triads at zero is the true
+  play-along mode — the app holds the harmonic floor and the beat, the player supplies the
+  triads. Unreachable before v0.8.4 gave the bass its own timbre; confirmed live under
+  Playwright (bass events into a unity bus, triad bus at 0, click running), final judgement
+  by ear.
+- **Mute chords unified with the triads level** — `st.metroOnly` deleted; the checkbox is a
+  view of `st.triadVol === 0` in both directions, with the last non-zero level restored on
+  uncheck. One piece of state, asserted in `engine/tests/triadetudes-mixer.test.mjs`.
+- **Pre-mixer notebook entries restore and sound identical**: levels default `?? 1` in
+  `applyRaw` (the `noteVoice` serialization pattern); unity gain is transparent. Asserted
+  with a pre-item entry, not just a round-trip.
+- **Report-back (the item asked):** the play-along balance is bass against click, and those
+  two levels sit in different cards (Transport / Metronome). On screen this read fine — both
+  cards share the clock row, side by side at 1280 and adjacent at 390 — but the real answer
+  is Daniel's, playing. No duplicate control invented to pre-empt it.
+- Suite 309/309 · Playwright offline 390-first + 1280, zero console errors · `hugo` +
+  `tools/check_site.py` clean. Supersedes v0.8.6 (git history holds it).
+
 ## 2026-08-12 — Triadetudes v0.8.6: the sketch speaks shape (Update Log 260812.7)
 
 - **Daniel on v0.8.5: "The bug is still there." He was right** — v0.8.5 fixed the manners
