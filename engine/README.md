@@ -42,6 +42,10 @@ engine/
 │                        drop-2, drop-3, the shells (arity 3, a separate stream)
 │                        and rootless 3-5-7-9. Voicing only — chord VOCABULARY
 │                        stays in chord.mjs. Feeds isolation.mjs's candidatesFor
+├── voice-identity.mjs   THE STABLE VOICE KEY: a derived, never-stored identity
+│                        per voice across a chord change, so a holding voice
+│                        keeps its DOM node and glides. Keyed by CHANNEL, never
+│                        by pitch rank — the crossing case. Any arity, no deps
 ├── string-sets.mjs      slot/degree translation across string sets (pure)
 ├── motion.mjs           the motion grammar: figures, approaches, resolution against
 │                        a chord context; the sketchpad's emitter (pure)
@@ -76,6 +80,10 @@ engine/
     ├── isolation.test.mjs            the Phase B safety net: 500+ shipped étude
     │                                 configs reproduced exactly, uneven windows
     ├── drill.test.mjs                the same, plus a non-string material
+    ├── voice-identity.test.mjs       the four cases a naive key breaks on —
+    │                                 hold, move, crossing, octave leap — each
+    │                                 at arity 3 and 4; crossing asserted
+    │                                 DIFFERENTIALLY against the pitch-rank key
     ├── tetrad-voicings.test.mjs      the arity-4 gate proven end to end, the
     │                                 shells' arity evidence, and the frozen
     │                                 study's payload as a 15,840-voicing oracle
