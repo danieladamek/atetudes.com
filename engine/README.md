@@ -38,6 +38,10 @@ engine/
 │                        declared by the consumer — nothing here says "string"
 ├── note-events.mjs      the note-event producer: one {midi,string,fret,role,slot,
 │                        onset,dur} list per chord, every renderer a consumer (pure)
+├── tetrad-voicings.mjs  THE CANDIDATE GENERATOR for four-voice shapes: close,
+│                        drop-2, drop-3, the shells (arity 3, a separate stream)
+│                        and rootless 3-5-7-9. Voicing only — chord VOCABULARY
+│                        stays in chord.mjs. Feeds isolation.mjs's candidatesFor
 ├── string-sets.mjs      slot/degree translation across string sets (pure)
 ├── motion.mjs           the motion grammar: figures, approaches, resolution against
 │                        a chord context; the sketchpad's emitter (pure)
@@ -72,6 +76,11 @@ engine/
     ├── isolation.test.mjs            the Phase B safety net: 500+ shipped étude
     │                                 configs reproduced exactly, uneven windows
     ├── drill.test.mjs                the same, plus a non-string material
+    ├── tetrad-voicings.test.mjs      the arity-4 gate proven end to end, the
+    │                                 shells' arity evidence, and the frozen
+    │                                 study's payload as a 15,840-voicing oracle
+    ├── _load-tetrad-oracle.mjs       reads the frozen study's 1.1 MB payload,
+    │                                 READ-ONLY (§5.2.1 — never modified)
     ├── triadetudes-engine.test.mjs   characterization of the shipped study's engine
     └── _load-triadetudes.mjs         extracts the study's <script> for headless testing
 ```
