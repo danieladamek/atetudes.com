@@ -35,7 +35,11 @@ hub/
 │   ├── fretboard-stage.mjs  the neck, the dots, the armed rings, the three CSS
 │   │                        transitions. Keyed by engine/voice-identity.mjs so the
 │   │                        nodes survive a chord change and the dots GLIDE
-│   └── chord-timeline.mjs   the roman-numeral pass; sequence-as-navigation
+│   ├── chord-timeline.mjs   the roman-numeral pass; sequence-as-navigation
+│   └── audio-card.mjs       THE HUB'S EARS: the AudioContext (created on a
+│                            GESTURE, never on load), the mixer buses, and the
+│                            realisation of engine/voices.mjs's descriptions.
+│                            Reaches nothing — it subscribes and sounds
 ├── doors/*.door.mjs    THE DOOR DECLARATION — { id, lock, present }. Nothing else.
 ├── tools/resolve.mjs   lock → reach-set → control partition → style ownership
 ├── tools/build.mjs     reach-set → one self-contained HTML file
@@ -58,7 +62,7 @@ neck it configures.
 |---|---|---|---|
 | `scribe` | `{notepad: true}` | metronome + notepad, 12 files | 148 kB |
 | `plain` | `{notepad: false}` | metronome only, 3 files | 21 kB |
-| `tetradetudes` | `{material:"tetrad", notepad:true}` | door #1 — the four-voice pass, 20 files | 225 kB |
+| `tetradetudes` | `{material:"tetrad", notepad:true, audio:true}` | door #1 — the four-voice pass, with sound, 23 files | 252 kB |
 
 The plain door drops six engine modules (notepad, markdown, palette, structures, atchart, chord)
 along with the card, plus 39 markup/style tokens. Its built file contains no trace of any of it —

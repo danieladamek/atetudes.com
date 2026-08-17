@@ -19,6 +19,10 @@
  *   metronome   metronome-card requires {} — EVERY door reaches it, so locking
  *               it would state a choice no door actually has
  *
+ * `audio: true` joined the lock on 2026-08-17, the day `hub/modules/audio-card.mjs`
+ * existed to require it — which is the rule working in the other direction, and
+ * the reason `plain` and `scribe` stay silent and carry no audio code at all.
+ *
  * This is §4.2.1's fail-closed law working, not an obstacle: *a lock key that
  * matches no module is an error naming the known ones, because a door that
  * ships smaller and quieter than intended is the one failure mode a door must
@@ -30,6 +34,7 @@ export default {
   lock: {
     material: "tetrad",
     notepad: true,
+    audio: true,
   },
   present: {
     title: "Tetradetudes",

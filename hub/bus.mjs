@@ -29,6 +29,11 @@ export const CONFIG_CHANGED = "atetudes:config";
 /** the position within the pass changed */
 export const STEP_CHANGED = "atetudes:step";
 
+/** a metronome beat is DUE. `lead` is seconds from now until it sounds, so a
+ * listener schedules against its OWN clock and never needs the sender's time
+ * base — which is what lets the clock stay pure and the audio stay accurate. */
+export const BEAT = "atetudes:beat";
+
 /** Dispatch a message. The detail is passed by value on purpose: a listener
  * that mutated a shared object would recreate exactly the coupling this
  * module exists to prevent. */

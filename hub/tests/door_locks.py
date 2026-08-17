@@ -235,6 +235,57 @@ def run_door(pw, door_id):
         page.wait_for_timeout(120)
         ids2 = page.eval_on_selector_all("#fsNeck .fs-dot", "e => e.map(x => x.dataset.voice)")
         check(ids2 == ids, f"{tag} the dots were rebuilt on a step — nothing would glide")
+    if "auOn" in r["controlsPresent"]:
+        # ---- the audio path, which no static check can see ----
+        # AUTOPLAY DISCIPLINE FIRST: no context may exist before a gesture.
+        # That refusal is what produces the frozen tetrad study's four warnings,
+        # and manufacturing new ones here would be a self-inflicted wound.
+        check(page.evaluate("() => window.__ac === undefined || window.__ac === null"),
+              f"{tag} an AudioContext existed before any gesture")
+        page.evaluate("""() => {
+          // count every source actually STARTED, so 'it made a sound' is
+          // observed rather than inferred from the code having run
+          window.__starts = 0;
+          for (const P of [window.OscillatorNode, window.AudioBufferSourceNode]) {
+            const s = P.prototype.start;
+            P.prototype.start = function (...a) { window.__starts++; return s.apply(this, a); };
+          }
+          const C = window.AudioContext || window.webkitAudioContext;
+          const mk = function (...a) { const c = new C(...a); window.__ac = c; return c; };
+          mk.prototype = C.prototype;
+          window.AudioContext = mk;
+        }""")
+        page.click("#auOn")                       # THE GESTURE
+        check(page.inner_text("#auOn") == "Sound: on", f"{tag} the sound toggle did not turn on")
+        page.wait_for_timeout(120)
+        check(page.evaluate("() => !!window.__ac"),
+              f"{tag} the gesture did not create an AudioContext")
+        check(page.evaluate("() => window.__ac.state") == "running",
+              f"{tag} the context is not running after a gesture: "
+              f"{page.evaluate('() => window.__ac.state')}")
+
+        # a step must actually start sources — the chord, its pedal, or both
+        before = page.evaluate("() => window.__starts")
+        page.click("#fsFwd")
+        page.wait_for_timeout(400)
+        after = page.evaluate("() => window.__starts")
+        check(after > before,
+              f"{tag} stepping with sound on started no audio sources ({before} → {after}) — "
+              f"the door is still silent")
+
+        # and the clock's click reaches the audio card over the bus
+        beats = page.evaluate("() => window.__starts")
+        page.wait_for_timeout(900)                # the metronome is running at 120 BPM
+        check(page.evaluate("() => window.__starts") > beats,
+              f"{tag} the metronome beat never reached the audio card")
+
+        # the mixer ramps rather than steps, and reaching zero is legal
+        page.fill("#auTriadVol", "0")
+        page.dispatch_event("#auTriadVol", "input")
+        page.fill("#auBassVol", "50")
+        page.dispatch_event("#auBassVol", "input")
+
+    if "ibKey" in r["controlsPresent"]:
         # leave a popup OPEN into the orphan check below, for the same reason
         # the clock is left running: `.ibPop.ibOpen` is a state this door really
         # has, and a check run against a closed popup would call it an orphan

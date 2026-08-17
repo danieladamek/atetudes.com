@@ -17,6 +17,7 @@
  * resolver now enforces that it stays moved.
  */
 import { createMetroCore, createTapTempo, SUB_OFFSETS } from "../../engine/metronome.mjs";
+import { BEAT, announce } from "../bus.mjs";
 
 export const metronomeCard = {
   id: "metronome-card",
@@ -117,8 +118,23 @@ export const metronomeCard = {
       for (let i = 0; i < dots.length; i++)
         dots[i].className = (i === 0 && acc ? "acc " : "") + (i === beat ? "on" : "");
     };
+    /* The card lights the lamp and ANNOUNCES the beat; it does not make a
+     * sound and does not know what does. `core.pump` returns events in the
+     * future, so the lead is real lookahead rather than "now" — a listener
+     * with an AudioContext can schedule it accurately. If nothing is
+     * listening, nothing happens, which is the point (§4.2.3). */
     const pump = () => {
-      for (const ev of core.pump(now(), 0.02)) light(ev.beat);
+      const t = now();
+      for (const ev of core.pump(t, 0.02)) {
+        light(ev.beat);
+        announce(d, BEAT, {
+          level: ev.beat === 0 ? 2 : 0,          // 2 = bar, 0 = beat
+          lead: Math.max(0, ev.time - t),
+          voice: byId("voiceSel").value,
+          accents: byId("accChk").checked,
+          vol: Number(byId("clickVolR").value) / 100,
+        });
+      }
       if (core.running) raf = d.defaultView.requestAnimationFrame(pump);
     };
 

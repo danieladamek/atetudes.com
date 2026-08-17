@@ -51,6 +51,10 @@ engine/
 │                        per voice across a chord change, so a holding voice
 │                        keeps its DOM node and glides. Keyed by CHANNEL, never
 │                        by pitch rank — the crossing case. Any arity, no deps
+├── voices.mjs           THE FAMILY'S VOICES, as math rather than as nodes: the
+│                        voice table, the Karplus-Strong string rendered to
+│                        samples, the click, the bass seat, and gain envelopes
+│                        as breakpoint DATA a host realises. No AudioContext
 ├── string-sets.mjs      slot/degree translation across string sets (pure)
 ├── motion.mjs           the motion grammar: figures, approaches, resolution against
 │                        a chord context; the sketchpad's emitter (pure)
@@ -85,6 +89,10 @@ engine/
     ├── isolation.test.mjs            the Phase B safety net: 500+ shipped étude
     │                                 configs reproduced exactly, uneven windows
     ├── drill.test.mjs                the same, plus a non-string material
+    ├── voices.test.mjs               voiceSchedule pinned EXACTLY against the
+    │                                 shipped study (it sits above the audio
+    │                                 cut); the extracted half pinned
+    │                                 structurally against the source text
     ├── tetrad-sequence.test.mjs      the frozen payload as an oracle for the
     │                                 CHOICE, not just membership: every step
     │                                 spells its chord, and where the rules
