@@ -38,7 +38,7 @@ export const audioCard = {
   requires: { audio: true },
   mount_point: "cards",
   order: 5,
-  controls: ["auOn", "auVoice", "auTriadVol", "auBassVol"],
+  controls: ["auOn", "auVoice", "auChordVol", "auBassVol"],
 
   markup: `
   <h2 class="auHead">Sound</h2>
@@ -50,8 +50,8 @@ export const audioCard = {
       <select id="auVoice" data-control="auVoice"></select></div>
   </div>
   <div class="auLevel">
-    <span class="auLab">Triads</span>
-    <input type="range" id="auTriadVol" data-control="auTriadVol" min="0" max="100" value="100">
+    <span class="auLab" id="auChordLab"></span>
+    <input type="range" id="auChordVol" data-control="auChordVol" min="0" max="100" value="100">
   </div>
   <div class="auLevel">
     <span class="auLab">Bass</span>
@@ -84,10 +84,10 @@ export const audioCard = {
     const families = Array.isArray(lock.families) && lock.families.length ? lock.families : ["drop2"];
 
     /* PRIVATE. Nothing else reads any of this. */
-    let ac = null, triadBus = null, bassBus = null, wave = null;
+    let ac = null, chordBus = null, bassBus = null, wave = null;
     const buffers = new Map();
     let on = false, voice = NOTE_VOICE_NAMES[0];
-    let triadVol = 1, bassVol = 1;
+    let chordVol = 1, bassVol = 1;
     let cfg = null, pass = null, live = 0;
 
     /* ---- the context, created on a GESTURE and never before ---- */
@@ -97,18 +97,18 @@ export const audioCard = {
         const Ctor = view && (view.AudioContext || view.webkitAudioContext);
         if (!Ctor) return null;                       // no Web Audio: stay silent, never throw
         try { ac = new Ctor(); } catch { return null; }
-        triadBus = ac.createGain(); triadBus.gain.value = triadVol; triadBus.connect(ac.destination);
+        chordBus = ac.createGain(); chordBus.gain.value = chordVol; chordBus.connect(ac.destination);
         bassBus = ac.createGain(); bassBus.gain.value = bassVol; bassBus.connect(ac.destination);
       }
       if (ac.state === "suspended") ac.resume();
       return ac;
     };
 
-    const busFor = (name) => (name === "bass" ? bassBus : triadBus);
+    const busFor = (name) => (name === "bass" ? bassBus : chordBus);
 
     const syncBuses = () => {
       if (!ac) return;                                // ramp, not a step: no click mid-note
-      triadBus.gain.setTargetAtTime(triadVol, ac.currentTime, 0.02);
+      chordBus.gain.setTargetAtTime(chordVol, ac.currentTime, 0.02);
       bassBus.gain.setTargetAtTime(bassVol, ac.currentTime, 0.02);
     };
 
@@ -208,6 +208,26 @@ export const audioCard = {
     };
 
     /* ---- controls ---- */
+    /* THE LABEL IS THE DOOR'S, AND THE DEFAULT IS ARITY-NEUTRAL.
+     *
+     * The shipped mixer said "Triads" because Triadetudes plays triads; on a
+     * four-voice app that is simply false, which is the same defect class as
+     * v0.6.8's "the readout says only true things". But "Tetrads" hardcoded
+     * here would be exactly the same landmine one door further on.
+     *
+     * So: the control id and the bus are named by ROLE — `auChordVol`,
+     * `bus: "chord"` — because that is true at every arity and matches what
+     * note-events.mjs already calls it. The visible LABEL defaults to "Chord",
+     * which is also true everywhere, and a door may override it with a word
+     * that fits its own material:
+     *
+     *     present: { chordLabel: "Tetrads" }
+     *
+     * Tetradetudes sets it, so the slider says what Daniel asked for on the
+     * door he was playing, and the next door inherits a true default rather
+     * than this one's vocabulary. */
+    byId("auChordLab").textContent = (ctx.door.present || {}).chordLabel || "Chord";
+
     const vsel = byId("auVoice");
     for (const n of NOTE_VOICE_NAMES) {
       const o = d.createElement("option");
@@ -224,8 +244,8 @@ export const audioCard = {
       b.textContent = "Sound: " + (on ? "on" : "off");
       b.classList.toggle("auLit", on);
     });
-    byId("auTriadVol").addEventListener("input", (e) => {
-      triadVol = Number(e.target.value) / 100; syncBuses();
+    byId("auChordVol").addEventListener("input", (e) => {
+      chordVol = Number(e.target.value) / 100; syncBuses();
     });
     byId("auBassVol").addEventListener("input", (e) => {
       bassVol = Number(e.target.value) / 100; syncBuses();

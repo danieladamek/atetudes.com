@@ -39,6 +39,9 @@ export default {
   present: {
     title: "Tetradetudes",
     blurb: "four voices, moving as little as they have to — hub door #1",
+    /* the mixer's chord-bus label. The card defaults to the arity-neutral
+     * "Chord"; this door plays four voices and says so. */
+    chordLabel: "Tetrads",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs. Not a published study.",
   },
 };

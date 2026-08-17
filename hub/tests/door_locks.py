@@ -255,6 +255,18 @@ def run_door(pw, door_id):
           mk.prototype = C.prototype;
           window.AudioContext = mk;
         }""")
+        # THE MIXER NAMES WHAT IT CONTROLS. The label is the door's — the card
+        # defaults to the arity-neutral "Chord" and a door may say something
+        # truer for its own material. Asserted against the door's own present
+        # block, so a door that sets it and a card that ignores it cannot agree
+        # by accident, and an empty label cannot ship.
+        want = (r.get("present") or {}).get("chordLabel") or "Chord"
+        got = page.inner_text("#auChordLab").strip()
+        check(got == want, f"{tag} the chord slider says {got!r}, the door says {want!r}")
+        check(got != "", f"{tag} the chord slider has no label at all")
+        check("Triads" not in page.inner_text("body") or want == "Triads",
+              f"{tag} the mixer still says 'Triads' somewhere visible")
+
         page.click("#auOn")                       # THE GESTURE
         check(page.inner_text("#auOn") == "Sound: on", f"{tag} the sound toggle did not turn on")
         page.wait_for_timeout(120)
@@ -280,8 +292,8 @@ def run_door(pw, door_id):
               f"{tag} the metronome beat never reached the audio card")
 
         # the mixer ramps rather than steps, and reaching zero is legal
-        page.fill("#auTriadVol", "0")
-        page.dispatch_event("#auTriadVol", "input")
+        page.fill("#auChordVol", "0")
+        page.dispatch_event("#auChordVol", "input")
         page.fill("#auBassVol", "50")
         page.dispatch_event("#auBassVol", "input")
 

@@ -229,7 +229,10 @@ test("voiceFor routes the bass pedal to its own voice and its own bus", () => {
   assert.equal(voiceFor("chord", "pluck"), NOTE_VOICES.pluck);
   assert.equal(voiceFor("chord", "nonsense"), NOTE_VOICES.tone, "an unknown voice falls back to tone");
   assert.equal(BASS_VOICE.bus, "bass");
-  for (const n of NOTE_VOICE_NAMES) assert.equal(NOTE_VOICES[n].bus, "triad");
+  // the bus is named by ROLE, not by arity — "triad" was false at four voices
+  for (const n of NOTE_VOICE_NAMES) assert.equal(NOTE_VOICES[n].bus, "chord");
+  assert.ok(!JSON.stringify(NOTE_VOICES).includes("triad"),
+    "a bus is named after an arity again — name it after the role");
 });
 
 test("envelopeOf refuses a description whose breakpoints run backwards", () => {

@@ -32,6 +32,12 @@
  * ARE pinned — and this module's copy is asserted against the shipped one over
  * a derived corpus, the same discipline `isolation.mjs` and `drill.mjs` used.
  *
+ * THE BUSES ARE NAMED BY ROLE, NOT BY ARITY. The shipped study called the
+ * chord bus "triad" because that app plays triads; the four tetrad voices then
+ * went to a bus named "triad", which is false one app over. `note-events.mjs`
+ * already calls the role `"chord"`, so naming the bus after the role makes it
+ * one fact instead of two, and it stays true at any arity.
+ *
  * Pure: no DOM, no AudioContext, no globals.
  */
 import { noteEvents } from "./note-events.mjs";
@@ -131,7 +137,7 @@ const env = (kind, at, value) => ({ kind, at, value });
 
 export const NOTE_VOICES = {
   tone: {
-    bus: "triad", tail: 0.05,
+    bus: "chord", tail: 0.05,
     source: { kind: "osc", type: "triangle" },
     filter: { type: "lowpass", freq: 2200, q: 0.4 },
     envelope: (t, dur, vel) => [
@@ -141,7 +147,7 @@ export const NOTE_VOICES = {
     ],
   },
   pluck: {
-    bus: "triad", tail: 0.02,
+    bus: "chord", tail: 0.02,
     source: { kind: "pluck" },
     filter: { type: "lowpass", freq: 3400, q: 0.2 },
     envelope: (t, dur, vel) => [
@@ -151,7 +157,7 @@ export const NOTE_VOICES = {
     ],
   },
   sustain: {
-    bus: "triad", tail: 0.05,
+    bus: "chord", tail: 0.05,
     source: { kind: "wave", partials: SUSTAIN_PARTIALS },
     filter: { type: "lowpass", freq: 2600, q: 0.3 },
     envelope: (t, dur, vel) => {
