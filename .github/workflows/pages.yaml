@@ -37,10 +37,30 @@ jobs:
       - name: Door build gate
         # family spec §4.2.2: the style-ownership rule, the static-derivation
         # bans, and the artifact greps — the half of the door gate that needs no
-        # browser. The rendered partition, the file:// offline check and the
-        # orphan-selector check are in hub/tests/door_locks.py and stay a local
-        # gate until Playwright in CI is approved (charter: no new dependencies).
+        # browser and no dependencies.
         run: node --test hub/tests/*.test.mjs
+      - uses: actions/setup-python@v5
+        # a runner-managed Python, so `pip install` below is not fighting
+        # ubuntu's externally-managed system interpreter. check_site.py is
+        # stdlib-only and does not care which of the two it gets.
+        with:
+          python-version: "3.12"
+      - name: Door lock suite (browser)
+        # family spec §4.2.2's AUTHORITATIVE half, local-only for two sessions
+        # and now guarding the branch that deploys: the rendered control
+        # partition (§4.2.1's equality over the control universe), the
+        # orphan-selector check, and file:// with the network aborted.
+        #
+        # Playwright is a CI devDependency, approved by Daniel 2026-08-16. It is
+        # a build-time tool and ships in nothing, so charter §5's single-file
+        # offline promise is untouched. Pinned to the version the gate was
+        # developed against, so a browser bump is a deliberate act with a log
+        # entry rather than a silent change in what "green" means.
+        run: |
+          pip install playwright==1.55.0
+          playwright install --with-deps chromium
+          node hub/tools/build.mjs
+          python3 hub/tests/door_locks.py
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"

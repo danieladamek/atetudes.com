@@ -5,6 +5,32 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-16 — Playwright joins CI as a devDependency; Triadetudes is NOT republished (Update Log 260816.4)
+
+- **No published study changed.** `static/studies/triadetudes/study.html` is byte-identical to
+  `HEAD`. Stage 3 would have regenerated it as door #1 and **stopped at its own gate instead** — the
+  door build cannot reproduce the study without breaking the characterization suite that protects it.
+  `/studies/triadetudes/` is untouched and permanent, as it was before. Full findings in Update Log
+  260816.4; the design decision is Daniel's.
+- **The dependency decision, recorded as the item required.** Playwright is now a **CI
+  devDependency**, approved by Daniel 2026-08-16. It is a build-time tool and **ships in nothing**,
+  so charter §5's single-file offline promise is untouched — no study page gains a byte. This is a
+  deliberate exception to "no new frameworks, bundlers or services", scoped to the CI runner.
+- **What it buys:** `.github/workflows/pages.yaml` gains a **Door lock suite (browser)** step —
+  `node hub/tools/build.mjs` then `python3 hub/tests/door_locks.py` — so the authoritative half of
+  the door gate now guards the branch that deploys. Until today it ran local-only: the rendered
+  control partition, the orphan-selector check, and `file://` load with the network aborted and zero
+  console errors. A door that grows a locked control, or a stylesheet that grows a rule matching
+  nothing, now fails the deploy instead of failing on someone's laptop.
+- **Pinned on purpose** (`playwright==1.55.0`, the version the gate was developed against) so a
+  browser bump is a deliberate act with a log entry, not a silent change in what "green" means.
+  `actions/setup-python@v5` added alongside so `pip install` is not fighting ubuntu's
+  externally-managed system interpreter; `check_site.py` is stdlib-only and is indifferent to which
+  interpreter it gets.
+- Verified: the exact CI command sequence run locally — **1966 assertions, 0 failed, exit 0**;
+  workflow YAML parsed and step order confirmed; engine **323/323**, door build gate **3/3**;
+  `git status` clean under `static/`.
+
 ## 2026-08-16 — Stage 2 re-verified cold; the CI door gate's spec citation now resolves (Update Log 260816.3)
 
 - **No site change, again.** All four published studies re-verified byte-identical to `HEAD` and
