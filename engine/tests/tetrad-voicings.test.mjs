@@ -340,25 +340,31 @@ test("rootless refuses a chord with no ninth, by name", () => {
 
 /* ================= 5. the shells, and the arity law ================= */
 
-test("THE EVIDENCE for the shells decision: a mixed-arity stream corrupts SILENTLY", () => {
+test("THE EVIDENCE for the shells decision: a mixed-arity stream is refused in both directions", () => {
   const four = tetradCandidates(parseChord("Cmaj7"), { set: [40, 45, 50, 55], nfrets: 16 })[0];
   const three = shellCandidates(parseChord("Cmaj7"), { set: [40, 45, 50], nfrets: 16 })[0];
 
-  // Direction 1 — loud. Iterating four voices reads prev.notes[3] and there
-  // is no such voice.
-  assert.throws(() => voiceLeadCost(four, three), TypeError,
-    "the loud direction stopped throwing — re-derive the shells decision");
+  // Direction 1 — this one always threw, but only by accident: it read
+  // prev.notes[3].midi off undefined. It is a NAMED refusal now, not a
+  // TypeError, which is why this asserts the message rather than the type.
+  assert.throws(() => voiceLeadCost(four, three), /arity mismatch — 4 voices compared against 3/,
+    "the loud direction stopped naming both arities — re-derive the shells decision");
 
-  // Direction 2 — SILENT, and this is the whole argument. Iterating three
-  // voices against a four-voice previous returns an ordinary number: a cost
-  // measured over fewer voices, so the shell looks cheap and wins, and nothing
-  // anywhere reports a problem.
-  const quiet = voiceLeadCost(three, four);
-  assert.ok(Number.isFinite(quiet),
-    "the silent direction no longer returns a number — re-derive the shells decision");
-  assert.ok(quiet >= 0);
+  // Direction 2 — this WAS the silent one, and it is the reason the shells
+  // decision exists: iterating three voices against a four-voice previous
+  // returned an ordinary number, so the shell was measured over fewer voices,
+  // looked cheap, won on cost, and nothing reported anything.
+  //
+  // FIXED AT SOURCE 2026-08-17 (Update Log 260817.2). isolation.mjs now refuses
+  // both directions by name, so this asserts the fix rather than the defect.
+  // The decision it justified is unchanged — a shell still may not share a
+  // stream with a tetrad — but it is now enforced by the module that does the
+  // comparing, which is what every LATER consumer inherits.
+  assert.throws(() => voiceLeadCost(three, four), /arity mismatch/,
+    "the once-silent direction is silent again — the source fix regressed");
 
-  // so the module makes the silent case loud, at the point a stream is built
+  // and the caller-side guard stays: it fires EARLIER, where a stream is built,
+  // with a message about shells rather than about voices
   assert.throws(() => assertUniformArity([four, three]), /mixed arity/);
   assert.throws(() => assertUniformArity([three, four]), /mixed arity/);
 });

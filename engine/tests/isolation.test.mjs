@@ -169,3 +169,124 @@ test("§5 stage 2: an unknown placement fails by name, and the named rules are t
   assert.throws(() => makeZone({ string: 9, frets: [1] }), /must be a real string/);
   assert.throws(() => makeZone({ string: 2, frets: [] }), /one or more frets/);
 });
+
+/* ===================== THE ARITY LAW (Update Log 260817.2) =====================
+ *
+ * `voiceLeadCost` measured over the CANDIDATE's note list while the comparison
+ * spanned two voicings, so a shorter candidate under-reported its own movement
+ * and won on cost with nothing reported. One direction threw; the other — the
+ * dangerous one — returned a plausible number.
+ *
+ * Found while building Tetradetudes 1, which guarded it in the caller. This
+ * fixes it at source so every later consumer inherits the loud version, and it
+ * is fixable here at all only because isolation.mjs is one of the two engine
+ * modules no shipped study carries (family spec §4.2.4 — the carrier
+ * constraint). The window closes the moment a door ships carrying it.
+ *
+ * Assert the THROW, not the value: the point is that neither direction is
+ * quietly answerable.
+ */
+
+const voicing = (...midis) =>
+  ({ notes: midis.map((m, i) => ({ midi: m, fret: m - 40, string: 6 - i, slot: i })) });
+
+test("arity law: voiceLeadCost refuses a mismatch in BOTH directions, naming both arities", () => {
+  const three = voicing(48, 52, 55);
+  const four = voicing(48, 52, 55, 59);
+
+  // the direction that was already loud, but by accident (undefined.midi)
+  assert.throws(() => voiceLeadCost(four, three), /arity mismatch — 4 voices compared against 3/,
+    "the long-against-short direction must name both arities, not throw a TypeError");
+
+  // THE DEFECT: this returned a number, measured over three voices only
+  assert.throws(() => voiceLeadCost(three, four), /arity mismatch — 3 voices compared against 4/,
+    "the short-against-long direction is silent again — this is the whole defect");
+
+  // matched arities still compute, and still compute the same thing
+  assert.equal(voiceLeadCost(four, voicing(48, 52, 55, 60)), 1);
+  assert.equal(voiceLeadCost(three, three), 0);
+  assert.equal(voiceLeadCost(three, null), 0, "no previous chord is still free");
+});
+
+test("arity law: movementTotal inherits the fix rather than carrying its own copy", () => {
+  // movementTotal spans a SEQUENCE and delegates every pair to voiceLeadCost,
+  // so it is fixed by the same change — asserted, not assumed
+  assert.throws(() => movementTotal([voicing(48, 52, 55), voicing(48, 52, 55, 59)]),
+    /arity mismatch/, "a mixed-arity sequence must not total silently");
+  assert.equal(movementTotal([voicing(48, 52, 55), voicing(48, 52, 56)]), 1,
+    "a uniform sequence still totals");
+});
+
+test("arity law: placementCost names an out-of-range pivot instead of throwing on undefined", () => {
+  const zone = makeZone({ string: 2, frets: [1, 3, 5] });
+  const three = voicing(48, 52, 55);
+  assert.throws(() => placementCost(three, null, 3, zone, 4, 0.5),
+    /pivot index 3 is outside a 3-voice voicing/,
+    "the pivot is derived from the set, so this is a set/voicing mismatch and should say so");
+  assert.doesNotThrow(() => placementCost(three, null, 2, zone, 4, 0.5));
+});
+
+test("arity law: chooseVoicings refuses a candidate that does not match its string set", () => {
+  const zone = makeZone({ string: 2, frets: [1, 3, 5] });
+  // THE CASE NO OTHER GUARD CATCHES: the stream is internally uniform — three
+  // voices throughout — so a uniformity check passes it, but the set has four
+  // strings, so the pivot index would address the wrong voice.
+  assert.throws(() => chooseVoicings([{}], {
+    zone, placement: "grip", setLowHigh: [4, 3, 2, 1], nfrets: 15,
+    candidatesFor: () => [voicing(48, 52, 55), voicing(50, 54, 57)],
+  }), /a candidate has 3 voices but the set has 4 strings/);
+
+  // and the matching case is untouched
+  assert.doesNotThrow(() => chooseVoicings([{}], {
+    zone, placement: "grip", setLowHigh: [3, 2, 1], nfrets: 15,
+    candidatesFor: () => [voicing(48, 52, 55)],
+  }));
+});
+
+test("arity law: meanFret and lineVoicing are EXEMPT, and the exemption is asserted not assumed", () => {
+  // meanFret takes ONE voicing and divides by that same voicing's length, so it
+  // is arity-normalised by construction — which is what the "lower-position"
+  // tie rule needs, since it compares means across candidates
+  assert.equal(meanFret(voicing(48, 52, 55)), (8 + 12 + 15) / 3);
+  assert.equal(meanFret(voicing(48, 52, 55, 59)), (8 + 12 + 15 + 19) / 4);
+  assert.ok(Number.isFinite(meanFret(voicing(48))), "a single voice still has a mean");
+
+  // lineVoicing takes its arity FROM ITS INPUT and already asserts the result
+  // matches — it cannot mismatch two voicings because it only ever builds one
+  const zone = makeZone({ string: 2, frets: [3] });
+  assert.throws(() => lineVoicing([0, 4, 7], {
+    zone, zoneNotes: [], setLowHigh: [3, 2, 1],
+    positionsFor: () => [],            // nothing placeable → the count assertion fires
+  }), /expected 3 notes/);
+});
+
+test("arity law, THE GATE: the shipped Triadetudes corpus never builds a mixed-arity stream", () => {
+  /* The item predicted this — Triadetudes is all triads, so nothing it produces
+   * should trip the new refusals. A prediction is asserted here rather than
+   * assumed, because the alternative reading would have been much worse: if the
+   * shipped app DID rely on the silent behaviour, this fix would change shipped
+   * étude output, and that is a stop-and-report rather than a green suite.
+   *
+   * The corpus test above already drives the new check 500+ times as a side
+   * effect of reproducing every shipped étude. This states it directly. */
+  let streams = 0, candidates = 0;
+  for (const key of KEYS)
+    for (const scaleType of SCALES)
+      for (const set of SETS)
+        for (const prog of PROGS) {
+          const { seq } = shipped({ key, scaleType, set, prog, placement: "grip" });
+          const s = st.setLowHigh;
+          for (const ch of seq) {
+            const cands = unwrap(eng.voicingsFor(ch, s));
+            assert.ok(cands.length > 0, "a shipped chord produced no candidates");
+            for (const v of cands) {
+              assert.equal(v.notes.length, unwrap(s).length,
+                `a shipped candidate has ${v.notes.length} voices on a ${unwrap(s).length}-string set`);
+              candidates++;
+            }
+            streams++;
+          }
+        }
+  assert.ok(streams >= 500, `corpus too small to mean anything (${streams} streams)`);
+  assert.ok(candidates >= 1000, `too few candidates checked (${candidates})`);
+});

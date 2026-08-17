@@ -35,16 +35,21 @@
  * `chooseVoicings` matches voices BY INDEX across a sequence
  * (`voiceLeadCost`: `v.notes[i].midi - prev.notes[i].midi`) and reads
  * `v.notes[pivotIndex]` for placement. Both are arity-generic but arity-
- * CONSISTENT, and mixing arities fails DIFFERENTLY IN EACH DIRECTION — which is
- * what makes it worth a guard rather than a comment:
+ * CONSISTENT. When this module was written, mixing arities failed differently
+ * in each direction: `voiceLeadCost(4-voice, 3-voice)` threw, but
+ * `voiceLeadCost(3-voice, 4-voice)` iterated three voices and returned a
+ * PLAUSIBLE NUMBER — so a shell scored against a tetrad looked cheap simply
+ * because it was measured over fewer voices, won on cost, and nothing reported
+ * anything.
  *
- *   voiceLeadCost(4-voice, 3-voice)  reads prev.notes[3].midi → TypeError, loud
- *   voiceLeadCost(3-voice, 4-voice)  iterates 3 and returns a PLAUSIBLE NUMBER
+ * That silent direction was FIXED AT SOURCE on 2026-08-17 (Update Log 260817.2):
+ * `isolation.mjs` now refuses both directions by name, and `chooseVoicings`
+ * additionally refuses a candidate whose arity does not match its string set.
  *
- * The second is the hazard: a shell scored against a tetrad looks cheap simply
- * because it was measured over fewer voices, so it wins on cost and nothing
- * anywhere reports a problem. The suite proves both directions rather than
- * asserting them in prose.
+ * This module's own guard stays, and is not redundant. It fires EARLIER — where
+ * a stream is BUILT rather than where it is used — and it speaks this module's
+ * vocabulary ("keep shells out of a tetrad stream") rather than the optimizer's.
+ * The suite pins both layers.
  *
  * So the deciding question is not "are shells tetrads" but "may a shell share a
  * candidate stream with a tetrad", and the answer is no. That is a constraint on
