@@ -5,13 +5,13 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
-## 2026-08-16 — Playwright joins CI as a devDependency; Triadetudes is NOT republished (Update Log 260816.4)
+## 2026-08-16 — Playwright joins CI as a devDependency; Triadetudes is NOT republished (Update Log 260816.5)
 
 - **No published study changed.** `static/studies/triadetudes/study.html` is byte-identical to
   `HEAD`. Stage 3 would have regenerated it as door #1 and **stopped at its own gate instead** — the
   door build cannot reproduce the study without breaking the characterization suite that protects it.
   `/studies/triadetudes/` is untouched and permanent, as it was before. Full findings in Update Log
-  260816.4; the design decision is Daniel's.
+  260816.5; the decision — accept the domain limit, Tetradetudes becomes door #1 — is 260816.6.
 - **The dependency decision, recorded as the item required.** Playwright is now a **CI
   devDependency**, approved by Daniel 2026-08-16. It is a build-time tool and **ships in nothing**,
   so charter §5's single-file offline promise is untouched — no study page gains a byte. This is a
