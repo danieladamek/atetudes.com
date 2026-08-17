@@ -74,8 +74,15 @@ async function build(id) {
   for (const m of order)
     mods.push((await import(pathToFileURL(join(REPO, m.rel)).href))[m.name]);
 
+  /* A contribution may state where it belongs on the page with `order`
+   * (default 0, stable within a tie). Without it the page order is an accident
+   * of filename, which is not a fact any module should be asserting — and on
+   * this door it put the configuration BELOW the neck it configures. */
   const slots = { cards: [], boards: [] };
-  for (const m of mods) {
+  const placed = [...mods].map((m, i) => ({ m, i }))
+    .sort((a, b) => ((a.m.order ?? 0) - (b.m.order ?? 0)) || (a.i - b.i))
+    .map((x) => x.m);
+  for (const m of placed) {
     const where = m.mount_point ?? "cards";
     const wrap = shell.WRAPPERS[where];
     if (!wrap) throw new Error(`${m.id}: unknown mount point "${where}" — the shell offers ${Object.keys(shell.WRAPPERS).join(", ")}`);

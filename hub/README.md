@@ -21,10 +21,21 @@ python3 hub/tests/bite.py             # proves every assertion fails when it sho
 hub/
 ├── shell.mjs           page grammar + the layout CONTAINERS + boot(). Mounts a list
 │                       it does not write; never names a module; renders no control.
+├── bus.mjs             the door's MESSAGE CONTRACT (§4.2.3): modules announce a
+│                       plain value and derive from what they hear. No module
+│                       reaches another's state, so pruning a sender makes a
+│                       SMALLER door, not a broken one. Not a contribution —
+│                       reached through the imports of the modules that use it
 ├── modules/            contributions: { id, requires, controls, markup, styles, mount }
 │   ├── metronome-card.mjs   the family constant — requires {}, every door reaches it
-│   └── notepad-card.mjs     the gate case — wraps engine/notepad-surface.mjs and owns
-│                            the markup and styles the shipped study holds page-level
+│   ├── notepad-card.mjs     the gate case — wraps engine/notepad-surface.mjs and owns
+│   │                        the markup and styles the shipped study holds page-level
+│   ├── info-block.mjs       Tetradetudes' chart-heading configuration: Key / Scale /
+│   │                        bottom tone, the cycle and the string set. Owns the config
+│   ├── fretboard-stage.mjs  the neck, the dots, the armed rings, the three CSS
+│   │                        transitions. Keyed by engine/voice-identity.mjs so the
+│   │                        nodes survive a chord change and the dots GLIDE
+│   └── chord-timeline.mjs   the roman-numeral pass; sequence-as-navigation
 ├── doors/*.door.mjs    THE DOOR DECLARATION — { id, lock, present }. Nothing else.
 ├── tools/resolve.mjs   lock → reach-set → control partition → style ownership
 ├── tools/build.mjs     reach-set → one self-contained HTML file
@@ -36,12 +47,18 @@ hub/
 `engine/` stays DOM-free. A module that owns markup or styles lives here and wraps an engine
 module; that split is what makes CSS prunable from a lock.
 
+A contribution may also declare **`order`** (default 0, stable within a tie) to say where it
+belongs down the page. Without it the page order is an accident of filename — which is not a
+fact any module should be asserting, and on Tetradetudes it put the configuration below the
+neck it configures.
+
 ## What the doors demonstrate
 
 | door | lock | ships | size |
 |---|---|---|---|
 | `scribe` | `{notepad: true}` | metronome + notepad, 12 files | 148 kB |
 | `plain` | `{notepad: false}` | metronome only, 3 files | 21 kB |
+| `tetradetudes` | `{material:"tetrad", notepad:true}` | door #1 — the four-voice pass, 20 files | 225 kB |
 
 The plain door drops six engine modules (notepad, markdown, palette, structures, atchart, chord)
 along with the card, plus 39 markup/style tokens. Its built file contains no trace of any of it —

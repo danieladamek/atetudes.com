@@ -20,6 +20,9 @@ export const notepadCard = {
   layer: "surface",
   requires: { notepad: true },
   mount_point: "boards",
+  /* the notebook is where a take is written DOWN, so it reads last on any door
+   * that also carries material boards (build.mjs `order`, default 0) */
+  order: 90,
   controls: ["journalIn", "saveEntry", "clearPad", "exportLog", "importBtn",
     "histList", "histCount", "clearConfirm", "clearSave", "clearDiscard",
     "clearCancel", "storeNote", "handoffNote"],

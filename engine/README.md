@@ -42,6 +42,11 @@ engine/
 │                        drop-2, drop-3, the shells (arity 3, a separate stream)
 │                        and rootless 3-5-7-9. Voicing only — chord VOCABULARY
 │                        stays in chord.mjs. Feeds isolation.mjs's candidatesFor
+├── tetrad-sequence.mjs  THE DERIVED PASS: a scale, a cycle, and the voiced
+│                        chords that walk it. Diatonic tetrads by stacking
+│                        scale thirds; cycles as one integer each; the bottom
+│                        tone seeds the first chord. What Tetrad Voice Leading
+│                        CARRIES as 1.16 MB, computed
 ├── voice-identity.mjs   THE STABLE VOICE KEY: a derived, never-stored identity
 │                        per voice across a chord change, so a holding voice
 │                        keeps its DOM node and glides. Keyed by CHANNEL, never
@@ -80,6 +85,10 @@ engine/
     ├── isolation.test.mjs            the Phase B safety net: 500+ shipped étude
     │                                 configs reproduced exactly, uneven windows
     ├── drill.test.mjs                the same, plus a non-string material
+    ├── tetrad-sequence.test.mjs      the frozen payload as an oracle for the
+    │                                 CHOICE, not just membership: every step
+    │                                 spells its chord, and where the rules
+    │                                 coincide the voicings match exactly
     ├── voice-identity.test.mjs       the four cases a naive key breaks on —
     │                                 hold, move, crossing, octave leap — each
     │                                 at arity 3 and 4; crossing asserted

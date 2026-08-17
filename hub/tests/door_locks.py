@@ -74,11 +74,27 @@ def code_lines(rel_path):
 def markers(rel_path, retained):
     """Derived from the source: every identifier it declares at top level, plus
     every code line of its own that no reached file also has. Comment-blind by
-    design (engine/README.md)."""
+    design (engine/README.md).
+
+    A MARKER MUST BE DISTINCTIVE AGAINST THE RETAINED CORPUS, and distinctive in
+    the same way it is later tested against the artifact — as a substring, since
+    that is how the grep asks. The line half always did this; the identifier
+    half did not, and that asymmetry produced false positives the moment two
+    modules shared a name (2026-08-17: engine/motion.mjs declares a local
+    `placeOnSet`, which engine/tetrad-voicings.mjs also exports, and a comment in
+    engine/notepad.mjs contains the word CONFIG).
+
+    A non-distinctive marker is worse than a missing one: it fails on a door
+    that is correct, and a gate that cries wolf is a gate people learn to skip.
+    Dropping it does not weaken the grep — the module's remaining markers still
+    carry it, and `check(ms, ...)` fails loudly if a module is left with none."""
     src = (REPO / rel_path).read_text()
-    names = set(DECL.findall(src))
+    corpus = "\n".join((REPO / f).read_text() for f in retained)
+    names = {n for n in DECL.findall(src)
+             if not re.search(r"\b" + re.escape(n) + r"\b", corpus)}
     shared = set().union(*[code_lines(f) for f in retained]) if retained else set()
-    return sorted(names) + sorted(code_lines(rel_path) - shared)
+    lines = {ln for ln in (code_lines(rel_path) - shared) if ln not in corpus}
+    return sorted(names) + sorted(lines)
 
 
 # in-page: every selector, media blocks included, with pseudo-states stripped
@@ -194,6 +210,38 @@ def run_door(pw, door_id):
                   f"{tag} the palette panel did not open")
         check(page.eval_on_selector_all(".hist .note.md pre", "e => e.length") == 1,
               f"{tag} the note's fenced block did not render through the markdown engine")
+    if "ibKey" in r["controlsPresent"]:
+        # the chart-heading block: open a popup so its open state is entered,
+        # then change the key and confirm the pass actually rebuilds
+        before = page.inner_text("#tlList")
+        page.click("#ibKey")
+        check(page.eval_on_selector_all(".ibPop.ibOpen", "e => e.length") == 1,
+              f"{tag} the key popup did not open")
+        page.click("#ibKeyPop >> text=Eb")
+        page.wait_for_timeout(120)
+        check(page.inner_text("#ibKeyVal") == "Eb", f"{tag} the key did not change")
+        check(page.inner_text("#tlList") != before,
+              f"{tag} the pass did not rebuild when the key changed")
+        # the timeline is navigation: clicking a chord moves the stage
+        page.click("#tlList >> button >> nth=2")
+        page.wait_for_timeout(120)
+        check(page.eval_on_selector_all("#tlList button.tlCur", "e => e.length") == 1,
+              f"{tag} the timeline lost its current-chord mark")
+        # and the dots are the SAME NODES after a step — that is what glides
+        ids = page.eval_on_selector_all("#fsNeck .fs-dot", "e => e.map(x => x.dataset.voice)")
+        check(ids == ["v0", "v1", "v2", "v3"],
+              f"{tag} the stage is not keyed by the stable voice key: {ids}")
+        page.click("#fsFwd")
+        page.wait_for_timeout(120)
+        ids2 = page.eval_on_selector_all("#fsNeck .fs-dot", "e => e.map(x => x.dataset.voice)")
+        check(ids2 == ids, f"{tag} the dots were rebuilt on a step — nothing would glide")
+        # leave a popup OPEN into the orphan check below, for the same reason
+        # the clock is left running: `.ibPop.ibOpen` is a state this door really
+        # has, and a check run against a closed popup would call it an orphan
+        page.click("#ibScale")
+        check(page.eval_on_selector_all(".ibPop.ibOpen", "e => e.length") == 1,
+              f"{tag} the scale popup did not open")
+
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped
     # metronome would call them orphans

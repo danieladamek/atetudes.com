@@ -29,12 +29,28 @@ const codeLines = (rel) => new Set(
     .replace(/^export\s+/gm, "").split("\n").map((l) => l.trim())
     .filter((l) => l.length >= 16 && !/^[*/]/.test(l)));
 
-/** identifiers the file declares, plus the code lines no reached file shares */
+/** identifiers the file declares, plus the code lines no reached file shares.
+ *
+ * A MARKER MUST BE DISTINCTIVE AGAINST THE RETAINED CORPUS, and distinctive the
+ * same way it is tested against the artifact — as a substring, since that is how
+ * the grep asks. Filtering lines by exact-line equality is not enough: a bare
+ * `throw new Error(` continuation line is a line no other file HAS and a
+ * substring almost every file CONTAINS. Identifiers were not filtered at all,
+ * which broke the moment two modules shared a name (engine/motion.mjs declares
+ * a local `placeOnSet`; engine/tetrad-voicings.mjs exports one).
+ *
+ * A non-distinctive marker fails on a door that is correct, and a gate that
+ * cries wolf is a gate people learn to skip. Dropping it costs nothing — the
+ * module's other markers still carry the check, and the assertion below fails
+ * loudly if a module is left with none. Mirrors hub/tests/door_locks.py. */
 function markers(rel, retained) {
   const src = readFileSync(join(REPO, rel), "utf8");
-  const names = [...src.matchAll(DECL)].map((m) => m[1]);
+  const corpus = retained.map((f) => readFileSync(join(REPO, f), "utf8")).join("\n");
+  const names = [...new Set([...src.matchAll(DECL)].map((m) => m[1]))]
+    .filter((n) => !new RegExp("\\b" + n.replace(/[$]/g, "\\$&") + "\\b").test(corpus));
   const shared = new Set(retained.flatMap((f) => [...codeLines(f)]));
-  return { names: [...new Set(names)], lines: [...codeLines(rel)].filter((l) => !shared.has(l)) };
+  const lines = [...codeLines(rel)].filter((l) => !shared.has(l) && !corpus.includes(l));
+  return { names, lines };
 }
 
 const has = (html, m) => new RegExp("\\b" + m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(html);
