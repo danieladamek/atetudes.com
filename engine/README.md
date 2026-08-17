@@ -28,6 +28,14 @@ engine/
 ├── upper-structure.mjs  parsed chord → ranked upper-structure triads + auto bass,
 │                        by named rule (pure) — Triadetudes break-down mode / ST-2
 ├── metronome.mjs        metronome core: beat grid, tempo bends, tap tempo (pure)
+├── isolation.mjs        THE ISOLATION BOX as a first-class voicing constraint:
+│                        the zone as a VALUE, the two cost terms, the named
+│                        placements and their tie rules, the ladder wrap, line
+│                        placement — candidate geometry injected (pure)
+├── drill.mjs            the SHARED DRILL LAYER (family spec §4.1): a pattern
+│                        over a material's slots, the subdivision arithmetic
+│                        and bar splits, the sounding order. The material is
+│                        declared by the consumer — nothing here says "string"
 ├── note-events.mjs      the note-event producer: one {midi,string,fret,role,slot,
 │                        onset,dur} list per chord, every renderer a consumer (pure)
 ├── string-sets.mjs      slot/degree translation across string sets (pure)
@@ -61,6 +69,9 @@ engine/
     ├── structures.test.mjs           the 12-key × catalog matrix + the grep
     ├── palette.test.mjs              valid-input-by-construction + the caret's survival
     ├── host-conformance.test.mjs     family spec §4.3: one host list, same assertions
+    ├── isolation.test.mjs            the Phase B safety net: 500+ shipped étude
+    │                                 configs reproduced exactly, uneven windows
+    ├── drill.test.mjs                the same, plus a non-string material
     ├── triadetudes-engine.test.mjs   characterization of the shipped study's engine
     └── _load-triadetudes.mjs         extracts the study's <script> for headless testing
 ```
@@ -70,11 +81,16 @@ engine/
 Zero dependencies — the runner is Node's built-in `node:test` (Node ≥ 20):
 
 ```
-node --test "engine/tests/*.test.mjs"
+node --test engine/tests/*.test.mjs
 ```
 
-CI runs the same command in `.github/workflows/pages.yaml` before the Hugo build; a red
-test blocks deploy.
+**Leave the glob unquoted** — the shell expands it. Node only resolves a glob itself from
+Node 21, so the quoted form fails with *"Could not find …"* on the Node 20 this repo
+targets.
+
+CI runs that exact command in `.github/workflows/pages.yaml` before the Hugo build,
+followed by `node --test hub/tests/*.test.mjs` for the door build gate (family spec
+§4.2.2); a red test in either blocks deploy.
 
 ## Rules
 
@@ -84,6 +100,12 @@ test blocks deploy.
   `static/studies/triadetudes/study.html` verbatim and pin its current behaviour; they
   never modify it. When Phase B extracts the hub, these tests are the safety net — the
   extracted engine must produce identical output before the study file is regenerated.
+  **Used exactly that way on 2026-08-16** (Update Log 260816.2): `isolation.mjs` and
+  `drill.mjs` were extracted against them, and no shipped file was touched. An extraction
+  is a refactor, and a refactor is asserted, not reviewed.
+- **A door-facing module belongs in `hub/`, not here.** This directory stays DOM-free;
+  `hub/modules/*.mjs` own markup and styles and wrap these modules. The split is what
+  makes CSS prunable from a door's lock (family spec §4.2.2).
 - **No frameworks, no installs** (CLAUDE.md guardrail + the single-file charter promise).
   If a test needs a library, the design is wrong.
 - **Consistency is asserted, not remembered** (family spec §4.3,

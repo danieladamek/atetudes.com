@@ -1,0 +1,89 @@
+/* shell.mjs — the hub's host surface: page grammar and nothing else.
+ *
+ * It owns the family's layout vocabulary — the wrap, the card, the transport
+ * row, the hint — and it mounts contributions FROM A LIST IT DOES NOT WRITE.
+ * It never names a module (§4.2.1's structural constraint) and it renders no
+ * control of its own.
+ *
+ * SHELL_STYLES is the page grammar, lifted verbatim in spirit from the shipped
+ * Triadetudes study so the doors look like the family rather than like a test
+ * rig. Every rule here either uses a bare element selector or names something
+ * this file's own markup contains — the resolver enforces that, because a
+ * shell rule anchored in a MODULE's markup is CSS that outlives its module.
+ */
+
+export const SHELL_STYLES = `
+:root{
+  --ground:#ECECEE; --card:#FFFFFF; --ink:#212126; --gray:#73737A; --line:#D8D8DC;
+  --red:#B82929;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+     font-family:Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+header h1{font-size:26px;margin:6px 0 2px}
+header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
+.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:flex-start}
+label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
+select,input[type=text],textarea{
+  font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;color:var(--ink);max-width:100%;width:100%}
+.hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
+.transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
+.transport button.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:bold}
+footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
+`;
+
+/** The layout CONTAINERS are the shell's, and the shell writes them — that is
+ * why `.card` and `.board` are page grammar rather than one module's property.
+ * A module contributes the contents and names the container it wants; it never
+ * writes the container itself, exactly as it never writes the module list.
+ *
+ * A container's STYLES travel with the container, and the build emits them only
+ * for mount points a door actually fills. Otherwise `.board` outlives the last
+ * module that asked for a board — page grammar becomes a trace, which is the
+ * orphan the suite caught on first run. */
+export const WRAPPERS = {
+  cards: {
+    html: (inner, extra) => `<div class="card${extra ? " " + extra : ""}">${inner}</div>`,
+    styles: `
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+      padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
+.card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+         color:var(--gray);margin:0 0 10px;font-weight:bold}`,
+  },
+  boards: {
+    html: (inner, extra) => `<div class="board${extra ? " " + extra : ""}">${inner}</div>`,
+    styles: `
+.board{background:var(--card);border:1px solid var(--line);border-radius:10px;
+       padding:10px 12px;margin-bottom:12px;position:relative}`,
+  },
+};
+
+/** the page skeleton. cards and boards are the two mount points a
+ * contribution can ask for; everything else is chrome. */
+export const SHELL_MARKUP = `
+<div class="wrap">
+  <header>
+    <h1 id="doorTitle"></h1>
+    <div class="tag" id="doorTag"></div>
+  </header>
+  <div class="cards" id="cards"></div>
+  <div id="boards"></div>
+  <footer id="doorFoot"></footer>
+</div>`;
+
+export function boot(MODULES, door, doc) {
+  const byId = (id) => doc.getElementById(id);
+  doc.getElementById("doorTitle").textContent = door.present.title;
+  doc.getElementById("doorTag").textContent = door.present.blurb;
+  doc.getElementById("doorFoot").textContent = door.present.footer || "";
+  const ctx = { door, doc, byId,
+    /** modules report state changes here; the shell owns no readout of its
+     * own, so this is a no-op seam the host page can take over */
+    changed() {} };
+  for (const m of MODULES) m.mount(ctx);
+  return ctx;
+}

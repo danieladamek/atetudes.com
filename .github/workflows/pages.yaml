@@ -34,6 +34,13 @@ jobs:
         # node:test, zero dependencies — includes the characterization suite that
         # pins the shipped Triadetudes engine. A red test blocks deploy.
         run: node --test engine/tests/*.test.mjs
+      - name: Door build gate
+        # family spec §4.2.2: the style-ownership rule, the static-derivation
+        # bans, and the artifact greps — the half of the door gate that needs no
+        # browser. The rendered partition, the file:// offline check and the
+        # orphan-selector check are in hub/tests/door_locks.py and stay a local
+        # gate until Playwright in CI is approved (charter: no new dependencies).
+        run: node --test hub/tests/*.test.mjs
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"

@@ -6,6 +6,9 @@ notes/
 # The published interactive editions live (tracked) in static/studies/.
 publications/
 
+# Hub door builds — regenerable from hub/ by definition, same rule as publications/
+hub/build/
+
 # Hugo
 public/
 resources/

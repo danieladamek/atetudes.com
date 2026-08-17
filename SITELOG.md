@@ -5,6 +5,70 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-16 — Stage 2 re-verified cold; the CI door gate's spec citation now resolves (Update Log 260816.3)
+
+- **No site change, again.** All four published studies re-verified byte-identical to `HEAD` and
+  loading from `file://` with every http(s) request aborted — zero console errors, zero network
+  attempts. Triadetudes is still **not** republished; that is stage 3.
+- **The door gate re-run from a cold session and green throughout**: engine 323/323, the CI door
+  build gate 3/3, the local browser suite 1966 assertions / 0 failed, 7/7 bite mutations biting.
+  Doors rebuilt to the same shape and their screenshots re-inspected at 1280 and 390.
+- **Why this touches the site build:** `.github/workflows/pages.yaml`'s door-gate step cites *family
+  spec §4.2.2* for the rule it enforces, and that section did not exist — stage 2's results were
+  logged but never ratified into the spec the way stage 1's were. §4.2.2 is now written, so the
+  build file's stated authority resolves. `engine/README.md` carried the same dangling citation.
+- **`engine/README.md`'s test command was wrong where a human would copy it** (a quoted glob, which
+  `node --test` cannot resolve before Node 21). CI used the working unquoted form and was never
+  affected. Fixed, and the hub gate's command documented beside it.
+- Noted for the record: the frozen `tetrad-voice-leading` study emits Chrome autoplay-policy
+  *warnings* for its `AudioContext` on load — pre-existing, not errors, file byte-unchanged, and
+  §5.2.1 freezes that study. Recorded so a future run's warnings are not read as new.
+
+## 2026-08-16 — Door mechanism stage 2: CSS and markup prune from the lock; the hub's first two modules (Update Log 260816.2)
+
+- **No published study changed.** All four are byte-identical to `HEAD` and were re-verified loading
+  from `file://` with the network disabled, zero console errors. Triadetudes is **not** republished —
+  that is stage 3.
+- **The site-relevant result:** a door's single file can now be driven from its lock in all three
+  materials — script, markup and styles. `hub/` builds two proving doors: `scribe` (metronome +
+  notebook) at 148 kB and `plain` (metronome alone) at **21 kB**, the smaller one containing no trace
+  of the notepad card or the six engine modules behind it. Greped on the artifact, not the config.
+  **Charter §5's single-file offline promise holds for a door that prunes real UI**, which is the
+  version of the promise the pentatonic door will actually need.
+- **Why this is a site change even though no page moved:** every future study page will be built this
+  way, and the rule that makes it work is a *stylesheet* rule. A study's CSS must be owned by the
+  module whose markup it matches; page-level rules for one module's markup (`#journalIn`, `.jcol`,
+  `.hist …` in Triadetudes today) cannot be pruned and are now refused by the build.
+- **Dead CSS found in the shipped study** by the new orphan-selector check: `.hist .sum` matches
+  nothing — `notepad-surface.mjs` builds no such element. Left in place (nothing shipped is touched
+  in this item); it goes when Triadetudes is regenerated at stage 3.
+- **CI gains a door gate** (`hub/tests/door_build.test.mjs`, zero dependencies, beside the engine
+  suite): style ownership, the static-derivation bans, and the artifact greps run on every push. The
+  browser half (rendered partition, `file://` offline, orphan selectors) stays a local gate —
+  Playwright in CI would be a new dependency and is Daniel's call.
+- Chrome and palette untouched; the hub's page grammar is the study's own, neutral, no degree color.
+  Engine suite 323/323. Full findings in Update Log 260816.2.
+
+## 2026-08-16 — Door mechanism stage 1: the gate passes, nothing on the site changed (Update Log 260816.1)
+
+- **No site change.** No published study, wrapper page, layout, or CSS was touched; nothing was
+  extracted from Triadetudes. Logged here because the result governs how every future study will be
+  built and published, and because the charter §5 promise it tests is a *site* promise.
+- **The question:** can a door's locked config drive which modules get inlined into its published
+  single file (family spec §4.2)? **Answer: yes.** Three throwaway doors, module set derived from
+  the lock end to end, each built to one self-contained HTML file that loads from `file://` with the
+  network aborted and **zero console errors**, exercised rather than merely loaded, screenshots at
+  1280 and 390 taken and inspected. **Charter §5's single-file offline promise survives the
+  consolidation** — the kill condition did not fire.
+- **What that means for published pages:** a door's page keeps the site's guarantees for free rather
+  than by discipline. Beta's built file contains **none** of material-a's source (greped on the
+  artifact, not the config), so a locked door's download is genuinely smaller — the promise the
+  pentatonic door will need when it must not ship a chord parser.
+- **Chrome untouched, palette untouched.** The toy doors are ink/gray/ground only; no degree color
+  appears anywhere, since there is no musical function to color.
+- Engine suite 309/309, unchanged. Prototype (throwaway, gitignored):
+  `notes/prototypes/door-mechanism-stage1/`. Full findings in Update Log 260816.1.
+
 ## 2026-08-14 — Triadetudes v0.8.7: the mixer — triads and bass, one mute (Update Log 260814.2)
 
 - **Two level sliders in the Transport card — triads and bass** — each a gain bus spliced
