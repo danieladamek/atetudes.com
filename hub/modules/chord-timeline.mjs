@@ -29,6 +29,7 @@ export const chordTimeline = {
 
   markup: `
   <h2>Timeline</h2>
+  <div class="clpsum">The chords in order — click a bar to jump, or step with the transport.</div>
   <div class="tlrow">
     <div class="tlscroll" id="tlBars" data-control="tlBars"></div>
     <span id="tlMini" data-control="tlMini"></span>

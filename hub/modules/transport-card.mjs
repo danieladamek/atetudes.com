@@ -74,7 +74,8 @@ export const transportCard = {
     <input type="range" id="bassVolR" data-control="bassVolR" min="0" max="100" value="100">
     <span class="trVal" id="bassVolVal">100</span>
   </div>
-  <div class="hint">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2
+  <div class="clpsum">The étude's walk — Play joins the grid at the next bar.</div>
+  <div class="hint info">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2
   beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next bar</b> — the
   click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first).
   Mute chords is the chord level at zero — bass and click keep sounding and the changes still

@@ -846,6 +846,55 @@ def run_door(pw, door_id):
     check("clpsd" not in (panel.get_attribute("class") or ""), f"{tag} the chevron did not expand the panel")
     check(body.is_visible(), f"{tag} the body did not come back on expand")
 
+    # ---------------- the info button + popout (this item) ------------------
+    # Static prose moved off the panel face into a popout. A panel WITH prose has
+    # a button; a panel WITHOUT has none (no disabled placeholder). The popout is
+    # exercised HERE, before the orphan check, so its selectors are not orphans
+    # (the .clpsd lesson from Shell 4).
+    for p in page.query_selector_all(".card, .board"):
+        has_prose = p.query_selector(".info") is not None   # moved into the popout, still a descendant
+        has_btn = p.query_selector(".infoBtn") is not None
+        title = p.query_selector("h2, .bh span")
+        name = title.inner_text() if title else "?"
+        check(has_prose == has_btn,
+              f"{tag} panel {name!r}: info button ({has_btn}) and static prose ({has_prose}) disagree — "
+              f"a panel with no prose must show no button, and one with prose must show it")
+    # EVERY panel keeps a NON-EMPTY collapsed summary — the coupling most likely
+    # to break in silence, because the .hint that used to feed it just moved away
+    for p in page.query_selector_all(".card, .board"):
+        btn = p.query_selector(".clpsBtn")
+        btn.click(); page.wait_for_timeout(25)
+        summ = page.evaluate("(el) => el.querySelector('.clpsSum').textContent.trim()", p)
+        t = p.query_selector("h2, .bh span")
+        check(summ != "",
+              f"{tag} panel {(t.inner_text() if t else '?')!r} collapses to an EMPTY summary — the moved prose broke the coupling")
+        btn.click(); page.wait_for_timeout(15)              # expand again
+    # each popout carries the prose it replaced, verbatim (read the moved .info,
+    # text_content so a hidden popout still reports its text)
+    allinfo = " ".join(e.text_content() for e in page.query_selector_all(".infoPop .info") if e.text_content())
+    check("A full metronome on its own clock" in allinfo,
+          f"{tag} the Metronome prose did not move into a popout verbatim")
+    if "splitSel" in r["controlsPresent"]:
+        check("Chords take the bar's slots" in allinfo and "at the next bar" in allinfo,
+              f"{tag} the Transport prose did not move into a popout verbatim (with the beat-fix clause)")
+    if "journalIn" in r["controlsPresent"]:
+        check("nothing leaves this machine" in allinfo,
+              f"{tag} the Notepad handoff prose did not move into a popout")
+    # OPEN a popout, and prove it dismisses without a modal — Escape and click-out
+    ib = page.query_selector(".infoBtn")
+    ib.click(); page.wait_for_timeout(60)
+    check(page.query_selector(".infoPop:not([hidden])") is not None,
+          f"{tag} the info button did not open its popout")
+    page.keyboard.press("Escape"); page.wait_for_timeout(40)
+    check(page.query_selector(".infoPop:not([hidden])") is None, f"{tag} Escape did not dismiss the popout")
+    ib.click(); page.wait_for_timeout(40)
+    check(page.query_selector(".infoPop:not([hidden])") is not None, f"{tag} the popout did not reopen")
+    page.mouse.click(3, 3); page.wait_for_timeout(40)       # click far outside the popout
+    check(page.query_selector(".infoPop:not([hidden])") is None, f"{tag} click-outside did not dismiss the popout")
+    # the popout must not have pushed layout: the panel it belongs to keeps its
+    # place (absolute positioning), so no console error and the page still loads
+    # — asserted by the zero-error check below and the orphan sweep.
+
     # ---------------- strip mini-transports + click-a-bar (Shell 4) ---------
     if page.query_selector("#tlMini"):
         tl_at = lambda: page.evaluate("""() => {
@@ -935,8 +984,20 @@ def run_door(pw, door_id):
     page.wait_for_timeout(40)
 
     if SHOTS:
+        # open the LARGEST popout for the shots — the item wants the popout open
+        # at both widths, and the Transport paragraph (531 chars) is the real test
+        # of whether it overflows a 390px viewport
+        info_btns = page.query_selector_all(".infoBtn")
+        if info_btns:
+            # open the popout with the MOST prose (Transport's 531 chars where it
+            # exists) — the real test of whether a popout overflows 390px
+            best = max(info_btns, key=lambda b: len(
+                b.evaluate("el => (el.parentElement.querySelector('.infoPop') || {}).textContent || ''")))
+            best.click()
+            page.wait_for_timeout(80)
         page.screenshot(path=str(BUILD / f"{door_id}-1280.png"), full_page=True)
         page.set_viewport_size({"width": 390, "height": 844})
+        page.wait_for_timeout(80)
         page.screenshot(path=str(BUILD / f"{door_id}-390.png"), full_page=True)
     ctx.close()
     print(f"  {tag} {len(r['controlsPresent'])}/{len(r['controlsAbsent'])} controls "

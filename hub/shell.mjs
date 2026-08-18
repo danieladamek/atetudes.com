@@ -65,6 +65,27 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .clpsd>h2{display:block!important;margin-bottom:2px}
 .clpsd>.clpsBtn{display:block!important}
 .clpsd>.clpsSum{display:block!important}
+
+/* THE INFO BUTTON + POPOUT (Daniel: static instructional prose "takes up real
+ * estate and lends to visual clutter"). Shell-level like the chevron: a panel
+ * marks its STATIC prose with the grammar class .info, and the shell moves it
+ * off the panel face into a popout behind a neutral circle-i, immediately left
+ * of the collapse chevron. A panel with no .info prose gets no button. LIVE
+ * readouts (a .hint written at runtime) are never .info, so they stay on the
+ * face — the whole point of the item. House neutrals only; --red is the degree
+ * palette's Root. The popout is a plain element, never a dialog element: the
+ * file:// gate forbids a modal. .clpsum is a hidden one-line collapse summary a
+ * panel supplies when moving its prose would otherwise leave it summariless. */
+.infoBtn{position:absolute;top:8px;right:38px;font:inherit;font-size:11px;
+  padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
+  cursor:pointer;color:var(--gray);z-index:7}
+.infoBtn:hover{border-color:var(--ink);color:var(--ink)}
+.infoPop{position:absolute;top:32px;left:10px;right:10px;z-index:20;
+  background:var(--card);border:1px solid var(--line);border-radius:8px;
+  padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.14);max-height:60vh;overflow:auto}
+.infoPop[hidden]{display:none}
+.infoPop .info{font-size:12px;color:var(--ink);line-height:1.55;margin:0}
+.clpsum{display:none}
 `;
 
 /** The layout CONTAINERS are the shell's, and the shell writes them — that is
@@ -150,12 +171,23 @@ export const SHELL_MARKUP = `
  * the stage's readout line, or a board's header — and refreshed while collapsed
  * so it never shows stale settings. */
 function initCollapse(doc) {
-  // the summary is derived from a panel's own live line, named only through
-  // GRAMMAR tokens (.hint, .bh) — never a module's private id, which would ship
-  // this shell's always-present code into a door that prunes that module
+  // the summary is derived from a panel's own line, named only through GRAMMAR
+  // tokens (.clpsum, .hint, .bh) — never a module's private id, which would ship
+  // this shell's always-present code into a door that prunes that module. The
+  // FIRST NON-EMPTY source wins: an explicit `.clpsum` one-liner, else a live
+  // `.hint` (never `.info` — that is the static prose now in a popout), else the
+  // board header. Skipping empties matters — a hidden fsBoxHint or an empty
+  // import message must fall through to the header, not blank the summary.
   const summaryOf = (p) => {
-    const src = p.querySelector(".hint") || p.querySelector(".bh span");
-    return src ? src.textContent.replace(/\s+/g, " ").trim() : "";
+    // …and the panel's own title (h2) is the floor: a panel must never collapse
+    // to a blank line, and its name is the minimum honest summary. Real panels
+    // all carry a richer source above and never reach it.
+    for (const sel of [".clpsum", ".hint:not(.info)", ".bh span", "h2"]) {
+      const el = p.querySelector(sel);
+      const t = el ? el.textContent.replace(/\s+/g, " ").trim() : "";
+      if (t) return t;
+    }
+    return "";
   };
   const panels = [];
   for (const p of doc.querySelectorAll(".card, .board")) {
@@ -183,6 +215,44 @@ function initCollapse(doc) {
   for (const ev of ["input", "change", "click"]) doc.addEventListener(ev, refresh, true);
 }
 
+/** The info button + popout — page grammar, applied AFTER the modules mount so
+ * it wraps whatever a door rendered without naming one. A panel that carries
+ * `.info` prose grows a neutral ⓘ just left of the collapse chevron; the prose
+ * is MOVED verbatim into a popout the button toggles. Dismissed by click-outside
+ * and by Escape — never a browser modal (the file:// gate forbids a dialog).
+ * Keyboard-reachable (a real button) and labelled, since the popout is now the
+ * only route to that text. A panel with no static prose gets no button. */
+function initInfo(doc) {
+  let openBtn = null, openPop = null;
+  const close = () => {
+    if (openPop) { openPop.hidden = true; openBtn.setAttribute("aria-expanded", "false"); }
+    openBtn = openPop = null;
+  };
+  let n = 0;
+  for (const p of doc.querySelectorAll(".card, .board")) {
+    const prose = [...p.querySelectorAll(".info")];
+    if (!prose.length) continue;
+    const pop = doc.createElement("div");
+    pop.className = "infoPop"; pop.hidden = true; pop.id = "infoPop-" + (++n);
+    for (const el of prose) pop.appendChild(el);   // MOVE the prose in, verbatim
+    p.appendChild(pop);
+    const btn = doc.createElement("button");
+    btn.className = "infoBtn"; btn.textContent = "ⓘ";   // ⓘ
+    btn.setAttribute("aria-label", "About this panel");
+    btn.setAttribute("aria-controls", pop.id);
+    btn.setAttribute("aria-expanded", "false");
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();          // this click must not reach the outside-close
+      const willOpen = pop.hidden;
+      close();
+      if (willOpen) { pop.hidden = false; btn.setAttribute("aria-expanded", "true"); openBtn = btn; openPop = pop; }
+    });
+    p.appendChild(btn);
+  }
+  doc.addEventListener("click", (e) => { if (openPop && !openPop.contains(e.target)) close(); });
+  doc.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+}
+
 export function boot(MODULES, door, doc) {
   const byId = (id) => doc.getElementById(id);
   doc.getElementById("doorTitle").textContent = door.present.title;
@@ -193,6 +263,7 @@ export function boot(MODULES, door, doc) {
      * own, so this is a no-op seam the host page can take over */
     changed() {} };
   for (const m of MODULES) m.mount(ctx);
+  initInfo(doc);
   initCollapse(doc);
   return ctx;
 }

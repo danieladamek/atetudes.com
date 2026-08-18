@@ -60,7 +60,8 @@ export const metronomeCard = {
     <input type="range" id="clickVolR" data-control="clickVolR" min="0" max="100" value="80">
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
-  <div class="hint">A full metronome on its own clock — use it with or without the étude.
+  <div class="clpsum">A metronome on its own clock — with or without the étude.</div>
+  <div class="hint info">A full metronome on its own clock — use it with or without the étude.
   The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
   metronome, first block, this look.)</div>`,
 
@@ -81,7 +82,11 @@ export const metronomeCard = {
  * rule cannot outlive the card (Shell 4) */
 .card.metro .clpsBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
 .card.metro label{color:#9C9CA4}
-.card.metro .hint{color:#85858D}
+/* the info button's dark-card variant lives here with the inverted card it
+ * dresses — metro is this module's own token, so the rule cannot outlive the
+ * card (same reason as the collapse chevron above). The static prose it reveals
+ * now lives in a white popout, so it needs no dark-card colour of its own. */
+.card.metro .infoBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
 .card.metro select{background:#2E2E34;color:#ECECEE;border-color:#44444C}
 .card.metro .transport button{background:#2E2E34;color:#ECECEE;border-color:#44444C}
 .card.metro .transport button.primary{background:#ECECEE;color:var(--ink);
