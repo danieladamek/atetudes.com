@@ -11,11 +11,11 @@
  * this file's own markup contains — the resolver enforces that, because a
  * shell rule anchored in a MODULE's markup is CSS that outlives its module.
  *
- * `.chk` is here by PROMOTION rather than by decree: it lived in the metronome
- * card while exactly one module used it, and moved up on 2026-08-17 when the
- * transport card became its second user. Grammar is earned with evidence
- * (§4.2.2), and the resolver refused the build until it moved — which is the
- * rule doing its job rather than an inconvenience.
+ * `.chk` and `.row2` are here by PROMOTION rather than by decree: each lived
+ * in the metronome card while exactly one module used it, and moved up on
+ * 2026-08-17 when a second user arrived (`.chk`: the transport card; `.row2`:
+ * the harmony panel). Grammar is earned with evidence (§4.2.2), and the
+ * resolver refused the build until they moved — the rule doing its job.
  */
 
 export const SHELL_STYLES = `
@@ -37,6 +37,8 @@ select,input[type=text],textarea{
 .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
 .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
 .chk input{width:auto}
+.row2{display:flex;gap:10px;flex-wrap:wrap}
+.row2>div{flex:1 1 90px}
 .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}

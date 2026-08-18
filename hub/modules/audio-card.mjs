@@ -169,7 +169,9 @@ export const audioCard = {
       if (!a) return;
       const t0 = a.currentTime + 0.02;
       const low = Math.min(...step.voicing.notes.map((n) => n.midi));
-      const bass = bassSeat(low, step.chord.root.pc);
+      // the Harmony panel's bass select, honoured here: "none" mutes the PEDAL
+      // only — the four voicing notes are on the chord bus and keep sounding
+      const bass = cfg && cfg.bass === "none" ? null : bassSeat(low, step.chord.root.pc);
       for (const ev of chordSchedule(step.voicing, { bassMidi: bass, durBeats: 2, bpm: 72, voice }))
         sound(voiceFor(ev.role, voice), ev.midi, t0 + ev.onset, ev.dur, ev.role === "bass" ? 0.3 : 0.2);
     };

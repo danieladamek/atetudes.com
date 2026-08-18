@@ -290,18 +290,51 @@ def run_door(pw, door_id):
         check(page.eval_on_selector_all(".trToggle.trLit", "e => e.length") == 1,
               f"{tag} the play toggle does not light")
 
-    if "ibKey" in r["controlsPresent"]:
-        # the chart-heading block: open a popup so its open state is entered,
-        # then change the key and confirm the pass actually rebuilds
+    if "keySel" in r["controlsPresent"]:
+        # ---- the Harmony panel, in the reference's form: labelled selects,
+        # no popups — the overlap defect left with the idiom that caused it ----
         before = page.inner_text("#tlList")
-        page.click("#ibKey")
-        check(page.eval_on_selector_all(".ibPop.ibOpen", "e => e.length") == 1,
-              f"{tag} the key popup did not open")
-        page.click("#ibKeyPop >> text=Eb")
+        page.select_option("#keySel", "Eb")
         page.wait_for_timeout(120)
-        check(page.inner_text("#ibKeyVal") == "Eb", f"{tag} the key did not change")
+        check(page.input_value("#keySel") == "Eb", f"{tag} the key did not change")
         check(page.inner_text("#tlList") != before,
               f"{tag} the pass did not rebuild when the key changed")
+        # "Start on" is the reference's roman list, derived per key and scale:
+        # major's vii must read as the half-diminished roman
+        romans = page.eval_on_selector_all("#startSel option", "e => e.map(x => x.textContent)")
+        check(len(romans) == 7 and any("\u00f8" in x for x in romans),
+              f"{tag} Start on is not the derived roman list: {romans}")
+        # starting the pass elsewhere really reorders it
+        first = page.inner_text("#tlList button >> nth=0")
+        page.select_option("#startSel", "3")
+        page.wait_for_timeout(120)
+        check(page.inner_text("#tlList button >> nth=0") != first,
+              f"{tag} Start on did not move the pass's first chord")
+        page.select_option("#startSel", "0")
+        page.wait_for_timeout(80)
+        # Break down is the reference's form, honestly disabled until typed
+        # changes land — a control that pretends would be the v0.6.8 defect
+        check(page.eval_on_selector_all("#modeSeg button[disabled]", "e => e.length") == 1,
+              f"{tag} the Break down button is not disabled (or vanished)")
+        # NO OVERLAP anywhere in the panel: the defect this panel removed must
+        # not reappear — every pair of visible controls must be disjoint
+        overlaps = page.evaluate("""() => {
+          const els = [...document.querySelectorAll(
+            '.hp-strip select, .hp-strip button, .hp-strip label')]
+            .map(e => ({ t: e.tagName + ':' + (e.id || e.textContent.slice(0, 12)),
+                         r: e.getBoundingClientRect() }))
+            .filter(x => x.r.width > 0 && x.r.height > 0);
+          const bad = [];
+          for (let i = 0; i < els.length; i++)
+            for (let j = i + 1; j < els.length; j++) {
+              const a = els[i].r, b = els[j].r;
+              const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+              const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+              if (x > 2 && y > 2) bad.push(els[i].t + " ~ " + els[j].t);
+            }
+          return bad;
+        }""")
+        check(overlaps == [], f"{tag} Harmony panel elements overlap: {overlaps[:4]}")
         # the timeline is navigation: clicking a chord moves the stage
         page.click("#tlList >> button >> nth=2")
         page.wait_for_timeout(120)
@@ -376,14 +409,6 @@ def run_door(pw, door_id):
         page.dispatch_event("#auChordVol", "input")
         page.fill("#auBassVol", "50")
         page.dispatch_event("#auBassVol", "input")
-
-    if "ibKey" in r["controlsPresent"]:
-        # leave a popup OPEN into the orphan check below, for the same reason
-        # the clock is left running: `.ibPop.ibOpen` is a state this door really
-        # has, and a check run against a closed popup would call it an orphan
-        page.click("#ibScale")
-        check(page.eval_on_selector_all(".ibPop.ibOpen", "e => e.length") == 1,
-              f"{tag} the scale popup did not open")
 
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped

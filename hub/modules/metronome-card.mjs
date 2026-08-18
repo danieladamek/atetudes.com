@@ -68,18 +68,16 @@ export const metronomeCard = {
    * `chk`, `bpmrow` or a control id — tokens no other module ships today. The
    * inverted card cannot outlive the card.
    *
-   * `.row2` and `.bpmrow` LOOK like page grammar and sit in the shell's
-   * stylesheet in the shipped study. They are here because exactly one module
-   * uses them: grammar is promoted to the shell when it earns a second user,
-   * with the evidence, rather than being declared grammar in advance.
+   * `.bpmrow` LOOKS like page grammar and sits in the shell's stylesheet in
+   * the shipped study. It is here because exactly one module uses it: grammar
+   * is promoted to the shell when it earns a second user, with the evidence,
+   * rather than being declared grammar in advance.
    *
-   * `.chk` WAS here on exactly those terms and has now been promoted: the
-   * transport card is its second user (2026-08-17), so it is page grammar by
-   * evidence and lives in the shell. The rule worked as written — the resolver
-   * refused the build until it moved. */
+   * `.chk` and `.row2` WERE here on exactly those terms and have been
+   * promoted — the transport card became `.chk`'s second user and the harmony
+   * panel `.row2`'s (both 2026-08-17). The rule worked as written each time:
+   * the resolver refused the build until they moved. */
   styles: `
-.row2{display:flex;gap:10px;flex-wrap:wrap}
-.row2>div{flex:1 1 90px}
 .bpmrow{display:flex;align-items:center;gap:8px;margin-top:10px}
 .bpmrow input[type=range]{flex:1;accent-color:var(--ink);width:auto}
 .card.metro{background:var(--ink);border-color:var(--ink);color:#ECECEE}

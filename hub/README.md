@@ -30,8 +30,10 @@ hub/
 │   ├── metronome-card.mjs   the family constant — requires {}, every door reaches it
 │   ├── notepad-card.mjs     the gate case — wraps engine/notepad-surface.mjs and owns
 │   │                        the markup and styles the shipped study holds page-level
-│   ├── info-block.mjs       Tetradetudes' chart-heading configuration: Key / Scale /
-│   │                        bottom tone, the cycle and the string set. Owns the config
+│   ├── harmony-panel.mjs    the HARMONY strip in the reference page's form: Key,
+│   │                        Scale, mode segment, Progression, Start on, the bass
+│   │                        select. Owns the config; replaced the chart-heading
+│   │                        module whose popups overlapped the row beneath
 │   ├── fretboard-stage.mjs  the neck, the dots, the armed rings, the three CSS
 │   │                        transitions. Keyed by engine/voice-identity.mjs so the
 │   │                        nodes survive a chord change and the dots GLIDE
