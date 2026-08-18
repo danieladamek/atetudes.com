@@ -30,10 +30,12 @@
  */
 import {
   NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf,
-  pluckSamples, SUSTAIN_PARTIALS, chordSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES,
+  pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES,
 } from "../../engine/voices.mjs";
-import { tetradPass } from "../../engine/tetrad-sequence.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, listen } from "../bus.mjs";
+import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
+import { scaleNotes } from "../../engine/chord.mjs";
+import { parseFigure, figureEvents } from "../../engine/figure.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, listen } from "../bus.mjs";
 
 export const audioCard = {
   id: "audio-card",
@@ -58,6 +60,7 @@ export const audioCard = {
     let on = false, voice = NOTE_VOICE_NAMES[0], clickOn = true;
     let chordVol = 1, bassVol = 1;
     let cfg = null, pass = null, live = 0;
+    let bpm = 72, durBeats = 2;                       // the clock's, heard on the bus
 
     /* ---- the context, created on a GESTURE and never before ---- */
     const audio = () => {
@@ -141,8 +144,20 @@ export const audioCard = {
       // the Harmony panel's bass select, honoured here: "none" mutes the PEDAL
       // only — the four voicing notes are on the chord bus and keep sounding
       const bass = cfg && cfg.bass === "none" ? null : bassSeat(low, step.chord.root.pc);
-      for (const ev of chordSchedule(step.voicing, { bassMidi: bass, durBeats: 2, bpm: 72, voice }))
-        sound(voiceFor(ev.role, voice), ev.midi, t0 + ev.onset, ev.dur, ev.role === "bass" ? 0.3 : 0.2);
+      /* THE FIGURE CHAIN: one event list per chord from engine/figure.mjs —
+       * block strum, the figure as a line, or both — then voice-scheduled. The
+       * same list the stage pulses and the score draws; nothing re-derived. */
+      const parsed = parseFigure(cfg && cfg.figure, (cfg && cfg.address) || "slots");
+      const events = figureEvents(step, {
+        parsed: parsed.err ? null : parsed.pattern, address: (cfg && cfg.address) || "slots",
+        playback: (cfg && cfg.playback) || "block", bassMidi: bass, durBeats, bpm,
+        ctx: { scalePcs: scaleNotes(cfg.key || "C", cfg.scale || "major").map((n) => n.pc),
+          tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,
+          open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
+      });
+      for (const ev of voiceSchedule(events, voice, durBeats, bpm))
+        sound(voiceFor(ev.role, voice), ev.midi, t0 + ev.onset, ev.dur,
+          ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.strum ? 0.14 : 0.2);
     };
 
     /** the click. `lead` is seconds until the beat, announced by whoever owns
@@ -189,8 +204,13 @@ export const audioCard = {
       cfg = { ...(cfg || {}), ...next };
       try { pass = tetradPass({ families, ...cfg }); } catch { pass = null; }
     });
+    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
     listen(d, STEP_CHANGED, (m) => {
-      if (m && m.request !== true && typeof m.index === "number") soundStep(m.index);
+      if (!m) return;
+      // the transport's request carries the beats this chord holds — the figure
+      // divides THAT span, so a 2+2 split and a 4 split sound different
+      if (m.request === true && typeof m.beats === "number") durBeats = m.beats;
+      if (m.request !== true && typeof m.index === "number") soundStep(m.index);
     });
     listen(d, BEAT, (m) => { if (clickOn) soundClick(m); });
     /* the mixer's controls live in the Transport card; this only listens */

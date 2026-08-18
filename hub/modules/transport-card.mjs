@@ -221,7 +221,8 @@ export const transportCard = {
       if (w.countingIn) { byId("trLoop").textContent = "count-in " + w.beatsLeft; return; }
       if (!w.attack) return;
       showLoop();
-      announce(d, STEP_CHANGED, { index: w.step, request: true, lead: ev.lead, level: w.level, meter, splitIdx });
+      announce(d, STEP_CHANGED, { index: w.step, request: true, lead: ev.lead, level: w.level, meter, splitIdx,
+        beats: patternOf(meter, splitIdx)[w.step % patternOf(meter, splitIdx).length] });
     });
 
     mixer();

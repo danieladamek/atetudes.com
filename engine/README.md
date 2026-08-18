@@ -55,6 +55,11 @@ engine/
 │                        voice table, the Karplus-Strong string rendered to
 │                        samples, the click, the bass seat, and gain envelopes
 │                        as breakpoint DATA a host realises. No AudioContext
+├── figure.mjs           THE FIGURE CHAIN, composed from seams that exist: two
+│                        drill.material()s (slots 1-2-3-4 · tones R-3-5-7),
+│                        drill.parsePattern/orderFor, motion.mjs for enclosures
+│                        (tones mode, any arity), noteEvents for the one event
+│                        list. Nothing forked; slot-mode parens refused loudly
 ├── transport.mjs        THE ÉTUDE'S WALK along a beat grid: bar splits (drill's
 │                        own table, consumed), the beat→step attack, count-in
 │                        and the loop counter. Owns NO clock — beats are
@@ -93,6 +98,10 @@ engine/
     ├── isolation.test.mjs            the Phase B safety net: 500+ shipped étude
     │                                 configs reproduced exactly, uneven windows
     ├── drill.test.mjs                the same, plus a non-string material
+    ├── figure.test.mjs               the chain end to end, headless: both
+    │                                 materials, enclosures role-tagged, three
+    │                                 playback modes, and mistakes failing with
+    │                                 a message rather than a throw or silence
     ├── transport.test.mjs            the walk driven by injected beat lists —
     │                                 splits, count-in, loop wrap, meter change
     │                                 mid-pass, and the role-naming grep

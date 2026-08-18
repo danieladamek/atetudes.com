@@ -14,17 +14,20 @@
  *                     the tetrad app's is a FAMILY, so it needs a control. This
  *                     is the second consumer of `families` — the lock key the
  *                     resolver refused yesterday because nothing required it.
- *   Motion follows    the reference's segment, RENDERED DISABLED: "the tones"
- *                     is the motion grammar's business and the sketch is not
- *                     ported yet. The form is kept; pretending is not.
- *   Figure            the reference's select + pattern field, DISABLED with the
- *                     same honesty — the drill layer exists (engine/drill.mjs)
- *                     but no door consumer wires it yet.
+ *   Figure addresses  the reference's "Motion follows: the shape / the tones"
+ *                     applied to the figure vocabulary (Daniel, 2026-08-18):
+ *                     SLOTS 1-2-3-4 repeat a shape; TONES R-3-5-7 follow the
+ *                     harmony through the shape. Same segment, live.
+ *   Figure            the reference's picker + field, LIVE, with arpErr — the
+ *                     error surface the audit found missing. The field is the
+ *                     truth; the picker writes into it. Consumers parse the
+ *                     text through engine/figure.mjs; nothing is pre-digested.
  *   Placement         LIVE: Grip / Free / Line are isolation.mjs's own named
  *                     placements, unchanged at four voices; Line is disabled
  *                     because it needs a lineVoicingFor the pass does not build.
- *   Playback          the reference's segment, disabled — arpeggiation is the
- *                     figure's business, above.
+ *   Playback          LIVE: Block / Arpeggiated / Both, exactly the reference's.
+ *   Guide tones only  NEW toggle: dim R and 5, leave 3 and 7 full — the reading
+ *                     light for tone-figures. A view, not a mode.
  *   Root notes        the reference's toggle, live: rings the chord root on the
  *                     strings below the set, exactly as the study draws them.
  *
@@ -36,6 +39,7 @@
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { FAMILIES } from "../../engine/tetrad-voicings.mjs";
 import { PLACEMENTS } from "../../engine/isolation.mjs";
+import { parseFigure, describeFigure, SLOT_ORDER, TONE_ORDER } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, announce, listen } from "../bus.mjs";
 
 const FAMILY_LABEL = { close: "Close", drop2: "Drop-2", drop3: "Drop-3" };
@@ -47,7 +51,7 @@ export const shapeMotion = {
   requires: { material: "tetrad" },
   mount_point: "strips",
   order: 12,
-  controls: ["setSeg", "famSeg", "motionSeg", "figSel", "arpIn", "placeSeg", "playbackSeg", "rootsChk"],
+  controls: ["setSeg", "famSeg", "motionSeg", "figSel", "arpIn", "arpErr", "placeSeg", "playbackSeg", "rootsChk", "guideChk"],
 
   markup: `
   <h2>Shape &amp; Motion</h2>
@@ -60,18 +64,17 @@ export const shapeMotion = {
     </div>
     <div class="grp smFig">
       <div class="row2 alignEnd">
-        <div class="smTight"><label>Motion follows</label>
+        <div class="smTight"><label>Figure addresses</label>
           <div class="seg" id="motionSeg" data-control="motionSeg">
-            <button data-mm="shape" class="on" disabled title="the motion grammar arrives with a later shell child">the shape</button>
-            <button data-mm="tones" disabled title="the motion grammar arrives with a later shell child">the tones</button>
+            <button data-mm="slots" class="on" title="1-2-3-4, low → high: a figure repeats a SHAPE">slots</button>
+            <button data-mm="tones" title="R-3-5-7, by role: a figure follows the HARMONY through the shape">tones</button>
           </div></div>
         <div class="smTight"><label>Figure</label>
-          <select id="figSel" data-control="figSel" disabled title="the drill layer's figures arrive with a later shell child">
-            <option>Block</option></select></div>
+          <select id="figSel" data-control="figSel"></select></div>
       </div>
-      <label>Figure (slots low → high; approaches in parens)</label>
-      <input type="text" id="arpIn" data-control="arpIn" spellcheck="false" placeholder="e.g. 1-2-3-4" disabled
-        title="the drill layer's pattern field arrives with a later shell child">
+      <label id="arpLabel">Figure (slots 1–4 low → high)</label>
+      <input type="text" id="arpIn" data-control="arpIn" spellcheck="false" placeholder="e.g. 1-2-3-4">
+      <span id="arpErr" data-control="arpErr" class="smErr"></span>
     </div>
     <div class="grp">
       <div class="row2">
@@ -79,12 +82,14 @@ export const shapeMotion = {
           <div class="seg" id="placeSeg" data-control="placeSeg"></div></div>
         <div class="smTight"><label>Playback</label>
           <div class="seg" id="playbackSeg" data-control="playbackSeg">
-            <button data-pb="block" class="on" disabled title="arpeggiation arrives with the figure">Block</button>
-            <button data-pb="arpeggiated" disabled title="arpeggiation arrives with the figure">Arpeggiated</button>
-            <button data-pb="both" disabled title="arpeggiation arrives with the figure">Both</button>
+            <button data-pb="block" class="on" title="the harmony, strummed">Block</button>
+            <button data-pb="arpeggiated" title="the figure as a line — the figure IS the rhythm">Arpeggiated</button>
+            <button data-pb="both" title="the line over a short strummed harmony">Both</button>
           </div></div>
       </div>
       <label class="chk"><input type="checkbox" id="rootsChk" data-control="rootsChk"> Show root notes on lower strings</label>
+      <label class="chk" title="the reading light for tone-figures: dim R and 5, leave 3 and 7 full">
+        <input type="checkbox" id="guideChk" data-control="guideChk"> Guide tones only (dim R and 5)</label>
     </div>
   </div>
   <div class="hint" id="smHint"></div>`,
@@ -92,6 +97,7 @@ export const shapeMotion = {
   /* `sm` tokens anchor every rule; the strip grammar is the harmony panel's
    * until the resolver promotes it (this module is that second user). */
   styles: `
+.smErr{color:var(--red);font-size:11.5px;display:block;min-height:1.2em}
 .striprow .grp.smFig{flex:1 1 320px;max-width:560px}
 .striprow .smTight{flex:0 1 auto}
 .striprow #arpIn{width:100%;box-sizing:border-box}
@@ -107,7 +113,20 @@ export const shapeMotion = {
     // drop-2 is the reference texture (the frozen study is entirely drop-2), so
     // it is the default whenever the door allows it
     const cfg = { setIndex: 0, families: [allowed.includes("drop2") ? "drop2" : allowed[0]],
-      placement: "free", roots: false,
+      /* GRIP, as the reference defaults (`placement:"grip"`). The door had said
+       * "free" — under which isolation.mjs releases the anchor (pivotW: 0), so
+       * the box shipped by the zone item was decorative on first run. Third
+       * instance of the same pattern: where the reference has an answer, take
+       * it. The ENGINE's own argument default stays "free" — that is a library
+       * default, and the oracle corpus and the default-zone pin were measured
+       * under it; moving it would move pinned output. */
+      placement: "grip", roots: false,
+      /* THE FIGURE CHAIN. `address` is the vocabulary toggle (slots | tones);
+       * `figure` is the user's text, verbatim — parsed by every consumer through
+       * engine/figure.mjs, never pre-digested here, so the pass stays the only
+       * derived thing and the text stays the stored fact. `playback` is the
+       * reference's segment. `guide` is the guide-tone reduction view. */
+      address: "slots", figure: "", playback: "block", guide: false,
       /* THE ZONE (audit 260818 §A2) is a SHAPE fact — where on the neck — so it
        * is owned here. `null` means "the pass's own default"; the stage's Box
        * mode announces a value the moment the user moves it, and this owner
@@ -138,17 +157,58 @@ export const shapeMotion = {
              : "free placement along the set — needs the line voicer, not wired yet" })),
         cfg.placement, (v) => { cfg.placement = v; push(); }, (v) => v === "line");
       byId("rootsChk").checked = cfg.roots;
+      byId("guideChk").checked = cfg.guide;
+      // the address toggle
+      for (const b of byId("motionSeg").querySelectorAll("button"))
+        b.classList.toggle("on", b.dataset.mm === cfg.address);
+      byId("arpLabel").textContent = cfg.address === "tones"
+        ? "Figure (tones R 3 5 7; approaches in parens: (-1,+2)3)"
+        : "Figure (slots 1–4 low → high)";
+      byId("arpIn").placeholder = cfg.address === "tones" ? "e.g. R-3-7-5 or (-1,+2)3 7" : "e.g. 1-2-3-4";
+      // the picker: presets derived from the address's stated letter order —
+      // v0.7.7 gave the reference a picker because raw figure syntax was
+      // hostile; the door keeps both, the picker writing into the field
+      const letters = cfg.address === "tones" ? TONE_ORDER : SLOT_ORDER;
+      const presets = [
+        ["", "— block —"],
+        [letters.join("-"), "up " + letters.join("-")],
+        [[...letters].reverse().join("-"), "down " + [...letters].reverse().join("-")],
+        [letters[0] + "-" + letters[2] + "-" + letters[1] + "-" + letters[3], "broken " + letters[0] + "-" + letters[2] + "-" + letters[1] + "-" + letters[3]],
+      ];
+      if (cfg.address === "tones") presets.push(["3-7-3-7", "guide tones 3-7-3-7"], ["(-1,+2)3 7", "enclose the 3rd, land the 7th"]);
+      const sel = byId("figSel"); sel.textContent = "";
+      for (const [v, label] of presets) {
+        const o = d.createElement("option"); o.value = v; o.textContent = label;
+        if (v === cfg.figure) o.selected = true;
+        sel.appendChild(o);
+      }
+      if (![...sel.options].some((o) => o.value === cfg.figure)) {
+        const o = d.createElement("option"); o.value = cfg.figure; o.textContent = "custom: " + cfg.figure; o.selected = true; sel.appendChild(o);
+      }
+      if (byId("arpIn").value !== cfg.figure) byId("arpIn").value = cfg.figure;
+      // THE ERROR SURFACE (audit A3): a bad figure says why, loudly, and the
+      // segment reflects that no figure is in force
+      const parsed = parseFigure(cfg.figure, cfg.address);
+      byId("arpErr").textContent = parsed.err || "";
+      for (const b of byId("playbackSeg").querySelectorAll("button"))
+        b.classList.toggle("on", b.dataset.pb === cfg.playback);
+      const parsedForHint = parseFigure(cfg.figure, cfg.address);
+      const figWords = parsedForHint.pattern
+        ? (parsedForHint.source === "motion" ? describeFigure(parsedForHint.pattern, cfg.address)
+                                              : describeFigure(parsedForHint.pattern, cfg.address) + (cfg.address === "tones" ? " by role" : " by slot"))
+        : "no figure — block";
       byId("smHint").textContent =
         `${FAMILY_LABEL[cfg.families[0]]} voicings on ${STRING_SETS[cfg.setIndex].label} · ` +
         `${PLACE_LABEL[cfg.placement]}: ${cfg.placement === "grip"
           ? "one note per string, anchored to the zone"
-          : "the grip chosen by smoothest voice-leading, anchor released"}.`;
+          : "the grip chosen by smoothest voice-leading, anchor released"} · figure ${figWords} · ${cfg.playback}` +
+        (cfg.guide ? " · guide tones only" : "");
     };
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
     /* adopt this panel's own fields from any announcement (a restore carries
      * them), without re-announcing — see the harmony panel's note */
-    const MINE = ["setIndex", "families", "placement", "roots", "zone"];
+    const MINE = ["setIndex", "families", "placement", "roots", "zone", "address", "figure", "playback", "guide"];
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
@@ -159,6 +219,16 @@ export const shapeMotion = {
     });
 
     byId("rootsChk").addEventListener("change", (e) => { cfg.roots = e.target.checked; push(); });
+    byId("guideChk").addEventListener("change", (e) => { cfg.guide = e.target.checked; push(); });
+    for (const b of byId("motionSeg").querySelectorAll("button"))
+      b.addEventListener("click", () => { cfg.address = b.dataset.mm; push(); });
+    for (const b of byId("playbackSeg").querySelectorAll("button"))
+      b.addEventListener("click", () => { cfg.playback = b.dataset.pb; push(); });
+    // the field is the truth; the picker writes into it. A bad figure is kept
+    // in the field (so the user can fix it) and refused loudly by arpErr; the
+    // pass falls back to block until it parses.
+    byId("arpIn").addEventListener("input", (e) => { cfg.figure = e.target.value; push(); });
+    byId("figSel").addEventListener("change", (e) => { cfg.figure = e.target.value; push(); });
     push();
   },
 };

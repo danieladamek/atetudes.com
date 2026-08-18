@@ -18,9 +18,11 @@
  * scale (chromatic notes fall back to the key's accidental side), staff
  * position from the letter and octave. Nothing here is hand-placed.
  */
-import { tetradPass, degreeLabel } from "../../engine/tetrad-sequence.mjs";
+import { tetradPass, degreeLabel, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes, LETTER_PC } from "../../engine/chord.mjs";
 import { patternOf } from "../../engine/transport.mjs";
+import { writtenValue } from "../../engine/drill.mjs";
+import { parseFigure, figureEvents } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -146,15 +148,72 @@ export const scoreBoard = {
         lb.textContent = s.symbol;
         const r = el("text", { x: x + 3, y: 28, "font-size": "9.5", fill: "#73737A" }, svg);
         r.textContent = s.roman;
-        // block chord: the four voices stacked at the slot start, one stem
-        const open = beats >= 2, xh = x + 16;
-        let yTop = 1e9, yLow = -1e9;
-        s.voicing.notes.forEach((n, k) => {
-          const sp = spell(n.midi), lab = s.labels[k];
-          const y = head(xh, sp.name, sp.oct, famOf(lab), lab, open);
-          yTop = Math.min(yTop, y); yLow = Math.max(yLow, y);
-        });
-        if (beats < 4) el("line", { x1: xh + 6, y1: yLow, x2: xh + 6, y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2 }, svg);
+        /* THE FIGURE IS THE RHYTHM (the reference's renderScore, ported): the
+         * same event list the audio plays and the stage pulses. Block: the four
+         * voices stacked at the slot start, one stem. A line: each event at its
+         * onset, written at the value the subdivision implies — beamed for 8ths
+         * and 16ths, bracketed with a number when not dyadic. Approaches are
+         * cue-size, hollow, degree-coloured when diatonic and violet when not. */
+        const parsedFig = parseFigure(cfg.figure, cfg.address || "slots");
+        let events;
+        try {
+          events = figureEvents(s, { parsed: parsedFig.err ? null : parsedFig.pattern,
+            address: cfg.address || "slots", playback: cfg.playback || "block", durBeats: beats, bpm: 72,
+            ctx: { scalePcs: scaleNotes(cfg.key, cfg.scale).map((n) => n.pc), tonicPc: scaleNotes(cfg.key, cfg.scale)[0].pc,
+              open: OPEN_MIDI, nfrets: 15, set: pass.set.strings } });
+        } catch { events = null; }
+        const seqEvents = events && (cfg.playback || "block") !== "block" && parsedFig.pattern
+          ? events.filter((ev) => ev.role !== "bass" && !ev.strum) : null;
+        const labOf = (midi) => degreeLabel(s.chord, midi);
+        if (!seqEvents) {
+          const open = beats >= 2, xh = x + 16;
+          let yTop = 1e9, yLow = -1e9;
+          s.voicing.notes.forEach((n, k) => {
+            const sp = spell(n.midi), lab = s.labels[k];
+            const y = head(xh, sp.name, sp.oct, famOf(lab), lab, open);
+            yTop = Math.min(yTop, y); yLow = Math.max(yLow, y);
+          });
+          if (beats < 4) el("line", { x1: xh + 6, y1: yLow, x2: xh + 6, y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2 }, svg);
+        } else {
+          const L = seqEvents.length, dv = beats / L;
+          const dyadic = [4, 2, 1, 0.5, 0.25].includes(dv);
+          const wv = dyadic ? dv : writtenValue(dv);
+          const open = wv >= 2;
+          const xsL = [], ysL = [];
+          const scalePcs = scaleNotes(cfg.key, cfg.scale).map((n) => n.pc);
+          seqEvents.forEach((ev, k) => {
+            const sp = spell(ev.midi), xk = x + (k + 0.5) * (w / L);
+            let y;
+            if (ev.role === "approach") {
+              y = yOf(sp.name, sp.oct); ledger(xk, sp.name, sp.oct);
+              const acc = sp.name.slice(1);
+              if (acc) { const a = el("text", { x: xk - 11, y: y + 3.4, "text-anchor": "middle", "font-size": "10", fill: "#212126" }, svg);
+                a.textContent = acc.replace(/#/g, "♯").replace(/b/g, "♭"); }
+              const chrom = !scalePcs.includes(((ev.midi % 12) + 12) % 12);
+              const fam = famOf(labOf(ev.midi));
+              el("ellipse", { cx: xk, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : (chrom ? "#7847A8" : FAM_COLOR[fam]),
+                stroke: chrom ? "#7847A8" : FAM_COLOR[fam], "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${xk} ${y})` }, svg);
+            } else {
+              const lab = labOf(ev.midi);
+              y = head(xk, sp.name, sp.oct, famOf(lab), lab, open);
+            }
+            xsL.push(xk); ysL.push(y);
+          });
+          if (wv < 4) {
+            const yBeam = Math.min(...ysL) - 24;
+            xsL.forEach((xk, k) => el("line", { x1: xk + 5.6, y1: ysL[k] - 1.5, x2: xk + 5.6, y2: yBeam, stroke: "#212126", "stroke-width": 1.1 }, svg));
+            if (wv < 1) {
+              el("line", { x1: xsL[0] + 5.6, y1: yBeam, x2: xsL[xsL.length - 1] + 5.6, y2: yBeam, stroke: "#212126", "stroke-width": 2.6 }, svg);
+              if (wv <= 0.25) el("line", { x1: xsL[0] + 5.6, y1: yBeam + 4.4, x2: xsL[xsL.length - 1] + 5.6, y2: yBeam + 4.4, stroke: "#212126", "stroke-width": 2.2 }, svg);
+              if (!dyadic) { const t = el("text", { x: (xsL[0] + xsL[xsL.length - 1]) / 2 + 5.6, y: yBeam - 4, "text-anchor": "middle", "font-size": "9", "font-style": "italic", fill: "#212126" }, svg); t.textContent = String(L); }
+            } else if (!dyadic) {
+              const yB = yBeam - 1, xa = xsL[0] + 5.6, xb = xsL[xsL.length - 1] + 5.6, xm = (xa + xb) / 2;
+              for (const [x1, x2] of [[xa, xm - 7], [xm + 7, xb]]) el("line", { x1, y1: yB, x2, y2: yB, stroke: "#212126", "stroke-width": 1.1 }, svg);
+              for (const xx of [xa, xb]) el("line", { x1: xx, y1: yB, x2: xx, y2: yB + 5, stroke: "#212126", "stroke-width": 1.1 }, svg);
+              const t = el("text", { x: xm, y: yB + 3.4, "text-anchor": "middle", "font-size": "9.5", "font-style": "italic", fill: "#212126" }, svg); t.textContent = String(L);
+            }
+          }
+        }
         // the pedal in the bass clef, when the Harmony panel asks for one
         if (cfg.bass !== "none") {
           const low = Math.min(...s.voicing.notes.map((n) => n.midi));

@@ -23,7 +23,8 @@
 import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, listen, announce } from "../bus.mjs";
+import { parseFigure, figureEvents, toneIndexOf } from "../../engine/figure.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
@@ -98,7 +99,9 @@ export const fretboardStage = {
 
     /* PRIVATE state. Nothing else reads it; the step is announced, not shared. */
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
-    let pass = null, dots = [], step = 0, ctxLayer = null, zoneLayer = null;
+    let pass = null, dots = [], step = 0, ctxLayer = null, zoneLayer = null, pulseLayer = null;
+    let bpm = 72, durBeats = 2;            // the clock's, heard on the bus — for the pulse and Follow-the-line
+    let pulseTimers = [];
     /* the WINDOW MODE is display state — the stage's own, not config */
     let win = "full";
     /* the ZONE is config. It defaults to nothing (the pass applies its own
@@ -169,6 +172,7 @@ export const fretboardStage = {
         el("text", { class: "fs-lab", x: 0, y: 3.6, "text-anchor": "middle", "font-size": "10.5" }, g);
         return { key, g };
       });
+      pulseLayer = el("g", {}, svg);       // the sounding-note pulse — outlives chord changes
       zoneLayer = el("g", {}, svg);        // the box, drawn ABOVE the dots so it can be dragged
       drawZone();
       applyWindow();
@@ -271,6 +275,10 @@ export const fretboardStage = {
         if (instant) g.style.transition = "none";
         g.style.transform = "translate(" + fx(note.fret) + "px," + fy(note.string) + "px)";
         g.querySelector(".fs-mk").setAttribute("fill", FAM_COLOR[fam]);
+        /* THE GUIDE-TONE REDUCTION VIEW: dim R and 5, leave 3 and 7 full — the
+         * reading light for tone-figures. A view, not a mode: opacity only. */
+        const role = toneIndexOf(note, cur.chord);
+        g.style.opacity = cfg.guide && (role === 0 || role === 2) ? "0.28" : "";
         const t = g.querySelector(".fs-lab");
         const swap = () => {
           t.textContent = lab;
@@ -301,6 +309,53 @@ export const fretboardStage = {
         `${step + 1} of ${n} · ${cfg.key} ${({ major: "major", harm: "harmonic minor", mel: "melodic minor" })[cfg.scale]}</span>`;
 
       announce(d, STEP_CHANGED, { index: step, total: n, symbol: cur.symbol });
+      pulse(cur);
+    };
+
+    /* THE SOUNDING-NOTE PULSE (the reference's v0.6.5): one ring per event at
+     * its onset, from the SAME event list the audio realises — figure.mjs's —
+     * so what you see pulsing is what you hear. Approaches pulse hollow. And
+     * FOLLOW-THE-LINE: in Follow mode with a figure playing, the window tracks
+     * the sounding note rather than the grip — the coupling deferred out of the
+     * zone item lands here. */
+    const pulse = (cur) => {
+      for (const t of pulseTimers) d.defaultView.clearTimeout(t);
+      pulseTimers = [];
+      pulseLayer.textContent = "";
+      const parsed = parseFigure(cfg.figure, cfg.address || "slots");
+      const scale = scaleNotes(cfg.key, cfg.scale);
+      let events;
+      try {
+        events = figureEvents(cur, {
+          parsed: parsed.err ? null : parsed.pattern, address: cfg.address || "slots",
+          playback: cfg.playback || "block", durBeats, bpm,
+          ctx: { scalePcs: scale.map((n) => n.pc), tonicPc: scale[0].pc, open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
+        });
+      } catch { return; }
+      const line = events.filter((e) => e.role !== "bass" && !e.strum);
+      const isLine = (cfg.playback || "block") !== "block" && !!parsed.pattern;
+      line.forEach((ev) => {
+        const t = d.defaultView.setTimeout(() => {
+          if (ev.string == null || ev.fret == null) return;
+          const r = el("circle", { cx: fx(ev.fret), cy: fy(ev.string), r: ev.role === "approach" ? 9 : 19,
+            fill: "none", stroke: ev.role === "approach" ? "#7847A8" : "#212126",
+            "stroke-width": ev.role === "approach" ? 1.6 : 2.4, opacity: 0.9, "pointer-events": "none" }, pulseLayer);
+          const fade = d.defaultView.setTimeout(() => r.remove(), 320);
+          pulseTimers.push(fade);
+          if (isLine && win === "follow") followTo(ev.fret);
+        }, Math.max(0, ev.onset * 1000));
+        pulseTimers.push(t);
+      });
+    };
+    /* the window slides to keep the sounding fret framed — a camera move, not a rebuild */
+    const followTo = (fret) => {
+      const svg = svgEl();
+      const cur = svg.getAttribute("viewBox").split(" ").map(Number);
+      const width = cur[2];
+      const cx = fx(fret);
+      let x0 = cx - width / 2;
+      x0 = Math.max(0, Math.min(1160 - width, x0));
+      svg.setAttribute("viewBox", `${x0} 0 ${width} 260`);
     };
 
     /* PLAYING BELONGS TO THE TRANSPORT, NOT THE STAGE (Shell 1). The stage
@@ -308,7 +363,9 @@ export const fretboardStage = {
      * it no longer decides WHEN, and the ◀ ▶ buttons are the Transport's. */
     listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; build(); });
     /* another module asking to move — the stage owns the position */
+    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
     listen(d, STEP_CHANGED, (m) => {
+      if (m && m.request === true && typeof m.beats === "number") durBeats = m.beats;
       if (m && m.request === true && pass && m.index !== step) show(m.index, false);
     });
 

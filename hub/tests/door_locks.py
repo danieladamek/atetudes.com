@@ -340,6 +340,97 @@ def run_door(pw, door_id):
         # timeline/score re-derived (a chip's title carries the beats, the pass
         # rebuilt — the stage's dots moving IS the re-derivation)
 
+    if "arpIn" in r["controlsPresent"]:
+        # ---- THE FIGURE CHAIN (extensions §1, audit A3/B4). Every stage is a
+        # tested engine seam; the gate proves the WIRING end to end in the page.
+        # 1. the segment and field are live (no longer disabled)
+        check(page.eval_on_selector_all("#playbackSeg button[disabled]", "e => e.length") == 0,
+              f"{tag} Playback is still disabled")
+        check(page.eval_on_selector_all("#motionSeg button[disabled]", "e => e.length") == 0,
+              f"{tag} Figure addresses is still disabled")
+        check(page.is_enabled("#arpIn") and page.is_enabled("#figSel"), f"{tag} the figure field/picker are disabled")
+        # 2. arpErr — figures fail LOUDLY (audit A3): a bad slot, and parens in slot mode
+        page.click("#motionSeg >> text=slots")
+        page.fill("#arpIn", "1-2-9"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        err = page.inner_text("#arpErr")
+        check("9" in err and "slot" in err, f"{tag} a bad slot did not fail loudly: {err!r}")
+        page.fill("#arpIn", "(-1,+2)3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        check("tone" in page.inner_text("#arpErr").lower(),
+              f"{tag} parens in slot mode must be refused by name (drill would silently read 1-2-3): {page.inner_text('#arpErr')!r}")
+        # 3. a good slot figure clears the error; the picker writes into the field
+        page.select_option("#figSel", "1-2-3-4"); page.wait_for_timeout(60)
+        check(page.input_value("#arpIn") == "1-2-3-4", f"{tag} the picker did not write into the field")
+        check(page.inner_text("#arpErr") == "", f"{tag} a good figure left an error standing")
+        # 4. TONES: switching address re-lists the picker in tone letters and
+        #    the guide-tone preset exists — the pedagogy in one control
+        page.click("#motionSeg >> text=tones"); page.wait_for_timeout(60)
+        opts = page.eval_on_selector_all("#figSel option", "e => e.map(x => x.value)")
+        check("3-7-3-7" in opts and any(o.startswith("(") for o in opts),
+              f"{tag} the tone picker lacks the guide-tone / enclosure presets: {opts}")
+        # 5. THE FIGURE SOUNDS AS A LINE, and Playback modes differ — observed on
+        #    the audio graph, not inferred. Arm audio, count sources per step.
+        page.evaluate("""() => { window.__st = 0;
+          for (const P of [window.OscillatorNode, window.AudioBufferSourceNode]) {
+            const s0 = P.prototype.start; P.prototype.start = function (...a) { window.__st++; return s0.apply(this, a); }; } }""")
+        page.click("#nextBtn"); page.wait_for_timeout(150)          # a gesture; audio arms
+        # count sources for ONE clean step per mode: step away, clear, sound the
+        # target step once. A capture window that spans two steps double-counts,
+        # so each measurement is isolated. 3-7-3-7 is a 4-note line; block is the
+        # 4-voice strum; both is the 4 strummed + 4 line. Pedal rides all three.
+        page.select_option("#figSel", "3-7-3-7")
+        def sources_for(mode):
+            page.click(f"#playbackSeg >> text={mode}"); page.wait_for_timeout(60)
+            # step away and let ALL prior sources finish (a 2-beat step at 120bpm
+            # rings ~1s; wait past it) so the counter starts from silence
+            page.click("#tlBars >> button >> nth=4"); page.wait_for_timeout(1400)
+            page.evaluate("() => { window.__st = 0 }")
+            page.click("#tlBars >> button >> nth=0"); page.wait_for_timeout(350)    # sound step 0 once
+            return page.evaluate("() => window.__st")
+        block_n = sources_for("Block")
+        arp_n = sources_for("Arpeggiated")
+        both_n = sources_for("Both")
+        check(block_n >= 4 and arp_n >= 4, f"{tag} figure playback started no audio (block {block_n}, arp {arp_n})")
+        check(both_n > block_n, f"{tag} Both must sound MORE sources than Block (both {both_n}, block {block_n})")
+        check(both_n >= arp_n, f"{tag} Both carries the line, so it is at least Arpeggiated (both {both_n}, arp {arp_n})")
+        # 6. the pulse rings appear from the SAME event list, at their onsets
+        page.click("#playbackSeg >> text=Arpeggiated"); page.select_option("#figSel", "3-7-3-7")
+        page.click("#nextBtn")
+        seen = 0
+        for _ in range(8):
+            page.wait_for_timeout(120)
+            seen = max(seen, page.eval_on_selector_all("#fretSvg circle[stroke='#212126'][r='19']", "e => e.length"))
+        check(seen >= 1, f"{tag} the sounding-note pulse never rang for the figure")
+        # 7. the score draws the figure at its onsets: an arpeggiated 4-note line
+        #    over a 4-beat bar writes quarters — four heads per bar, not one stack
+        page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(120)
+        stems_block = page.eval_on_selector_all("#score line[stroke-width='1.2']", "e => e.length")
+        page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(120)
+        stems_arp = page.eval_on_selector_all("#score line[stroke-width='1.1']", "e => e.length")
+        check(stems_arp > stems_block, f"{tag} the score does not draw the figure as a line (block stems {stems_block}, line stems {stems_arp})")
+        # 8. GUIDE TONES: dim R and 5, leave 3 and 7 full — a view, not a mode
+        page.check("#guideChk"); page.wait_for_timeout(120)
+        ops = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.style.opacity)")
+        check(ops.count("0.28") == 2 and sum(1 for o in ops if o in ("", "1")) == 2,
+              f"{tag} guide-tone view must dim exactly two of four voices (R and 5): {ops}")
+        page.uncheck("#guideChk")
+        # 9. FOLLOW-THE-LINE: in Follow, with a line playing, the window's viewBox
+        #    x moves as the sounding note moves (a camera move over the same drawing)
+        page.click("#winSeg >> text=Follow"); page.click("#motionSeg >> text=slots")
+        page.select_option("#figSel", "1-2-3-4"); page.click("#placeSeg >> text=Free"); page.wait_for_timeout(120)
+        page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(80)
+        vbs = [page.get_attribute("#fretSvg", "viewBox")]
+        page.click("#nextBtn")
+        for _ in range(14):
+            page.wait_for_timeout(100)
+            vbs.append(page.get_attribute("#fretSvg", "viewBox"))
+        xs = {float(v.split()[0]) for v in vbs}
+        check(len(xs) >= 2,
+              f"{tag} follow-the-line: the window never moved while a 1-2-3-4 line played — {sorted(xs)}")
+        check(all(float(v.split()[2]) < 1160 for v in vbs),
+              f"{tag} follow-the-line widened to the whole neck — it must stay a crop while tracking")
+        page.click("#winSeg >> text=Full"); page.click("#placeSeg >> text=Grip")
+        page.select_option("#figSel", ""); page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(80)
+
     if "keySel" in r["controlsPresent"]:
         # ---- the Harmony panel, in the reference's form: labelled selects,
         # no popups — the overlap defect left with the idiom that caused it ----
