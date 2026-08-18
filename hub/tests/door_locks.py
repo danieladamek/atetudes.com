@@ -473,6 +473,30 @@ def run_door(pw, door_id):
         page.click("#winSeg >> text=Full"); page.click("#placeSeg >> text=Grip")
         page.select_option("#figSel", ""); page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(80)
 
+        # 10. THE PANEL NARRATES ITS OWN RULES (this item: state the rules in the
+        #     hints). The figure sounds ONLY when Playback != Block AND a figure
+        #     parses; the two silent states must each say which one you are in,
+        #     and Free must warn that the Box is inert.
+        hint = lambda: page.inner_text("#smHint").lower()
+        # (a) Arpeggiated with NO figure — nothing to arpeggiate, falls back to Block
+        page.select_option("#figSel", ""); page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(80)
+        check("no figure" in hint() and "block" in hint(),
+              f"{tag} Arpeggiated with no figure does not say it sounds as Block: {page.inner_text('#smHint')!r}")
+        # (b) a figure typed but Playback = Block — the figure is ignored, silently
+        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(80)
+        check("not sounding" in hint(),
+              f"{tag} Block with a figure does not say the figure is ignored: {page.inner_text('#smHint')!r}")
+        # (c) Placement = Free makes the Box inert — stated from this panel too
+        page.click("#placeSeg >> text=Free"); page.wait_for_timeout(80)
+        check("box" in hint() and "pull" in hint(),
+              f"{tag} Free does not warn that the Box won't pull: {page.inner_text('#smHint')!r}")
+        # (d) every disabled control states WHY in the panel, not only in a tooltip
+        check("line" in page.inner_text("#smWhy").lower(),
+              f"{tag} the disabled Line placement has no stated reason in the panel")
+        # reset to a clean default for the blocks below
+        page.click("#placeSeg >> text=Grip"); page.select_option("#figSel", "")
+        page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(80)
+
     if "keySel" in r["controlsPresent"]:
         # ---- the Harmony panel, in the reference's form: labelled selects,
         # no popups — the overlap defect left with the idiom that caused it ----
@@ -499,6 +523,11 @@ def run_door(pw, door_id):
         # changes land — a control that pretends would be the v0.6.8 defect
         check(page.eval_on_selector_all("#modeSeg button[disabled]", "e => e.length") == 1,
               f"{tag} the Break down button is not disabled (or vanished)")
+        # and it STATES WHY in the panel, not only in a tooltip (Shape & Motion
+        # item: no control silently disabled)
+        hpnote = page.query_selector(".hpNote")
+        check(hpnote is not None and "break down" in hpnote.inner_text().lower(),
+              f"{tag} the disabled Break-down button states no reason in the panel")
         # NO OVERLAP anywhere in the panel: the defect this panel removed must
         # not reappear — every pair of visible controls must be disjoint
         overlaps = page.evaluate("""() => {
@@ -756,6 +785,11 @@ def run_door(pw, door_id):
         # changes land — a control that pretends would be the v0.6.8 defect
         check(page.eval_on_selector_all("#modeSeg button[disabled]", "e => e.length") == 1,
               f"{tag} the Break down button is not disabled (or vanished)")
+        # and it STATES WHY in the panel, not only in a tooltip (Shape & Motion
+        # item: no control silently disabled)
+        hpnote = page.query_selector(".hpNote")
+        check(hpnote is not None and "break down" in hpnote.inner_text().lower(),
+              f"{tag} the disabled Break-down button states no reason in the panel")
         # NO OVERLAP anywhere in the panel: the defect this panel removed must
         # not reappear — every pair of visible controls must be disjoint
         overlaps = page.evaluate("""() => {

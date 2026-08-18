@@ -80,6 +80,7 @@ export const harmonyPanel = {
         <button data-mode="break" disabled
           title="typed changes arrive with a later shell child">Break down</button>
       </div>
+      <div class="hpNote">“Break down” is greyed until typed chord entry ships in a later shell child.</div>
     </div>
     <div class="grp hpWide">
       <div class="row2 alignEnd">
@@ -106,7 +107,8 @@ export const harmonyPanel = {
   styles: `
 .striprow .grp.hpWide{flex:1 1 420px;max-width:none}
 .striprow .hpTight{flex:0 1 auto}
-#hpRule{margin-top:8px}`,
+#hpRule{margin-top:8px}
+.hpNote{font-size:11px;color:var(--gray);font-style:italic;margin-top:4px;max-width:220px}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;

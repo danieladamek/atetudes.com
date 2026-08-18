@@ -95,7 +95,8 @@ export const shapeMotion = {
         <input type="checkbox" id="guideChk" data-control="guideChk"> Guide tones only (dim R and 5)</label>
     </div>
   </div>
-  <div class="hint" id="smHint"></div>`,
+  <div class="hint" id="smHint"></div>
+  <div class="smNote" id="smWhy"></div>`,
 
   /* `sm` tokens anchor every rule; the strip grammar is the harmony panel's
    * until the resolver promotes it (this module is that second user). */
@@ -104,7 +105,8 @@ export const shapeMotion = {
 .striprow .grp.smFig{flex:1 1 320px;max-width:560px}
 .striprow .smTight{flex:0 1 auto}
 .striprow #arpIn{width:100%;box-sizing:border-box}
-#smHint{margin-top:8px}`,
+#smHint{margin-top:8px}
+.smNote{font-size:11px;color:var(--gray);font-style:italic;margin-top:3px}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -198,17 +200,45 @@ export const shapeMotion = {
       byId("arpErr").textContent = parsed.err || "";
       for (const b of byId("playbackSeg").querySelectorAll("button"))
         b.classList.toggle("on", b.dataset.pb === cfg.playback);
-      const parsedForHint = parseFigure(cfg.figure, cfg.address);
-      const figWords = parsedForHint.pattern
-        ? (parsedForHint.source === "motion" ? describeFigure(parsedForHint.pattern, cfg.address)
-                                              : describeFigure(parsedForHint.pattern, cfg.address) + (cfg.address === "tones" ? " by role" : " by slot"))
-        : "no figure — block";
-      byId("smHint").textContent =
-        `${FAMILY_LABEL[cfg.families[0]]} voicings on ${STRING_SETS[cfg.setIndex].label} · ` +
-        `${PLACE_LABEL[cfg.placement]}: ${cfg.placement === "grip"
-          ? "one note per string, anchored to the zone"
-          : "the grip chosen by smoothest voice-leading, anchor released"} · figure ${figWords} · ${cfg.playback}` +
-        (cfg.guide ? " · guide tones only" : "");
+
+      /* THE PANEL NARRATES ITSELF (this item: state the rules in the hints, so
+       * the page explains itself). The one rule that catches everyone — read off
+       * figure.mjs:161-162 — is that the figure sounds ONLY when Playback ≠ Block
+       * AND a figure parses; on Block, or with no figure, `order` is null and the
+       * plain block chord plays. Two different control states therefore reach the
+       * SAME silent result, and the panel used to say neither. Every clause below
+       * is stated only when it is true, so an inert control announces itself. */
+      const hasFig = !!parsed.pattern;
+      const figWords = hasFig
+        ? describeFigure(parsed.pattern, cfg.address) + (parsed.source === "motion" ? "" : (cfg.address === "tones" ? " by role" : " by slot"))
+        : "";
+      const parts = [`${FAMILY_LABEL[cfg.families[0]]} voicings on ${STRING_SETS[cfg.setIndex].label}`];
+      parts.push(`${PLACE_LABEL[cfg.placement]}: ${cfg.placement === "grip"
+        ? "one note per string, anchored to the zone"
+        : "the grip chosen by smoothest voice-leading, anchor released"}`);
+      // Placement = Free makes the stage's Box inert (isolation.mjs pivotW:0) —
+      // the same dependency the Box hint states, said from this side too
+      if (cfg.placement === "free")
+        parts.push("Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it");
+      // the sounding rule, and the two ways to reach the silent block chord
+      if (cfg.playback === "block")
+        parts.push(hasFig
+          ? "Playback is Block, so the figure is typed but not sounding — choose Arpeggiated or Both to hear it"
+          : "Block chords");
+      else
+        parts.push(hasFig
+          ? `${cfg.playback}: ${figWords}`
+          : `${cfg.playback} has no figure to sound — Block chords until one parses`);
+      // the address toggle only bites while a figure is actually sounding
+      if (hasFig && cfg.playback !== "block")
+        parts.push(cfg.address === "tones" ? "spelled by tone role" : "spelled by slot");
+      if (cfg.guide) parts.push("guide tones lit — a neck view that dims R and 5");
+      byId("smHint").textContent = parts.join(" · ");
+
+      // every DISABLED control states why, in the panel, not only in a tooltip
+      // (this item's Done-means): Line placement is off because the pass builds
+      // no line voicer for it yet
+      byId("smWhy").textContent = "“Line” placement is greyed because it needs the line voicer the pass doesn’t build yet.";
     };
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
