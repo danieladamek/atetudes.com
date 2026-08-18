@@ -210,3 +210,109 @@ test("all three scales and all four bottom tones produce a playable pass on ever
         }
       }
 });
+
+/* ================= the zone as an argument (audit 260818 §A2) ================= */
+
+import { DEFAULT_ZONE_FRETS } from "../tetrad-sequence.mjs";
+import { makeZone, chooseVoicings } from "../isolation.mjs";
+import { tetradCandidates } from "../tetrad-voicings.mjs";
+import { STRING_SETS as SETS2 } from "../tetrad-sequence.mjs";
+
+test("THE PIN: the default zone reproduces the pre-argument pass EXACTLY, across the corpus", () => {
+  /* Before this item every pass was anchored to makeZone({string: set.strings[0],
+   * frets:[5,6,7]}) with no way to say otherwise. That literal is now the
+   * DEFAULT, and this asserts that a caller who passes no zone gets the same
+   * derived output as before — every fret of every voice of every step —
+   * across the same corpus the oracle test walks. No silent musical change. */
+  assert.deepEqual([...DEFAULT_ZONE_FRETS], [5, 6, 7], "the default is no longer the historical literal");
+  let steps = 0;
+  for (const [ei, eng] of ORACLE.passes.entries())
+    for (const [si] of eng.entries())
+      for (const [ti] of eng[si].entries())
+        for (const [ki] of eng[si][ti].entries())
+          for (const [bi] of eng[si][ti][ki].entries()) {
+            const args = { key: ORACLE.keys[ki], scale: SCALE_OF[si],
+              cycle: CYCLE_OF[ORACLE.engines[ei].key], bottom: bi, setIndex: ti };
+            const implicit = tetradPass(args);
+            const explicit = tetradPass({ ...args, zone: { frets: [5, 6, 7] } });
+            const frets = (p) => p.steps.map((s) => s.voicing.notes.map((n) => n.fret));
+            assert.deepEqual(frets(implicit), frets(explicit),
+              `default ≠ explicit [5,6,7] for ${JSON.stringify(args)}`);
+            assert.deepEqual(implicit.zone, { string: SETS2[ti].strings[0], frets: [5, 6, 7] });
+            steps += implicit.steps.length;
+          }
+  assert.equal(steps, 17280);
+});
+
+test("the default pass is the historical one, re-derived independently against isolation.mjs", () => {
+  // the literal, applied by hand through the same engines — so the pin above is
+  // not merely "the function agrees with itself"
+  const set = SETS2[0];
+  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 });
+  const zone = makeZone({ string: set.strings[0], frets: [5, 6, 7] });
+  let first = true;
+  const byHand = chooseVoicings(p.steps.map((s) => s), {
+    zone, placement: "free", setLowHigh: set.strings, nfrets: 15,
+    candidatesFor: (st) => {
+      const all = tetradCandidates(st.chord, { set: set.opens, nfrets: 15, strings: set.strings, families: ["drop2"] });
+      if (!first) return all; first = false;
+      const seeded = all.filter((v) => v.bass === 0); return seeded.length ? seeded : all;
+    },
+  });
+  assert.deepEqual(p.steps.map((s) => s.voicing.notes.map((n) => n.fret)),
+    byHand.map((v) => v.notes.map((n) => n.fret)));
+});
+
+test("THE WIRING: moving the zone changes the chosen voicings — the zone the caller sets is the zone chooseVoicings receives", () => {
+  /* Under GRIP. This first ran under the door's default, Free, and the pass did
+   * not move — and that was the RULE, not the plumbing: Free is defined in
+   * isolation.mjs as "the grip chosen by smoothest voice-leading, ANCHOR
+   * RELEASED" (pivotW: 0), so the zone contributes nothing to its cost by
+   * construction; only the first-chord seed anchor remains, and a root-position
+   * seed sits at the same fret whatever the window. Grip (pivotW: 4) is the
+   * placement whose whole point is the zone, so it is where the wiring is
+   * proven. Recorded, because "the box does nothing under Free" is a fact the
+   * UI must say rather than let the user discover. */
+  const base = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, placement: "grip" };
+  const low = tetradPass({ ...base, zone: { frets: [1, 2, 3] } });
+  const mid = tetradPass({ ...base, zone: { frets: [5, 6, 7] } });
+  const high = tetradPass({ ...base, zone: { frets: [10, 11, 12] } });
+  const frets = (p) => JSON.stringify(p.steps.map((s) => s.voicing.notes.map((n) => n.fret)));
+  assert.notEqual(frets(low), frets(high), "a zone at the nut and a zone at the 12th chose the same voicings — the argument is not reaching the optimizer");
+  assert.notEqual(frets(mid), frets(high));
+  // and it moves in the RIGHT direction: the mean fret follows the zone
+  const mean = (p) => p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret)).reduce((a, b) => a + b, 0) / (p.steps.length * 4);
+  assert.ok(mean(low) < mean(mid) && mean(mid) < mean(high),
+    `mean fret does not follow the zone: ${mean(low).toFixed(1)} / ${mean(mid).toFixed(1)} / ${mean(high).toFixed(1)}`);
+  // every voicing is still a correct one — the zone moves placement, never pitch class
+  for (const p of [low, mid, high])
+    for (const s of p.steps)
+      assert.deepEqual(new Set(s.voicing.notes.map((n) => pc(n.midi))), new Set(s.chord.pcs.map(pc)));
+});
+
+test("FINDING, pinned: under FREE the zone does not move the pass — anchor released is the rule", () => {
+  // this is isolation.mjs's shipped definition of Free (pivotW: 0), extracted
+  // verbatim and pinned by its own suite; not something to "fix" here. It is
+  // pinned so the day Free changes, this says so — and so the door's UI can
+  // state it truthfully rather than offer a box that appears broken.
+  const base = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, placement: "free" };
+  const frets = (p) => JSON.stringify(p.steps.map((s) => s.voicing.notes.map((n) => n.fret)));
+  assert.equal(frets(tetradPass({ ...base, zone: { frets: [1, 2, 3] } })),
+               frets(tetradPass({ ...base, zone: { frets: [10, 11, 12] } })),
+    "Free now follows the zone — isolation.mjs's Free changed; revisit the door's Box mode prose");
+});
+
+test("the box is DERIVED — the zone grown to cover every chosen voicing, as Triadetudes derives it", () => {
+  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, zone: { frets: [5, 6, 7] } });
+  const all = p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret));
+  assert.equal(p.box.fLo, Math.min(5, ...all));
+  assert.equal(p.box.fHi, Math.max(7, ...all));
+  assert.deepEqual(p.box.strings, SETS2[0].strings);
+  assert.ok(p.box.fLo <= 5 && p.box.fHi >= 7, "the box must contain the zone");
+});
+
+test("a zone string outside the set falls back to the set's lowest, and a bad frets list to the default", () => {
+  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, zone: { string: 1, frets: [] } });
+  assert.equal(p.zone.string, SETS2[0].strings[0]);
+  assert.deepEqual(p.zone.frets, [5, 6, 7]);
+});

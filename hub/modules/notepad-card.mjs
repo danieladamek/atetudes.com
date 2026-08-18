@@ -160,6 +160,8 @@ export const notepadCard = {
       if (typeof c.setIndex === "number") parts.push("set " + (SETS[c.setIndex] || c.setIndex));
       if (Array.isArray(c.families) && c.families.length) parts.push(FAMILY[c.families[0]] || c.families[0]);
       if (c.placement && c.placement !== "free") parts.push(c.placement);
+      if (c.zone && Array.isArray(c.zone.frets) && c.zone.frets.length)
+        parts.push("zone " + Math.min(...c.zone.frets) + "–" + Math.max(...c.zone.frets));
       if (typeof c.bpm === "number") parts.push(c.bpm + " bpm");
       return parts.join(" · ") || "no configuration attached";
     };

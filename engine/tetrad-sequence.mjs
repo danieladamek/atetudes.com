@@ -120,9 +120,18 @@ export function romanOf({ chord, degree }) {
  * cycling engines rotate through two or four, because their rules hold some
  * voices and move others. So it constrains the FIRST chord's candidates and
  * the optimizer decides the rest, which is exactly what the payload does. */
+/** THE ZONE'S DEFAULT — the value every pass was silently anchored to before
+ * the zone had a surface (audit 260818 §A2): three frets at 5–7 on the set's
+ * lowest string. Kept as the DEFAULT so nothing moves musically until a door
+ * says otherwise; pinned in the suite. `zone` is `{ frets }` and optionally
+ * `{ string }` — the string defaults to the set's lowest, which is where the
+ * pivot lives in every voicing on that set. */
+export const DEFAULT_ZONE_FRETS = Object.freeze([5, 6, 7]);
+
 export function tetradPass({
   key = "C", scale = "major", cycle = "fourths", bottom = 0, setIndex = 0,
   nfrets = 15, families = ["drop2"], startDegree = 0, placement = "free",
+  zone = null,
 } = {}) {
   if (!SCALE_STEPS[scale]) throw new Error(`unknown scale "${scale}" — chord.mjs knows ${Object.keys(SCALE_STEPS).join(", ")}`);
   const set = STRING_SETS[setIndex];
@@ -147,16 +156,33 @@ export function tetradPass({
     return seeded.length ? seeded : all;
   };
 
-  const zone = makeZone({ string: set.strings[0], frets: [5, 6, 7] });
+  /* THE ZONE IS AN ARGUMENT, not a magic number. The relative-state doctrine:
+   * store it small (a fret list, an optional string), pass it plainly, and let
+   * isolation.mjs — untouched — build the real zone value with its two centres
+   * and its cost. A caller with no opinion gets the historical default. */
+  const zoneFrets = zone && Array.isArray(zone.frets) && zone.frets.length
+    ? zone.frets.map(Number) : [...DEFAULT_ZONE_FRETS];
+  const zoneString = zone && Number.isInteger(zone.string) && set.strings.includes(zone.string)
+    ? zone.string : set.strings[0];
+  const theZone = makeZone({ string: zoneString, frets: zoneFrets });
   const voicings = chooseVoicings(chords, {
-    zone, placement, setLowHigh: set.strings, nfrets, candidatesFor,
+    zone: theZone, placement, setLowHigh: set.strings, nfrets, candidatesFor,
   });
+
+  /* THE BOX, as Triadetudes derives it: the zone grown to cover every chosen
+   * voicing — "where the figure ended up living, a consequence of the
+   * placement, not a setting." Returned so a stage can draw it without
+   * re-deriving it, and so a test can assert on it. */
+  let boxLo = Math.min(...zoneFrets), boxHi = Math.max(...zoneFrets);
+  for (const v of voicings) if (v) for (const n of v.notes) { boxLo = Math.min(boxLo, n.fret); boxHi = Math.max(boxHi, n.fret); }
 
   for (const [i, v] of voicings.entries())
     if (!v) throw new Error(`no voicing for ${chords[i].symbol} on ${set.label} within ${nfrets} frets`);
 
   return {
     key, scale, cycle, bottom, setIndex, set, families, placement,
+    zone: { string: zoneString, frets: [...zoneFrets] },
+    box: { fLo: boxLo, fHi: boxHi, strings: [...set.strings] },
     rule: CYCLES[cycle].rule,
     steps: chords.map((c, i) => ({
       ...c, voicing: voicings[i], keys: keysOf(voicings[i]),

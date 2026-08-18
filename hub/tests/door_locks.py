@@ -290,6 +290,56 @@ def run_door(pw, door_id):
         check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,
               f"{tag} the play toggle does not light")
 
+    if "winSeg" in r["controlsPresent"]:
+        # ---- THE ZONE GETS A SURFACE (audit 260818 A2/C3): Full / Follow / Box.
+        # The gate proves the WIRING — moving the box changes the chosen
+        # voicings — not the pixels. Under Grip, because Free is defined as
+        # anchor-released (pinned in the engine suite) and the box hint says so.
+        frets_now = lambda: page.eval_on_selector_all(
+            "#fretSvg .fs-dot", "e => e.map(x => x.style.transform)")
+        # Follow: the viewBox narrows to the pass's fret window (the frozen
+        # study's auto-crop, as a camera over the same drawing)
+        full_vb = page.get_attribute("#fretSvg", "viewBox")
+        page.click("#winSeg >> text=Follow")
+        page.wait_for_timeout(80)
+        follow_vb = page.get_attribute("#fretSvg", "viewBox")
+        check(follow_vb != full_vb and float(follow_vb.split()[2]) < 1160,
+              f"{tag} Follow did not crop the window: {full_vb!r} -> {follow_vb!r}")
+        check(frets_now() == frets_now(),
+              f"{tag} Follow moved the dots — the crop must be a camera over the same drawing")
+        # Box: the zone draws, and it is CONFIG — announced, adopted, and it moves the pass
+        page.click("#winSeg >> text=Box")
+        page.wait_for_timeout(80)
+        check(page.eval_on_selector_all(".fs-zone", "e => e.length") >= 2,
+              f"{tag} Box mode did not draw the zone and its box")
+        check(page.get_attribute("#fretSvg", "viewBox") == "0 0 1160 260",
+              f"{tag} Box mode should show the whole neck")
+        # under Grip the box PULLS; choose it, then move the zone by keyboard.
+        # Read the dots at STEP 2, not step 0: the first chord is the SEED and
+        # sits at its bottom-tone anchor whatever the zone (root-position Cmaj7
+        # drop-2 has one home) — the zone moves the pass from step 1 onward.
+        page.click("#placeSeg >> text=Grip")
+        page.wait_for_timeout(120)
+        page.click("#tlBars >> button >> nth=2")
+        page.wait_for_timeout(120)
+        before = frets_now()
+        hint0 = page.inner_text("#fsBoxHint")
+        page.focus("#fretSvg")
+        for _ in range(6):
+            page.keyboard.press("ArrowRight")
+        page.wait_for_timeout(200)
+        page.click("#tlBars >> button >> nth=2")   # the pass rebuilt to step 0; look at step 2 again
+        page.wait_for_timeout(120)
+        after = frets_now()
+        hint1 = page.inner_text("#fsBoxHint")
+        check(hint0 != hint1 and "zone" in hint1.lower(),
+              f"{tag} the box hint did not follow the zone: {hint0!r} -> {hint1!r}")
+        check(before != after,
+              f"{tag} moving the zone six frets right under Grip did not change the chosen voicings — the box is furniture, not the optimizer's zone")
+        # and the move flowed through CONFIG: Shape & Motion adopted it and the
+        # timeline/score re-derived (a chip's title carries the beats, the pass
+        # rebuilt — the stage's dots moving IS the re-derivation)
+
     if "keySel" in r["controlsPresent"]:
         # ---- the Harmony panel, in the reference's form: labelled selects,
         # no popups — the overlap defect left with the idiom that caused it ----
@@ -443,6 +493,15 @@ def run_door(pw, door_id):
         page.click("#setSeg >> text=A–D–G–B")
         page.click("#famSeg >> text=Drop-3")
         page.wait_for_timeout(150)
+        if "winSeg" in r["controlsPresent"]:
+            # the zone is CONFIG: set it here, on this fresh page, so it is part
+            # of the configuration this entry snapshots and must round-trip
+            page.click("#winSeg >> text=Box")
+            page.wait_for_timeout(60)
+            page.focus("#fretSvg")
+            for _ in range(4):
+                page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(150)
         first_before = page.inner_text("#tlBars button >> nth=0")
         page.fill("#journalIn", "the persistence round-trip entry")
         page.dispatch_event("#journalIn", "input")
@@ -460,6 +519,15 @@ def run_door(pw, door_id):
         for word in ("Ab", "harmonic minor", "Cycling 6ths", "bottom 5", "A–D–G–B", "drop-3"):
             check(word in (mine[0] if mine else ""),
                   f"{tag} the entry's summary lacks {word!r} — Restore would be blind: {mine[:1]}")
+        if "winSeg" in r["controlsPresent"]:
+            # the zone was moved above; it is CONFIG, so it must be in the summary
+            check("zone" in (mine[0] if mine else "").lower(),
+                  f"{tag} the entry's summary lacks the zone — it did not flow through CONFIG_CHANGED: {mine[:1]}")
+            zone_saved = page.evaluate("""() => { const p = JSON.parse(localStorage.getItem('%s'));
+              const e = (p.entries||[]).find(x => (x.text||'').includes('persistence round-trip'));
+              return e && e.payload && e.payload.data && e.payload.data.zone; }""" % own_key)
+            check(zone_saved and isinstance(zone_saved.get("frets"), list),
+                  f"{tag} the saved entry carries no zone: {zone_saved!r}")
 
         # RELOAD. Everything in the page is gone; the log must not be.
         page.goto(html_path.as_uri())
@@ -483,6 +551,14 @@ def run_door(pw, door_id):
               f"{tag} restore did not bring the voicing family back")
         check(page.inner_text("#tlBars button >> nth=0") == first_before,
               f"{tag} restore did not rebuild the same pass")
+        if "winSeg" in r["controlsPresent"]:
+            # the zone came back too: Shape & Motion adopted it, and the stage's
+            # hint (Box mode) names the restored frets
+            page.click("#winSeg >> text=Box")
+            page.wait_for_timeout(80)
+            restored_hint = page.inner_text("#fsBoxHint")
+            check(zone_saved and f"frets {min(zone_saved['frets'])}–{max(zone_saved['frets'])}" in restored_hint,
+                  f"{tag} restore did not bring the zone back: {restored_hint!r} vs {zone_saved!r}")
 
         # THE SHARED SCHEMA IS A FACT: one Triadetudes v1 log imports through the
         # engine's own fromTriadetudesV1 and renders as a foreign-app entry

@@ -46,20 +46,40 @@ export const fretboardStage = {
   requires: { material: "tetrad" },
   mount_point: "boards",
   order: 20,
-  controls: ["fretSvg"],
+  controls: ["fretSvg", "winSeg"],
 
   /* the reference's board, verbatim: a readout line, then the neck SVG at the
    * board's full width. The step buttons this card used to carry are the
    * Transport card's ◀ ▶ now, as they are in the reference. */
+  /* the reference's board — a readout line, then the neck — plus the WINDOW
+   * segment (audit 260818 §A2/§C3): Full (the whole neck, the reference's
+   * rendering) · Follow (the frozen tetrad study's auto-cropping window,
+   * ported read-only) · Box (the isolation zone as a visible, movable object,
+   * as Triadetudes draws it). The mode is display state and the stage's own;
+   * THE ZONE IS CONFIG and travels on the bus like key or family. */
   markup: `
-  <div class="readout" id="readout"></div>
-  <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>`,
+  <div class="fsTop">
+    <div class="readout" id="readout"></div>
+    <div class="seg fsWin" id="winSeg" data-control="winSeg">
+      <button data-win="full" class="on" title="the whole neck">Full</button>
+      <button data-win="follow" title="the frozen study's auto-cropping window — the neck framed to the pass">Follow</button>
+      <button data-win="box" title="the isolation zone as a movable box the optimizer honours (Grip placement)">Box</button>
+    </div>
+  </div>
+  <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
+  <div class="hint fsBoxHint" id="fsBoxHint" hidden></div>`,
 
   /* Every rule names an `fs` token. The three transitions below are the whole
    * animation; they travel with the stage and cannot outlive it. */
   styles: `
 #fretSvg{width:100%;height:auto;display:block}
 #fretSvg .dot-label{font-weight:bold;pointer-events:none;user-select:none}
+.fsTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.fsWin{flex:0 0 auto;margin-top:2px}
+.fsBoxHint{margin-top:6px}
+.fs-zone{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4;cursor:ew-resize}
+.fs-zone.fs-zone-on{stroke:var(--ink);stroke-width:2}
+.fs-zone-hit{fill:transparent;cursor:ew-resize}
 .readout{font-size:14px;margin:2px 2px 10px;color:var(--ink)}
 .readout b{font-size:16px}
 .readout .rosub{color:var(--gray);font-size:12.5px}
@@ -78,7 +98,14 @@ export const fretboardStage = {
 
     /* PRIVATE state. Nothing else reads it; the step is announced, not shared. */
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
-    let pass = null, dots = [], step = 0, ctxLayer = null;
+    let pass = null, dots = [], step = 0, ctxLayer = null, zoneLayer = null;
+    /* the WINDOW MODE is display state — the stage's own, not config */
+    let win = "full";
+    /* the ZONE is config. It defaults to nothing (the pass applies its own
+     * historical default) and becomes a value the moment the user sets it —
+     * announced on the bus, so every consumer re-derives, the owners adopt it,
+     * and it lands in the practice log like key or family. */
+    let dragging = null;
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -142,8 +169,95 @@ export const fretboardStage = {
         el("text", { class: "fs-lab", x: 0, y: 3.6, "text-anchor": "middle", "font-size": "10.5" }, g);
         return { key, g };
       });
+      zoneLayer = el("g", {}, svg);        // the box, drawn ABOVE the dots so it can be dragged
+      drawZone();
+      applyWindow();
       show(0, true);
     };
+
+    /* ---- THE BOX: the zone as Triadetudes draws it — the dashed rectangle,
+     * clamped to the drawn board — over the set's strings, from the zone grown
+     * to cover every chosen voicing (`pass.box`, derived in the engine). It is
+     * DRAGGABLE: dragging moves the ZONE (three frets), which is config, which
+     * re-derives the pass, which moves the box. The user sets the zone; the
+     * engine sets the box. ---- */
+    const zoneWidth = () => (pass.zone.frets.length || 3);
+    const drawZone = () => {
+      zoneLayer.textContent = "";
+      if (win !== "box" || !pass) return;
+      const B = pass.box;
+      const ys = B.strings.map(fy), yLo = Math.min(...ys) - 17, yHi = Math.max(...ys) + 17;
+      const xLo = B.fLo === 0 ? FX0 - 34 : FX0 + (B.fLo - 1) * FW + FW * 0.28;
+      const xHi = Math.min(FX0 + B.fHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9);
+      const box = el("rect", { class: "fs-zone", x: xLo, y: yLo, width: xHi - xLo, height: yHi - yLo, rx: 12 }, zoneLayer);
+      // the ZONE itself, inside the box: the frets the optimizer is pulled toward
+      const zf = pass.zone.frets;
+      const zLo = Math.min(...zf), zHi = Math.max(...zf);
+      const zx = zLo === 0 ? FX0 - 34 : FX0 + (zLo - 1) * FW + FW * 0.28;
+      const zw = Math.min(FX0 + zHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9) - zx;
+      const zy = fy(pass.zone.string);
+      el("rect", { class: "fs-zone fs-zone-on", x: zx, y: zy - 19, width: zw, height: 38, rx: 10 }, zoneLayer);
+      // a wide invisible hit area for the drag, so a thin dashed line is not the target
+      const hit = el("rect", { class: "fs-zone-hit", x: zx - 10, y: zy - 26, width: zw + 20, height: 52 }, zoneLayer);
+      const start = (e) => { dragging = { x0: e.clientX, lo0: zLo }; e.preventDefault(); };
+      hit.addEventListener("pointerdown", start);
+      box.addEventListener("pointerdown", start);
+      byId("fsBoxHint").hidden = false;
+      byId("fsBoxHint").textContent =
+        `Isolation zone: frets ${zLo}–${zHi} on string ${pass.zone.string}. Drag it, or press ← → with the neck focused. ` +
+        (pass.placement === "grip"
+          ? "Grip placement anchors every voicing to it."
+          : `Placement is ${pass.placement}: the anchor is released, so the zone draws but does not pull — choose Grip in Shape & Motion to practise inside it.`);
+    };
+
+    /* the drag: pointer x → fret; announce the new zone as CONFIG */
+    const svgEl = () => byId("fretSvg");
+    const fretAt = (clientX) => {
+      const r = svgEl().getBoundingClientRect();
+      const x = (clientX - r.left) * (1160 / r.width);
+      return Math.max(0, Math.min(NFRETS - (zoneWidth() - 1), Math.round((x - FX0) / FW + 0.5)));
+    };
+    const setZoneLo = (lo) => {
+      const w = zoneWidth();
+      lo = Math.max(0, Math.min(NFRETS - (w - 1), lo));
+      const frets = Array.from({ length: w }, (_, i) => lo + i);
+      if (pass && frets.join() === pass.zone.frets.join()) return;
+      announce(d, CONFIG_CHANGED, { zone: { frets, string: pass.zone.string } });
+    };
+    d.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const lo = fretAt(e.clientX);
+      if (lo !== dragging.lo0) { dragging.lo0 = lo; setZoneLo(lo); }
+    });
+    d.addEventListener("pointerup", () => { dragging = null; });
+    svgEl().setAttribute("tabindex", "0");
+    svgEl().addEventListener("keydown", (e) => {
+      if (win !== "box" || !pass) return;
+      if (e.key === "ArrowLeft") { setZoneLo(Math.min(...pass.zone.frets) - 1); e.preventDefault(); }
+      if (e.key === "ArrowRight") { setZoneLo(Math.min(...pass.zone.frets) + 1); e.preventDefault(); }
+    });
+
+    /* ---- THE WINDOW: Full shows the whole neck; FOLLOW is the frozen tetrad
+     * study's auto-crop, ported read-only — `fmin = max(1, min(frets) − 1)`,
+     * `fmax = max(frets) + 1` over every fret of every step of the pass — as
+     * a viewBox over the same fixed drawing, so the gliding nodes never move
+     * and only the camera does. Box shows the whole neck with the zone drawn. */
+    const applyWindow = () => {
+      const svg = svgEl();
+      if (win === "follow" && pass) {
+        const frets = pass.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret));
+        const fmin = Math.max(1, Math.min(...frets) - 1), fmax = Math.max(...frets) + 1;
+        const x0 = FX0 + (fmin - 1) * FW - 6, x1 = FX0 + fmax * FW + 6;
+        svg.setAttribute("viewBox", `${x0} 0 ${x1 - x0} 260`);
+      } else svg.setAttribute("viewBox", "0 0 1160 260");
+      byId("fsBoxHint").hidden = win !== "box";
+    };
+    for (const b of byId("winSeg").querySelectorAll("button"))
+      b.addEventListener("click", () => {
+        win = b.dataset.win;
+        for (const o of byId("winSeg").querySelectorAll("button")) o.classList.toggle("on", o === b);
+        drawZone(); applyWindow();
+      });
 
     const show = (i, instant) => {
       const n = pass.steps.length;

@@ -107,7 +107,12 @@ export const shapeMotion = {
     // drop-2 is the reference texture (the frozen study is entirely drop-2), so
     // it is the default whenever the door allows it
     const cfg = { setIndex: 0, families: [allowed.includes("drop2") ? "drop2" : allowed[0]],
-      placement: "free", roots: false };
+      placement: "free", roots: false,
+      /* THE ZONE (audit 260818 §A2) is a SHAPE fact — where on the neck — so it
+       * is owned here. `null` means "the pass's own default"; the stage's Box
+       * mode announces a value the moment the user moves it, and this owner
+       * adopts it like any other field. */
+      zone: null };
 
     const seg = (host, items, current, pick, disabled = () => false) => {
       host.textContent = "";
@@ -143,7 +148,7 @@ export const shapeMotion = {
 
     /* adopt this panel's own fields from any announcement (a restore carries
      * them), without re-announcing — see the harmony panel's note */
-    const MINE = ["setIndex", "families", "placement", "roots"];
+    const MINE = ["setIndex", "families", "placement", "roots", "zone"];
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
