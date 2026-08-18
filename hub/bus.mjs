@@ -58,11 +58,33 @@ export const BEAT = "atetudes:beat";
 /** Dispatch a message. The detail is passed by value on purpose: a listener
  * that mutated a shared object would recreate exactly the coupling this
  * module exists to prevent. */
+/* THE BUS REMEMBERS WHAT WAS SAID. Modules mount in `order`, so a listener that
+ * mounts late (the notepad, order 90) never heard the harmony panel's mount-time
+ * announcement (order 10) — and would snapshot a half-empty configuration until
+ * someone happened to touch a control. Found by the persistence item: a fresh
+ * page's first saved entry said "set · drop-2" and nothing else.
+ *
+ * So for the STATE-shaped messages, the last detail per name is kept — merged
+ * per name, because CONFIG_CHANGED has two owners whose halves compose — and
+ * REPLAYED to a listener the moment it subscribes. This is not shared mutable
+ * state (§4.2.3): nothing can reach it, nothing can mutate it, and a listener
+ * gets a copy of a message it merely missed. Event-shaped messages (BEAT, a
+ * STEP request) are not replayed — a late listener has no business hearing an
+ * old beat. */
+const REPLAYED = new Set([CONFIG_CHANGED, CLOCK_STATE, MIXER]);
+const lastOf = (doc) => (doc.__atetudesLast ||= new Map());
+
 export function announce(doc, name, detail) {
   const view = doc.defaultView;
   const Ev = view && view.CustomEvent;
   if (!Ev) return;                       // no view (a headless parse): nothing to hear it
-  doc.dispatchEvent(new Ev(name, { detail: JSON.parse(JSON.stringify(detail)) }));
+  const copy = JSON.parse(JSON.stringify(detail));
+  if (REPLAYED.has(name)) {
+    const prev = lastOf(doc).get(name);
+    lastOf(doc).set(name, prev && typeof prev === "object" && copy && typeof copy === "object"
+      ? { ...prev, ...copy } : copy);
+  }
+  doc.dispatchEvent(new Ev(name, { detail: copy }));
 }
 
 /** Listen for a message. Returns an unsubscribe, so a module can be mounted
@@ -70,5 +92,8 @@ export function announce(doc, name, detail) {
 export function listen(doc, name, fn) {
   const h = (e) => fn(e.detail);
   doc.addEventListener(name, h);
+  // a late subscriber to a state-shaped message hears its current value at once
+  if (REPLAYED.has(name) && lastOf(doc).has(name))
+    fn(JSON.parse(JSON.stringify(lastOf(doc).get(name))));
   return () => doc.removeEventListener(name, h);
 }

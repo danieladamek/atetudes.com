@@ -36,7 +36,7 @@
  */
 import { scaleNotes, SCALE_STEPS } from "../../engine/chord.mjs";
 import { CYCLES, tetradOnDegree, romanOf } from "../../engine/tetrad-sequence.mjs";
-import { CONFIG_CHANGED, announce } from "../bus.mjs";
+import { CONFIG_CHANGED, announce, listen } from "../bus.mjs";
 
 /* the twelve keys, kept exactly to the ones chord.mjs can spell */
 const KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
@@ -149,6 +149,19 @@ export const harmonyPanel = {
     };
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
+
+    /* A RESTORE (or any other owner's announcement) may carry this panel's own
+     * fields — a saved entry does. Adopt them and re-render, WITHOUT
+     * re-announcing: this panel is a view of the fact as well as its owner,
+     * and echoing the message back would loop. Only the fields this panel owns
+     * are read; the rest belong to Shape & Motion (§4.2.3). */
+    const MINE = ["key", "scale", "cycle", "bottom", "startDegree", "bass"];
+    listen(d, CONFIG_CHANGED, (m) => {
+      if (!m || typeof m !== "object") return;
+      let changed = false;
+      for (const k of MINE) if (k in m && m[k] !== cfg[k]) { cfg[k] = m[k]; changed = true; }
+      if (changed) render();
+    });
 
     byId("keySel").addEventListener("change", (e) => { cfg.key = e.target.value; push(); });
     byId("scaleSel").addEventListener("change", (e) => { cfg.scale = e.target.value; push(); });

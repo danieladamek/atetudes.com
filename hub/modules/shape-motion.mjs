@@ -36,7 +36,7 @@
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { FAMILIES } from "../../engine/tetrad-voicings.mjs";
 import { PLACEMENTS } from "../../engine/isolation.mjs";
-import { CONFIG_CHANGED, announce } from "../bus.mjs";
+import { CONFIG_CHANGED, announce, listen } from "../bus.mjs";
 
 const FAMILY_LABEL = { close: "Close", drop2: "Drop-2", drop3: "Drop-3" };
 const PLACE_LABEL = { grip: "Grip", line: "Line", free: "Free" };
@@ -140,6 +140,18 @@ export const shapeMotion = {
           : "the grip chosen by smoothest voice-leading, anchor released"}.`;
     };
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
+
+    /* adopt this panel's own fields from any announcement (a restore carries
+     * them), without re-announcing — see the harmony panel's note */
+    const MINE = ["setIndex", "families", "placement", "roots"];
+    listen(d, CONFIG_CHANGED, (m) => {
+      if (!m || typeof m !== "object") return;
+      let changed = false;
+      for (const k of MINE) if (k in m && JSON.stringify(m[k]) !== JSON.stringify(cfg[k])) {
+        cfg[k] = Array.isArray(m[k]) ? [...m[k]] : m[k]; changed = true;
+      }
+      if (changed) render();
+    });
 
     byId("rootsChk").addEventListener("change", (e) => { cfg.roots = e.target.checked; push(); });
     push();

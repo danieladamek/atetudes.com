@@ -410,6 +410,101 @@ def run_door(pw, door_id):
             page.fill("#journalIn", "re-entered after the audio reload\n\n```\nCmaj7\n```\n")
             page.dispatch_event("#journalIn", "input")
             page.click("#saveEntry")
+
+    if "journalIn" in r["controlsPresent"] and "keySel" in r["controlsPresent"]:
+        # ---- PERSISTENCE (audit 260818 A1/B5): the log must SURVIVE A RELOAD, under
+        # the door's OWN key, with a summary that says what Restore will do, and
+        # Restore must round-trip the pass. Verified first that localStorage
+        # works under file:// in this browser (it does, and survives goto()).
+        own_key = door_id + ".v1.log"
+        page.evaluate(f"() => localStorage.removeItem({own_key!r})")
+        page.evaluate("() => localStorage.removeItem('triadetudes.v1.log')")
+        # A FRESH PAGE'S FIRST ENTRY MUST BE COMPLETE. The notepad mounts last
+        # (order 90) and used to miss the mount-time announcements of the panels
+        # that mount before it, snapshotting "set · drop-2" and nothing else. The
+        # bus now replays state-shaped messages to late listeners; assert the
+        # consequence — every one of the seven facts, with nothing touched.
+        page.goto(html_path.as_uri())
+        page.wait_for_timeout(300)
+        page.fill("#journalIn", "fresh-page entry — nothing touched\n\nwith `inline code` and a fence:\n\n```\nCmaj7\n```\n")
+        page.dispatch_event("#journalIn", "input")
+        page.click("#saveEntry")
+        page.wait_for_timeout(120)
+        fresh = [x for x in page.eval_on_selector_all(".hist", "e => e.map(x => x.innerText)")
+                 if "nothing touched" in x]
+        for word in ("C major", "Cycling 4ths", "bottom R", "set E–A–D–G", "drop-2", "bpm"):
+            check(fresh and word in fresh[0],
+                  f"{tag} a fresh page's first entry lacks {word!r} — a late listener missed a mount-time announcement: {fresh[:1]}")
+        # a distinctive configuration to save
+        page.select_option("#keySel", "Ab")
+        page.select_option("#scaleSel", "harm")
+        page.select_option("#progSel", "sixths")
+        page.select_option("#bottomSel", "2")            # start bottom on the 5th
+        page.click("#setSeg >> text=A–D–G–B")
+        page.click("#famSeg >> text=Drop-3")
+        page.wait_for_timeout(150)
+        first_before = page.inner_text("#tlBars button >> nth=0")
+        page.fill("#journalIn", "the persistence round-trip entry")
+        page.dispatch_event("#journalIn", "input")
+        page.click("#saveEntry")
+        page.wait_for_timeout(120)
+        stored = page.evaluate(f"() => localStorage.getItem({own_key!r})")
+        check(stored is not None and "persistence round-trip" in stored,
+              f"{tag} saving did not write under the door's own key {own_key!r}")
+        check(page.evaluate("() => localStorage.getItem('triadetudes.v1.log')") is None,
+              f"{tag} the door wrote under the REFERENCE's key — namespaces must be separate")
+        # the entry is not blind: its summary names what Restore would restore
+        rows = page.eval_on_selector_all(".hist", "e => e.map(x => x.innerText)")
+        mine = [x for x in rows if "persistence round-trip" in x]
+        check(len(mine) == 1, f"{tag} the saved entry did not render")
+        for word in ("Ab", "harmonic minor", "Cycling 6ths", "bottom 5", "A–D–G–B", "drop-3"):
+            check(word in (mine[0] if mine else ""),
+                  f"{tag} the entry's summary lacks {word!r} — Restore would be blind: {mine[:1]}")
+
+        # RELOAD. Everything in the page is gone; the log must not be.
+        page.goto(html_path.as_uri())
+        page.wait_for_timeout(400)
+        count = page.inner_text("#histCount").strip()
+        check(count not in ("", "0"), f"{tag} after reload the log says {count!r} saved — persistence is false")
+        check(page.eval_on_selector_all(".hist", "e => e.length") >= 1,
+              f"{tag} after reload no entries render — 'SAVED' is a lie")
+        # the page came back at defaults — prove it, so restore is a real change
+        check(page.input_value("#keySel") == "C", f"{tag} the page did not reload to defaults")
+        # RESTORE. The pass, family, set and bottom must all return.
+        page.click(".hist >> text=Restore étude")
+        page.wait_for_timeout(200)
+        check(page.input_value("#keySel") == "Ab", f"{tag} restore did not bring the key back")
+        check(page.input_value("#scaleSel") == "harm", f"{tag} restore did not bring the scale back")
+        check(page.input_value("#progSel") == "sixths", f"{tag} restore did not bring the cycle back")
+        check(page.input_value("#bottomSel") == "2", f"{tag} restore did not bring the start bottom back")
+        check(page.eval_on_selector_all("#setSeg button.on", "e => e.map(x => x.textContent)") == ["A–D–G–B"],
+              f"{tag} restore did not bring the string set back")
+        check(page.eval_on_selector_all("#famSeg button.on", "e => e.map(x => x.textContent)") == ["Drop-3"],
+              f"{tag} restore did not bring the voicing family back")
+        check(page.inner_text("#tlBars button >> nth=0") == first_before,
+              f"{tag} restore did not rebuild the same pass")
+
+        # THE SHARED SCHEMA IS A FACT: one Triadetudes v1 log imports through the
+        # engine's own fromTriadetudesV1 and renders as a foreign-app entry
+        v1 = ('[{"id":"tri-1","savedAt":"2026-08-10T10:00:00.000Z","intention":"cycle 4ths in C",'
+              '"accomplished":"kept the pivots","minutes":12,"cfg":{"v":1,"key":"C","set":[1,2,3],'
+              '"pivotFrets":[5,7,8]}}]')
+        page.evaluate("""(txt) => {
+          const inp = document.querySelector('#importFile');
+          const f = new File([txt], 'triadetudes-log.json', { type: 'application/json' });
+          const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files;
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+        }""", v1)
+        page.wait_for_timeout(300)
+        rows2 = page.eval_on_selector_all(".hist", "e => e.map(x => x.innerText)")
+        check(any("cycle 4ths in C" in x for x in rows2),
+              f"{tag} a Triadetudes v1 log did not import through fromTriadetudesV1: {rows2[:2]}")
+        # and a foreign entry says so rather than pretending to be restorable here
+        foreign = [x for x in rows2 if "cycle 4ths in C" in x]
+        check(foreign and "triadetudes" in foreign[0].lower(),
+              f"{tag} the imported entry does not name its source app: {foreign[:1]}")
+
+        # the persistence block reloaded again; leave Play lit for what follows
         page.click("#playBtn")
         page.wait_for_timeout(120)
         check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,

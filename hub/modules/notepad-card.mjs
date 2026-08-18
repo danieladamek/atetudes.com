@@ -12,8 +12,25 @@
  * markdown, palette, structures, atchart and chord. A door that locks the
  * notepad out therefore drops six engine modules as well as this card — which
  * is what makes the pruning worth having rather than cosmetic.
+ *
+ * PERSISTENCE (audit 260818 §A1) — the log stores under the DOOR'S OWN KEY,
+ * `<door-id>.v1.log`, never the reference study's. Shared
+ * SCHEMA, separate NAMESPACE: the roadmap's merged-history page is then a
+ * reader over N keys, not a migration. And under `file://` every page shares
+ * ONE origin, so a door that reused the reference's key would silently merge
+ * with — or clobber — a study opened from the same disk. Charter: browser
+ * storage is a per-app cache, never a transport; the file stays the handoff.
+ *
+ * THE ENTRY IS NOT BLIND (§B5): its payload is the door's whole announced
+ * configuration, and the surface renders `adapter.summarize(data)` on every
+ * row — key · scale · cycle · start bottom · set · family · bpm — so Restore
+ * says what it will restore. Restore ANNOUNCES the saved config on the bus;
+ * every card that owns a piece of it re-renders from the message (§4.2.3).
+ * This card reaches into nothing.
  */
 import { createNotepadSurface } from "../../engine/notepad-surface.mjs";
+import { fromTriadetudesV1 } from "../../engine/notepad.mjs";
+import { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } from "../bus.mjs";
 
 export const notepadCard = {
   id: "notepad-card",
@@ -108,21 +125,74 @@ export const notepadCard = {
 }`,
 
   mount(ctx) {
-    const byId = ctx.byId;
-    let mem = null;                       // this door is a proving ground, not
-    const storage = {                     // a shipped app: in-memory storage
-      load: () => mem,                    // keeps the gate free of a real
-      save: (s) => { mem = s; },          // persistence dependency
+    const d = ctx.doc, byId = ctx.byId;
+    const doorId = ctx.door.id;
+    const KEY = doorId + ".v1.log";          // the door's OWN namespace, derived
+
+    /* the last configuration heard on the bus, merged across its owners — the
+     * harmony panel, Shape & Motion, and the clock's tempo. This is what an
+     * entry snapshots. Nothing here is read from another module. */
+    let cfg = {};
+    let bpm = null;
+    listen(d, CONFIG_CHANGED, (m) => { if (m) cfg = { ...cfg, ...m }; });
+    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
+
+    const view = d.defaultView;
+    const storage = {
+      load: () => view.localStorage.getItem(KEY),          // MAY THROW — the
+      save: (str) => view.localStorage.setItem(KEY, str),   // surface handles denial
     };
+
+    /* the one-line summary, in the reference's register: every fact the door
+     * can restore, and only those. `family` and `set` are Shape & Motion's
+     * words; the rest are Harmony's. */
+    const FAMILY = { close: "close", drop2: "drop-2", drop3: "drop-3" };
+    const SCALE = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
+    const CYCLE = { scale: "Scaler", thirds: "Cycling 3rds", fourths: "Cycling 4ths",
+      fifths: "Cycling 5ths", sixths: "Cycling 6ths" };
+    const SETS = ["E–A–D–G", "A–D–G–B", "D–G–B–e"];
+    const summarize = (c) => {
+      if (!c || typeof c !== "object") return "no configuration attached";
+      const parts = [];
+      if (c.key) parts.push(c.key + (c.scale ? " " + (SCALE[c.scale] || c.scale) : ""));
+      if (c.cycle) parts.push(CYCLE[c.cycle] || c.cycle);
+      if (typeof c.bottom === "number") parts.push("bottom " + ["R", "3", "5", "7"][c.bottom]);
+      if (typeof c.setIndex === "number") parts.push("set " + (SETS[c.setIndex] || c.setIndex));
+      if (Array.isArray(c.families) && c.families.length) parts.push(FAMILY[c.families[0]] || c.families[0]);
+      if (c.placement && c.placement !== "free") parts.push(c.placement);
+      if (typeof c.bpm === "number") parts.push(c.bpm + " bpm");
+      return parts.join(" · ") || "no configuration attached";
+    };
+
     createNotepadSurface({
       adapter: {
-        app: "hub-door", version: 1,
-        nouns: { item: "entry", apply: "Restore settings" },
-        snapshot: () => ({ door: ctx.door.id }),
-        apply: () => {},
-        summarize: (data) => "door " + (data && data.door),
+        app: doorId, version: 1,
+        nouns: { item: "entry", apply: "Restore étude" },
+        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}) }),
+        /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
+         * the message; the tempo goes to the clock owner as a request. */
+        apply: (data) => {
+          if (!data || typeof data !== "object") return;
+          const { bpm: savedBpm, ...rest } = data;
+          announce(d, CONFIG_CHANGED, rest);
+          if (typeof savedBpm === "number") announce(d, CLOCK, { bpm: savedBpm });
+        },
+        summarize,
       },
       storage,
+      /* the shared schema is a fact: a Triadetudes v1 log imports through the
+       * engine's own migration. Nothing to migrate on first run here — this
+       * door has no v1 predecessor — but the path is wired, and the gate
+       * asserts one import through it. */
+      migrate: () => null,
+      importFallback: (text) => {
+        try {
+          const j = JSON.parse(text);
+          const log = Array.isArray(j) ? j : (j && Array.isArray(j.entries) ? j.entries : null);
+          if (!log || !log.length || !log.some((e) => e && (e.cfg !== undefined || e.intention !== undefined))) return null;
+          return fromTriadetudesV1(log).entries;
+        } catch { return null; }
+      },
       els: { pad: byId("journalIn"), saveBtn: byId("saveEntry"),
         clearBtn: byId("clearPad"), confirmRoot: byId("clearConfirm"),
         confirmSave: byId("clearSave"), confirmDiscard: byId("clearDiscard"),
@@ -132,7 +202,8 @@ export const notepadCard = {
         list: byId("histList"), count: byId("histCount"),
         storeNote: byId("storeNote"), controls: byId("journalControls"),
         handoff: byId("handoffNote") },
-      file: { title: "hub door", name: () => "hub-door.atchart.md" },
+      file: { title: doorId + " journal",
+        name: () => doorId + "-journal-" + new Date().toISOString().slice(0, 10) + ".atchart.md" },
       onChange: () => ctx.changed(),
     });
   },
