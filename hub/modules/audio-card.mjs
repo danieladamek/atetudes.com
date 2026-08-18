@@ -20,73 +20,42 @@
  * FIRST REAL GESTURE and never on load — the `file://` gate demands zero
  * console errors, and there is no reason to manufacture warnings either.
  *
- * The mixer is two gain buses on existing paths (v0.8.7): triads and bass,
+ * The mixer is two gain buses on existing paths (v0.8.7): chord and bass,
  * each one multiply, ramped rather than stepped so a level move mid-note does
- * not click. The metronome's own level stays in the metronome card, because
- * the shared component owns its own sound.
+ * not click. ITS CONTROLS ARE NOT HERE: as in the reference page, the sliders
+ * and the voice select live in the Transport card, which announces `MIXER`.
+ * This module has no surface at all — it is mounted `hidden` — so it can never
+ * be the empty box the reference has none of. The click's own level stays in
+ * the metronome card, because the shared component owns its own sound.
  */
 import {
   NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf,
   pluckSamples, SUSTAIN_PARTIALS, chordSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES,
 } from "../../engine/voices.mjs";
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, BEAT, listen } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, listen } from "../bus.mjs";
 
 export const audioCard = {
   id: "audio-card",
   layer: "surface",
   requires: { audio: true },
-  mount_point: "cards",
+  mount_point: "hidden",           // no surface of its own — the mixer lives in Transport
   order: 5,
-  controls: ["auOn", "auVoice", "auChordVol", "auBassVol"],
-
-  markup: `
-  <h2 class="auHead">Sound</h2>
-  <div class="transport">
-    <button id="auOn" data-control="auOn" class="auToggle">Sound: off</button>
-  </div>
-  <div class="auRow">
-    <div><label>Voice</label>
-      <select id="auVoice" data-control="auVoice"></select></div>
-  </div>
-  <div class="auLevel">
-    <span class="auLab" id="auChordLab"></span>
-    <input type="range" id="auChordVol" data-control="auChordVol" min="0" max="100" value="100">
-  </div>
-  <div class="auLevel">
-    <span class="auLab">Bass</span>
-    <input type="range" id="auBassVol" data-control="auBassVol" min="0" max="100" value="100">
-  </div>
-  <div class="hint auHint" id="auHint">Sound starts on your first click — browsers require a
-  gesture before any audio. Then the pass, the pedal and the click all sound.</div>`,
-
-  /* The toggle is deliberately NOT the shell's "primary" class. That one paints
-   * with --red, #B82929, which is the degree palette's ROOT — and CLAUDE.md
-   * reserves the degree colours for musical function, forbidding them as
-   * interface furniture. The shell's red primary is already on the backlog
-   * ("Retire the degree-palette red from the interface furniture"); this card
-   * declines to add a second instance and uses the house neutral instead, the
-   * same on-state the info block's segmented controls wear. */
-  styles: `
-.auToggle.auLit{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:bold}
-.auHead{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--gray);margin:0 0 10px;font-weight:bold}
-.auRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
-.auRow>div{flex:1 1 120px}
-.auLevel{display:flex;align-items:center;gap:8px;margin-top:8px}
-.auLevel input[type=range]{flex:1;accent-color:var(--ink);width:auto}
-.auLab{font-size:12px;color:var(--gray);width:44px}
-.auHint{margin-top:10px}`,
+  controls: [],
+  markup: ``,
+  styles: ``,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     const lock = ctx.door.lock || {};
+    // the lock's families is the door's DEFAULT; Shape & Motion announces the
+    // one actually chosen and that wins when present
     const families = Array.isArray(lock.families) && lock.families.length ? lock.families : ["drop2"];
 
     /* PRIVATE. Nothing else reads any of this. */
     let ac = null, chordBus = null, bassBus = null, wave = null;
     const buffers = new Map();
-    let on = false, voice = NOTE_VOICE_NAMES[0];
+    let on = false, voice = NOTE_VOICE_NAMES[0], clickOn = true;
     let chordVol = 1, bassVol = 1;
     let cfg = null, pass = null, live = 0;
 
@@ -209,58 +178,30 @@ export const audioCard = {
       src.start(t); src.stop(t + spec.dur + 0.01);
     };
 
-    /* ---- controls ---- */
-    /* THE LABEL IS THE DOOR'S, AND THE DEFAULT IS ARITY-NEUTRAL.
-     *
-     * The shipped mixer said "Triads" because Triadetudes plays triads; on a
-     * four-voice app that is simply false, which is the same defect class as
-     * v0.6.8's "the readout says only true things". But "Tetrads" hardcoded
-     * here would be exactly the same landmine one door further on.
-     *
-     * So: the control id and the bus are named by ROLE — `auChordVol`,
-     * `bus: "chord"` — because that is true at every arity and matches what
-     * note-events.mjs already calls it. The visible LABEL defaults to "Chord",
-     * which is also true everywhere, and a door may override it with a word
-     * that fits its own material:
-     *
-     *     present: { chordLabel: "Tetrads" }
-     *
-     * Tetradetudes sets it, so the slider says what Daniel asked for on the
-     * door he was playing, and the next door inherits a true default rather
-     * than this one's vocabulary. */
-    byId("auChordLab").textContent = (ctx.door.present || {}).chordLabel || "Chord";
-
-    const vsel = byId("auVoice");
-    for (const n of NOTE_VOICE_NAMES) {
-      const o = d.createElement("option");
-      o.value = n; o.textContent = n;
-      vsel.appendChild(o);
-    }
-    vsel.addEventListener("change", () => { voice = vsel.value; });
-
-    byId("auOn").addEventListener("click", () => {
-      on = !on;
-      // THE GESTURE. This is the only place a context is ever created.
-      if (on) audio();
-      const b = byId("auOn");
-      b.textContent = "Sound: " + (on ? "on" : "off");
-      b.classList.toggle("auLit", on);
-    });
-    byId("auChordVol").addEventListener("input", (e) => {
-      chordVol = Number(e.target.value) / 100; syncBuses();
-    });
-    byId("auBassVol").addEventListener("input", (e) => {
-      bassVol = Number(e.target.value) / 100; syncBuses();
-    });
+    /* ---- the gesture. Browsers refuse an AudioContext before a user gesture;
+     * the FIRST click anywhere on the page is that gesture. Nothing is created
+     * on load, so the frozen study's four autoplay warnings are not reproduced. */
+    const arm = () => { on = true; audio(); d.removeEventListener("pointerdown", arm, true); };
+    d.addEventListener("pointerdown", arm, true);
 
     /* ---- what it listens to; it asks nobody for anything ---- */
     listen(d, CONFIG_CHANGED, (next) => {
       cfg = { ...(cfg || {}), ...next };
-      try { pass = tetradPass({ ...cfg, families }); } catch { pass = null; }
+      try { pass = tetradPass({ families, ...cfg }); } catch { pass = null; }
     });
     listen(d, STEP_CHANGED, (m) => {
       if (m && m.request !== true && typeof m.index === "number") soundStep(m.index);
     });
-    listen(d, BEAT, soundClick);
+    listen(d, BEAT, (m) => { if (clickOn) soundClick(m); });
+    /* the mixer's controls live in the Transport card; this only listens */
+    listen(d, MIXER, (m) => {
+      if (!m) return;
+      if (typeof m.chord === "number") chordVol = m.chord;
+      if (typeof m.bass === "number") bassVol = m.bass;
+      if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) voice = m.voice;
+      if (typeof m.click === "boolean") clickOn = m.click;
+      if (m.on === true) { on = true; audio(); }
+      syncBuses();
+    });
   },
 };

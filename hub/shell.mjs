@@ -31,9 +31,11 @@ header h1{font-size:26px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
 .cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:flex-start}
 label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
-select,input[type=text],textarea{
+select,input[type=text]{
   font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
-  border-radius:6px;background:#fff;color:var(--ink);max-width:100%;width:100%}
+  border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
+.bpmrow{display:flex;align-items:center;gap:8px;margin-top:10px}
+.bpmrow input[type=range]{flex:1;accent-color:var(--ink)}
 .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
 .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
 .chk input{width:auto}
@@ -56,19 +58,50 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * module that asked for a board — page grammar becomes a trace, which is the
  * orphan the suite caught on first run. */
 export const WRAPPERS = {
+  /* a contribution with NO surface of its own — script that realises what
+   * other cards control (the audio realiser). It gets no container, so it can
+   * never be the empty box the reference has none of. */
+  hidden: {
+    html: (inner) => inner ? `<div hidden>${inner}</div>` : "",
+    styles: "",
+  },
   cards: {
     html: (inner, extra) => `<div class="card${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
       padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
 .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-         color:var(--gray);margin:0 0 10px;font-weight:bold}`,
+         color:var(--gray);margin:0 0 10px;font-weight:bold}
+`,
+  },
+  /* the reference page's THIRD container: a full-width material strip between
+   * the clock row and the boards — `.card.strip` in the study, where Harmony,
+   * Shape & Motion and the timeline live. It was missing here, and its absence
+   * is most of why the page read airy: strips were being mounted as boards. */
+  strips: {
+    html: (inner, extra) => `<div class="card strip${extra ? " " + extra : ""}">${inner}</div>`,
+    styles: `
+.card.strip{background:var(--card);border:1px solid var(--line);border-radius:10px;
+      padding:12px 14px;margin-bottom:12px;position:relative}
+.card.strip h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+         color:var(--gray);margin:0 0 10px;font-weight:bold}
+.card.strip .row2.alignEnd{align-items:flex-end}
+.striprow{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-start}
+.striprow .grp{flex:0 1 auto;min-width:170px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
+.seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}`,
   },
   boards: {
     html: (inner, extra) => `<div class="board${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
 .board{background:var(--card);border:1px solid var(--line);border-radius:10px;
-       padding:10px 12px;margin-bottom:12px;position:relative}`,
+       padding:10px 12px;margin-bottom:12px;position:relative}
+.board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
+           font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+`,
   },
 };
 
@@ -80,7 +113,9 @@ export const SHELL_MARKUP = `
     <h1 id="doorTitle"></h1>
     <div class="tag" id="doorTag"></div>
   </header>
+  <div id="hidden"></div>
   <div class="cards" id="cards"></div>
+  <div id="strips"></div>
   <div id="boards"></div>
   <footer id="doorFoot"></footer>
 </div>`;

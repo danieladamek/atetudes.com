@@ -62,8 +62,6 @@ export const notepadCard = {
    * study these same rules sit in the page's one stylesheet, where no lock
    * could reach them — the move IS the mechanism. */
   styles: `
-.bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
-    font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
 .nb2j{display:flex;align-items:stretch}
 .jcol{min-width:0;position:relative}
 #logCol{flex:0 1 auto;width:50%;padding-right:12px}
@@ -73,7 +71,7 @@ export const notepadCard = {
 #dragBar:hover{border-left-color:var(--ink)}
 .colhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
   color:var(--gray);font-weight:bold;margin:0 0 8px}
-#journalIn{min-height:210px}
+#journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
 .journalcontrols{margin-top:10px}
 .journalconfirm{display:none;margin-top:6px}

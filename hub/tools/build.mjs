@@ -87,7 +87,7 @@ async function build(id) {
    * (default 0, stable within a tie). Without it the page order is an accident
    * of filename, which is not a fact any module should be asserting — and on
    * this door it put the configuration BELOW the neck it configures. */
-  const slots = { cards: [], boards: [] };
+  const slots = { hidden: [], cards: [], strips: [], boards: [] };
   const placed = [...mods].map((m, i) => ({ m, i }))
     .sort((a, b) => ((a.m.order ?? 0) - (b.m.order ?? 0)) || (a.i - b.i))
     .map((x) => x.m);
@@ -105,6 +105,9 @@ async function build(id) {
   const markup = shell.SHELL_MARKUP
     .replace('<div class="cards" id="cards"></div>',
       `<div class="cards" id="cards">${slots.cards.join("\n")}\n</div>`)
+    .replace('<div id="hidden"></div>', slots.hidden.join("\n"))
+    .replace('<div id="strips"></div>',
+      `<div id="strips">${slots.strips.join("\n")}\n</div>`)
     .replace('<div id="boards"></div>',
       `<div id="boards">${slots.boards.join("\n")}\n</div>`);
 

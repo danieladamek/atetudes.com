@@ -32,21 +32,28 @@ hub/
 │   │                        the markup and styles the shipped study holds page-level
 │   ├── harmony-panel.mjs    the HARMONY strip in the reference page's form: Key,
 │   │                        Scale, mode segment, Progression, Start on, the bass
-│   │                        select. Owns the config; replaced the chart-heading
-│   │                        module whose popups overlapped the row beneath
+│   │                        select. Owns the harmony half of the config
+│   ├── shape-motion.mjs     the SHAPE & MOTION strip — the one sanctioned
+│   │                        divergence: string set, voicing FAMILY (the tetrad
+│   │                        twin of triad inversion), placement, root rings.
+│   │                        Owns the shape half of the config
+│   ├── score-board.mjs      "The étude — end to end": the reference's grand-staff
+│   │                        score at four voices, every notehead derived
+│   ├── keyboard-strip.mjs   the reference's C2–C6 keyboard strip
 │   ├── fretboard-stage.mjs  the neck, the dots, the armed rings, the three CSS
 │   │                        transitions. Keyed by engine/voice-identity.mjs so the
 │   │                        nodes survive a chord change and the dots GLIDE
 │   ├── chord-timeline.mjs   the roman-numeral pass; sequence-as-navigation
-│   ├── transport-card.mjs   play/pause, tempo, meter, bar split, count-in, loop
-│   │                        counter and the playhead. Owns no clock: it
-│   │                        SUBSCRIBES to the metronome's grid over the bus and
-│   │                        walks engine/transport.mjs along it, so the click
-│   │                        and the chord change are the same beat
-│   └── audio-card.mjs       THE HUB'S EARS: the AudioContext (created on a
-│                            GESTURE, never on load), the mixer buses, and the
-│                            realisation of engine/voices.mjs's descriptions.
-│                            Reaches nothing — it subscribes and sounds
+│   ├── transport-card.mjs   the reference's Transport card: ◀ Play ▶, tempo,
+│   │                        meter, bar split, the checkbox row, AND THE MIXER
+│   │                        (there is no separate Sound card). Owns no clock:
+│   │                        it subscribes to the metronome's grid and walks
+│   │                        engine/transport.mjs along it
+│   └── audio-card.mjs       THE HUB'S EARS, with no surface of its own (mounted
+│                            `hidden`): the AudioContext (created on the first
+│                            gesture, never on load), the buses, the realisation
+│                            of engine/voices.mjs. It listens for MIXER, BEAT and
+│                            STEP; the controls that drive it live in Transport
 ├── doors/*.door.mjs    THE DOOR DECLARATION — { id, lock, present }. Nothing else.
 ├── tools/resolve.mjs   lock → reach-set → control partition → style ownership
 ├── tools/build.mjs     reach-set → one self-contained HTML file
@@ -57,6 +64,11 @@ hub/
 
 `engine/` stays DOM-free. A module that owns markup or styles lives here and wraps an engine
 module; that split is what makes CSS prunable from a lock.
+
+A contribution names one of **four mount points**: `cards` (the clock row), `strips` (the
+reference's full-width `.card.strip` material strips — Harmony, Shape & Motion, the timeline),
+`boards` (the drawing boards and the log), or `hidden` (script with no surface — the audio
+realiser — which gets no container and so can never be an empty box).
 
 A contribution may also declare **`order`** (default 0, stable within a tie) to say where it
 belongs down the page. Without it the page order is an accident of filename — which is not a
@@ -69,7 +81,7 @@ neck it configures.
 |---|---|---|---|
 | `scribe` | `{notepad: true}` | metronome + notepad, 12 files | 148 kB |
 | `plain` | `{notepad: false}` | metronome only, 3 files | 21 kB |
-| `tetradetudes` | `{material:"tetrad", notepad:true, audio:true, transport:true}` | door #1 — the four-voice pass, with sound and a real transport, 26 files | 284 kB |
+| `tetradetudes` | `{material:"tetrad", notepad:true, audio:true, transport:true}` | door #1 — the whole reference page at four voices: nine panels, 29 files | 314 kB |
 
 The plain door drops six engine modules (notepad, markdown, palette, structures, atchart, chord)
 along with the card, plus 39 markup/style tokens. Its built file contains no trace of any of it —

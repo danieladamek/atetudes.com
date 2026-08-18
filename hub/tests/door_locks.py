@@ -210,40 +210,40 @@ def run_door(pw, door_id):
                   f"{tag} the palette panel did not open")
         check(page.eval_on_selector_all(".hist .note.md pre", "e => e.length") == 1,
               f"{tag} the note's fenced block did not render through the markdown engine")
-    if "trPlay" in r["controlsPresent"]:
+    if "playBtn" in r["controlsPresent"]:
         # ---- the transport: one grid, two views, and a playhead that agrees ----
         # BPM is ONE state seen twice. Move it here, and the metronome's own
         # readout must follow — they are two views of one clock, not two copies.
-        page.fill("#trBpm", "150")
-        page.dispatch_event("#trBpm", "input")
+        page.fill("#bpmRange2", "150")
+        page.dispatch_event("#bpmRange2", "input")
         page.wait_for_timeout(80)
         check(page.inner_text("#bpmVal") == "150",
               f"{tag} the metronome's BPM did not follow the transport's — two clocks, not one")
-        check(page.inner_text("#trBpmVal") == "150", f"{tag} the transport's own readout did not follow")
+        check(page.inner_text("#bpmVal2") == "150", f"{tag} the transport's own readout did not follow")
         # and back the other way
         page.fill("#bpmRange", "120")
         page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(80)
-        check(page.inner_text("#trBpmVal") == "120",
+        check(page.inner_text("#bpmVal2") == "120",
               f"{tag} the transport did not follow the metronome — the mirror is one-way")
 
         # the meter is one state too, and the split list follows it
-        page.select_option("#trMeter", "3")
+        page.select_option("#meterSel2", "3")
         page.wait_for_timeout(80)
         check(page.input_value("#meterSel") == "3",
               f"{tag} the metronome's meter did not follow the transport's")
-        splits3 = page.eval_on_selector_all("#trSplit option", "e => e.map(x => x.textContent)")
+        splits3 = page.eval_on_selector_all("#splitSel option", "e => e.map(x => x.textContent)")
         check(splits3 and all("+" in x or x.isdigit() for x in splits3),
               f"{tag} the bar-split list did not re-derive for the new meter: {splits3}")
-        page.select_option("#trMeter", "4")
-        page.select_option("#trSplit", "2")            # [1,1,1,1] — one chord a beat
+        page.select_option("#meterSel2", "4")
+        page.select_option("#splitSel", "2")            # [1,1,1,1] — one chord a beat
         page.wait_for_timeout(60)
 
         # PLAY. The transport does not own a clock: it asks for the metronome's.
         head0 = page.inner_text("#trHead")
-        page.click("#trPlay")
+        page.click("#playBtn")
         page.wait_for_timeout(150)
-        check(page.inner_text("#trPlay") == "Pause", f"{tag} the transport did not arm")
+        check(page.inner_text("#playBtn") == "Pause", f"{tag} the transport did not arm")
         check(page.inner_text("#metroBtn") == "Stop",
               f"{tag} pressing Play did not start the grid — the transport asked for a clock it did not get")
 
@@ -259,10 +259,10 @@ def run_door(pw, door_id):
           const ps = [...document.querySelectorAll('#trHead .trPip')];
           return ps.findIndex(p => p.classList.contains('trNow'));
         }""")
-        curChord = page.eval_on_selector_all("#tlList button.tlCur", "e => e.length")
+        curChord = page.eval_on_selector_all("#tlBars button.cur", "e => e.length")
         tlIdx = page.evaluate("""() => {
-          const bs = [...document.querySelectorAll('#tlList button')];
-          return bs.findIndex(b => b.classList.contains('tlCur'));
+          const bs = [...document.querySelectorAll('#tlBars button')];
+          return bs.findIndex(b => b.classList.contains('cur'));
         }""")
         check(curChord == 1, f"{tag} the timeline lost its current chord while playing")
         check(headIdx == tlIdx,
@@ -272,9 +272,9 @@ def run_door(pw, door_id):
               f"{tag} the playhead never moved")
 
         # pausing stops the walk but leaves the position where it was
-        page.click("#trPlay")
+        page.click("#playBtn")
         page.wait_for_timeout(60)
-        check(page.inner_text("#trPlay") == "Play", f"{tag} the transport did not pause")
+        check(page.inner_text("#playBtn") == "Play", f"{tag} the transport did not pause")
         parked = page.evaluate("""() => {
           const ps = [...document.querySelectorAll('#trHead .trPip')];
           return ps.findIndex(p => p.classList.contains('trNow'));
@@ -286,18 +286,18 @@ def run_door(pw, door_id):
         }""") == parked, f"{tag} the playhead kept walking after pause")
 
         # leave it LIT into the orphan check: .trLit is a state this door has
-        page.click("#trPlay")
-        check(page.eval_on_selector_all(".trToggle.trLit", "e => e.length") == 1,
+        page.click("#playBtn")
+        check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,
               f"{tag} the play toggle does not light")
 
     if "keySel" in r["controlsPresent"]:
         # ---- the Harmony panel, in the reference's form: labelled selects,
         # no popups — the overlap defect left with the idiom that caused it ----
-        before = page.inner_text("#tlList")
+        before = page.inner_text("#tlBars")
         page.select_option("#keySel", "Eb")
         page.wait_for_timeout(120)
         check(page.input_value("#keySel") == "Eb", f"{tag} the key did not change")
-        check(page.inner_text("#tlList") != before,
+        check(page.inner_text("#tlBars") != before,
               f"{tag} the pass did not rebuild when the key changed")
         # "Start on" is the reference's roman list, derived per key and scale:
         # major's vii must read as the half-diminished roman
@@ -305,10 +305,10 @@ def run_door(pw, door_id):
         check(len(romans) == 7 and any("\u00f8" in x for x in romans),
               f"{tag} Start on is not the derived roman list: {romans}")
         # starting the pass elsewhere really reorders it
-        first = page.inner_text("#tlList button >> nth=0")
+        first = page.inner_text("#tlBars button >> nth=0")
         page.select_option("#startSel", "3")
         page.wait_for_timeout(120)
-        check(page.inner_text("#tlList button >> nth=0") != first,
+        check(page.inner_text("#tlBars button >> nth=0") != first,
               f"{tag} Start on did not move the pass's first chord")
         page.select_option("#startSel", "0")
         page.wait_for_timeout(80)
@@ -336,28 +336,37 @@ def run_door(pw, door_id):
         }""")
         check(overlaps == [], f"{tag} Harmony panel elements overlap: {overlaps[:4]}")
         # the timeline is navigation: clicking a chord moves the stage
-        page.click("#tlList >> button >> nth=2")
+        page.click("#tlBars >> button >> nth=2")
         page.wait_for_timeout(120)
-        check(page.eval_on_selector_all("#tlList button.tlCur", "e => e.length") == 1,
+        check(page.eval_on_selector_all("#tlBars button.cur", "e => e.length") == 1,
               f"{tag} the timeline lost its current-chord mark")
         # and the dots are the SAME NODES after a step — that is what glides
-        ids = page.eval_on_selector_all("#fsNeck .fs-dot", "e => e.map(x => x.dataset.voice)")
+        ids = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
         check(ids == ["v0", "v1", "v2", "v3"],
               f"{tag} the stage is not keyed by the stable voice key: {ids}")
-        page.click("#fsFwd")
+        page.click("#nextBtn")
         page.wait_for_timeout(120)
-        ids2 = page.eval_on_selector_all("#fsNeck .fs-dot", "e => e.map(x => x.dataset.voice)")
+        ids2 = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
         check(ids2 == ids, f"{tag} the dots were rebuilt on a step — nothing would glide")
-    if "auOn" in r["controlsPresent"]:
-        # ---- the audio path, which no static check can see ----
-        # AUTOPLAY DISCIPLINE FIRST: no context may exist before a gesture.
-        # That refusal is what produces the frozen tetrad study's four warnings,
-        # and manufacturing new ones here would be a self-inflicted wound.
-        check(page.evaluate("() => window.__ac === undefined || window.__ac === null"),
-              f"{tag} an AudioContext existed before any gesture")
+    if "chordVolR" in r["controlsPresent"]:
+        # ---- the audio path, which no static check can see. THE MIXER LIVES IN
+        # TRANSPORT (the reference's form); the audio realiser is a hidden module
+        # that only listens. Its label is the door's own `present.chordLabel`.
+        want = ((r.get("present") or {}).get("chordLabel") or "chord").lower()
+        got = page.inner_text("#chordVolLab").strip()
+        check(got == want, f"{tag} the mixer's chord slider says {got!r}, the door says {want!r}")
+        check(page.query_selector("#auOn") is None and page.query_selector(".auHead") is None,
+              f"{tag} a separate Sound card still renders — the mixer must live in Transport")
+
+        # AUTOPLAY DISCIPLINE. The realiser arms on the FIRST gesture, and this
+        # door has already been clicked above (Play, the popups) — so the
+        # instrumentation below cannot see the context that already exists.
+        # Reload into a fresh page for this block: it is the only way to assert
+        # "nothing before a gesture" honestly rather than instrumenting after
+        # the fact and calling it proof.
+        page.goto(html_path.as_uri())
+        page.wait_for_timeout(300)
         page.evaluate("""() => {
-          // count every source actually STARTED, so 'it made a sound' is
-          // observed rather than inferred from the code having run
           window.__starts = 0;
           for (const P of [window.OscillatorNode, window.AudioBufferSourceNode]) {
             const s = P.prototype.start;
@@ -368,48 +377,102 @@ def run_door(pw, door_id):
           mk.prototype = C.prototype;
           window.AudioContext = mk;
         }""")
-        # THE MIXER NAMES WHAT IT CONTROLS. The label is the door's — the card
-        # defaults to the arity-neutral "Chord" and a door may say something
-        # truer for its own material. Asserted against the door's own present
-        # block, so a door that sets it and a card that ignores it cannot agree
-        # by accident, and an empty label cannot ship.
-        want = (r.get("present") or {}).get("chordLabel") or "Chord"
-        got = page.inner_text("#auChordLab").strip()
-        check(got == want, f"{tag} the chord slider says {got!r}, the door says {want!r}")
-        check(got != "", f"{tag} the chord slider has no label at all")
-        check("Triads" not in page.inner_text("body") or want == "Triads",
-              f"{tag} the mixer still says 'Triads' somewhere visible")
-
-        page.click("#auOn")                       # THE GESTURE
-        check(page.inner_text("#auOn") == "Sound: on", f"{tag} the sound toggle did not turn on")
-        page.wait_for_timeout(120)
-        check(page.evaluate("() => !!window.__ac"),
-              f"{tag} the gesture did not create an AudioContext")
+        check(page.evaluate("() => window.__ac === undefined || window.__ac === null"),
+              f"{tag} an AudioContext existed before any gesture")
+        page.click("#nextBtn")                    # THE GESTURE
+        page.wait_for_timeout(150)
+        check(page.evaluate("() => !!window.__ac"), f"{tag} a gesture did not create an AudioContext")
         check(page.evaluate("() => window.__ac.state") == "running",
-              f"{tag} the context is not running after a gesture: "
-              f"{page.evaluate('() => window.__ac.state')}")
-
-        # a step must actually start sources — the chord, its pedal, or both
+              f"{tag} the context is not running after a gesture: {page.evaluate('() => window.__ac && window.__ac.state')}")
         before = page.evaluate("() => window.__starts")
-        page.click("#fsFwd")
+        page.click("#nextBtn")
         page.wait_for_timeout(400)
         after = page.evaluate("() => window.__starts")
-        check(after > before,
-              f"{tag} stepping with sound on started no audio sources ({before} → {after}) — "
-              f"the door is still silent")
-
-        # and the clock's click reaches the audio card over the bus
+        check(after > before, f"{tag} stepping started no audio sources ({before} → {after}) — the door is silent")
+        page.click("#metroBtn")                   # the clock, fresh page
+        page.fill("#bpmRange", "120"); page.dispatch_event("#bpmRange", "input")
         beats = page.evaluate("() => window.__starts")
-        page.wait_for_timeout(900)                # the metronome is running at 120 BPM
-        check(page.evaluate("() => window.__starts") > beats,
-              f"{tag} the metronome beat never reached the audio card")
+        page.wait_for_timeout(900)
+        check(page.evaluate("() => window.__starts") > beats, f"{tag} the metronome beat never reached the audio realiser")
+        # the mixer ramps rather than steps, and zero is legal; mute chords IS the
+        # chord slider at zero — one state, two views (the reference's rule)
+        page.fill("#chordVolR", "0")
+        page.dispatch_event("#chordVolR", "input")
+        check(page.is_checked("#metroChk"), f"{tag} the chord slider at zero did not tick 'mute chords'")
+        page.uncheck("#metroChk")
+        check(page.input_value("#chordVolR") != "0", f"{tag} unticking 'mute chords' did not restore the level")
+        page.fill("#bassVolR", "50")
+        page.dispatch_event("#bassVolR", "input")
+        # the reload above emptied the states earlier blocks had entered; re-enter
+        # them so the orphan check below judges the door with everything lit,
+        # exactly as it did before this block existed
+        if "journalIn" in r["controlsPresent"]:
+            page.fill("#journalIn", "re-entered after the audio reload\n\n```\nCmaj7\n```\n")
+            page.dispatch_event("#journalIn", "input")
+            page.click("#saveEntry")
+        page.click("#playBtn")
+        page.wait_for_timeout(120)
+        check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,
+              f"{tag} Play did not light after the reload")
 
-        # the mixer ramps rather than steps, and reaching zero is legal
-        page.fill("#auChordVol", "0")
-        page.dispatch_event("#auChordVol", "input")
-        page.fill("#auBassVol", "50")
-        page.dispatch_event("#auBassVol", "input")
-
+    if "keySel" in r["controlsPresent"]:
+        # ---- the Harmony panel, in the reference's form: labelled selects,
+        # no popups — the overlap defect left with the idiom that caused it ----
+        before = page.inner_text("#tlBars")
+        page.select_option("#keySel", "Eb")
+        page.wait_for_timeout(120)
+        check(page.input_value("#keySel") == "Eb", f"{tag} the key did not change")
+        check(page.inner_text("#tlBars") != before,
+              f"{tag} the pass did not rebuild when the key changed")
+        # "Start on" is the reference's roman list, derived per key and scale:
+        # major's vii must read as the half-diminished roman
+        romans = page.eval_on_selector_all("#startSel option", "e => e.map(x => x.textContent)")
+        check(len(romans) == 7 and any("\u00f8" in x for x in romans),
+              f"{tag} Start on is not the derived roman list: {romans}")
+        # starting the pass elsewhere really reorders it
+        first = page.inner_text("#tlBars button >> nth=0")
+        page.select_option("#startSel", "3")
+        page.wait_for_timeout(120)
+        check(page.inner_text("#tlBars button >> nth=0") != first,
+              f"{tag} Start on did not move the pass's first chord")
+        page.select_option("#startSel", "0")
+        page.wait_for_timeout(80)
+        # Break down is the reference's form, honestly disabled until typed
+        # changes land — a control that pretends would be the v0.6.8 defect
+        check(page.eval_on_selector_all("#modeSeg button[disabled]", "e => e.length") == 1,
+              f"{tag} the Break down button is not disabled (or vanished)")
+        # NO OVERLAP anywhere in the panel: the defect this panel removed must
+        # not reappear — every pair of visible controls must be disjoint
+        overlaps = page.evaluate("""() => {
+          const els = [...document.querySelectorAll(
+            '.hp-strip select, .hp-strip button, .hp-strip label')]
+            .map(e => ({ t: e.tagName + ':' + (e.id || e.textContent.slice(0, 12)),
+                         r: e.getBoundingClientRect() }))
+            .filter(x => x.r.width > 0 && x.r.height > 0);
+          const bad = [];
+          for (let i = 0; i < els.length; i++)
+            for (let j = i + 1; j < els.length; j++) {
+              const a = els[i].r, b = els[j].r;
+              const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+              const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+              if (x > 2 && y > 2) bad.push(els[i].t + " ~ " + els[j].t);
+            }
+          return bad;
+        }""")
+        check(overlaps == [], f"{tag} Harmony panel elements overlap: {overlaps[:4]}")
+        # the timeline is navigation: clicking a chord moves the stage
+        page.click("#tlBars >> button >> nth=2")
+        page.wait_for_timeout(120)
+        check(page.eval_on_selector_all("#tlBars button.cur", "e => e.length") == 1,
+              f"{tag} the timeline lost its current-chord mark")
+        # and the dots are the SAME NODES after a step — that is what glides
+        ids = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
+        check(ids == ["v0", "v1", "v2", "v3"],
+              f"{tag} the stage is not keyed by the stable voice key: {ids}")
+        page.click("#nextBtn")
+        page.wait_for_timeout(120)
+        ids2 = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
+        check(ids2 == ids, f"{tag} the dots were rebuilt on a step — nothing would glide")
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped
     # metronome would call them orphans

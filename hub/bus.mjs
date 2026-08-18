@@ -40,6 +40,11 @@ export const CLOCK = "atetudes:clock";
  * views of one clock cannot drift apart. */
 export const CLOCK_STATE = "atetudes:clock-state";
 
+/** the mixer moved: { chord?, bass?, voice?, on? } — levels 0..1, the note
+ * voice by name, and whether sound is on at all. The controls live in the
+ * Transport card (the reference's form); whoever realises audio listens. */
+export const MIXER = "atetudes:mixer";
+
 /** a metronome beat is DUE. `lead` is seconds from now until it sounds, so a
  * listener schedules against its OWN clock and never needs the sender's time
  * base — which is what lets the clock stay pure and the audio stay accurate.

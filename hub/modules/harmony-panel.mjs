@@ -21,9 +21,7 @@
  *   - Progression lists the door's five derived cycles, not the study's seven;
  *   - the bass select offers none/root — the pedal, not triad extensions;
  *   - "Start bottom on" (R/3/5/7, the inversion seed) has no reference twin;
- *   - the string-set segment is PARKED here until Shell 3 builds Shape &
- *     Motion, which is its reference home (`#setSeg` keeps that id);
- *   - Break down is rendered DISABLED: the reference's mode segment is part of
+ * *   - Break down is rendered DISABLED: the reference's mode segment is part of
  *     the panel's form, but typed changes are a later shell child, and a
  *     control that pretends is worse than one that says "not yet".
  *
@@ -37,7 +35,7 @@
  * out here that the engine already knows.
  */
 import { scaleNotes, SCALE_STEPS } from "../../engine/chord.mjs";
-import { CYCLES, STRING_SETS, tetradOnDegree, romanOf } from "../../engine/tetrad-sequence.mjs";
+import { CYCLES, tetradOnDegree, romanOf } from "../../engine/tetrad-sequence.mjs";
 import { CONFIG_CHANGED, announce } from "../bus.mjs";
 
 /* the twelve keys, kept exactly to the ones chord.mjs can spell */
@@ -57,13 +55,12 @@ export const harmonyPanel = {
   id: "harmony-panel",
   layer: "surface",
   requires: { material: "tetrad" },
-  mount_point: "boards",
+  mount_point: "strips",
   order: 10,
-  controls: ["keySel", "scaleSel", "modeSeg", "progSel", "startSel", "bottomSel", "setSeg", "extSel"],
+  controls: ["keySel", "scaleSel", "modeSeg", "progSel", "startSel", "bottomSel", "extSel"],
 
   markup: `
-  <div class="hp-strip">
-  <h2 class="hpHead">Harmony</h2>
+  <h2>Harmony</h2>
   <div class="striprow">
     <div class="grp">
       <div class="row2">
@@ -100,32 +97,15 @@ export const harmonyPanel = {
       </div>
       <div class="hint" id="hpRule"></div>
     </div>
-    <div class="grp">
-      <label>String set</label>
-      <div class="seg" id="setSeg" data-control="setSeg"></div>
-    </div>
-  </div>
   </div>`,
 
-  /* the strip's grammar is the reference's, values verbatim from the study's
-   * stylesheet; `hp` tokens anchor each rule in markup only this module ships.
-   * `.row2`/`.alignEnd` live in the SHELL — page grammar since this panel
-   * became their second user. */
+  /* the strip grammar (`striprow`, `grp`, `seg`) lived here while this was its
+   * only user and was PROMOTED to the shell the moment Shape & Motion became
+   * the second — the evidence rule, fourth application. `hp` tokens anchor
+   * what is genuinely this panel's. */
   styles: `
-.hp-strip{text-align:left}
-.hpHead{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--gray);margin:0 0 10px;font-weight:bold}
-.hp-strip .striprow{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-start}
-.hp-strip .grp{flex:0 1 auto;min-width:170px}
-.hp-strip .grp.hpWide{flex:1 1 420px;max-width:none}
-.hp-strip .hpTight{flex:0 1 auto}
-.row2.alignEnd{align-items:flex-end}
-.hp-strip .seg{display:flex;flex-wrap:wrap;gap:6px}
-.hp-strip .seg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
-  border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
-.hp-strip .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-.hp-strip .seg button:disabled{opacity:.45;cursor:not-allowed}
-.hp-strip select{width:auto;max-width:100%}
+.striprow .grp.hpWide{flex:1 1 420px;max-width:none}
+.striprow .hpTight{flex:0 1 auto}
 #hpRule{margin-top:8px}`,
 
   mount(ctx) {
@@ -136,7 +116,7 @@ export const harmonyPanel = {
     const cfg = {
       key: "C", scale: "major",
       cycle: Object.keys(CYCLES).includes(lock.cycle) ? lock.cycle : "fourths",
-      bottom: 0, setIndex: 0, startDegree: 0, bass: "root",
+      bottom: 0, startDegree: 0, bass: "root",
     };
 
     const fill = (host, items, current) => {
@@ -158,17 +138,6 @@ export const harmonyPanel = {
         return { value: deg, label: romanOf({ ...t, degree: deg }) };
       }), cfg.startDegree);
 
-    const seg = (host, items, current, pick) => {
-      host.textContent = "";
-      items.forEach(({ value, label }, i) => {
-        const b = d.createElement("button");
-        b.textContent = label;
-        if (value === current) b.className = "on";
-        b.addEventListener("click", () => pick(value, i));
-        host.appendChild(b);
-      });
-    };
-
     const render = () => {
       fill(byId("keySel"), KEYS.map((k) => ({ value: k, label: k })), cfg.key);
       byId("scaleSel").value = cfg.scale;
@@ -176,8 +145,6 @@ export const harmonyPanel = {
       fillStart();
       fill(byId("bottomSel"), BOTTOMS.map((b, i) => ({ value: i, label: b })), cfg.bottom);
       byId("extSel").value = cfg.bass;
-      seg(byId("setSeg"), STRING_SETS.map((s, i) => ({ value: i, label: s.label })),
-        cfg.setIndex, (v) => { cfg.setIndex = v; push(); });
       byId("hpRule").textContent = CYCLES[cfg.cycle].rule;
     };
 

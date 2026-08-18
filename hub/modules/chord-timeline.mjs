@@ -1,45 +1,64 @@
-/* chord-timeline.mjs — the roman-numeral timeline, sequence-as-navigation.
+/* chord-timeline.mjs — the reference's chord timeline strip.
  *
- * The frozen study's timeline is not a progress bar: every chord in the pass is
- * a button, so the sequence IS the navigation. That is the behaviour preserved
- * here — click any chord to jump there.
+ * `#timeline` in static/studies/triadetudes/study.html: a scrollable row of
+ * BARS, each a group of chord chips whose width grows with the chord's beats —
+ * so the bar split is visible rather than prose — with the step controls on
+ * the strip's right (they step through changes, and the changes are here).
+ * The current chord wears the red `.cur` ring; its bar is shaded.
  *
- * It derives the pass itself from the configuration rather than being handed
- * one, so pruning the stage leaves a timeline that still renders the music
- * (§4.2.3: a door that prunes a module builds a smaller file, not a broken
- * one). The derivation lives once, in engine/tetrad-sequence.mjs; this module
- * restates none of it.
+ * Roman numerals sit UNDER each chip — the door's chips carry them because a
+ * tetrad app's vocabulary is the roman, and it costs nothing.
  *
- * It asks the stage to move by ANNOUNCING a request. It does not reach for the
- * stage, and if there is no stage the click simply moves the highlight.
+ * It derives the pass itself from the announced configuration and asks the
+ * position owner to move by announcing a request (§4.2.3). Bar length follows
+ * the transport's meter and split, which it learns from CLOCK_STATE and the
+ * transport's own announcements — never by reaching for the transport.
  */
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, listen, announce } from "../bus.mjs";
+import { patternOf } from "../../engine/transport.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 
 export const chordTimeline = {
   id: "chord-timeline",
   layer: "surface",
   requires: { material: "tetrad" },
-  mount_point: "boards",
-  order: 30,
-  controls: ["tlList"],
+  mount_point: "strips",
+  order: 14,
+  controls: ["tlBars", "tlPrev", "tlNext"],
 
   markup: `
-  <div class="tl-board">
-    <h2 class="tlHead">The pass</h2>
-    <div class="tlList" id="tlList" data-control="tlList"></div>
+  <div class="tlrow">
+    <div class="tlscroll" id="tlBars" data-control="tlBars"></div>
+    <span class="tlmini">
+      <button id="tlPrev" data-control="tlPrev" title="previous chord">&#9664;</button>
+      <button id="tlNext" data-control="tlNext" title="next chord">&#9654;</button>
+    </span>
   </div>`,
 
+  /* the reference's timeline rules, verbatim values; the strip's own padding
+   * replaces the card's so the row sits tight, as the study's `#timeline` does */
   styles: `
-.tl-board{text-align:center}
-.tlHead{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--gray);margin:0 0 10px;font-weight:bold}
-.tlList{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
-.tlList button{border:1px solid var(--line);border-radius:7px;background:#fff;cursor:pointer;
-  font:600 11px inherit;font-family:inherit;color:var(--ink);padding:5px 9px;text-align:center}
-.tlRn{display:block;font-style:italic;font-size:9px;font-weight:normal;color:var(--gray)}
-.tlList button.tlCur{background:var(--ink);color:#fff}
-.tlList button.tlCur .tlRn{color:#CCCCCE}`,
+.tl-strip{padding:8px 12px}
+.tlrow{display:flex;align-items:center;gap:12px}
+.tlscroll{display:flex;flex:1 1 auto;overflow-x:auto;align-items:stretch;
+          scrollbar-width:thin;padding:2px 0}
+.tlbar{display:flex;flex:1 0 auto;align-items:center;gap:4px;
+       border-left:2px solid #B9B9BF;padding:3px 8px;min-width:88px;border-radius:2px}
+.tlbar:last-child{border-right:2px solid #B9B9BF}
+.tlbar.curbar{background:#E9E9EC}
+.tlbar button{font:inherit;font-size:12.5px;padding:2px 6px;border:1.4px solid transparent;
+       border-radius:999px;background:transparent;cursor:pointer;color:var(--ink);
+       min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+       display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
+.tlbar button:hover{border-color:var(--line);background:#fff}
+.tlbar button.cur{border-color:var(--red);color:var(--red);font-weight:bold;background:#fff}
+.tlbar button .tlrn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
+.tlbar button.cur .tlrn{color:var(--red)}
+.tlmini{flex:0 0 auto;display:flex;gap:4px}
+.tlmini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+.tlmini button:hover{border-color:var(--ink)}`,
+  wrap_class: "tl-strip",
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -47,40 +66,58 @@ export const chordTimeline = {
     const families = Array.isArray(lock.families) && lock.families.length ? lock.families : ["drop2"];
 
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
-    let step = 0;
+    let step = 0, meter = 4, splitIdx = 0, total = 8;
 
     const render = () => {
-      const pass = tetradPass({ ...cfg, families });
-      const host = byId("tlList");
+      const pass = tetradPass({ families, ...cfg });
+      total = pass.steps.length;
+      const host = byId("tlBars");
       host.textContent = "";
-      pass.steps.forEach((s, i) => {
-        const b = d.createElement("button");
-        b.textContent = s.symbol;
-        const rn = d.createElement("span");
-        rn.className = "tlRn";
-        rn.textContent = s.roman;
-        b.appendChild(rn);
-        if (i === step) b.className = "tlCur";
-        // ask, do not reach: the stage owns the position
-        b.addEventListener("click", () => {
-          step = i;
-          mark();
-          announce(d, STEP_CHANGED, { index: i, request: true });
-        });
-        host.appendChild(b);
-      });
+      const pat = patternOf(meter, splitIdx);
+      const L = pat.length;
+      let curBar = null;
+      for (let i0 = 0; i0 < pass.steps.length; i0 += L) {
+        const bd = d.createElement("div");
+        bd.className = "tlbar";
+        for (let k = 0; k < L && i0 + k < pass.steps.length; k++) {
+          const i = i0 + k, s = pass.steps[i];
+          const b = d.createElement("button");
+          b.textContent = s.symbol;
+          const rn = d.createElement("span"); rn.className = "tlrn"; rn.textContent = s.roman;
+          b.appendChild(rn);
+          b.style.flexGrow = String(pat[k]);
+          b.title = pat[k] + (pat[k] === 1 ? " beat" : " beats");
+          if (i === step) { b.className = "cur"; bd.classList.add("curbar"); curBar = bd; }
+          b.addEventListener("click", () => announce(d, STEP_CHANGED, { index: i, request: true }));
+          bd.appendChild(b);
+        }
+        host.appendChild(bd);
+      }
+      if (curBar) {   // keep the sounding bar in view — scroll the strip, never the page
+        const dr = host.getBoundingClientRect(), cr = curBar.getBoundingClientRect();
+        const r = cr.left - dr.left + host.scrollLeft, w = cr.width;
+        if (r < host.scrollLeft) host.scrollLeft = r - 8;
+        else if (r + w > host.scrollLeft + host.clientWidth) host.scrollLeft = r + w - host.clientWidth + 8;
+      }
     };
 
-    const mark = () => {
-      const kids = byId("tlList").children;
-      for (let i = 0; i < kids.length; i++) kids[i].className = i === step ? "tlCur" : "";
-    };
+    byId("tlPrev").addEventListener("click", () => announce(d, STEP_CHANGED, { index: step - 1, request: true }));
+    byId("tlNext").addEventListener("click", () => announce(d, STEP_CHANGED, { index: step + 1, request: true }));
 
     listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; step = 0; render(); });
     listen(d, STEP_CHANGED, (m) => {
-      if (m && m.request !== true && typeof m.index === "number") { step = m.index; mark(); }
+      if (!m) return;
+      // a transport request carries the split it walks — the bars follow it
+      if (m.request === true && typeof m.splitIdx === "number") {
+        if (typeof m.meter === "number") meter = m.meter;
+        if (m.splitIdx !== splitIdx) { splitIdx = m.splitIdx; render(); }
+        return;
+      }
+      if (m.request !== true && typeof m.index === "number") { step = m.index; render(); }
     });
-
+    listen(d, CLOCK_STATE, (m) => {
+      if (m && typeof m.meter === "number" && m.meter !== meter) { meter = m.meter; splitIdx = 0; render(); }
+    });
     render();
   },
 };

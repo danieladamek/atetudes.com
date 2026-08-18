@@ -122,7 +122,7 @@ export function romanOf({ chord, degree }) {
  * the optimizer decides the rest, which is exactly what the payload does. */
 export function tetradPass({
   key = "C", scale = "major", cycle = "fourths", bottom = 0, setIndex = 0,
-  nfrets = 15, families = ["drop2"], startDegree = 0,
+  nfrets = 15, families = ["drop2"], startDegree = 0, placement = "free",
 } = {}) {
   if (!SCALE_STEPS[scale]) throw new Error(`unknown scale "${scale}" — chord.mjs knows ${Object.keys(SCALE_STEPS).join(", ")}`);
   const set = STRING_SETS[setIndex];
@@ -149,14 +149,14 @@ export function tetradPass({
 
   const zone = makeZone({ string: set.strings[0], frets: [5, 6, 7] });
   const voicings = chooseVoicings(chords, {
-    zone, placement: "free", setLowHigh: set.strings, nfrets, candidatesFor,
+    zone, placement, setLowHigh: set.strings, nfrets, candidatesFor,
   });
 
   for (const [i, v] of voicings.entries())
     if (!v) throw new Error(`no voicing for ${chords[i].symbol} on ${set.label} within ${nfrets} frets`);
 
   return {
-    key, scale, cycle, bottom, setIndex, set,
+    key, scale, cycle, bottom, setIndex, set, families, placement,
     rule: CYCLES[cycle].rule,
     steps: chords.map((c, i) => ({
       ...c, voicing: voicings[i], keys: keysOf(voicings[i]),

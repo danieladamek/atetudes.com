@@ -20,22 +20,25 @@
  * The window AUTO-CROPS to the frets the pass actually uses, exactly as the
  * frozen study does: the neck is drawn to the music, not the music to the neck.
  */
-import { tetradPass } from "../../engine/tetrad-sequence.mjs";
+import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
+import { scaleNotes } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen, announce } from "../bus.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
-const FW = 46, SS = 26, PADT = 8, PADB = 20;
-
-/** the degree palette — musical function only, per the Spec and CLAUDE.md.
- * These are the same seven families the charts use; nothing here is chrome. */
-const DEGREE_COLOR = {
-  R: "#B82929", "9": "#3C8B2F", b9: "#3C8B2F", "3": "#2959A6", b3: "#2959A6",
-  "11": "#A9ABB4", "5": "#212126", b5: "#A9ABB4", "#5": "#212126",
-  "6": "#1CB8D1", "7": "#D99A08", b7: "#D99A08",
-};
-/** the light marks need dark text on them (Spec §7.2) */
-const DARK_TEXT = new Set(["11", "b5", "6"]);
+/* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
+ * viewBox, string 1 at the top. The study's `FX0=46,FW=71,SY0=34,SGAP=34` and
+ * its fx/fy — the neck is drawn full-bleed and dense because that IS the
+ * layout specification, not because a number here was tuned. */
+const NFRETS = 15, FX0 = 46, FW = 71, SY0 = 34, SGAP = 34;
+const fx = (f) => (f === 0 ? FX0 - 22 : FX0 + (f - 0.5) * FW);
+const fy = (str) => SY0 + (str - 1) * SGAP;
+/* the scale-degree family palette and its text colours — the Spec's, and the
+ * study's FAM_COLOR/FAM_TEXT verbatim: light marks (4, 6, 7) take dark text */
+const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
+  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
+const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
+  "5": "#fff", "6": "#212126", "7": "#212126" };
 
 export const fretboardStage = {
   id: "fretboard-stage",
@@ -43,44 +46,39 @@ export const fretboardStage = {
   requires: { material: "tetrad" },
   mount_point: "boards",
   order: 20,
-  controls: ["fsBack", "fsFwd", "fsNeck"],
+  controls: ["fretSvg"],
 
+  /* the reference's board, verbatim: a readout line, then the neck SVG at the
+   * board's full width. The step buttons this card used to carry are the
+   * Transport card's ◀ ▶ now, as they are in the reference. */
   markup: `
-  <div class="fs-board">
-  <div class="fsStage">
-    <svg id="fsNeck" data-control="fsNeck" class="fsNeck" aria-label="fretboard"></svg>
-    <div class="fsHint" id="fsHint"></div>
-  </div>
-  <div class="fsTransport">
-    <button id="fsBack" data-control="fsBack" class="fsBtn">&#8592; step</button>
-    <button id="fsFwd" data-control="fsFwd" class="fsBtn">step &#8594;</button>
-  </div>
-  </div>`,
+  <div class="readout" id="readout"></div>
+  <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>`,
 
   /* Every rule names an `fs` token. The three transitions below are the whole
    * animation; they travel with the stage and cannot outlive it. */
   styles: `
-.fs-board{text-align:center}
-.fsStage{display:flex;flex-direction:column;align-items:center}
-.fsNeck{max-width:100%;height:auto}
-.fsHint{font-size:10.5px;color:var(--gray);padding:4px 0 2px}
-.fsTransport{display:flex;gap:8px;justify-content:center;padding:10px 0 2px;flex-wrap:wrap}
-.fsBtn{font:600 12.5px inherit;font-family:inherit;padding:8px 15px;border:1px solid var(--line);
-  border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
+#fretSvg{width:100%;height:auto;display:block}
+#fretSvg .dot-label{font-weight:bold;pointer-events:none;user-select:none}
+.readout{font-size:14px;margin:2px 2px 10px;color:var(--ink)}
+.readout b{font-size:16px}
+.readout .rosub{color:var(--gray);font-size:12.5px}
 .fs-dot{transition:transform .55s cubic-bezier(.4,0,.2,1);cursor:pointer}
 .fs-dot .fs-mk{transition:fill .55s}
 .fs-dot .fs-ring{fill:none;stroke:#212126;stroke-width:2;opacity:0;transition:opacity .2s}
 .fs-dot.fs-armed .fs-ring{opacity:1}
-.fs-lab{font-family:inherit;font-weight:bold}`,
+.fs-dot .fs-lab{font-family:inherit;font-weight:bold}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     const lock = ctx.door.lock || {};
+    // the lock's families is the door's DEFAULT; Shape & Motion announces the
+    // one actually chosen and that wins when present
     const families = Array.isArray(lock.families) && lock.families.length ? lock.families : ["drop2"];
 
     /* PRIVATE state. Nothing else reads it; the step is announced, not shared. */
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
-    let pass = null, dots = [], geom = null, step = 0;
+    let pass = null, dots = [], step = 0, ctxLayer = null;
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -89,69 +87,61 @@ export const fretboardStage = {
       return e;
     };
 
+    /* the current chord's tone → family, so the ghosted scale and the active
+     * dots agree on colour; a family is the degree relative to the CHORD root
+     * for the voicing, and to the KEY for the ghosted scale (the study's own
+     * two readings, both by function) */
+    const famOfIv = (iv) => ({ 0: "R", 1: "2", 2: "2", 3: "3", 4: "3", 5: "4", 6: "4",
+      7: "5", 8: "6", 9: "6", 10: "7", 11: "7" })[((iv % 12) + 12) % 12];
+
     const build = () => {
-      pass = tetradPass({ ...cfg, families });
-      const frets = pass.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret));
-      const fmin = Math.max(0, Math.min(...frets) - 1);          // AUTO-CROP
-      const fmax = Math.max(...frets) + 1;
-      const cols = fmax - fmin + 1, W = cols * FW, H = PADT + 5 * SS + PADB + 14;
-      geom = { fmin, X: (f) => (f - fmin) * FW + FW / 2, Y: (i) => PADT + 7 + i * SS };
+      pass = tetradPass({ families, ...cfg });
+      const svg = byId("fretSvg");
+      svg.textContent = "";
+      const scale = scaleNotes(cfg.key, cfg.scale);
+      const keyPcs = scale.map((n) => n.pc);
 
-      const neck = byId("fsNeck");
-      neck.textContent = "";
-      neck.setAttribute("width", W + 40);
-      neck.setAttribute("height", H);
-      neck.setAttribute("viewBox", "-36 0 " + (W + 40) + " " + H);
-
-      const strings = pass.set.strings;                          // low → high
-      /* row 0 is the TOP line and carries the HIGHEST string, so row i is
-       * string i+1. Getting this backwards puts the low-E voice at row -1,
-       * off the top of the SVG — a dot that is simply not there, which no
-       * assertion in the suite can see and a screenshot shows instantly. */
-      for (let i = 0; i < 6; i++) {
-        const num = i + 1;
-        const active = strings.includes(num);
-        el("line", { x1: 0, y1: geom.Y(i), x2: W, y2: geom.Y(i),
-          stroke: active ? "#CCCCCE" : "#EBEBED", "stroke-width": active ? 1.4 : 1.1 }, neck);
-        el("circle", { cx: -19, cy: geom.Y(i), r: 9.6,
-          fill: active ? "#212126" : "#fff",
-          stroke: active ? "#212126" : "#CCCCCE", "stroke-width": 1.4 }, neck);
-        const t = el("text", { x: -19, y: geom.Y(i) + 3.4, "text-anchor": "middle",
-          fill: active ? "#fff" : "#73737A", "font-size": 10, "font-weight": "bold",
-          "font-family": "inherit" }, neck);
-        t.textContent = ["e", "B", "G", "D", "A", "E"][i];
+      /* ---- the neck: the reference's renderFret, verbatim geometry ---- */
+      for (let f = 0; f <= NFRETS; f++)
+        el("line", { x1: FX0 + f * FW, y1: fy(1) - 14, x2: FX0 + f * FW, y2: fy(6) + 14,
+          stroke: f === 0 ? "#212126" : "#D8D8DC", "stroke-width": f === 0 ? 4 : 1.2 }, svg);
+      for (const mf of [3, 5, 7, 9, 12]) {
+        el("circle", { cx: FX0 + (mf - 0.5) * FW, cy: fy(6) + 26, r: 3.4, fill: "#D8D8DC" }, svg);
+        if (mf === 12) el("circle", { cx: FX0 + (mf - 0.5) * FW + 10, cy: fy(6) + 26, r: 3.4, fill: "#D8D8DC" }, svg);
+        const tx = el("text", { x: FX0 + (mf - 0.5) * FW, y: fy(1) - 22, "text-anchor": "middle",
+          "font-size": "10", fill: "#B9B9BF" }, svg);
+        tx.textContent = mf;
       }
-      for (let i = 0; i <= cols; i++) {
-        el("line", { x1: i * FW, y1: geom.Y(0), x2: i * FW, y2: geom.Y(5),
-          stroke: "#CCCCCE", "stroke-width": 1.8 }, neck);
-        if (i < cols) {
-          const t = el("text", { x: i * FW + FW / 2, y: H - 4, "text-anchor": "middle",
-            fill: "#73737A", "font-size": 9, "font-family": "inherit" }, neck);
-          t.textContent = fmin + i;
+      for (let s2 = 1; s2 <= 6; s2++) {
+        el("line", { x1: FX0 - 30, y1: fy(s2), x2: FX0 + NFRETS * FW, y2: fy(s2),
+          stroke: "#B9B9BF", "stroke-width": s2 >= 4 ? 1.8 : 1.1 }, svg);
+        const t = el("text", { x: FX0 + NFRETS * FW + 8, y: fy(s2) + 4, "font-size": "11", fill: "#73737A" }, svg);
+        t.textContent = s2;
+      }
+      /* the whole scale, ghosted at 0.28 — the study's density comes from this */
+      for (let s2 = 1; s2 <= 6; s2++)
+        for (let f = 0; f <= NFRETS; f++) {
+          const pc = (OPEN_MIDI[s2] + f) % 12, di = keyPcs.indexOf(pc);
+          if (di < 0) continue;
+          const fam = ["R", "2", "3", "4", "5", "6", "7"][di];
+          const g = el("g", { opacity: 0.28 }, svg);
+          el("circle", { cx: fx(f), cy: fy(s2), r: 10.5, fill: FAM_COLOR[fam] }, g);
+          const t = el("text", { x: fx(f), y: fy(s2) + 3.4, "text-anchor": "middle", "font-size": "9.5",
+            fill: FAM_TEXT[fam], class: "dot-label" }, g);
+          t.textContent = fam === "R" ? "R" : String(di + 1);
         }
-      }
-      for (let i = 0; i < cols; i++) {                            // inlays track the window
-        const f = fmin + i, cx = i * FW + FW / 2;
-        if ([3, 5, 7, 9, 15, 17, 19, 21].includes(f))
-          el("circle", { cx, cy: geom.Y(0) + 2.5 * SS, r: 4.6, fill: "#DDDDE1" }, neck);
-        if (f === 12 || f === 24) {
-          el("circle", { cx, cy: geom.Y(0) + 1.5 * SS, r: 4.6, fill: "#DDDDE1" }, neck);
-          el("circle", { cx, cy: geom.Y(0) + 3.5 * SS, r: 4.6, fill: "#DDDDE1" }, neck);
-        }
-      }
+      ctxLayer = el("g", {}, svg);           // root rings on the lower strings
+      const active = el("g", {}, svg);
 
       /* THE NODES THAT MUST SURVIVE. One group per VOICE KEY, built once for the
        * whole pass — never per step, or nothing would ever glide. */
       dots = keysOf(pass.steps[0].voicing).map((key) => {
-        const g = el("g", { class: "fs-dot", "data-voice": key }, neck);
-        el("circle", { class: "fs-mk", cx: 0, cy: 0, r: 10.5, fill: "#212126" }, g);
-        el("circle", { class: "fs-ring", cx: 0, cy: 0, r: 13.6 }, g);
-        el("text", { class: "fs-lab", x: 0, y: 3.6, "text-anchor": "middle" }, g);
+        const g = el("g", { class: "fs-dot", "data-voice": key }, active);
+        el("circle", { class: "fs-mk", cx: 0, cy: 0, r: 14, fill: "#212126", stroke: "#fff", "stroke-width": 2 }, g);
+        el("circle", { class: "fs-ring", cx: 0, cy: 0, r: 17.5 }, g);
+        el("text", { class: "fs-lab", x: 0, y: 3.6, "text-anchor": "middle", "font-size": "10.5" }, g);
         return { key, g };
       });
-
-      byId("fsHint").textContent =
-        pass.set.label + " · " + pass.steps.length + " chords · window " + fmin + "–" + fmax;
       show(0, true);
     };
 
@@ -159,49 +149,49 @@ export const fretboardStage = {
       const n = pass.steps.length;
       step = ((i % n) + n) % n;
       const cur = pass.steps[step], next = pass.steps[step + 1] || null;
-      const strings = pass.set.strings;
 
-      dots.forEach(({ key, g }, k) => {
+      dots.forEach(({ g }, k) => {
         const note = cur.voicing.notes[k];
-        const lab = cur.labels[k];
-        const row = strings[k] - 1;                       // string 1 is the top line
+        const iv = note.midi - cur.chord.root.pc;
+        const fam = famOfIv(iv), lab = cur.labels[k];
         if (instant) g.style.transition = "none";
-        g.style.transform = "translate(" + geom.X(note.fret) + "px," + geom.Y(row) + "px)";
-        g.querySelector(".fs-mk").setAttribute("fill", DEGREE_COLOR[lab] || "#212126");
+        g.style.transform = "translate(" + fx(note.fret) + "px," + fy(note.string) + "px)";
+        g.querySelector(".fs-mk").setAttribute("fill", FAM_COLOR[fam]);
         const t = g.querySelector(".fs-lab");
         const swap = () => {
           t.textContent = lab;
-          t.setAttribute("fill", DARK_TEXT.has(lab) ? "#212126" : "#fff");
-          t.setAttribute("font-size", lab.length > 1 ? 8.2 : 9.4);
+          t.setAttribute("fill", FAM_TEXT[fam]);
+          t.setAttribute("font-size", lab.length > 1 ? 9 : 10.5);
         };
         instant ? swap() : setTimeout(swap, 260);
         if (instant) { void g.getBoundingClientRect(); g.style.transition = ""; }
-        // ARMED = this voice is about to move
         g.classList.toggle("fs-armed", !!next && next.voicing.notes[k].fret !== note.fret);
       });
+
+      /* root rings on the strings BELOW the set — the reference's rootsChk */
+      ctxLayer.textContent = "";
+      if (cfg.roots) {
+        const maxStr = Math.max(...pass.set.strings);
+        for (let s2 = maxStr + 1; s2 <= 6; s2++)
+          for (let f = 0; f <= NFRETS; f++)
+            if ((OPEN_MIDI[s2] + f) % 12 === cur.chord.root.pc)
+              el("circle", { cx: fx(f), cy: fy(s2), r: 11, fill: "none", stroke: "#B82929", "stroke-width": 2.6 }, ctxLayer);
+      }
+
+      /* the readout: the reference's line — chord, roman · family/inversion ·
+       * n of N · key scale — every prefix true */
+      const invName = ["root pos.", "1st inv.", "2nd inv.", "3rd inv."][cur.voicing.bass] || "";
+      const fam = pass.families && pass.families[0] ? pass.families[0] : "drop2";
+      byId("readout").innerHTML =
+        `<b>${cur.symbol}</b> <span class="rosub">${cur.roman} · ${fam} · ${invName} · ` +
+        `${step + 1} of ${n} · ${cfg.key} ${({ major: "major", harm: "harmonic minor", mel: "melodic minor" })[cfg.scale]}</span>`;
 
       announce(d, STEP_CHANGED, { index: step, total: n, symbol: cur.symbol });
     };
 
-    /* PLAYING BELONGS TO THE TRANSPORT, NOT THE STAGE.
-     *
-     * This card used to run `setInterval(…, 1700)` — the fixed interval the
-     * roadmap names: *"fine for a demonstration; it isn't practice."* A chord
-     * that changes on a wall-clock timer cannot be played along with, and a
-     * second timer beside the metronome's grid would drift against the click.
-     *
-     * So the stage no longer keeps time. It still steps on request, and the
-     * transport card walks the beat grid and asks. The stage remains the
-     * authority on WHERE the pass is — it answers every move with the
-     * step it actually rendered — it simply no longer decides WHEN.
-     *
-     * A door with no transport keeps the step buttons and loses only autoplay,
-     * which is smaller rather than broken. */
-
-    byId("fsFwd").addEventListener("click", () => show(step + 1, false));
-    byId("fsBack").addEventListener("click", () => show(step - 1, false));
-
-    /* derived from the message, never from the sender (§4.2.3) */
+    /* PLAYING BELONGS TO THE TRANSPORT, NOT THE STAGE (Shell 1). The stage
+     * owns WHERE the pass is and answers every move with the step it rendered;
+     * it no longer decides WHEN, and the ◀ ▶ buttons are the Transport's. */
     listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; build(); });
     /* another module asking to move — the stage owns the position */
     listen(d, STEP_CHANGED, (m) => {
