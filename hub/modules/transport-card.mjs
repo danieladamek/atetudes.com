@@ -75,8 +75,8 @@ export const transportCard = {
     <span class="trVal" id="bassVolVal">100</span>
   </div>
   <div class="hint">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2
-  beats, next chord 3, new bar. <b>If the metronome is running, Play joins it</b> — the click you
-  already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first).
+  beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next bar</b> — the
+  click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first).
   Mute chords is the chord level at zero — bass and click keep sounding and the changes still
   animate in time: play-along, you supply the voicings. Sound starts on your first click. The
   click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
@@ -211,7 +211,9 @@ export const transportCard = {
 
     listen(d, BEAT, (ev) => {
       if (!ev || typeof ev.index !== "number") return;
-      if (armed === "pending") { core.start(ev.index, { fromStep: position }); armed = true; }
+      // JOIN AT THE NEXT BAR: hand start() the beat's place in its bar (ev.beat)
+      // so it can find the next bar line rather than joining on this arming beat
+      if (armed === "pending") { core.start(ev.index, { fromStep: position, beatInBar: ev.beat }); armed = true; }
       if (!armed) return;
       const w = core.beat(ev);
       if (w.countingIn) { byId("trLoop").textContent = "count-in " + w.beatsLeft; return; }

@@ -275,6 +275,50 @@ def run_door(pw, door_id):
         check(page.eval_on_selector_all(".trPlayhead, #trHead, .trPip", "e => e.length") == 0,
               f"{tag} the transport playhead strip is still in the DOM — Shell 4 cut it")
 
+        # PLAY JOINS AT THE NEXT BAR, not the arming beat — the beat-2 defect.
+        # The clock is running and the transport idle (paused above). One chord
+        # per WHOLE bar, so a correct join makes EVERY attack a bar line. The
+        # transport announces level=BAR(2) on a downbeat attack and level=STEP(1)
+        # mid-bar, so the first attack's announced level IS the join beat — the
+        # old timing gate could not see this, the chords were 1.9 ms from a click,
+        # just the WRONG click. Arm right after a downbeat so the arming beat is
+        # off the downbeat; the join must still land on the next bar line.
+        BAR = 2
+        page.select_option("#splitSel", "0")                 # one chord per whole bar
+        page.wait_for_timeout(60)
+        arm_recorder = """() => {
+          if (window.__lvh) document.removeEventListener('atetudes:step', window.__lvh);
+          window.__lv = [];
+          window.__lvh = e => { const x = e.detail;
+            if (x && x.request === true && x.lead !== undefined && x.level !== undefined) window.__lv.push(x.level); };
+          document.addEventListener('atetudes:step', window.__lvh); }"""
+        wait_downbeat = """() => new Promise(res => { const h = e => {
+          if (e.detail.beat === 0) { document.removeEventListener('atetudes:beat', h); res(); } };
+          document.addEventListener('atetudes:beat', h); })"""
+        page.evaluate(arm_recorder)
+        page.evaluate(wait_downbeat)                          # a downbeat just passed → next beat is mid-bar
+        page.click("#playBtn")
+        page.wait_for_function("() => window.__lv && window.__lv.length >= 2", timeout=12000)
+        levels = page.evaluate("() => window.__lv")
+        check(levels[0] == BAR,
+              f"{tag} Play joined OFF the downbeat — first chord attack level {levels[0]}, not BAR — the beat-2 defect")
+        check(all(l == BAR for l in levels),
+              f"{tag} a chord attacked off the bar line after joining (every chord repeats the offset): {levels}")
+        page.click("#playBtn"); page.wait_for_timeout(120)   # pause
+
+        # THE STRIP MINI ▶ TAKES THE SAME PATH (Shell 4 announces PLAY). Re-arm
+        # mid-bar from a strip's ▶ and assert the same downbeat join.
+        if page.query_selector("#tlMini"):
+            if page.inner_text("#metroBtn") != "Stop":       # keep the clock running
+                page.click("#metroBtn"); page.wait_for_timeout(80)
+            page.evaluate(arm_recorder)                       # resets window.__lv
+            page.evaluate(wait_downbeat)
+            page.click("#tlMini button[data-role=play]")
+            page.wait_for_function("() => window.__lv && window.__lv.length >= 1", timeout=12000)
+            check(page.evaluate("() => window.__lv[0]") == BAR,
+                  f"{tag} the strip mini ▶ joined off the downbeat — it must take the same PLAY path as Play")
+            page.click("#playBtn"); page.wait_for_timeout(120)   # disarm, leave the clock running
+
         # leave it LIT into the orphan check: .trLit is a state this door has
         page.click("#playBtn")
         check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,

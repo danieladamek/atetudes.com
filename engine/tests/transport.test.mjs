@@ -87,17 +87,34 @@ test("THE COUNT-IN holds for exactly one bar and clicks through it", () => {
   assert.deepEqual(attacksOf(rows), [4]);
 });
 
-test("starting mid-bar still counts a WHOLE bar in — a count-in is a bar, not four beats' delay", () => {
+test("a count-in aligns to the next bar FIRST, then counts a whole bar — a count-in is a bar you can come in on", () => {
   const t = createTransportCore({ meter: 4, splitIdx: 0, steps: 4, countIn: true });
-  t.start(2);                                        // joined on beat 2 of a bar
-  const rows = run(t, 10, 4, 2);
-  assert.equal(attacksOf(rows)[0], 6, "the join is a full meter after the start");
+  t.start(2, { beatInBar: 2 });                      // Play pressed mid-bar, armed on beat 2
+  const rows = run(t, 12, 4, 2);
+  // the current bar finishes (indices 2,3), then index 4 is the count-in bar, and
+  // the join is the bar line after it — index 8, on the downbeat, on step 0
+  assert.equal(attacksOf(rows)[0], 8, "count-in must align to the next bar (4) then count one whole bar → join at 8");
+  assert.equal(rows.find((r) => r.i === 8).step, 0);
 });
 
-test("without a count-in the transport joins on the very next beat", () => {
+test("Play joins at the NEXT BAR, not the arming beat — the beat-2 defect", () => {
+  // Arm mid-bar on beat 3 (absolute index 7). The join must be the next bar line
+  // (index 8, beat 0), NOT index 7 — otherwise beatInStep cycles from the offset
+  // and EVERY chord lands off the downbeat for the rest of the pass, which is the
+  // symptom Daniel heard. The old code joined on the arming beat.
   const t = createTransportCore({ meter: 4, splitIdx: 0, steps: 4 });
-  t.start(7);
-  assert.equal(run(t, 4, 4, 7)[0].attack, true);
+  t.start(7, { beatInBar: 3 });
+  const rows = run(t, 12, 4, 7);
+  const at = attacksOf(rows);
+  assert.equal(at[0], 8, "the first attack must be the next bar line (8), not the arming beat (7)");
+  for (const r of rows.filter((x) => x.attack))
+    assert.equal(r.i % 4, 0, `a chord attacked on beat ${r.i % 4}, not the downbeat — the defect repeats every bar`);
+});
+
+test("armed ON a downbeat, Play joins immediately — the next bar is this one", () => {
+  const t = createTransportCore({ meter: 4, splitIdx: 0, steps: 4 });
+  t.start(8, { beatInBar: 0 });                      // the arming beat IS a bar line
+  assert.equal(run(t, 4, 4, 8)[0].attack, true, "on a downbeat there is nothing to wait for");
 });
 
 /* ================= the accent level ================= */

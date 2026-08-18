@@ -88,13 +88,26 @@ export function createTransportCore({ meter = 4, splitIdx = 0, steps = 8, countI
     get meter() { return s.meter; },
     get splitIdx() { return s.splitIdx; },
 
-    /** Join the grid. With a count-in the transport waits a whole bar first,
-     * which is what a count-in IS — a bar of clicks you can come in on. */
-    start(atIndex, { fromStep = 0 } = {}) {
+    /** Join the grid AT THE NEXT BAR, not the arming beat. `beatInBar` is the
+     * arming beat's place in its bar (the metronome's `ev.beat`, 0 on a down-
+     * beat); the distance to the next bar line is `(meter − beatInBar) % meter`,
+     * which is zero when Play lands on a downbeat, so you join immediately. This
+     * is the reference's `nextBarStartIndex()`, derived from the beat the BEAT
+     * handler already armed on rather than a separate clock query — and it is the
+     * fix for "block chords sound on beat 2": joining on the arming beat made
+     * `beatInStep` cycle from that offset, so every chord fell off the downbeat.
+     *
+     * A count-in composes ON TOP: align to the next bar FIRST, then hold one
+     * whole aligned bar of clicks. Any other order gives a "count-in" that is a
+     * fraction of a bar — a bar you cannot come in on, which is the whole point
+     * of one. `beatInBar` defaults to 0 so a caller that arms on a known downbeat
+     * (every headless test here, and the initial mount) needs say nothing. */
+    start(atIndex, { fromStep = 0, beatInBar = 0 } = {}) {
       s.on = true;
       s.beatInStep = 0; s.patPos = 0; s.runStep = fromStep;
       s.countingIn = !!s.countIn;
-      s.joinIdx = atIndex + (s.countIn ? s.meter : 0);
+      const toNextBar = (s.meter - (beatInBar % s.meter)) % s.meter;
+      s.joinIdx = atIndex + toNextBar + (s.countIn ? s.meter : 0);
     },
     stop() { s.on = false; s.countingIn = false; },
 
