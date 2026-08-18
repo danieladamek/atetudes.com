@@ -59,6 +59,7 @@ export const fretboardStage = {
    * as Triadetudes draws it). The mode is display state and the stage's own;
    * THE ZONE IS CONFIG and travels on the bus like key or family. */
   markup: `
+  <div class="bh"><span>On the neck</span></div>
   <div class="fsTop">
     <div class="readout" id="readout"></div>
     <div class="seg fsWin" id="winSeg" data-control="winSeg">

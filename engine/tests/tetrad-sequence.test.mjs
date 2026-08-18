@@ -43,6 +43,30 @@ test("the three string sets are a sliding window, and match the frozen study's",
     assert.deepEqual(s.opens, d.sets[i].opens, `set ${i} does not match the frozen study`);
 });
 
+test("setIndex is the STORED IDENTITY: array order and opens are the fact, label is derived presentation (Shell 4)", () => {
+  /* Shell 4 turns the set label high→low to match the reference. The trap the
+   * item names: the practice log persists the set by its position in this
+   * array, so reordering the array silently remaps every saved entry. This pins
+   * the invariant that keeps that safe — the array is NOT reordered; setIndex i
+   * still addresses the same physical set (offset i, its opens), and only the
+   * label string changes. A saved entry from before the relabel restores the
+   * same set BY CONSTRUCTION, because its setIndex still means what it meant. */
+  for (const [i, s] of STRING_SETS.entries()) {
+    assert.equal(s.offset, i, `set ${i} is no longer at its offset — a reorder would remap saved entries`);
+    // opens are already pinned to the frozen study above; restate the identity here
+    assert.equal(s.strings.length, 4);
+  }
+  // the label now reads highest pitch first (the reference's dialect), derived
+  // from the strings, not hand-listed
+  assert.deepEqual(STRING_SETS.map((s) => s.label), ["G–D–A–E", "B–G–D–A", "e–B–G–D"]);
+  for (const s of STRING_SETS) {
+    const pitchOf = { e: 64, B: 59, G: 55, D: 50, A: 45, E: 40 };
+    const seq = s.label.split("–").map((l) => pitchOf[l]);
+    for (let j = 1; j < seq.length; j++)
+      assert.ok(seq[j] < seq[j - 1], `label ${s.label} is not high→low at ${j}`);
+  }
+});
+
 test("every cycle visits all seven degrees and returns home in eight chords", () => {
   for (const name of Object.keys(CYCLES)) {
     const d = cycleDegrees(name);

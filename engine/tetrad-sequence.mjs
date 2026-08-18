@@ -39,10 +39,17 @@ export const OPEN_MIDI = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };
  * window of four down the six strings rather than listed */
 export const STRING_SETS = [0, 1, 2].map((offset) => {
   const strings = [6, 5, 4, 3].map((s) => s - offset);
+  const letter = (s) => ["", "e", "B", "G", "D", "A", "E"][s];
   return {
     offset, strings,
     opens: strings.map((s) => OPEN_MIDI[s]),
-    label: strings.map((s) => ["", "e", "B", "G", "D", "A", "E"][s]).join("–"),
+    /* THE LABEL READS HIGH → LOW, the reference's dialect (Shell 4). `strings`
+     * is the data and stays untouched — string 1 is the highest (string-sets.mjs
+     * law) — so the label is derived by sorting ASCENDING by string number
+     * (= descending pitch): offset 0 → G–D–A–E, not E–A–D–G. Presentation only;
+     * `offset`/`opens`/`strings` are the stored identity a saved étude restores
+     * by, and none of them move. */
+    label: [...strings].sort((a, b) => a - b).map(letter).join("–"),
   };
 });
 

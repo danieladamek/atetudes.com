@@ -17,6 +17,7 @@
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
 import { patternOf } from "../../engine/transport.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
+import { mountMini } from "../mini.mjs";
 
 export const chordTimeline = {
   id: "chord-timeline",
@@ -24,15 +25,13 @@ export const chordTimeline = {
   requires: { material: "tetrad" },
   mount_point: "strips",
   order: 14,
-  controls: ["tlBars", "tlPrev", "tlNext"],
+  controls: ["tlBars", "tlMini"],
 
   markup: `
+  <h2>Timeline</h2>
   <div class="tlrow">
     <div class="tlscroll" id="tlBars" data-control="tlBars"></div>
-    <span class="tlmini">
-      <button id="tlPrev" data-control="tlPrev" title="previous chord">&#9664;</button>
-      <button id="tlNext" data-control="tlNext" title="next chord">&#9654;</button>
-    </span>
+    <span id="tlMini" data-control="tlMini"></span>
   </div>`,
 
   /* the reference's timeline rules, verbatim values; the strip's own padding
@@ -54,10 +53,10 @@ export const chordTimeline = {
 .tlbar button.cur{border-color:var(--red);color:var(--red);font-weight:bold;background:#fff}
 .tlbar button .tlrn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
 .tlbar button.cur .tlrn{color:var(--red)}
-.tlmini{flex:0 0 auto;display:flex;gap:4px}
-.tlmini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+#tlMini{display:flex;gap:4px;flex:0 0 auto}
+#tlMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
-.tlmini button:hover{border-color:var(--ink)}`,
+#tlMini button:hover{border-color:var(--ink)}`,
   wrap_class: "tl-strip",
 
   mount(ctx) {
@@ -101,8 +100,7 @@ export const chordTimeline = {
       }
     };
 
-    byId("tlPrev").addEventListener("click", () => announce(d, STEP_CHANGED, { index: step - 1, request: true }));
-    byId("tlNext").addEventListener("click", () => announce(d, STEP_CHANGED, { index: step + 1, request: true }));
+    mountMini(ctx, byId("tlMini"));   // ⏮ ▶ ⏹ ⏭, driving the one clock via the bus
 
     listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; step = 0; render(); });
     listen(d, STEP_CHANGED, (m) => {

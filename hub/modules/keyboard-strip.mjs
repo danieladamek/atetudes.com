@@ -12,6 +12,7 @@
  */
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
+import { mountMini } from "../mini.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const KBD = { LO: 36, HI: 84, WK: 22, WH: 92, BH: 56, BW: 13 };
@@ -37,10 +38,17 @@ export const keyboardStrip = {
   requires: { material: "tetrad" },
   mount_point: "boards",
   order: 24,
-  controls: ["kbd"],
+  controls: ["kbd", "kbMini"],
 
-  markup: `<svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>`,
-  styles: `#kbd rect{cursor:default}`,
+  markup: `
+  <span id="kbMini" data-control="kbMini"></span>
+  <div class="bh"><span>On the keys</span></div>
+  <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>`,
+  styles: `#kbd rect{cursor:default}
+#kbMini{position:absolute;top:7px;right:44px;display:flex;gap:4px;z-index:6}
+#kbMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#kbMini button:hover{border-color:var(--ink)}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -95,6 +103,7 @@ export const keyboardStrip = {
 
     listen(d, CONFIG_CHANGED, (m) => { cfg = { ...cfg, ...m }; step = 0; pass = tetradPass({ families, ...cfg }); render(); });
     listen(d, STEP_CHANGED, (m) => { if (m && m.request !== true && typeof m.index === "number") { step = m.index; render(); } });
+    mountMini(ctx, byId("kbMini"));   // ⏮ ▶ ⏹ ⏭ over the keyboard, driving the one clock
     pass = tetradPass({ families, ...cfg }); render();
   },
 };

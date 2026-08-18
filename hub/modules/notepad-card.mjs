@@ -150,7 +150,15 @@ export const notepadCard = {
     const SCALE = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
     const CYCLE = { scale: "Scaler", thirds: "Cycling 3rds", fourths: "Cycling 4ths",
       fifths: "Cycling 5ths", sixths: "Cycling 6ths" };
-    const SETS = ["E–A–D–G", "A–D–G–B", "D–G–B–e"];
+    /* setIndex is the STORED IDENTITY (its position in engine STRING_SETS); the
+     * label is presentation. These read high → low to match the panel (Shell 4),
+     * in the SAME index order — index i is the same physical set it always was,
+     * so a saved étude restores unchanged. Kept a local list rather than
+     * importing STRING_SETS: this card is shared with non-tetrad doors (scribe),
+     * and importing the tetrad engine would drag its whole tree into a door that
+     * has no string sets. A bounded, knowing duplication of THREE presentation
+     * strings — not the musical fact, which stays the setIndex. */
+    const SETS = ["G–D–A–E", "B–G–D–A", "e–B–G–D"];
     const summarize = (c) => {
       if (!c || typeof c !== "object") return "no configuration attached";
       const parts = [];

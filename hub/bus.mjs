@@ -40,6 +40,16 @@ export const CLOCK = "atetudes:clock";
  * views of one clock cannot drift apart. */
 export const CLOCK_STATE = "atetudes:clock-state";
 
+/** A REQUEST to the transport (the pass-walker): arm or disarm the étude walk —
+ * `{ run: true|false }`. The strip mini-transports summon Play without owning
+ * the walk; the transport card answers exactly as its own Play button does,
+ * then drives the clock through CLOCK. A strip that presses Stop announces CLOCK
+ * `{run:false}` instead — the metronome halts and the transport disarms on the
+ * CLOCK_STATE it hears back, so one stop cascades without any module reaching
+ * another. Event-shaped, NOT replayed: a late listener must not re-arm from a
+ * stale request. */
+export const PLAY = "atetudes:play";
+
 /** the mixer moved: { chord?, bass?, voice?, on? } — levels 0..1, the note
  * voice by name, and whether sound is on at all. The controls live in the
  * Transport card (the reference's form); whoever realises audio listens. */

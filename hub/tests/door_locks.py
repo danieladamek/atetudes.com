@@ -240,50 +240,40 @@ def run_door(pw, door_id):
         page.wait_for_timeout(60)
 
         # PLAY. The transport does not own a clock: it asks for the metronome's.
-        head0 = page.inner_text("#trHead")
+        tl_index = lambda: page.evaluate("""() => {
+          const bs = [...document.querySelectorAll('#tlBars button')];
+          return bs.findIndex(b => b.classList.contains('cur'));
+        }""")
+        tl_before = tl_index()
         page.click("#playBtn")
         page.wait_for_timeout(150)
         check(page.inner_text("#playBtn") == "Pause", f"{tag} the transport did not arm")
         check(page.inner_text("#metroBtn") == "Stop",
               f"{tag} pressing Play did not start the grid — the transport asked for a clock it did not get")
 
-        # THE PLAYHEAD AGREES WITH THE PASS. At 120 BPM with one chord per beat,
-        # ~2 s is about four chord changes; the head must move and must land on
-        # the same step the stage rendered.
+        # THE PASS ADVANCES. Shell 4 cut the pip playhead; the TIMELINE is the
+        # position indicator now (the reference's own, with roman numerals). At
+        # ~2 s and one chord a beat the current chord must move and stay unique —
+        # a transport whose position never advances is worse than none.
         page.wait_for_timeout(2200)
-        pips = page.eval_on_selector_all("#trHead .trPip", "e => e.length")
-        now = page.eval_on_selector_all("#trHead .trNow", "e => e.length")
-        check(pips > 1, f"{tag} the playhead has {pips} steps — it never learned the pass length")
-        check(now == 1, f"{tag} the playhead marks {now} current steps, not exactly one")
-        headIdx = page.evaluate("""() => {
-          const ps = [...document.querySelectorAll('#trHead .trPip')];
-          return ps.findIndex(p => p.classList.contains('trNow'));
-        }""")
         curChord = page.eval_on_selector_all("#tlBars button.cur", "e => e.length")
-        tlIdx = page.evaluate("""() => {
-          const bs = [...document.querySelectorAll('#tlBars button')];
-          return bs.findIndex(b => b.classList.contains('cur'));
-        }""")
-        check(curChord == 1, f"{tag} the timeline lost its current chord while playing")
-        check(headIdx == tlIdx,
-              f"{tag} the playhead says step {headIdx} and the pass says {tlIdx} — "
-              f"a transport that drifts from what you hear is worse than none")
-        check(page.inner_text("#trHead") != head0 or headIdx > 0,
-              f"{tag} the playhead never moved")
+        tlIdx = tl_index()
+        check(curChord == 1, f"{tag} the timeline lost (or duplicated) its current chord while playing: {curChord}")
+        check(tlIdx != tl_before, f"{tag} the pass never advanced — current chord parked at {tlIdx}")
 
         # pausing stops the walk but leaves the position where it was
         page.click("#playBtn")
         page.wait_for_timeout(60)
         check(page.inner_text("#playBtn") == "Play", f"{tag} the transport did not pause")
-        parked = page.evaluate("""() => {
-          const ps = [...document.querySelectorAll('#trHead .trPip')];
-          return ps.findIndex(p => p.classList.contains('trNow'));
-        }""")
+        parked = tl_index()
         page.wait_for_timeout(600)
-        check(page.evaluate("""() => {
-          const ps = [...document.querySelectorAll('#trHead .trPip')];
-          return ps.findIndex(p => p.classList.contains('trNow'));
-        }""") == parked, f"{tag} the playhead kept walking after pause")
+        check(tl_index() == parked, f"{tag} the pass kept walking after pause: {parked} -> {tl_index()}")
+
+        # THE PLAYHEAD IS GONE FROM THE ARTIFACT (Shell 4). Not "the control was
+        # dropped from the config" — the div itself must not be in the rendered
+        # DOM, the redundant fourth indicator removed at the source.
+        check(page.eval_on_selector_all(".trPlayhead, #trHead, .trPip", "e => e.length") == 0,
+              f"{tag} the transport playhead strip is still in the DOM — Shell 4 cut it")
 
         # leave it LIT into the orphan check: .trLit is a state this door has
         page.click("#playBtn")
@@ -373,6 +363,14 @@ def run_door(pw, door_id):
           for (const P of [window.OscillatorNode, window.AudioBufferSourceNode]) {
             const s0 = P.prototype.start; P.prototype.start = function (...a) { window.__st++; return s0.apply(this, a); }; } }""")
         page.click("#nextBtn"); page.wait_for_timeout(150)          # a gesture; audio arms
+        # STOP THE CLOCK FIRST. A manual step sounds on its own (the stage
+        # re-announces the canonical STEP_CHANGED, the audio card sounds it), but
+        # a RUNNING metronome adds a click source every beat and can auto-advance
+        # — both bleed into the capture window and made this count flaky. Stopped,
+        # each manual step sounds exactly its own graph and the modes compare
+        # deterministically. (The clock is restarted by the blocks below.)
+        if page.inner_text("#metroBtn") == "Stop":
+            page.click("#metroBtn"); page.wait_for_timeout(150)
         # count sources for ONE clean step per mode: step away, clear, sound the
         # target step once. A capture window that spans two steps double-counts,
         # so each measurement is isolated. 3-7-3-7 is a 4-note line; block is the
@@ -573,7 +571,7 @@ def run_door(pw, door_id):
         page.wait_for_timeout(120)
         fresh = [x for x in page.eval_on_selector_all(".hist", "e => e.map(x => x.innerText)")
                  if "nothing touched" in x]
-        for word in ("C major", "Cycling 4ths", "bottom R", "set E–A–D–G", "drop-2", "bpm"):
+        for word in ("C major", "Cycling 4ths", "bottom R", "set G–D–A–E", "drop-2", "bpm"):
             check(fresh and word in fresh[0],
                   f"{tag} a fresh page's first entry lacks {word!r} — a late listener missed a mount-time announcement: {fresh[:1]}")
         # a distinctive configuration to save
@@ -581,7 +579,7 @@ def run_door(pw, door_id):
         page.select_option("#scaleSel", "harm")
         page.select_option("#progSel", "sixths")
         page.select_option("#bottomSel", "2")            # start bottom on the 5th
-        page.click("#setSeg >> text=A–D–G–B")
+        page.click("#setSeg >> text=B–G–D–A")           # the middle set (index 1), labelled high → low
         page.click("#famSeg >> text=Drop-3")
         page.wait_for_timeout(150)
         if "winSeg" in r["controlsPresent"]:
@@ -607,9 +605,20 @@ def run_door(pw, door_id):
         rows = page.eval_on_selector_all(".hist", "e => e.map(x => x.innerText)")
         mine = [x for x in rows if "persistence round-trip" in x]
         check(len(mine) == 1, f"{tag} the saved entry did not render")
-        for word in ("Ab", "harmonic minor", "Cycling 6ths", "bottom 5", "A–D–G–B", "drop-3"):
+        for word in ("Ab", "harmonic minor", "Cycling 6ths", "bottom 5", "B–G–D–A", "drop-3"):
             check(word in (mine[0] if mine else ""),
                   f"{tag} the entry's summary lacks {word!r} — Restore would be blind: {mine[:1]}")
+        # THE STABLE-IDENTITY TRAP (Shell 4): the set is persisted by its NUMERIC
+        # index, not its label. Shell 4 relabelled the sets high → low; if the log
+        # had stored the label, every pre-change entry would now name a stale
+        # string. Assert the stored fact is the number 1 (the middle set) — so an
+        # entry saved before the relabel restores the same PHYSICAL set, because
+        # its identity never mentioned the label.
+        set_saved = page.evaluate("""() => { const p = JSON.parse(localStorage.getItem('%s'));
+          const e = (p.entries||[]).find(x => (x.text||'').includes('persistence round-trip'));
+          return e && e.payload && e.payload.data && e.payload.data.setIndex; }""" % own_key)
+        check(set_saved == 1,
+              f"{tag} the set is not persisted as its stable numeric index (got {set_saved!r}) — a relabel would remap saved études")
         if "winSeg" in r["controlsPresent"]:
             # the zone was moved above; it is CONFIG, so it must be in the summary
             check("zone" in (mine[0] if mine else "").lower(),
@@ -636,7 +645,7 @@ def run_door(pw, door_id):
         check(page.input_value("#scaleSel") == "harm", f"{tag} restore did not bring the scale back")
         check(page.input_value("#progSel") == "sixths", f"{tag} restore did not bring the cycle back")
         check(page.input_value("#bottomSel") == "2", f"{tag} restore did not bring the start bottom back")
-        check(page.eval_on_selector_all("#setSeg button.on", "e => e.map(x => x.textContent)") == ["A–D–G–B"],
+        check(page.eval_on_selector_all("#setSeg button.on", "e => e.map(x => x.textContent)") == ["B–G–D–A"],
               f"{tag} restore did not bring the string set back")
         check(page.eval_on_selector_all("#famSeg button.on", "e => e.map(x => x.textContent)") == ["Drop-3"],
               f"{tag} restore did not bring the voicing family back")
@@ -735,6 +744,86 @@ def run_door(pw, door_id):
         page.wait_for_timeout(120)
         ids2 = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
         check(ids2 == ids, f"{tag} the dots were rebuilt on a step — nothing would glide")
+    # ---------------- expand/collapse on every panel (Shell 4) --------------
+    # session-only: a DOM class, never stored, never on the bus. Every card and
+    # board grows a chevron; collapsing hides the body and shows a one-line
+    # summary. A collapse that does not collapse is exactly the silently-skipping
+    # class this project keeps finding — so EXERCISE it, never just assert it.
+    toggles = page.query_selector_all(".clpsBtn")
+    panels_n = len(page.query_selector_all(".card, .board"))
+    check(panels_n >= 1 and len(toggles) == panels_n,
+          f"{tag} {len(toggles)} chevrons for {panels_n} panels — collapse must reach every panel")
+    panel = page.query_selector(".card")                 # the metronome card, first panel
+    body = panel.query_selector("h2 ~ *:not(.clpsSum):not(.clpsBtn)")
+    check(body is not None and body.is_visible(), f"{tag} the panel body is not visible before collapse")
+    before_h = panel.bounding_box()["height"]
+    panel.query_selector(".clpsBtn").click()
+    page.wait_for_timeout(80)
+    check("clpsd" in (panel.get_attribute("class") or ""), f"{tag} the chevron did not collapse the panel")
+    check(not body.is_visible(), f"{tag} the body is still visible after collapse — the collapse did nothing")
+    check(panel.query_selector(".clpsSum").is_visible(), f"{tag} no summary line shows when collapsed")
+    check(panel.bounding_box()["height"] < before_h, f"{tag} collapsing did not shrink the panel")
+    panel.query_selector(".clpsBtn").click()             # a real toggle: expand again
+    page.wait_for_timeout(80)
+    check("clpsd" not in (panel.get_attribute("class") or ""), f"{tag} the chevron did not expand the panel")
+    check(body.is_visible(), f"{tag} the body did not come back on expand")
+
+    # ---------------- strip mini-transports + click-a-bar (Shell 4) ---------
+    if page.query_selector("#tlMini"):
+        tl_at = lambda: page.evaluate("""() => {
+          const bs = [...document.querySelectorAll('#tlBars button')];
+          return bs.findIndex(b => b.classList.contains('cur')); }""")
+        if page.inner_text("#metroBtn") == "Stop":       # start from a stopped clock
+            page.click("#metroBtn"); page.wait_for_timeout(80)
+        # every strip carries the full cluster
+        for host in ("#tlMini", "#scMini", "#kbMini"):
+            roles = page.eval_on_selector_all(f"{host} button", "e => e.map(x => x.dataset.role)")
+            check(roles == ["prev", "play", "stop", "next"],
+                  f"{tag} {host} is not the ⏮ ▶ ⏹ ⏭ cluster: {roles}")
+        # ⏭ on a strip steps the ONE pass (the mini owns no timer, it asks the bus)
+        was = tl_at()
+        page.click("#tlMini button[data-role=next]")
+        page.wait_for_timeout(120)
+        check(tl_at() != was, f"{tag} the strip ⏭ did not step the pass: parked at {was}")
+        # ▶ on the KEYBOARD strip summons the transport AND the clock
+        page.click("#kbMini button[data-role=play]")
+        page.wait_for_timeout(220)
+        check(page.inner_text("#metroBtn") == "Stop", f"{tag} a strip ▶ did not start the one clock")
+        check(page.inner_text("#playBtn") == "Pause", f"{tag} a strip ▶ did not arm the transport")
+        page.wait_for_timeout(500)
+        # ⏹ on the SCORE strip stops everything — the cascade CLOCK→CLOCK_STATE
+        page.click("#scMini button[data-role=stop]")
+        page.wait_for_timeout(160)
+        check(page.inner_text("#metroBtn") == "Start", f"{tag} the strip ⏹ did not stop the clock")
+        check(page.inner_text("#playBtn") == "Play", f"{tag} the strip ⏹ did not disarm the transport")
+        # CLICK A BAR IN THE SCORE TO JUMP THERE — the board names the feature
+        page.click("#nextBtn"); page.click("#nextBtn"); page.wait_for_timeout(80)
+        check(tl_at() != 0, f"{tag} could not move off bar 0 to test the score jump")
+        page.eval_on_selector("#score .sc-hit",
+                              "e => e.dispatchEvent(new MouseEvent('click', {bubbles:true}))")
+        page.wait_for_timeout(140)
+        check(tl_at() == 0, f"{tag} clicking the first score bar did not jump the pass to it")
+        # RESTORE the live states the orphan check needs present: a strip ▶
+        # re-arms the transport (.trLit) and restarts the clock (the lamp's
+        # running-only classes), the same states Shell 1 left running below
+        page.click("#tlMini button[data-role=play]")
+        page.wait_for_timeout(220)
+        check(page.inner_text("#playBtn") == "Pause" and page.inner_text("#metroBtn") == "Stop",
+              f"{tag} a strip ▶ did not re-arm transport + clock for the orphan check")
+
+    # collapse a CARD (h2) and, where the door has one, a BOARD (.bh) into the
+    # orphan check, so the header re-show rules (.clpsd>h2, .clpsd>.bh) each
+    # match. Collapse only hides (the nodes stay in the DOM, so the running
+    # clock's live classes are still found); expanded again below for the shots.
+    collapsed_for_check = []
+    for sel in (".card", ".board"):
+        p = page.query_selector(sel)
+        if p and "clpsd" not in (p.get_attribute("class") or ""):
+            p.query_selector(".clpsBtn").click()
+            collapsed_for_check.append(p)
+    page.wait_for_timeout(60)
+    check(page.query_selector(".clpsd") is not None,
+          f"{tag} no panel is collapsed going into the orphan check — .clpsd rules would orphan")
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped
     # metronome would call them orphans
@@ -758,6 +847,14 @@ def run_door(pw, door_id):
 
     check(not errors and not [c for c in console if c[0] in ("error", "warning")],
           f"{tag} console dirtied by interaction: {console}")
+
+    # re-expand the panels collapsed only for the orphan check, so the gate
+    # screenshots show the whole page rather than two shut panels
+    for p in collapsed_for_check:
+        btn = p.query_selector(".clpsBtn")
+        if btn:
+            btn.click()
+    page.wait_for_timeout(40)
 
     if SHOTS:
         page.screenshot(path=str(BUILD / f"{door_id}-1280.png"), full_page=True)

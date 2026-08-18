@@ -7,8 +7,11 @@
  * "really only slightly" (Daniel): the panel's SHAPE is the reference's, and
  * only what four voices genuinely force is different. Each change, named:
  *
- *   String set        reference: E-B-G, B-G-D, G-D-A, D-A-E (three strings)
- *                     here: E–A–D–G, A–D–G–B, D–G–B–e (four). Same segment.
+ *   String set        reference: E-B-G, B-G-D, G-D-A (three strings), listed
+ *                     high → low. Here: the four-string groups in the SAME
+ *                     dialect — e–B–G–D, B–G–D–A, G–D–A–E, highest set first
+ *                     (Shell 4 settled the family on high → low). Same segment;
+ *                     the label is derived, the stored setIndex is the fact.
  *   Voicing family    NEW group in the shape column: close / drop-2 / drop-3.
  *                     The triad app's "inversion" is a property of the voicing;
  *                     the tetrad app's is a FAMILY, so it needs a control. This
@@ -57,7 +60,7 @@ export const shapeMotion = {
   <h2>Shape &amp; Motion</h2>
   <div class="striprow">
     <div class="grp">
-      <label>String set (tetrads live here, low → high)</label>
+      <label>String set (tetrads live here, high → low)</label>
       <div class="seg" id="setSeg" data-control="setSeg"></div>
       <label>Voicing family</label>
       <div class="seg" id="famSeg" data-control="famSeg"></div>
@@ -147,7 +150,10 @@ export const shapeMotion = {
     };
 
     const render = () => {
-      seg(byId("setSeg"), STRING_SETS.map((s, i) => ({ value: i, label: s.label })),
+      /* display HIGHEST set first (the reference lists high → low), but each
+       * button's value stays the real STRING_SETS index — the stored identity a
+       * saved étude restores by. Presentation reversed; the fact is not. */
+      seg(byId("setSeg"), STRING_SETS.map((s, i) => ({ value: i, label: s.label })).reverse(),
         cfg.setIndex, (v) => { cfg.setIndex = v; push(); });
       seg(byId("famSeg"), allowed.map((f) => ({ value: f, label: FAMILY_LABEL[f] || f })),
         cfg.families[0], (v) => { cfg.families = [v]; push(); });

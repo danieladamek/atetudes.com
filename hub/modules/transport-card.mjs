@@ -14,13 +14,16 @@
  * cannot drift apart. The mixer is announced the same way (`MIXER`), so the
  * card that realises audio needs to know nothing about this one (§4.2.3).
  *
- * The playhead the reference does not have — a pip per step — is kept: the
- * roman timeline shows position too, but this one shows loop progress at a
- * glance and it costs one line of the card.
+ * NO PLAYHEAD STRIP. Shell 1 added a pip-per-step row the reference never had;
+ * Shell 4 cut it (Daniel, playing the build: "not sure what the value is of the
+ * chord tracking lines"). It was a fourth indicator of one fact the timeline
+ * (with roman numerals), the score bar highlight and the neck's "4 of 8"
+ * already carry — and the "position at a glance" it offered is exactly what
+ * this shell's strip mini-transports provide properly.
  */
 import { createTransportCore, patternOf, SPLITS } from "../../engine/transport.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
-import { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, listen, announce } from "../bus.mjs";
+import { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, listen, announce } from "../bus.mjs";
 
 const METERS = Object.keys(SPLITS).map(Number).sort((a, b) => a - b);
 
@@ -31,7 +34,7 @@ export const transportCard = {
   mount_point: "cards",
   order: 1,
   controls: ["prevBtn", "playBtn", "nextBtn", "bpmRange2", "meterSel2", "splitSel",
-    "clickChk2", "countChk", "metroChk", "noteVoiceSel", "chordVolR", "bassVolR", "trHead"],
+    "clickChk2", "countChk", "metroChk", "noteVoiceSel", "chordVolR", "bassVolR"],
 
   markup: `
   <h2>Transport</h2>
@@ -71,7 +74,6 @@ export const transportCard = {
     <input type="range" id="bassVolR" data-control="bassVolR" min="0" max="100" value="100">
     <span class="trVal" id="bassVolVal">100</span>
   </div>
-  <div class="trPlayhead" id="trHead" data-control="trHead"></div>
   <div class="hint">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2
   beats, next chord 3, new bar. <b>If the metronome is running, Play joins it</b> — the click you
   already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first).
@@ -93,11 +95,7 @@ export const transportCard = {
 .trVal{font-size:13px;width:30px;text-align:right}
 .trChecks{gap:9px;margin-top:8px}
 .trChecks .chk{margin:0}
-.trChecks select{width:auto;padding:3px 6px;margin-left:4px}
-.trPlayhead{display:flex;gap:3px;margin-top:10px}
-.trPip{flex:1 1 8px;height:6px;border-radius:3px;background:var(--line);min-width:6px}
-.trPip.trNow{background:var(--ink)}
-.trPip.trDone{background:#B9B9BF}`,
+.trChecks select{width:auto;padding:3px 6px;margin-left:4px}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -132,15 +130,6 @@ export const transportCard = {
     }
     byId("chordVolLab").textContent = (present.chordLabel || "chord").toLowerCase();
 
-    const drawHead = (at) => {
-      const host = byId("trHead");
-      if (host.children.length !== steps) {
-        host.textContent = "";
-        for (let i = 0; i < steps; i++) { const p = d.createElement("span"); p.className = "trPip"; host.appendChild(p); }
-      }
-      for (let i = 0; i < host.children.length; i++)
-        host.children[i].className = "trPip" + (i === at ? " trNow" : i < at ? " trDone" : "");
-    };
     const showLoop = () => { byId("trLoop").textContent = armed ? "loop " + (core.loop + 1) : ""; };
 
     const mixer = () => announce(d, MIXER, {
@@ -160,7 +149,7 @@ export const transportCard = {
       showLoop();
     };
 
-    fillMeters(); fillSplits(); drawHead(0); showLoop();
+    fillMeters(); fillSplits(); showLoop();
 
     byId("playBtn").addEventListener("click", () => setPlaying(!armed));
     byId("prevBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position - 1, request: true }));
@@ -195,6 +184,13 @@ export const transportCard = {
       bassVol = Number(e.target.value) / 100; byId("bassVolVal").textContent = e.target.value; mixer();
     });
 
+    /* a strip mini summoned Play — arm (or disarm) the walk exactly as our own
+     * Play button does; setPlaying takes it from there (grid + audio) */
+    listen(d, PLAY, (m) => {
+      if (!m || typeof m.run !== "boolean") return;
+      if (m.run !== !!armed) setPlaying(m.run);
+    });
+
     listen(d, CLOCK_STATE, (m) => {
       if (!m) return;
       running = !!m.running;
@@ -210,7 +206,7 @@ export const transportCard = {
     listen(d, STEP_CHANGED, (m) => {
       if (!m || m.request === true) return;
       if (typeof m.total === "number" && m.total !== steps) { steps = m.total; core.setSteps(steps); }
-      if (typeof m.index === "number") { position = m.index; drawHead(position); }
+      if (typeof m.index === "number") position = m.index;
     });
 
     listen(d, BEAT, (ev) => {

@@ -24,6 +24,7 @@ import { patternOf } from "../../engine/transport.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
 import { parseFigure, figureEvents } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
+import { mountMini } from "../mini.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
@@ -60,15 +61,20 @@ export const scoreBoard = {
   requires: { material: "tetrad" },
   mount_point: "boards",
   order: 22,
-  controls: ["score"],
+  controls: ["score", "scMini"],
 
   markup: `
+  <span id="scMini" data-control="scMini"></span>
   <div class="bh"><span>The étude — end to end (click a bar to jump there)</span></div>
   <svg id="score" data-control="score" viewBox="0 0 1160 214" aria-label="etude notation"></svg>`,
 
   styles: `
 #score{width:100%;height:auto;display:block}
-#score .sc-hit{cursor:pointer}`,
+#score .sc-hit{cursor:pointer}
+#scMini{position:absolute;top:7px;right:44px;display:flex;gap:4px;z-index:6}
+#scMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#scMini button:hover{border-color:var(--ink)}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -251,6 +257,7 @@ export const scoreBoard = {
     listen(d, CLOCK_STATE, (m) => {
       if (m && typeof m.meter === "number" && m.meter !== meter) { meter = m.meter; splitIdx = 0; render(); }
     });
+    mountMini(ctx, byId("scMini"));   // ⏮ ▶ ⏹ ⏭ over the score, driving the one clock
     render();
   },
 };

@@ -46,6 +46,25 @@ select,input[type=text]{
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
 .transport button.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:bold}
 footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
+
+/* EXPAND/COLLAPSE ON EVERY PANEL (Shell 4) — the reference's chevron, its look
+ * and its persistence behaviour, which is NONE: collapse is a DOM class only,
+ * session-only, never stored and never on the bus. A shared étude opens the way
+ * its author left it. The chevron and one-line summary are injected by the shell
+ * (initCollapse) into every card, strip and board; collapse hard-hides every
+ * direct child, then re-shows the header, the chevron and the summary. The
+ * board-header variant (.bh) lives with the boards wrapper, since only a door
+ * with boards can match it — the rest is universal and belongs here. */
+.clpsBtn{position:absolute;top:8px;right:10px;font:inherit;font-size:11px;
+  padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
+  cursor:pointer;color:var(--gray);z-index:7}
+.clpsBtn:hover{border-color:var(--ink);color:var(--ink)}
+.clpsSum{display:none;font-size:12px;color:var(--gray);margin:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:58px}
+.clpsd>*{display:none!important}
+.clpsd>h2{display:block!important;margin-bottom:2px}
+.clpsd>.clpsBtn{display:block!important}
+.clpsd>.clpsSum{display:block!important}
 `;
 
 /** The layout CONTAINERS are the shell's, and the shell writes them — that is
@@ -101,6 +120,9 @@ export const WRAPPERS = {
        padding:10px 12px;margin-bottom:12px;position:relative}
 .board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
            font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+/* the collapse header-variant for a board (.bh, not h2) rides with the boards
+ * wrapper — it ships only when a door has boards, so it can never orphan */
+.clpsd>.bh{display:flex!important;margin-bottom:2px}
 `,
   },
 };
@@ -120,6 +142,47 @@ export const SHELL_MARKUP = `
   <footer id="doorFoot"></footer>
 </div>`;
 
+/** Expand/collapse on every panel — page grammar, applied AFTER the modules
+ * mount so it wraps whatever a door actually rendered without naming one. The
+ * chevron and summary are the shell's; the state is a DOM class and nothing
+ * else (session-only, off the bus), so a shared étude opens the way its author
+ * left it. The summary is derived from the panel's own live readout — its hint,
+ * the stage's readout line, or a board's header — and refreshed while collapsed
+ * so it never shows stale settings. */
+function initCollapse(doc) {
+  // the summary is derived from a panel's own live line, named only through
+  // GRAMMAR tokens (.hint, .bh) — never a module's private id, which would ship
+  // this shell's always-present code into a door that prunes that module
+  const summaryOf = (p) => {
+    const src = p.querySelector(".hint") || p.querySelector(".bh span");
+    return src ? src.textContent.replace(/\s+/g, " ").trim() : "";
+  };
+  const panels = [];
+  for (const p of doc.querySelectorAll(".card, .board")) {
+    const header = p.querySelector("h2") || p.querySelector(".bh");
+    const sum = doc.createElement("div");
+    sum.className = "clpsSum";
+    if (header) header.after(sum); else p.prepend(sum);
+    const btn = doc.createElement("button");
+    btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse";
+    btn.addEventListener("click", () => {
+      const on = p.classList.toggle("clpsd");
+      btn.textContent = on ? "▸" : "▾";
+      btn.title = on ? "expand" : "collapse";
+      if (on) sum.textContent = summaryOf(p);
+    });
+    p.appendChild(btn);
+    panels.push([p, sum]);
+  }
+  // a collapsed panel's summary stays current as the user works elsewhere —
+  // derived on any interaction, the way the reference refreshes on render
+  const refresh = () => {
+    for (const [p, sum] of panels)
+      if (p.classList.contains("clpsd")) sum.textContent = summaryOf(p);
+  };
+  for (const ev of ["input", "change", "click"]) doc.addEventListener(ev, refresh, true);
+}
+
 export function boot(MODULES, door, doc) {
   const byId = (id) => doc.getElementById(id);
   doc.getElementById("doorTitle").textContent = door.present.title;
@@ -130,5 +193,6 @@ export function boot(MODULES, door, doc) {
      * own, so this is a no-op seam the host page can take over */
     changed() {} };
   for (const m of MODULES) m.mount(ctx);
+  initCollapse(doc);
   return ctx;
 }

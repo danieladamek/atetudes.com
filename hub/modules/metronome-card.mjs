@@ -76,6 +76,10 @@ export const metronomeCard = {
   styles: `
 .card.metro{background:var(--ink);border-color:var(--ink);color:#ECECEE}
 .card.metro h2{color:#9C9CA4}
+/* the collapse chevron is shell grammar, but its dark-card variant belongs here
+ * with the inverted card it dresses — metro is this module's own token, so the
+ * rule cannot outlive the card (Shell 4) */
+.card.metro .clpsBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
 .card.metro label{color:#9C9CA4}
 .card.metro .hint{color:#85858D}
 .card.metro select{background:#2E2E34;color:#ECECEE;border-color:#44444C}
