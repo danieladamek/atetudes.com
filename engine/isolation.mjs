@@ -149,9 +149,21 @@ export function meanFret(v) {
 /** total voice-leading movement across a voiced sequence, in semitones; a
  * wrapped transition is measured against the previous voicing an octave down */
 export function movementTotal(voic) {
+  // A NULL entry is a chord `chooseVoicings` could not voice — a REAL result of
+  // the optimizer, not a caller error (unlike the arity mismatch voiceLeadCost
+  // throws on). A sequence carrying one is UNPLAYABLE, and its total movement is
+  // therefore not zero but unbounded. The pre-fix loop skipped the null and the
+  // pairs spanning it and returned the sum of the rest — so [A, null, C] scored 0,
+  // the BEST possible value, and the most broken input imaginable won every
+  // comparison it entered (measured: [A,B,C]→30, [A,null,C]→0). Infinity loses
+  // them all, reads honestly in the placement readout that consumes this, keeps
+  // the number→number signature every caller and the drift pin rely on, and never
+  // throws on legitimate `chooseVoicings` output. (Item 260817.3, deferred by the
+  // voiceLeadCost fix; movementTotal is reporting-only — it feeds no selection —
+  // so no shipped étude output moves.)
+  if (voic.some((v) => !v)) return Infinity;
   let t = 0;
   for (let i = 1; i < voic.length; i++) {
-    if (!voic[i] || !voic[i - 1]) continue;
     let p = voic[i - 1];
     if (voic[i].wrapped) p = { notes: p.notes.map((n) => ({ ...n, midi: n.midi - 12 })) };
     t += voiceLeadCost(voic[i], p);

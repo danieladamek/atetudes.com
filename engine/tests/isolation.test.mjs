@@ -217,6 +217,24 @@ test("arity law: movementTotal inherits the fix rather than carrying its own cop
     "a uniform sequence still totals");
 });
 
+test("a null (unvoiceable chord) scores Infinity — a broken sequence never beats an intact one (260817.3)", () => {
+  const a = voicing(48, 52, 55), b = voicing(50, 53, 57), c = voicing(52, 55, 59);
+  const intact = movementTotal([a, b, c]);
+  assert.ok(Number.isFinite(intact) && intact > 0, "the intact sequence has a finite, positive total");
+  // THE MEASURED DEFECT: the pre-fix loop skipped the null and the pairs spanning
+  // it, so [A, null, C] returned the sum of the rest — here 0, the BEST score, for
+  // the most broken input possible. It must now score WORSE than intact, not better.
+  assert.equal(movementTotal([a, null, c]), Infinity,
+    "a chord that could not be voiced makes the whole sequence unplayable, not free");
+  assert.ok(movementTotal([a, null, c]) > intact,
+    "a null-bearing sequence must never score better than the same sequence intact");
+  // a null anywhere breaks it — first, middle, or last
+  assert.equal(movementTotal([null, b, c]), Infinity);
+  assert.equal(movementTotal([a, b, null]), Infinity);
+  // and a VALID sequence is unchanged by the fix — the reporting path still totals
+  assert.equal(movementTotal([a, b]), voiceLeadCost(b, a), "an intact sequence still totals exactly");
+});
+
 test("arity law: placementCost names an out-of-range pivot instead of throwing on undefined", () => {
   const zone = makeZone({ string: 2, frets: [1, 3, 5] });
   const three = voicing(48, 52, 55);
