@@ -210,6 +210,86 @@ def run_door(pw, door_id):
                   f"{tag} the palette panel did not open")
         check(page.eval_on_selector_all(".hist .note.md pre", "e => e.length") == 1,
               f"{tag} the note's fenced block did not render through the markdown engine")
+    if "trPlay" in r["controlsPresent"]:
+        # ---- the transport: one grid, two views, and a playhead that agrees ----
+        # BPM is ONE state seen twice. Move it here, and the metronome's own
+        # readout must follow — they are two views of one clock, not two copies.
+        page.fill("#trBpm", "150")
+        page.dispatch_event("#trBpm", "input")
+        page.wait_for_timeout(80)
+        check(page.inner_text("#bpmVal") == "150",
+              f"{tag} the metronome's BPM did not follow the transport's — two clocks, not one")
+        check(page.inner_text("#trBpmVal") == "150", f"{tag} the transport's own readout did not follow")
+        # and back the other way
+        page.fill("#bpmRange", "120")
+        page.dispatch_event("#bpmRange", "input")
+        page.wait_for_timeout(80)
+        check(page.inner_text("#trBpmVal") == "120",
+              f"{tag} the transport did not follow the metronome — the mirror is one-way")
+
+        # the meter is one state too, and the split list follows it
+        page.select_option("#trMeter", "3")
+        page.wait_for_timeout(80)
+        check(page.input_value("#meterSel") == "3",
+              f"{tag} the metronome's meter did not follow the transport's")
+        splits3 = page.eval_on_selector_all("#trSplit option", "e => e.map(x => x.textContent)")
+        check(splits3 and all("+" in x or x.isdigit() for x in splits3),
+              f"{tag} the bar-split list did not re-derive for the new meter: {splits3}")
+        page.select_option("#trMeter", "4")
+        page.select_option("#trSplit", "2")            # [1,1,1,1] — one chord a beat
+        page.wait_for_timeout(60)
+
+        # PLAY. The transport does not own a clock: it asks for the metronome's.
+        head0 = page.inner_text("#trHead")
+        page.click("#trPlay")
+        page.wait_for_timeout(150)
+        check(page.inner_text("#trPlay") == "Pause", f"{tag} the transport did not arm")
+        check(page.inner_text("#metroBtn") == "Stop",
+              f"{tag} pressing Play did not start the grid — the transport asked for a clock it did not get")
+
+        # THE PLAYHEAD AGREES WITH THE PASS. At 120 BPM with one chord per beat,
+        # ~2 s is about four chord changes; the head must move and must land on
+        # the same step the stage rendered.
+        page.wait_for_timeout(2200)
+        pips = page.eval_on_selector_all("#trHead .trPip", "e => e.length")
+        now = page.eval_on_selector_all("#trHead .trNow", "e => e.length")
+        check(pips > 1, f"{tag} the playhead has {pips} steps — it never learned the pass length")
+        check(now == 1, f"{tag} the playhead marks {now} current steps, not exactly one")
+        headIdx = page.evaluate("""() => {
+          const ps = [...document.querySelectorAll('#trHead .trPip')];
+          return ps.findIndex(p => p.classList.contains('trNow'));
+        }""")
+        curChord = page.eval_on_selector_all("#tlList button.tlCur", "e => e.length")
+        tlIdx = page.evaluate("""() => {
+          const bs = [...document.querySelectorAll('#tlList button')];
+          return bs.findIndex(b => b.classList.contains('tlCur'));
+        }""")
+        check(curChord == 1, f"{tag} the timeline lost its current chord while playing")
+        check(headIdx == tlIdx,
+              f"{tag} the playhead says step {headIdx} and the pass says {tlIdx} — "
+              f"a transport that drifts from what you hear is worse than none")
+        check(page.inner_text("#trHead") != head0 or headIdx > 0,
+              f"{tag} the playhead never moved")
+
+        # pausing stops the walk but leaves the position where it was
+        page.click("#trPlay")
+        page.wait_for_timeout(60)
+        check(page.inner_text("#trPlay") == "Play", f"{tag} the transport did not pause")
+        parked = page.evaluate("""() => {
+          const ps = [...document.querySelectorAll('#trHead .trPip')];
+          return ps.findIndex(p => p.classList.contains('trNow'));
+        }""")
+        page.wait_for_timeout(600)
+        check(page.evaluate("""() => {
+          const ps = [...document.querySelectorAll('#trHead .trPip')];
+          return ps.findIndex(p => p.classList.contains('trNow'));
+        }""") == parked, f"{tag} the playhead kept walking after pause")
+
+        # leave it LIT into the orphan check: .trLit is a state this door has
+        page.click("#trPlay")
+        check(page.eval_on_selector_all(".trToggle.trLit", "e => e.length") == 1,
+              f"{tag} the play toggle does not light")
+
     if "ibKey" in r["controlsPresent"]:
         # the chart-heading block: open a popup so its open state is entered,
         # then change the key and confirm the pass actually rebuilds

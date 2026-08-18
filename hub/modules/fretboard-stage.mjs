@@ -43,7 +43,7 @@ export const fretboardStage = {
   requires: { material: "tetrad" },
   mount_point: "boards",
   order: 20,
-  controls: ["fsPlay", "fsBack", "fsFwd", "fsNeck"],
+  controls: ["fsBack", "fsFwd", "fsNeck"],
 
   markup: `
   <div class="fs-board">
@@ -52,7 +52,6 @@ export const fretboardStage = {
     <div class="fsHint" id="fsHint"></div>
   </div>
   <div class="fsTransport">
-    <button id="fsPlay" data-control="fsPlay" class="fsBtn fsPrimary">play</button>
     <button id="fsBack" data-control="fsBack" class="fsBtn">&#8592; step</button>
     <button id="fsFwd" data-control="fsFwd" class="fsBtn">step &#8594;</button>
   </div>
@@ -68,7 +67,6 @@ export const fretboardStage = {
 .fsTransport{display:flex;gap:8px;justify-content:center;padding:10px 0 2px;flex-wrap:wrap}
 .fsBtn{font:600 12.5px inherit;font-family:inherit;padding:8px 15px;border:1px solid var(--line);
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
-.fsPrimary{background:var(--ink);color:#fff;border-color:var(--ink)}
 .fs-dot{transition:transform .55s cubic-bezier(.4,0,.2,1);cursor:pointer}
 .fs-dot .fs-mk{transition:fill .55s}
 .fs-dot .fs-ring{fill:none;stroke:#212126;stroke-width:2;opacity:0;transition:opacity .2s}
@@ -82,7 +80,7 @@ export const fretboardStage = {
 
     /* PRIVATE state. Nothing else reads it; the step is announced, not shared. */
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
-    let pass = null, dots = [], geom = null, step = 0, timer = null, playing = false;
+    let pass = null, dots = [], geom = null, step = 0;
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -185,22 +183,29 @@ export const fretboardStage = {
       announce(d, STEP_CHANGED, { index: step, total: n, symbol: cur.symbol });
     };
 
-    const play = (on) => {
-      playing = on;
-      byId("fsPlay").textContent = on ? "pause" : "play";
-      if (timer) { clearInterval(timer); timer = null; }
-      if (on) timer = setInterval(() => show(step + 1, false), 1700);
-    };
+    /* PLAYING BELONGS TO THE TRANSPORT, NOT THE STAGE.
+     *
+     * This card used to run `setInterval(…, 1700)` — the fixed interval the
+     * roadmap names: *"fine for a demonstration; it isn't practice."* A chord
+     * that changes on a wall-clock timer cannot be played along with, and a
+     * second timer beside the metronome's grid would drift against the click.
+     *
+     * So the stage no longer keeps time. It still steps on request, and the
+     * transport card walks the beat grid and asks. The stage remains the
+     * authority on WHERE the pass is — it answers every move with the
+     * step it actually rendered — it simply no longer decides WHEN.
+     *
+     * A door with no transport keeps the step buttons and loses only autoplay,
+     * which is smaller rather than broken. */
 
-    byId("fsPlay").addEventListener("click", () => play(!playing));
-    byId("fsFwd").addEventListener("click", () => { play(false); show(step + 1, false); });
-    byId("fsBack").addEventListener("click", () => { play(false); show(step - 1, false); });
+    byId("fsFwd").addEventListener("click", () => show(step + 1, false));
+    byId("fsBack").addEventListener("click", () => show(step - 1, false));
 
     /* derived from the message, never from the sender (§4.2.3) */
-    listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; play(false); build(); });
+    listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; build(); });
     /* another module asking to move — the stage owns the position */
     listen(d, STEP_CHANGED, (m) => {
-      if (m && m.request === true && pass && m.index !== step) { play(false); show(m.index, false); }
+      if (m && m.request === true && pass && m.index !== step) show(m.index, false);
     });
 
     build();

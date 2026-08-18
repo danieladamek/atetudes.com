@@ -29,9 +29,25 @@ export const CONFIG_CHANGED = "atetudes:config";
 /** the position within the pass changed */
 export const STEP_CHANGED = "atetudes:step";
 
+/** A REQUEST to whoever owns the beat grid: run/stop it, or change its tempo
+ * or meter. A request, not a command — the owner applies it and answers with
+ * CLOCK_STATE, so nobody reaches into anybody's clock (§4.2.3) and a door with
+ * no clock simply has nothing listening. */
+export const CLOCK = "atetudes:clock";
+
+/** the grid owner's answer: what the clock IS now. Every card that shows tempo,
+ * meter or a run state renders from this rather than from its own copy, so two
+ * views of one clock cannot drift apart. */
+export const CLOCK_STATE = "atetudes:clock-state";
+
 /** a metronome beat is DUE. `lead` is seconds from now until it sounds, so a
  * listener schedules against its OWN clock and never needs the sender's time
- * base — which is what lets the clock stay pure and the audio stay accurate. */
+ * base — which is what lets the clock stay pure and the audio stay accurate.
+ *
+ * It also carries the beat's PLACE on the grid (`index`, `beat`, `bar`) and the
+ * grid's `meter`/`bpm`, so a listener can walk a sequence along the same beats
+ * the click sounds. Additive: a listener that only wants to make a noise reads
+ * `level`/`lead` and ignores the rest. */
 export const BEAT = "atetudes:beat";
 
 /** Dispatch a message. The detail is passed by value on purpose: a listener

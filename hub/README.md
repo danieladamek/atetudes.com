@@ -36,6 +36,11 @@ hub/
 │   │                        transitions. Keyed by engine/voice-identity.mjs so the
 │   │                        nodes survive a chord change and the dots GLIDE
 │   ├── chord-timeline.mjs   the roman-numeral pass; sequence-as-navigation
+│   ├── transport-card.mjs   play/pause, tempo, meter, bar split, count-in, loop
+│   │                        counter and the playhead. Owns no clock: it
+│   │                        SUBSCRIBES to the metronome's grid over the bus and
+│   │                        walks engine/transport.mjs along it, so the click
+│   │                        and the chord change are the same beat
 │   └── audio-card.mjs       THE HUB'S EARS: the AudioContext (created on a
 │                            GESTURE, never on load), the mixer buses, and the
 │                            realisation of engine/voices.mjs's descriptions.
@@ -62,7 +67,7 @@ neck it configures.
 |---|---|---|---|
 | `scribe` | `{notepad: true}` | metronome + notepad, 12 files | 148 kB |
 | `plain` | `{notepad: false}` | metronome only, 3 files | 21 kB |
-| `tetradetudes` | `{material:"tetrad", notepad:true, audio:true}` | door #1 — the four-voice pass, with sound, 23 files | 252 kB |
+| `tetradetudes` | `{material:"tetrad", notepad:true, audio:true, transport:true}` | door #1 — the four-voice pass, with sound and a real transport, 26 files | 284 kB |
 
 The plain door drops six engine modules (notepad, markdown, palette, structures, atchart, chord)
 along with the card, plus 39 markup/style tokens. Its built file contains no trace of any of it —

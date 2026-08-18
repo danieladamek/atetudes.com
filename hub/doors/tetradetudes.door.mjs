@@ -35,6 +35,7 @@ export default {
     material: "tetrad",
     notepad: true,
     audio: true,
+    transport: true,
   },
   present: {
     title: "Tetradetudes",

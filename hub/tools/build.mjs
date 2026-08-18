@@ -41,6 +41,15 @@ function moduleChunk(relPath, src, resolveDep) {
     binds.push(`const { ${names.join(", ")} } = ${from};`);
   }
   const exports = [...src.matchAll(EXPORT_DECL)].map((m) => m[1]);
+  /* A re-export LIST (`export { a, b };` or `export … from "…"`) is invisible to
+   * the declaration scan above, so it would be dropped in silence and the
+   * consumer would see `undefined` at runtime — a page error with no hint of
+   * where it came from. Refuse it by name instead, and say what to write. */
+  const RE_EXPORT = /^\s*export\s*\{[^}]*\}/m;
+  if (RE_EXPORT.test(src))
+    throw new Error(`${relPath}: a re-export list (\`export { … }\`) does not survive inlining — ` +
+      `the build reads exports by declaration, so this would be dropped silently and read as ` +
+      `undefined at runtime. Re-export by value instead: \`export const X = Y;\``);
   if (!exports.length) throw new Error(`${relPath}: exports nothing — a hub module must export what its consumers name`);
   return `/* ===== ${relPath} ===== */\nconst ${nsOf(relPath)} = (() => {\n` +
     (binds.length ? binds.join("\n") + "\n" : "") +

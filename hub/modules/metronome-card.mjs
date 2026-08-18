@@ -17,7 +17,7 @@
  * resolver now enforces that it stays moved.
  */
 import { createMetroCore, createTapTempo, SUB_OFFSETS } from "../../engine/metronome.mjs";
-import { BEAT, announce } from "../bus.mjs";
+import { BEAT, CLOCK, CLOCK_STATE, announce, listen } from "../bus.mjs";
 
 export const metronomeCard = {
   id: "metronome-card",
@@ -68,15 +68,18 @@ export const metronomeCard = {
    * `chk`, `bpmrow` or a control id — tokens no other module ships today. The
    * inverted card cannot outlive the card.
    *
-   * `.row2`, `.chk` and `.bpmrow` LOOK like page grammar and sit in the shell's
+   * `.row2` and `.bpmrow` LOOK like page grammar and sit in the shell's
    * stylesheet in the shipped study. They are here because exactly one module
    * uses them: grammar is promoted to the shell when it earns a second user,
-   * with the evidence, rather than being declared grammar in advance. */
+   * with the evidence, rather than being declared grammar in advance.
+   *
+   * `.chk` WAS here on exactly those terms and has now been promoted: the
+   * transport card is its second user (2026-08-17), so it is page grammar by
+   * evidence and lives in the shell. The rule worked as written — the resolver
+   * refused the build until it moved. */
   styles: `
 .row2{display:flex;gap:10px;flex-wrap:wrap}
 .row2>div{flex:1 1 90px}
-.chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
-.chk input{width:auto}
 .bpmrow{display:flex;align-items:center;gap:8px;margin-top:10px}
 .bpmrow input[type=range]{flex:1;accent-color:var(--ink);width:auto}
 .card.metro{background:var(--ink);border-color:var(--ink);color:#ECECEE}
@@ -133,15 +136,28 @@ export const metronomeCard = {
           voice: byId("voiceSel").value,
           accents: byId("accChk").checked,
           vol: Number(byId("clickVolR").value) / 100,
+          // the beat's PLACE on the grid, so a listener can walk a sequence
+          // along the same beats this card is clicking (additive: a listener
+          // that only wants a noise reads level/lead and ignores these)
+          index: ev.index, beat: ev.beat, bar: ev.bar,
+          meter: core.meter, bpm: core.bpm,
         });
       }
       if (core.running) raf = d.defaultView.requestAnimationFrame(pump);
     };
 
-    byId("metroBtn").addEventListener("click", () => {
-      if (core.running) {
+    /* THIS CARD OWNS THE GRID, and says so on the bus rather than being asked.
+     * Anything else that shows tempo, meter or a run state renders from
+     * CLOCK_STATE, so two views of one clock cannot drift apart — and a door
+     * that prunes this card simply has no grid, which is smaller, not broken. */
+    const publish = () => announce(d, CLOCK_STATE,
+      { running: core.running, bpm: core.bpm, meter: core.meter });
+
+    const setRunning = (want) => {
+      if (want === core.running) return;
+      if (!want) {
         core.stop();
-        if (raf) d.defaultView.cancelAnimationFrame(raf);
+        if (raf) { d.defaultView.cancelAnimationFrame(raf); raf = null; }
         byId("metroBtn").textContent = "Start";
         light(-1);
       } else {
@@ -149,17 +165,39 @@ export const metronomeCard = {
         byId("metroBtn").textContent = "Stop";
         pump();
       }
+      publish();
+    };
+
+    /* a REQUEST from elsewhere — the transport asking for the grid it walks on.
+     * It is applied here, by the owner, and answered with the resulting state. */
+    listen(d, CLOCK, (m) => {
+      if (!m) return;
+      if (typeof m.bpm === "number") {
+        core.setBpm(m.bpm);
+        byId("bpmRange").value = m.bpm; byId("bpmVal").textContent = m.bpm;
+      }
+      if (typeof m.meter === "number") {
+        core.setMeter(m.meter);
+        byId("meterSel").value = String(m.meter);
+        if (!core.running) lamps();
+      }
+      if (typeof m.run === "boolean") setRunning(m.run);
+      else publish();
+    });
+
+    byId("metroBtn").addEventListener("click", () => {
+      setRunning(!core.running);
       ctx.changed();
     });
     byId("tapBtn").addEventListener("click", () => {
       const bpm = tap(now());
-      if (bpm) { core.setBpm(bpm); byId("bpmRange").value = bpm; byId("bpmVal").textContent = bpm; }
+      if (bpm) { core.setBpm(bpm); byId("bpmRange").value = bpm; byId("bpmVal").textContent = bpm; publish(); }
     });
     byId("bpmRange").addEventListener("input", (e) => {
-      core.setBpm(+e.target.value); byId("bpmVal").textContent = e.target.value;
+      core.setBpm(+e.target.value); byId("bpmVal").textContent = e.target.value; publish();
     });
     byId("meterSel").addEventListener("change", (e) => {
-      core.setMeter(+e.target.value); if (!core.running) lamps();
+      core.setMeter(+e.target.value); if (!core.running) lamps(); publish();
     });
     byId("subSel").addEventListener("change", (e) => {
       // the offsets the audio layer would schedule against; asserted live so a
@@ -174,5 +212,8 @@ export const metronomeCard = {
     });
     byId("accChk").addEventListener("change", () => light(-1));
     lamps(); light(-1);
+    // say what the grid is at mount, so a card that mounts after this one still
+    // starts from the truth rather than from its own defaults
+    publish();
   },
 };
