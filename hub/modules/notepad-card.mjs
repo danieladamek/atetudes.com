@@ -71,7 +71,7 @@ export const notepadCard = {
         <button id="clearDiscard" data-control="clearDiscard">Discard</button>
         <button id="clearCancel" data-control="clearCancel">keep writing</button>
       </div>
-      <div class="hint info" id="handoffNote" data-control="handoffNote"></div>
+      <div class="hint" id="handoffNote" data-control="handoffNote"></div>
     </div>
   </div>`,
 

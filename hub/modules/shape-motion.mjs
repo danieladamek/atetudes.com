@@ -17,10 +17,15 @@
  *                     the tetrad app's is a FAMILY, so it needs a control. This
  *                     is the second consumer of `families` — the lock key the
  *                     resolver refused yesterday because nothing required it.
- *   Figure addresses  the reference's "Motion follows: the shape / the tones"
- *                     applied to the figure vocabulary (Daniel, 2026-08-18):
- *                     SLOTS 1-2-3-4 repeat a shape; TONES R-3-5-7 follow the
- *                     harmony through the shape. Same segment, live.
+ *   Figure addresses  how a FIGURE is spelled: SLOTS 1-2-3-4 repeat a shape;
+ *                     TONES R-3-5-7 follow the harmony through the shape (Daniel,
+ *                     2026-08-18). Control id `figAddrSeg` — renamed off the
+ *                     reference's `motionSeg` (P3, 260818.x): the reference's
+ *                     "Motion follows: the shape / the tones" is how VOICE-LEADING
+ *                     MOTION is derived, a DIFFERENT concept, and it is NOT
+ *                     OFFERED here. Borrowing the id for figure-addressing was the
+ *                     accretion the truth-table item found; the id now names its
+ *                     own idea so no later reader assumes Motion-follows exists.
  *   Figure            the reference's picker + field, LIVE, with arpErr — the
  *                     error surface the audit found missing. The field is the
  *                     truth; the picker writes into it. Consumers parse the
@@ -54,7 +59,7 @@ export const shapeMotion = {
   requires: { material: "tetrad" },
   mount_point: "strips",
   order: 12,
-  controls: ["setSeg", "famSeg", "motionSeg", "figSel", "arpIn", "arpErr", "placeSeg", "playbackSeg", "rootsChk", "guideChk"],
+  controls: ["setSeg", "famSeg", "figAddrSeg", "figSel", "arpIn", "arpErr", "placeSeg", "playbackSeg", "rootsChk", "guideChk"],
 
   markup: `
   <h2>Shape &amp; Motion</h2>
@@ -68,7 +73,7 @@ export const shapeMotion = {
     <div class="grp smFig">
       <div class="row2 alignEnd">
         <div class="smTight"><label>Figure addresses</label>
-          <div class="seg" id="motionSeg" data-control="motionSeg">
+          <div class="seg" id="figAddrSeg" data-control="figAddrSeg">
             <button data-mm="slots" class="on" title="1-2-3-4, low → high: a figure repeats a SHAPE">slots</button>
             <button data-mm="tones" title="R-3-5-7, by role: a figure follows the HARMONY through the shape">tones</button>
           </div></div>
@@ -167,7 +172,7 @@ export const shapeMotion = {
       byId("rootsChk").checked = cfg.roots;
       byId("guideChk").checked = cfg.guide;
       // the address toggle
-      for (const b of byId("motionSeg").querySelectorAll("button"))
+      for (const b of byId("figAddrSeg").querySelectorAll("button"))
         b.classList.toggle("on", b.dataset.mm === cfg.address);
       byId("arpLabel").textContent = cfg.address === "tones"
         ? "Figure (tones R 3 5 7; approaches in parens: (-1,+2)3)"
@@ -198,8 +203,17 @@ export const shapeMotion = {
       // segment reflects that no figure is in force
       const parsed = parseFigure(cfg.figure, cfg.address);
       byId("arpErr").textContent = parsed.err || "";
-      for (const b of byId("playbackSeg").querySelectorAll("button"))
+      const hasFig = !!parsed.pattern;
+      for (const b of byId("playbackSeg").querySelectorAll("button")) {
         b.classList.toggle("on", b.dataset.pb === cfg.playback);
+        // P1 (cheap variant): the figure sounds only when Playback ≠ Block AND a
+        // figure parses, so Arpeggiated and Both have nothing to sound without
+        // one — "Block with a figure" and "Arpeggiated with no figure" reach the
+        // identical silent chord. Disable them until a figure parses; enabling is
+        // LIVE (render runs on every change). Playback stays three real buttons —
+        // not collapsed, not renamed; this only gates when the axis is inert.
+        b.disabled = b.dataset.pb !== "block" && !hasFig;
+      }
 
       /* THE PANEL NARRATES ITSELF (this item: state the rules in the hints, so
        * the page explains itself). The one rule that catches everyone — read off
@@ -208,7 +222,6 @@ export const shapeMotion = {
        * plain block chord plays. Two different control states therefore reach the
        * SAME silent result, and the panel used to say neither. Every clause below
        * is stated only when it is true, so an inert control announces itself. */
-      const hasFig = !!parsed.pattern;
       const figWords = hasFig
         ? describeFigure(parsed.pattern, cfg.address) + (parsed.source === "motion" ? "" : (cfg.address === "tones" ? " by role" : " by slot"))
         : "";
@@ -235,10 +248,13 @@ export const shapeMotion = {
       if (cfg.guide) parts.push("guide tones lit — a neck view that dims R and 5");
       byId("smHint").textContent = parts.join(" · ");
 
-      // every DISABLED control states why, in the panel, not only in a tooltip
-      // (this item's Done-means): Line placement is off because the pass builds
-      // no line voicer for it yet
-      byId("smWhy").textContent = "“Line” placement is greyed because it needs the line voicer the pass doesn’t build yet.";
+      // every DISABLED control states why, in the panel, not only in a tooltip:
+      // Arpeggiated/Both are gated on a figure (P1), and Line placement needs a
+      // voicer the pass does not build. Each reason shows only while it applies.
+      const why = [];
+      if (!hasFig) why.push("Arpeggiated and Both need a figure — type one to enable them.");
+      why.push("“Line” placement is greyed because it needs the line voicer the pass doesn’t build yet.");
+      byId("smWhy").textContent = why.join(" ");
     };
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
@@ -256,7 +272,7 @@ export const shapeMotion = {
 
     byId("rootsChk").addEventListener("change", (e) => { cfg.roots = e.target.checked; push(); });
     byId("guideChk").addEventListener("change", (e) => { cfg.guide = e.target.checked; push(); });
-    for (const b of byId("motionSeg").querySelectorAll("button"))
+    for (const b of byId("figAddrSeg").querySelectorAll("button"))
       b.addEventListener("click", () => { cfg.address = b.dataset.mm; push(); });
     for (const b of byId("playbackSeg").querySelectorAll("button"))
       b.addEventListener("click", () => { cfg.playback = b.dataset.pb; push(); });

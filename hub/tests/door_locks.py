@@ -377,14 +377,31 @@ def run_door(pw, door_id):
     if "arpIn" in r["controlsPresent"]:
         # ---- THE FIGURE CHAIN (extensions §1, audit A3/B4). Every stage is a
         # tested engine seam; the gate proves the WIRING end to end in the page.
-        # 1. the segment and field are live (no longer disabled)
-        check(page.eval_on_selector_all("#playbackSeg button[disabled]", "e => e.length") == 0,
-              f"{tag} Playback is still disabled")
-        check(page.eval_on_selector_all("#motionSeg button[disabled]", "e => e.length") == 0,
+        # 1. the figure chain is live (not the old all-disabled placeholder): the
+        #    address toggle, field and picker are enabled, and Block always is.
+        check(page.eval_on_selector_all("#figAddrSeg button[disabled]", "e => e.length") == 0,
               f"{tag} Figure addresses is still disabled")
         check(page.is_enabled("#arpIn") and page.is_enabled("#figSel"), f"{tag} the figure field/picker are disabled")
+        # P1 (cheap): Arpeggiated and Both have nothing to sound without a figure,
+        # so they are DISABLED until one parses and enable the moment it does.
+        # Exercise BOTH states — a disabled control the gate never enables is the
+        # silently-skipping class. Playback stays three real buttons.
+        page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        gated = sorted(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.map(x => x.dataset.pb)"))
+        check(gated == ["arpeggiated", "both"],
+              f"{tag} with no figure, Arpeggiated and Both must be disabled (got {gated})")
+        check(page.eval_on_selector_all("#playbackSeg button[data-pb=block]:disabled", "e => e.length") == 0,
+              f"{tag} Block must stay enabled — it is the only thing that sounds without a figure")
+        check("figure" in page.inner_text("#smWhy").lower(),
+              f"{tag} the panel does not state why Arpeggiated/Both are disabled")
+        page.select_option("#figSel", "1-2-3-4"); page.wait_for_timeout(60)
+        check(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.length") == 0,
+              f"{tag} a valid figure did not enable Arpeggiated and Both (the enable is not live)")
+        page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        check(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.length") == 2,
+              f"{tag} clearing the figure did not re-disable Arpeggiated/Both — the gate is not live")
         # 2. arpErr — figures fail LOUDLY (audit A3): a bad slot, and parens in slot mode
-        page.click("#motionSeg >> text=slots")
+        page.click("#figAddrSeg >> text=slots")
         page.fill("#arpIn", "1-2-9"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
         err = page.inner_text("#arpErr")
         check("9" in err and "slot" in err, f"{tag} a bad slot did not fail loudly: {err!r}")
@@ -397,7 +414,7 @@ def run_door(pw, door_id):
         check(page.inner_text("#arpErr") == "", f"{tag} a good figure left an error standing")
         # 4. TONES: switching address re-lists the picker in tone letters and
         #    the guide-tone preset exists — the pedagogy in one control
-        page.click("#motionSeg >> text=tones"); page.wait_for_timeout(60)
+        page.click("#figAddrSeg >> text=tones"); page.wait_for_timeout(60)
         opts = page.eval_on_selector_all("#figSel option", "e => e.map(x => x.value)")
         check("3-7-3-7" in opts and any(o.startswith("(") for o in opts),
               f"{tag} the tone picker lacks the guide-tone / enclosure presets: {opts}")
@@ -457,7 +474,7 @@ def run_door(pw, door_id):
         page.uncheck("#guideChk")
         # 9. FOLLOW-THE-LINE: in Follow, with a line playing, the window's viewBox
         #    x moves as the sounding note moves (a camera move over the same drawing)
-        page.click("#winSeg >> text=Follow"); page.click("#motionSeg >> text=slots")
+        page.click("#winSeg >> text=Follow"); page.click("#figAddrSeg >> text=slots")
         page.select_option("#figSel", "1-2-3-4"); page.click("#placeSeg >> text=Free"); page.wait_for_timeout(120)
         page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(80)
         vbs = [page.get_attribute("#fretSvg", "viewBox")]
@@ -478,8 +495,12 @@ def run_door(pw, door_id):
         #     parses; the two silent states must each say which one you are in,
         #     and Free must warn that the Box is inert.
         hint = lambda: page.inner_text("#smHint").lower()
-        # (a) Arpeggiated with NO figure — nothing to arpeggiate, falls back to Block
-        page.select_option("#figSel", ""); page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(80)
+        # (a) Arpeggiated SELECTED, then the figure cleared — P1 greys the option
+        #     but the selection stays; the hint says it sounds as Block until a
+        #     figure parses. (Arpeggiated can no longer be CLICKED with no figure,
+        #     so reach the state by selecting it with a figure, then clearing.)
+        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(60)
+        page.select_option("#figSel", ""); page.wait_for_timeout(80)
         check("no figure" in hint() and "block" in hint(),
               f"{tag} Arpeggiated with no figure does not say it sounds as Block: {page.inner_text('#smHint')!r}")
         # (b) a figure typed but Playback = Block — the figure is ignored, silently
@@ -654,7 +675,8 @@ def run_door(pw, door_id):
         page.select_option("#bottomSel", "2")            # start bottom on the 5th
         page.click("#setSeg >> text=B–G–D–A")           # the middle set (index 1), labelled high → low
         page.click("#famSeg >> text=Drop-3")
-        page.wait_for_timeout(150)
+        page.click("#figAddrSeg >> text=tones")          # P3: the address is CONFIG; its value must
+        page.wait_for_timeout(150)                       # round-trip though the control was renamed
         if "winSeg" in r["controlsPresent"]:
             # the zone is CONFIG: set it here, on this fresh page, so it is part
             # of the configuration this entry snapshots and must round-trip
@@ -722,6 +744,11 @@ def run_door(pw, door_id):
               f"{tag} restore did not bring the string set back")
         check(page.eval_on_selector_all("#famSeg button.on", "e => e.map(x => x.textContent)") == ["Drop-3"],
               f"{tag} restore did not bring the voicing family back")
+        # P3 stable-identity: the figure address is persisted by its VALUE ("tones")
+        # under the key `address`, which the motionSeg→figAddrSeg rename did not
+        # touch — so an entry saved before the rename restores the same address.
+        check(page.eval_on_selector_all("#figAddrSeg button.on", "e => e.map(x => x.textContent)") == ["tones"],
+              f"{tag} restore did not bring the figure address back — the rename broke a saved entry")
         check(page.inner_text("#tlBars button >> nth=0") == first_before,
               f"{tag} restore did not rebuild the same pass")
         if "winSeg" in r["controlsPresent"]:
@@ -878,8 +905,14 @@ def run_door(pw, door_id):
         check("Chords take the bar's slots" in allinfo and "at the next bar" in allinfo,
               f"{tag} the Transport prose did not move into a popout verbatim (with the beat-fix clause)")
     if "journalIn" in r["controlsPresent"]:
-        check("nothing leaves this machine" in allinfo,
-              f"{tag} the Notepad handoff prose did not move into a popout")
+        # THE HANDOFF GUARANTEE STAYS ON THE FACE (the P1P3 correction): it is a
+        # privacy assurance, not instructional prose — prominence is part of what
+        # it does, so it is NOT in a popout, and the notepad has no info button.
+        check("nothing leaves this machine" not in allinfo,
+              f"{tag} the Notepad handoff guarantee was hidden in a popout — a promise behind a click is weaker")
+        face = page.query_selector("#handoffNote")
+        check(face is not None and "nothing leaves this machine" in face.inner_text() and face.is_visible(),
+              f"{tag} the handoff guarantee is not visible on the notepad face")
     # OPEN a popout, and prove it dismisses without a modal — Escape and click-out
     ib = page.query_selector(".infoBtn")
     ib.click(); page.wait_for_timeout(60)
