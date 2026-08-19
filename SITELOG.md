@@ -5,6 +5,18 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-18 — Deployed: Tetradetudes is live at atetudes.com/studies/tetradetudes/ (Update Log 260818.24)
+
+- **Daniel pushed `a7a6d2c`** (his call, per the entry below) and the Pages workflow ran green end to
+  end — engine suite, door build gate, browser lock suite, site integrity, deploy.
+- **Live spot-check, per the verification doctrine:** the wrapper answers 200 at the permanent URL and
+  renders its iframe; the served `study.html` is **shasum-identical** to the committed file
+  (`77e0806…`), so the byte-identity chain now runs build → `static/` → live, unbroken. All four
+  sibling studies still answer 200.
+- Worth a line: the workflow run carried a GitHub annotation that **Node.js 20 actions are deprecated
+  on runners** (checkout@v4, setup-python@v5, etc. forced onto Node 24). A warning, not a failure —
+  flagged for a future workflow-maintenance item rather than acted on here.
+
 ## 2026-08-18 — Tetradetudes goes live as door #1 — the first hub-built study on the site (Update Log 260818.24)
 
 - **What shipped.** `static/studies/tetradetudes/study.html` — the Tetradetudes door, built by
