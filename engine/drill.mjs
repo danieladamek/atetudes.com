@@ -52,6 +52,17 @@ export function material({ letters, values, noun, of }) {
   for (const k of keys)
     if (!values.includes(letters[k]))
       throw new Error(`slot "${k}" maps to ${letters[k]}, which is not one of this material's values`);
+  // THE letters/values RELATIONSHIP, asserted (audit §4.2.4). `letters` may be a
+  // SUBSET of `values` — a named vocabulary over a larger legal set, as a
+  // pentatonic box names three of its five degrees and the rest are addressed by
+  // digit; that is intended and stays legal. What is NOT legal is two letters on
+  // the SAME value: `patternText`'s reverse map (value → letter) would silently
+  // keep one and lose the other, a quiet vocabulary ambiguity. Requiring the
+  // letters to address DISTINCT values documents the subset case AND makes "more
+  // letters than values" — reachable only by such a collision — impossible.
+  const mapped = keys.map((k) => letters[k]);
+  if (new Set(mapped).size !== mapped.length)
+    throw new Error("a drill material's slot letters must address distinct values — two letters on one value is an ambiguous vocabulary");
   return { letters, values: [...values], noun, of, keys };
 }
 
@@ -109,6 +120,21 @@ export const SPLITS = {
   7: [[7], [4, 3], [3, 4], [2, 2, 3], [3, 2, 2], [2, 3, 2]],
 };
 
+/* Load-time invariant (audit §4.2.4): every split must DIVIDE ITS METER — sum to
+ * the meter it is filed under. A split that does not is a data typo that would
+ * silently mis-bar the étude (a chord landing off the bar it belongs to), and
+ * `splitFor` only ever INDEXES into this table, so a table proven consistent at
+ * load makes "a split that does not divide the meter" unreachable downstream
+ * rather than something to catch at every use. Asserted here the way
+ * tetrad-sequence.mjs asserts OPEN_MIDI, so a typo is loud at load, not a
+ * drifting playhead. */
+for (const [meter, splits] of Object.entries(SPLITS))
+  for (const split of splits) {
+    const sum = split.reduce((a, b) => a + b, 0);
+    if (sum !== Number(meter))
+      throw new Error(`drill.SPLITS: the split [${split}] filed under meter ${meter} sums to ${sum}, not ${meter} — a split must divide its bar`);
+  }
+
 /** keep the SHAPE of a bar split across a meter change where the same shape
  * exists; otherwise fall back to the whole bar */
 export function splitFor(oldMeter, oldIdx, newMeter) {
@@ -156,5 +182,19 @@ export function orderFor(voicing, pattern, keyOf = (n) => n.string) {
   if (!pattern) return null;
   const by = {};
   for (const n of voicing.notes) by[keyOf(n)] = n;
-  return pattern.map((v) => by[v]);
+  // LOUD AT SOURCE (the isolation.mjs audit lesson, §4.2.4): a pattern slot with
+  // no note in this voicing is a real mismatch — the figure names a slot the
+  // voicing does not hold. The pre-audit code returned it as `undefined`, a
+  // silent hole; a consumer without its own guard (figure.mjs happens to have
+  // one, a second consumer need not) would carry that undefined into
+  // note-events and drop it, the exact "a missing input contributes nothing"
+  // shape isolation.mjs carried twice. Naming it here protects every caller,
+  // present and future — a caller-side guard protects one caller and the rest
+  // inherit the silent version, which is why voiceLeadCost throws at source too.
+  return pattern.map((v) => {
+    const n = by[v];
+    if (n === undefined)
+      throw new Error(`drill.orderFor: pattern slot ${JSON.stringify(v)} names a note this voicing does not hold`);
+    return n;
+  });
 }

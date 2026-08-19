@@ -137,3 +137,42 @@ test("stage 2 drill: a material that lies about itself fails at declaration", ()
   assert.throws(() => material({ letters: {}, values: [1], noun: "x", of: "y" }),
     /at least one slot letter/);
 });
+
+/* ---- the §4.2.4 audit: the silent-failure family isolation.mjs carried twice,
+ * hunted through drill.mjs before the module freezes. Each fix is loud at source
+ * and fires only on the edge case the drift corpora above never reach, so the
+ * shipped study's behaviour is untouched (characterization stays 88/88). ---- */
+
+test("AUDIT: orderFor is loud when a pattern slot is not in the voicing — the isolation analogue", () => {
+  const v = { notes: [{ midi: 60, slot: 0 }, { midi: 64, slot: 1 }] };
+  // a pattern the voicing holds still orders exactly — the reporting path is unchanged
+  assert.deepEqual(orderFor(v, [1, 0], (n) => n.slot).map((n) => n.midi), [64, 60]);
+  // a slot the voicing does NOT hold was a silent `undefined` hole a consumer
+  // without a guard drops into note-events; it must throw at source now
+  assert.throws(() => orderFor(v, [0, 2, 1], (n) => n.slot),
+    /names a note this voicing does not hold/,
+    "a pattern slot absent from the voicing must not become a silent undefined");
+  assert.equal(orderFor(v, null), null, "a null pattern is still a block attack, not an error");
+});
+
+test("AUDIT: a material's slot letters must address DISTINCT values", () => {
+  // the SUBSET case stays legal — a named vocabulary over a larger legal set (the
+  // box is three letters over five degrees), proven by the second-consumer test
+  assert.doesNotThrow(() => material({ letters: { R: 0, T: 2, F: 4 },
+    values: [0, 2, 4, 7, 9], noun: "degree", of: "box" }));
+  // two letters on ONE value is ambiguous — patternText's reverse map would lose
+  // one silently — so it is refused at declaration, loudly
+  assert.throws(() => material({ letters: { L: 2, M: 2, H: 5 }, values: [2, 5],
+    noun: "string", of: "set" }),
+    /distinct values/,
+    "two letters mapping to one value must be refused, not silently collapsed");
+});
+
+test("AUDIT: every bar split divides its meter — the load-time invariant", () => {
+  // the table is frozen, so the guard's real job is a FUTURE typo: it runs at
+  // module load, throwing on import rather than surfacing as a drifting bar.
+  for (const [meter, splits] of Object.entries(SPLITS))
+    for (const split of splits)
+      assert.equal(split.reduce((a, b) => a + b, 0), Number(meter),
+        `split [${split}] filed under meter ${meter} does not sum to it`);
+});
