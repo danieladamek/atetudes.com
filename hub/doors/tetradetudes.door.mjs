@@ -40,11 +40,14 @@ export default {
   present: {
     title: "Tetradetudes",
     /* the version rides the tag, as every sibling's does (Triadetudes v0.8.7,
-     * Metronome v1.4.0). v0.1.0 is a deliberate FIRST release: the family
+     * Metronome v1.4.0). v0.1.0 was the deliberate FIRST release: the family
      * versions conservatively — Triadetudes is more mature and still pre-1.0 —
      * and this door's own roadmap (child 4's narrator and guide-tones) is not
-     * built yet, so 1.0.0 would overclaim. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.0",
+     * built yet, so 1.0.0 would overclaim. v0.1.1 (2026-08-19): metroOwner
+     * carried — the transport owns the clock it starts; Pause stops it; one
+     * count-in bar; chord 1 sounds. Shipped behaviour changed, so the patch
+     * version moved. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.1",
     /* the mixer's chord-bus label. The card defaults to the arity-neutral
      * "Chord"; this door plays four voices and says so. */
     chordLabel: "Tetrads",

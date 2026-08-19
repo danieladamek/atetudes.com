@@ -319,6 +319,68 @@ def run_door(pw, door_id):
                   f"{tag} the strip mini ▶ joined off the downbeat — it must take the same PLAY path as Play")
             page.click("#playBtn"); page.wait_for_timeout(120)   # disarm, leave the clock running
 
+        # ---- metroOwner: THE TRANSPORT DOES NOT OWN THE CLOCK (side-by-side
+        # triage 260819). Three symptoms Daniel found, ONE defect: the play path
+        # was asymmetric — Play announced CLOCK run:true, Pause announced nothing
+        # — so the clock free-ran after Pause, the next Play armed MID-BAR
+        # (partial bar + a full count-in bar = "two measures"), and fromStep
+        # restored a stale position (the first chord never sounded). These three
+        # pins reproduce Daniel's exact sequence, Play → Pause → Play, from a
+        # COLD clock, which no existing test performs. Each was watched to fail
+        # against the pre-fix build (260819).
+        page.click("#playBtn"); page.wait_for_timeout(120)   # disarm the lit transport from above
+        if page.inner_text("#metroBtn") == "Stop":            # a COLD, stopped clock
+            page.click("#metroBtn"); page.wait_for_timeout(120)
+        check(page.inner_text("#metroBtn") == "Start", f"{tag} could not reach a cold clock for the metroOwner pins")
+        page.select_option("#splitSel", "0"); page.check("#countChk"); page.wait_for_timeout(60)
+        rec = """() => {
+          if (window.__mo) document.removeEventListener('atetudes:step', window.__mo);
+          window.__att = []; window.__cin = 0;
+          window.__mo = e => { const x = e.detail; if (!x || x.request !== true) return;
+            if (x.lead !== undefined && x.level !== undefined) window.__att.push(x.index); };
+          document.addEventListener('atetudes:step', window.__mo);
+          if (window.__moc) document.removeEventListener('atetudes:beat', window.__moc);
+          window.__moc = () => { const t = document.getElementById('trLoop');
+            if (t && /count-in/.test(t.textContent)) window.__cin++; };
+          document.addEventListener('atetudes:beat', window.__moc); }"""
+        # PLAY (transport starts the clock it now owns) → let it run past the count-in into the pass
+        page.evaluate(rec)
+        page.click("#playBtn")
+        page.wait_for_function("() => window.__att && window.__att.length >= 1", timeout=15000)
+        # SYMPTOM 1: PAUSE must stop the clock the transport started
+        page.click("#playBtn"); page.wait_for_timeout(200)
+        check(page.inner_text("#playBtn") == "Play", f"{tag} Pause did not disarm the transport")
+        check(page.inner_text("#metroBtn") == "Start",
+              f"{tag} SYMPTOM 1: Pause left the metronome ticking — the transport started the clock and must stop it (metroOwner)")
+        # PLAY AGAIN from that pause — Daniel's sequence. A stopped clock means we
+        # arm cold on a downbeat: ONE count-in bar, and the FIRST chord sounds.
+        page.evaluate(rec)
+        page.click("#playBtn")
+        page.wait_for_function("() => window.__att && window.__att.length >= 1", timeout=15000)
+        cin, first = page.evaluate("() => [window.__cin, window.__att[0]]")
+        meter_now = int(page.input_value("#meterSel2"))
+        # SYMPTOM 2: exactly one bar of count-in (beats with the count-in readout ≤ meter;
+        # two bars would be ~2*meter)
+        check(0 < cin <= meter_now,
+              f"{tag} SYMPTOM 2: Play→Pause→Play counted in {cin} beats, not one bar of {meter_now} — it armed mid-bar on a free-running clock")
+        # SYMPTOM 3: the first attack is chord 1 (step 0), not a stale step from the last run
+        check(first == 0,
+              f"{tag} SYMPTOM 3: Play→Pause→Play attacked step {first}, not step 0 — the first chord never sounds")
+        page.click("#playBtn"); page.wait_for_timeout(150)     # pause; clock stops with it
+        # BOTH DIRECTIONS: a metronome the USER started survives a transport stop,
+        # and the metronome's own Stop stops a running étude (the reference's stopAll)
+        page.click("#metroBtn"); page.wait_for_timeout(120)    # user starts the clock by hand
+        page.click("#playBtn"); page.wait_for_timeout(200)     # Play joins the running grid
+        page.click("#playBtn"); page.wait_for_timeout(200)     # Pause — must NOT stop a hand-started clock
+        check(page.inner_text("#metroBtn") == "Stop",
+              f"{tag} a transport Pause stopped a metronome the USER started — the transport may only stop a clock it owns")
+        page.click("#playBtn"); page.wait_for_timeout(200)     # Play again (joins)
+        page.click("#metroBtn"); page.wait_for_timeout(200)    # metronome Stop stops EVERYTHING
+        check(page.inner_text("#playBtn") == "Play",
+              f"{tag} the metronome's Stop did not stop the running étude — stopAll must cascade")
+        page.uncheck("#countChk"); page.wait_for_timeout(40)
+        page.click("#metroBtn"); page.wait_for_timeout(120)    # clock running again for the blocks below
+
         # leave it LIT into the orphan check: .trLit is a state this door has
         page.click("#playBtn")
         check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,

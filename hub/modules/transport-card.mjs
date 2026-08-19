@@ -105,6 +105,7 @@ export const transportCard = {
     let steps = 8, meter = 4, splitIdx = 0, bpm = 72, running = false;
     let core = createTransportCore({ meter, splitIdx, steps, countIn: false });
     let armed = false, position = 0;
+    let armFrom = null, armAt = 0;   // metroOwner: see setPlaying
     let chordVol = 1, bassVol = 1, mutedStash = 1;
 
     const fillMeters = () => {
@@ -136,17 +137,47 @@ export const transportCard = {
     const mixer = () => announce(d, MIXER, {
       chord: chordVol, bass: bassVol, voice: vsel.value, click: byId("clickChk2").checked });
 
+    /* metroOwner — the reference's rule, carried by name (side-by-side triage
+     * 2026-08-19). Play STARTS the clock as "transport" if it is not already
+     * running; Pause STOPS it only if the transport owns it (a metronome the
+     * user started by hand survives), by naming itself in the stop request —
+     * the clock owner honours or ignores that by ownership. The pre-fix path
+     * was asymmetric (Play announced run:true, Pause announced nothing), so the
+     * clock free-ran after Pause, the next Play armed mid-bar (a partial bar
+     * plus a full count-in bar — "two measures"), and a stale `position` meant
+     * the first chord never sounded. One defect, three symptoms.
+     *
+     * POSITION ON PLAY: the étude restarts from STEP 0 — the reference's own
+     * rule (etudeToggle sets runStep=0 on every start), so Play after Pause
+     * sounds chord 1, not wherever the last run happened to stop. The one case
+     * the item flags: the user stepped with prev/next WHILE STOPPED to rehearse
+     * from a chosen chord. That is a deliberate act, so it is honoured — a
+     * manual step while disarmed sets the arm point; Play from a plain Pause
+     * (no step in between) goes back to chord 1. `armFrom` records it. */
     const setPlaying = (want) => {
       byId("playBtn").textContent = want ? "Pause" : "Play";
       byId("playBtn").classList.toggle("trLit", want);
       if (want) {
-        announce(d, CLOCK, { run: true });
+        const from = armFrom === null ? 0 : armFrom;
         core.setCountIn(byId("countChk").checked);
-        core.start(0, { fromStep: position });
-        armed = "pending";
+        core.start(0, { fromStep: from });
+        // ARM BEFORE STARTING THE CLOCK. The metronome's start pumps its first
+        // BEAT synchronously, inside this announce — so if `armed` is still
+        // false at that moment the downbeat (index 0, beat 0) is skipped and the
+        // arm lands on beat 1, mid-bar: a 3-beat wait to the next bar line PLUS
+        // the full count-in bar, seven beats of count-in for a one-bar request —
+        // Daniel's "two measures", and it happened on a COLD first Play too. The
+        // pre-fix order (announce first, arm after) hid that under the pause
+        // asymmetry; once the clock stopped correctly it stood on its own.
+        armed = "pending"; armAt = from;
+        announce(d, CLOCK, { run: true, owner: "transport" });
         // sound on, arm audio through the same message the mixer uses
         announce(d, MIXER, { on: true });
-      } else { armed = false; core.stop(); }
+      } else {
+        armed = false; core.stop(); armFrom = null;
+        // stop the clock ONLY IF the transport started it — the owner decides
+        announce(d, CLOCK, { run: false, owner: "transport" });
+      }
       showLoop();
     };
 
@@ -207,14 +238,19 @@ export const transportCard = {
     listen(d, STEP_CHANGED, (m) => {
       if (!m || m.request === true) return;
       if (typeof m.total === "number" && m.total !== steps) { steps = m.total; core.setSteps(steps); }
-      if (typeof m.index === "number") position = m.index;
+      if (typeof m.index === "number") {
+        position = m.index;
+        // a step taken WHILE STOPPED is the user choosing where to rehearse from —
+        // Play honours it (see setPlaying); a step during play is just the walk
+        if (!armed) armFrom = m.index;
+      }
     });
 
     listen(d, BEAT, (ev) => {
       if (!ev || typeof ev.index !== "number") return;
       // JOIN AT THE NEXT BAR: hand start() the beat's place in its bar (ev.beat)
       // so it can find the next bar line rather than joining on this arming beat
-      if (armed === "pending") { core.start(ev.index, { fromStep: position, beatInBar: ev.beat }); armed = true; }
+      if (armed === "pending") { core.start(ev.index, { fromStep: armAt, beatInBar: ev.beat }); armed = true; }
       if (!armed) return;
       const w = core.beat(ev);
       if (w.countingIn) { byId("trLoop").textContent = "count-in " + w.beatsLeft; return; }

@@ -151,19 +151,32 @@ export const metronomeCard = {
      * Anything else that shows tempo, meter or a run state renders from
      * CLOCK_STATE, so two views of one clock cannot drift apart — and a door
      * that prunes this card simply has no grid, which is smaller, not broken. */
+    /* metroOwner — the reference's rule (triadetudes study.html:5209-5230),
+     * carried into the hub BY NAME after the side-by-side triage of 2026-08-19.
+     * WHO started the clock: "transport" (the étude's Play) or "metro" (this
+     * card's own Start), null when stopped. The rule it encodes:
+     *   - the transport stops the clock ONLY IF the transport started it — a
+     *     metronome the user started by hand survives a transport Pause;
+     *   - this card's own Stop stops EVERYTHING (the reference's stopAll): the
+     *     transport disarms on the CLOCK_STATE it hears back.
+     * Ownership is STATE, so it rides CLOCK_STATE (replayed to late subscribers
+     * like the rest) rather than an ad-hoc stop bolted onto the pause path. */
+    let owner = null;
     const publish = () => announce(d, CLOCK_STATE,
-      { running: core.running, bpm: core.bpm, meter: core.meter });
+      { running: core.running, bpm: core.bpm, meter: core.meter, owner });
 
-    const setRunning = (want) => {
+    const setRunning = (want, who) => {
       if (want === core.running) return;
       if (!want) {
         core.stop();
         if (raf) { d.defaultView.cancelAnimationFrame(raf); raf = null; }
         byId("metroBtn").textContent = "Start";
         light(-1);
+        owner = null;
       } else {
         core.start(now());
         byId("metroBtn").textContent = "Stop";
+        owner = who || "metro";
         pump();
       }
       publish();
@@ -182,7 +195,13 @@ export const metronomeCard = {
         byId("meterSel").value = String(m.meter);
         if (!core.running) lamps();
       }
-      if (typeof m.run === "boolean") setRunning(m.run);
+      if (typeof m.run === "boolean") {
+        // a stop that NAMES an owner is honoured only if that owner started the
+        // clock — the transport may not stop a metronome the user started by
+        // hand. An unnamed stop, or a start, is applied as asked.
+        if (m.run === false && m.owner && owner !== m.owner) return;
+        setRunning(m.run, m.owner);
+      }
       else publish();
     });
 

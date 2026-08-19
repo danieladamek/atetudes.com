@@ -5,6 +5,25 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-19 — Tetradetudes v0.1.1: the transport owns the clock it starts (Update Log 260819.1)
+
+- **What changed, and why it is a version bump.** Shipped behaviour changed: Pause now stops a
+  metronome the transport started; Play after Pause gives ONE count-in bar and sounds chord 1; a
+  metronome the user started by hand survives a transport Pause; the metronome's own Stop stops a
+  running étude. Three symptoms Daniel found in the side-by-side recording, one defect (the play path
+  was asymmetric — Play started the clock, Pause never stopped it) plus one ordering defect it had
+  hidden (the arm landed one beat late). Fixed in the hub's transport and metronome cards by carrying
+  the reference's `metroOwner` rule by name — **v0.1.1**.
+- **`static/studies/tetradetudes/study.html` rebuilt and republished byte-identical** from the build
+  (shasum `0466ed8…`). **No engine module changed** — the eight anti-drift pins pass unchanged
+  against the new file, so the §4.2.4 carrier state is exactly as it was: eighteen modules
+  byte-pinned, none moved.
+- **Verified:** published file from `file://`, network aborted — zero console errors, zero network
+  attempts; the other four studies byte-identical and still loading; full suite green (engine
+  457/457, pins 8/8, characterization 88/88, door_locks 6767/0 with three new pins that were
+  watched to fail first, bite 7/7); screenshots at 1280 and 390 inspected.
+- **Committed, NOT pushed** — the deploy is Daniel's.
+
 ## 2026-08-18 — Deployed: Tetradetudes is live at atetudes.com/studies/tetradetudes/ (Update Log 260818.24)
 
 - **Daniel pushed `a7a6d2c`** (his call, per the entry below) and the Pages workflow ran green end to

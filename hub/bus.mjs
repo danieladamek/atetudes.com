@@ -32,12 +32,25 @@ export const STEP_CHANGED = "atetudes:step";
 /** A REQUEST to whoever owns the beat grid: run/stop it, or change its tempo
  * or meter. A request, not a command — the owner applies it and answers with
  * CLOCK_STATE, so nobody reaches into anybody's clock (§4.2.3) and a door with
- * no clock simply has nothing listening. */
+ * no clock simply has nothing listening.
+ *
+ * `{ run: true, owner }` names WHO is starting the clock — "transport" (the
+ * étude's Play) or "metro" (the metronome's own Start). `{ run: false, owner }`
+ * asks to stop it ONLY IF that owner started it: the reference's `metroOwner`
+ * rule (triadetudes study.html:5209-5230), carried into the hub by name. The
+ * transport stops the clock it started; a metronome the user started by hand
+ * survives a transport Pause; and the metronome's own Stop (no owner named)
+ * stops everything, as the reference's `stopAll` does. Without this the play
+ * path was asymmetric — Play started the clock, Pause never stopped it — and
+ * three symptoms followed from that one defect (side-by-side triage 260819). */
 export const CLOCK = "atetudes:clock";
 
-/** the grid owner's answer: what the clock IS now. Every card that shows tempo,
- * meter or a run state renders from this rather than from its own copy, so two
- * views of one clock cannot drift apart. */
+/** the grid owner's answer: what the clock IS now — `{ running, bpm, meter,
+ * owner }`. `owner` is the metroOwner ("transport" | "metro" | null): ownership
+ * is STATE, so it rides the state-shaped message and is replayed to a late
+ * subscriber like the rest. Every card that shows tempo, meter or a run state
+ * renders from this rather than from its own copy, so two views of one clock
+ * cannot drift apart. */
 export const CLOCK_STATE = "atetudes:clock-state";
 
 /** A REQUEST to the transport (the pass-walker): arm or disarm the étude walk —
