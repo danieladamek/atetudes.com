@@ -35,7 +35,7 @@ import {
 import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { parseFigure, figureEvents } from "../../engine/figure.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, listen } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, listen } from "../bus.mjs";
 
 export const audioCard = {
   id: "audio-card",
@@ -210,7 +210,22 @@ export const audioCard = {
       // the transport's request carries the beats this chord holds — the figure
       // divides THAT span, so a 2+2 split and a 4 split sound different
       if (m.request === true && typeof m.beats === "number") durBeats = m.beats;
-      if (m.request !== true && typeof m.index === "number") soundStep(m.index);
+      // plain echoes sound (a clicked chord strums, a key change plays the new
+      // chord 1) — EXCEPT attack-borne ones: that sound already travelled on
+      // ATTACK, and sounding its echo too would double every walked chord
+      if (m.request !== true && typeof m.index === "number" && m.attack !== true) soundStep(m.index);
+    });
+    /* THE WALK'S SOUND, direct from the transport (260819.2). Not the render
+     * echo: the step owner rightly swallows a request for the step we are
+     * already on (a cold Play attacking step 0, a length-1 pass wrapping), and
+     * the first chord of the etude was silent because the sound depended on
+     * that echo. An attack is "sound step N now", true even when N is where we
+     * already are — and with this path a door that prunes the stage still
+     * sounds. */
+    listen(d, ATTACK, (m) => {
+      if (!m || typeof m.index !== "number") return;
+      if (typeof m.beats === "number") durBeats = m.beats;
+      soundStep(m.index);
     });
     listen(d, BEAT, (m) => { if (clickOn) soundClick(m); });
     /* the mixer's controls live in the Transport card; this only listens */

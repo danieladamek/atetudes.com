@@ -24,7 +24,7 @@ import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
 import { parseFigure, figureEvents, toneIndexOf } from "../../engine/figure.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, listen, announce } from "../bus.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
@@ -101,6 +101,7 @@ export const fretboardStage = {
     /* PRIVATE state. Nothing else reads it; the step is announced, not shared. */
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
     let pass = null, dots = [], step = 0, ctxLayer = null, zoneLayer = null, pulseLayer = null;
+    let echoAttack = false;   // the next show()'s echo is attack-borne — see the announce
     let bpm = 72, durBeats = 2;            // the clock's, heard on the bus — for the pulse and Follow-the-line
     let pulseTimers = [];
     /* the WINDOW MODE is display state — the stage's own, not config */
@@ -309,7 +310,15 @@ export const fretboardStage = {
         `<b>${cur.symbol}</b> <span class="rosub">${cur.roman} · ${fam} · ${invName} · ` +
         `${step + 1} of ${n} · ${cfg.key} ${({ major: "major", harm: "harmonic minor", mel: "melodic minor" })[cfg.scale]}</span>`;
 
-      announce(d, STEP_CHANGED, { index: step, total: n, symbol: cur.symbol });
+      /* the echo: the canonical position fact every board follows. When the
+       * show was attack-borne the echo says so, and the audio card skips it —
+       * the sound already travelled on ATTACK, and an echo that also sounded
+       * would double every walked chord. The guard above stays: a request for
+       * the step we are on is still not a render. */
+      announce(d, STEP_CHANGED, echoAttack
+        ? { index: step, total: n, symbol: cur.symbol, attack: true }
+        : { index: step, total: n, symbol: cur.symbol });
+      echoAttack = false;
       pulse(cur);
     };
 
@@ -367,7 +376,15 @@ export const fretboardStage = {
     listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
     listen(d, STEP_CHANGED, (m) => {
       if (m && m.request === true && typeof m.beats === "number") durBeats = m.beats;
-      if (m && m.request === true && pass && m.index !== step) show(m.index, false);
+      if (m && m.request === true && pass && m.index !== step) { echoAttack = m.attack === true; show(m.index, false); }
+    });
+    /* the sounding-note rings rode the same echo the sound did, so a swallowed
+     * 0 -> 0 attack also lost its pulse. When an attack lands on the step we
+     * already show, pulse it here; when it moves us, show() pulses as always
+     * (the request arrives right after this event, so exactly one fires). */
+    listen(d, ATTACK, (m) => {
+      if (m && pass && typeof m.index === "number" && ((m.index % pass.steps.length) + pass.steps.length) % pass.steps.length === step)
+        pulse(pass.steps[step]);
     });
 
     build();

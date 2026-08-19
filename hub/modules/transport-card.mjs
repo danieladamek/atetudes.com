@@ -23,7 +23,7 @@
  */
 import { createTransportCore, patternOf, SPLITS } from "../../engine/transport.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
-import { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, listen, announce } from "../bus.mjs";
+import { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } from "../bus.mjs";
 
 const METERS = Object.keys(SPLITS).map(Number).sort((a, b) => a - b);
 
@@ -256,8 +256,14 @@ export const transportCard = {
       if (w.countingIn) { byId("trLoop").textContent = "count-in " + w.beatsLeft; return; }
       if (!w.attack) return;
       showLoop();
-      announce(d, STEP_CHANGED, { index: w.step, request: true, lead: ev.lead, level: w.level, meter, splitIdx,
-        beats: patternOf(meter, splitIdx)[w.step % patternOf(meter, splitIdx).length] });
+      const beats = patternOf(meter, splitIdx)[w.step % patternOf(meter, splitIdx).length];
+      // THE SOUND travels on its own event (ATTACK, straight to the audio card);
+      // the POSITION travels on the request, which the step owner may rightly
+      // swallow when nothing moved (0 -> 0 on a cold Play, a length-1 pass on a
+      // loop wrap). `attack: true` on the request lets the owner's echo say it
+      // was attack-borne, so audio does not sound that echo a second time.
+      announce(d, ATTACK, { index: w.step, lead: ev.lead, level: w.level, beats });
+      announce(d, STEP_CHANGED, { index: w.step, request: true, attack: true, lead: ev.lead, level: w.level, meter, splitIdx, beats });
     });
 
     mixer();

@@ -68,6 +68,19 @@ export const PLAY = "atetudes:play";
  * Transport card (the reference's form); whoever realises audio listens. */
 export const MIXER = "atetudes:mixer";
 
+/** THE TRANSPORT'S ATTACK: sound step `index` NOW — `{ index, lead, level,
+ * beats }`. Event-shaped and NOT replayed, like BEAT: "make a sound" is an
+ * instant, not a state a late listener should replay. This is deliberately NOT
+ * the STEP_CHANGED request: a request means "please go to step N" and its owner
+ * rightly skips it when the position is already N — but an attack means "sound
+ * step N now", which is true even when N is where we already are. The first
+ * chord of a cold Play was silent for exactly this confusion (260819.2): the
+ * attack rode the request, the step owner swallowed 0→0 as a non-change, and
+ * the echo that triggers audio never fired. Sound now travels transport → audio
+ * directly, so a door that prunes the fretboard stage still SOUNDS — the render
+ * echo is for boards, not for the speaker. */
+export const ATTACK = "atetudes:attack";
+
 /** a metronome beat is DUE. `lead` is seconds from now until it sounds, so a
  * listener schedules against its OWN clock and never needs the sender's time
  * base — which is what lets the clock stay pure and the audio stay accurate.

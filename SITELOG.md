@@ -5,6 +5,25 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-19 — Tetradetudes v0.1.2: the first chord sounds — an attack is not a position request (Update Log 260819.2)
+
+- **What changed:** on a cold Play (and Pause → Play) the FIRST chord now sounds. The transport's
+  attack rode the position request, the step owner rightly swallowed "go to step 0" when already at
+  step 0, and the audio card — which sounds on the owner's echo — was never reached. Sound now travels
+  on its own event-shaped `ATTACK` message, transport → audio directly; position still flows on the
+  request and the render guard is untouched. A silent extra: the sounding-note pulse fires for that
+  first chord too. **v0.1.2.**
+- **`static/studies/tetradetudes/study.html` rebuilt and republished byte-identical** (shasum
+  `be3c81b…`). No engine module changed — the eight anti-drift pins pass unchanged.
+- **The gate grew artifact-level ears:** a new block counts REAL audio sources at the first attack of
+  a cold Play (≥4 sounded, ≤9 so the echo did not double it), demonstrated failing against v0.1.1 —
+  where the step-0 attack was announced and 0 sources started. The prior pins had asserted the
+  message and passed over the silence.
+- **Verified:** published file from `file://`, network aborted — zero console errors; other four
+  studies untouched; full suite green (engine 457/457, pins 8/8, door_locks 6796/0, bite 7/7);
+  screenshots at 1280 and 390 inspected (tag reads v0.1.2).
+- **Committed, NOT pushed** — the deploy is Daniel's.
+
 ## 2026-08-19 — Tetradetudes v0.1.1: the transport owns the clock it starts (Update Log 260819.1)
 
 - **What changed, and why it is a version bump.** Shipped behaviour changed: Pause now stops a

@@ -3191,6 +3191,19 @@ const PLAY = "atetudes:play";
  * Transport card (the reference's form); whoever realises audio listens. */
 const MIXER = "atetudes:mixer";
 
+/** THE TRANSPORT'S ATTACK: sound step `index` NOW — `{ index, lead, level,
+ * beats }`. Event-shaped and NOT replayed, like BEAT: "make a sound" is an
+ * instant, not a state a late listener should replay. This is deliberately NOT
+ * the STEP_CHANGED request: a request means "please go to step N" and its owner
+ * rightly skips it when the position is already N — but an attack means "sound
+ * step N now", which is true even when N is where we already are. The first
+ * chord of a cold Play was silent for exactly this confusion (260819.2): the
+ * attack rode the request, the step owner swallowed 0→0 as a non-change, and
+ * the echo that triggers audio never fired. Sound now travels transport → audio
+ * directly, so a door that prunes the fretboard stage still SOUNDS — the render
+ * echo is for boards, not for the speaker. */
+const ATTACK = "atetudes:attack";
+
 /** a metronome beat is DUE. `lead` is seconds from now until it sounds, so a
  * listener schedules against its OWN clock and never needs the sender's time
  * base — which is what lets the clock stay pure and the audio stay accurate.
@@ -3243,7 +3256,7 @@ function listen(doc, name, fn) {
     fn(JSON.parse(JSON.stringify(lastOf(doc).get(name))));
   return () => doc.removeEventListener(name, h);
 }
-return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, BEAT, announce, listen };
+return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, BEAT, announce, listen };
 })();
 
 /* ===== hub/modules/audio-card.mjs ===== */
@@ -3252,7 +3265,7 @@ const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, p
 const { tetradPass, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { parseFigure, figureEvents } = __m_engine_figure_mjs;
-const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, listen } = __m_hub_bus_mjs;
+const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, listen } = __m_hub_bus_mjs;
 /* audio-card.mjs — the hub's ears: an AudioContext, a mixer, and nothing else.
  *
  * `engine/voices.mjs` describes the voices as data; this realises them as
@@ -3461,7 +3474,22 @@ const audioCard = {
       // the transport's request carries the beats this chord holds — the figure
       // divides THAT span, so a 2+2 split and a 4 split sound different
       if (m.request === true && typeof m.beats === "number") durBeats = m.beats;
-      if (m.request !== true && typeof m.index === "number") soundStep(m.index);
+      // plain echoes sound (a clicked chord strums, a key change plays the new
+      // chord 1) — EXCEPT attack-borne ones: that sound already travelled on
+      // ATTACK, and sounding its echo too would double every walked chord
+      if (m.request !== true && typeof m.index === "number" && m.attack !== true) soundStep(m.index);
+    });
+    /* THE WALK'S SOUND, direct from the transport (260819.2). Not the render
+     * echo: the step owner rightly swallows a request for the step we are
+     * already on (a cold Play attacking step 0, a length-1 pass wrapping), and
+     * the first chord of the etude was silent because the sound depended on
+     * that echo. An attack is "sound step N now", true even when N is where we
+     * already are — and with this path a door that prunes the stage still
+     * sounds. */
+    listen(d, ATTACK, (m) => {
+      if (!m || typeof m.index !== "number") return;
+      if (typeof m.beats === "number") durBeats = m.beats;
+      soundStep(m.index);
     });
     listen(d, BEAT, (m) => { if (clickOn) soundClick(m); });
     /* the mixer's controls live in the Transport card; this only listens */
@@ -3886,7 +3914,7 @@ const { tetradPass, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { keysOf } = __m_engine_voice_identity_mjs;
 const { parseFigure, figureEvents, toneIndexOf } = __m_engine_figure_mjs;
-const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
+const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, listen, announce } = __m_hub_bus_mjs;
 /* fretboard-stage.mjs — the neck, the dots, the armed rings, the transitions.
  *
  * The stage the frozen study calls its crown jewel, rebuilt as a door
@@ -3989,6 +4017,7 @@ const fretboardStage = {
     /* PRIVATE state. Nothing else reads it; the step is announced, not shared. */
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
     let pass = null, dots = [], step = 0, ctxLayer = null, zoneLayer = null, pulseLayer = null;
+    let echoAttack = false;   // the next show()'s echo is attack-borne — see the announce
     let bpm = 72, durBeats = 2;            // the clock's, heard on the bus — for the pulse and Follow-the-line
     let pulseTimers = [];
     /* the WINDOW MODE is display state — the stage's own, not config */
@@ -4197,7 +4226,15 @@ const fretboardStage = {
         `<b>${cur.symbol}</b> <span class="rosub">${cur.roman} · ${fam} · ${invName} · ` +
         `${step + 1} of ${n} · ${cfg.key} ${({ major: "major", harm: "harmonic minor", mel: "melodic minor" })[cfg.scale]}</span>`;
 
-      announce(d, STEP_CHANGED, { index: step, total: n, symbol: cur.symbol });
+      /* the echo: the canonical position fact every board follows. When the
+       * show was attack-borne the echo says so, and the audio card skips it —
+       * the sound already travelled on ATTACK, and an echo that also sounded
+       * would double every walked chord. The guard above stays: a request for
+       * the step we are on is still not a render. */
+      announce(d, STEP_CHANGED, echoAttack
+        ? { index: step, total: n, symbol: cur.symbol, attack: true }
+        : { index: step, total: n, symbol: cur.symbol });
+      echoAttack = false;
       pulse(cur);
     };
 
@@ -4255,7 +4292,15 @@ const fretboardStage = {
     listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
     listen(d, STEP_CHANGED, (m) => {
       if (m && m.request === true && typeof m.beats === "number") durBeats = m.beats;
-      if (m && m.request === true && pass && m.index !== step) show(m.index, false);
+      if (m && m.request === true && pass && m.index !== step) { echoAttack = m.attack === true; show(m.index, false); }
+    });
+    /* the sounding-note rings rode the same echo the sound did, so a swallowed
+     * 0 -> 0 attack also lost its pulse. When an attack lands on the step we
+     * already show, pulse it here; when it moves us, show() pulses as always
+     * (the request arrives right after this event, so exactly one fires). */
+    listen(d, ATTACK, (m) => {
+      if (m && pass && typeof m.index === "number" && ((m.index % pass.steps.length) + pass.steps.length) % pass.steps.length === step)
+        pulse(pass.steps[step]);
     });
 
     build();
@@ -7656,7 +7701,7 @@ return { shapeMotion };
 const __m_hub_modules_transport_card_mjs = (() => {
 const { createTransportCore, patternOf, SPLITS } = __m_engine_transport_mjs;
 const { NOTE_VOICE_NAMES } = __m_engine_voices_mjs;
-const { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, listen, announce } = __m_hub_bus_mjs;
+const { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } = __m_hub_bus_mjs;
 /* transport-card.mjs — the reference page's Transport card, ported.
  *
  * `static/studies/triadetudes/study.html` is the layout specification, and this
@@ -7914,8 +7959,14 @@ const transportCard = {
       if (w.countingIn) { byId("trLoop").textContent = "count-in " + w.beatsLeft; return; }
       if (!w.attack) return;
       showLoop();
-      announce(d, STEP_CHANGED, { index: w.step, request: true, lead: ev.lead, level: w.level, meter, splitIdx,
-        beats: patternOf(meter, splitIdx)[w.step % patternOf(meter, splitIdx).length] });
+      const beats = patternOf(meter, splitIdx)[w.step % patternOf(meter, splitIdx).length];
+      // THE SOUND travels on its own event (ATTACK, straight to the audio card);
+      // the POSITION travels on the request, which the step owner may rightly
+      // swallow when nothing moved (0 -> 0 on a cold Play, a length-1 pass on a
+      // loop wrap). `attack: true` on the request lets the owner's echo say it
+      // was attack-borne, so audio does not sound that echo a second time.
+      announce(d, ATTACK, { index: w.step, lead: ev.lead, level: w.level, beats });
+      announce(d, STEP_CHANGED, { index: w.step, request: true, attack: true, lead: ev.lead, level: w.level, meter, splitIdx, beats });
     });
 
     mixer();
@@ -8200,7 +8251,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.1","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.2","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

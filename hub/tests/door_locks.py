@@ -698,6 +698,55 @@ def run_door(pw, door_id):
         check(page.input_value("#chordVolR") != "0", f"{tag} unticking 'mute chords' did not restore the level")
         page.fill("#bassVolR", "50")
         page.dispatch_event("#bassVolR", "input")
+
+        # ---- THE FIRST CHORD SOUNDS (260819.2) — asserted on the ARTIFACT, not
+        # the message. The metroOwner pins asserted the transport ANNOUNCED an
+        # attack at step 0, and it did — while the user heard silence, because
+        # the step owner swallowed the 0→0 request and the sound rode its echo.
+        # This block counts REAL audio sources at the first attack of a COLD
+        # Play: the thing that makes noise, reached. Demonstrated failing
+        # against v0.1.1 (0 sources at an announced step-0 attack).
+        page.goto(html_path.as_uri())
+        page.wait_for_timeout(300)
+        page.evaluate("""() => { window.__starts = 0; window.__att = [];
+          for (const P of [window.OscillatorNode, window.AudioBufferSourceNode]) {
+            const s = P.prototype.start;
+            P.prototype.start = function (...a) { window.__starts++; return s.apply(this, a); }; }
+          document.addEventListener('atetudes:step', e => { const x = e.detail;
+            if (x && x.request === true && x.lead !== undefined) window.__att.push(x.index); }); }""")
+        page.uncheck("#clickChk2"); page.wait_for_timeout(60)   # click silent: every source below is a CHORD
+        base = page.evaluate("() => window.__starts")
+        page.click("#playBtn")                                   # Play IS the first sounding gesture
+        page.wait_for_function("() => window.__att.length >= 1", timeout=15000)
+        page.wait_for_timeout(350)
+        first, n1 = page.evaluate("() => [window.__att[0], window.__starts]"), None
+        first, srcs = first[0], first[1]
+        check(first == 0, f"{tag} the cold Play's first attack was step {first}, not 0")
+        check(srcs - base >= 4,
+              f"{tag} THE FIRST CHORD IS SILENT: step-0 attack announced but only {srcs - base} audio "
+              f"sources started — the sound depended on a render echo the step owner rightly swallowed")
+        check(srcs - base <= 9,
+              f"{tag} the first chord DOUBLED ({srcs - base} sources) — the attack sounded on both the "
+              f"direct path and its echo")
+        # Pause → Play: chord 1 sounds AGAIN (Daniel's sequence, artifact-level)
+        page.click("#playBtn"); page.wait_for_timeout(200)
+        page.evaluate("() => { window.__att.length = 0 }")
+        b2 = page.evaluate("() => window.__starts")
+        page.click("#playBtn")
+        page.wait_for_function("() => window.__att.length >= 1", timeout=15000)
+        page.wait_for_timeout(350)
+        s2 = page.evaluate("() => window.__starts")
+        check(page.evaluate("() => window.__att[0]") == 0 and s2 - b2 >= 4,
+              f"{tag} Pause -> Play did not SOUND chord 1 ({s2 - b2} sources)")
+        page.click("#playBtn"); page.wait_for_timeout(200)       # pause; clock stops (owned)
+        # the case that accidentally worked must keep working: a timeline click
+        # strums (the echo path, not attack-borne), exactly as before
+        b3 = page.evaluate("() => window.__starts")
+        page.click("#tlBars >> button >> nth=2"); page.wait_for_timeout(350)
+        check(page.evaluate("() => window.__starts") - b3 >= 4,
+              f"{tag} a timeline click no longer strums — the echo path broke")
+        page.check("#clickChk2")
+
         # the reload above emptied the states earlier blocks had entered; re-enter
         # them so the orphan check below judges the door with everything lit,
         # exactly as it did before this block existed
