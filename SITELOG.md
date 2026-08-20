@@ -1,3 +1,13 @@
+## 2026-08-20 — DEPLOYED: the card grammar + the info button back-ports live
+
+- Daniel authorized the push; `1a7d763` + `a6b873a` deployed as one Pages run (green,
+  head `a6b873a`). Three studies changed live in one deploy — Tetradetudes **v0.1.8**,
+  Triadetudes **v0.8.12**, Metronome **v1.4.3** — every URL unchanged.
+- Doctrine spot-check: ALL FIVE study raw files answer 200 and are **shasum-identical** to the
+  committed files (the two untouched studies included); wrappers and landing 200. Rendered check
+  on the three changed pages live: version in the tag, the info popouts open and Escape-dismiss,
+  every Metronome card renders exactly 4 row groups, zero console errors.
+
 ## 2026-08-20 — The info button back-ports — two studies changed
 
 - `static/studies/triadetudes/study.html` → **v0.8.12** (3 info buttons: Metronome, Transport,
