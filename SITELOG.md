@@ -5,6 +5,16 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-19 — Deployed: the four-commit day is live — Tetradetudes v0.1.3, Triadetudes v0.8.8
+
+- **Daniel pushed `ca64c5c`** (four commits: metroOwner v0.1.1 · the ATTACK message v0.1.2 · the
+  artifact-level gate conversions · shell parity v0.1.3 + v0.8.8). The Pages workflow ran green end
+  to end.
+- **Live spot-check:** both changed apps answer 200 and are **shasum-identical** to the committed
+  files — the tags read v0.1.3 and v0.8.8 live; the three untouched studies still answer 200.
+- The Node.js-20 runner deprecation annotation appeared again — still a warning, still filed for a
+  future workflow-maintenance item.
+
 ## 2026-08-19 — Shell parity: Tetradetudes v0.1.3 and Triadetudes v0.8.8, one commit, both directions (Update Log 260819.4)
 
 - **Tetradetudes v0.1.3** (rebuilt from the hub, republished byte-identical, shasum `a836a92…`):
