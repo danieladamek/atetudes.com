@@ -1,3 +1,13 @@
+## 2026-08-20 — DEPLOYED: the family standard's machinery — no study changed
+
+- Daniel authorized the push; `37e09f5` + `d13c11c` deployed in one Pages run (green, head
+  `d13c11c`). Governance-only: the family register + its CI gate, the floor suite, the corrected
+  carrier procedure, the ratified kinds, spec §4.5–§4.6, and CLAUDE.md v2.1 (verification
+  doctrine). **No user-visible change; no version bumps.**
+- CI now runs the register gate (480 engine tests) — it passed in the deploy run.
+- Doctrine spot-check live: **all five study raw files shasum-identical** to the committed files;
+  landing 200. Nothing on the site moved, which is exactly what this deploy claims.
+
 ## 2026-08-20 — DEPLOYED: the card grammar + the info button back-ports live
 
 - Daniel authorized the push; `1a7d763` + `a6b873a` deployed as one Pages run (green,
