@@ -9,15 +9,13 @@ layout: hextra-home
 
 <div class="hx:mb-6">
 {{< hextra/hero-subtitle >}}
-  Interactive jazz études — see it, flip it, hear it.
+  Interactive études 
 {{< /hextra/hero-subtitle >}}
 </div>
 
 <div class="hx:mb-8" style="max-width: 46rem;">
 
-<p style="margin:0 0 1rem;">Learn the shapes that make jazz work — modes on the guitar
-neck, chords moving through a scale on neck and keyboard. Each study is a living chart:
-pick any key, flip between hearings, step through the motion, and tap any note to hear
+<p style="margin:0 0 1rem;">Learn the shapes that make melody and harmony in music work — modes on the guitar neck, chords moving through a scale on neck and keyboard. Each study is a living chart: pick any key, flip between hearings, step through the motion, and tap any note to hear
 it.</p>
 
 <p style="margin:0;">One convention ties it all together: <strong>color shows what a note
@@ -41,15 +39,11 @@ other.</p>
 <h2 id="studies" class="hx:text-2xl hx:font-semibold hx:mt-8 hx:mb-4">Studies</h2>
 
 {{< cards >}}
+
   {{< card
-    link="/studies/modes-from-pentatonic-boxes/"
-    title="Modes from Pentatonic Boxes"
-    subtitle="Every mode is a guitar pentatonic box you already know, plus two notes. An interactive fretboard map in every key — see it, flip it, hear it."
-  >}}
-  {{< card
-    link="/studies/tetrad-voice-leading/"
-    title="Tetrad Voice Leading — Cycling Through a Scale"
-    subtitle="Four-note chords walk through a scale one smooth voice-leading move at a time — on a guitar neck and a keyboard. Any key, five cycles, sound included."
+    link="/studies/metronome/"
+    title="Metronome"
+    subtitle="The At-Etudes metronome, standing alone — three click voices, tap tempo, accents, subdivisions — with a notepad that saves every idea alongside the tempo it arrived at."
   >}}
   {{< card
     link="/studies/triadetudes/"
@@ -57,9 +51,14 @@ other.</p>
     subtitle="Design your own isolation étude: three pivot notes anchor triads cycling with minimal voice movement — fretboard, notation, playable keyboard, metronome, and a practice log."
   >}}
   {{< card
-    link="/studies/metronome/"
-    title="Metronome"
-    subtitle="The At-Etudes metronome, standing alone — three click voices, tap tempo, accents, subdivisions — with a notepad that saves every idea alongside the tempo it arrived at."
+    link="/studies/tetradetudes/"
+    title="Tetradetudes — the Tetrad Étude Designer"
+    subtitle="Design a four-voice tetrad étude: pick a key, a cycle, a string set and a voicing family — close, drop-2 and drop-3 chords walk through progressions with minimal voice movement, on the neck, the staff and the keyboard."
+  >}}
+  {{< card
+    link="/studies/modes-from-pentatonic-boxes/"
+    title="Modes from Pentatonic Boxes"
+    subtitle="Every mode is a guitar pentatonic box you already know, plus two notes. An interactive fretboard map in every key"
   >}}
 {{< /cards >}}
 
@@ -70,10 +69,5 @@ other.</p>
     link="/blog/"
     title="Notes on the system"
     subtitle="How the studies are built, what changed, and what's next."
-  >}}
-  {{< card
-    link="/studies/metronome/"
-    title="Metronome"
-    subtitle="The At-Etudes metronome, standing alone — three click voices, tap tempo, accents, subdivisions — with a notepad that saves every idea alongside the tempo it arrived at."
   >}}
 {{< /cards >}}
