@@ -87,6 +87,22 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:34px}
   .clpsd .clpsSum{display:block}
   .clpsd>*:not(h2):not(.clpsBtn):not(.clpsSum){display:none!important}
+  /* THE INFO BUTTON + POPOUT (back-ported from the tetrad app, v0.8.12): static
+     instructional prose marked .info moves off the card face into a popout
+     behind a neutral circle-i, immediately left of the collapse chevron. Live
+     readouts (hints written at runtime) are never .info and stay on the face;
+     guarantees stay on the face whatever their length. Never a dialog element
+     — the file:// gate forbids a modal. */
+  .infoBtn{position:absolute;top:8px;right:38px;font:inherit;font-size:11px;
+    padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
+    cursor:pointer;color:var(--gray);z-index:7}
+  .infoBtn:hover{border-color:var(--ink);color:var(--ink)}
+  .card.metro .infoBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
+  .infoPop{position:absolute;top:32px;left:10px;right:10px;z-index:20;
+    background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.14);max-height:60vh;overflow:auto}
+  .infoPop[hidden]{display:none}
+  .infoPop .info{font-size:12px;color:var(--ink);line-height:1.55;margin:0}
   .clpsd h2{margin-bottom:2px}
   .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
@@ -222,7 +238,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.11</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.12</div>
 </header>
 
 <div class="cards">
@@ -256,7 +272,7 @@
       <input type="range" id="clickVolR" min="0" max="100" value="80">
       <span id="clickVolVal" style="font-size:13px;width:30px;text-align:right">80</span>
     </div>
-    <div class="hint">A full metronome on its own clock — use it with or without the étude.
+    <div class="hint info">A full metronome on its own clock — use it with or without the étude.
     The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
     metronome, first block, this look.)</div>
   </div>
@@ -302,7 +318,7 @@
       <input type="range" id="bassVolR" min="0" max="100" value="100">
       <span id="bassVolVal" style="font-size:13px;width:30px;text-align:right">100</span>
     </div>
-    <div class="hint">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord
+    <div class="hint info">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord
     2 beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next
     bar</b> — the click you already hear is your count-in. If it isn't, Play starts it
     (count-in adds one clicked bar first). Stopping the étude leaves a self-started metronome
@@ -365,7 +381,7 @@
         </div>
         <span id="customWrap" style="display:none"><label>Custom (romans or chords: <i>ii V i</i> · <i>Dm G7 C</i>)</label>
           <input type="text" id="customIn" size="24" value="ii V I vi"></span>
-        <div class="hint">Triads first, meaning added underneath: with a bass, every dot is
+        <div class="hint info">Triads first, meaning added underneath: with a bass, every dot is
         relabeled relative to the new root — the same shape changes meaning.</div>
       </div>
       <div id="breakBlock" style="display:none">
@@ -374,7 +390,7 @@
         <!-- the EDITOR chips dock here in break-down, beside the field that writes
              the same data. The position row above the neck is the timeline. -->
         <div id="chipsDock"><div class="chips" id="bdChips"></div></div>
-        <div class="hint">Type the progression you actually face, or grow it chip by chip
+        <div class="hint info">Type the progression you actually face, or grow it chip by chip
         with +. The app derives the upper-structure triad on your string set and grounds
         it on the chord's root in the bass. Tap a chip to edit it — where a chord holds
         more than one honest triad the chip grows a ▾. Romans resolve in the selected
@@ -520,7 +536,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.11 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.12 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -5296,6 +5312,45 @@ function collapseSummaries(){
     const f=CLPS_SUMS[e2.dataset.panel]; if(f)e2.textContent=f();
   });
 }
+/* The info button + popout — back-ported verbatim from the tetrad app's shell
+ * (hub/shell.mjs initInfo), applied after the page renders so it wraps whatever
+ * is there. A card that carries .info prose grows a neutral ⓘ just left of the
+ * collapse chevron; the prose is MOVED verbatim into a popout the button
+ * toggles. Dismissed by click-outside and by Escape — never a browser modal.
+ * Keyboard-reachable (a real button) and labelled, since the popout is now the
+ * only route to that text. A card with no static prose gets no button. */
+function initInfo(){
+  const doc=document;
+  let openBtn=null,openPop=null;
+  const close=()=>{
+    if(openPop){openPop.hidden=true;openBtn.setAttribute("aria-expanded","false");}
+    openBtn=openPop=null;
+  };
+  let n=0;
+  for(const p of doc.querySelectorAll(".card, .board")){
+    const prose=[...p.querySelectorAll(".info")];
+    if(!prose.length)continue;
+    const pop=doc.createElement("div");
+    pop.className="infoPop"; pop.hidden=true; pop.id="infoPop-"+(++n);
+    for(const el of prose)pop.appendChild(el);   // MOVE the prose in, verbatim
+    p.appendChild(pop);
+    const btn=doc.createElement("button");
+    btn.className="infoBtn"; btn.textContent="\u24D8";   // ⓘ
+    btn.setAttribute("aria-label","About this panel");
+    btn.setAttribute("aria-controls",pop.id);
+    btn.setAttribute("aria-expanded","false");
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();          // this click must not reach the outside-close
+      const willOpen=pop.hidden;
+      close();
+      if(willOpen){pop.hidden=false;btn.setAttribute("aria-expanded","true");openBtn=btn;openPop=pop;}
+    });
+    p.appendChild(btn);
+  }
+  doc.addEventListener("click",e=>{if(openPop&&!openPop.contains(e.target))close();});
+  doc.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
+}
+
 function initCollapse(){
   const panels=[
     ["metro",document.querySelector(".card.metro")],
@@ -6729,7 +6784,7 @@ function initControls(){
     document.getElementById("clickVolVal").textContent=e.target.value;
     syncClickUI();});
   document.getElementById("clickVolR").addEventListener("change",()=>renderCfg());
-  buildMinis(); initCollapse();
+  buildMinis(); initInfo(); initCollapse();
   syncClickUI(); renderLamp(); syncPlayUI();
   document.getElementById("figSel").addEventListener("change",e=>{
     // choosing a preset WRITES ITS GRAMMAR STRING into the visible field —
@@ -6872,6 +6927,43 @@ renderHist();
   const c2=JSON.parse(before); c2.placement="box"; applyRaw(c2);
   if(st.placement!=="grip")console.error("TEST: stored box must resolve to grip, got",st.placement);
   applyRaw(JSON.parse(before));
+})();
+
+/* popout self-tests (console.error only on failure) — the trap this week is
+ * asserting a control EXISTS instead of that it WORKS: open each popout and
+ * see the prose, dismiss it and see it gone, and see the faces carry no
+ * .info prose of their own any more. */
+(function popoutTests(){
+  const err=m=>console.error("TEST:",m);
+  const pops=[...document.querySelectorAll(".infoPop")];
+  if(pops.length!==3)err("three popouts expected (Metronome, Transport, Harmony), got "+pops.length);
+  for(const pop of pops){
+    const card=pop.closest(".card");
+    const btn=card.querySelector(".infoBtn");
+    if(!btn){err("a popout without its button");continue;}
+    if(!pop.hidden)err("a popout open at load");
+    if(btn.getAttribute("aria-controls")!==pop.id)err("aria-controls does not name the popout");
+    if([...card.querySelectorAll(".info")].some(e=>!e.closest(".infoPop")))
+      err("a card face still carries .info prose — the move left it in both places");
+    btn.click();
+    if(pop.hidden||!pop.offsetParent)err("the button did not OPEN the popout (hidden or display:none)");
+    if(btn.getAttribute("aria-expanded")!=="true")err("open popout but aria-expanded is not true");
+    document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape"}));
+    if(!pop.hidden)err("Escape did not dismiss the popout");
+    if(btn.getAttribute("aria-expanded")!=="false")err("dismissed popout but aria-expanded is not false");
+  }
+  // the moved prose is IN the popouts — each panel's text reachable, verbatim
+  const texts=pops.map(p2=>p2.textContent);
+  for(const frag of ["A full metronome on its own clock",
+                     "Chords take the bar's slots in order",
+                     "Triads first, meaning added underneath",
+                     "Type the progression you actually face"])
+    if(!texts.some(t=>t.includes(frag)))err("moved prose missing from every popout: "+frag);
+  // the guarantees stayed on their faces (P1P3's ruling, not re-litigated):
+  // the notepad's filing/handoff block, ending in the privacy guarantee
+  const note=document.getElementById("noteCol")||document.body;
+  if(!note.textContent.includes("Save entry files the note"))
+    err("the notepad's filing prose left the face — it is the P1P3 guarantee block");
 })();
 </script>
 </body>

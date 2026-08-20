@@ -40,6 +40,23 @@
     border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
   .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
+  .card{position:relative}
+  /* THE INFO BUTTON + POPOUT (back-ported from the tetrad app, v1.4.3): static
+     instructional prose marked .info moves off the card face into a popout
+     behind a neutral circle-i. This appliance has no collapse chevron, so the
+     button stands alone in the corner where one would sit — collapse is NOT
+     invented for it. Guarantees stay on the face whatever their length. Never
+     a dialog element — the file:// gate forbids a modal. */
+  .infoBtn{position:absolute;top:8px;right:10px;font:inherit;font-size:11px;
+    padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
+    cursor:pointer;color:var(--gray);z-index:7}
+  .infoBtn:hover{border-color:var(--ink);color:var(--ink)}
+  .card.metro .infoBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
+  .infoPop{position:absolute;top:32px;left:10px;right:10px;z-index:20;
+    background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.14);max-height:60vh;overflow:auto}
+  .infoPop[hidden]{display:none}
+  .infoPop .info{font-size:12px;color:var(--ink);line-height:1.55;margin:0}
   /* one mute icon per slider (family rule, v0.8.10/v0.1.7): a VIEW of the level —
      level 0 renders muted however it got there */
   .muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
@@ -95,7 +112,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.2</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.3</div>
 </header>
 
 <div class="cards">
@@ -129,8 +146,9 @@
       <input type="range" id="clickVolR" min="0" max="100" value="80">
       <span id="clickVolVal" style="font-size:13px;width:30px;text-align:right">80</span>
     </div>
-    <div class="hint">A full metronome on its own clock, standing alone. (Shared component:
-    every At-Etudes app carries this metronome, first block, this look.) Settings persist
+    <div class="hint info">A full metronome on its own clock, standing alone. (Shared component:
+    every At-Etudes app carries this metronome, first block, this look.)</div>
+    <div class="hint">Settings persist
     in this browser; the page works offline from a double-click.</div>
   </div>
 
@@ -169,7 +187,7 @@
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.4.2 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.4.3 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
@@ -3306,11 +3324,81 @@ loadCfg();
   eq(typeof ATCHART.parseAtchart(src).meta.title,"string","the format engine reads our file");
 })();
 
+/* The info button + popout — back-ported verbatim from the tetrad app's shell
+ * (hub/shell.mjs initInfo). A card that carries .info prose grows a neutral ⓘ
+ * standing alone where a collapse chevron would sit (this appliance has none);
+ * the prose is MOVED verbatim into a popout the button toggles. Dismissed by
+ * click-outside and by Escape — never a browser modal. Keyboard-reachable (a
+ * real button) and labelled, since the popout is now the only route to that
+ * text. A card with no static prose gets no button. */
+function initInfo(){
+  const doc=document;
+  let openBtn=null,openPop=null;
+  const close=()=>{
+    if(openPop){openPop.hidden=true;openBtn.setAttribute("aria-expanded","false");}
+    openBtn=openPop=null;
+  };
+  let n=0;
+  for(const p of doc.querySelectorAll(".card, .board")){
+    const prose=[...p.querySelectorAll(".info")];
+    if(!prose.length)continue;
+    const pop=doc.createElement("div");
+    pop.className="infoPop"; pop.hidden=true; pop.id="infoPop-"+(++n);
+    for(const el of prose)pop.appendChild(el);   // MOVE the prose in, verbatim
+    p.appendChild(pop);
+    const btn=doc.createElement("button");
+    btn.className="infoBtn"; btn.textContent="\u24D8";   // ⓘ
+    btn.setAttribute("aria-label","About this panel");
+    btn.setAttribute("aria-controls",pop.id);
+    btn.setAttribute("aria-expanded","false");
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();          // this click must not reach the outside-close
+      const willOpen=pop.hidden;
+      close();
+      if(willOpen){pop.hidden=false;btn.setAttribute("aria-expanded","true");openBtn=btn;openPop=pop;}
+    });
+    p.appendChild(btn);
+  }
+  doc.addEventListener("click",e=>{if(openPop&&!openPop.contains(e.target))close();});
+  doc.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
+}
+
 initControls();
 initNotepad();
+initInfo();
 
 METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
 syncUI(); renderLamp();
+
+/* popout self-tests (console.error only on failure) — the trap this week is
+ * asserting a control EXISTS instead of that it WORKS: open each popout and
+ * see the prose, dismiss it and see it gone, and see the face carries no
+ * .info prose of its own any more. */
+(function popoutTests(){
+  const err=m=>console.error("TEST:",m);
+  const pops=[...document.querySelectorAll(".infoPop")];
+  if(pops.length!==1)err("exactly one popout expected (the metronome card), got "+pops.length);
+  for(const pop of pops){
+    const card=pop.closest(".card");
+    const btn=card.querySelector(".infoBtn");
+    if(!btn){err("a popout without its button");continue;}
+    if(!pop.hidden)err("a popout open at load");
+    if(btn.getAttribute("aria-controls")!==pop.id)err("aria-controls does not name the popout");
+    if([...card.querySelectorAll(".info")].some(e=>!e.closest(".infoPop")))
+      err("the card face still carries .info prose — the move left it in both places");
+    btn.click();
+    if(pop.hidden||!pop.offsetParent)err("the button did not OPEN the popout (hidden or display:none)");
+    if(!pop.textContent.includes("A full metronome on its own clock"))
+      err("the popout does not hold the moved prose");
+    if(btn.getAttribute("aria-expanded")!=="true")err("open popout but aria-expanded is not true");
+    document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape"}));
+    if(!pop.hidden)err("Escape did not dismiss the popout");
+    if(btn.getAttribute("aria-expanded")!=="false")err("dismissed popout but aria-expanded is not false");
+  }
+  const face=document.querySelector(".card.metro");
+  if(!/Settings persist\s+in this browser/.test(face.textContent.replace(/\n/g," ")))
+    err("the persistence/offline assurance left the face — guarantees stay, whatever their length");
+})();
 </script>
 </body>
 </html>

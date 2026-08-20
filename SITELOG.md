@@ -1,3 +1,17 @@
+## 2026-08-20 — The info button back-ports — two studies changed
+
+- `static/studies/triadetudes/study.html` → **v0.8.12** (3 info buttons: Metronome, Transport,
+  Harmony), `static/studies/metronome/study.html` → **v1.4.3** (1: the metronome card, standing
+  alone — the appliance has no chevrons and none were invented). Update Log **260820.5**.
+- The tetrad app's idiom, ported verbatim from `hub/shell.mjs` `initInfo` — same placement, popout,
+  dismissal (click-outside + Escape), aria and keyboard behaviour. Static instructional prose moved
+  into the popouts; live readouts and the P1P3 guarantee blocks stay on the faces. Tetradetudes
+  unchanged.
+- In-page self-tests now assert the popouts WORK and the faces are clean (shown red first against
+  three sabotaged builds); both pages verified `file://` network-off, zero console errors;
+  screenshots at 1280/390 with popouts open, inspected; `hugo` + `tools/check_site.py` green.
+  URLs unchanged. Committed, not pushed.
+
 ## 2026-08-20 — The card grammar: four rows, no row wasted on a checkbox — three studies changed
 
 - `static/studies/tetradetudes/study.html` → **v0.1.8** (door rebuilt from
