@@ -97,6 +97,35 @@ def markers(rel_path, retained):
     return sorted(names) + sorted(lines)
 
 
+# ---- artifact-level audio analysis (260819.3) ----------------------------
+# The instrument records a TIMESTAMP per audio-source start. A CHORD is a BURST
+# (>= 4 starts within 250 ms — four voices and the bass land in one tick); a
+# CLICK is a singleton. This is the shape the 260819.2 block proved: count what
+# the consumer actually did, not what somebody announced. Clustering lives here
+# because two blocks use it (the metroOwner pins and the beat-2 join).
+AUDIO_TAP = """() => {
+  if (!window.__srcTapped) {
+    window.__srcTapped = true;
+    window.__src = [];
+    for (const P of [window.OscillatorNode, window.AudioBufferSourceNode]) {
+      const s0 = P.prototype.start;
+      P.prototype.start = function (...a) { window.__src.push(performance.now()); return s0.apply(this, a); };
+    }
+  }
+  window.__src.length = 0;
+}"""
+
+def bursts_and_clicks(times, window_ms=250, burst_min=4):
+    """cluster start-times: (bursts=[{t0, n}], clicks=[t]) in time order"""
+    groups = []
+    for t in sorted(times):
+        if groups and t - groups[-1][-1] <= window_ms: groups[-1].append(t)
+        else: groups.append([t])
+    bursts = [{"t0": g[0], "n": len(g)} for g in groups if len(g) >= burst_min]
+    clicks = [g[0] for g in groups if len(g) < burst_min]
+    return bursts, clicks
+
+
 # in-page: every selector, media blocks included, with pseudo-states stripped
 SELECTOR_JS = """() => {
   const out = [];
@@ -296,14 +325,37 @@ def run_door(pw, door_id):
           if (e.detail.beat === 0) { document.removeEventListener('atetudes:beat', h); res(); } };
           document.addEventListener('atetudes:beat', h); })"""
         page.evaluate(arm_recorder)
+        # THE ARTIFACT HALF (converted 260819.3): the announced level is the
+        # contract, but a silent join at the right level would still pass it —
+        # so record when the grid's own downbeats are DISPATCHED and when audio
+        # sources actually START, and assert the chord BURSTS land on beat-0
+        # times. What the levels cause is a chord sounding on the click you
+        # count; that is what is asserted. Shown RED against a build with the
+        # beat-2 bug put back (beatInBar forced to 0 in the transport card):
+        # bursts landed on the arming beat, ~2 beats off the bar line.
+        page.evaluate(AUDIO_TAP)
+        page.evaluate("""() => { window.__bar0 = [];
+          if (window.__b0h) document.removeEventListener('atetudes:beat', window.__b0h);
+          window.__b0h = e => { if (e.detail && e.detail.beat === 0) window.__bar0.push(performance.now()); };
+          document.addEventListener('atetudes:beat', window.__b0h); }""")
         page.evaluate(wait_downbeat)                          # a downbeat just passed → next beat is mid-bar
         page.click("#playBtn")
         page.wait_for_function("() => window.__lv && window.__lv.length >= 2", timeout=12000)
+        page.wait_for_timeout(300)
         levels = page.evaluate("() => window.__lv")
         check(levels[0] == BAR,
               f"{tag} Play joined OFF the downbeat — first chord attack level {levels[0]}, not BAR — the beat-2 defect")
         check(all(l == BAR for l in levels),
               f"{tag} a chord attacked off the bar line after joining (every chord repeats the offset): {levels}")
+        bursts, _clicks = bursts_and_clicks(page.evaluate("() => window.__src"))
+        bar0 = page.evaluate("() => window.__bar0")
+        check(len(bursts) >= 2, f"{tag} joining the running grid produced {len(bursts)} chord bursts — the join was silent")
+        beat_ms = 60000 / 120 if page.input_value("#bpmRange2") == "120" else 60000 / int(page.input_value("#bpmRange2"))
+        for bu in bursts[:2]:
+            off = min((abs(bu["t0"] - t) for t in bar0), default=1e9)
+            check(off <= beat_ms * 0.4,
+                  f"{tag} a chord SOUNDED {off:.0f} ms from the nearest bar line (a beat is {beat_ms:.0f} ms) — "
+                  f"aligned to the wrong click, the failure the announced level cannot see")
         page.click("#playBtn"); page.wait_for_timeout(120)   # pause
 
         # THE STRIP MINI ▶ TAKES THE SAME PATH (Shell 4 announces PLAY). Re-arm
@@ -320,64 +372,97 @@ def run_door(pw, door_id):
             page.click("#playBtn"); page.wait_for_timeout(120)   # disarm, leave the clock running
 
         # ---- metroOwner: THE TRANSPORT DOES NOT OWN THE CLOCK (side-by-side
-        # triage 260819). Three symptoms Daniel found, ONE defect: the play path
-        # was asymmetric — Play announced CLOCK run:true, Pause announced nothing
-        # — so the clock free-ran after Pause, the next Play armed MID-BAR
-        # (partial bar + a full count-in bar = "two measures"), and fromStep
-        # restored a stale position (the first chord never sounded). These three
-        # pins reproduce Daniel's exact sequence, Play → Pause → Play, from a
-        # COLD clock, which no existing test performs. Each was watched to fail
-        # against the pre-fix build (260819).
-        page.click("#playBtn"); page.wait_for_timeout(120)   # disarm the lit transport from above
+        # triage 260819) — CONVERTED to artifact-level by 260819.3. The original
+        # pins asserted ANNOUNCED attacks and a trLoop/beat count-in proxy, and
+        # symptom 3's pin passed cleanly over a silent first chord one commit
+        # before Daniel found it by ear. Now every symptom is asserted on what
+        # the user gets: real audio-source starts (a chord is a BURST, a click a
+        # singleton) and the timeline's rendered position — announced messages
+        # remain only as diagnostics. Each assertion was re-demonstrated RED:
+        # symptoms 1-3 against the pre-metroOwner build (eecea4b), the chord-1
+        # sound against v0.1.1 (40d4e00), then green here.
+        if page.inner_text("#playBtn") == "Pause":
+            page.click("#playBtn"); page.wait_for_timeout(120)
         if page.inner_text("#metroBtn") == "Stop":            # a COLD, stopped clock
             page.click("#metroBtn"); page.wait_for_timeout(120)
         check(page.inner_text("#metroBtn") == "Start", f"{tag} could not reach a cold clock for the metroOwner pins")
         page.select_option("#splitSel", "0"); page.check("#countChk"); page.wait_for_timeout(60)
-        rec = """() => {
+        page.evaluate(AUDIO_TAP)
+        page.evaluate("""() => {
           if (window.__mo) document.removeEventListener('atetudes:step', window.__mo);
-          window.__att = []; window.__cin = 0;
+          window.__att = [];
           window.__mo = e => { const x = e.detail; if (!x || x.request !== true) return;
             if (x.lead !== undefined && x.level !== undefined) window.__att.push(x.index); };
-          document.addEventListener('atetudes:step', window.__mo);
-          if (window.__moc) document.removeEventListener('atetudes:beat', window.__moc);
-          window.__moc = () => { const t = document.getElementById('trLoop');
-            if (t && /count-in/.test(t.textContent)) window.__cin++; };
-          document.addEventListener('atetudes:beat', window.__moc); }"""
-        # PLAY (transport starts the clock it now owns) → let it run past the count-in into the pass
-        page.evaluate(rec)
-        page.click("#playBtn")
-        page.wait_for_function("() => window.__att && window.__att.length >= 1", timeout=15000)
-        # SYMPTOM 1: PAUSE must stop the clock the transport started
-        page.click("#playBtn"); page.wait_for_timeout(200)
-        check(page.inner_text("#playBtn") == "Play", f"{tag} Pause did not disarm the transport")
-        check(page.inner_text("#metroBtn") == "Start",
-              f"{tag} SYMPTOM 1: Pause left the metronome ticking — the transport started the clock and must stop it (metroOwner)")
-        # PLAY AGAIN from that pause — Daniel's sequence. A stopped clock means we
-        # arm cold on a downbeat: ONE count-in bar, and the FIRST chord sounds.
-        page.evaluate(rec)
-        page.click("#playBtn")
-        page.wait_for_function("() => window.__att && window.__att.length >= 1", timeout=15000)
-        cin, first = page.evaluate("() => [window.__cin, window.__att[0]]")
+          document.addEventListener('atetudes:step', window.__mo); }""")
+        tl_cur = lambda: page.evaluate("""() => {
+          const bs = [...document.querySelectorAll('#tlBars button')];
+          return bs.findIndex(b => b.classList.contains('cur')); }""")
+
+        def play_and_first_burst(label):
+            """Play from a cold clock; return (bursts, clicks) once chord 1 has had time to sound."""
+            page.evaluate("() => { window.__src.length = 0; window.__att.length = 0 }")
+            page.click("#playBtn")
+            # the DISPLAY check (not a length proxy): the user is shown a count-in
+            page.wait_for_function("() => /count-in/.test(document.getElementById('trLoop').textContent)", timeout=8000)
+            # wait for an audible chord: a burst, not an announcement
+            page.wait_for_function(
+                """() => { const t = window.__src; let run = 1;
+                     for (let i = 1; i < t.length; i++) { run = t[i] - t[i-1] <= 250 ? run + 1 : 1;
+                       if (run >= 4) return true; } return false; }""", timeout=20000)
+            page.wait_for_timeout(300)
+            b, c = bursts_and_clicks(page.evaluate("() => window.__src"))
+            check(len(b) >= 1, f"{tag} {label}: no chord burst ever sounded")
+            return b, c
+
+        # PLAY from cold — the étude the user hears: ~one bar of clicks, then CHORD 1.
         meter_now = int(page.input_value("#meterSel2"))
-        # SYMPTOM 2: exactly one bar of count-in (beats with the count-in readout ≤ meter;
-        # two bars would be ~2*meter)
-        check(0 < cin <= meter_now,
-              f"{tag} SYMPTOM 2: Play→Pause→Play counted in {cin} beats, not one bar of {meter_now} — it armed mid-bar on a free-running clock")
-        # SYMPTOM 3: the first attack is chord 1 (step 0), not a stale step from the last run
-        check(first == 0,
-              f"{tag} SYMPTOM 3: Play→Pause→Play attacked step {first}, not step 0 — the first chord never sounds")
-        page.click("#playBtn"); page.wait_for_timeout(150)     # pause; clock stops with it
-        # BOTH DIRECTIONS: a metronome the USER started survives a transport stop,
-        # and the metronome's own Stop stops a running étude (the reference's stopAll)
+        b, c = play_and_first_burst("cold Play")
+        clicks_before = len([t for t in c if t < b[0]["t0"]])
+        check(clicks_before <= meter_now + 1,
+              f"{tag} SYMPTOM 2 (artifact): {clicks_before} clicks sounded before the first chord — "
+              f"a one-bar count-in is at most {meter_now + 1} (arm beat included); two bars means it armed mid-bar")
+        check(tl_cur() == 0,
+              f"{tag} SYMPTOM 3 (artifact): the first SOUNDED chord left the timeline on chord {tl_cur() + 1}, not chord 1")
+        check(page.evaluate("() => window.__att[0]") == 0,
+              f"{tag} (diagnostic) the first announced attack was not step 0")
+
+        # SYMPTOM 1: Pause must SILENCE the clock the transport started — Daniel's
+        # symptom was hearing it tick, so the assertion is that nothing else sounds.
+        page.click("#playBtn"); page.wait_for_timeout(400)     # pause + let scheduled stragglers land
+        frozen = page.evaluate("() => window.__src.length")
+        page.wait_for_timeout(900)
+        after = page.evaluate("() => window.__src.length")
+        check(after == frozen,
+              f"{tag} SYMPTOM 1 (artifact): {after - frozen} audio sources started AFTER Pause — "
+              f"the metronome kept ticking; the transport must stop the clock it started")
+        check(page.inner_text("#playBtn") == "Play", f"{tag} Pause did not disarm the transport")
+
+        # PLAY AGAIN — Daniel's exact sequence, same artifact assertions.
+        b, c = play_and_first_burst("Play after Pause")
+        clicks_before = len([t for t in c if t < b[0]["t0"]])
+        check(clicks_before <= meter_now + 1,
+              f"{tag} SYMPTOM 2 (artifact): Play->Pause->Play heard {clicks_before} clicks before chord 1 — not one bar")
+        check(tl_cur() == 0,
+              f"{tag} SYMPTOM 3 (artifact): Play->Pause->Play sounded chord {tl_cur() + 1} first, not chord 1")
+        page.click("#playBtn"); page.wait_for_timeout(400)     # pause; clock stops with it
+
+        # BOTH DIRECTIONS, as sound. A metronome the USER started keeps ticking
+        # through a transport Pause; the metronome's own Stop silences everything.
         page.click("#metroBtn"); page.wait_for_timeout(120)    # user starts the clock by hand
         page.click("#playBtn"); page.wait_for_timeout(200)     # Play joins the running grid
-        page.click("#playBtn"); page.wait_for_timeout(200)     # Pause — must NOT stop a hand-started clock
-        check(page.inner_text("#metroBtn") == "Stop",
-              f"{tag} a transport Pause stopped a metronome the USER started — the transport may only stop a clock it owns")
+        page.click("#playBtn"); page.wait_for_timeout(400)     # Pause — the hand-started clock survives
+        t0 = page.evaluate("() => window.__src.length")
+        page.wait_for_timeout(1200)
+        check(page.evaluate("() => window.__src.length") > t0,
+              f"{tag} a transport Pause SILENCED a metronome the USER started — it may only stop a clock it owns")
         page.click("#playBtn"); page.wait_for_timeout(200)     # Play again (joins)
-        page.click("#metroBtn"); page.wait_for_timeout(200)    # metronome Stop stops EVERYTHING
+        page.click("#metroBtn"); page.wait_for_timeout(400)    # metronome Stop stops EVERYTHING
         check(page.inner_text("#playBtn") == "Play",
               f"{tag} the metronome's Stop did not stop the running étude — stopAll must cascade")
+        t1 = page.evaluate("() => window.__src.length")
+        page.wait_for_timeout(900)
+        check(page.evaluate("() => window.__src.length") == t1,
+              f"{tag} sound continued after the metronome's own Stop — stopAll must silence everything")
         page.uncheck("#countChk"); page.wait_for_timeout(40)
         page.click("#metroBtn"); page.wait_for_timeout(120)    # clock running again for the blocks below
 
