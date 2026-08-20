@@ -1,3 +1,20 @@
+## 2026-08-20 — Tetradetudes v0.1.5: the high E is uppercase (Update Log 260820.1)
+
+- **What changed:** the string-set labels read **E–B–G–D · B–G–D–A · G–D–A–E** — uppercase
+  everywhere, as the triad app already is (Daniel: *"no likelihood a user who understands standard
+  tuning mistakes which E that is"*). One character in `engine/tetrad-sequence.mjs`, plus the
+  notepad summary's label list, carried through the carrier re-inline procedure's first run by a
+  non-author. `carriersOf("tetrad-sequence")` = tetradetudes alone; door rebuilt and republished
+  byte-identical (shasum `654bc3e…`); **the other four studies byte-identical**; URL unchanged.
+- **Verified:** census pin red for exactly the one carrier, then green; engine 474/474; door_locks
+  6817/0 (the saved-étude restore round-trip confirms setIndex identity unmoved); file://
+  network-off zero console errors; screenshots at 1280/390 inspected.
+- **The procedure's first customer filed three findings** (no app-side-consumer step — it ran green
+  while the artifact still shipped the old label in the notepad's summary list; a redundant double
+  door-rebuild; under-specified pinned-test handling) — recorded in Update Log 260820.1 for the
+  family-standard item.
+- **Committed, NOT pushed** — the deploy is Daniel's.
+
 # SITELOG — atetudes.com
 
 Newest first. Every change to the site is recorded here: date, what changed, why, and for

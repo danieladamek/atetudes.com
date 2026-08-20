@@ -9,7 +9,7 @@
  *
  *   String set        reference: E-B-G, B-G-D, G-D-A (three strings), listed
  *                     high → low. Here: the four-string groups in the SAME
- *                     dialect — e–B–G–D, B–G–D–A, G–D–A–E, highest set first
+ *                     dialect — E–B–G–D, B–G–D–A, G–D–A–E, highest set first
  *                     (Shell 4 settled the family on high → low). Same segment;
  *                     the label is derived, the stored setIndex is the fact.
  *   Voicing family    NEW group in the shape column: close / drop-2 / drop-3.

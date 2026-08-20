@@ -2048,7 +2048,7 @@ const OPEN_MIDI = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };
  * window of four down the six strings rather than listed */
 const STRING_SETS = [0, 1, 2].map((offset) => {
   const strings = [6, 5, 4, 3].map((s) => s - offset);
-  const letter = (s) => ["", "e", "B", "G", "D", "A", "E"][s];
+  const letter = (s) => ["", "E", "B", "G", "D", "A", "E"][s];   // uppercase high E (N4, 260820.1)
   return {
     offset, strings,
     opens: strings.map((s) => OPEN_MIDI[s]),
@@ -7097,7 +7097,7 @@ const notepadCard = {
      * and importing the tetrad engine would drag its whole tree into a door that
      * has no string sets. A bounded, knowing duplication of THREE presentation
      * strings — not the musical fact, which stays the setIndex. */
-    const SETS = ["G–D–A–E", "B–G–D–A", "e–B–G–D"];
+    const SETS = ["G–D–A–E", "B–G–D–A", "E–B–G–D"];
     const summarize = (c) => {
       if (!c || typeof c !== "object") return "no configuration attached";
       const parts = [];
@@ -7452,7 +7452,7 @@ const { CONFIG_CHANGED, announce, listen } = __m_hub_bus_mjs;
  *
  *   String set        reference: E-B-G, B-G-D, G-D-A (three strings), listed
  *                     high → low. Here: the four-string groups in the SAME
- *                     dialect — e–B–G–D, B–G–D–A, G–D–A–E, highest set first
+ *                     dialect — E–B–G–D, B–G–D–A, G–D–A–E, highest set first
  *                     (Shell 4 settled the family on high → low). Same segment;
  *                     the label is derived, the stored setIndex is the fact.
  *   Voicing family    NEW group in the shape column: close / drop-2 / drop-3.
@@ -8287,7 +8287,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.4","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.5","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

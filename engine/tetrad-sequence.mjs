@@ -39,7 +39,7 @@ export const OPEN_MIDI = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };
  * window of four down the six strings rather than listed */
 export const STRING_SETS = [0, 1, 2].map((offset) => {
   const strings = [6, 5, 4, 3].map((s) => s - offset);
-  const letter = (s) => ["", "e", "B", "G", "D", "A", "E"][s];
+  const letter = (s) => ["", "E", "B", "G", "D", "A", "E"][s];   // uppercase high E (N4, 260820.1)
   return {
     offset, strings,
     opens: strings.map((s) => OPEN_MIDI[s]),

@@ -58,10 +58,12 @@ test("setIndex is the STORED IDENTITY: array order and opens are the fact, label
   }
   // the label now reads highest pitch first (the reference's dialect), derived
   // from the strings, not hand-listed
-  assert.deepEqual(STRING_SETS.map((s) => s.label), ["G–D–A–E", "B–G–D–A", "e–B–G–D"]);
+  assert.deepEqual(STRING_SETS.map((s) => s.label), ["G–D–A–E", "B–G–D–A", "E–B–G–D"]);
   for (const s of STRING_SETS) {
-    const pitchOf = { e: 64, B: 59, G: 55, D: 50, A: 45, E: 40 };
-    const seq = s.label.split("–").map((l) => pitchOf[l]);
+    // both Es are spelled "E" now (N4: uppercase everywhere, Daniel 2026-08-19);
+    // position disambiguates — high -> low, so a leading E is the high one
+    const pitchOf = { B: 59, G: 55, D: 50, A: 45, E: 40 };
+    const seq = s.label.split("–").map((l, i) => (l === "E" && i === 0 && s.offset === 2) ? 64 : pitchOf[l]);
     for (let j = 1; j < seq.length; j++)
       assert.ok(seq[j] < seq[j - 1], `label ${s.label} is not high→low at ${j}`);
   }

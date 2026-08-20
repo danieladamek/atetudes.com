@@ -49,8 +49,9 @@ export default {
      * sound no longer rides the step owner's render echo. v0.1.3 (2026-08-19):
      * shell parity N1/N2/N5 — cards share a row height, Play is red, the piano
      * keys sound when pressed. v0.1.4 (2026-08-19): chord.mjs reads +M7 (the
-     * first carrier re-inline, census-driven — 260819.6). */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.4",
+     * first carrier re-inline, census-driven — 260819.6). v0.1.5 (2026-08-20):
+     * N4 — the high E is uppercase (E–B–G–D), the procedure's first customer. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.5",
     /* the mixer's chord-bus label. The card defaults to the arity-neutral
      * "Chord"; this door plays four voices and says so. */
     chordLabel: "Tetrads",

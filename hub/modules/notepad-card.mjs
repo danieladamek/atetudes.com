@@ -158,7 +158,7 @@ export const notepadCard = {
      * and importing the tetrad engine would drag its whole tree into a door that
      * has no string sets. A bounded, knowing duplication of THREE presentation
      * strings — not the musical fact, which stays the setIndex. */
-    const SETS = ["G–D–A–E", "B–G–D–A", "e–B–G–D"];
+    const SETS = ["G–D–A–E", "B–G–D–A", "E–B–G–D"];
     const summarize = (c) => {
       if (!c || typeof c !== "object") return "no configuration attached";
       const parts = [];
