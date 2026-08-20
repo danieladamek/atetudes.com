@@ -1,3 +1,17 @@
+## 2026-08-20 — Deployed: the mute icons + Daniel's landing page — v0.1.7 and v0.8.10 live
+
+- **Deployed `1c2449d`** (two commits: the mute icons f925fe9, and Daniel's landing-page/copy edits
+  with two riding repairs — his paste artifact removed, the welcome summary matched to his
+  jazz→music body edit). Pages workflow green.
+- **Live spot-check:** all five study URLs answer 200; triadetudes and tetradetudes are
+  shasum-identical to their committed files with **v0.8.10** and **v0.1.7** reading live; the
+  landing page renders five cards — FOUR study cards (Metronome · Triadetudes · Tetradetudes ·
+  Modes, his order) plus exactly ONE Blog card, no blockquote, no stray ">" anywhere in the
+  rendered text. **Noted:** tetrad-voice-leading has no landing card in his layout — the URL stays
+  live and permanent; presumed deliberate, flagged in the scrum for his confirmation.
+- **Flagged, not fixed** (his prose, his voice): the welcome post still says "Two interactive
+  studies are live today" — there are five.
+
 ## 2026-08-20 — One mute icon per slider: Tetradetudes v0.1.7, Triadetudes v0.8.10 (Update Log 260820.3)
 
 - **Both apps** (Ruling 1): a speaker icon at the left of every level slider — chord, bass, and the
