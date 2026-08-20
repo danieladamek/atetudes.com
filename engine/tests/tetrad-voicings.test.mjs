@@ -81,25 +81,14 @@ test("THE GATE, negative: nothing in the optimizer is pinned to three voices", (
 const data = loadOracle();
 const ORACLE = oracleVoicings(data);
 
-/* THE COVERAGE GAP, pinned rather than skipped.
- *
- * The payload spells the augmented-major seventh "+M7" (harmonic and melodic
- * minor's III chord), and engine/chord.mjs's tokenizer does not read that
- * spelling — "+" is the augmented triad and "M7" is then an unrecognized tail.
- * The STRUCTURE is not missing: [0,4,8,11] is already reachable as maj7 + #5.
- * Only the spelling is.
- *
- * This item cannot close it. chord.mjs is inlined VERBATIM into two shipped
- * studies and pinned byte-for-byte by notepad.test.mjs's anti-drift assertion,
- * so extending it means re-inlining and re-verifying both carriers — work under
- * static/, which this item may not touch. It is a separate item.
- *
- * So the gap is measured, named and asserted here. The day chord.mjs learns the
- * spelling, THIS TEST FAILS — which is the prompt to widen the oracle assertion
- * to the full 17,280 rather than leaving 8.3% quietly uncovered forever. */
-const readable = (v) => { try { parseChord(v.symbol); return true; } catch { return false; } };
-const READABLE = ORACLE.filter(readable);
-const UNREADABLE = ORACLE.filter((v) => !readable(v));
+/* THE COVERAGE GAP IS CLOSED (260819.6). From 260817.1 to 260819.6 a pinned
+ * gap lived here: chord.mjs could not read the payload's "+M7" spelling, so
+ * 1,440 of 17,280 voicings (8.3%) were filtered out of the oracle, and a
+ * self-dissolving test asserted the exact size and shape of the gap so it
+ * could not be forgotten. chord.mjs learned the spelling (a tokenizer alias
+ * through the existing maj7 rule and #5 transform — no new interval data), the
+ * test failed as designed, and per its own instruction the oracle now runs at
+ * the FULL 17,280 with no filtered split. */
 
 test("the oracle loads at the shape this suite expects", () => {
   assert.equal(ORACLE.length, 17280, "5 engines x 3 scales x 3 sets x 12 keys x 4 bottoms x 8 steps");
@@ -107,22 +96,18 @@ test("the oracle loads at the shape this suite expects", () => {
   for (const s of data.sets) assert.equal(s.opens.length, ARITY, "a set is four strings");
 });
 
-test("GAP: exactly the augmented-major sevenths are unreadable, and nothing else", () => {
-  assert.equal(UNREADABLE.length, 1440, "the unreadable slice changed size");
-  assert.equal(READABLE.length, 15840, "oracle coverage changed");
-  assert.deepEqual([...new Set(UNREADABLE.map((v) => v.symbol.replace(/^[A-G][#b]?/, "")))], ["+M7"],
-    "something other than +M7 became unreadable — investigate before widening the filter");
-
-  // the structure is reachable, only the spelling is not — so this is a
-  // tokenizer gap, not a missing chord rule
-  assert.deepEqual(parseChord("Cmaj7#5").intervals, [0, 4, 8, 11]);
-  assert.throws(() => parseChord("C+M7"), /unrecognized "M7"/,
-    "chord.mjs now reads +M7 — close this gap: widen the oracle assertion to all 17,280 " +
-    "and delete the READABLE/UNREADABLE split");
+test("every payload symbol parses — the +M7 gap stays closed", () => {
+  // the successor to the GAP pin: all 17,280, no filter. If any symbol stops
+  // parsing, this names it — a shrinking oracle must never shrink quietly.
+  const bad = [...new Set(ORACLE.filter((v) => { try { parseChord(v.symbol); return false; } catch { return true; } })
+    .map((v) => v.symbol))];
+  assert.deepEqual(bad, [], "payload symbols became unreadable: " + bad.slice(0, 6).join(", "));
+  // and the alias stays a spelling, not a rule: both forms, one structure
+  assert.deepEqual(parseChord("C+M7").intervals, parseChord("Cmaj7#5").intervals);
 });
 
 test("every payload voicing is internally consistent: four ascending notes of its own chord", () => {
-  for (const v of READABLE) {
+  for (const v of ORACLE) {
     const midis = midisOf(v);
     assert.equal(midis.length, ARITY);
     for (let i = 1; i < midis.length; i++)
@@ -137,7 +122,7 @@ test("FINDING: the payload is entirely drop-2 — its tone orderings are exactly
   // read the orderings out of the payload as chord-tone INDEX patterns, so
   // alteration spelling (b5/#5/b7) cannot fragment them
   const seen = new Set();
-  for (const v of READABLE) {
+  for (const v of ORACLE) {
     const ch = parseChord(v.symbol);
     const core = coreTetrad(ch);
     const pattern = midisOf(v).map((m) => core.findIndex((iv) => pc(ch.root.pc + iv) === pc(m)));
@@ -149,7 +134,7 @@ test("FINDING: the payload is entirely drop-2 — its tone orderings are exactly
     "the payload's orderings are not exactly the drop-2 family — the oracle's scope changed");
 });
 
-test("THE ORACLE: all 15,840 readable known-good voicings are produced by the generator", () => {
+test("THE ORACLE: all 17,280 known-good voicings are produced by the generator", () => {
   // candidates are per (chord symbol, set) — cache, or this is 17,280 rebuilds
   const cache = new Map();
   const candidatesFor = (symbol, setIndex, opens) => {
@@ -162,17 +147,17 @@ test("THE ORACLE: all 15,840 readable known-good voicings are produced by the ge
   };
 
   const misses = [];
-  for (const v of READABLE) {
+  for (const v of ORACLE) {
     const have = candidatesFor(v.symbol, v.setIndex, v.opens);
     if (!have.has(v.frets.join(",")))
       misses.push(`${v.symbol} on set ${v.setIndex} bottom ${v.bottom}: frets ${v.frets}`);
   }
   assert.deepEqual(misses.slice(0, 10), [],
-    `${misses.length} of ${READABLE.length} readable payload voicings are not generated`);
+    `${misses.length} of ${ORACLE.length} payload voicings are not generated`);
 });
 
 test("the oracle grep is surgical, not vacuous: a wrong fret is NOT accepted", () => {
-  const v = READABLE[0];
+  const v = ORACLE[0];
   const have = new Set(
     tetradCandidates(parseChord(v.symbol), { set: v.opens, nfrets: 24, families: ["drop2"] })
       .map((c) => c.notes.map((n) => n.fret).join(",")));
@@ -198,7 +183,7 @@ const bassToneOf = (v) => {
 test("the payload's bottom-tone axis is the bass of STEP 0 of every pass", () => {
   const BOTTOM_TONE = { R: 0, 3: 1, 5: 2, 7: 3 };     // the axis, as chord-tone index
   let checked = 0;
-  for (const v of READABLE) {
+  for (const v of ORACLE) {
     if (v.step !== 0) continue;
     assert.equal(bassToneOf(v), BOTTOM_TONE[v.bottom],
       `${v.symbol} starts the ${v.bottom} pass but its bass is core tone ${bassToneOf(v)}`);
@@ -212,7 +197,7 @@ test("the payload's bottom-tone axis is the bass of STEP 0 of every pass", () =>
 
 test("every leaf's own inversion label agrees with its read-back bass, at every step", () => {
   const INV_TONE = { root: 0, "1st": 1, "2nd": 2, "3rd": 3 };   // ordinal naming, not vocabulary
-  for (const v of READABLE)
+  for (const v of ORACLE)
     assert.equal(bassToneOf(v), INV_TONE[v.inversion],
       `${v.symbol} is labelled "${v.inversion}" but its bass is core tone ${bassToneOf(v)}`);
 });

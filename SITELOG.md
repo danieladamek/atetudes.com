@@ -5,6 +5,29 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-19 — chord.mjs reads +M7: the first carrier re-inline touches three studies at once (Update Log 260819.6)
+
+- **What changed, and why three studies:** `engine/chord.mjs` gained a SPELLING alias — `+M7` (the
+  augmented-major seventh, harmonic and melodic minor's III) now routes through the existing `maj7`
+  rule and `#5` transform; no new interval data. chord.mjs is byte-pinned into every study that
+  carries it, and the census (`carriersOf("chord")`) names three: **Metronome, Triadetudes,
+  Tetradetudes**. Each was re-inlined BY ITS OWN SHAPE — the two hand-authored studies had the
+  identical block applied at the identical seam; the door was rebuilt from source and republished
+  byte-identical. **All URLs unchanged.**
+- **Versions:** Metronome **v1.4.1** · Triadetudes **v0.8.9** · Tetradetudes **v0.1.4** — a
+  re-inline changes shipped behaviour in every carrier, so every carrier bumps.
+- **The oracle opened up:** the tetrad payload's 1,440 previously-unreadable `+M7` voicings (8.3%)
+  are now checked — the oracle assertion widened from 15,840 to the full **17,280**, and the
+  self-dissolving GAP pin (asserting `C+M7` throws) was replaced by its designed successor
+  (every payload symbol parses; a shrinking oracle names what shrank).
+- **The procedure is now written down** in `engine/README.md` ("The carrier re-inline procedure") —
+  census-driven, covering both carrier shapes, for the other eleven modules.
+- **Verified:** census + module pins green (they went red for exactly the three carriers on the
+  engine edit — the checklist working); engine **474/474**; `door_locks.py` 6817/0; `bite.py` 7/7;
+  all three changed studies loaded `file://` network-off with zero console errors; the two untouched
+  studies byte-identical.
+- **Committed, NOT pushed** — the deploy is Daniel's.
+
 ## 2026-08-19 — Deployed: the four-commit day is live — Tetradetudes v0.1.3, Triadetudes v0.8.8
 
 - **Daniel pushed `ca64c5c`** (four commits: metroOwner v0.1.1 · the ATTACK message v0.1.2 · the

@@ -85,7 +85,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.0</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.1</div>
 </header>
 
 <div class="cards">
@@ -161,7 +161,7 @@
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.4.0 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.4.1 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
@@ -416,6 +416,14 @@ function parseChord(input) {
   if (!rm) throw new Error(`no root in "${input}"`);
   const rootName = rm[1] + (rm[2] || "");
   let rest = head.slice(rm[0].length);
+
+  /* "+M7" — the tetrad payload's spelling of the augmented-major seventh
+   * (harmonic and melodic minor's III). A SPELLING ALIAS, not a chord rule:
+   * the structure [0,4,8,11] already lives in the maj7 rule + the #5 transform,
+   * and this rewrite routes the spelling through both. No new interval data —
+   * a second home for that fact is the defect this project keeps finding
+   * (260819.6; the gap was pinned in tetrad-voicings.test.mjs from 260817.1). */
+  if (rest.startsWith("+M7")) rest = "maj7#5" + rest.slice(3);
 
   // quality token (longest match wins by table order)
   let triad = "maj",

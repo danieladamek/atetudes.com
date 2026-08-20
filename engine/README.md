@@ -151,6 +151,51 @@ CI runs that exact command in `.github/workflows/pages.yaml` before the Hugo bui
 followed by `node --test hub/tests/*.test.mjs` for the door build gate (family spec
 §4.2.2); a red test in either blocks deploy.
 
+## The carrier re-inline procedure — for any change to a carried module
+
+**Twelve of the fourteen original engine modules are byte-pinned into published studies (§4.2.4).
+Changing one is never a one-file edit.** This procedure was established by the first re-inline
+(chord.mjs learning `+M7`, Update Log 260819.6) and is the one every later change copies. It lives
+here because everyone editing `engine/` is already bound to this README, and the census it depends
+on lives beside it in `tests/`.
+
+**Do not work out which studies carry the module. Ask the census:**
+
+```
+node --input-type=module -e 'import { carriersOf, CENSUS } from "./engine/tests/_carriers.mjs";
+  const m = "chord";  // your module
+  for (const c of carriersOf(m)) console.log(c, "→", CENSUS.get(c).source);'
+```
+
+Every carrier comes back tagged with its SHAPE, and the shape decides the work:
+
+1. **Make the engine change**, with its tests. Run the suite: the census pin
+   (`carrier-census.test.mjs`) and any module-specific pins go RED for every carrier — that is the
+   procedure's checklist, not a failure. A pin that stays green for a carrier you know you changed
+   means the census is wrong: stop.
+2. **For each carrier, by its census tag:**
+   - **`derived` (a hub door):** rebuild (`node hub/tools/build.mjs`) and copy the build output over
+     `static/studies/<slug>/study.html`, byte-identical (`cmp` it). **Never hand-edit a door's
+     published file** — the door source (`hub/doors/*.door.mjs`, `hub/modules/*`) is the only thing
+     a hand touches.
+   - **`detected` (a pre-hub, hand-authored study):** the published file IS the source. Apply the
+     exact same bytes the module gained, at the same seam, to the inlined copy — the whole-module
+     pins require byte fidelity, so copy the text, do not re-type it. Touch nothing outside the
+     module's inlined region; if the fix seems to need more, stop and report (the inline boundary is
+     not where it was thought to be).
+3. **Version-bump every carrier** — a re-inline changes shipped behaviour in each of them. Doors
+   bump in `present.blurb` (then rebuild); hand-authored studies bump their header tag and footer.
+   If a carrier genuinely should not bump, say why in the report rather than skipping it quietly.
+4. **Prove the drift is gone:** the census pin and every module pin green again. Then the full
+   ritual for every changed study — `file://` with the network disabled, zero console errors — and
+   the studies you did NOT change byte-identical (`git status static/`).
+5. **Log it:** SITELOG names every changed study and states that the URLs are unchanged; the Update
+   Log entry names the census as the carrier list used.
+
+**The safety net, not the plan:** if a carrier is missed, `carrier-census.test.mjs` fails naming the
+study and the fix ("rebuild the door and re-publish" / "re-inline the module"). It was proven to
+bite on exactly this shape before the first re-inline ran (260819.5).
+
 ## Rules
 
 - **No hand-placed musical data.** Interval formulas are named rules (`maj7 = R 3 5 7`),

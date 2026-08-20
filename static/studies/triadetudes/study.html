@@ -212,7 +212,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.8</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.9</div>
 </header>
 
 <div class="cards">
@@ -511,7 +511,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.8 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.9 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -706,6 +706,14 @@ function parseChord(input) {
   if (!rm) throw new Error(`no root in "${input}"`);
   const rootName = rm[1] + (rm[2] || "");
   let rest = head.slice(rm[0].length);
+
+  /* "+M7" — the tetrad payload's spelling of the augmented-major seventh
+   * (harmonic and melodic minor's III). A SPELLING ALIAS, not a chord rule:
+   * the structure [0,4,8,11] already lives in the maj7 rule + the #5 transform,
+   * and this rewrite routes the spelling through both. No new interval data —
+   * a second home for that fact is the defect this project keeps finding
+   * (260819.6; the gap was pinned in tetrad-voicings.test.mjs from 260817.1). */
+  if (rest.startsWith("+M7")) rest = "maj7#5" + rest.slice(3);
 
   // quality token (longest match wins by table order)
   let triad = "maj",

@@ -177,6 +177,14 @@ export function parseChord(input) {
   const rootName = rm[1] + (rm[2] || "");
   let rest = head.slice(rm[0].length);
 
+  /* "+M7" — the tetrad payload's spelling of the augmented-major seventh
+   * (harmonic and melodic minor's III). A SPELLING ALIAS, not a chord rule:
+   * the structure [0,4,8,11] already lives in the maj7 rule + the #5 transform,
+   * and this rewrite routes the spelling through both. No new interval data —
+   * a second home for that fact is the defect this project keeps finding
+   * (260819.6; the gap was pinned in tetrad-voicings.test.mjs from 260817.1). */
+  if (rest.startsWith("+M7")) rest = "maj7#5" + rest.slice(3);
+
   // quality token (longest match wins by table order)
   let triad = "maj",
     seventh = null,

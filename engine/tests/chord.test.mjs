@@ -199,3 +199,18 @@ test("scaleNotes spells each scale with one note per letter", () => {
   assert.equal(scaleNotes("A", "harm").map((n) => n.name).join(" "), "A B C D E F G#");
   assert.equal(scaleNotes("A", "mel").map((n) => n.name).join(" "), "A B C D E F# G#");
 });
+
+test("+M7 is a SPELLING of maj7#5, and the two converge in every key (260819.6)", () => {
+  // the augmented-major seventh (harmonic/melodic minor's III), as the tetrad
+  // payload spells it. A tokenizer alias, not a chord rule: same structure,
+  // same canonical symbol, no interval data of its own to drift.
+  for (const key of ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]) {
+    const alias = parseChord(key + "+M7"), canon = parseChord(key + "maj7#5");
+    assert.deepEqual(alias.intervals, [0, 4, 8, 11], key + "+M7 is not the augmented-major seventh");
+    assert.deepEqual(alias.intervals, canon.intervals, key + ": the two spellings diverge");
+    assert.deepEqual(alias.pcs, canon.pcs, key + ": pitch classes diverge");
+    assert.equal(alias.symbol, canon.symbol, key + ": canonical respelling diverges");
+  }
+  // the alias keeps its tail: alterations after +M7 still parse
+  assert.deepEqual(parseChord("C+M7no5").intervals, parseChord("Cmaj7#5no5").intervals);
+});

@@ -48,8 +48,9 @@ export default {
      * the ATTACK message — the first chord of a cold Play sounds; the walk's
      * sound no longer rides the step owner's render echo. v0.1.3 (2026-08-19):
      * shell parity N1/N2/N5 — cards share a row height, Play is red, the piano
-     * keys sound when pressed. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.3",
+     * keys sound when pressed. v0.1.4 (2026-08-19): chord.mjs reads +M7 (the
+     * first carrier re-inline, census-driven — 260819.6). */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.4",
     /* the mixer's chord-bus label. The card defaults to the arity-neutral
      * "Chord"; this door plays four voices and says so. */
     chordLabel: "Tetrads",
