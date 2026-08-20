@@ -1,3 +1,16 @@
+## 2026-08-20 — Deployed: the welcome post says five studies in two groups, and "derived by code"
+
+- **Deployed `317b3aa`** — Daniel's approved rewrite of the welcome post: five studies, "The études"
+  (metronome · triadetudes · tetradetudes, voice-count order, the family logic in prose) separated
+  by a rule from "The maps" (modes · tetrad voice leading, with why they sit outside the étude
+  family). One factual correction rode the phrasing: "derived by a Python generator" → **"derived by
+  code"** — Tetradetudes is composed by the JS hub from a door lock, so the Python claim was false
+  for one of five.
+- **Verified on the RENDERED page** (cache-busted): all five studies linked and resolving 200; the
+  two sections render with exactly one visible `<hr>` between them (the bare `---` rendered as a
+  rule — looked at, not assumed); no literal "---" or ">" in the visible text; **"Python" appears
+  nowhere on the page**.
+
 ## 2026-08-20 — Deployed: the mute icons + Daniel's landing page — v0.1.7 and v0.8.10 live
 
 - **Deployed `1c2449d`** (two commits: the mute icons f925fe9, and Daniel's landing-page/copy edits
