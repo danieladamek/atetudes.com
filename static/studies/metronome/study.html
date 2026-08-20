@@ -40,6 +40,16 @@
     border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
   .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
+  /* one mute icon per slider (family rule, v0.8.10/v0.1.7): a VIEW of the level —
+     level 0 renders muted however it got there */
+  .muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
+    background:transparent;cursor:pointer}
+  .muteBtn[aria-pressed="true"]{opacity:.55}
+  /* the card grammar (v1.4.2, Daniel's sketch): no row spent on a checkbox —
+     state toggles ride the right-hand end of a row that already exists */
+  .transport .rowEnd{margin-left:auto;display:flex;gap:9px;align-items:center}
+  .row2>.rowEnd{margin-left:auto;flex:0 0 auto;display:flex;gap:9px;align-items:flex-end}
+  .rowEnd .chk{margin:0}
   .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
   .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
     border-radius:8px;background:#fff;cursor:pointer}
@@ -85,7 +95,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.1</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.2</div>
 </header>
 
 <div class="cards">
@@ -111,12 +121,10 @@
       <div><label>Voice</label>
         <select id="voiceSel"><option value="beep" selected>beep</option>
           <option value="wood">wood</option><option value="tick">tick</option></select></div>
+      <div class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" checked> accents</label></div>
     </div>
-    <div class="transport" style="gap:9px;margin-top:8px">
-      <button id="clickTgl" title="click sound on/off">Sound: on</button>
-      <label class="chk" style="margin:0"><input type="checkbox" id="accChk" checked> accents</label>
-    </div>
-    <div class="bpmrow">
+    <div class="bpmrow" title="the click level — muted is this slider at zero">
+      <button id="clickMute" class="muteBtn">🔊</button>
       <span style="font-size:12px;color:#9C9CA4">Vol</span>
       <input type="range" id="clickVolR" min="0" max="100" value="80">
       <span id="clickVolVal" style="font-size:13px;width:30px;text-align:right">80</span>
@@ -161,7 +169,7 @@
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.4.1 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.4.2 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
@@ -3067,12 +3075,17 @@ const SUB_OFFSETS={1:[],2:[0.5],3:[1/3,2/3],4:[0.25,0.5,0.75]};
 /* ============ appliance state (persisted) ============ */
 const CFG_KEY="metronome.v1.cfg", PAD_KEY="metronome.v1.pad", LOG_KEY="metronome.v1.log";
 const st={bpm:72,meter:4,clickOn:true,clickVol:0.8,clickAccent:true,clickSub:1,clickVoice:"beep"};
+let CLICK_STASH=0.8; // what the mute icon un-mutes to
 function saveCfg(){ try{localStorage.setItem(CFG_KEY,JSON.stringify(st));}catch(e){} }
 function loadCfg(){
   try{const c=JSON.parse(localStorage.getItem(CFG_KEY)||"null"); if(!c)return;
     st.bpm=c.bpm??72; st.meter=c.meter??4; st.clickOn=c.clickOn??true;
     st.clickVol=c.clickVol??0.8; st.clickAccent=c.clickAccent??true;
     st.clickSub=c.clickSub??1; st.clickVoice=c.clickVoice??"beep";
+    // pre-v1.4.2 entries could hold clickOn:false with clickVol>0 — the Sound
+    // button era. Mute IS the slider at zero now: stash the level and zero it.
+    if(!st.clickOn&&st.clickVol>0){ CLICK_STASH=st.clickVol; st.clickVol=0; }
+    st.clickOn=st.clickVol>0;
   }catch(e){}
 }
 function cfgSnapshot(){ return {bpm:st.bpm,meter:st.meter,clickSub:st.clickSub,
@@ -3081,6 +3094,7 @@ function applyCfg(c){
   st.bpm=c.bpm??st.bpm; st.meter=c.meter??st.meter; st.clickSub=c.clickSub??st.clickSub;
   st.clickVoice=c.clickVoice??st.clickVoice; st.clickAccent=c.clickAccent??st.clickAccent;
   st.clickVol=c.clickVol??st.clickVol;
+  st.clickOn=st.clickVol>0; if(st.clickVol>0)CLICK_STASH=st.clickVol;
   METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
   syncUI(); renderLamp(); saveCfg();
 }
@@ -3234,9 +3248,10 @@ function syncUI(){
   document.getElementById("subSel").value=String(st.clickSub);
   document.getElementById("voiceSel").value=st.clickVoice;
   document.getElementById("accChk").checked=st.clickAccent;
-  const b=document.getElementById("clickTgl");
-  b.textContent="Sound: "+(st.clickOn?"on":"off");
-  b.style.color=st.clickOn?"":"var(--gray)";
+  const b=document.getElementById("clickMute"), muted=st.clickVol===0;
+  b.textContent=muted?"🔇":"🔊";
+  b.setAttribute("aria-pressed",String(muted));
+  b.title=muted?"unmute — restore the click level":"mute the click — the slider to zero";
   document.getElementById("clickVolR").value=Math.round(st.clickVol*100);
   document.getElementById("clickVolVal").textContent=Math.round(st.clickVol*100);
 }
@@ -3255,11 +3270,16 @@ function initControls(){
   document.getElementById("subSel").addEventListener("change",e=>{st.clickSub=+e.target.value;saveCfg();});
   document.getElementById("voiceSel").addEventListener("change",e=>{st.clickVoice=e.target.value;click();saveCfg();});
   document.getElementById("accChk").addEventListener("change",e=>{st.clickAccent=e.target.checked;saveCfg();});
-  document.getElementById("clickTgl").addEventListener("click",()=>{
-    st.clickOn=!st.clickOn;syncUI();saveCfg();});
+  document.getElementById("clickMute").addEventListener("click",()=>{
+    // the mute icon: the click's on/off IS the Vol level at zero
+    if(st.clickVol>0){ CLICK_STASH=st.clickVol; st.clickVol=0; }
+    else st.clickVol=CLICK_STASH>0?CLICK_STASH:0.8;
+    st.clickOn=st.clickVol>0; syncUI(); saveCfg();});
   document.getElementById("clickVolR").addEventListener("input",e=>{
     st.clickVol=+e.target.value/100;
-    document.getElementById("clickVolVal").textContent=e.target.value;});
+    if(st.clickVol>0)CLICK_STASH=st.clickVol;
+    st.clickOn=st.clickVol>0;   // level 0 IS muted, however it got there
+    syncUI();});
   document.getElementById("clickVolR").addEventListener("change",saveCfg);
   // notepad pad + buttons + import/export: wired by the shared surface
 }

@@ -95,6 +95,11 @@
   .muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
     background:transparent;cursor:pointer}
   .muteBtn[aria-pressed="true"]{opacity:.55}
+  /* the card grammar (v0.8.11, Daniel's sketch): no row spent on a checkbox —
+     state toggles ride the right-hand end of a row that already exists */
+  .transport .rowEnd{margin-left:auto;display:flex;gap:9px;align-items:center}
+  .row2>.rowEnd{margin-left:auto;flex:0 0 auto;display:flex;gap:9px;align-items:flex-end}
+  .rowEnd .chk{margin:0}
   .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
   .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
     border-radius:8px;background:#fff;cursor:pointer}
@@ -217,7 +222,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.10</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.11</div>
 </header>
 
 <div class="cards">
@@ -243,9 +248,7 @@
       <div><label>Voice</label>
         <select id="voiceSel"><option value="beep" selected>beep</option>
           <option value="wood">wood</option><option value="tick">tick</option></select></div>
-    </div>
-    <div class="transport" style="gap:9px;margin-top:8px">
-      <label class="chk" style="margin:0"><input type="checkbox" id="accChk" checked> accents</label>
+      <div class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" checked> accents</label></div>
     </div>
     <div class="bpmrow" title="the click level — muted is this slider at zero">
       <button id="clickMute" class="muteBtn">🔊</button>
@@ -264,6 +267,11 @@
       <button id="prevBtn" title="previous chord">◀</button>
       <button id="playBtn" class="primary">Play</button>
       <button id="nextBtn" title="next chord">▶</button>
+      <span class="rowEnd">
+        <label class="chk" title="metronome click sound on/off">
+          <input type="checkbox" id="clickChk2"> metronome</label>
+        <label class="chk"><input type="checkbox" id="countChk"> count-in</label>
+      </span>
     </div>
     <div class="bpmrow">
       <span style="font-size:12px;color:var(--gray)">BPM</span>
@@ -275,17 +283,12 @@
         <select id="meterSel2"></select></div>
       <div><label>Bar split<br>(beats per chord)</label>
         <select id="splitSel"></select></div>
-    </div>
-    <div class="transport" style="gap:9px;margin-top:8px">
-      <label class="chk" style="margin:0" title="metronome click sound on/off">
-        <input type="checkbox" id="clickChk2"> metronome</label>
-      <label class="chk" style="margin:0"><input type="checkbox" id="countChk"> count-in</label>
-      <label class="chk" style="margin:0" title="triad voice — tone (today's), pluck (plucked string), sustain (notes hold to the chord change)">voice
+      <div class="rowEnd"><label class="chk" title="triad voice — tone (today's), pluck (plucked string), sustain (notes hold to the chord change)">voice
         <select id="noteVoiceSel">
           <option value="tone">tone</option>
           <option value="pluck">pluck</option>
           <option value="sustain">sustain</option>
-        </select></label>
+        </select></label></div>
     </div>
     <div class="bpmrow" title="the mixer: chord level — muted is this slider at zero">
       <button id="chordMute" class="muteBtn">🔊</button>
@@ -517,7 +520,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.10 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.11 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any

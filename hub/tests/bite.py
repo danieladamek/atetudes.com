@@ -204,11 +204,74 @@ def m6_new_module_no_door_edited():
         new.unlink(missing_ok=True)
 
 
+# ---------------------------------------------------------------- mutation 7
+# THE CARD GRAMMAR (260820.4): a checkbox-only row reappears — accents back in
+# a row of its own. The live-DOM predicate must name it. (The row keeps its
+# rowEnd wrapper so the shell's shared token still ships from two modules —
+# stripping it breaks the BUILD instead, which is the resolver's bite, not
+# this suite's.)
+def m7_checkbox_only_row_returns():
+    p, original, mutated = patch("hub/modules/metronome-card.mjs",
+        '    <div class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label></div>\n  </div>',
+        '  </div>\n  <div class="transport"><span class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label></span></div>')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        only = "renders ONLY checkboxes" in r.stdout
+        count = "row groups, not 4" in r.stdout
+        record("a checkbox-only row back in the metronome card",
+               r.returncode != 0 and only and count,
+               "suite exit %d; the only-checkboxes predicate bit: %s; the row count bit: %s"
+               % (r.returncode, only, count))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutation 8
+# The item's trap, half one: accents MOVED and DIED — the checkbox renders but
+# the lamp stops reading it. The gate exercises the box, not its presence.
+def m8_moved_accents_dead():
+    p, original, mutated = patch("hub/modules/metronome-card.mjs",
+        '      const acc = byId("accChk").checked;',
+        '      const acc = true;')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the moved control is dead" in r.stdout
+        record("the accents checkbox no longer read by the lamp",
+               r.returncode != 0 and hit,
+               "suite exit %d; caught exercising the box, not counting it: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutation 9
+# The trap, half two: the voice select MOVED and DIED — the audio card stops
+# taking the mixer's voice. pluck must fail to reach a buffer source.
+def m9_moved_voice_dead():
+    p, original, mutated = patch("hub/modules/audio-card.mjs",
+        '      if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) voice = m.voice;',
+        '      /* voice pinned */')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the moved voice select is dead" in r.stdout
+        record("the voice select no longer drives the audio path",
+               r.returncode != 0 and hit,
+               "suite exit %d; caught on the node type (pluck != buffer source): %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
                m3_styles_shipped_regardless_of_reach, m4_markup_shipped_regardless_of_reach,
-               m5_dynamic_import_and_lookup_by_string, m6_new_module_no_door_edited):
+               m5_dynamic_import_and_lookup_by_string, m6_new_module_no_door_edited,
+               m7_checkbox_only_row_returns, m8_moved_accents_dead, m9_moved_voice_dead):
         try:
             fn()
         except BuildBroken as e:

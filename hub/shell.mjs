@@ -55,6 +55,12 @@ select,input[type=text]{
 .muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
   background:transparent;cursor:pointer}
 .muteBtn[aria-pressed="true"]{opacity:.55}
+/* THE CARD GRAMMAR (260820.4, Daniel's sketch): no row spent on a checkbox —
+ * state toggles ride the right-hand end of a row that already exists. .rowEnd
+ * is that seat, in both cards, in every app. (Right-alignment is an inference
+ * from the sketch, flagged in the item.) */
+.row2>.rowEnd{margin-left:auto;flex:0 0 auto;display:flex;gap:9px;align-items:flex-end}
+.rowEnd .chk{margin:0}
 footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
 /* EXPAND/COLLAPSE ON EVERY PANEL (Shell 4) — the reference's chevron, its look

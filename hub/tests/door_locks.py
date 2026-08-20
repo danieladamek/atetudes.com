@@ -499,6 +499,48 @@ def run_door(pw, door_id):
               f"{tag} unmute with no stashed level must restore the click's default (80): {page.input_value('#clickVolR')!r}")
         check(clicks_in(1300) >= 1, f"{tag} the click did not resume after unmuting from the icon")
 
+        # ---- THE CARD GRAMMAR (260820.4): four rows, none spent on a checkbox.
+        # Daniel's sketch is a MOVE, not a redesign: accents joined the selects
+        # row, metronome + count-in joined the Play row, voice joined the sig
+        # row, and the two checkbox-only rows are gone. The static half (row
+        # counts per card region, retired classes absent) lives in
+        # engine/tests/host-conformance.test.mjs across all three apps; the
+        # LIVE DOM here answers the predicate the sketch states — no row group
+        # renders only checkboxes — and each moved control is EXERCISED below
+        # (the trap is a control that moved and died: present but unwired).
+        rows = page.evaluate("""() => {
+          const out = [];
+          for (const card of document.querySelectorAll('.card')) {
+            const h2 = card.querySelector('h2');
+            for (const row of card.querySelectorAll('.transport,.row2,.bpmrow')) {
+              const ctl = [...row.querySelectorAll('button,select,input,textarea')]
+                .filter(e => getComputedStyle(e).display !== 'none');
+              out.push({ card: h2 ? h2.textContent.trim() : '?',
+                         onlyChk: ctl.length > 0 && ctl.every(e => e.matches('input[type=checkbox]')) });
+            }
+          }
+          return out; }""")
+        wasted = [x["card"] for x in rows if x["onlyChk"]]
+        check(not wasted,
+              f"{tag} a row group renders ONLY checkboxes in: {wasted} — no row is spent on a checkbox")
+        metro_rows = len([x for x in rows if x["card"] == "Metronome"])
+        check(metro_rows == 4,
+              f"{tag} the metronome card renders {metro_rows} row groups, not 4 — the card grammar is fixed")
+        tr_rows = len([x for x in rows if x["card"] == "Transport"])
+        check(tr_rows == 5,
+              f"{tag} the transport card renders {tr_rows} row groups, not 5 (play, BPM, sig+voice, chord, bass)")
+        # accents MOVED into the selects row — and still WORK: the downbeat dot
+        # wears .acc while the box is checked, live, on the running clock
+        check(page.is_checked("#accChk"), f"{tag} accents not on by default — cannot exercise the moved checkbox")
+        check(page.eval_on_selector_all("#beatLamp span.acc", "e => e.length") == 1,
+              f"{tag} accents on but no downbeat dot wears .acc")
+        page.uncheck("#accChk"); page.wait_for_timeout(80)
+        check(page.eval_on_selector_all("#beatLamp span.acc", "e => e.length") == 0,
+              f"{tag} accents UNCHECKED in its new row but the downbeat dot still wears .acc — the moved control is dead")
+        page.check("#accChk"); page.wait_for_timeout(80)
+        check(page.eval_on_selector_all("#beatLamp span.acc", "e => e.length") == 1,
+              f"{tag} re-checking accents did not restore the downbeat's .acc")
+
         # leave it LIT into the orphan check: .trLit is a state this door has
         page.click("#playBtn")
         check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,
@@ -930,6 +972,29 @@ def run_door(pw, door_id):
         n5 = page.evaluate("() => window.__starts") - b4
         check(n5 >= 1, f"{tag} N5: pressing a piano key started no audio sources — the key is silent")
         check(n5 <= 3, f"{tag} N5: one key press started {n5} sources — a single note must not fan out")
+
+        # ---- THE CARD GRAMMAR (260820.4), the moved voice select: it joined
+        # the sig row and must still DRIVE the audio path. The artifact is the
+        # node type: pluck renders as an AudioBufferSourceNode (Karplus-Strong
+        # samples), tone as an oscillator — so a buffer-source counter tells
+        # whether the select actually reached the voice, both directions. The
+        # click stays on beep (square osc) so it cannot fake a buffer start.
+        page.select_option("#voiceSel", "beep")
+        page.evaluate("""() => { if (!window.__bufTap) { window.__bufTap = 1; window.__bufst = 0;
+            const s = AudioBufferSourceNode.prototype.start;
+            AudioBufferSourceNode.prototype.start = function (...a) { window.__bufst++; return s.apply(this, a); }; } }""")
+        press_key = lambda: (page.eval_on_selector("#kbd rect",
+            "e => e.dispatchEvent(new MouseEvent('click', {bubbles:true}))"), page.wait_for_timeout(300))
+        page.select_option("#noteVoiceSel", "pluck"); page.wait_for_timeout(80)
+        vb0 = page.evaluate("() => window.__bufst"); press_key()
+        check(page.evaluate("() => window.__bufst") - vb0 >= 1,
+              f"{tag} voice=pluck but a key press started no buffer source — the moved voice select is dead")
+        page.select_option("#noteVoiceSel", "tone"); page.wait_for_timeout(80)
+        vb1 = page.evaluate("() => window.__bufst"); vs1 = page.evaluate("() => window.__starts"); press_key()
+        check(page.evaluate("() => window.__bufst") == vb1,
+              f"{tag} voice=tone but a key press started a buffer source — the select did not switch the path back")
+        check(page.evaluate("() => window.__starts") > vs1,
+              f"{tag} voice=tone and the key press made no sound at all")
         page.check("#clickChk2")
 
         # the reload above emptied the states earlier blocks had entered; re-enter

@@ -177,14 +177,11 @@ test("§4.3 notepad: an unwired host fails NAMING what is missing (the spec for 
 // component guarantee line, from the same one-line-per-host list.
 
 const METRONOME_HOSTS = [
+  /* 260820.4 closed the recorded divergence: the appliance's Sound button
+   * became the mute icon too — all three hosts ship one inventory again. */
   { name: "metronome", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
-      "meterSel", "subSel", "voiceSel", "clickTgl", "accChk", "clickVolR",
+      "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
-  /* 260820.3: triadetudes and tetradetudes replaced the Sound button with the
-   * mute icon (clickMute); the metronome APPLIANCE still ships clickTgl — out
-   * of that item's two-app scope, a recorded family divergence awaiting its
-   * own back-port item. This inventory says so explicitly rather than papering
-   * the three hosts over with one list. */
   { name: "triadetudes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
       "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
@@ -209,6 +206,40 @@ test("§4.3 metronome: the control inventory and the family guarantee render in 
     // whitespace-normalized: HTML prose wraps at the author's line length
     assert.ok(page.replace(/\s+/g, " ").includes(METRONOME_GUARANTEE),
       `[${host.name}] must carry the shared-component sentence: "${METRONOME_GUARANTEE}"`);
+  }
+});
+
+// ================= the card grammar (260820.4): four rows, none spent on a checkbox =================
+// Daniel's sketch made row count part of the family look: the metronome card is
+// exactly four row groups (transport · BPM · selects+accents · icon+Vol) and the
+// transport card exactly five (play · BPM · sig+voice · chord · bass) — the
+// checkbox-only rows (`metrosound`, `trChecks`, and the hand-authored studies'
+// inline-styled equivalents) are gone, their controls riding the right end of
+// rows that already exist. This asserts the SHAPE statically: row-group counts
+// per card region and the absence of the retired row classes. The stronger
+// predicate — "no row group's live content is only checkboxes" — needs a DOM,
+// and lives in hub/tests/door_locks.py where one runs.
+
+const ROW_COUNTS = { Metronome: 4, Transport: 5 };
+const GRAMMAR_HOSTS = ["metronome", "triadetudes", "tetradetudes"];
+
+test("§4.3 grammar: metronome cards are four row groups, transport cards five, in every host", () => {
+  for (const name of GRAMMAR_HOSTS) {
+    const page = studyOf(name);
+    assert.ok(!/metrosound|trChecks/.test(page),
+      `[${name}] carries a retired checkbox-row class — the card grammar item deleted these`);
+    // a door page holds each card twice (module template + door body); the
+    // count must hold for EVERY occurrence of a card's <h2> region
+    for (const m of page.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)) {
+      const title = m[1].trim().replace("&amp;", "&");
+      if (!(title in ROW_COUNTS)) continue;
+      const next = page.indexOf("<h2", m.index + m[0].length);
+      const seg = page.slice(m.index, next < 0 ? page.length : next);
+      const rows = seg.match(/class="(transport|row2[^"]*|bpmrow)"/g) || [];
+      assert.equal(rows.length, ROW_COUNTS[title],
+        `[${name}] the ${title} card must be exactly ${ROW_COUNTS[title]} row groups, ` +
+        `found ${rows.length} — the card grammar is a family constant`);
+    }
   }
 });
 

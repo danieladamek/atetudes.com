@@ -50,9 +50,7 @@ export const metronomeCard = {
     <div><label>Voice</label>
       <select id="voiceSel" data-control="voiceSel"><option value="beep" selected>beep</option>
         <option value="wood">wood</option><option value="tick">tick</option></select></div>
-  </div>
-  <div class="transport metrosound">
-    <label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label>
+    <div class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label></div>
   </div>
   <div class="bpmrow" title="the click level — muted is this slider at zero">
     <button id="clickMute" data-control="clickMute" class="muteBtn">🔊</button>
@@ -65,7 +63,7 @@ export const metronomeCard = {
   The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
   metronome, first block, this look.)</div>`,
 
-  /* Every rule names `metro`, `metrolabel`, `metroval`, `metrosound`, `row2`,
+  /* Every rule names `metro`, `metrolabel`, `metroval`, `row2`,
    * `chk`, `bpmrow` or a control id — tokens no other module ships today. The
    * inverted card cannot outlive the card.
    *
@@ -96,8 +94,6 @@ export const metronomeCard = {
 .card.metro input[type=range]{accent-color:#ECECEE}
 .metrolabel{font-size:12px;color:#9C9CA4}
 .metroval{font-size:13px;width:30px;text-align:right}
-.metrosound{gap:9px;margin-top:8px}
-.metrosound .chk{margin:0}
 #beatLamp{display:flex;gap:5px;align-items:center;margin-left:4px}
 #beatLamp span{width:9px;height:9px;border-radius:50%;background:#44444C;display:block}
 #beatLamp span.on{background:#ECECEE}

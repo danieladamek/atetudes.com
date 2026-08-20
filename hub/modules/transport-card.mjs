@@ -43,6 +43,11 @@ export const transportCard = {
     <button id="playBtn" data-control="playBtn" class="trPlay primary">Play</button>
     <button id="nextBtn" data-control="nextBtn" title="next chord">&#9654;</button>
     <span class="trLoop" id="trLoop"></span>
+    <span class="trEnd">
+      <label class="chk" title="metronome click sound on/off">
+        <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
+      <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
+    </span>
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
@@ -54,13 +59,8 @@ export const transportCard = {
       <select id="meterSel2" data-control="meterSel2"></select></div>
     <div><label>Bar split<br>(beats per chord)</label>
       <select id="splitSel" data-control="splitSel"></select></div>
-  </div>
-  <div class="transport trChecks">
-    <label class="chk" title="metronome click sound on/off">
-      <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
-    <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
-    <label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
-      <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label>
+    <div class="rowEnd"><label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
+      <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label></div>
   </div>
   <div class="bpmrow" title="the mixer: the chord level — muted is this slider at zero">
     <button id="chordMute" data-control="chordMute" class="muteBtn">\u{1F50A}</button>
@@ -95,9 +95,12 @@ export const transportCard = {
 .trLab{font-size:12px;color:var(--gray)}
 .trMixLab{width:36px}
 .trVal{font-size:13px;width:30px;text-align:right}
-.trChecks{gap:9px;margin-top:8px}
-.trChecks .chk{margin:0}
-.trChecks select{width:auto;padding:3px 6px;margin-left:4px}`,
+.trSig select{width:auto;padding:3px 6px;margin-left:4px}
+/* only this module puts a row-end group inside a .transport row (the Play
+ * row's metronome + count-in), so the anchor is its own: the .row2>.rowEnd
+ * form is shell grammar — two modules use that one */
+.trEnd{margin-left:auto;display:flex;gap:9px;align-items:center}
+.trEnd .chk{margin:0}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;

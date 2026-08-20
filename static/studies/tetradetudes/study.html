@@ -45,6 +45,12 @@ select,input[type=text]{
 .muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
   background:transparent;cursor:pointer}
 .muteBtn[aria-pressed="true"]{opacity:.55}
+/* THE CARD GRAMMAR (260820.4, Daniel's sketch): no row spent on a checkbox —
+ * state toggles ride the right-hand end of a row that already exists. .rowEnd
+ * is that seat, in both cards, in every app. (Right-alignment is an inference
+ * from the sketch, flagged in the item.) */
+.row2>.rowEnd{margin-left:auto;flex:0 0 auto;display:flex;gap:9px;align-items:flex-end}
+.rowEnd .chk{margin:0}
 footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
 /* EXPAND/COLLAPSE ON EVERY PANEL (Shell 4) — the reference's chevron, its look
@@ -185,8 +191,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .card.metro input[type=range]{accent-color:#ECECEE}
 .metrolabel{font-size:12px;color:#9C9CA4}
 .metroval{font-size:13px;width:30px;text-align:right}
-.metrosound{gap:9px;margin-top:8px}
-.metrosound .chk{margin:0}
 #beatLamp{display:flex;gap:5px;align-items:center;margin-left:4px}
 #beatLamp span{width:9px;height:9px;border-radius:50%;background:#44444C;display:block}
 #beatLamp span.on{background:#ECECEE}
@@ -257,9 +261,12 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .trLab{font-size:12px;color:var(--gray)}
 .trMixLab{width:36px}
 .trVal{font-size:13px;width:30px;text-align:right}
-.trChecks{gap:9px;margin-top:8px}
-.trChecks .chk{margin:0}
-.trChecks select{width:auto;padding:3px 6px;margin-left:4px}</style>
+.trSig select{width:auto;padding:3px 6px;margin-left:4px}
+/* only this module puts a row-end group inside a .transport row (the Play
+ * row's metronome + count-in), so the anchor is its own: the .row2>.rowEnd
+ * form is shell grammar — two modules use that one */
+.trEnd{margin-left:auto;display:flex;gap:9px;align-items:center}
+.trEnd .chk{margin:0}</style>
 </head><body>
 
 <div class="wrap">
@@ -290,9 +297,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <div><label>Voice</label>
       <select id="voiceSel" data-control="voiceSel"><option value="beep" selected>beep</option>
         <option value="wood">wood</option><option value="tick">tick</option></select></div>
-  </div>
-  <div class="transport metrosound">
-    <label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label>
+    <div class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label></div>
   </div>
   <div class="bpmrow" title="the click level — muted is this slider at zero">
     <button id="clickMute" data-control="clickMute" class="muteBtn">🔊</button>
@@ -311,6 +316,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <button id="playBtn" data-control="playBtn" class="trPlay primary">Play</button>
     <button id="nextBtn" data-control="nextBtn" title="next chord">&#9654;</button>
     <span class="trLoop" id="trLoop"></span>
+    <span class="trEnd">
+      <label class="chk" title="metronome click sound on/off">
+        <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
+      <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
+    </span>
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
@@ -322,13 +332,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       <select id="meterSel2" data-control="meterSel2"></select></div>
     <div><label>Bar split<br>(beats per chord)</label>
       <select id="splitSel" data-control="splitSel"></select></div>
-  </div>
-  <div class="transport trChecks">
-    <label class="chk" title="metronome click sound on/off">
-      <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
-    <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
-    <label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
-      <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label>
+    <div class="rowEnd"><label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
+      <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label></div>
   </div>
   <div class="bpmrow" title="the mixer: the chord level — muted is this slider at zero">
     <button id="chordMute" data-control="chordMute" class="muteBtn">🔊</button>
@@ -4805,9 +4810,7 @@ const metronomeCard = {
     <div><label>Voice</label>
       <select id="voiceSel" data-control="voiceSel"><option value="beep" selected>beep</option>
         <option value="wood">wood</option><option value="tick">tick</option></select></div>
-  </div>
-  <div class="transport metrosound">
-    <label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label>
+    <div class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label></div>
   </div>
   <div class="bpmrow" title="the click level — muted is this slider at zero">
     <button id="clickMute" data-control="clickMute" class="muteBtn">🔊</button>
@@ -4820,7 +4823,7 @@ const metronomeCard = {
   The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
   metronome, first block, this look.)</div>`,
 
-  /* Every rule names `metro`, `metrolabel`, `metroval`, `metrosound`, `row2`,
+  /* Every rule names `metro`, `metrolabel`, `metroval`, `row2`,
    * `chk`, `bpmrow` or a control id — tokens no other module ships today. The
    * inverted card cannot outlive the card.
    *
@@ -4851,8 +4854,6 @@ const metronomeCard = {
 .card.metro input[type=range]{accent-color:#ECECEE}
 .metrolabel{font-size:12px;color:#9C9CA4}
 .metroval{font-size:13px;width:30px;text-align:right}
-.metrosound{gap:9px;margin-top:8px}
-.metrosound .chk{margin:0}
 #beatLamp{display:flex;gap:5px;align-items:center;margin-left:4px}
 #beatLamp span{width:9px;height:9px;border-radius:50%;background:#44444C;display:block}
 #beatLamp span.on{background:#ECECEE}
@@ -7843,6 +7844,11 @@ const transportCard = {
     <button id="playBtn" data-control="playBtn" class="trPlay primary">Play</button>
     <button id="nextBtn" data-control="nextBtn" title="next chord">&#9654;</button>
     <span class="trLoop" id="trLoop"></span>
+    <span class="trEnd">
+      <label class="chk" title="metronome click sound on/off">
+        <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
+      <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
+    </span>
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
@@ -7854,13 +7860,8 @@ const transportCard = {
       <select id="meterSel2" data-control="meterSel2"></select></div>
     <div><label>Bar split<br>(beats per chord)</label>
       <select id="splitSel" data-control="splitSel"></select></div>
-  </div>
-  <div class="transport trChecks">
-    <label class="chk" title="metronome click sound on/off">
-      <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
-    <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
-    <label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
-      <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label>
+    <div class="rowEnd"><label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
+      <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label></div>
   </div>
   <div class="bpmrow" title="the mixer: the chord level — muted is this slider at zero">
     <button id="chordMute" data-control="chordMute" class="muteBtn">\u{1F50A}</button>
@@ -7895,9 +7896,12 @@ const transportCard = {
 .trLab{font-size:12px;color:var(--gray)}
 .trMixLab{width:36px}
 .trVal{font-size:13px;width:30px;text-align:right}
-.trChecks{gap:9px;margin-top:8px}
-.trChecks .chk{margin:0}
-.trChecks select{width:auto;padding:3px 6px;margin-left:4px}`,
+.trSig select{width:auto;padding:3px 6px;margin-left:4px}
+/* only this module puts a row-end group inside a .transport row (the Play
+ * row's metronome + count-in), so the anchor is its own: the .row2>.rowEnd
+ * form is shell grammar — two modules use that one */
+.trEnd{margin-left:auto;display:flex;gap:9px;align-items:center}
+.trEnd .chk{margin:0}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -8153,6 +8157,12 @@ select,input[type=text]{
 .muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
   background:transparent;cursor:pointer}
 .muteBtn[aria-pressed="true"]{opacity:.55}
+/* THE CARD GRAMMAR (260820.4, Daniel's sketch): no row spent on a checkbox —
+ * state toggles ride the right-hand end of a row that already exists. .rowEnd
+ * is that seat, in both cards, in every app. (Right-alignment is an inference
+ * from the sketch, flagged in the item.) */
+.row2>.rowEnd{margin-left:auto;flex:0 0 auto;display:flex;gap:9px;align-items:flex-end}
+.rowEnd .chk{margin:0}
 footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
 /* EXPAND/COLLAPSE ON EVERY PANEL (Shell 4) — the reference's chevron, its look
@@ -8380,7 +8390,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.7","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.8","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

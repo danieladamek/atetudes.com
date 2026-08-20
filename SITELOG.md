@@ -1,3 +1,21 @@
+## 2026-08-20 — The card grammar: four rows, no row wasted on a checkbox — three studies changed
+
+- `static/studies/tetradetudes/study.html` → **v0.1.8** (door rebuilt from
+  `hub/doors/tetradetudes.door.mjs`, republished byte-identical), `static/studies/triadetudes/study.html`
+  → **v0.8.11**, `static/studies/metronome/study.html` → **v1.4.2**. Update Log **260820.4**.
+- The move, identical in all three: accents → the selects row's end; metronome + count-in → the
+  Play row's end; voice → the sig row's end; the two checkbox-only rows deleted. Every metronome
+  card is four row groups, every transport card five — asserted statically across all three apps
+  and on the door's live DOM, with the moved controls exercised (not counted) and the gates proven
+  to bite.
+- The appliance also traded its `Sound: on/off` button for the family's mute icon (the 260820.3
+  divergence closed): icon = a view of the click level, stash restored on unmute, default 80,
+  pre-icon localStorage reconciled on load.
+- All three pages verified `file://` with the network disabled, zero console errors (the
+  appliance's in-page self-tests ran clean); screenshots at 1280 and 390 inspected; `hugo` +
+  `tools/check_site.py` green (19 pages, all links). URLs unchanged. The two untouched studies are
+  byte-identical. Committed, not pushed.
+
 ## 2026-08-20 — Deployed: the welcome post says five studies in two groups, and "derived by code"
 
 - **Deployed `317b3aa`** — Daniel's approved rewrite of the welcome post: five studies, "The études"
