@@ -35,7 +35,7 @@ import {
 import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { parseFigure, figureEvents } from "../../engine/figure.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, listen } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } from "../bus.mjs";
 
 export const audioCard = {
   id: "audio-card",
@@ -222,6 +222,16 @@ export const audioCard = {
      * that echo. An attack is "sound step N now", true even when N is where we
      * already are — and with this path a door that prunes the stage still
      * sounds. */
+    /* a key pressed on a board (shell parity N5): one note, the current note
+     * voice, the triad app's own numbers (0.7 s, vel 0.24). The pointerdown
+     * arm above has already run by the time any key is clicked, so this sounds
+     * before the first Play, exactly as the triad keyboard does. */
+    listen(d, NOTE, (m) => {
+      if (!m || typeof m.midi !== "number") return;
+      const a = audio();
+      if (!a) return;
+      sound(voiceFor("chord", voice), m.midi, a.currentTime + 0.02, 0.7, 0.24);
+    });
     listen(d, ATTACK, (m) => {
       if (!m || typeof m.index !== "number") return;
       if (typeof m.beats === "number") durBeats = m.beats;

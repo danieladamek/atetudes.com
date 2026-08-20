@@ -11,7 +11,7 @@
  * the Harmony panel asks for one.
  */
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -44,7 +44,7 @@ export const keyboardStrip = {
   <span id="kbMini" data-control="kbMini"></span>
   <div class="bh"><span>On the keys</span></div>
   <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>`,
-  styles: `#kbd rect{cursor:default}
+  styles: `#kbd rect{cursor:pointer}
 #kbMini{position:absolute;top:7px;right:44px;display:flex;gap:4px;z-index:6}
 #kbMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -74,15 +74,20 @@ export const keyboardStrip = {
           if (!act.has(bm)) act.set(bm, { fam: "R", lab: "R" });
         }
       }
+      // a key press SOUNDS (shell parity N5, the triad keyboard's behaviour):
+      // the board announces the note and the audio realiser plays it — the
+      // board never owns a context, and the dots stay pointer-transparent so
+      // the key underneath is always the target
+      const press = (midi) => (r) => r.addEventListener("click", () => announce(d, NOTE, { midi }));
       for (const m of whites) {
-        el("rect", { x: xOf[m], y: 0, width: WK, height: WH, fill: "#fff", stroke: "#D8D8DC", "stroke-width": 0.8 }, svg);
+        press(m)(el("rect", { x: xOf[m], y: 0, width: WK, height: WH, fill: "#fff", stroke: "#D8D8DC", "stroke-width": 0.8 }, svg));
         if (m % 12 === 0) {
           const t = el("text", { x: xOf[m] + WK / 2, y: WH - 4, "text-anchor": "middle", "font-size": "7.5", fill: "#B9B9BF" }, svg);
           t.textContent = "C" + (Math.floor(m / 12) - 1);
         }
         if (act.has(m)) {
           const a = act.get(m), g = geom(m);
-          el("circle", { cx: g.x, cy: g.y, r: g.r, fill: FAM_COLOR[a.fam] }, svg);
+          el("circle", { cx: g.x, cy: g.y, r: g.r, fill: FAM_COLOR[a.fam], "pointer-events": "none" }, svg);
           const t = el("text", { x: g.x, y: g.y + 3, "text-anchor": "middle", "font-size": "7", fill: FAM_TEXT[a.fam], class: "dot-label" }, svg);
           t.textContent = a.lab;
         }
@@ -90,10 +95,10 @@ export const keyboardStrip = {
       for (const m of whites) {
         const nb = m + 1;
         if (nb <= HI && !isWhite(nb)) {
-          el("rect", { x: xOf[m] + WK - BW / 2, y: 0, width: BW, height: BH, fill: "#212126" }, svg);
+          press(nb)(el("rect", { x: xOf[m] + WK - BW / 2, y: 0, width: BW, height: BH, fill: "#212126" }, svg));
           if (act.has(nb)) {
             const a = act.get(nb), g = geom(nb);
-            el("circle", { cx: g.x, cy: g.y, r: g.r, fill: FAM_COLOR[a.fam], stroke: "#fff", "stroke-width": 1.2 }, svg);
+            el("circle", { cx: g.x, cy: g.y, r: g.r, fill: FAM_COLOR[a.fam], stroke: "#fff", "stroke-width": 1.2, "pointer-events": "none" }, svg);
             const t = el("text", { x: g.x, y: g.y + 2.8, "text-anchor": "middle", "font-size": "6", fill: FAM_TEXT[a.fam], class: "dot-label" }, svg);
             t.textContent = a.lab;
           }

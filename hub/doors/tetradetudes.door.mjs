@@ -46,8 +46,10 @@ export default {
      * built yet, so 1.0.0 would overclaim. v0.1.1 (2026-08-19): metroOwner
      * carried — the transport owns the clock it starts. v0.1.2 (2026-08-19):
      * the ATTACK message — the first chord of a cold Play sounds; the walk's
-     * sound no longer rides the step owner's render echo. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.2",
+     * sound no longer rides the step owner's render echo. v0.1.3 (2026-08-19):
+     * shell parity N1/N2/N5 — cards share a row height, Play is red, the piano
+     * keys sound when pressed. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.3",
     /* the mixer's chord-bus label. The card defaults to the arity-neutral
      * "Chord"; this door plays four voices and says so. */
     chordLabel: "Tetrads",

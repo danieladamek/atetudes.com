@@ -29,7 +29,10 @@ body{margin:0;background:var(--ground);color:var(--ink);
 .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 header h1{font-size:26px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
-.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:flex-start}
+/* cards in one row share a height (default stretch), exactly the triad app's
+ * rule — align-items:flex-start had let the metronome fall short of the
+ * transport, the dead gap Daniel saw (shell parity N1, 260819.4) */
+.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
 label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
 select,input[type=text]{
   font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);

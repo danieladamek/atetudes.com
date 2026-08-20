@@ -5,6 +5,29 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-19 — Shell parity: Tetradetudes v0.1.3 and Triadetudes v0.8.8, one commit, both directions (Update Log 260819.4)
+
+- **Tetradetudes v0.1.3** (rebuilt from the hub, republished byte-identical, shasum `a836a92…`):
+  the metronome and transport cards share a row height (the triad app's stretch rule — the sizing
+  rule fixed, not a card nudged); the Play button is the house red `.primary` (Daniel reversed the
+  earlier retire-the-red call); the piano keys sound when pressed (a new event-shaped `NOTE` bus
+  message; the audio card plays the note with the triad app's own duration and velocity).
+- **Triadetudes v0.8.8** (hand-authored — the study file IS the source): the first beat of the bar
+  flashes RED on the beat lamp (`LAMP.bar` → #B82929, the tetrad rule back-ported per Daniel's
+  recap), runtime-verified; the keyboard board gains the "On the keys" header. **A contradiction
+  reported on N6:** the key-name labels the finding names (C2–C6, dot labels) already existed
+  identically in both apps — the header was the one visible labelling difference; if Daniel meant
+  something else, it needs his eyes. **No anti-drift pin fired** — the edits stayed clear of every
+  inlined engine module, and the 66 carrier-pin + 88 characterization assertions pass untouched.
+- **NOT done: N4** (the lowercase `e` in the string-set labels) — one character inside byte-pinned
+  `engine/tetrad-sequence.mjs`; it rides the first coordinated carrier re-inline rather than being
+  hand-poked into a published file.
+- **Verified:** both apps `file://` network-off, zero console errors; side-by-side screenshots at
+  1280 and 390 inspected; the three untouched studies byte-identical; engine 457/457, tetrad pins
+  8/8, door_locks 6816/0 (with new artifact assertions: card heights equal, a pressed key starts
+  real audio sources), bite 7/7.
+- **Committed, NOT pushed** — the deploy is Daniel's; v0.1.1 → v0.1.3 and v0.8.8 all ride it.
+
 ## 2026-08-19 — Tetradetudes v0.1.2: the first chord sounds — an attack is not a position request (Update Log 260819.2)
 
 - **What changed:** on a cold Play (and Pause → Play) the FIRST chord now sounds. The transport's

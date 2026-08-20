@@ -81,6 +81,13 @@ export const MIXER = "atetudes:mixer";
  * echo is for boards, not for the speaker. */
 export const ATTACK = "atetudes:attack";
 
+/** SOUND ONE NOTE NOW — `{ midi }`. Event-shaped, like ATTACK and BEAT: a key
+ * pressed on a board is an instant, not state. The keyboard strip announces it
+ * and whoever realises audio plays the note with the current note voice — the
+ * triad app's playNote behaviour (shell parity N5, 260819.4), carried through
+ * the bus so the board never touches an AudioContext (§4.2.3). */
+export const NOTE = "atetudes:note";
+
 /** a metronome beat is DUE. `lead` is seconds from now until it sounds, so a
  * listener schedules against its OWN clock and never needs the sender's time
  * base — which is what lets the clock stay pure and the audio stay accurate.

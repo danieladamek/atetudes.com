@@ -40,7 +40,7 @@ export const transportCard = {
   <h2>Transport</h2>
   <div class="transport">
     <button id="prevBtn" data-control="prevBtn" title="previous chord">&#9664;</button>
-    <button id="playBtn" data-control="playBtn" class="trPlay">Play</button>
+    <button id="playBtn" data-control="playBtn" class="trPlay primary">Play</button>
     <button id="nextBtn" data-control="nextBtn" title="next chord">&#9654;</button>
     <span class="trLoop" id="trLoop"></span>
   </div>
@@ -82,14 +82,15 @@ export const transportCard = {
   animate in time: play-along, you supply the voicings. Sound starts on your first click. The
   click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
-  /* Play is deliberately NOT the shell's red `.primary` — that is the degree
-   * palette's Root and CLAUDE.md forbids degree colours as furniture; the
-   * reference's red Play is on the backlog to retire and this card does not
-   * add a second instance. The rest is the reference's grammar. */
+  /* Play IS the shell's red `.primary`, as the reference's is — Daniel reversed
+   * the earlier retire-the-red call in the 2026-08-19 side-by-side ("more
+   * obvious that it is a play button", shell parity N2). The playing state
+   * reads from the button text (Play/Pause), the triad app's own idiom; the
+   * trLit class stays on the element as state the gate reads, with no look of
+   * its own. */
   styles: `
 .trSig{align-items:flex-end}
 .trPlay{font-weight:bold}
-.trPlay.trLit{background:var(--ink);color:#fff;border-color:var(--ink)}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
 .trMixLab{width:36px}

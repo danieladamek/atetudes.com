@@ -19,7 +19,10 @@ body{margin:0;background:var(--ground);color:var(--ink);
 .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 header h1{font-size:26px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
-.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:flex-start}
+/* cards in one row share a height (default stretch), exactly the triad app's
+ * rule — align-items:flex-start had let the metronome fall short of the
+ * transport, the dead gap Daniel saw (shell parity N1, 260819.4) */
+.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
 label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
 select,input[type=text]{
   font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
@@ -148,7 +151,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .striprow .hpTight{flex:0 1 auto}
 #hpRule{margin-top:8px}
 .hpNote{font-size:11px;color:var(--gray);font-style:italic;margin-top:4px;max-width:220px}
-#kbd rect{cursor:default}
+#kbd rect{cursor:pointer}
 #kbMini{position:absolute;top:7px;right:44px;display:flex;gap:4px;z-index:6}
 #kbMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -242,7 +245,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
 .trSig{align-items:flex-end}
 .trPlay{font-weight:bold}
-.trPlay.trLit{background:var(--ink);color:#fff;border-color:var(--ink)}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
 .trMixLab{width:36px}
@@ -298,7 +300,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <h2>Transport</h2>
   <div class="transport">
     <button id="prevBtn" data-control="prevBtn" title="previous chord">&#9664;</button>
-    <button id="playBtn" data-control="playBtn" class="trPlay">Play</button>
+    <button id="playBtn" data-control="playBtn" class="trPlay primary">Play</button>
     <button id="nextBtn" data-control="nextBtn" title="next chord">&#9654;</button>
     <span class="trLoop" id="trLoop"></span>
   </div>
@@ -3204,6 +3206,13 @@ const MIXER = "atetudes:mixer";
  * echo is for boards, not for the speaker. */
 const ATTACK = "atetudes:attack";
 
+/** SOUND ONE NOTE NOW — `{ midi }`. Event-shaped, like ATTACK and BEAT: a key
+ * pressed on a board is an instant, not state. The keyboard strip announces it
+ * and whoever realises audio plays the note with the current note voice — the
+ * triad app's playNote behaviour (shell parity N5, 260819.4), carried through
+ * the bus so the board never touches an AudioContext (§4.2.3). */
+const NOTE = "atetudes:note";
+
 /** a metronome beat is DUE. `lead` is seconds from now until it sounds, so a
  * listener schedules against its OWN clock and never needs the sender's time
  * base — which is what lets the clock stay pure and the audio stay accurate.
@@ -3256,7 +3265,7 @@ function listen(doc, name, fn) {
     fn(JSON.parse(JSON.stringify(lastOf(doc).get(name))));
   return () => doc.removeEventListener(name, h);
 }
-return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, BEAT, announce, listen };
+return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, NOTE, BEAT, announce, listen };
 })();
 
 /* ===== hub/modules/audio-card.mjs ===== */
@@ -3265,7 +3274,7 @@ const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, p
 const { tetradPass, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { parseFigure, figureEvents } = __m_engine_figure_mjs;
-const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, listen } = __m_hub_bus_mjs;
+const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } = __m_hub_bus_mjs;
 /* audio-card.mjs — the hub's ears: an AudioContext, a mixer, and nothing else.
  *
  * `engine/voices.mjs` describes the voices as data; this realises them as
@@ -3486,6 +3495,16 @@ const audioCard = {
      * that echo. An attack is "sound step N now", true even when N is where we
      * already are — and with this path a door that prunes the stage still
      * sounds. */
+    /* a key pressed on a board (shell parity N5): one note, the current note
+     * voice, the triad app's own numbers (0.7 s, vel 0.24). The pointerdown
+     * arm above has already run by the time any key is clicked, so this sounds
+     * before the first Play, exactly as the triad keyboard does. */
+    listen(d, NOTE, (m) => {
+      if (!m || typeof m.midi !== "number") return;
+      const a = audio();
+      if (!a) return;
+      sound(voiceFor("chord", voice), m.midi, a.currentTime + 0.02, 0.7, 0.24);
+    });
     listen(d, ATTACK, (m) => {
       if (!m || typeof m.index !== "number") return;
       if (typeof m.beats === "number") durBeats = m.beats;
@@ -4496,7 +4515,7 @@ return { harmonyPanel };
 /* ===== hub/modules/keyboard-strip.mjs ===== */
 const __m_hub_modules_keyboard_strip_mjs = (() => {
 const { tetradPass } = __m_engine_tetrad_sequence_mjs;
-const { CONFIG_CHANGED, STEP_CHANGED, listen } = __m_hub_bus_mjs;
+const { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 /* keyboard-strip.mjs — the reference's keyboard strip.
  *
@@ -4543,7 +4562,7 @@ const keyboardStrip = {
   <span id="kbMini" data-control="kbMini"></span>
   <div class="bh"><span>On the keys</span></div>
   <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>`,
-  styles: `#kbd rect{cursor:default}
+  styles: `#kbd rect{cursor:pointer}
 #kbMini{position:absolute;top:7px;right:44px;display:flex;gap:4px;z-index:6}
 #kbMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -4573,15 +4592,20 @@ const keyboardStrip = {
           if (!act.has(bm)) act.set(bm, { fam: "R", lab: "R" });
         }
       }
+      // a key press SOUNDS (shell parity N5, the triad keyboard's behaviour):
+      // the board announces the note and the audio realiser plays it — the
+      // board never owns a context, and the dots stay pointer-transparent so
+      // the key underneath is always the target
+      const press = (midi) => (r) => r.addEventListener("click", () => announce(d, NOTE, { midi }));
       for (const m of whites) {
-        el("rect", { x: xOf[m], y: 0, width: WK, height: WH, fill: "#fff", stroke: "#D8D8DC", "stroke-width": 0.8 }, svg);
+        press(m)(el("rect", { x: xOf[m], y: 0, width: WK, height: WH, fill: "#fff", stroke: "#D8D8DC", "stroke-width": 0.8 }, svg));
         if (m % 12 === 0) {
           const t = el("text", { x: xOf[m] + WK / 2, y: WH - 4, "text-anchor": "middle", "font-size": "7.5", fill: "#B9B9BF" }, svg);
           t.textContent = "C" + (Math.floor(m / 12) - 1);
         }
         if (act.has(m)) {
           const a = act.get(m), g = geom(m);
-          el("circle", { cx: g.x, cy: g.y, r: g.r, fill: FAM_COLOR[a.fam] }, svg);
+          el("circle", { cx: g.x, cy: g.y, r: g.r, fill: FAM_COLOR[a.fam], "pointer-events": "none" }, svg);
           const t = el("text", { x: g.x, y: g.y + 3, "text-anchor": "middle", "font-size": "7", fill: FAM_TEXT[a.fam], class: "dot-label" }, svg);
           t.textContent = a.lab;
         }
@@ -4589,10 +4613,10 @@ const keyboardStrip = {
       for (const m of whites) {
         const nb = m + 1;
         if (nb <= HI && !isWhite(nb)) {
-          el("rect", { x: xOf[m] + WK - BW / 2, y: 0, width: BW, height: BH, fill: "#212126" }, svg);
+          press(nb)(el("rect", { x: xOf[m] + WK - BW / 2, y: 0, width: BW, height: BH, fill: "#212126" }, svg));
           if (act.has(nb)) {
             const a = act.get(nb), g = geom(nb);
-            el("circle", { cx: g.x, cy: g.y, r: g.r, fill: FAM_COLOR[a.fam], stroke: "#fff", "stroke-width": 1.2 }, svg);
+            el("circle", { cx: g.x, cy: g.y, r: g.r, fill: FAM_COLOR[a.fam], stroke: "#fff", "stroke-width": 1.2, "pointer-events": "none" }, svg);
             const t = el("text", { x: g.x, y: g.y + 2.8, "text-anchor": "middle", "font-size": "6", fill: FAM_TEXT[a.fam], class: "dot-label" }, svg);
             t.textContent = a.lab;
           }
@@ -7743,7 +7767,7 @@ const transportCard = {
   <h2>Transport</h2>
   <div class="transport">
     <button id="prevBtn" data-control="prevBtn" title="previous chord">&#9664;</button>
-    <button id="playBtn" data-control="playBtn" class="trPlay">Play</button>
+    <button id="playBtn" data-control="playBtn" class="trPlay primary">Play</button>
     <button id="nextBtn" data-control="nextBtn" title="next chord">&#9654;</button>
     <span class="trLoop" id="trLoop"></span>
   </div>
@@ -7785,14 +7809,15 @@ const transportCard = {
   animate in time: play-along, you supply the voicings. Sound starts on your first click. The
   click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
-  /* Play is deliberately NOT the shell's red `.primary` — that is the degree
-   * palette's Root and CLAUDE.md forbids degree colours as furniture; the
-   * reference's red Play is on the backlog to retire and this card does not
-   * add a second instance. The rest is the reference's grammar. */
+  /* Play IS the shell's red `.primary`, as the reference's is — Daniel reversed
+   * the earlier retire-the-red call in the 2026-08-19 side-by-side ("more
+   * obvious that it is a play button", shell parity N2). The playing state
+   * reads from the button text (Play/Pause), the triad app's own idiom; the
+   * trLit class stays on the element as state the gate reads, with no look of
+   * its own. */
   styles: `
 .trSig{align-items:flex-end}
 .trPlay{font-weight:bold}
-.trPlay.trLit{background:var(--ink);color:#fff;border-color:var(--ink)}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
 .trMixLab{width:36px}
@@ -8008,7 +8033,10 @@ body{margin:0;background:var(--ground);color:var(--ink);
 .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
 header h1{font-size:26px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
-.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:flex-start}
+/* cards in one row share a height (default stretch), exactly the triad app's
+ * rule — align-items:flex-start had let the metronome fall short of the
+ * transport, the dead gap Daniel saw (shell parity N1, 260819.4) */
+.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
 label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
 select,input[type=text]{
   font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
@@ -8251,7 +8279,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.2","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.3","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

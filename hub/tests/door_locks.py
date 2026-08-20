@@ -471,6 +471,25 @@ def run_door(pw, door_id):
         check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,
               f"{tag} the play toggle does not light")
 
+    if "playBtn" in r["controlsPresent"]:
+        # ---- shell parity N1 (260819.4): the metronome and transport cards
+        # SHARE A HEIGHT when they share a row — a sizing rule (flex stretch,
+        # the triad app's own), not a nudged card. Asserted geometrically.
+        hs = page.evaluate("""() => {
+          const metro = document.querySelector('.card.metro');
+          const tr = document.querySelector('#playBtn') && document.querySelector('#playBtn').closest('.card');
+          if (!metro || !tr) return null;
+          const a = metro.getBoundingClientRect(), b = tr.getBoundingClientRect();
+          return { sameRow: Math.abs(a.top - b.top) < 2, dh: Math.abs(a.height - b.height) };
+        }""")
+        check(hs and hs["sameRow"], f"{tag} the metronome and transport cards are not on one row at 1280")
+        check(hs and hs["dh"] <= 1,
+              f"{tag} N1: the metronome and transport cards differ by {hs and hs['dh']}px in height — the row must stretch them together")
+        # ---- shell parity N2: the play button is RED — the shell's .primary,
+        # as the reference's is (Daniel reversed the retire-the-red call)
+        check(page.eval_on_selector_all("#playBtn.primary", "e => e.length") == 1,
+              f"{tag} N2: the play button is not the shell's red .primary")
+
     if "winSeg" in r["controlsPresent"]:
         # ---- THE ZONE GETS A SURFACE (audit 260818 A2/C3): Full / Follow / Box.
         # The gate proves the WIRING — moving the box changes the chosen
@@ -830,6 +849,16 @@ def run_door(pw, door_id):
         page.click("#tlBars >> button >> nth=2"); page.wait_for_timeout(350)
         check(page.evaluate("() => window.__starts") - b3 >= 4,
               f"{tag} a timeline click no longer strums — the echo path broke")
+        # ---- shell parity N5 (260819.4): pressing a PIANO KEY sounds — the
+        # triad keyboard's behaviour, asserted on the artifact (real sources),
+        # not on a handler having fired. One key, one note.
+        b4 = page.evaluate("() => window.__starts")
+        page.eval_on_selector("#kbd rect",
+                              "e => e.dispatchEvent(new MouseEvent('click', {bubbles:true}))")
+        page.wait_for_timeout(300)
+        n5 = page.evaluate("() => window.__starts") - b4
+        check(n5 >= 1, f"{tag} N5: pressing a piano key started no audio sources — the key is silent")
+        check(n5 <= 3, f"{tag} N5: one key press started {n5} sources — a single note must not fan out")
         page.check("#clickChk2")
 
         # the reload above emptied the states earlier blocks had entered; re-enter
@@ -1063,7 +1092,21 @@ def run_door(pw, door_id):
     check("clpsd" in (panel.get_attribute("class") or ""), f"{tag} the chevron did not collapse the panel")
     check(not body.is_visible(), f"{tag} the body is still visible after collapse — the collapse did nothing")
     check(panel.query_selector(".clpsSum").is_visible(), f"{tag} no summary line shows when collapsed")
-    check(panel.bounding_box()["height"] < before_h, f"{tag} collapsing did not shrink the panel")
+    # THE SHRINK, under the N1 stretch rule (shell parity, 260819.4): cards in a
+    # shared row stretch together — the triad app's own behaviour — so one
+    # collapsed card keeps the row's height while its neighbour stands. The
+    # honest claim: collapse EVERY card in the row and the row itself shrinks.
+    rowmates = [p2 for p2 in page.query_selector_all(".cards > .card") if p2.bounding_box() and abs(p2.bounding_box()["y"] - panel.bounding_box()["y"]) < 2]
+    toggled = []                                          # exactly the cards THIS loop collapsed
+    for p2 in rowmates:
+        if "clpsd" not in (p2.get_attribute("class") or ""):
+            p2.query_selector(".clpsBtn").click(); toggled.append(p2)
+    page.wait_for_timeout(80)
+    check(panel.bounding_box()["height"] < before_h,
+          f"{tag} collapsing every card in the row did not shrink it")
+    for p2 in toggled:                                    # expand exactly those again
+        p2.query_selector(".clpsBtn").click()
+    page.wait_for_timeout(40)
     panel.query_selector(".clpsBtn").click()             # a real toggle: expand again
     page.wait_for_timeout(80)
     check("clpsd" not in (panel.get_attribute("class") or ""), f"{tag} the chevron did not expand the panel")
