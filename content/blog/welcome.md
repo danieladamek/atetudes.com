@@ -6,7 +6,36 @@ aliases: ["/blog/welcome.html"]
 ---
 
 At-Etudes is a small system for making music study materials — and this site is its public
-home. Two interactive studies are live today:
+home. Five interactive studies are live today, and they fall into two groups.
+
+## The études
+
+An étude here is something you **build**, not something you read. You pick the key, the
+cycle, the strings and the shape; the app works out the voicings that move as little as
+they have to, shows them on the neck, the staff and the keyboard, plays them, and keeps a
+log of what you practised. The three below share one engine, and they go in this order for
+a reason — each one is the last one with more voices.
+
+- [Metronome](/studies/metronome/) — the click every étude carries, standing on its own:
+  three voices, tap tempo, accents, subdivisions, and a notepad that saves an idea next to
+  the tempo it arrived at. Start here and it will feel familiar inside the other two.
+- [Triadetudes — the Triad Étude Designer](/studies/triadetudes/) — **three voices.** Three
+  pivot notes anchor triads cycling through a progression with minimal movement. Fretboard,
+  notation, playable keyboard, metronome, practice log.
+- [Tetradetudes — the Tetrad Étude Designer](/studies/tetradetudes/) — **four voices.** The
+  same idea one note wider: close, drop-2 and drop-3 chords walking a cycle, arpeggiated or
+  enclosing a target tone.
+
+---
+
+## The maps
+
+These two came first and work differently. They are **maps rather than designers** — the
+material is fixed and you explore it, rather than building something of your own. There is
+no étude to design, nothing to practise against, nothing to save. They share the colour
+language and the single-file promise, but they are not part of the étude family, and that
+is on purpose: they answer a question you have once, where an étude is something you come
+back to.
 
 - [Modes from Pentatonic Boxes](/studies/modes-from-pentatonic-boxes/) — every mode is a
   guitar pentatonic box you already know, plus two notes. Pick a key, flip between
@@ -18,11 +47,11 @@ home. Two interactive studies are live today:
 ## Generated, not drawn
 
 Nothing on these pages was placed by hand. Every dot on every fretboard, every voicing on
-the keyboard, is **derived by a Python generator** from a handful of musical first
-principles — and every derivation runs through an assertion suite before a page is
-published. If a chart and the theory ever disagreed, the build would fail rather than ship
-the chart. That's the deal behind the whole system: the pages you see are the *output of a
-proof*, not an illustration of one.
+the keyboard, is **derived by code** from a handful of musical first principles — and every
+derivation runs through an assertion suite before a page is published. If a chart and the
+theory ever disagreed, the build would fail rather than ship the chart. That's the deal
+behind the whole system: the pages you see are the *output of a proof*, not an illustration
+of one.
 
 ## One color language
 
