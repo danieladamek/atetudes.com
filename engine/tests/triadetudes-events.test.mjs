@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { loadTriadetudesEngine, unwrap } from "./_load-triadetudes.mjs";
+import { preHubCarriersOf } from "./_carriers.mjs";
 
 const GOLDEN = [[[[40, null, null, "bass", 0, 1], [64, 2, 5, "chord", 0, 0.666667], [60, 3, 5, "chord", 0.416667, 0.666667], [60, 3, 5, "chord", 0.833333, 0.666667], [67, 1, 3, "chord", 1.25, 0.666667]], [[41, null, null, "bass", 0, 1], [65, 2, 6, "chord", 0, 0.666667], [60, 3, 5, "chord", 0.416667, 0.666667], [60, 3, 5, "chord", 0.833333, 0.666667], [69, 1, 5, "chord", 1.25, 0.666667]], [[42, null, null, "bass", 0, 1], [65, 2, 6, "chord", 0, 0.666667], [62, 3, 7, "chord", 0.416667, 0.666667], [62, 3, 7, "chord", 0.833333, 0.666667], [71, 1, 7, "chord", 1.25, 0.666667]]], [[[40, null, null, "bass", 0, 1], [60, 3, 5, "chord", 0, 0.85], [64, 2, 5, "chord", 0.028, 0.85], [67, 1, 3, "chord", 0.056, 0.85]], [[41, null, null, "bass", 0, 1], [60, 3, 5, "chord", 0, 0.85], [65, 2, 6, "chord", 0.028, 0.85], [69, 1, 5, "chord", 0.056, 0.85]], [[42, null, null, "bass", 0, 1], [62, 3, 7, "chord", 0, 0.85], [65, 2, 6, "chord", 0.028, 0.85], [71, 1, 7, "chord", 0.056, 0.85]]], [[[40, null, null, "bass", 0, 1], [64, 2, 5, "chord", 0, 0.9], [60, 3, 5, "chord", 0.833333, 0.9], [67, 1, 3, "chord", 1.666667, 0.9]], [[41, null, null, "bass", 0, 1], [65, 2, 6, "chord", 0, 0.9], [60, 3, 5, "chord", 0.833333, 0.9], [69, 1, 5, "chord", 1.666667, 0.9]], [[42, null, null, "bass", 0, 1], [65, 2, 6, "chord", 0, 0.9], [62, 3, 7, "chord", 0.833333, 0.9], [71, 1, 7, "chord", 1.666667, 0.9]]], [[[40, null, null, "bass", 0, 1], [60, 3, 5, "chord", 0, 0.888889], [64, 2, 5, "chord", 0.555556, 0.888889], [67, 2, 8, "chord", 1.111111, 0.888889]], [[41, null, null, "bass", 0, 1], [60, 3, 5, "chord", 0, 0.888889], [65, 2, 6, "chord", 0.555556, 0.888889], [69, 1, 5, "chord", 1.111111, 0.888889]], [[42, null, null, "bass", 0, 1], [62, 3, 7, "chord", 0, 0.888889], [65, 2, 6, "chord", 0.555556, 0.888889], [71, 1, 7, "chord", 1.111111, 0.888889]]], [[[40, null, null, "bass", 0, 1], [60, 3, 5, "chord", 0, 0.85], [64, 2, 5, "chord", 0.028, 0.85], [67, 2, 8, "chord", 0.056, 0.85]], [[41, null, null, "bass", 0, 1], [60, 3, 5, "chord", 0, 0.85], [65, 2, 6, "chord", 0.028, 0.85], [69, 1, 5, "chord", 0.056, 0.85]], [[42, null, null, "bass", 0, 1], [62, 3, 7, "chord", 0, 0.85], [65, 2, 6, "chord", 0.028, 0.85], [71, 1, 7, "chord", 0.056, 0.85]]], [[[40, null, null, "bass", 0, 1], [60, 3, 5, "chord", 0, 0.85], [64, 2, 5, "chord", 0.028, 0.85], [67, 1, 3, "chord", 0.056, 0.85]], [[41, null, null, "bass", 0, 1], [60, 3, 5, "chord", 0, 0.85], [65, 2, 6, "chord", 0.028, 0.85], [69, 1, 5, "chord", 0.056, 0.85]], [[42, null, null, "bass", 0, 1], [62, 3, 7, "chord", 0, 0.85], [65, 2, 6, "chord", 0.028, 0.85], [71, 1, 7, "chord", 0.056, 0.85]]]];
 
@@ -77,7 +78,10 @@ test("every app carrying note-events matches the module verbatim (no drift)", ()
   const inlineForm = readFileSync(join(here, "..", "note-events.mjs"), "utf8")
     .split("\n").filter((l) => !/^import /.test(l)).join("\n")
     .replace(/^export /gm, "").replace(/^\n+/, "").replace(/\n+$/, "\n");
-  const CARRIERS = ["triadetudes"];
+  // the census's fact, pre-hub half — this was the SIXTH hand list, found by
+  // the 260819.5 sweep after the item had counted five
+  const CARRIERS = preHubCarriersOf("note-events");
+  assert.ok(CARRIERS.length >= 1, "the census lost note-events' pre-hub carriers");
   for (const slug of CARRIERS) {
     const src = readFileSync(
       join(here, "..", "..", "static", "studies", slug, "study.html"), "utf8");

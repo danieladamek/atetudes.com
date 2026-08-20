@@ -122,6 +122,15 @@ engine/
     │                                 study's payload as a 15,840-voicing oracle
     ├── _load-tetrad-oracle.mjs       reads the frozen study's 1.1 MB payload,
     │                                 READ-ONLY (§5.2.1 — never modified)
+    ├── _carriers.mjs                 THE CARRIER CENSUS: which studies carry
+    │                                 which modules — doors DERIVED from the
+    │                                 resolver's reach-set, pre-hub studies
+    │                                 DETECTED from the published bytes; the
+    │                                 fact is stated nowhere by hand
+    ├── carrier-census.test.mjs       every carried module pinned verbatim in
+    │                                 every published study, pairs from the
+    │                                 census; census completeness (a new study
+    │                                 cannot slip in unpinned)
     ├── triadetudes-engine.test.mjs   characterization of the shipped study's engine
     └── _load-triadetudes.mjs         extracts the study's <script> for headless testing
 ```

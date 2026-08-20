@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createNotepadSurface, CAPABILITIES } from "../notepad-surface.mjs";
 import { makeDoc, memStorage, capsOf } from "./_dom-stub.mjs";
+import { carriersOf, CENSUS } from "./_carriers.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const studyOf = (slug) =>
@@ -50,7 +51,27 @@ const NOTEPAD_HOSTS = [
       msg: "saveMsg", importMsg: "importMsg", list: "histList",
       count: "histCount", storeNote: "storeNote", controls: "journalControls",
       handoff: "handoffNote" } },
+  { name: "tetradetudes",   // the door's notepad-card ports triadetudes' ids wholesale
+    nouns: { item: "entry", apply: "Restore étude" },
+    mounts: { pad: "journalIn", saveBtn: "saveEntry", clearBtn: "clearPad",
+      confirmRoot: "clearConfirm", confirmSave: "clearSave",
+      confirmDiscard: "clearDiscard", confirmCancel: "clearCancel",
+      exportBtn: "exportLog", importBtn: "importBtn", importFile: "importFile",
+      msg: "saveMsg", importMsg: "importMsg", list: "histList",
+      count: "histCount", storeNote: "storeNote", controls: "journalControls",
+      handoff: "handoffNote" } },
 ];
+
+/* The MEMBERSHIP of these host lists is the census's fact: every study the
+ * census says carries the module must have an entry here, and no entry may
+ * name a study that does not carry it. The per-host CONFIG (mounts, nouns,
+ * control ids) stays here — that is genuinely per-host — but a new carrier
+ * shipping without a host entry now FAILS NAMING WHAT IS MISSING instead of
+ * passing quietly, which is how the fifth study slipped every list (260819.5). */
+test("§4.3 hosts: the notepad host list IS the census's carrier list for notepad-surface", () => {
+  assert.deepEqual(NOTEPAD_HOSTS.map((h) => h.name).sort(), carriersOf("notepad-surface"),
+    "a study carrying notepad-surface.mjs has no host entry (or an entry names a non-carrier) — wire it here");
+});
 
 function mountHost(host) {
   // build stub els from exactly the mounts the page provides, then let the
@@ -72,15 +93,22 @@ function mountHost(host) {
 test("§4.3 notepad: every declared mount exists in every host's shipped page, and is wired", () => {
   for (const host of NOTEPAD_HOSTS) {
     const page = studyOf(host.name);
+    const preHub = CENSUS.get(host.name).source === "detected";
     for (const [key, id] of Object.entries(host.mounts)) {
       assert.ok(page.includes('id="' + id + '"'),
         `[${host.name}] mount "${key}" expects #${id} in the page — ` +
         `add the element, or update this host list if it moved`);
-      assert.ok(page.includes('getElementById("' + id + '")'),
+      /* the wiring and nouns greps below read the HAND-AUTHORED idiom
+       * (getElementById, minified adapter literals) and are those pages'
+       * only check. A door-built host wires through ctx.byId and is asserted
+       * LIVE by door_locks.py — every declared control rendered and driven in
+       * a real browser — which is the stronger claim, so the textual proxy is
+       * not applied to it. */
+      if (preHub) assert.ok(page.includes('getElementById("' + id + '")'),
         `[${host.name}] #${id} exists but nothing passes it to the surface — ` +
         `wire els.${key} in the host's init`);
     }
-    assert.ok(page.includes('nouns:{item:"' + host.nouns.item + '"'),
+    if (preHub) assert.ok(page.includes('nouns:{item:"' + host.nouns.item + '"'),
       `[${host.name}] the adapter must declare nouns {item:"${host.nouns.item}"} — ` +
       `vocabulary is adapter-supplied, never hand-written in the page`);
   }
@@ -155,8 +183,16 @@ const METRONOME_HOSTS = [
   { name: "triadetudes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
       "meterSel", "subSel", "voiceSel", "clickTgl", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
+  { name: "tetradetudes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
+      "meterSel", "subSel", "voiceSel", "clickTgl", "accChk", "clickVolR",
+      "clickVolVal", "beatLamp"] },
 ];
 const METRONOME_GUARANTEE = "every At-Etudes app carries this metronome, first block, this look";
+
+test("§4.3 hosts: the metronome host list IS the census's carrier list for metronome", () => {
+  assert.deepEqual(METRONOME_HOSTS.map((h) => h.name).sort(), carriersOf("metronome"),
+    "a study carrying metronome.mjs has no host entry (or an entry names a non-carrier) — wire it here");
+});
 
 test("§4.3 metronome: the control inventory and the family guarantee render in every carrier", () => {
   for (const host of METRONOME_HOSTS) {

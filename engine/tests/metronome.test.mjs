@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createMetroCore, createTapTempo, SUB_OFFSETS } from "../metronome.mjs";
+import { preHubCarriersOf } from "./_carriers.mjs";
 
 const close = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
 
@@ -180,8 +181,11 @@ test("every app carrying the metronome matches the module verbatim (no drift)", 
     .slice(1)
     .map((s) => s.trimEnd());
   assert.equal(defs.length, 3, "module exports three definitions");
-  // ALL apps that inline the component — add each new adopter here
-  const CARRIERS = ["triadetudes", "metronome"];
+  // ALL apps that inline the component — DERIVED from the carrier census
+  // (engine/tests/_carriers.mjs), never listed by hand: the hand list missed
+  // the fifth study the day it shipped (260819.5)
+  const CARRIERS = preHubCarriersOf("metronome");
+  assert.ok(CARRIERS.length >= 2, "the census lost the metronome's pre-hub carriers");
   for (const slug of CARRIERS) {
     const src = readFileSync(
       join(here, "..", "..", "static", "studies", slug, "study.html"), "utf8");

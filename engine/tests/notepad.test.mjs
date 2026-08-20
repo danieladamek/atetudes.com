@@ -11,6 +11,7 @@ import { emptyDoc, makeEntry, addEntry, editEntry, deleteEntry, reorderEntry,
   fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart } from "../notepad.mjs";
 import { parseAtchart, serializeAtchart, readApp } from "../atchart.mjs";
 import { readFileSync } from "node:fs";
+import { CENSUS } from "./_carriers.mjs";
 
 const strip = (doc) => ({ pad: doc.pad,
   entries: doc.entries.map(({ id, savedAt, heading, text, payload }) =>
@@ -233,10 +234,21 @@ test("metronome and triadetudes carry atchart, markdown and notepad verbatim (no
     readFileSync(here2 + "../" + file, "utf8")
       .split("\n").filter((l) => !l.startsWith("import ")).join("\n")
       .replace(/^export /gm, "").replace(/^\n+/, "").replace(/\n+$/, "\n");
-  const CARRIERS = { metronome: ["chord.mjs", "atchart.mjs", "markdown.mjs",
-      "motion.mjs", "notepad.mjs", "structures.mjs", "palette.mjs", "notepad-surface.mjs"],
-    triadetudes: ["atchart.mjs", "markdown.mjs", "motion.mjs", "notepad.mjs",
-      "structures.mjs", "palette.mjs", "notepad-surface.mjs"] };
+  /* WHICH studies carry WHICH of these modules is the census's fact
+   * (engine/tests/_carriers.mjs), not a list kept here — the hand-written map
+   * this replaces had already drifted from the shipped bytes (it did not know
+   * triadetudes carries chord.mjs, found by detection 2026-08-19). What stays
+   * local is the FAMILY: the modules whose whole-module inline form this pin
+   * covers (stronger than the census's per-export pin — it reaches the
+   * preambles of markdown/motion/palette). Pre-hub carriers only: a door build
+   * blanks import lines with irregular whitespace, so contiguity fits only the
+   * hand-inlined studies; the census pin covers the doors per-export. */
+  const FAMILY = ["chord.mjs", "atchart.mjs", "markdown.mjs", "motion.mjs",
+    "notepad.mjs", "structures.mjs", "palette.mjs", "notepad-surface.mjs"];
+  const CARRIERS = Object.fromEntries([...CENSUS.entries()]
+    .filter(([, v]) => v.source === "detected")
+    .map(([slug, v]) => [slug, FAMILY.filter((f) => v.modules.has(f.slice(0, -4)))])
+    .filter(([, files]) => files.length));
   for (const [slug, files] of Object.entries(CARRIERS)) {
     const src = readFileSync(here2 + "../../static/studies/" + slug + "/study.html", "utf8");
     for (const file of files)

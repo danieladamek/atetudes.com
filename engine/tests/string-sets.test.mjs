@@ -15,6 +15,7 @@ import {
   pivotWindow, MAX_PATTERN,
 } from "../string-sets.mjs";
 import { loadTriadetudesEngine, unwrap } from "./_load-triadetudes.mjs";
+import { preHubCarriersOf } from "./_carriers.mjs";
 
 const SETS = [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6]];
 
@@ -168,7 +169,10 @@ test("every app carrying string-sets matches the module verbatim (no drift)", ()
   const inlineForm = readFileSync(join(here, "..", "string-sets.mjs"), "utf8")
     .split("\n").filter((l) => !/^import /.test(l)).join("\n")
     .replace(/^export /gm, "").replace(/^\n+/, "").replace(/\n+$/, "\n");
-  const CARRIERS = ["triadetudes"]; // ALL apps that inline the translation law
+  // ALL apps that inline the translation law — the census's fact, pre-hub
+  // half (whole-module contiguity fits only hand-inlined studies)
+  const CARRIERS = preHubCarriersOf("string-sets");
+  assert.ok(CARRIERS.length >= 1, "the census lost string-sets' carriers");
   for (const slug of CARRIERS) {
     const src = readFileSync(
       join(here, "..", "..", "static", "studies", slug, "study.html"), "utf8");

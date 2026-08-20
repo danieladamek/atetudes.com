@@ -14,6 +14,7 @@ import { dirname, join } from "node:path";
 import { parseChord, pcOf, resolveRoman } from "../chord.mjs";
 import { upperStructures, candidateKey, findCandidate } from "../upper-structure.mjs";
 import { loadTriadetudesEngine, unwrap } from "./_load-triadetudes.mjs";
+import { preHubCarriersOf } from "./_carriers.mjs";
 
 const mod12 = (n) => ((n % 12) + 12) % 12;
 const SHAPES = { maj: [0, 4, 7], min: [0, 3, 7], dim: [0, 3, 6], aug: [0, 4, 8] };
@@ -225,7 +226,9 @@ test("every app carrying the harmony engine matches the modules verbatim (no dri
     readFileSync(join(here, "..", file), "utf8")
       .split("\n").filter((l) => !/^import /.test(l)).join("\n")
       .replace(/^export /gm, "").replace(/^\n+/, "").replace(/\n+$/, "\n");
-  const CARRIERS = ["triadetudes"]; // ALL apps that inline the harmony engine
+  // ALL apps that inline the harmony engine — the census's fact, pre-hub half
+  const CARRIERS = preHubCarriersOf("upper-structure");
+  assert.ok(CARRIERS.length >= 1, "the census lost the harmony engine's carriers");
   for (const slug of CARRIERS) {
     const src = readFileSync(
       join(here, "..", "..", "static", "studies", slug, "study.html"), "utf8");
