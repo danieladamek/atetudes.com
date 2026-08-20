@@ -1,3 +1,12 @@
+## 2026-08-20 — Deployed: v0.1.5 + v0.1.6 are live — the uppercase E and the working Sound button
+
+- **Daniel's deploy of `be7ecb6`** (two commits: N4's uppercase E via the re-inline procedure's
+  first customer run, and the Sound-button fix). Pages workflow green end to end.
+- **Live spot-check, all five URLs:** every study answers 200 and is **shasum-identical** to its
+  committed file. The live Tetradetudes tag reads **v0.1.6**; the string sets read E–B–G–D with zero
+  lowercase occurrences; the other four studies unchanged.
+- The Node.js-20 runner deprecation annotation, again — still filed for workflow maintenance.
+
 ## 2026-08-20 — Tetradetudes v0.1.6: the metronome's Sound button works (Update Log 260820.2)
 
 - **What changed:** the Metronome card's Sound on/off button now silences and restores the click —
