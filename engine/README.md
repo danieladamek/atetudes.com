@@ -127,6 +127,14 @@ engine/
     │                                 resolver's reach-set, pre-hub studies
     │                                 DETECTED from the published bytes; the
     │                                 fact is stated nowhere by hand
+    ├── _family.mjs                   THE FAMILY REGISTER: which pages are the
+    │                                 family, app vs chart, and where each
+    │                                 floor surface lives — the answer to
+    │                                 "which APPS?" for a shared idiom
+    ├── family-register.test.mjs      register completeness vs static/studies/
+    │                                 and the census; registered handles exist
+    │                                 in the published bytes (the browser floor
+    │                                 itself runs in tools/family_floor.py)
     ├── carrier-census.test.mjs       every carried module pinned verbatim in
     │                                 every published study, pairs from the
     │                                 census; census completeness (a new study
@@ -169,23 +177,35 @@ node --input-type=module -e 'import { carriersOf, CENSUS } from "./engine/tests/
 
 Every carrier comes back tagged with its SHAPE, and the shape decides the work:
 
-1. **Make the engine change**, with its tests. Run the suite: the census pin
-   (`carrier-census.test.mjs`) and any module-specific pins go RED for every carrier — that is the
-   procedure's checklist, not a failure. A pin that stays green for a carrier you know you changed
-   means the census is wrong: stop.
-2. **For each carrier, by its census tag:**
-   - **`derived` (a hub door):** rebuild (`node hub/tools/build.mjs`) and copy the build output over
+1. **Make the engine change**, with its tests. Run the suite and sort the reds — **there are two
+   kinds and they mean opposite things** (N4 finding 3, 260820.1):
+   - **A behaviour pin asserting the OLD value** (a module test, a characterization test): the old
+     value was correct until this change. **Update the pin to the new truth — never delete it.**
+     The updated pin is part of this change's tests.
+   - **The census pin** (`carrier-census.test.mjs`) red for every carrier: that is the procedure's
+     checklist, not a failure — it stays red until step 2 re-inlines each carrier. A census pin
+     that stays GREEN for a carrier you know you changed means the census is wrong: stop.
+2. **For each carrier, by its census tag** — version bump and re-inline in ONE pass per carrier
+   (N4 finding 2: bumping after rebuilding forced a second rebuild; bump first):
+   - **`derived` (a hub door):** bump the version in `present.blurb`, THEN rebuild once
+     (`node hub/tools/build.mjs`) and copy the build output over
      `static/studies/<slug>/study.html`, byte-identical (`cmp` it). **Never hand-edit a door's
      published file** — the door source (`hub/doors/*.door.mjs`, `hub/modules/*`) is the only thing
      a hand touches.
    - **`detected` (a pre-hub, hand-authored study):** the published file IS the source. Apply the
      exact same bytes the module gained, at the same seam, to the inlined copy — the whole-module
-     pins require byte fidelity, so copy the text, do not re-type it. Touch nothing outside the
-     module's inlined region; if the fix seems to need more, stop and report (the inline boundary is
-     not where it was thought to be).
-3. **Version-bump every carrier** — a re-inline changes shipped behaviour in each of them. Doors
-   bump in `present.blurb` (then rebuild); hand-authored studies bump their header tag and footer.
-   If a carrier genuinely should not bump, say why in the report rather than skipping it quietly.
+     pins require byte fidelity, so copy the text, do not re-type it — and bump the study's header
+     tag and footer in the same edit. Touch nothing outside those regions; if the fix seems to need
+     more, stop and report (the inline boundary is not where it was thought to be).
+
+   A re-inline changes shipped behaviour in every carrier, which is why every carrier bumps. If a
+   carrier genuinely should not, say why in the report rather than skipping it quietly.
+3. **Hunt the change's OTHER consumers — the census cannot see them** (N4 finding 1, the procedure's
+   first failure: it ran GREEN while an artifact still shipped the old string through a documented
+   app-side duplicate). **Grep every built artifact for the OLD form** — the string, spelling, or
+   value the change retired — in `static/studies/*/study.html` and `hub/build/*.html`. A hit is an
+   app-side consumer the module change did not reach; fix it at its own source (a door module, a
+   hand-authored region) and say so in the report.
 4. **Prove the drift is gone:** the census pin and every module pin green again. Then the full
    ritual for every changed study — `file://` with the network disabled, zero console errors — and
    the studies you did NOT change byte-identical (`git status static/`).
@@ -195,6 +215,21 @@ Every carrier comes back tagged with its SHAPE, and the shape decides the work:
 **The safety net, not the plan:** if a carrier is missed, `carrier-census.test.mjs` fails naming the
 study and the fix ("rebuild the door and re-publish" / "re-inline the module"). It was proven to
 bite on exactly this shape before the first re-inline ran (260819.5).
+
+## Which APPS? — propagating a shared idiom (not a module)
+
+The census above answers *which carriers* for a **module**. It cannot answer *which apps* for a
+shared **UI idiom** — mute icons, the card grammar, info buttons — because an idiom is not a module,
+and this week's three idiom propagations each answered the question by hand: "both apps" meant the
+two on screen, in a family of five, and left the appliance behind twice.
+
+**The family register answers it: `engine/tests/_family.mjs`.** For any idiom change, the checklist
+is `appsOf()` — every registered `kind: "app"` entry — and the item records a **disposition per
+app**: *carried* · *deliberately divergent, with the written reason §4.4 requires* · *not
+applicable, with the reason*. An app not mentioned is not "out of scope"; it is a silent divergence,
+which §4.4 defines as a defect. The register's completeness is CI-asserted
+(`family-register.test.mjs`), so the checklist cannot rot; the floor itself (Ruling 2's four
+surfaces) is asserted at the artifact level by `tools/family_floor.py`.
 
 ## Rules
 
