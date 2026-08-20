@@ -466,6 +466,29 @@ def run_door(pw, door_id):
         page.uncheck("#countChk"); page.wait_for_timeout(40)
         page.click("#metroBtn"); page.wait_for_timeout(120)    # clock running again for the blocks below
 
+        # ---- the metronome's own Sound button SILENCES THE CLICK (260820.2).
+        # Daniel, in the live app: the button did nothing — it flipped a local
+        # variable nobody read, while the transport's checkbox (via MIXER) was
+        # the only real state. A declared control that announces NOTHING is
+        # invisible to every message-level gate by construction, so this one is
+        # asserted the only way that could have caught it: press the control,
+        # count what the consumer did. Demonstrated failing against the inert
+        # build first (clicks kept sounding; the checkbox never moved).
+        clicks_in = lambda ms: (lambda a: (page.wait_for_timeout(ms), page.evaluate("() => window.__src.length") - a)[1])(page.evaluate("() => window.__src.length"))
+        check(clicks_in(1300) >= 1, f"{tag} no baseline click is sounding — cannot test the Sound button")
+        page.click("#clickTgl"); page.wait_for_timeout(400)    # Sound: off — settle past scheduled clicks
+        check(clicks_in(1300) == 0,
+              f"{tag} the metronome's Sound button did not SILENCE the click — it flips a variable nobody reads")
+        # ONE STATE, TWO VIEWS, both directions: the transport's checkbox is the
+        # other view of the same fact and must have moved with it
+        check(not page.is_checked("#clickChk2"),
+              f"{tag} Sound: off did not move the transport's metronome checkbox — two states, not two views")
+        check("off" in page.inner_text("#clickTgl"), f"{tag} the Sound button's label does not state the new state")
+        page.check("#clickChk2"); page.wait_for_timeout(300)   # the OTHER direction: checkbox -> button
+        check("on" in page.inner_text("#clickTgl"),
+              f"{tag} re-checking the transport checkbox did not move the Sound button — the arrow only points one way")
+        check(clicks_in(1300) >= 1, f"{tag} the click did not resume after re-enabling from the checkbox")
+
         # leave it LIT into the orphan check: .trLit is a state this door has
         page.click("#playBtn")
         check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,

@@ -50,8 +50,11 @@ export default {
      * shell parity N1/N2/N5 — cards share a row height, Play is red, the piano
      * keys sound when pressed. v0.1.4 (2026-08-19): chord.mjs reads +M7 (the
      * first carrier re-inline, census-driven — 260819.6). v0.1.5 (2026-08-20):
-     * N4 — the high E is uppercase (E–B–G–D), the procedure's first customer. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.5",
+     * N4 — the high E is uppercase (E–B–G–D), the procedure's first customer.
+     * v0.1.6 (2026-08-20): the metronome's Sound button works — the click's
+     * on/off is the clock owner's state (CLOCK_STATE.click), the transport
+     * checkbox its second view. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.6",
     /* the mixer's chord-bus label. The card defaults to the arity-neutral
      * "Chord"; this door plays four voices and says so. */
     chordLabel: "Tetrads",

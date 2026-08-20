@@ -135,8 +135,13 @@ export const transportCard = {
 
     const showLoop = () => { byId("trLoop").textContent = armed ? "loop " + (core.loop + 1) : ""; };
 
+    /* the click's on/off is NOT here any more (260820.2): it is the clock
+     * owner's state (CLOCK_STATE.click) and this card's checkbox is a VIEW of
+     * it — changes go out as a CLOCK request, renders come back from the
+     * state, so the metronome's own Sound button and this checkbox can never
+     * disagree. The mixer keeps the levels and the voice. */
     const mixer = () => announce(d, MIXER, {
-      chord: chordVol, bass: bassVol, voice: vsel.value, click: byId("clickChk2").checked });
+      chord: chordVol, bass: bassVol, voice: vsel.value });
 
     /* metroOwner — the reference's rule, carried by name (side-by-side triage
      * 2026-08-19). Play STARTS the clock as "transport" if it is not already
@@ -198,7 +203,7 @@ export const transportCard = {
       announce(d, STEP_CHANGED, { index: position, request: true, meter, splitIdx });
     });
     byId("countChk").addEventListener("change", (e) => core.setCountIn(e.target.checked));
-    byId("clickChk2").addEventListener("change", mixer);
+    byId("clickChk2").addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
     vsel.addEventListener("change", mixer);
     /* mute chords IS the chord slider at zero — one state, two views, the
      * reference's rule (v0.8.7). The checkbox renders chordVol===0. */
@@ -233,6 +238,7 @@ export const transportCard = {
       if (typeof m.meter === "number" && m.meter !== meter) {
         core.setMeter(m.meter); meter = m.meter; splitIdx = core.splitIdx; fillMeters(); fillSplits();
       }
+      if (typeof m.click === "boolean") byId("clickChk2").checked = m.click;
       if (!running && armed) setPlaying(false);
     });
 

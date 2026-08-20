@@ -292,7 +292,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <input type="range" id="clickVolR" data-control="clickVolR" min="0" max="100" value="80">
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
-  <div class="clpsum">A metronome on its own clock — with or without the étude.</div>
+  <div class="clpsum" id="metroSum">A metronome on its own clock — with or without the étude.</div>
   <div class="hint info">A full metronome on its own clock — use it with or without the étude.
   The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
   metronome, first block, this look.)</div></div>
@@ -3173,13 +3173,18 @@ const STEP_CHANGED = "atetudes:step";
  * rule (triadetudes study.html:5209-5230), carried into the hub by name. The
  * transport stops the clock it started; a metronome the user started by hand
  * survives a transport Pause; and the metronome's own Stop (no owner named)
- * stops everything, as the reference's `stopAll` does. Without this the play
- * path was asymmetric — Play started the clock, Pause never stopped it — and
- * three symptoms followed from that one defect (side-by-side triage 260819). */
+ * stops everything, as the reference's `stopAll` does. `{ click: boolean }`
+ * asks the owner to sound or silence its click — the click is the clock's own
+ * voice, so its on/off lives with the clock owner and every view of it
+ * (the metronome's Sound button, the transport's metronome checkbox) is a view
+ * of CLOCK_STATE.click: one state, two views, either can move it (260820.2).
+ * (Before the owner rule, the play path was asymmetric — Play started the
+ * clock, Pause never stopped it — and three symptoms followed from that one
+ * defect; side-by-side triage 260819.) */
 const CLOCK = "atetudes:clock";
 
 /** the grid owner's answer: what the clock IS now — `{ running, bpm, meter,
- * owner }`. `owner` is the metroOwner ("transport" | "metro" | null): ownership
+ * owner, click }`. `owner` is the metroOwner ("transport" | "metro" | null): ownership
  * is STATE, so it rides the state-shaped message and is replayed to a late
  * subscriber like the rest. Every card that shows tempo, meter or a run state
  * renders from this rather than from its own copy, so two views of one clock
@@ -3485,7 +3490,13 @@ const audioCard = {
       cfg = { ...(cfg || {}), ...next };
       try { pass = tetradPass({ families, ...cfg }); } catch { pass = null; }
     });
-    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
+    listen(d, CLOCK_STATE, (m) => {
+      if (!m) return;
+      if (typeof m.bpm === "number") bpm = m.bpm;
+      // the click is the clock's own voice: its on/off is the clock owner's
+      // state, not a mixer level (260820.2 — the dead Sound button)
+      if (typeof m.click === "boolean") clickOn = m.click;
+    });
     listen(d, STEP_CHANGED, (m) => {
       if (!m) return;
       // the transport's request carries the beats this chord holds — the figure
@@ -3525,7 +3536,6 @@ const audioCard = {
       if (typeof m.chord === "number") chordVol = m.chord;
       if (typeof m.bass === "number") bassVol = m.bass;
       if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) voice = m.voice;
-      if (typeof m.click === "boolean") clickOn = m.click;
       if (m.on === true) { on = true; audio(); }
       syncBuses();
     });
@@ -4790,7 +4800,7 @@ const metronomeCard = {
     <input type="range" id="clickVolR" data-control="clickVolR" min="0" max="100" value="80">
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
-  <div class="clpsum">A metronome on its own clock — with or without the étude.</div>
+  <div class="clpsum" id="metroSum">A metronome on its own clock — with or without the étude.</div>
   <div class="hint info">A full metronome on its own clock — use it with or without the étude.
   The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
   metronome, first block, this look.)</div>`,
@@ -4837,6 +4847,13 @@ const metronomeCard = {
     const core = createMetroCore({ bpm: 72, meter: 4 });
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
+    /* THE CLICK'S ON/OFF — this card's own state, at last read (260820.2: the
+     * button flipped this variable and NOTHING read it, Daniel's dead Sound
+     * button). The click is the clock's own voice, so the state lives with the
+     * clock owner and rides CLOCK_STATE.click; the transport's metronome
+     * checkbox is the second VIEW of it and moves through a CLOCK request —
+     * one state, two views, either can move it, both always agree (the
+     * mute-is-the-slider-at-zero rule, third application). */
     let raf = null, sound = true;
 
     const lamps = () => {
@@ -4892,8 +4909,21 @@ const metronomeCard = {
      * Ownership is STATE, so it rides CLOCK_STATE (replayed to late subscribers
      * like the rest) rather than an ad-hoc stop bolted onto the pause path. */
     let owner = null;
-    const publish = () => announce(d, CLOCK_STATE,
-      { running: core.running, bpm: core.bpm, meter: core.meter, owner });
+    /* the label STATES the state (the reference's meaning — "Sound: on" is what
+     * IS, settled 260820.2); the title states the ACTION, so the two cannot be
+     * confused. The card's collapse summary is LIVE, as the reference's is —
+     * it names the clock and the click state rather than a fixed sentence. */
+    const syncSound = () => {
+      const b = byId("clickTgl");
+      b.textContent = "Sound: " + (sound ? "on" : "off");
+      b.title = sound ? "press to silence the click" : "press to sound the click";
+      b.setAttribute("aria-pressed", String(sound));
+      const sum = byId("metroSum");
+      if (sum) sum.textContent = `A metronome on its own clock — ${core.running ? "running" : "stopped"} · ` +
+        `${core.bpm} bpm · ${core.meter}/4 · click ${sound ? "on" : "off"}.`;
+    };
+    const publish = () => { syncSound(); announce(d, CLOCK_STATE,
+      { running: core.running, bpm: core.bpm, meter: core.meter, owner, click: sound }); };
 
     const setRunning = (want, who) => {
       if (want === core.running) return;
@@ -4932,6 +4962,8 @@ const metronomeCard = {
         if (m.run === false && m.owner && owner !== m.owner) return;
         setRunning(m.run, m.owner);
       }
+      // the other view asking: the transport's metronome checkbox
+      if (typeof m.click === "boolean" && m.click !== sound) { sound = m.click; publish(); }
       else publish();
     });
 
@@ -4954,9 +4986,7 @@ const metronomeCard = {
       // meaningless subdivision cannot be selected silently
       if (!SUB_OFFSETS[+e.target.value]) throw new Error("unknown subdivision");
     });
-    byId("clickTgl").addEventListener("click", () => {
-      sound = !sound; byId("clickTgl").textContent = "Sound: " + (sound ? "on" : "off");
-    });
+    byId("clickTgl").addEventListener("click", () => { sound = !sound; publish(); });
     byId("clickVolR").addEventListener("input", (e) => {
       byId("clickVolVal").textContent = e.target.value;
     });
@@ -7870,8 +7900,13 @@ const transportCard = {
 
     const showLoop = () => { byId("trLoop").textContent = armed ? "loop " + (core.loop + 1) : ""; };
 
+    /* the click's on/off is NOT here any more (260820.2): it is the clock
+     * owner's state (CLOCK_STATE.click) and this card's checkbox is a VIEW of
+     * it — changes go out as a CLOCK request, renders come back from the
+     * state, so the metronome's own Sound button and this checkbox can never
+     * disagree. The mixer keeps the levels and the voice. */
     const mixer = () => announce(d, MIXER, {
-      chord: chordVol, bass: bassVol, voice: vsel.value, click: byId("clickChk2").checked });
+      chord: chordVol, bass: bassVol, voice: vsel.value });
 
     /* metroOwner — the reference's rule, carried by name (side-by-side triage
      * 2026-08-19). Play STARTS the clock as "transport" if it is not already
@@ -7933,7 +7968,7 @@ const transportCard = {
       announce(d, STEP_CHANGED, { index: position, request: true, meter, splitIdx });
     });
     byId("countChk").addEventListener("change", (e) => core.setCountIn(e.target.checked));
-    byId("clickChk2").addEventListener("change", mixer);
+    byId("clickChk2").addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
     vsel.addEventListener("change", mixer);
     /* mute chords IS the chord slider at zero — one state, two views, the
      * reference's rule (v0.8.7). The checkbox renders chordVol===0. */
@@ -7968,6 +8003,7 @@ const transportCard = {
       if (typeof m.meter === "number" && m.meter !== meter) {
         core.setMeter(m.meter); meter = m.meter; splitIdx = core.splitIdx; fillMeters(); fillSplits();
       }
+      if (typeof m.click === "boolean") byId("clickChk2").checked = m.click;
       if (!running && armed) setPlaying(false);
     });
 
@@ -8287,7 +8323,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.5","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.6","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

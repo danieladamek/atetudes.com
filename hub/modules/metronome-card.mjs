@@ -60,7 +60,7 @@ export const metronomeCard = {
     <input type="range" id="clickVolR" data-control="clickVolR" min="0" max="100" value="80">
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
-  <div class="clpsum">A metronome on its own clock — with or without the étude.</div>
+  <div class="clpsum" id="metroSum">A metronome on its own clock — with or without the étude.</div>
   <div class="hint info">A full metronome on its own clock — use it with or without the étude.
   The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
   metronome, first block, this look.)</div>`,
@@ -107,6 +107,13 @@ export const metronomeCard = {
     const core = createMetroCore({ bpm: 72, meter: 4 });
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
+    /* THE CLICK'S ON/OFF — this card's own state, at last read (260820.2: the
+     * button flipped this variable and NOTHING read it, Daniel's dead Sound
+     * button). The click is the clock's own voice, so the state lives with the
+     * clock owner and rides CLOCK_STATE.click; the transport's metronome
+     * checkbox is the second VIEW of it and moves through a CLOCK request —
+     * one state, two views, either can move it, both always agree (the
+     * mute-is-the-slider-at-zero rule, third application). */
     let raf = null, sound = true;
 
     const lamps = () => {
@@ -162,8 +169,21 @@ export const metronomeCard = {
      * Ownership is STATE, so it rides CLOCK_STATE (replayed to late subscribers
      * like the rest) rather than an ad-hoc stop bolted onto the pause path. */
     let owner = null;
-    const publish = () => announce(d, CLOCK_STATE,
-      { running: core.running, bpm: core.bpm, meter: core.meter, owner });
+    /* the label STATES the state (the reference's meaning — "Sound: on" is what
+     * IS, settled 260820.2); the title states the ACTION, so the two cannot be
+     * confused. The card's collapse summary is LIVE, as the reference's is —
+     * it names the clock and the click state rather than a fixed sentence. */
+    const syncSound = () => {
+      const b = byId("clickTgl");
+      b.textContent = "Sound: " + (sound ? "on" : "off");
+      b.title = sound ? "press to silence the click" : "press to sound the click";
+      b.setAttribute("aria-pressed", String(sound));
+      const sum = byId("metroSum");
+      if (sum) sum.textContent = `A metronome on its own clock — ${core.running ? "running" : "stopped"} · ` +
+        `${core.bpm} bpm · ${core.meter}/4 · click ${sound ? "on" : "off"}.`;
+    };
+    const publish = () => { syncSound(); announce(d, CLOCK_STATE,
+      { running: core.running, bpm: core.bpm, meter: core.meter, owner, click: sound }); };
 
     const setRunning = (want, who) => {
       if (want === core.running) return;
@@ -202,6 +222,8 @@ export const metronomeCard = {
         if (m.run === false && m.owner && owner !== m.owner) return;
         setRunning(m.run, m.owner);
       }
+      // the other view asking: the transport's metronome checkbox
+      if (typeof m.click === "boolean" && m.click !== sound) { sound = m.click; publish(); }
       else publish();
     });
 
@@ -224,9 +246,7 @@ export const metronomeCard = {
       // meaningless subdivision cannot be selected silently
       if (!SUB_OFFSETS[+e.target.value]) throw new Error("unknown subdivision");
     });
-    byId("clickTgl").addEventListener("click", () => {
-      sound = !sound; byId("clickTgl").textContent = "Sound: " + (sound ? "on" : "off");
-    });
+    byId("clickTgl").addEventListener("click", () => { sound = !sound; publish(); });
     byId("clickVolR").addEventListener("input", (e) => {
       byId("clickVolVal").textContent = e.target.value;
     });

@@ -1,3 +1,19 @@
+## 2026-08-20 — Tetradetudes v0.1.6: the metronome's Sound button works (Update Log 260820.2)
+
+- **What changed:** the Metronome card's Sound on/off button now silences and restores the click —
+  it had flipped a variable nothing read (Daniel found it live). The click's on/off is now the clock
+  owner's state (`CLOCK_STATE.click`); the transport's metronome checkbox is its second view — one
+  state, two views, either moves both, asserted in both directions by counting real audio sources
+  (demonstrated failing against the inert build first). The button's label states the state, its
+  title states the action; the metronome's collapse summary is live (running/stopped · bpm · meter ·
+  click on/off).
+- **Republished byte-identical** from the door build; URL unchanged; the other four studies
+  byte-identical. Engine 474/474, door_locks 6827/0, bite 7/7, file:// clean.
+- **Filed, not fixed here:** the practice log does not round-trip the click state (the reference
+  saves it); and the control-read sweep found one more declared control nothing reads
+  (harmony-panel's modeSeg, benign today) — both as backlog items.
+- **Committed, NOT pushed** — the deploy is Daniel's.
+
 ## 2026-08-20 — Tetradetudes v0.1.5: the high E is uppercase (Update Log 260820.1)
 
 - **What changed:** the string-set labels read **E–B–G–D · B–G–D–A · G–D–A–E** — uppercase

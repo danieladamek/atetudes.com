@@ -204,7 +204,13 @@ export const audioCard = {
       cfg = { ...(cfg || {}), ...next };
       try { pass = tetradPass({ families, ...cfg }); } catch { pass = null; }
     });
-    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
+    listen(d, CLOCK_STATE, (m) => {
+      if (!m) return;
+      if (typeof m.bpm === "number") bpm = m.bpm;
+      // the click is the clock's own voice: its on/off is the clock owner's
+      // state, not a mixer level (260820.2 — the dead Sound button)
+      if (typeof m.click === "boolean") clickOn = m.click;
+    });
     listen(d, STEP_CHANGED, (m) => {
       if (!m) return;
       // the transport's request carries the beats this chord holds — the figure
@@ -244,7 +250,6 @@ export const audioCard = {
       if (typeof m.chord === "number") chordVol = m.chord;
       if (typeof m.bass === "number") bassVol = m.bass;
       if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) voice = m.voice;
-      if (typeof m.click === "boolean") clickOn = m.click;
       if (m.on === true) { on = true; audio(); }
       syncBuses();
     });

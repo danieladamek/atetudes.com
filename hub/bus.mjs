@@ -40,13 +40,18 @@ export const STEP_CHANGED = "atetudes:step";
  * rule (triadetudes study.html:5209-5230), carried into the hub by name. The
  * transport stops the clock it started; a metronome the user started by hand
  * survives a transport Pause; and the metronome's own Stop (no owner named)
- * stops everything, as the reference's `stopAll` does. Without this the play
- * path was asymmetric — Play started the clock, Pause never stopped it — and
- * three symptoms followed from that one defect (side-by-side triage 260819). */
+ * stops everything, as the reference's `stopAll` does. `{ click: boolean }`
+ * asks the owner to sound or silence its click — the click is the clock's own
+ * voice, so its on/off lives with the clock owner and every view of it
+ * (the metronome's Sound button, the transport's metronome checkbox) is a view
+ * of CLOCK_STATE.click: one state, two views, either can move it (260820.2).
+ * (Before the owner rule, the play path was asymmetric — Play started the
+ * clock, Pause never stopped it — and three symptoms followed from that one
+ * defect; side-by-side triage 260819.) */
 export const CLOCK = "atetudes:clock";
 
 /** the grid owner's answer: what the clock IS now — `{ running, bpm, meter,
- * owner }`. `owner` is the metroOwner ("transport" | "metro" | null): ownership
+ * owner, click }`. `owner` is the metroOwner ("transport" | "metro" | null): ownership
  * is STATE, so it rides the state-shaped message and is replayed to a late
  * subscriber like the rest. Every card that shows tempo, meter or a run state
  * renders from this rather than from its own copy, so two views of one clock
