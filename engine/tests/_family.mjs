@@ -11,19 +11,30 @@
  * not a module. THIS list answers it: a propagation's checklist is
  * `appsOf()`, not whatever was on screen.
  *
- * WHAT THE ENTRIES MEAN
- *   kind: "app"    — an interactive instrument; the conformance floor
- *                    (Ruling 2, 2026-08-19: metronome · transport ·
- *                    interactive neck · animated staff) binds it, and
- *                    tools/family_floor.py asserts the four surfaces at the
- *                    artifact level. Whether EVERY app owes ALL four is
- *                    Daniel's scope ruling — see the proposal
- *                    (notes/specs/) — so the suite runs against every entry
- *                    and absence is a REPORTED failure, filed, not hidden.
- *   kind: "chart"  — a published chart study (a page, not an instrument).
- *                    The floor does not bind it; the suite still runs it and
- *                    reports, so a chart study that grows controls cannot
- *                    drift into being an unregistered app.
+ * WHAT THE ENTRIES MEAN — the kinds are RATIFIED (Daniel, 2026-08-20, R2–R4)
+ *   kind: "app"       — an étude app; the conformance floor (Ruling 2,
+ *                       2026-08-19: metronome · transport · interactive neck ·
+ *                       animated staff) binds all four surfaces, asserted at
+ *                       the artifact level by tools/family_floor.py.
+ *   kind: "appliance" — R2: the floor binds the metronome surface only;
+ *                       transport/neck/staff are EXEMPT and the suite reports
+ *                       them as exempted WITH THE REASON, never as passes —
+ *                       "a transport with nothing to transport, and a neck
+ *                       with no étude on it, would be surfaces invented to
+ *                       satisfy a gate." Idiom propagation still targets it:
+ *                       appsOf() includes appliances, because leaving the
+ *                       appliance behind is the exact defect the register
+ *                       exists to end.
+ *   kind: "frozen"    — R3: §5.2.1 freezes the study as the engine's
+ *                       read-only oracle; the floor skips it entirely and
+ *                       names why — "a floor that forces an edit to its own
+ *                       oracle is a floor arguing with a deliberate
+ *                       decision." Not an idiom target either: frozen means
+ *                       not edited.
+ *   kind: "chart"     — R4: a map, not a designer — "the material is fixed
+ *                       and you explore it." The floor does not bind it; the
+ *                       register still names it so a chart that grows
+ *                       controls cannot drift into being an unregistered app.
  *
  *   surfaces: per-surface HANDLES — where the suite reaches each surface in
  *   THIS app. The suite asserts BEHAVIOUR through the handle (a click that
@@ -63,17 +74,13 @@ export const FAMILY = new Map([
     },
   }],
   ["metronome", {
-    kind: "app",
+    kind: "appliance",   // R2, ratified 2026-08-20 — exempt from F2/F3/F4 by kind
     surfaces: {
       metronome: { start: "#metroBtn" },
-      /* transport, neck, staff: the appliance does not carry them. Whether an
-       * appliance owes the full floor is the scope question the proposal puts
-       * to Daniel; until he narrows the floor, the suite fails these three by
-       * name (filed 260820, not fixed here). */
     },
   }],
   ["tetrad-voice-leading", {
-    kind: "app",
+    kind: "frozen",      // R3, ratified 2026-08-20 — §5.2.1's oracle; the floor skips it, named
     surfaces: {
       /* no metronome card — the study predates the shared component */
       /* no arm handle: #soundBtn defaults ON — the suite's first run
@@ -93,8 +100,32 @@ export const FAMILY = new Map([
 /** The answer to "which apps?" for a shared UI idiom — the propagation
  * checklist. Every idiom item enumerates THIS list and records a disposition
  * per app (carried · deliberately divergent with a written reason (§4.4) ·
- * not applicable with the reason); "the two apps on screen" is not a list. */
+ * not applicable with the reason); "the two apps on screen" is not a list.
+ * Appliances ARE idiom targets — the appliance being left behind twice is
+ * why this list exists. Frozen studies are not: frozen means not edited. */
 export const appsOf = () =>
-  [...FAMILY].filter(([, v]) => v.kind === "app").map(([k]) => k);
+  [...FAMILY].filter(([, v]) => v.kind === "app" || v.kind === "appliance").map(([k]) => k);
 
+export const KINDS = ["app", "appliance", "frozen", "chart"];
 export const SURFACE_NAMES = ["metronome", "transport", "neck", "staff"];
+
+/** Which floor surfaces bind a study of this kind — the suite reads THIS, so
+ * an exemption is a register fact with a quotable reason, never suite logic.
+ * The reasons are Daniel's ratified words (R2/R3, 2026-08-20). */
+export const FLOOR_SCOPE = {
+  app: { binds: SURFACE_NAMES, exempt: {} },
+  appliance: {
+    binds: ["metronome"],
+    exempt: {
+      transport: "R2: a transport with nothing to transport would be a surface invented to satisfy a gate",
+      neck: "R2: a neck with no étude on it would be a surface invented to satisfy a gate",
+      staff: "R2: a staff with no étude on it would be a surface invented to satisfy a gate",
+    },
+  },
+  frozen: {
+    binds: [],
+    exempt: Object.fromEntries(SURFACE_NAMES.map((n) =>
+      [n, "R3: §5.2.1 freezes this study as the engine's read-only oracle — a floor that forces an edit to its own oracle is a floor arguing with a deliberate decision"])),
+  },
+  chart: { binds: [], exempt: {} },   // R4: the floor does not bind a map at all
+};

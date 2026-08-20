@@ -1,4 +1,4 @@
-# 🎵 At-Etudes — Claude Code contract (v2.0)
+# 🎵 At-Etudes — Claude Code contract (v2.1)
 
 > **One repo, two crafts.** This repository is now the single home of At-Etudes: the Python
 > generators that derive the charts, the built publications, and **atetudes.com**, the site
@@ -23,6 +23,34 @@ unless asked. On finishing an item, set its frontmatter to `state: inreview` and
 your scrum note; closing is Daniel's call. Leave a scrum note at `notes/Scrums/YYMMDD.md` in
 the exact format the root `CLAUDE.md` fixes — its frontmatter keys and `🚧 Blockers` heading
 are parsed by the scrum-of-scrums.
+
+## Verification doctrine
+
+Three rules, each earned more than once. They are about what you assert, whether the assertion
+ran, and whether it was asserting the right thing.
+
+**1. Assert on the artifact, not the representation.**
+Assert against the thing the user actually has, not the thing the code finds convenient. Bytes on
+disk over parsed objects; rendered content over content length; the built file over the config.
+Derived four times independently: length-based view fingerprints gave six false alarms where
+content-based ones did not; a comment-stripping grep would have failed permissive and silently
+weakened a charter guarantee; structural round-trips passed while byte-identity found parse-time
+defaults corrupting every existing v1 file; and the door build's CSS rule reached the same
+conclusion from a different direction — the authoritative check is on the artifact and needs no
+static analysis.
+
+**2. A gate must be able to prove it ran, not merely that it did not fail.**
+A check that does not run is indistinguishable from one that passed. Prefer assertion counts that
+move, and artifacts you can look at, over green. Three instances: a grep that matched prose
+instead of code; a build that dropped a re-export list in silence so the symbol read `undefined`
+at runtime; and a gate block keyed to a control id that no longer existed, which skipped silently
+while the suite stayed green. If you change a harness, show the count moved.
+
+**3. A test can pin a bug — when a defect is found, the test covering it is a suspect, not an
+authority.**
+Read the existing tests in that area first and ask which of them is asserting the defect. Correct
+those, watch them fail, then fix the code. A test titled "the transport joins on the very next
+beat" kept a defect alive under a 444-test green suite — a defect a listener heard in one bar.
 
 ## Repository map
 
@@ -173,7 +201,7 @@ permanent.**
 
 ---
 
-# Verification doctrine — the non-negotiable part
+# The verification ritual — charts and site, the non-negotiable part
 
 **Charts:** assertions pass, derived data printed for review, and the output rendered to PNG and
 actually looked at. Assertions cannot catch layout bugs.
@@ -217,3 +245,9 @@ a log entry; amend the design language without Daniel's approval.
 vault's Primary Prompt v1.1, the Site Prompt v1.0 and its 2026-08-06 Hugo amendment, and the
 portfolio Claude Code contract. Migration record: `0. 🧭 Program/04 Audits & Inventories/260808
 At-Etudes Migration.md`. Originals verbatim in `notes/archive/instructions/`.*
+
+*v2.1, 2026-08-20 — the Verification doctrine added verbatim (ratified 2026-08-18; applied under
+family spec §4.6 C5, `Authorized: 2026-08-20`, Update Log 260820.7); the former "Verification
+doctrine — the non-negotiable part" section renamed to "The verification ritual — charts and
+site, the non-negotiable part" to resolve the name collision — its content is unchanged. Prior
+version superseded to `notes/archive/instructions/`.*

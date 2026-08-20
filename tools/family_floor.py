@@ -26,16 +26,19 @@ supplies the per-app HANDLE, this file supplies the one shared assertion):
               sampled twice, 2.8 s apart, and must differ. The lit position is
               sampled, not the constant that set it.
 
-A surface with no registered handle FAILS as absent, by name — the register
-is the declaration, and a missing declaration is a missing surface, not an
-exemption. Whether every app owes all four surfaces is Daniel's scope ruling
-(see the proposal in notes/specs/); until he narrows the floor, absences are
-REPORTED failures, filed as backlog items, never silently skipped.
+SCOPE IS RATIFIED (Daniel, 2026-08-20, R2-R4) and lives in the register's
+FLOOR_SCOPE, not here: an app owes all four surfaces; an appliance owes the
+metronome and is EXEMPT from the rest; a frozen study is skipped entirely; a
+chart is not bound. AN EXEMPTED SURFACE REPORTS AS EXEMPTED, WITH ITS RATIFIED
+REASON, NEVER AS A PASS — an exemption that reads like a pass is section 4.4's
+silent-divergence defect wearing a register entry. For a BOUND surface, a
+missing handle still FAILS as absent, by name — the register is the
+declaration, and a missing declaration is a missing surface, not an
+exemption.
 
-This suite is deliberately NOT in CI yet: on day one it fails three studies
-by design (the failures are filed), and blocking deploys on a floor Daniel
-has not ratified would ratify it by side effect. Wiring options are in the
-proposal.
+This suite is deliberately NOT in CI yet: the door's neck finding (F3) is
+filed and open, and a red floor in CI should mean a regression, not a known,
+filed gap. Wiring options are in the spec's section 4.5.
 
 usage:  python3 tools/family_floor.py [--demo slug=path] [--only slug]
         --demo substitutes a file for one study (used to demonstrate the
@@ -63,13 +66,15 @@ AUDIO_TAP = """() => {
 
 
 def register():
-    """the family register, read from the one place it exists"""
+    """the family register and the ratified floor scope, read from the one
+    place they exist — the suite carries no scope opinions of its own"""
     r = subprocess.run(
         ["node", "--input-type=module", "-e",
-         'import {FAMILY} from "./engine/tests/_family.mjs";'
-         "console.log(JSON.stringify([...FAMILY]))"],
+         'import {FAMILY, FLOOR_SCOPE} from "./engine/tests/_family.mjs";'
+         "console.log(JSON.stringify({fam: [...FAMILY], scope: FLOOR_SCOPE}))"],
         capture_output=True, text=True, cwd=REPO, check=True)
-    return dict(json.loads(r.stdout))
+    d = json.loads(r.stdout)
+    return dict(d["fam"]), d["scope"]
 
 
 def click(page, sel):
@@ -101,7 +106,7 @@ def starts_since(page, n0, ms):
     return page.evaluate("() => window.__src.length") - n0
 
 
-def run_study(browser, slug, entry, file_path, results):
+def run_study(browser, slug, entry, scope, file_path, results):
     def fail(surface, msg):
         results.append((slug, surface, False, msg))
         print(f"  FAIL  {slug} · {surface} — {msg}")
@@ -109,6 +114,15 @@ def run_study(browser, slug, entry, file_path, results):
     def ok(surface, msg):
         results.append((slug, surface, True, msg))
         print(f"  pass  {slug} · {surface} — {msg}")
+
+    def exempt(surface):
+        """R2/R3: an exemption is reported out loud with its ratified reason,
+        and is a third status — never a pass, never silence."""
+        reason = scope["exempt"][surface]
+        results.append((slug, surface, "exempt", reason))
+        print(f"  EXMT  {slug} · {surface} — exempt, not passing: {reason}")
+
+    bound = scope["binds"]
 
     ctx = browser.new_context(viewport={"width": 1280, "height": 900})
     page = ctx.new_page()
@@ -121,8 +135,10 @@ def run_study(browser, slug, entry, file_path, results):
     surfaces = entry.get("surfaces", {})
 
     # ---- metronome: a repeating audible click, start and stop ----
-    h = surfaces.get("metronome")
-    if not h:
+    h = surfaces.get("metronome") if "metronome" in bound else None
+    if "metronome" not in bound:
+        exempt("metronome")
+    elif not h:
         fail("metronome", "no registered handle — the surface is absent")
     elif not click(page, h["start"]):
         fail("metronome", f"registered start control {h['start']} is not on the page")
@@ -141,9 +157,11 @@ def run_study(browser, slug, entry, file_path, results):
                 ok("metronome", f"{n} clicks while running, silent after stop")
 
     # ---- transport: play sounds, pause stops new sound ----
-    h = surfaces.get("transport")
+    h = surfaces.get("transport") if "transport" in bound else None
     playing = False
-    if not h:
+    if "transport" not in bound:
+        exempt("transport")
+    elif not h:
         fail("transport", "no registered handle — the surface is absent")
     elif not click(page, h.get("arm", "#__none__")) and h.get("arm"):
         fail("transport", f"registered arm control {h['arm']} is not on the page")
@@ -161,8 +179,10 @@ def run_study(browser, slug, entry, file_path, results):
                 ok("transport", f"{n} source start(s) after Play")
 
     # ---- staff: changes while the transport plays ----
-    h = surfaces.get("staff")
-    if not h:
+    h = surfaces.get("staff") if "staff" in bound else None
+    if "staff" not in bound:
+        exempt("staff")
+    elif not h:
         fail("staff", "no registered handle — the surface is absent")
     else:
         root = page.query_selector(h["root"])
@@ -183,8 +203,10 @@ def run_study(browser, slug, entry, file_path, results):
         page.wait_for_timeout(500)
 
     # ---- neck: clicking a note sounds it ----
-    h = surfaces.get("neck")
-    if not h:
+    h = surfaces.get("neck") if "neck" in bound else None
+    if "neck" not in bound:
+        exempt("neck")
+    elif not h:
         fail("neck", "no registered handle — the surface is absent")
     elif "note" not in h or page.query_selector(h["note"]) is None:
         fail("neck", f"no clickable note at registered handle {h.get('note')} — nothing to press")
@@ -212,25 +234,36 @@ def main():
             demo[slug] = Path(path)
         elif a.startswith("--only"):
             only = a.split("=", 1)[1]
-    fam = register()
+    fam, floor_scope = register()
     results = []
     print(f"family floor — {len(fam)} registered stud(ies), four surfaces "
-          f"(Ruling 2: metronome · transport · neck · staff)\n")
+          f"(Ruling 2: metronome · transport · neck · staff; scope R2-R4, ratified 2026-08-20)\n")
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         for slug, entry in fam.items():
             if only and slug != only:
                 continue
-            if entry["kind"] != "app":
-                print(f"  --    {slug} — kind: {entry['kind']}, the floor does not bind it (scope: proposal)")
+            scope = floor_scope[entry["kind"]]
+            if entry["kind"] == "chart":
+                print(f"  --    {slug} — kind: chart (R4: a map, not a designer — the floor does not bind it)")
+                continue
+            if entry["kind"] == "frozen":
+                # R3: skipped entirely, and the skip NAMES its ruling — a
+                # silent skip would be indistinguishable from a pass
+                print(f"[{slug}] kind: frozen — floor skipped:")
+                for name in ["metronome", "transport", "neck", "staff"]:
+                    results.append((slug, name, "exempt", scope["exempt"][name]))
+                    print(f"  EXMT  {slug} · {name} — exempt, not passing: {scope['exempt'][name]}")
                 continue
             f = demo.get(slug, STUDIES / slug / "study.html")
             tag = " (DEMO FILE)" if slug in demo else ""
-            print(f"[{slug}]{tag}")
-            run_study(browser, slug, entry, f, results)
+            print(f"[{slug}]{tag} kind: {entry['kind']}")
+            run_study(browser, slug, entry, scope, f, results)
         browser.close()
-    fails = [r for r in results if not r[2]]
-    print(f"\n{len(results)} surface assertion(s), {len(fails)} failed")
+    fails = [r for r in results if r[2] is False]
+    exempts = [r for r in results if r[2] == "exempt"]
+    passes = [r for r in results if r[2] is True]
+    print(f"\n{len(results)} surface(s): {len(passes)} pass · {len(exempts)} exempt (never counted as passes) · {len(fails)} failed")
     for slug, surface, _, msg in fails:
         print(f"  BELOW THE FLOOR  {slug} · {surface} — {msg}")
     return 1 if fails else 0
