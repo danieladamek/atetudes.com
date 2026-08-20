@@ -24,7 +24,7 @@ import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
 import { parseFigure, figureEvents, toneIndexOf } from "../../engine/figure.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, listen, announce } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } from "../bus.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
@@ -110,7 +110,7 @@ export const fretboardStage = {
      * historical default) and becomes a value the moment the user sets it —
      * announced on the bus, so every consumer re-derives, the owners adopt it,
      * and it lands in the practice log like key or family. */
-    let dragging = null;
+    let dragging = null, justDragged = false;
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -156,7 +156,7 @@ export const fretboardStage = {
           const pc = (OPEN_MIDI[s2] + f) % 12, di = keyPcs.indexOf(pc);
           if (di < 0) continue;
           const fam = ["R", "2", "3", "4", "5", "6", "7"][di];
-          const g = el("g", { opacity: 0.28 }, svg);
+          const g = el("g", { opacity: 0.28, "data-midi": OPEN_MIDI[s2] + f, cursor: "pointer" }, svg);
           el("circle", { cx: fx(f), cy: fy(s2), r: 10.5, fill: FAM_COLOR[fam] }, g);
           const t = el("text", { x: fx(f), y: fy(s2) + 3.4, "text-anchor": "middle", "font-size": "9.5",
             fill: FAM_TEXT[fam], class: "dot-label" }, g);
@@ -233,9 +233,38 @@ export const fretboardStage = {
     d.addEventListener("pointermove", (e) => {
       if (!dragging) return;
       const lo = fretAt(e.clientX);
-      if (lo !== dragging.lo0) { dragging.lo0 = lo; setZoneLo(lo); }
+      if (lo !== dragging.lo0) { dragging.lo0 = lo; dragging.moved = true; setZoneLo(lo); }
     });
-    d.addEventListener("pointerup", () => { dragging = null; });
+    d.addEventListener("pointerup", () => { justDragged = dragging ? !!dragging.moved : false; dragging = null; });
+
+    /* ---- THE NECK SOUNDS (floor F3, filed 260820): clicking a dot announces
+     * NOTE — the audio card's existing listener realises it, exactly as the
+     * keyboard's keys do. The stage grows no audio of its own: one behaviour,
+     * one owner. Every dot carries `data-midi` (the ghosted scale dots at
+     * build, the gliding voice dots per step), and ONE delegated click
+     * listener reads it — the next refactor of this handler inherits the
+     * whole gesture story from this block.
+     *
+     * HOW THE CLICK AND THE ZONE DRAG SHARE THE SVG WITHOUT COLLIDING:
+     * element-level ownership plus a did-it-move fact — no pixel threshold,
+     * no timer. The drag starts only on the zone's own rects (pointerdown
+     * above); a drag counts as MOVED only when the zone's low fret actually
+     * changed (`dragging.moved`, the artifact-level definition of a drag),
+     * and the click that concludes a moved drag is suppressed via
+     * `justDragged`. A press on the zone's wide hit rect that never moved IS
+     * a click — it falls through to the dot beneath it via elementsFromPoint,
+     * so Box mode does not shadow the dots it covers. */
+    svgEl().addEventListener("click", (e) => {
+      const wasDrag = justDragged; justDragged = false;
+      if (wasDrag) return;                       // a drag is not a click
+      let hit = e.target.closest("[data-midi]");
+      if (!hit)                                  // through the zone's hit rect
+        for (const n of d.elementsFromPoint(e.clientX, e.clientY)) {
+          const g = n.closest && n.closest("[data-midi]");
+          if (g) { hit = g; break; }
+        }
+      if (hit) announce(d, NOTE, { midi: +hit.dataset.midi });
+    });
     svgEl().setAttribute("tabindex", "0");
     svgEl().addEventListener("keydown", (e) => {
       if (win !== "box" || !pass) return;
@@ -272,6 +301,7 @@ export const fretboardStage = {
 
       dots.forEach(({ g }, k) => {
         const note = cur.voicing.notes[k];
+        g.dataset.midi = note.midi;      // the dot's sounding truth, per step
         const iv = note.midi - cur.chord.root.pc;
         const fam = famOfIv(iv), lab = cur.labels[k];
         if (instant) g.style.transition = "none";

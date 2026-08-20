@@ -59,8 +59,11 @@ export default {
      * it; the chord slider is called chord (chordLabel retired — one value
      * across every door is a fact with no variation). v0.1.8 (2026-08-20): the
      * card grammar — four rows, no row spent on a checkbox: accents, metronome,
-     * count-in and voice ride the right end of rows that already exist. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.8",
+     * count-in and voice ride the right end of rows that already exist.
+     * v0.1.9 (2026-08-20): the neck sounds — clicking any dot announces NOTE
+     * (floor F3; the triad's every-dot-sounds idiom); the zone drag keeps its
+     * pointerdown, a moved drag suppresses the click. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.9",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

@@ -69,7 +69,10 @@ export const FAMILY = new Map([
     surfaces: {
       metronome: { start: "#metroBtn" },
       transport: { play: "#playBtn" },
-      neck:      { root: "#fretSvg", note: "#fretSvg circle" },
+      /* the note handle targets a dot that CARRIES its midi — the neck's
+       * first bare circles are inert board markers, the same lesson the
+       * triad's entry above records (v0.1.9 wired data-midi on every dot) */
+      neck:      { root: "#fretSvg", note: "#fretSvg [data-midi] circle" },
       staff:     { root: "#score" },
     },
   }],

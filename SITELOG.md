@@ -1,3 +1,15 @@
+## 2026-08-20 — The neck sounds — Tetradetudes v0.1.9
+
+- `static/studies/tetradetudes/study.html` → **v0.1.9** (door rebuilt from source, republished
+  byte-identical; URL unchanged). Update Log **260820.8**.
+- Clicking any neck dot now sounds it — the stage announces `NOTE`, the audio card's existing
+  listener realises it (the keyboard's seam; no new audio). The zone drag is untouched: drag
+  starts only on the zone's rects, a moved drag suppresses its click, and a still press over the
+  zone's hit rect falls through to the dot beneath. The family floor is green for the first time
+  (9 pass · 7 exempt · 0 failed).
+- Gates: engine 480/480 · door_locks 6889/0 · floor F3 red→green (the existing gate, no new
+  assertion) · four other studies byte-identical. Committed, not pushed.
+
 ## 2026-08-20 — DEPLOYED: the family standard's machinery — no study changed
 
 - Daniel authorized the push; `37e09f5` + `d13c11c` deployed in one Pages run (green, head
