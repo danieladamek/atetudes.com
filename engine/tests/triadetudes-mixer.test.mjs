@@ -28,15 +28,19 @@ test("two levels with unity defaults — the buses are transparent until touched
   assert.equal(e.st.bassVol, 1, "bass level defaults to unity");
 });
 
-test("mute chords IS the triads level at zero — one piece of state, not two", () => {
+test("muted IS the level at zero — one piece of state per slider, the icon a view (v0.8.10)", () => {
   assert.equal(e.st.metroOnly, undefined,
-    "st.metroOnly is gone — the checkbox is a view of the level, not a second state");
+    "st.metroOnly is gone — a mute view never stores its own truth");
   assert.ok(!SRC.includes("metroOnly"),
     "no metroOnly anywhere in the study — code or comment");
-  assert.ok(SRC.includes("m.checked=st.triadVol===0"),
-    "the checkbox renders triadVol===0 — it never stores its own truth");
-  assert.ok(SRC.includes("st.triadVol=0;"),
-    "checking the box writes the level, nothing else");
+  // v0.8.10: the checkbox became the per-slider mute ICON, same rule, new view
+  assert.ok(!SRC.includes('id="metroChk"'), "the mute-chords checkbox is retired");
+  assert.ok(SRC.includes('icon("chordMute",st.triadVol===0'),
+    "the chord icon renders triadVol===0 — a view of the level, never its own truth");
+  assert.ok(SRC.includes('icon("bassMute",st.bassVol===0') && SRC.includes('icon("clickMute",st.clickVol===0'),
+    "every slider's icon renders its own level at zero — the rule is universal");
+  assert.ok(SRC.includes("MIX_STASH=st.triadVol; st.triadVol=0;"),
+    "muting stashes then writes the level, nothing else");
 });
 
 test("each level is a gain node on an existing path, not a new graph", () => {

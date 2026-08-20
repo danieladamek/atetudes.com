@@ -180,11 +180,16 @@ const METRONOME_HOSTS = [
   { name: "metronome", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
       "meterSel", "subSel", "voiceSel", "clickTgl", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
+  /* 260820.3: triadetudes and tetradetudes replaced the Sound button with the
+   * mute icon (clickMute); the metronome APPLIANCE still ships clickTgl — out
+   * of that item's two-app scope, a recorded family divergence awaiting its
+   * own back-port item. This inventory says so explicitly rather than papering
+   * the three hosts over with one list. */
   { name: "triadetudes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
-      "meterSel", "subSel", "voiceSel", "clickTgl", "accChk", "clickVolR",
+      "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
   { name: "tetradetudes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
-      "meterSel", "subSel", "voiceSel", "clickTgl", "accChk", "clickVolR",
+      "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
 ];
 const METRONOME_GUARANTEE = "every At-Etudes app carries this metronome, first block, this look";

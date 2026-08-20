@@ -90,6 +90,11 @@
   .clpsd h2{margin-bottom:2px}
   .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
+  /* one mute icon per slider (v0.8.10): a VIEW of the level — level 0 renders
+     muted however it got there. v0.8.7's rule, made universal. */
+  .muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
+    background:transparent;cursor:pointer}
+  .muteBtn[aria-pressed="true"]{opacity:.55}
   .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
   .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
     border-radius:8px;background:#fff;cursor:pointer}
@@ -212,7 +217,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.9</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.10</div>
 </header>
 
 <div class="cards">
@@ -240,10 +245,10 @@
           <option value="wood">wood</option><option value="tick">tick</option></select></div>
     </div>
     <div class="transport" style="gap:9px;margin-top:8px">
-      <button id="clickTgl" title="click sound on/off">Sound: on</button>
       <label class="chk" style="margin:0"><input type="checkbox" id="accChk" checked> accents</label>
     </div>
-    <div class="bpmrow">
+    <div class="bpmrow" title="the click level — muted is this slider at zero">
+      <button id="clickMute" class="muteBtn">🔊</button>
       <span style="font-size:12px;color:#9C9CA4">Vol</span>
       <input type="range" id="clickVolR" min="0" max="100" value="80">
       <span id="clickVolVal" style="font-size:13px;width:30px;text-align:right">80</span>
@@ -275,7 +280,6 @@
       <label class="chk" style="margin:0" title="metronome click sound on/off">
         <input type="checkbox" id="clickChk2"> metronome</label>
       <label class="chk" style="margin:0"><input type="checkbox" id="countChk"> count-in</label>
-      <label class="chk" style="margin:0"><input type="checkbox" id="metroChk"> mute chords</label>
       <label class="chk" style="margin:0" title="triad voice — tone (today's), pluck (plucked string), sustain (notes hold to the chord change)">voice
         <select id="noteVoiceSel">
           <option value="tone">tone</option>
@@ -283,12 +287,14 @@
           <option value="sustain">sustain</option>
         </select></label>
     </div>
-    <div class="bpmrow" title="the mixer: triads level — mute chords is this slider at zero">
-      <span style="font-size:12px;color:var(--gray);width:36px">triads</span>
+    <div class="bpmrow" title="the mixer: chord level — muted is this slider at zero">
+      <button id="chordMute" class="muteBtn">🔊</button>
+      <span style="font-size:12px;color:var(--gray);width:36px">chord</span>
       <input type="range" id="triadVolR" min="0" max="100" value="100">
       <span id="triadVolVal" style="font-size:13px;width:30px;text-align:right">100</span>
     </div>
-    <div class="bpmrow" title="the mixer: bass level — triads at zero, bass up: the app holds the floor and the beat, you supply the triads">
+    <div class="bpmrow" title="the mixer: bass level — muted is this slider at zero">
+      <button id="bassMute" class="muteBtn">🔊</button>
       <span style="font-size:12px;color:var(--gray);width:36px">bass</span>
       <input type="range" id="bassVolR" min="0" max="100" value="100">
       <span id="bassVolVal" style="font-size:13px;width:30px;text-align:right">100</span>
@@ -297,9 +303,9 @@
     2 beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next
     bar</b> — the click you already hear is your count-in. If it isn't, Play starts it
     (count-in adds one clicked bar first). Stopping the étude leaves a self-started metronome
-    running; the metronome's Stop stops everything — it owns the clock. Mute chords is the
-    triads level at zero — bass and click keep sounding and the changes still animate in
-    time: play-along, you supply the triads. The click's own level lives in the Metronome
+    running; the metronome's Stop stops everything — it owns the clock. Each slider's speaker
+    icon mutes that voice — the icon is the slider at zero, and a muted chord with bass and
+    click sounding is play-along: you supply the chords. The click's own level lives in the Metronome
     card — the metronome owns its sound.</div>
   </div>
 </div>
@@ -511,7 +517,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.9 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.10 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -4808,7 +4814,7 @@ function ctx(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioCont
    st.clickVol with its one control in the Metronome card (the shared component
    owns its own sound). Mute chords is the triads level at zero: bass + click
    with the triads out is the play-along mode this mixer exists for. */
-let TRIAD_BUS=null,BASS_BUS=null,MIX_STASH=1; // stash: the level "mute chords" un-mutes to
+let TRIAD_BUS=null,BASS_BUS=null,MIX_STASH=1,BASS_STASH=1,CLICK_STASH=0.8; // stashes: what each mute un-mutes to
 function triadBus(ac){
   if(!TRIAD_BUS){TRIAD_BUS=ac.createGain();TRIAD_BUS.gain.value=st.triadVol;
     TRIAD_BUS.connect(ac.destination);}
@@ -6373,6 +6379,11 @@ function applyRaw(c){
     // pre-mixer entries default to unity: a gain of 1 is transparent, so they
     // restore and SOUND identical — the same ?? pattern as noteVoice/clickVoice
     triadVol:c.triadVol??1,bassVol:c.bassVol??1});
+  // v0.8.10 reconcile: the click's on/off IS the Vol level at zero now. An
+  // entry saved before that could hold clickOn:false with clickVol>0 — restore
+  // it MUTED with its level stashed, so unmute brings the saved level back.
+  if(!st.clickOn&&st.clickVol>0){ CLICK_STASH=st.clickVol; st.clickVol=0; }
+  st.clickOn=st.clickVol>0;
   // foreign/imported configs may be internally inconsistent — a pivot string
   // outside the set re-seats to the default before anything derives from it
   if(!st.set.includes(st.pivotString))defaultPivots();
@@ -6403,12 +6414,20 @@ function applyRaw(c){
   rebuild();
 }
 
-function toggleClick(){ st.clickOn=!st.clickOn; syncClickUI(); renderCfg(); }
+function toggleClick(){ // the mute icon: the click's on/off IS the Vol level at zero (v0.8.10)
+  if(st.clickVol>0){ CLICK_STASH=st.clickVol; st.clickVol=0; }
+  else st.clickVol=CLICK_STASH>0?CLICK_STASH:0.8;
+  st.clickOn=st.clickVol>0; syncClickUI(); renderCfg(); }
 
 function syncClickUI(){
-  const b=document.getElementById("clickTgl");
-  if(b){b.textContent="Sound: "+(st.clickOn?"on":"off");
-        b.style.color=st.clickOn?"":"var(--gray)";}
+  // the icons are VIEWS of the levels: level 0 renders muted however it got there
+  const icon=(id,muted,what)=>{const b=document.getElementById(id); if(!b)return;
+    b.textContent=muted?"🔇":"🔊";
+    b.setAttribute("aria-pressed",String(muted));
+    b.title=muted?"unmute — restore the "+what+" level":"mute the "+what+" — the slider to zero";};
+  icon("clickMute",st.clickVol===0,"click");
+  icon("chordMute",st.triadVol===0,"chord");
+  icon("bassMute",st.bassVol===0,"bass");
   const k=document.getElementById("clickChk2");   // Transport mirror: a checkbox
   if(k)k.checked=st.clickOn;
   const a=document.getElementById("accChk"); if(a)a.checked=st.clickAccent;
@@ -6416,8 +6435,6 @@ function syncClickUI(){
   const vc=document.getElementById("voiceSel"); if(vc)vc.value=st.clickVoice;
   const nv=document.getElementById("noteVoiceSel"); if(nv)nv.value=st.noteVoice;
   const c=document.getElementById("countChk"); if(c)c.checked=st.countIn;
-  // mute chords is the triads level at zero — the checkbox renders the level
-  const m=document.getElementById("metroChk"); if(m)m.checked=st.triadVol===0;
   const v=document.getElementById("clickVolR");
   if(v){v.value=Math.round(st.clickVol*100);
     document.getElementById("clickVolVal").textContent=Math.round(st.clickVol*100);}
@@ -6668,11 +6685,16 @@ function initControls(){
   document.getElementById("splitSel").addEventListener("change",e=>{
     st.splitIdx=+e.target.value; renderScore(); syncArpIn(); renderCfg();
     renderTimeline();});  // bar split legible: the divisions redraw with it
-  document.getElementById("metroChk").addEventListener("change",e=>{
-    // one piece of state: checking writes the triads level to zero, unchecking
-    // restores the last non-zero level (MIX_STASH; 1 if it was never touched)
-    if(e.target.checked){ if(st.triadVol>0)MIX_STASH=st.triadVol; st.triadVol=0; }
-    else st.triadVol=MIX_STASH;
+  // one mute icon per slider (v0.8.10): the icon writes the level, the level
+  // renders the icon — one state per slider, the stash only a memory
+  document.getElementById("chordMute").addEventListener("click",()=>{
+    if(st.triadVol>0){ MIX_STASH=st.triadVol; st.triadVol=0; }
+    else st.triadVol=MIX_STASH>0?MIX_STASH:1;
+    syncClickUI(); renderCfg();
+  });
+  document.getElementById("bassMute").addEventListener("click",()=>{
+    if(st.bassVol>0){ BASS_STASH=st.bassVol; st.bassVol=0; }
+    else st.bassVol=BASS_STASH>0?BASS_STASH:1;
     syncClickUI(); renderCfg();
   });
   for(const [r,key] of [["triadVolR","triadVol"],["bassVolR","bassVol"]]){
@@ -6680,15 +6702,18 @@ function initControls(){
     el.addEventListener("input",e=>{
       st[key]=+e.target.value/100;
       if(key==="triadVol"&&st.triadVol>0)MIX_STASH=st.triadVol;
+      if(key==="bassVol"&&st.bassVol>0)BASS_STASH=st.bassVol;
       document.getElementById(r.replace("R","Val")).textContent=e.target.value;
-      const m=document.getElementById("metroChk"); if(m)m.checked=st.triadVol===0;
-      syncBuses();
+      syncClickUI();     // the icon is a view of the level — dragging to zero shows muted
     });
     el.addEventListener("change",()=>renderCfg());
   }
-  document.getElementById("clickTgl").addEventListener("click",toggleClick);
+  document.getElementById("clickMute").addEventListener("click",toggleClick);
   document.getElementById("clickChk2").addEventListener("change",e=>{
-    st.clickOn=e.target.checked; syncClickUI(); renderCfg();});
+    // the transport's view of the one fact: off stashes and zeroes, on restores
+    if(!e.target.checked){ if(st.clickVol>0)CLICK_STASH=st.clickVol; st.clickVol=0; }
+    else st.clickVol=CLICK_STASH>0?CLICK_STASH:0.8;
+    st.clickOn=st.clickVol>0; syncClickUI(); renderCfg();});
   document.getElementById("accChk").addEventListener("change",e=>{st.clickAccent=e.target.checked;renderCfg();});
   document.getElementById("subSel").addEventListener("change",e=>{st.clickSub=+e.target.value;renderCfg();});
   document.getElementById("voiceSel").addEventListener("change",e=>{st.clickVoice=e.target.value;click();renderCfg();});
@@ -6696,7 +6721,10 @@ function initControls(){
   document.getElementById("countChk").addEventListener("change",e=>{st.countIn=e.target.checked;renderCfg();});
   document.getElementById("clickVolR").addEventListener("input",e=>{
     st.clickVol=+e.target.value/100;
-    document.getElementById("clickVolVal").textContent=e.target.value;});
+    if(st.clickVol>0)CLICK_STASH=st.clickVol;
+    st.clickOn=st.clickVol>0;   // level 0 IS muted, however it got there
+    document.getElementById("clickVolVal").textContent=e.target.value;
+    syncClickUI();});
   document.getElementById("clickVolR").addEventListener("change",()=>renderCfg());
   buildMinis(); initCollapse();
   syncClickUI(); renderLamp(); syncPlayUI();

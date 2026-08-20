@@ -1,3 +1,20 @@
+## 2026-08-20 — One mute icon per slider: Tetradetudes v0.1.7, Triadetudes v0.8.10 (Update Log 260820.3)
+
+- **Both apps** (Ruling 1): a speaker icon at the left of every level slider — chord, bass, and the
+  metronome's Vol — muting to zero and restoring on a second press; the tetrads/triads slider is
+  now called **chord**. v0.8.7's mute-is-the-slider-at-zero rule made universal; the `mute chords`
+  checkbox and the metronome's `Sound` button retired into it. The icon is a view of the level
+  (dragging to zero shows muted), unmute restores the stash or the default, aria-pressed + titles
+  carried. A muted voice schedules no audio sources, so the gates count silence honestly.
+- Tetradetudes rebuilt and republished byte-identical; Triadetudes hand-edited (it is the source),
+  with old saved entries reconciled on restore. URLs unchanged; the metronome, modes and
+  tetrad-voice-leading studies byte-identical. The metronome APPLIANCE keeps its Sound button —
+  out of scope, recorded as a pending back-port.
+- **Verified:** engine 474/474, door_locks 6859/0 (icon gates demonstrated failing against the
+  pre-icon build first), bite 7/7, both apps file:// network-off zero console errors, side-by-side
+  screenshots at 1280/390 inspected.
+- **Committed, NOT pushed** — the deploy is Daniel's.
+
 ## 2026-08-20 — Deployed: v0.1.5 + v0.1.6 are live — the uppercase E and the working Sound button
 
 - **Daniel's deploy of `be7ecb6`** (two commits: N4's uppercase E via the re-inline procedure's

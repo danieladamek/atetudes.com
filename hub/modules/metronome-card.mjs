@@ -26,7 +26,7 @@ export const metronomeCard = {
   mount_point: "cards",
   wrap_class: "metro",
   controls: ["metroBtn", "tapBtn", "beatLamp", "bpmRange", "bpmVal", "meterSel",
-    "subSel", "voiceSel", "clickTgl", "accChk", "clickVolR", "clickVolVal"],
+    "subSel", "voiceSel", "clickMute", "accChk", "clickVolR", "clickVolVal"],
 
   markup: `
   <h2>Metronome</h2>
@@ -52,10 +52,10 @@ export const metronomeCard = {
         <option value="wood">wood</option><option value="tick">tick</option></select></div>
   </div>
   <div class="transport metrosound">
-    <button id="clickTgl" data-control="clickTgl" title="click sound on/off">Sound: on</button>
     <label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label>
   </div>
-  <div class="bpmrow">
+  <div class="bpmrow" title="the click level — muted is this slider at zero">
+    <button id="clickMute" data-control="clickMute" class="muteBtn">🔊</button>
     <span class="metrolabel">Vol</span>
     <input type="range" id="clickVolR" data-control="clickVolR" min="0" max="100" value="80">
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
@@ -87,6 +87,7 @@ export const metronomeCard = {
  * card (same reason as the collapse chevron above). The static prose it reveals
  * now lives in a white popout, so it needs no dark-card colour of its own. */
 .card.metro .infoBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
+.card.metro .muteBtn{background:transparent}
 .card.metro select{background:#2E2E34;color:#ECECEE;border-color:#44444C}
 .card.metro .transport button{background:#2E2E34;color:#ECECEE;border-color:#44444C}
 .card.metro .transport button.primary{background:#ECECEE;color:var(--ink);
@@ -107,14 +108,15 @@ export const metronomeCard = {
     const core = createMetroCore({ bpm: 72, meter: 4 });
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
-    /* THE CLICK'S ON/OFF — this card's own state, at last read (260820.2: the
-     * button flipped this variable and NOTHING read it, Daniel's dead Sound
-     * button). The click is the clock's own voice, so the state lives with the
-     * clock owner and rides CLOCK_STATE.click; the transport's metronome
-     * checkbox is the second VIEW of it and moves through a CLOCK request —
-     * one state, two views, either can move it, both always agree (the
-     * mute-is-the-slider-at-zero rule, third application). */
-    let raf = null, sound = true;
+    /* THE CLICK'S ON/OFF — the clock owner's state, riding CLOCK_STATE.click
+     * (260820.2), and since 260820.3 it IS the Vol level at zero: v0.8.7's
+     * mute-is-the-slider-at-zero rule, made universal. The mute icon replaced
+     * the Sound button (Daniel's design) and is a VIEW of the level — level 0
+     * renders muted however it got there, dragging included. The stash is a
+     * memory, not an owner: unmute restores the last non-zero level, or this
+     * slider's default (80). Views of the one fact: the icon, the Vol slider,
+     * and the transport's metronome checkbox (via CLOCK requests). */
+    let raf = null, sound = true, clickStash = 0.8;
 
     const lamps = () => {
       const w = byId("beatLamp");
@@ -169,18 +171,24 @@ export const metronomeCard = {
      * Ownership is STATE, so it rides CLOCK_STATE (replayed to late subscribers
      * like the rest) rather than an ad-hoc stop bolted onto the pause path. */
     let owner = null;
-    /* the label STATES the state (the reference's meaning — "Sound: on" is what
-     * IS, settled 260820.2); the title states the ACTION, so the two cannot be
-     * confused. The card's collapse summary is LIVE, as the reference's is —
-     * it names the clock and the click state rather than a fixed sentence. */
+    /* the icon is a VIEW: it renders the level (muted at 0), announces itself
+     * (aria-pressed — an icon does not, a checkbox did), and its title states
+     * the ACTION. The card's collapse summary is LIVE, as the reference's is. */
+    const clickVol = () => Number(byId("clickVolR").value) / 100;
     const syncSound = () => {
-      const b = byId("clickTgl");
-      b.textContent = "Sound: " + (sound ? "on" : "off");
-      b.title = sound ? "press to silence the click" : "press to sound the click";
-      b.setAttribute("aria-pressed", String(sound));
+      sound = clickVol() > 0;
+      const b = byId("clickMute");
+      b.textContent = sound ? "🔊" : "🔇";
+      b.title = sound ? "mute the click — the slider to zero" : "unmute — restore the click level";
+      b.setAttribute("aria-pressed", String(!sound));
       const sum = byId("metroSum");
       if (sum) sum.textContent = `A metronome on its own clock — ${core.running ? "running" : "stopped"} · ` +
         `${core.bpm} bpm · ${core.meter}/4 · click ${sound ? "on" : "off"}.`;
+    };
+    const setClickVol = (v) => {
+      byId("clickVolR").value = String(Math.round(v * 100));
+      byId("clickVolVal").textContent = String(Math.round(v * 100));
+      publish();
     };
     const publish = () => { syncSound(); announce(d, CLOCK_STATE,
       { running: core.running, bpm: core.bpm, meter: core.meter, owner, click: sound }); };
@@ -222,8 +230,12 @@ export const metronomeCard = {
         if (m.run === false && m.owner && owner !== m.owner) return;
         setRunning(m.run, m.owner);
       }
-      // the other view asking: the transport's metronome checkbox
-      if (typeof m.click === "boolean" && m.click !== sound) { sound = m.click; publish(); }
+      // the other view asking: the transport's metronome checkbox — mapped to
+      // the ONE state, the level: off stashes and zeroes, on restores
+      if (typeof m.click === "boolean" && m.click !== (clickVol() > 0)) {
+        if (!m.click) { clickStash = clickVol() || clickStash; setClickVol(0); }
+        else setClickVol(clickStash > 0 ? clickStash : 0.8);
+      }
       else publish();
     });
 
@@ -246,9 +258,17 @@ export const metronomeCard = {
       // meaningless subdivision cannot be selected silently
       if (!SUB_OFFSETS[+e.target.value]) throw new Error("unknown subdivision");
     });
-    byId("clickTgl").addEventListener("click", () => { sound = !sound; publish(); });
+    byId("clickMute").addEventListener("click", () => {
+      if (clickVol() > 0) { clickStash = clickVol(); setClickVol(0); }
+      else setClickVol(clickStash > 0 ? clickStash : 0.8);
+    });
     byId("clickVolR").addEventListener("input", (e) => {
       byId("clickVolVal").textContent = e.target.value;
+      const v = Number(e.target.value) / 100;
+      if (v > 0) clickStash = v;
+      // rule 1: level 0 IS muted, however it got there — dragging included.
+      // publish() re-derives `sound` from the level and re-renders the icon.
+      publish();
     });
     byId("accChk").addEventListener("change", () => light(-1));
     lamps(); light(-1);

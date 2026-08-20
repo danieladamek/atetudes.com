@@ -38,6 +38,13 @@ select,input[type=text]{
 .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
 .transport button.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:bold}
+/* ONE MUTE ICON PER SLIDER (260820.3, Daniel's design) — page grammar because
+ * two cards render it (the transport's chord and bass rows, the metronome's
+ * Vol). The icon is a VIEW of its slider's level: level 0 renders muted however
+ * it got there — v0.8.7's mute-is-the-slider-at-zero rule made universal. */
+.muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
+  background:transparent;cursor:pointer}
+.muteBtn[aria-pressed="true"]{opacity:.55}
 footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
 /* EXPAND/COLLAPSE ON EVERY PANEL (Shell 4) — the reference's chevron, its look
@@ -169,6 +176,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * card (same reason as the collapse chevron above). The static prose it reveals
  * now lives in a white popout, so it needs no dark-card colour of its own. */
 .card.metro .infoBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
+.card.metro .muteBtn{background:transparent}
 .card.metro select{background:#2E2E34;color:#ECECEE;border-color:#44444C}
 .card.metro .transport button{background:#2E2E34;color:#ECECEE;border-color:#44444C}
 .card.metro .transport button.primary{background:#ECECEE;color:var(--ink);
@@ -284,10 +292,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
         <option value="wood">wood</option><option value="tick">tick</option></select></div>
   </div>
   <div class="transport metrosound">
-    <button id="clickTgl" data-control="clickTgl" title="click sound on/off">Sound: on</button>
     <label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label>
   </div>
-  <div class="bpmrow">
+  <div class="bpmrow" title="the click level — muted is this slider at zero">
+    <button id="clickMute" data-control="clickMute" class="muteBtn">🔊</button>
     <span class="metrolabel">Vol</span>
     <input type="range" id="clickVolR" data-control="clickVolR" min="0" max="100" value="80">
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
@@ -319,17 +327,17 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <label class="chk" title="metronome click sound on/off">
       <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
     <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
-    <label class="chk" title="the chord level at zero — bass and click keep sounding">
-      <input type="checkbox" id="metroChk" data-control="metroChk"> mute chords</label>
     <label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
       <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label>
   </div>
-  <div class="bpmrow" title="the mixer: the chord level — mute chords is this slider at zero">
-    <span class="trLab trMixLab" id="chordVolLab"></span>
+  <div class="bpmrow" title="the mixer: the chord level — muted is this slider at zero">
+    <button id="chordMute" data-control="chordMute" class="muteBtn">🔊</button>
+    <span class="trLab trMixLab">chord</span>
     <input type="range" id="chordVolR" data-control="chordVolR" min="0" max="100" value="100">
     <span class="trVal" id="chordVolVal">100</span>
   </div>
-  <div class="bpmrow" title="the mixer: the bass level">
+  <div class="bpmrow" title="the mixer: the bass level — muted is this slider at zero">
+    <button id="bassMute" data-control="bassMute" class="muteBtn">🔊</button>
     <span class="trLab trMixLab">bass</span>
     <input type="range" id="bassVolR" data-control="bassVolR" min="0" max="100" value="100">
     <span class="trVal" id="bassVolVal">100</span>
@@ -3441,9 +3449,15 @@ const audioCard = {
           tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,
           open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
       });
-      for (const ev of voiceSchedule(events, voice, durBeats, bpm))
+      for (const ev of voiceSchedule(events, voice, durBeats, bpm)) {
+        // a voice at level ZERO schedules nothing (260820.3): the mute icons
+        // pull a bus to silence, and skipping here makes the sources tell the
+        // truth — the gate counts source-starts, and a muted voice that still
+        // started inaudible sources would pass over a broken mute forever
+        if ((ev.role === "bass" ? bassVol : chordVol) === 0) continue;
         sound(voiceFor(ev.role, voice), ev.midi, t0 + ev.onset, ev.dur,
           ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.strum ? 0.14 : 0.2);
+      }
     };
 
     /** the click. `lead` is seconds until the beat, announced by whoever owns
@@ -3520,6 +3534,7 @@ const audioCard = {
      * before the first Play, exactly as the triad keyboard does. */
     listen(d, NOTE, (m) => {
       if (!m || typeof m.midi !== "number") return;
+      if (chordVol === 0) return;              // a muted chord voice presses silently
       const a = audio();
       if (!a) return;
       sound(voiceFor("chord", voice), m.midi, a.currentTime + 0.02, 0.7, 0.24);
@@ -4766,7 +4781,7 @@ const metronomeCard = {
   mount_point: "cards",
   wrap_class: "metro",
   controls: ["metroBtn", "tapBtn", "beatLamp", "bpmRange", "bpmVal", "meterSel",
-    "subSel", "voiceSel", "clickTgl", "accChk", "clickVolR", "clickVolVal"],
+    "subSel", "voiceSel", "clickMute", "accChk", "clickVolR", "clickVolVal"],
 
   markup: `
   <h2>Metronome</h2>
@@ -4792,10 +4807,10 @@ const metronomeCard = {
         <option value="wood">wood</option><option value="tick">tick</option></select></div>
   </div>
   <div class="transport metrosound">
-    <button id="clickTgl" data-control="clickTgl" title="click sound on/off">Sound: on</button>
     <label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label>
   </div>
-  <div class="bpmrow">
+  <div class="bpmrow" title="the click level — muted is this slider at zero">
+    <button id="clickMute" data-control="clickMute" class="muteBtn">🔊</button>
     <span class="metrolabel">Vol</span>
     <input type="range" id="clickVolR" data-control="clickVolR" min="0" max="100" value="80">
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
@@ -4827,6 +4842,7 @@ const metronomeCard = {
  * card (same reason as the collapse chevron above). The static prose it reveals
  * now lives in a white popout, so it needs no dark-card colour of its own. */
 .card.metro .infoBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
+.card.metro .muteBtn{background:transparent}
 .card.metro select{background:#2E2E34;color:#ECECEE;border-color:#44444C}
 .card.metro .transport button{background:#2E2E34;color:#ECECEE;border-color:#44444C}
 .card.metro .transport button.primary{background:#ECECEE;color:var(--ink);
@@ -4847,14 +4863,15 @@ const metronomeCard = {
     const core = createMetroCore({ bpm: 72, meter: 4 });
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
-    /* THE CLICK'S ON/OFF — this card's own state, at last read (260820.2: the
-     * button flipped this variable and NOTHING read it, Daniel's dead Sound
-     * button). The click is the clock's own voice, so the state lives with the
-     * clock owner and rides CLOCK_STATE.click; the transport's metronome
-     * checkbox is the second VIEW of it and moves through a CLOCK request —
-     * one state, two views, either can move it, both always agree (the
-     * mute-is-the-slider-at-zero rule, third application). */
-    let raf = null, sound = true;
+    /* THE CLICK'S ON/OFF — the clock owner's state, riding CLOCK_STATE.click
+     * (260820.2), and since 260820.3 it IS the Vol level at zero: v0.8.7's
+     * mute-is-the-slider-at-zero rule, made universal. The mute icon replaced
+     * the Sound button (Daniel's design) and is a VIEW of the level — level 0
+     * renders muted however it got there, dragging included. The stash is a
+     * memory, not an owner: unmute restores the last non-zero level, or this
+     * slider's default (80). Views of the one fact: the icon, the Vol slider,
+     * and the transport's metronome checkbox (via CLOCK requests). */
+    let raf = null, sound = true, clickStash = 0.8;
 
     const lamps = () => {
       const w = byId("beatLamp");
@@ -4909,18 +4926,24 @@ const metronomeCard = {
      * Ownership is STATE, so it rides CLOCK_STATE (replayed to late subscribers
      * like the rest) rather than an ad-hoc stop bolted onto the pause path. */
     let owner = null;
-    /* the label STATES the state (the reference's meaning — "Sound: on" is what
-     * IS, settled 260820.2); the title states the ACTION, so the two cannot be
-     * confused. The card's collapse summary is LIVE, as the reference's is —
-     * it names the clock and the click state rather than a fixed sentence. */
+    /* the icon is a VIEW: it renders the level (muted at 0), announces itself
+     * (aria-pressed — an icon does not, a checkbox did), and its title states
+     * the ACTION. The card's collapse summary is LIVE, as the reference's is. */
+    const clickVol = () => Number(byId("clickVolR").value) / 100;
     const syncSound = () => {
-      const b = byId("clickTgl");
-      b.textContent = "Sound: " + (sound ? "on" : "off");
-      b.title = sound ? "press to silence the click" : "press to sound the click";
-      b.setAttribute("aria-pressed", String(sound));
+      sound = clickVol() > 0;
+      const b = byId("clickMute");
+      b.textContent = sound ? "🔊" : "🔇";
+      b.title = sound ? "mute the click — the slider to zero" : "unmute — restore the click level";
+      b.setAttribute("aria-pressed", String(!sound));
       const sum = byId("metroSum");
       if (sum) sum.textContent = `A metronome on its own clock — ${core.running ? "running" : "stopped"} · ` +
         `${core.bpm} bpm · ${core.meter}/4 · click ${sound ? "on" : "off"}.`;
+    };
+    const setClickVol = (v) => {
+      byId("clickVolR").value = String(Math.round(v * 100));
+      byId("clickVolVal").textContent = String(Math.round(v * 100));
+      publish();
     };
     const publish = () => { syncSound(); announce(d, CLOCK_STATE,
       { running: core.running, bpm: core.bpm, meter: core.meter, owner, click: sound }); };
@@ -4962,8 +4985,12 @@ const metronomeCard = {
         if (m.run === false && m.owner && owner !== m.owner) return;
         setRunning(m.run, m.owner);
       }
-      // the other view asking: the transport's metronome checkbox
-      if (typeof m.click === "boolean" && m.click !== sound) { sound = m.click; publish(); }
+      // the other view asking: the transport's metronome checkbox — mapped to
+      // the ONE state, the level: off stashes and zeroes, on restores
+      if (typeof m.click === "boolean" && m.click !== (clickVol() > 0)) {
+        if (!m.click) { clickStash = clickVol() || clickStash; setClickVol(0); }
+        else setClickVol(clickStash > 0 ? clickStash : 0.8);
+      }
       else publish();
     });
 
@@ -4986,9 +5013,17 @@ const metronomeCard = {
       // meaningless subdivision cannot be selected silently
       if (!SUB_OFFSETS[+e.target.value]) throw new Error("unknown subdivision");
     });
-    byId("clickTgl").addEventListener("click", () => { sound = !sound; publish(); });
+    byId("clickMute").addEventListener("click", () => {
+      if (clickVol() > 0) { clickStash = clickVol(); setClickVol(0); }
+      else setClickVol(clickStash > 0 ? clickStash : 0.8);
+    });
     byId("clickVolR").addEventListener("input", (e) => {
       byId("clickVolVal").textContent = e.target.value;
+      const v = Number(e.target.value) / 100;
+      if (v > 0) clickStash = v;
+      // rule 1: level 0 IS muted, however it got there — dragging included.
+      // publish() re-derives `sound` from the level and re-renders the icon.
+      publish();
     });
     byId("accChk").addEventListener("change", () => light(-1));
     lamps(); light(-1);
@@ -7799,7 +7834,7 @@ const transportCard = {
   mount_point: "cards",
   order: 1,
   controls: ["prevBtn", "playBtn", "nextBtn", "bpmRange2", "meterSel2", "splitSel",
-    "clickChk2", "countChk", "metroChk", "noteVoiceSel", "chordVolR", "bassVolR"],
+    "clickChk2", "countChk", "chordMute", "bassMute", "noteVoiceSel", "chordVolR", "bassVolR"],
 
   markup: `
   <h2>Transport</h2>
@@ -7824,17 +7859,17 @@ const transportCard = {
     <label class="chk" title="metronome click sound on/off">
       <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
     <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
-    <label class="chk" title="the chord level at zero — bass and click keep sounding">
-      <input type="checkbox" id="metroChk" data-control="metroChk"> mute chords</label>
     <label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
       <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label>
   </div>
-  <div class="bpmrow" title="the mixer: the chord level — mute chords is this slider at zero">
-    <span class="trLab trMixLab" id="chordVolLab"></span>
+  <div class="bpmrow" title="the mixer: the chord level — muted is this slider at zero">
+    <button id="chordMute" data-control="chordMute" class="muteBtn">\u{1F50A}</button>
+    <span class="trLab trMixLab">chord</span>
     <input type="range" id="chordVolR" data-control="chordVolR" min="0" max="100" value="100">
     <span class="trVal" id="chordVolVal">100</span>
   </div>
-  <div class="bpmrow" title="the mixer: the bass level">
+  <div class="bpmrow" title="the mixer: the bass level — muted is this slider at zero">
+    <button id="bassMute" data-control="bassMute" class="muteBtn">\u{1F50A}</button>
     <span class="trLab trMixLab">bass</span>
     <input type="range" id="bassVolR" data-control="bassVolR" min="0" max="100" value="100">
     <span class="trVal" id="bassVolVal">100</span>
@@ -7872,7 +7907,7 @@ const transportCard = {
     let core = createTransportCore({ meter, splitIdx, steps, countIn: false });
     let armed = false, position = 0;
     let armFrom = null, armAt = 0;   // metroOwner: see setPlaying
-    let chordVol = 1, bassVol = 1, mutedStash = 1;
+    let chordVol = 1, bassVol = 1;
 
     const fillMeters = () => {
       const sel = byId("meterSel2"); sel.textContent = "";
@@ -7896,7 +7931,6 @@ const transportCard = {
     for (const n of NOTE_VOICE_NAMES) {
       const o = d.createElement("option"); o.value = n; o.textContent = n; vsel.appendChild(o);
     }
-    byId("chordVolLab").textContent = (present.chordLabel || "chord").toLowerCase();
 
     const showLoop = () => { byId("trLoop").textContent = armed ? "loop " + (core.loop + 1) : ""; };
 
@@ -7970,22 +8004,38 @@ const transportCard = {
     byId("countChk").addEventListener("change", (e) => core.setCountIn(e.target.checked));
     byId("clickChk2").addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
     vsel.addEventListener("change", mixer);
-    /* mute chords IS the chord slider at zero — one state, two views, the
-     * reference's rule (v0.8.7). The checkbox renders chordVol===0. */
-    byId("chordVolR").addEventListener("input", (e) => {
-      chordVol = Number(e.target.value) / 100; byId("chordVolVal").textContent = e.target.value;
-      byId("metroChk").checked = chordVol === 0; mixer();
-    });
-    byId("metroChk").addEventListener("change", (e) => {
-      if (e.target.checked) { mutedStash = chordVol || mutedStash; chordVol = 0; }
-      else chordVol = mutedStash || 1;
-      byId("chordVolR").value = String(Math.round(chordVol * 100));
-      byId("chordVolVal").textContent = String(Math.round(chordVol * 100));
-      mixer();
-    });
-    byId("bassVolR").addEventListener("input", (e) => {
-      bassVol = Number(e.target.value) / 100; byId("bassVolVal").textContent = e.target.value; mixer();
-    });
+    /* ONE MUTE ICON PER SLIDER (260820.3) — v0.8.7's mute-is-the-slider-at-
+     * zero rule made universal, and the "mute chords" checkbox retired into it.
+     * The ICON IS A VIEW OF THE LEVEL, never separate state: level 0 renders
+     * muted however it got there, dragging by hand included; the stash is a
+     * memory, not an owner — unmute restores the last non-zero level, or the
+     * slider's default when there is none. The dead Sound button and the
+     * MIXER-vs-CLOCK_STATE trap were both a second owner; this has one. */
+    const wireMute = (btnId, sliderId, valId, get, set, dflt) => {
+      let stash = 0;
+      const renderIcon = () => {
+        const muted = get() === 0, b = byId(btnId);
+        b.textContent = muted ? "\u{1F507}" : "\u{1F50A}";
+        b.setAttribute("aria-pressed", String(muted));
+        b.title = muted ? "unmute — restore the level" : "mute — the slider to zero";
+      };
+      const apply = (v) => { set(v);
+        byId(sliderId).value = String(Math.round(v * 100));
+        byId(valId).textContent = String(Math.round(v * 100));
+        renderIcon(); mixer(); };
+      byId(btnId).addEventListener("click", () => {
+        if (get() > 0) { stash = get(); apply(0); }
+        else apply(stash > 0 ? stash : dflt);
+      });
+      byId(sliderId).addEventListener("input", (e) => {
+        const v = Number(e.target.value) / 100;
+        if (v > 0) stash = v;
+        set(v); byId(valId).textContent = e.target.value; renderIcon(); mixer();
+      });
+      renderIcon();
+    };
+    wireMute("chordMute", "chordVolR", "chordVolVal", () => chordVol, (v) => { chordVol = v; }, 1);
+    wireMute("bassMute", "bassVolR", "bassVolVal", () => bassVol, (v) => { bassVol = v; }, 1);
 
     /* a strip mini summoned Play — arm (or disarm) the walk exactly as our own
      * Play button does; setPlaying takes it from there (grid + audio) */
@@ -8096,6 +8146,13 @@ select,input[type=text]{
 .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
 .transport button.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:bold}
+/* ONE MUTE ICON PER SLIDER (260820.3, Daniel's design) — page grammar because
+ * two cards render it (the transport's chord and bass rows, the metronome's
+ * Vol). The icon is a VIEW of its slider's level: level 0 renders muted however
+ * it got there — v0.8.7's mute-is-the-slider-at-zero rule made universal. */
+.muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
+  background:transparent;cursor:pointer}
+.muteBtn[aria-pressed="true"]{opacity:.55}
 footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
 /* EXPAND/COLLAPSE ON EVERY PANEL (Shell 4) — the reference's chevron, its look
@@ -8323,7 +8380,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.6","chordLabel":"Tetrads","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.7","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

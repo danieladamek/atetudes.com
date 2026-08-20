@@ -466,28 +466,38 @@ def run_door(pw, door_id):
         page.uncheck("#countChk"); page.wait_for_timeout(40)
         page.click("#metroBtn"); page.wait_for_timeout(120)    # clock running again for the blocks below
 
-        # ---- the metronome's own Sound button SILENCES THE CLICK (260820.2).
-        # Daniel, in the live app: the button did nothing — it flipped a local
-        # variable nobody read, while the transport's checkbox (via MIXER) was
-        # the only real state. A declared control that announces NOTHING is
-        # invisible to every message-level gate by construction, so this one is
-        # asserted the only way that could have caught it: press the control,
-        # count what the consumer did. Demonstrated failing against the inert
-        # build first (clicks kept sounding; the checkbox never moved).
+        # ---- ONE MUTE ICON PER SLIDER (260820.3): the metronome's Vol slider.
+        # The icon REPLACED the Sound button (Daniel's design); the state work
+        # stays — the click's on/off is the clock owner's CLOCK_STATE.click —
+        # and "click muted" now IS "click Vol at zero", the v0.8.7 rule made
+        # universal. The icon is a VIEW of the level, never separate state.
+        # Demonstrated failing against the pre-icon build (no #clickMute).
         clicks_in = lambda ms: (lambda a: (page.wait_for_timeout(ms), page.evaluate("() => window.__src.length") - a)[1])(page.evaluate("() => window.__src.length"))
-        check(clicks_in(1300) >= 1, f"{tag} no baseline click is sounding — cannot test the Sound button")
-        page.click("#clickTgl"); page.wait_for_timeout(400)    # Sound: off — settle past scheduled clicks
+        check(clicks_in(1300) >= 1, f"{tag} no baseline click is sounding — cannot test the click mute icon")
+        page.click("#clickMute"); page.wait_for_timeout(400)   # mute — settle past scheduled clicks
         check(clicks_in(1300) == 0,
-              f"{tag} the metronome's Sound button did not SILENCE the click — it flips a variable nobody reads")
-        # ONE STATE, TWO VIEWS, both directions: the transport's checkbox is the
-        # other view of the same fact and must have moved with it
+              f"{tag} the click mute icon did not SILENCE the click — pressing it must stop the voice")
+        check(page.input_value("#clickVolR") == "0",
+              f"{tag} click muted but the Vol slider is not at zero — the icon must WRITE the level, not hold its own truth")
         check(not page.is_checked("#clickChk2"),
-              f"{tag} Sound: off did not move the transport's metronome checkbox — two states, not two views")
-        check("off" in page.inner_text("#clickTgl"), f"{tag} the Sound button's label does not state the new state")
-        page.check("#clickChk2"); page.wait_for_timeout(300)   # the OTHER direction: checkbox -> button
-        check("on" in page.inner_text("#clickTgl"),
-              f"{tag} re-checking the transport checkbox did not move the Sound button — the arrow only points one way")
-        check(clicks_in(1300) >= 1, f"{tag} the click did not resume after re-enabling from the checkbox")
+              f"{tag} click muted but the transport's metronome checkbox did not move — two states, not two views")
+        check(page.get_attribute("#clickMute", "aria-pressed") == "true",
+              f"{tag} the click mute icon does not announce its pressed state")
+        page.check("#clickChk2"); page.wait_for_timeout(300)   # the OTHER view unmutes
+        check(page.input_value("#clickVolR") == "80",
+              f"{tag} unmuting from the checkbox did not restore the stashed level (80): {page.input_value('#clickVolR')!r}")
+        check(clicks_in(1300) >= 1, f"{tag} the click did not resume after unmuting from the checkbox")
+        # RULE 1, the one most likely to be missed: drag the Vol slider to zero
+        # BY HAND and the icon shows muted — level 0 is muted however it got there
+        page.fill("#clickVolR", "0"); page.dispatch_event("#clickVolR", "input"); page.wait_for_timeout(200)
+        check(page.get_attribute("#clickMute", "aria-pressed") == "true",
+              f"{tag} Vol dragged to zero by hand but the icon does not show muted — the icon is a VIEW of the level")
+        check(clicks_in(1300) == 0, f"{tag} Vol at zero but the click still sounds")
+        # unmute with NO stash (it was dragged to zero): restore the DEFAULT (80)
+        page.click("#clickMute"); page.wait_for_timeout(300)
+        check(page.input_value("#clickVolR") == "80",
+              f"{tag} unmute with no stashed level must restore the click's default (80): {page.input_value('#clickVolR')!r}")
+        check(clicks_in(1300) >= 1, f"{tag} the click did not resume after unmuting from the icon")
 
         # leave it LIT into the orphan check: .trLit is a state this door has
         page.click("#playBtn")
@@ -773,10 +783,12 @@ def run_door(pw, door_id):
     if "chordVolR" in r["controlsPresent"]:
         # ---- the audio path, which no static check can see. THE MIXER LIVES IN
         # TRANSPORT (the reference's form); the audio realiser is a hidden module
-        # that only listens. Its label is the door's own `present.chordLabel`.
-        want = ((r.get("present") or {}).get("chordLabel") or "chord").lower()
-        got = page.inner_text("#chordVolLab").strip()
-        check(got == want, f"{tag} the mixer's chord slider says {got!r}, the door says {want!r}")
+        # that only listens. The chord slider is called "chord" in every app —
+        # Daniel's consistent-reproducible-pattern call (260820.3) retired the
+        # per-door chordLabel key: one value across every door is a fact with no
+        # variation, so the word is markup, not configuration.
+        labels = page.eval_on_selector_all(".trMixLab", "e => e.map(x => x.textContent.trim())")
+        check(labels == ["chord", "bass"], f"{tag} the mixer rows are not chord/bass: {labels}")
         check(page.query_selector("#auOn") is None and page.query_selector(".auHead") is None,
               f"{tag} a separate Sound card still renders — the mixer must live in Transport")
 
@@ -816,13 +828,49 @@ def run_door(pw, door_id):
         beats = page.evaluate("() => window.__starts")
         page.wait_for_timeout(900)
         check(page.evaluate("() => window.__starts") > beats, f"{tag} the metronome beat never reached the audio realiser")
-        # the mixer ramps rather than steps, and zero is legal; mute chords IS the
-        # chord slider at zero — one state, two views (the reference's rule)
-        page.fill("#chordVolR", "0")
-        page.dispatch_event("#chordVolR", "input")
-        check(page.is_checked("#metroChk"), f"{tag} the chord slider at zero did not tick 'mute chords'")
-        page.uncheck("#metroChk")
-        check(page.input_value("#chordVolR") != "0", f"{tag} unticking 'mute chords' did not restore the level")
+        # ONE MUTE ICON PER SLIDER (260820.3): chord and bass. The icon is a
+        # VIEW of the level (v0.8.7's rule universal); 'mute chords' checkbox is
+        # GONE. Muting a voice stops its SOURCES (the realiser skips a voice at
+        # level zero), asserted by counting — the item's gate.
+        # chord: mute -> a step sounds only the bass
+        page.click("#chordMute"); page.wait_for_timeout(120)
+        check(page.input_value("#chordVolR") == "0", f"{tag} the chord mute icon did not pull the slider to zero")
+        b_ch = page.evaluate("() => window.__starts")
+        page.click("#nextBtn"); page.wait_for_timeout(400)
+        n_ch = page.evaluate("() => window.__starts") - b_ch
+        check(1 <= n_ch <= 2,
+              f"{tag} chord muted but a step started {n_ch} sources — the chord voice must STOP (bass alone is 1-2)")
+        page.click("#chordMute"); page.wait_for_timeout(120)   # unmute: stash was 100
+        check(page.input_value("#chordVolR") == "100", f"{tag} chord unmute did not restore the stashed level")
+        b_ch = page.evaluate("() => window.__starts")
+        page.click("#nextBtn"); page.wait_for_timeout(400)
+        check(page.evaluate("() => window.__starts") - b_ch >= 4,
+              f"{tag} the chord voice did not come back after unmute")
+        # bass: mute -> a step sounds only the chord (4 voices, no bass)
+        page.click("#bassMute"); page.wait_for_timeout(120)
+        b_b = page.evaluate("() => window.__starts")
+        page.click("#nextBtn"); page.wait_for_timeout(400)
+        n_b = page.evaluate("() => window.__starts") - b_b
+        check(4 <= n_b <= 5 and page.input_value("#bassVolR") == "0",
+              f"{tag} bass muted but a step started {n_b} sources / slider {page.input_value('#bassVolR')!r}")
+        page.click("#bassMute"); page.wait_for_timeout(120)
+        # RULE 1: drag the chord slider to zero BY HAND -> its icon shows muted
+        page.fill("#chordVolR", "0"); page.dispatch_event("#chordVolR", "input"); page.wait_for_timeout(100)
+        check(page.get_attribute("#chordMute", "aria-pressed") == "true",
+              f"{tag} chord slider dragged to zero but the icon does not show muted — the icon is a VIEW of the level")
+        # unmute with NO stash (dragged to zero) -> the chord default, 100
+        page.click("#chordMute"); page.wait_for_timeout(100)
+        check(page.input_value("#chordVolR") == "100",
+              f"{tag} chord unmute with no stash must restore the default 100: {page.input_value('#chordVolR')!r}")
+        # the stash path: 60 -> mute -> unmute -> 60
+        page.fill("#chordVolR", "60"); page.dispatch_event("#chordVolR", "input")
+        page.click("#chordMute"); page.click("#chordMute"); page.wait_for_timeout(100)
+        check(page.input_value("#chordVolR") == "60",
+              f"{tag} chord unmute did not restore the stashed 60: {page.input_value('#chordVolR')!r}")
+        page.fill("#chordVolR", "100"); page.dispatch_event("#chordVolR", "input")
+        # metroChk is GONE from the artifact — the checkbox this icon replaced
+        check(page.eval_on_selector_all("#metroChk", "e => e.length") == 0,
+              f"{tag} the 'mute chords' checkbox still renders — the icon replaced it")
         page.fill("#bassVolR", "50")
         page.dispatch_event("#bassVolR", "input")
 
@@ -1237,6 +1285,13 @@ def run_door(pw, door_id):
     # orphan check, so the header re-show rules (.clpsd>h2, .clpsd>.bh) each
     # match. Collapse only hides (the nodes stay in the DOM, so the running
     # clock's live classes are still found); expanded again below for the shots.
+    # ...and one slider MUTED, so the .muteBtn[aria-pressed="true"] rule has an
+    # element to match (the same lesson as .clpsd). Any mute icon this door
+    # renders will do — the bass where a transport exists, else the click
+    # (every door carries the metronome). Restored below.
+    muted_for_check = page.query_selector("#bassMute") or page.query_selector("#clickMute")
+    if muted_for_check and muted_for_check.get_attribute("aria-pressed") != "true":
+        muted_for_check.click(); page.wait_for_timeout(60)
     collapsed_for_check = []
     for sel in (".card", ".board"):
         p = page.query_selector(sel)
@@ -1271,12 +1326,16 @@ def run_door(pw, door_id):
           f"{tag} console dirtied by interaction: {console}")
 
     # re-expand the panels collapsed only for the orphan check, so the gate
-    # screenshots show the whole page rather than two shut panels
+    # screenshots show the whole page rather than two shut panels — and only
+    # THEN unmute the slider muted for the check: in a door where the metronome
+    # is the collapsed card, its icon is display:none until the card reopens
     for p in collapsed_for_check:
         btn = p.query_selector(".clpsBtn")
         if btn:
             btn.click()
     page.wait_for_timeout(40)
+    if muted_for_check and muted_for_check.get_attribute("aria-pressed") == "true":
+        muted_for_check.click(); page.wait_for_timeout(40)
 
     if SHOTS:
         # open the LARGEST popout for the shots — the item wants the popout open

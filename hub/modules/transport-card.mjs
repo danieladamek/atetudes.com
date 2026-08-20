@@ -34,7 +34,7 @@ export const transportCard = {
   mount_point: "cards",
   order: 1,
   controls: ["prevBtn", "playBtn", "nextBtn", "bpmRange2", "meterSel2", "splitSel",
-    "clickChk2", "countChk", "metroChk", "noteVoiceSel", "chordVolR", "bassVolR"],
+    "clickChk2", "countChk", "chordMute", "bassMute", "noteVoiceSel", "chordVolR", "bassVolR"],
 
   markup: `
   <h2>Transport</h2>
@@ -59,17 +59,17 @@ export const transportCard = {
     <label class="chk" title="metronome click sound on/off">
       <input type="checkbox" id="clickChk2" data-control="clickChk2" checked> metronome</label>
     <label class="chk"><input type="checkbox" id="countChk" data-control="countChk"> count-in</label>
-    <label class="chk" title="the chord level at zero — bass and click keep sounding">
-      <input type="checkbox" id="metroChk" data-control="metroChk"> mute chords</label>
     <label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
       <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label>
   </div>
-  <div class="bpmrow" title="the mixer: the chord level — mute chords is this slider at zero">
-    <span class="trLab trMixLab" id="chordVolLab"></span>
+  <div class="bpmrow" title="the mixer: the chord level — muted is this slider at zero">
+    <button id="chordMute" data-control="chordMute" class="muteBtn">\u{1F50A}</button>
+    <span class="trLab trMixLab">chord</span>
     <input type="range" id="chordVolR" data-control="chordVolR" min="0" max="100" value="100">
     <span class="trVal" id="chordVolVal">100</span>
   </div>
-  <div class="bpmrow" title="the mixer: the bass level">
+  <div class="bpmrow" title="the mixer: the bass level — muted is this slider at zero">
+    <button id="bassMute" data-control="bassMute" class="muteBtn">\u{1F50A}</button>
     <span class="trLab trMixLab">bass</span>
     <input type="range" id="bassVolR" data-control="bassVolR" min="0" max="100" value="100">
     <span class="trVal" id="bassVolVal">100</span>
@@ -107,7 +107,7 @@ export const transportCard = {
     let core = createTransportCore({ meter, splitIdx, steps, countIn: false });
     let armed = false, position = 0;
     let armFrom = null, armAt = 0;   // metroOwner: see setPlaying
-    let chordVol = 1, bassVol = 1, mutedStash = 1;
+    let chordVol = 1, bassVol = 1;
 
     const fillMeters = () => {
       const sel = byId("meterSel2"); sel.textContent = "";
@@ -131,7 +131,6 @@ export const transportCard = {
     for (const n of NOTE_VOICE_NAMES) {
       const o = d.createElement("option"); o.value = n; o.textContent = n; vsel.appendChild(o);
     }
-    byId("chordVolLab").textContent = (present.chordLabel || "chord").toLowerCase();
 
     const showLoop = () => { byId("trLoop").textContent = armed ? "loop " + (core.loop + 1) : ""; };
 
@@ -205,22 +204,38 @@ export const transportCard = {
     byId("countChk").addEventListener("change", (e) => core.setCountIn(e.target.checked));
     byId("clickChk2").addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
     vsel.addEventListener("change", mixer);
-    /* mute chords IS the chord slider at zero — one state, two views, the
-     * reference's rule (v0.8.7). The checkbox renders chordVol===0. */
-    byId("chordVolR").addEventListener("input", (e) => {
-      chordVol = Number(e.target.value) / 100; byId("chordVolVal").textContent = e.target.value;
-      byId("metroChk").checked = chordVol === 0; mixer();
-    });
-    byId("metroChk").addEventListener("change", (e) => {
-      if (e.target.checked) { mutedStash = chordVol || mutedStash; chordVol = 0; }
-      else chordVol = mutedStash || 1;
-      byId("chordVolR").value = String(Math.round(chordVol * 100));
-      byId("chordVolVal").textContent = String(Math.round(chordVol * 100));
-      mixer();
-    });
-    byId("bassVolR").addEventListener("input", (e) => {
-      bassVol = Number(e.target.value) / 100; byId("bassVolVal").textContent = e.target.value; mixer();
-    });
+    /* ONE MUTE ICON PER SLIDER (260820.3) — v0.8.7's mute-is-the-slider-at-
+     * zero rule made universal, and the "mute chords" checkbox retired into it.
+     * The ICON IS A VIEW OF THE LEVEL, never separate state: level 0 renders
+     * muted however it got there, dragging by hand included; the stash is a
+     * memory, not an owner — unmute restores the last non-zero level, or the
+     * slider's default when there is none. The dead Sound button and the
+     * MIXER-vs-CLOCK_STATE trap were both a second owner; this has one. */
+    const wireMute = (btnId, sliderId, valId, get, set, dflt) => {
+      let stash = 0;
+      const renderIcon = () => {
+        const muted = get() === 0, b = byId(btnId);
+        b.textContent = muted ? "\u{1F507}" : "\u{1F50A}";
+        b.setAttribute("aria-pressed", String(muted));
+        b.title = muted ? "unmute — restore the level" : "mute — the slider to zero";
+      };
+      const apply = (v) => { set(v);
+        byId(sliderId).value = String(Math.round(v * 100));
+        byId(valId).textContent = String(Math.round(v * 100));
+        renderIcon(); mixer(); };
+      byId(btnId).addEventListener("click", () => {
+        if (get() > 0) { stash = get(); apply(0); }
+        else apply(stash > 0 ? stash : dflt);
+      });
+      byId(sliderId).addEventListener("input", (e) => {
+        const v = Number(e.target.value) / 100;
+        if (v > 0) stash = v;
+        set(v); byId(valId).textContent = e.target.value; renderIcon(); mixer();
+      });
+      renderIcon();
+    };
+    wireMute("chordMute", "chordVolR", "chordVolVal", () => chordVol, (v) => { chordVol = v; }, 1);
+    wireMute("bassMute", "bassVolR", "bassVolVal", () => bassVol, (v) => { bassVol = v; }, 1);
 
     /* a strip mini summoned Play — arm (or disarm) the walk exactly as our own
      * Play button does; setPlaying takes it from there (grid + audio) */

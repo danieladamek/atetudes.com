@@ -53,11 +53,12 @@ export default {
      * N4 — the high E is uppercase (E–B–G–D), the procedure's first customer.
      * v0.1.6 (2026-08-20): the metronome's Sound button works — the click's
      * on/off is the clock owner's state (CLOCK_STATE.click), the transport
-     * checkbox its second view. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.6",
-    /* the mixer's chord-bus label. The card defaults to the arity-neutral
-     * "Chord"; this door plays four voices and says so. */
-    chordLabel: "Tetrads",
+     * checkbox its second view. v0.1.7 (2026-08-20): one mute icon per slider
+     * (chord, bass, click Vol) — v0.8.7's mute-is-the-slider-at-zero rule made
+     * universal; the mute-chords checkbox and the Sound button retired into
+     * it; the chord slider is called chord (chordLabel retired — one value
+     * across every door is a fact with no variation). */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.7",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

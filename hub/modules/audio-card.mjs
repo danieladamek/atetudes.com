@@ -155,9 +155,15 @@ export const audioCard = {
           tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,
           open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
       });
-      for (const ev of voiceSchedule(events, voice, durBeats, bpm))
+      for (const ev of voiceSchedule(events, voice, durBeats, bpm)) {
+        // a voice at level ZERO schedules nothing (260820.3): the mute icons
+        // pull a bus to silence, and skipping here makes the sources tell the
+        // truth — the gate counts source-starts, and a muted voice that still
+        // started inaudible sources would pass over a broken mute forever
+        if ((ev.role === "bass" ? bassVol : chordVol) === 0) continue;
         sound(voiceFor(ev.role, voice), ev.midi, t0 + ev.onset, ev.dur,
           ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.strum ? 0.14 : 0.2);
+      }
     };
 
     /** the click. `lead` is seconds until the beat, announced by whoever owns
@@ -234,6 +240,7 @@ export const audioCard = {
      * before the first Play, exactly as the triad keyboard does. */
     listen(d, NOTE, (m) => {
       if (!m || typeof m.midi !== "number") return;
+      if (chordVol === 0) return;              // a muted chord voice presses silently
       const a = audio();
       if (!a) return;
       sound(voiceFor("chord", voice), m.midi, a.currentTime + 0.02, 0.7, 0.24);
