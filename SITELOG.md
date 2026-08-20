@@ -5,6 +5,18 @@ ingests the source vault edition (per the Site Charter, `CLAUDE.md`).
 
 ---
 
+## 2026-08-20 — Deployed: the census-driven triple re-inline is live — Metronome v1.4.1, Triadetudes v0.8.9, Tetradetudes v0.1.4
+
+- **Daniel's deploy of `2d11439`** (the carrier census + the +M7 re-inline). The Pages workflow ran
+  green end to end.
+- **Live spot-check, all five URLs per the doctrine:** the three changed studies answer 200 and are
+  **shasum-identical** to their committed files — v1.4.1, v0.8.9 and v0.1.4 read live in their tags —
+  and the two untouched studies (modes-from-pentatonic-boxes, tetrad-voice-leading) answer 200,
+  byte-identical to the repo. First deploy in the site's history to change three published studies
+  in one push; every URL unchanged.
+- The Node.js-20 runner deprecation annotation appeared again — still a warning, still filed for a
+  future workflow-maintenance item.
+
 ## 2026-08-19 — chord.mjs reads +M7: the first carrier re-inline touches three studies at once (Update Log 260819.6)
 
 - **What changed, and why three studies:** `engine/chord.mjs` gained a SPELLING alias — `+M7` (the
