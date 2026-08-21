@@ -1,3 +1,9 @@
+## 2026-08-21 — DEPLOYED: the 15–300 range live in all three apps
+
+- Daniel authorized mid-session; `b0b0c6f` deployed (Pages run green, head `b0b0c6f`). Doctrine
+  spot-check: **all five study raw files shasum-identical** to the committed files; the widened
+  range (`min="15" max="300"`) confirmed in the served bytes. URLs unchanged.
+
 ## 2026-08-21 — The metronome range is 15–300 bpm — three studies changed
 
 - Metronome → **v1.4.4**, Triadetudes → **v0.8.13**, Tetradetudes → **v0.1.13** (door rebuilt,
