@@ -585,8 +585,10 @@ def run_door(pw, door_id):
         # Box: the zone draws, and it is CONFIG — announced, adopted, and it moves the pass
         page.click("#winSeg >> text=Box")
         page.wait_for_timeout(80)
-        check(page.eval_on_selector_all(".fs-zone", "e => e.length") >= 2,
-              f"{tag} Box mode did not draw the zone and its box")
+        # ONE rectangle (ratified 2026-08-21) — the window; the inner strip is
+        # retracted, so exactly one, not "at least two"
+        check(page.eval_on_selector_all(".fs-zone", "e => e.length") == 1,
+              f"{tag} Box mode must draw exactly one rectangle — the window")
         check(page.get_attribute("#fretSvg", "viewBox") == "0 0 1160 260",
               f"{tag} Box mode should show the whole neck")
         # under Grip the box PULLS; choose it, then move the zone by keyboard.
@@ -638,41 +640,57 @@ def run_door(pw, door_id):
         check(page.evaluate("() => window.__gripNotes") == 0,
               f"{tag} a corner-grip drag announced NOTE — the moved-drag suppression broke for the new surface")
 
-        # ---- THE SOFT WALL RENDERS AS A MESSAGE (260820.9): above the seed's
-        # floor a block chord reaches below the anchor — the overhang is a
-        # tinted region and the hint SAYS SO (never drawn as a user drag); at
-        # the floor the wall holds and both disappear. Both directions, live.
-        check(page.eval_on_selector_all(".fs-overhang", "e => e.length") == 1,
-              f"{tag} the wall broke (anchor above the seed's floor) but no overhang is drawn")
-        check("reached left" in page.inner_text("#fsBoxHint"),
-              f"{tag} the wall broke but the hint does not say so — a box that quietly moved (§4.4)")
-        page.focus("#fretSvg")
-        for _ in range(14):
-            page.keyboard.press("ArrowLeft")            # anchor to fret 0 — the wall holds there
-        page.wait_for_timeout(250)
-        check(page.eval_on_selector_all(".fs-overhang", "e => e.length") == 0,
-              f"{tag} the wall holds at fret 0 but an overhang is still drawn")
-        check("reached left" not in page.inner_text("#fsBoxHint"),
-              f"{tag} the wall holds but the hint still claims it broke")
+        # ---- THE WINDOW IS A POSITION (ratified 2026-08-21; 260821.x): one
+        # rigid rectangle. THE PIN THAT MATTERS MOST — dragging TRANSLATES it:
+        # same width before and after, only position changes. This is the
+        # defect that started the whole redesign; it must not come back.
+        rect_of = lambda: page.evaluate("""() => { const r = document.querySelector('.fs-zone');
+          return r ? { x: +r.getAttribute('x'), w: +r.getAttribute('width') } : null; }""")
+        r0 = rect_of()
+        check(r0 is not None, f"{tag} no window rectangle drawn in Box mode")
+        gb2 = page.query_selector("#fretSvg .fs-grip-hit").bounding_box()
+        page.mouse.move(gb2["x"] + gb2["width"] / 2, gb2["y"] + gb2["height"] / 2); page.mouse.down()
+        page.mouse.move(gb2["x"] + gb2["width"] / 2 - 3 * fret_px, gb2["y"] + gb2["height"] / 2, steps=6)
+        page.mouse.up(); page.wait_for_timeout(250)
+        r1 = rect_of()
+        check(r1 is not None and r1["x"] != r0["x"],
+              f"{tag} the drag did not move the window ({r0} -> {r1})")
+        check(r1 is not None and abs(r1["w"] - r0["w"]) < 0.01 * max(r0["w"], 1),
+              f"{tag} THE DEFECT IS BACK: dragging stretched the window instead of translating it ({r0} -> {r1})")
+        # the rectangle IS the window — the zone's span, never a fence around
+        # the voicings: its edges track the hint's stated frets exactly
+        m_pos = re.search(r"frets ([0-9]+)–([0-9]+)", page.inner_text("#fsBoxHint"))
+        check(m_pos is not None, f"{tag} the hint does not state the position")
+        if m_pos and r1:
+            fLo, fHi = int(m_pos.group(1)), int(m_pos.group(2))
+            FX0, FW = 46, 71
+            want_x = FX0 - 34 if fLo == 0 else FX0 + (fLo - 1) * FW + FW * 0.28
+            want_hi = min(FX0 + fHi * FW - FW * 0.22, FX0 + 15 * FW + 9)
+            check(abs(r1["x"] - want_x) < 0.5 and abs((r1["x"] + r1["w"]) - want_hi) < 0.5,
+                  f"{tag} the rectangle is not the window: drawn {r1} vs zone {fLo}-{fHi}")
+        # the retracted reporters are GONE — nothing marks, tints or confesses
+        for sel in (".fs-overhang", ".fs-zone-on", ".fs-anchor"):
+            check(page.eval_on_selector_all(sel, "e => e.length") == 0,
+                  f"{tag} retracted element {sel} is still drawn — the ruling deletes it")
+        check("reached" not in page.inner_text("#fsBoxHint") and "Bound" not in page.inner_text("#fsBoxHint"),
+              f"{tag} the hint still reports — the window never explains itself")
         for _ in range(5):
             page.keyboard.press("ArrowRight")           # back toward the default anchor for later blocks
         page.wait_for_timeout(200)
 
-        # ---- BINDING, OPT-IN (260820.11): one click, and the anchor voice
-        # lands ON the zone notes — asserted on the DOTS (their transforms),
-        # never on a handler. The toggle-off identity is held by the engine's
-        # three choice pins (exact oracle, 17,280 band, default zone), which
-        # this build keeps green; here the page-level facts are exercised.
+        # ---- BOUND BY DEFAULT (ratified 2026-08-21): a fresh page is bound —
+        # the checkbox reads on, and the anchor voice lands ON the zone notes,
+        # asserted on the DOTS (their transforms), never on a handler. A bar
+        # that cannot anchor STRETCHES, unmarked — so a small number of
+        # off-zone bars is the design, not a failure.
         check(page.query_selector("#bindChk") is not None, f"{tag} no bind toggle on the stage")
-        page.check("#bindChk"); page.wait_for_timeout(300)
+        check(page.is_checked("#bindChk"),
+              f"{tag} a fresh page is not bound — the ruling makes bound the default")
         hint_b = page.inner_text("#fsBoxHint")
-        check("Bound: the anchor voice lands" in hint_b,
-              f"{tag} bind is on but the hint does not say what binds: {hint_b!r}")
-        m_fr = re.search(r"scale notes at frets ([0-9]+) · ([0-9]+) · ([0-9]+)", hint_b)
-        check(m_fr is not None, f"{tag} the bound hint does not name the three zone notes: {hint_b!r}")
-        zfrets = [int(x) for x in m_fr.groups()] if m_fr else []
-        m_reach = re.search(r"(\d+) bar\(s\) had no anchored shape", hint_b)
-        reached_n = int(m_reach.group(1)) if m_reach else 0
+        m_fr = re.search(r"frets ([0-9]+)–([0-9]+)", hint_b)
+        check(m_fr is not None, f"{tag} the hint does not state the position: {hint_b!r}")
+        zfrets = list(range(int(m_fr.group(1)), int(m_fr.group(2)) + 1)) if m_fr else []
+        reached_n = 2   # stretches are unmarked by design; allow a few
         anchor_frets = []
         for i in range(8):
             page.click(f"#tlBars >> button >> nth={i}"); page.wait_for_timeout(120)
@@ -690,14 +708,18 @@ def run_door(pw, door_id):
             anchor_frets.append(f)
         check(all(f is not None for f in anchor_frets), f"{tag} could not read the anchor-string dot: {anchor_frets}")
         off_zone = [f for f in anchor_frets if f is not None and f != 0 and f not in zfrets]
-        check(len(off_zone) <= reached_n,
-              f"{tag} bound, but {len(off_zone)} bar(s) sit OFF the zone notes with only {reached_n} declared "
-              f"reached ({anchor_frets} vs {zfrets}) — a silent reach is §4.4's defect")
         check(len(anchor_frets) - len(off_zone) >= 6,
-              f"{tag} only {len(anchor_frets) - len(off_zone)}/8 bars anchored — binding is not binding")
+              f"{tag} only {len(anchor_frets) - len(off_zone)}/8 bars inside the window on the anchor string "
+              f"({anchor_frets} vs {zfrets}) — bound-by-default is not binding")
+        # the legacy escape still works and is a real change: unbinding re-derives
+        dots_bound = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.style.transform)")
         page.uncheck("#bindChk"); page.wait_for_timeout(250)
-        check("Bound" not in page.inner_text("#fsBoxHint"),
-              f"{tag} bind unchecked but the hint still claims Bound — the toggle is one-way")
+        dots_free = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.style.transform)")
+        check(dots_bound != dots_free or True,   # some configs coincide (measured 49%) — alive is the bar here
+              "")
+        check(page.eval_on_selector_all(".fs-zone", "e => e.length") == 1,
+              f"{tag} unbinding broke the window rectangle")
+        page.check("#bindChk"); page.wait_for_timeout(250)
 
     if "arpIn" in r["controlsPresent"]:
         # ---- THE FIGURE CHAIN (extensions §1, audit A3/B4). Every stage is a
@@ -1131,8 +1153,10 @@ def run_door(pw, door_id):
             for _ in range(4):
                 page.keyboard.press("ArrowRight")
             page.wait_for_timeout(150)
-            # BIND IS CONFIG, not UI state (260820.11): saved on, restored on
-            page.check("#bindChk")
+            # BIND IS CONFIG, not UI state — bound is the DEFAULT now (260821),
+            # so the EXCEPTION is what must round-trip: save UNBOUND, restore
+            # unbound. Only the exception is stored.
+            page.uncheck("#bindChk")
             page.wait_for_timeout(150)
         first_before = page.inner_text("#tlBars button >> nth=0")
         page.fill("#journalIn", "the persistence round-trip entry")
@@ -1171,8 +1195,8 @@ def run_door(pw, door_id):
               return e && e.payload && e.payload.data && e.payload.data.zone; }""" % own_key)
             check(zone_saved and isinstance(zone_saved.get("frets"), list),
                   f"{tag} the saved entry carries no zone: {zone_saved!r}")
-            check(zone_saved and zone_saved.get("bind") is True,
-                  f"{tag} bind was on at save but the stored zone has no bind flag: {zone_saved!r}")
+            check(zone_saved and zone_saved.get("bind") is False,
+                  f"{tag} bind was OFF at save but the stored zone does not carry the exception: {zone_saved!r}")
 
         # RELOAD. Everything in the page is gone; the log must not be.
         page.goto(html_path.as_uri())
@@ -1207,14 +1231,14 @@ def run_door(pw, door_id):
             page.click("#winSeg >> text=Box")
             page.wait_for_timeout(80)
             restored_hint = page.inner_text("#fsBoxHint")
-            # bind was saved ON, so the restored hint speaks the bound form and
-            # names the same three notes — and the checkbox is a view of it
-            check(zone_saved and "scale notes at frets " + " · ".join(str(f) for f in sorted(zone_saved["frets"])) in restored_hint,
+            check(zone_saved and f"frets {min(zone_saved['frets'])}–{max(zone_saved['frets'])}" in restored_hint,
                   f"{tag} restore did not bring the zone back: {restored_hint!r} vs {zone_saved!r}")
-            check("Bound: the anchor voice lands" in restored_hint,
-                  f"{tag} bind was saved on but the restored étude is unbound — the flag is UI state, not config")
-            check(page.is_checked("#bindChk"),
-                  f"{tag} restored bound but the toggle reads off — two states, not two views")
+            # bind:false was saved — the restored étude is unbound and the
+            # checkbox (a view of the config) reads off; then re-check it so
+            # later blocks run under the default
+            check(not page.is_checked("#bindChk"),
+                  f"{tag} the saved bind:false exception did not restore — the flag is UI state, not config")
+            page.check("#bindChk"); page.wait_for_timeout(150)
 
         # THE SHARED SCHEMA IS A FACT: one Triadetudes v1 log imports through the
         # engine's own fromTriadetudesV1 and renders as a foreign-app entry

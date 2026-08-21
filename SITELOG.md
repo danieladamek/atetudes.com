@@ -1,3 +1,17 @@
+## 2026-08-21 — The window is a position — Tetradetudes v0.1.12
+
+- `static/studies/tetradetudes/study.html` → **v0.1.12** (door rebuilt, republished byte-identical,
+  2.3 kB SMALLER; URL unchanged). Update Log **260821.1**; ruling: *The window is a position*
+  (`Authorized: 2026-08-21`, C5).
+- The isolation box is one rigid rectangle — the zone's span by the set's strings, a setting never
+  derived from the voicings — that dragging TRANSLATES (pinned; the old stretch demonstrated red
+  against v0.1.11 first). Binding is the default; notes outside the window are stretches in full
+  colour, unmarked. Deleted: the overhang tint, the anchor strip, brokeLeft, the reach counter,
+  every reporting sentence.
+- Gates: engine 485/485 (identity pins deliberately rewritten to the legacy path with reasons) ·
+  door_locks 6994/0 · bite 10/10 · floor 9/7/0 · four other studies byte-identical. Committed,
+  not pushed.
+
 ## 2026-08-20 — Binding, opt-in — Tetradetudes v0.1.11
 
 - `static/studies/tetradetudes/study.html` → **v0.1.11** (door rebuilt, republished byte-identical;

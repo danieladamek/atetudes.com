@@ -150,9 +150,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fsBind{flex:0 0 auto;margin:4px 0 0 2px}
 .fsBoxHint{margin-top:6px}
 .fs-zone{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4}
-.fs-zone.fs-zone-on{stroke:var(--ink);stroke-width:2;stroke-dasharray:none}
-.fs-overhang{fill:#73737A;opacity:.13;pointer-events:none}
-.fs-anchor{stroke:var(--ink);stroke-width:2.6}
 .fs-grip{fill:var(--ink);cursor:ew-resize}
 .fs-grip-hit{fill:transparent;cursor:ew-resize}
 .readout{font-size:14px;margin:2px 2px 10px;color:var(--ink)}
@@ -2155,13 +2152,24 @@ function romanOf({ chord, degree }) {
  * cycling engines rotate through two or four, because their rules hold some
  * voices and move others. So it constrains the FIRST chord's candidates and
  * the optimizer decides the rest, which is exactly what the payload does. */
-/** THE ZONE'S DEFAULT — the value every pass was silently anchored to before
- * the zone had a surface (audit 260818 §A2): three frets at 5–7 on the set's
- * lowest string. Kept as the DEFAULT so nothing moves musically until a door
- * says otherwise; pinned in the suite. `zone` is `{ frets }` and optionally
- * `{ string }` — the string defaults to the set's lowest, which is where the
- * pivot lives in every voicing on that set. */
-const DEFAULT_ZONE_FRETS = Object.freeze([5, 6, 7]);
+/** THE ZONE'S DEFAULT — DERIVED, ratified 2026-08-21 ("the window is a
+ * position"): three consecutive SCALE notes on the anchor string, at the
+ * familiar 5th position (the first scale fret at or above 5 starts the
+ * triple; the last possible triple if the string runs out). This deliberately
+ * retires the pre-ruling literal [5,6,7] — three ADJACENT frets, the e5ba874
+ * flattening — and moves pinned default output WITH the ruling's authority;
+ * the legacy path (explicit frets, bind:false) remains reachable and pinned,
+ * which is what pre-ruling saved études restore through. `zone` is
+ * `{ frets }` and optionally `{ string, bind }` — the string defaults to the
+ * set's lowest, where the pivot lives in every voicing on that set. */
+function defaultZoneFrets(key, scaleType, string) {
+  const pcs = scaleNotes(key, scaleType).map((n) => n.pc);
+  const sf = [];
+  for (let f = 0; f <= 22; f++) if (pcs.includes((OPEN_MIDI[string] + f) % 12)) sf.push(f);
+  let i = sf.findIndex((f) => f >= 5);
+  if (i < 0 || i > sf.length - 3) i = sf.length - 3;
+  return [sf[i], sf[i + 1], sf[i + 2]];
+}
 
 function tetradPass({
   key = "C", scale = "major", cycle = "fourths", bottom = 0, setIndex = 0,
@@ -2194,68 +2202,54 @@ function tetradPass({
   /* THE ZONE IS AN ARGUMENT, not a magic number. The relative-state doctrine:
    * store it small (a fret list, an optional string), pass it plainly, and let
    * isolation.mjs — untouched — build the real zone value with its two centres
-   * and its cost. A caller with no opinion gets the historical default. */
-  const zoneFrets = zone && Array.isArray(zone.frets) && zone.frets.length
-    ? zone.frets.map(Number) : [...DEFAULT_ZONE_FRETS];
+   * and its cost. A caller with no opinion gets the derived default. */
   const zoneString = zone && Number.isInteger(zone.string) && set.strings.includes(zone.string)
     ? zone.string : set.strings[0];
+  const zoneFrets = zone && Array.isArray(zone.frets) && zone.frets.length
+    ? zone.frets.map(Number) : defaultZoneFrets(key, scale, zoneString);
   const theZone = makeZone({ string: zoneString, frets: zoneFrets });
 
-  /* BINDING, OPT-IN (260820, measurements in notes/working/): with `zone.bind`
-   * the ANCHOR VOICE must land on one of the zone's frets (or an open string —
-   * positionless). Never the whole box: whole-box binding is structurally
-   * impossible for close and drop3 (measured 0% pass-feasible); the anchor-
-   * voice model is 100% feasible. A bar with NO anchored candidate REACHES
-   * OUTSIDE — the full pool, never a throw — and the reach is counted
-   * (`box.reached`), because a fallback nobody can see is §4.4's silent
-   * divergence. The seed outranks the bind: bar 1 keeps the requested bottom
-   * and reaches if it must — binding may not silently trade away the user's
-   * bass. With bind off this block is a no-op and the path is byte-for-byte
-   * the pinned one (the exact-oracle, 17,280-band and default-zone pins are
-   * the identity assertion). */
-  const bind = !!(zone && zone.bind === true);
+  /* BINDING IS THE DEFAULT (ratified 2026-08-21: "a position you do not stay
+   * in is not a position"). The ANCHOR VOICE must land on one of the zone's
+   * frets (or an open string — positionless); the other voices reach as the
+   * chord requires. Never the whole box: whole-box binding is structurally
+   * impossible for close and drop3 (measured, 260820). A bar with NO anchored
+   * candidate takes the full pool — a stretch, not an error, so nothing is
+   * counted and nothing throws. The seed outranks the bind: bar 1 keeps the
+   * requested bottom. `zone.bind === false` is the legacy unbound path,
+   * byte-for-byte the pre-ruling optimizer — what pre-ruling saved études
+   * restore through, and what the oracle comparisons pin. */
+  const bind = !(zone && zone.bind === false);
   const zi = set.strings.indexOf(zoneString);
-  let reached = 0;
   const bindFilter = (pool) => {
     if (!bind) return pool;
     const anchored = pool.filter((v) => {
       const pf = v.notes[zi].fret;
       return pf === 0 || zoneFrets.includes(pf);
     });
-    if (!anchored.length) { reached++; return pool; }
-    return anchored;
+    return anchored.length ? anchored : pool;
   };
   const boundCandidatesFor = (ch) => bindFilter(candidatesFor(ch));
   const voicings = chooseVoicings(chords, {
     zone: theZone, placement, setLowHigh: set.strings, nfrets, candidatesFor: boundCandidatesFor,
   });
 
-  /* THE BOX, as Triadetudes derives it: the zone grown to cover every chosen
-   * voicing — "where the figure ended up living, a consequence of the
-   * placement, not a setting." Returned so a stage can draw it without
-   * re-deriving it, and so a test can assert on it.
-   *
-   * THE SOFT WALL (260820): the zone minimum is the USER'S ANCHOR — the box's
-   * left edge by default. It extends left only when a chosen voicing genuinely
-   * sits below, and then it SAYS SO: `brokeLeft` is the fact a renderer must
-   * show differently from a user drag (§4.4 — a box that quietly moved).
-   * GRIP ONLY: grip is the placement the zone binds (pivotW 4) and the one
-   * whose seeded first chord can force a below-anchor block chord. Under free
-   * the anchor is released (pivotW 0, pinned) — below-zone voicings are the
-   * placement working, not a broken wall, so the flag stays false and the box
-   * stays purely descriptive. Both directions pinned in the suite. */
-  const anchorLo = Math.min(...zoneFrets);
-  let boxLo = anchorLo, boxHi = Math.max(...zoneFrets);
-  for (const v of voicings) if (v) for (const n of v.notes) { boxLo = Math.min(boxLo, n.fret); boxHi = Math.max(boxHi, n.fret); }
-  const brokeLeft = placement === "grip" && boxLo < anchorLo;
+  /* THE BOX IS THE WINDOW (ratified 2026-08-21): the span of the zone's three
+   * anchor-string scale notes by the strings of the set — a SETTING, derived
+   * from the zone and NEVER from the voicings. It is rigid: it never
+   * stretches, never reports, never explains itself. Notes outside it are
+   * stretches, left alone — that is the teaching. (The voicing scan, the
+   * soft wall, brokeLeft and the reach counter shipped 2026-08-20 are
+   * retracted by the ruling and deleted with it.) */
+  const box = { fLo: Math.min(...zoneFrets), fHi: Math.max(...zoneFrets), strings: [...set.strings] };
 
   for (const [i, v] of voicings.entries())
     if (!v) throw new Error(`no voicing for ${chords[i].symbol} on ${set.label} within ${nfrets} frets`);
 
   return {
     key, scale, cycle, bottom, setIndex, set, families, placement,
-    zone: { string: zoneString, frets: [...zoneFrets], ...(bind ? { bind: true } : {}) },
-    box: { fLo: boxLo, fHi: boxHi, strings: [...set.strings], brokeLeft, reached },
+    zone: { string: zoneString, frets: [...zoneFrets], ...(bind ? {} : { bind: false }) },
+    box,
     rule: CYCLES[cycle].rule,
     steps: chords.map((c, i) => ({
       ...c, voicing: voicings[i], keys: keysOf(voicings[i]),
@@ -2302,7 +2296,7 @@ function degreeLabel(chord, midi) {
   if (row !== "Cmaj7 Dm7 Em7 Fmaj7 G7 Am7 Bm7b5")
     throw new Error("tetrad-sequence: C major's diatonic sevenths are wrong — got " + row);
 }
-return { OPEN_MIDI, STRING_SETS, CYCLES, cycleDegrees, tetradOnDegree, romanOf, DEFAULT_ZONE_FRETS, tetradPass, degreeLabel };
+return { OPEN_MIDI, STRING_SETS, CYCLES, cycleDegrees, tetradOnDegree, romanOf, defaultZoneFrets, tetradPass, degreeLabel };
 })();
 
 /* ===== engine/drill.mjs ===== */
@@ -4100,9 +4094,6 @@ const fretboardStage = {
 .fsBind{flex:0 0 auto;margin:4px 0 0 2px}
 .fsBoxHint{margin-top:6px}
 .fs-zone{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4}
-.fs-zone.fs-zone-on{stroke:var(--ink);stroke-width:2;stroke-dasharray:none}
-.fs-overhang{fill:#73737A;opacity:.13;pointer-events:none}
-.fs-anchor{stroke:var(--ink);stroke-width:2.6}
 .fs-grip{fill:var(--ink);cursor:ew-resize}
 .fs-grip-hit{fill:transparent;cursor:ew-resize}
 .readout{font-size:14px;margin:2px 2px 10px;color:var(--ink)}
@@ -4213,52 +4204,29 @@ const fretboardStage = {
     const drawZone = () => {
       zoneLayer.textContent = "";
       if (win !== "box" || !pass) return;
+      /* THE WINDOW IS A POSITION (ratified 2026-08-21): one rigid rectangle —
+       * the box, which IS the zone's span, by the strings of the set — and the
+       * corner grip that moves it. It never stretches, never reports, never
+       * explains itself; a note outside it is a stretch shown in full colour
+       * hard against the line, and that is the teaching. The overhang tint,
+       * the solid anchor strip, the anchor edge and the seed-vs-consequence
+       * rendering rule shipped 2026-08-20 are retracted and deleted. */
       const B = pass.box;
       const ys = B.strings.map(fy), yLo = Math.min(...ys) - 17, yHi = Math.max(...ys) + 17;
       const xLo = B.fLo === 0 ? FX0 - 34 : FX0 + (B.fLo - 1) * FW + FW * 0.28;
       const xHi = Math.min(FX0 + B.fHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9);
-      /* SEED vs CONSEQUENCE, finally told apart (N7): the derived box is the
-       * DASHED rectangle — a consequence of the placement, not a setting —
-       * and everything the USER owns is SOLID: the zone strip, the anchor
-       * edge, and the corner grip that sets it. One property carries the
-       * whole distinction. */
       el("rect", { class: "fs-zone", x: xLo, y: yLo, width: xHi - xLo, height: yHi - yLo, rx: 12 }, zoneLayer);
-      // the ZONE itself, inside the box: the frets the optimizer is pulled toward
-      const zf = pass.zone.frets;
-      const zLo = Math.min(...zf), zHi = Math.max(...zf);
-      const zx = zLo === 0 ? FX0 - 34 : FX0 + (zLo - 1) * FW + FW * 0.28;
-      const zw = Math.min(FX0 + zHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9) - zx;
-      const zy = fy(pass.zone.string);
-      el("rect", { class: "fs-zone fs-zone-on", x: zx, y: zy - 19, width: zw, height: 38, rx: 10 }, zoneLayer);
-      /* THE OVERHANG (the soft wall, 260820): when a block chord had to reach
-       * below the anchor, the reach is TINTED, never drawn as if the user
-       * dragged there — it carries exactly one message, and the anchor edge
-       * stays solid at the fret the user set. Grip-only by derivation
-       * (box.brokeLeft is false under free — no wall exists there). */
-      if (B.brokeLeft)
-        el("rect", { class: "fs-overhang", x: xLo, y: yLo, width: Math.max(0, zx - xLo), height: yHi - yLo, rx: 12 }, zoneLayer);
-      el("line", { class: "fs-anchor", x1: zx, y1: yLo, x2: zx, y2: yHi }, zoneLayer);
-      /* THE CORNER GRIP — bottom-left, where Daniel asked for it: the user
-       * sets the LEFT edge and the box grows rightward. The grip is the ONLY
-       * drag-start surface now (element-level ownership, 93c5456's gesture
-       * story inherited unchanged); the wide bar that read as nothing is
-       * gone. A generous invisible hit square keeps it grabbable. */
-      el("rect", { class: "fs-grip", x: zx - 7, y: yHi - 7, width: 14, height: 14, rx: 3 }, zoneLayer);
-      const gripHit = el("rect", { class: "fs-grip-hit", x: zx - 20, y: yHi - 20, width: 40, height: 40 }, zoneLayer);
-      const start = (e) => { dragging = { x0: e.clientX, lo0: zLo }; e.preventDefault(); };
+      /* the corner grip — bottom-left, the only drag-start surface (93c5456's
+       * gesture story unchanged); a generous invisible hit square keeps it
+       * grabbable */
+      el("rect", { class: "fs-grip", x: xLo - 7, y: yHi - 7, width: 14, height: 14, rx: 3 }, zoneLayer);
+      const gripHit = el("rect", { class: "fs-grip-hit", x: xLo - 20, y: yHi - 20, width: 40, height: 40 }, zoneLayer);
+      const start = (e) => { dragging = { x0: e.clientX, lo0: B.fLo }; e.preventDefault(); };
       gripHit.addEventListener("pointerdown", start);
       byId("fsBoxHint").hidden = false;
       byId("fsBoxHint").textContent =
-        `Isolation zone: ${pass.zone.bind ? "scale notes at frets " + zf.join(" · ") : `frets ${zLo}–${zHi}`} on string ${pass.zone.string}. Drag the corner grip to set the left edge — the box grows rightward. Or press ← → with the neck focused. ` +
-        (pass.zone.bind
-          ? `Bound: the anchor voice lands on the zone notes${B.reached ? ` — ${B.reached} bar(s) had no anchored shape and reached outside` : ""}. `
-          : "") +
-        (B.brokeLeft
-          ? `The box reached left to fret ${B.fLo}: a block chord cannot be fretted inside the zone. `
-          : "") +
-        (pass.placement === "grip"
-          ? "Grip placement anchors every voicing to it."
-          : `Placement is ${pass.placement}: the anchor is released, so the zone draws but does not pull — choose Grip in Shape & Motion to practise inside it.`);
+        `Isolation zone: the position at frets ${B.fLo}–${B.fHi} on string ${pass.zone.string}. ` +
+        `Drag the corner grip to move it, or press ← → with the neck focused.`;
     };
 
     /* the drag: pointer x → fret; announce the new zone as CONFIG.
@@ -4299,8 +4267,8 @@ const fretboardStage = {
       const frets = tripleAt(lo);
       if (!frets) return;
       if (pass && frets.join() === pass.zone.frets.join()) return;
-      announce(d, CONFIG_CHANGED, { zone: { ...(cfg.zone || {}), frets, string: pass.zone.string,
-        ...(cfg.zone && cfg.zone.bind ? { bind: true } : {}) } });
+      announce(d, CONFIG_CHANGED, { zone: { frets, string: pass.zone.string,
+        ...(cfg.zone && cfg.zone.bind === false ? { bind: false } : {}) } });
     };
     const stepZone = (dir) => {
       const sf = scaleFretsOnAnchor();
@@ -4311,7 +4279,7 @@ const fretboardStage = {
       const frets = [sf[i], sf[i + 1], sf[i + 2]];
       if (frets.join() === pass.zone.frets.join()) return;
       announce(d, CONFIG_CHANGED, { zone: { frets, string: pass.zone.string,
-        ...(cfg.zone && cfg.zone.bind ? { bind: true } : {}) } });
+        ...(cfg.zone && cfg.zone.bind === false ? { bind: false } : {}) } });
     };
     d.addEventListener("pointermove", (e) => {
       if (!dragging) return;
@@ -4484,22 +4452,22 @@ const fretboardStage = {
     /* PLAYING BELONGS TO THE TRANSPORT, NOT THE STAGE (Shell 1). The stage
      * owns WHERE the pass is and answers every move with the step it rendered;
      * it no longer decides WHEN, and the ◀ ▶ buttons are the Transport's. */
-    /* THE BIND TOGGLE (opt-in, never a default): bind rides the ZONE OBJECT,
-     * so it is config — it travels on the bus, lands in Shape & Motion's
-     * snapshot with the rest of the zone, and a restored étude reproduces
-     * bound. Enabling it also SNAPS the zone to the nearest scale triple
-     * (announced, visible — binding is defined over scale notes, and the
-     * pinned [5,6,7] literal is not one); disabling leaves the zone where it
-     * is. The checkbox is a VIEW of cfg.zone.bind, one state two views. */
+    /* THE BIND TOGGLE — BOUND IS THE DEFAULT now (ratified 2026-08-21: "a
+     * position you do not stay in is not a position"). The checkbox stays
+     * because it costs nothing and it is how Daniel A/Bs the sound; it is a
+     * VIEW of `cfg.zone.bind !== false`, and only the EXCEPTION is stored:
+     * unchecking writes bind:false into the zone (config, snapshot-carried),
+     * re-checking drops the flag and snaps a legacy zone to a scale triple. */
     byId("bindChk").addEventListener("change", (e) => {
       const on = e.target.checked;
       const lo = pass ? Math.min(...pass.zone.frets) : 5;
       const frets = on ? (tripleAt(lo) || pass.zone.frets) : [...pass.zone.frets];
       announce(d, CONFIG_CHANGED, { zone: { frets, string: pass ? pass.zone.string : 6,
-        ...(on ? { bind: true } : {}) } });
+        ...(on ? {} : { bind: false }) } });
     });
+    byId("bindChk").checked = true;
     listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; build();
-      byId("bindChk").checked = !!(cfg.zone && cfg.zone.bind); });
+      byId("bindChk").checked = !(cfg.zone && cfg.zone.bind === false); });
     /* another module asking to move — the stage owns the position */
     listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
     listen(d, STEP_CHANGED, (m) => {
@@ -8545,7 +8513,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.11","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.12","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

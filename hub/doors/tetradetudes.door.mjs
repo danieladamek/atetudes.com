@@ -71,8 +71,13 @@ export default {
      * the anchor voice to the three zone notes (the triad's pivot model,
      * measurements 260820); the grip and arrows write scale TRIPLES now
      * (e5ba874 un-flattened at the user's seam); a bar with no anchored
-     * shape reaches outside and the hint counts it. Off = the pinned path. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.11",
+     * shape reaches outside and the hint counts it. Off = the pinned path.
+     * v0.1.12 (2026-08-21): THE WINDOW IS A POSITION (ratified family law) —
+     * the box IS the zone's span, one rigid dashed rectangle that dragging
+     * TRANSLATES; binding is the default; the overhang, anchor strip,
+     * brokeLeft and every reporter deleted. A note outside is a stretch in
+     * full colour, and that is the teaching. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.12",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

@@ -83,9 +83,6 @@ export const fretboardStage = {
 .fsBind{flex:0 0 auto;margin:4px 0 0 2px}
 .fsBoxHint{margin-top:6px}
 .fs-zone{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4}
-.fs-zone.fs-zone-on{stroke:var(--ink);stroke-width:2;stroke-dasharray:none}
-.fs-overhang{fill:#73737A;opacity:.13;pointer-events:none}
-.fs-anchor{stroke:var(--ink);stroke-width:2.6}
 .fs-grip{fill:var(--ink);cursor:ew-resize}
 .fs-grip-hit{fill:transparent;cursor:ew-resize}
 .readout{font-size:14px;margin:2px 2px 10px;color:var(--ink)}
@@ -196,52 +193,29 @@ export const fretboardStage = {
     const drawZone = () => {
       zoneLayer.textContent = "";
       if (win !== "box" || !pass) return;
+      /* THE WINDOW IS A POSITION (ratified 2026-08-21): one rigid rectangle —
+       * the box, which IS the zone's span, by the strings of the set — and the
+       * corner grip that moves it. It never stretches, never reports, never
+       * explains itself; a note outside it is a stretch shown in full colour
+       * hard against the line, and that is the teaching. The overhang tint,
+       * the solid anchor strip, the anchor edge and the seed-vs-consequence
+       * rendering rule shipped 2026-08-20 are retracted and deleted. */
       const B = pass.box;
       const ys = B.strings.map(fy), yLo = Math.min(...ys) - 17, yHi = Math.max(...ys) + 17;
       const xLo = B.fLo === 0 ? FX0 - 34 : FX0 + (B.fLo - 1) * FW + FW * 0.28;
       const xHi = Math.min(FX0 + B.fHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9);
-      /* SEED vs CONSEQUENCE, finally told apart (N7): the derived box is the
-       * DASHED rectangle — a consequence of the placement, not a setting —
-       * and everything the USER owns is SOLID: the zone strip, the anchor
-       * edge, and the corner grip that sets it. One property carries the
-       * whole distinction. */
       el("rect", { class: "fs-zone", x: xLo, y: yLo, width: xHi - xLo, height: yHi - yLo, rx: 12 }, zoneLayer);
-      // the ZONE itself, inside the box: the frets the optimizer is pulled toward
-      const zf = pass.zone.frets;
-      const zLo = Math.min(...zf), zHi = Math.max(...zf);
-      const zx = zLo === 0 ? FX0 - 34 : FX0 + (zLo - 1) * FW + FW * 0.28;
-      const zw = Math.min(FX0 + zHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9) - zx;
-      const zy = fy(pass.zone.string);
-      el("rect", { class: "fs-zone fs-zone-on", x: zx, y: zy - 19, width: zw, height: 38, rx: 10 }, zoneLayer);
-      /* THE OVERHANG (the soft wall, 260820): when a block chord had to reach
-       * below the anchor, the reach is TINTED, never drawn as if the user
-       * dragged there — it carries exactly one message, and the anchor edge
-       * stays solid at the fret the user set. Grip-only by derivation
-       * (box.brokeLeft is false under free — no wall exists there). */
-      if (B.brokeLeft)
-        el("rect", { class: "fs-overhang", x: xLo, y: yLo, width: Math.max(0, zx - xLo), height: yHi - yLo, rx: 12 }, zoneLayer);
-      el("line", { class: "fs-anchor", x1: zx, y1: yLo, x2: zx, y2: yHi }, zoneLayer);
-      /* THE CORNER GRIP — bottom-left, where Daniel asked for it: the user
-       * sets the LEFT edge and the box grows rightward. The grip is the ONLY
-       * drag-start surface now (element-level ownership, 93c5456's gesture
-       * story inherited unchanged); the wide bar that read as nothing is
-       * gone. A generous invisible hit square keeps it grabbable. */
-      el("rect", { class: "fs-grip", x: zx - 7, y: yHi - 7, width: 14, height: 14, rx: 3 }, zoneLayer);
-      const gripHit = el("rect", { class: "fs-grip-hit", x: zx - 20, y: yHi - 20, width: 40, height: 40 }, zoneLayer);
-      const start = (e) => { dragging = { x0: e.clientX, lo0: zLo }; e.preventDefault(); };
+      /* the corner grip — bottom-left, the only drag-start surface (93c5456's
+       * gesture story unchanged); a generous invisible hit square keeps it
+       * grabbable */
+      el("rect", { class: "fs-grip", x: xLo - 7, y: yHi - 7, width: 14, height: 14, rx: 3 }, zoneLayer);
+      const gripHit = el("rect", { class: "fs-grip-hit", x: xLo - 20, y: yHi - 20, width: 40, height: 40 }, zoneLayer);
+      const start = (e) => { dragging = { x0: e.clientX, lo0: B.fLo }; e.preventDefault(); };
       gripHit.addEventListener("pointerdown", start);
       byId("fsBoxHint").hidden = false;
       byId("fsBoxHint").textContent =
-        `Isolation zone: ${pass.zone.bind ? "scale notes at frets " + zf.join(" · ") : `frets ${zLo}–${zHi}`} on string ${pass.zone.string}. Drag the corner grip to set the left edge — the box grows rightward. Or press ← → with the neck focused. ` +
-        (pass.zone.bind
-          ? `Bound: the anchor voice lands on the zone notes${B.reached ? ` — ${B.reached} bar(s) had no anchored shape and reached outside` : ""}. `
-          : "") +
-        (B.brokeLeft
-          ? `The box reached left to fret ${B.fLo}: a block chord cannot be fretted inside the zone. `
-          : "") +
-        (pass.placement === "grip"
-          ? "Grip placement anchors every voicing to it."
-          : `Placement is ${pass.placement}: the anchor is released, so the zone draws but does not pull — choose Grip in Shape & Motion to practise inside it.`);
+        `Isolation zone: the position at frets ${B.fLo}–${B.fHi} on string ${pass.zone.string}. ` +
+        `Drag the corner grip to move it, or press ← → with the neck focused.`;
     };
 
     /* the drag: pointer x → fret; announce the new zone as CONFIG.
@@ -282,8 +256,8 @@ export const fretboardStage = {
       const frets = tripleAt(lo);
       if (!frets) return;
       if (pass && frets.join() === pass.zone.frets.join()) return;
-      announce(d, CONFIG_CHANGED, { zone: { ...(cfg.zone || {}), frets, string: pass.zone.string,
-        ...(cfg.zone && cfg.zone.bind ? { bind: true } : {}) } });
+      announce(d, CONFIG_CHANGED, { zone: { frets, string: pass.zone.string,
+        ...(cfg.zone && cfg.zone.bind === false ? { bind: false } : {}) } });
     };
     const stepZone = (dir) => {
       const sf = scaleFretsOnAnchor();
@@ -294,7 +268,7 @@ export const fretboardStage = {
       const frets = [sf[i], sf[i + 1], sf[i + 2]];
       if (frets.join() === pass.zone.frets.join()) return;
       announce(d, CONFIG_CHANGED, { zone: { frets, string: pass.zone.string,
-        ...(cfg.zone && cfg.zone.bind ? { bind: true } : {}) } });
+        ...(cfg.zone && cfg.zone.bind === false ? { bind: false } : {}) } });
     };
     d.addEventListener("pointermove", (e) => {
       if (!dragging) return;
@@ -467,22 +441,22 @@ export const fretboardStage = {
     /* PLAYING BELONGS TO THE TRANSPORT, NOT THE STAGE (Shell 1). The stage
      * owns WHERE the pass is and answers every move with the step it rendered;
      * it no longer decides WHEN, and the ◀ ▶ buttons are the Transport's. */
-    /* THE BIND TOGGLE (opt-in, never a default): bind rides the ZONE OBJECT,
-     * so it is config — it travels on the bus, lands in Shape & Motion's
-     * snapshot with the rest of the zone, and a restored étude reproduces
-     * bound. Enabling it also SNAPS the zone to the nearest scale triple
-     * (announced, visible — binding is defined over scale notes, and the
-     * pinned [5,6,7] literal is not one); disabling leaves the zone where it
-     * is. The checkbox is a VIEW of cfg.zone.bind, one state two views. */
+    /* THE BIND TOGGLE — BOUND IS THE DEFAULT now (ratified 2026-08-21: "a
+     * position you do not stay in is not a position"). The checkbox stays
+     * because it costs nothing and it is how Daniel A/Bs the sound; it is a
+     * VIEW of `cfg.zone.bind !== false`, and only the EXCEPTION is stored:
+     * unchecking writes bind:false into the zone (config, snapshot-carried),
+     * re-checking drops the flag and snaps a legacy zone to a scale triple. */
     byId("bindChk").addEventListener("change", (e) => {
       const on = e.target.checked;
       const lo = pass ? Math.min(...pass.zone.frets) : 5;
       const frets = on ? (tripleAt(lo) || pass.zone.frets) : [...pass.zone.frets];
       announce(d, CONFIG_CHANGED, { zone: { frets, string: pass ? pass.zone.string : 6,
-        ...(on ? { bind: true } : {}) } });
+        ...(on ? {} : { bind: false }) } });
     });
+    byId("bindChk").checked = true;
     listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; build();
-      byId("bindChk").checked = !!(cfg.zone && cfg.zone.bind); });
+      byId("bindChk").checked = !(cfg.zone && cfg.zone.bind === false); });
     /* another module asking to move — the stage owns the position */
     listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
     listen(d, STEP_CHANGED, (m) => {

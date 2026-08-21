@@ -127,13 +127,24 @@ export function romanOf({ chord, degree }) {
  * cycling engines rotate through two or four, because their rules hold some
  * voices and move others. So it constrains the FIRST chord's candidates and
  * the optimizer decides the rest, which is exactly what the payload does. */
-/** THE ZONE'S DEFAULT — the value every pass was silently anchored to before
- * the zone had a surface (audit 260818 §A2): three frets at 5–7 on the set's
- * lowest string. Kept as the DEFAULT so nothing moves musically until a door
- * says otherwise; pinned in the suite. `zone` is `{ frets }` and optionally
- * `{ string }` — the string defaults to the set's lowest, which is where the
- * pivot lives in every voicing on that set. */
-export const DEFAULT_ZONE_FRETS = Object.freeze([5, 6, 7]);
+/** THE ZONE'S DEFAULT — DERIVED, ratified 2026-08-21 ("the window is a
+ * position"): three consecutive SCALE notes on the anchor string, at the
+ * familiar 5th position (the first scale fret at or above 5 starts the
+ * triple; the last possible triple if the string runs out). This deliberately
+ * retires the pre-ruling literal [5,6,7] — three ADJACENT frets, the e5ba874
+ * flattening — and moves pinned default output WITH the ruling's authority;
+ * the legacy path (explicit frets, bind:false) remains reachable and pinned,
+ * which is what pre-ruling saved études restore through. `zone` is
+ * `{ frets }` and optionally `{ string, bind }` — the string defaults to the
+ * set's lowest, where the pivot lives in every voicing on that set. */
+export function defaultZoneFrets(key, scaleType, string) {
+  const pcs = scaleNotes(key, scaleType).map((n) => n.pc);
+  const sf = [];
+  for (let f = 0; f <= 22; f++) if (pcs.includes((OPEN_MIDI[string] + f) % 12)) sf.push(f);
+  let i = sf.findIndex((f) => f >= 5);
+  if (i < 0 || i > sf.length - 3) i = sf.length - 3;
+  return [sf[i], sf[i + 1], sf[i + 2]];
+}
 
 export function tetradPass({
   key = "C", scale = "major", cycle = "fourths", bottom = 0, setIndex = 0,
@@ -166,68 +177,54 @@ export function tetradPass({
   /* THE ZONE IS AN ARGUMENT, not a magic number. The relative-state doctrine:
    * store it small (a fret list, an optional string), pass it plainly, and let
    * isolation.mjs — untouched — build the real zone value with its two centres
-   * and its cost. A caller with no opinion gets the historical default. */
-  const zoneFrets = zone && Array.isArray(zone.frets) && zone.frets.length
-    ? zone.frets.map(Number) : [...DEFAULT_ZONE_FRETS];
+   * and its cost. A caller with no opinion gets the derived default. */
   const zoneString = zone && Number.isInteger(zone.string) && set.strings.includes(zone.string)
     ? zone.string : set.strings[0];
+  const zoneFrets = zone && Array.isArray(zone.frets) && zone.frets.length
+    ? zone.frets.map(Number) : defaultZoneFrets(key, scale, zoneString);
   const theZone = makeZone({ string: zoneString, frets: zoneFrets });
 
-  /* BINDING, OPT-IN (260820, measurements in notes/working/): with `zone.bind`
-   * the ANCHOR VOICE must land on one of the zone's frets (or an open string —
-   * positionless). Never the whole box: whole-box binding is structurally
-   * impossible for close and drop3 (measured 0% pass-feasible); the anchor-
-   * voice model is 100% feasible. A bar with NO anchored candidate REACHES
-   * OUTSIDE — the full pool, never a throw — and the reach is counted
-   * (`box.reached`), because a fallback nobody can see is §4.4's silent
-   * divergence. The seed outranks the bind: bar 1 keeps the requested bottom
-   * and reaches if it must — binding may not silently trade away the user's
-   * bass. With bind off this block is a no-op and the path is byte-for-byte
-   * the pinned one (the exact-oracle, 17,280-band and default-zone pins are
-   * the identity assertion). */
-  const bind = !!(zone && zone.bind === true);
+  /* BINDING IS THE DEFAULT (ratified 2026-08-21: "a position you do not stay
+   * in is not a position"). The ANCHOR VOICE must land on one of the zone's
+   * frets (or an open string — positionless); the other voices reach as the
+   * chord requires. Never the whole box: whole-box binding is structurally
+   * impossible for close and drop3 (measured, 260820). A bar with NO anchored
+   * candidate takes the full pool — a stretch, not an error, so nothing is
+   * counted and nothing throws. The seed outranks the bind: bar 1 keeps the
+   * requested bottom. `zone.bind === false` is the legacy unbound path,
+   * byte-for-byte the pre-ruling optimizer — what pre-ruling saved études
+   * restore through, and what the oracle comparisons pin. */
+  const bind = !(zone && zone.bind === false);
   const zi = set.strings.indexOf(zoneString);
-  let reached = 0;
   const bindFilter = (pool) => {
     if (!bind) return pool;
     const anchored = pool.filter((v) => {
       const pf = v.notes[zi].fret;
       return pf === 0 || zoneFrets.includes(pf);
     });
-    if (!anchored.length) { reached++; return pool; }
-    return anchored;
+    return anchored.length ? anchored : pool;
   };
   const boundCandidatesFor = (ch) => bindFilter(candidatesFor(ch));
   const voicings = chooseVoicings(chords, {
     zone: theZone, placement, setLowHigh: set.strings, nfrets, candidatesFor: boundCandidatesFor,
   });
 
-  /* THE BOX, as Triadetudes derives it: the zone grown to cover every chosen
-   * voicing — "where the figure ended up living, a consequence of the
-   * placement, not a setting." Returned so a stage can draw it without
-   * re-deriving it, and so a test can assert on it.
-   *
-   * THE SOFT WALL (260820): the zone minimum is the USER'S ANCHOR — the box's
-   * left edge by default. It extends left only when a chosen voicing genuinely
-   * sits below, and then it SAYS SO: `brokeLeft` is the fact a renderer must
-   * show differently from a user drag (§4.4 — a box that quietly moved).
-   * GRIP ONLY: grip is the placement the zone binds (pivotW 4) and the one
-   * whose seeded first chord can force a below-anchor block chord. Under free
-   * the anchor is released (pivotW 0, pinned) — below-zone voicings are the
-   * placement working, not a broken wall, so the flag stays false and the box
-   * stays purely descriptive. Both directions pinned in the suite. */
-  const anchorLo = Math.min(...zoneFrets);
-  let boxLo = anchorLo, boxHi = Math.max(...zoneFrets);
-  for (const v of voicings) if (v) for (const n of v.notes) { boxLo = Math.min(boxLo, n.fret); boxHi = Math.max(boxHi, n.fret); }
-  const brokeLeft = placement === "grip" && boxLo < anchorLo;
+  /* THE BOX IS THE WINDOW (ratified 2026-08-21): the span of the zone's three
+   * anchor-string scale notes by the strings of the set — a SETTING, derived
+   * from the zone and NEVER from the voicings. It is rigid: it never
+   * stretches, never reports, never explains itself. Notes outside it are
+   * stretches, left alone — that is the teaching. (The voicing scan, the
+   * soft wall, brokeLeft and the reach counter shipped 2026-08-20 are
+   * retracted by the ruling and deleted with it.) */
+  const box = { fLo: Math.min(...zoneFrets), fHi: Math.max(...zoneFrets), strings: [...set.strings] };
 
   for (const [i, v] of voicings.entries())
     if (!v) throw new Error(`no voicing for ${chords[i].symbol} on ${set.label} within ${nfrets} frets`);
 
   return {
     key, scale, cycle, bottom, setIndex, set, families, placement,
-    zone: { string: zoneString, frets: [...zoneFrets], ...(bind ? { bind: true } : {}) },
-    box: { fLo: boxLo, fHi: boxHi, strings: [...set.strings], brokeLeft, reached },
+    zone: { string: zoneString, frets: [...zoneFrets], ...(bind ? {} : { bind: false }) },
+    box,
     rule: CYCLES[cycle].rule,
     steps: chords.map((c, i) => ({
       ...c, voicing: voicings[i], keys: keysOf(voicings[i]),

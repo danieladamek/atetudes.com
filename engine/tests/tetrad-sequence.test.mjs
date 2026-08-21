@@ -117,10 +117,20 @@ test("degree labels relabel a HELD pitch when the chord under it changes", () =>
 
 const ORACLE = loadOracle();
 
+const LEGACY_ZONE = () => ({ frets: [5, 6, 7], bind: false });
+
 test("THE ORACLE, exactly: C major fourths from the root reproduces the payload step for step", () => {
+  /* REWRITTEN 2026-08-21, deliberately, under "the window is a position"
+   * (ratified family law): binding is the DEFAULT now and the default zone is
+   * scale-derived, so the DEFAULT pass no longer reproduces the frozen study —
+   * that change is the ruling's point, not drift. The comparison against the
+   * payload keeps its meaning through the LEGACY PATH (explicit [5,6,7],
+   * bind:false), which is byte-for-byte the pre-ruling optimizer and the path
+   * pre-ruling saved études restore through. */
   const ei = ORACLE.engines.findIndex((e) => e.key === "4");
   const payload = ORACLE.passes[ei][0][0][0][0];          // major, set 0, key C, bottom R
-  const mine = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 });
+  const mine = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
+    zone: LEGACY_ZONE() });
 
   for (let i = 0; i < 8; i++) {
     assert.deepEqual(mine.steps[i].voicing.notes.map((n) => n.fret), payload[i][3],
@@ -130,6 +140,7 @@ test("THE ORACLE, exactly: C major fourths from the root reproduces the payload 
 });
 
 test("EVERY step of EVERY pass is a correct voicing of its own chord — 17,280 steps", () => {
+  // runs the BOUND DEFAULT (post-ruling): correctness is invariant to binding
   let steps = 0, wrong = 0;
   for (const [ei, eng] of ORACLE.passes.entries())
     for (const [si] of eng.entries())
@@ -158,7 +169,11 @@ test("FINDING: the pass is voice-leading-optimal where the payload is rule-faith
    *
    * This is not a defect and it is not a licence either — it matters to the
    * narrator (child 4), which describes named moves. Recorded here so that
-   * session finds it rather than discovering it in the prose. */
+   * session finds it rather than discovering it in the prose.
+   *
+   * REWRITTEN 2026-08-21: measured through the LEGACY path (bind:false,
+   * [5,6,7]) — the band characterises the pre-ruling optimizer against the
+   * payload, and the bound default deliberately moves differently. */
   const move = (frets, opens) => {
     let t = 0;
     for (let i = 1; i < frets.length; i++)
@@ -173,7 +188,7 @@ test("FINDING: the pass is voice-leading-optimal where the payload is rule-faith
         for (const [ki] of eng[si][ti].entries())
           for (const [bi, bt] of eng[si][ti][ki].entries()) {
             const p = tetradPass({ key: ORACLE.keys[ki], scale: SCALE_OF[si],
-              cycle: CYCLE_OF[ORACLE.engines[ei].key], bottom: bi, setIndex: ti });
+              cycle: CYCLE_OF[ORACLE.engines[ei].key], bottom: bi, setIndex: ti, zone: LEGACY_ZONE() });
             const opens = ORACLE.sets[ti].opens;
             const mf = p.steps.map((s) => s.voicing.notes.map((n) => n.fret));
             mineMove += move(mf, opens);
@@ -239,42 +254,46 @@ test("all three scales and all four bottom tones produce a playable pass on ever
 
 /* ================= the zone as an argument (audit 260818 §A2) ================= */
 
-import { DEFAULT_ZONE_FRETS } from "../tetrad-sequence.mjs";
+import { defaultZoneFrets } from "../tetrad-sequence.mjs";
 import { makeZone, chooseVoicings } from "../isolation.mjs";
 import { tetradCandidates } from "../tetrad-voicings.mjs";
 import { STRING_SETS as SETS2 } from "../tetrad-sequence.mjs";
 
-test("THE PIN: the default zone reproduces the pre-argument pass EXACTLY, across the corpus", () => {
-  /* Before this item every pass was anchored to makeZone({string: set.strings[0],
-   * frets:[5,6,7]}) with no way to say otherwise. That literal is now the
-   * DEFAULT, and this asserts that a caller who passes no zone gets the same
-   * derived output as before — every fret of every voice of every step —
-   * across the same corpus the oracle test walks. No silent musical change. */
-  assert.deepEqual([...DEFAULT_ZONE_FRETS], [5, 6, 7], "the default is no longer the historical literal");
-  let steps = 0;
+test("THE PIN, rewritten 2026-08-21: the default zone is the DERIVED scale triple, bound, across the corpus", () => {
+  /* The pre-ruling pin asserted the default was the literal [5,6,7] and that
+   * a caller who passed no zone got the pre-argument pass. "The window is a
+   * position" retracts both ON PURPOSE: the default zone is three consecutive
+   * SCALE notes at 5th position (the e5ba874 flattening undone at the source),
+   * and binding is the default. This pin holds the NEW law the same way the
+   * old one held the old: derived, never a literal — and the width is never
+   * anything but the span of a scale triple. */
+  let checked = 0;
   for (const [ei, eng] of ORACLE.passes.entries())
     for (const [si] of eng.entries())
       for (const [ti] of eng[si].entries())
-        for (const [ki] of eng[si][ti].entries())
-          for (const [bi] of eng[si][ti][ki].entries()) {
-            const args = { key: ORACLE.keys[ki], scale: SCALE_OF[si],
-              cycle: CYCLE_OF[ORACLE.engines[ei].key], bottom: bi, setIndex: ti };
-            const implicit = tetradPass(args);
-            const explicit = tetradPass({ ...args, zone: { frets: [5, 6, 7] } });
-            const frets = (p) => p.steps.map((s) => s.voicing.notes.map((n) => n.fret));
-            assert.deepEqual(frets(implicit), frets(explicit),
-              `default ≠ explicit [5,6,7] for ${JSON.stringify(args)}`);
-            assert.deepEqual(implicit.zone, { string: SETS2[ti].strings[0], frets: [5, 6, 7] });
-            steps += implicit.steps.length;
-          }
-  assert.equal(steps, 17280);
+        for (const [ki] of eng[si][ti].entries()) {
+          const args = { key: ORACLE.keys[ki], scale: SCALE_OF[si],
+            cycle: CYCLE_OF[ORACLE.engines[ei].key], bottom: 0, setIndex: ti };
+          const p = tetradPass(args);
+          const want = defaultZoneFrets(args.key, args.scale, SETS2[ti].strings[0]);
+          assert.deepEqual(p.zone, { string: SETS2[ti].strings[0], frets: want },
+            `the default zone is not the derived scale triple for ${JSON.stringify(args)}`);
+          const w = p.box.fHi - p.box.fLo + 1;
+          assert.ok(w === 4 || w === 5,
+            `window width ${w} for ${args.key} ${args.scale} — the span of a scale triple is 4 or 5, never anything else`);
+          checked++;
+        }
+  assert.ok(checked >= 500, `only ${checked} corpus points checked`);
 });
 
-test("the default pass is the historical one, re-derived independently against isolation.mjs", () => {
-  // the literal, applied by hand through the same engines — so the pin above is
-  // not merely "the function agrees with itself"
+test("the LEGACY path is the historical pass, re-derived independently against isolation.mjs", () => {
+  // REWRITTEN 2026-08-21: the pre-ruling behaviour stays reachable as
+  // { frets:[5,6,7], bind:false } — what pre-ruling saved études restore
+  // through — and is pinned here BY HAND through the same engines, so the
+  // oracle comparisons above are not "the function agrees with itself"
   const set = SETS2[0];
-  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 });
+  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
+    zone: LEGACY_ZONE() });
   const zone = makeZone({ string: set.strings[0], frets: [5, 6, 7] });
   let first = true;
   const byHand = chooseVoicings(p.steps.map((s) => s), {
@@ -321,143 +340,117 @@ test("FINDING, pinned: under FREE the zone does not move the pass — anchor rel
   // verbatim and pinned by its own suite; not something to "fix" here. It is
   // pinned so the day Free changes, this says so — and so the door's UI can
   // state it truthfully rather than offer a box that appears broken.
+  // REWRITTEN 2026-08-21: the pivotW:0 fact belongs to the UNBOUND path, so
+  // it is pinned there (bind:false); the bound default DOES follow the zone —
+  // that is binding working, asserted alongside so the pair states the law.
   const base = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, placement: "free" };
   const frets = (p) => JSON.stringify(p.steps.map((s) => s.voicing.notes.map((n) => n.fret)));
-  assert.equal(frets(tetradPass({ ...base, zone: { frets: [1, 2, 3] } })),
-               frets(tetradPass({ ...base, zone: { frets: [10, 11, 12] } })),
-    "Free now follows the zone — isolation.mjs's Free changed; revisit the door's Box mode prose");
+  assert.equal(frets(tetradPass({ ...base, zone: { frets: [1, 2, 3], bind: false } })),
+               frets(tetradPass({ ...base, zone: { frets: [10, 11, 12], bind: false } })),
+    "unbound Free now follows the zone — isolation.mjs's Free changed; revisit the door's Box mode prose");
+  assert.notEqual(frets(tetradPass({ ...base, zone: { frets: [1, 3, 5] } })),
+                  frets(tetradPass({ ...base, zone: { frets: [8, 10, 12] } })),
+    "BOUND Free ignored the zone — binding must constrain the anchor voice under every placement");
 });
 
-test("the box is DERIVED — the zone grown to cover every chosen voicing, as Triadetudes derives it", () => {
-  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, zone: { frets: [5, 6, 7] } });
-  const all = p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret));
-  assert.equal(p.box.fLo, Math.min(5, ...all));
-  assert.equal(p.box.fHi, Math.max(7, ...all));
-  assert.deepEqual(p.box.strings, SETS2[0].strings);
-  assert.ok(p.box.fLo <= 5 && p.box.fHi >= 7, "the box must contain the zone");
-});
-
-/* ============ the soft wall (260820, "the isolation box should be draggable") ============
- * The left edge is the USER'S ANCHOR. By default the box's left edge IS the
- * zone minimum; it extends left only when a chosen voicing genuinely sits
- * below it — and then it SAYS SO: `box.brokeLeft` is the fact, not just a
- * number that quietly moved (§4.4). WHICH PLACEMENTS MAY BREAK THE WALL is
- * decided here from the engine's own definitions and pinned:
- *   grip — pivotW 4, the zone binds; the seeded first chord sits at its
- *          bottom-tone anchor whatever the zone, so a high zone forces a
- *          genuine break. brokeLeft may be true.
- *   free — pivotW 0, "THE ANCHOR IS RELEASED" (pinned above): there is no
- *          wall to break, so brokeLeft is NEVER true under free — the box
- *          stays purely descriptive. If free ever needed the flag, that
- *          would be a finding, and this pin is where it would surface.
- *   line — lineRule, unreachable in the door today (no line voicer); bound
- *          by the same never rule until it exists to prove otherwise. */
-test("the wall breaks under grip when the seed must sit below a high zone — and SAYS SO", () => {
-  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
-    placement: "grip", zone: { frets: [10, 11, 12] } });
-  const lowest = Math.min(...p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret)));
-  assert.ok(lowest < 10, "precondition: the seeded first chord sits below the zone");
-  assert.equal(p.box.fLo, lowest, "the box extends left to cover the voicing that needed it");
-  assert.equal(p.box.brokeLeft, true,
-    "the box extended below the anchor and must SAY SO — a box that quietly moved is §4.4's defect");
-});
-
-test("the wall holds under grip when every voicing fits at or above the anchor", () => {
-  /* FINDING (260820): under grip with cycling fourths, the seeded first chord
-   * anchors at its bottom tone at LOW frets whatever the zone — so nearly
-   * every practical zone breaks the wall, and the only zone that does not is
-   * one whose anchor is already at the floor. The overhang will be a common
-   * sight, not an edge case; reported to Daniel with the item. */
-  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
-    placement: "grip", zone: { frets: [0, 1, 2] } });
-  const lowest = Math.min(...p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret)));
-  assert.ok(lowest >= 0, "precondition: nothing can sit below fret 0");
-  assert.equal(p.box.fLo, 0, "the default: the box's left edge IS the zone minimum");
-  assert.equal(p.box.brokeLeft, false, "nothing reached below the anchor, so the wall did not break");
-});
-
-test("free NEVER breaks the wall — there is no wall: the anchor does not bind (pivotW 0)", () => {
-  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
-    placement: "free", zone: { frets: [10, 11, 12] } });
-  const lowest = Math.min(...p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret)));
-  assert.ok(lowest < 10, "precondition: free placed voicings below the zone (it ignores it)");
-  assert.equal(p.box.fLo, lowest, "the box still COVERS the voicings — descriptive, not a wall");
-  assert.equal(p.box.brokeLeft, false,
-    "under free the anchor is released; below-zone voicings are not a broken wall");
-});
-
-/* ============ binding, opt-in (260820, slice 1 of the zone redesign) ============
- * The measurements (notes/working/Isolation zone measurements 260820.md) are the
- * spec: the ANCHOR VOICE binds to the three zone notes (the triad's pivot model,
- * 100% pass-feasible), never the whole box; where a bar cannot, it REACHES
- * OUTSIDE instead of throwing, and says so (box.reached; the overhang draws it).
- * A TOGGLE, not a rule: with bind off, the path is byte-for-byte the pinned one
- * — the three existing choice pins (the exact oracle, the 17,280 band, the
- * default-zone pin) are the v0.1.10-identity assertion and stay untouched. */
-test("bind is a pure opt-in: absent and false are the identical, pinned path", () => {
-  for (const args of [
-    { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, placement: "grip", zone: { frets: [5, 7, 8] } },
-    { key: "A", scale: "mel", cycle: "fifths", bottom: 0, setIndex: 0, placement: "grip", zone: { frets: [7, 8, 10] } },
-    { key: "Eb", scale: "major", cycle: "thirds", bottom: 0, setIndex: 2, placement: "free", zone: { frets: [3, 5, 6] } },
-  ]) {
-    const off = tetradPass({ ...args, zone: { ...args.zone } });
-    const explicit = tetradPass({ ...args, zone: { ...args.zone, bind: false } });
-    assert.deepEqual(
-      explicit.steps.map((s) => s.voicing.notes.map((n) => n.fret)),
-      off.steps.map((s) => s.voicing.notes.map((n) => n.fret)),
-      "bind:false must be the identical path to no bind at all");
-    assert.equal(off.zone.bind, undefined, "an unbound pass does not grow a bind field");
-    assert.equal(off.box.reached, 0, "an unbound pass reaches nowhere by definition");
+test("the box IS the window — derived from the zone, NEVER from the voicings (ratified 2026-08-21)", () => {
+  /* The pre-ruling test pinned the opposite: a box grown to cover every
+   * chosen voicing. "The window is a position" retracts that — a rectangle
+   * that stretches is a residue, not a position — so the pin flips: the box
+   * equals the zone's span exactly, even when voicings roam far outside it.
+   * Legacy-unbound free with a low zone is the roaming case. */
+  for (const zone of [{ frets: [5, 7, 8] }, { frets: [1, 3, 5], bind: false }, { frets: [8, 10, 12] }]) {
+    const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
+      placement: "free", zone });
+    assert.equal(p.box.fLo, Math.min(...zone.frets), "the window's left edge is the zone's, full stop");
+    assert.equal(p.box.fHi, Math.max(...zone.frets), "the window's right edge is the zone's, full stop");
+    assert.deepEqual(p.box.strings, SETS2[0].strings);
+    assert.equal("brokeLeft" in p.box, false, "brokeLeft is retracted — there is no wall");
+    assert.equal("reached" in p.box, false, "the reach counter is retracted — a stretch is not reported");
+    const outside = p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret))
+      .filter((f) => f !== 0 && (f < p.box.fLo || f > p.box.fHi));
+    if (zone.bind === false && zone.frets[0] === 1) 
+      assert.ok(outside.length > 0, "precondition: the roaming case must actually roam outside the window");
   }
 });
 
-test("bind on: the anchor voice lands ON a zone note (or an open string) in every bar it can", () => {
+/* The soft-wall block (260820: the wall breaks/holds, free-never) is DELETED,
+ * not updated — "the window is a position" (ratified 2026-08-21) retracts the
+ * soft wall, brokeLeft and the overhang outright; pins of retracted behaviour
+ * go with their mechanism. The window pins above replace them. */
+
+test("BOUND BY DEFAULT (ratified 2026-08-21): a position you do not stay in is not a position", () => {
+  // no bind field at all ⇒ bound; bind:false is the explicit legacy escape
+  const args = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
+    placement: "grip", zone: { frets: [5, 7, 8] } };
+  const dflt = tetradPass(args);
+  const on = tetradPass({ ...args, zone: { ...args.zone, bind: true } });
+  assert.deepEqual(
+    dflt.steps.map((s) => s.voicing.notes.map((n) => n.fret)),
+    on.steps.map((s) => s.voicing.notes.map((n) => n.fret)),
+    "the default must BE the bound path");
+  assert.equal(dflt.zone.bind, undefined, "bound-by-default carries no flag — only the exception is stored");
+  const off = tetradPass({ ...args, zone: { ...args.zone, bind: false } });
+  assert.equal(off.zone.bind, false, "the legacy escape is stated in the returned zone");
+});
+
+test("bound: the anchor voice lands ON a zone note (or an open string) except where it stretches", () => {
   for (const [key, scale, frets] of [
     ["C", "major", [5, 7, 8]],       // A B C on string 6 — a real scale triple
-    ["A", "mel", [7, 8, 10]],        // B C D on string 6 (a real scale triple)
+    ["A", "mel", [7, 8, 10]],        // B C D on string 6
     ["G", "major", [3, 5, 7]],
   ]) {
     const p = tetradPass({ key, scale, cycle: "fourths", bottom: 0, setIndex: 0,
-      placement: "grip", zone: { frets, bind: true } });
-    assert.equal(p.zone.bind, true, "a bound pass says it is bound");
+      placement: "grip", zone: { frets } });
     const zi = p.set.strings.indexOf(p.zone.string);
-    let onZone = 0;
-    for (const st of p.steps) {
+    const onZone = p.steps.filter((st) => {
       const pf = st.voicing.notes[zi].fret;
-      if (frets.includes(pf) || pf === 0) onZone++;
-    }
-    assert.equal(onZone, p.steps.length - p.box.reached,
-      `[${key} ${scale}] ${onZone}/8 anchored with ${p.box.reached} reached — every un-reached bar must anchor, exactly`);
-    assert.ok(p.box.reached <= 1, `[${key} ${scale}] ${p.box.reached} bars reached at a good triple — binding is barely binding`);
+      return frets.includes(pf) || pf === 0;
+    }).length;
+    assert.ok(onZone >= 7, `[${key} ${scale}] only ${onZone}/8 bars anchored at a good triple — binding is barely binding`);
   }
 });
 
-test("bind NEVER throws: a bar with no anchored candidate reaches outside and says so", () => {
+test("bound NEVER throws: a bar with no anchored candidate stretches — voiced, unmarked", () => {
   // hunt a (config, triple) where some chord has zero anchor-bound candidates —
   // the measurements put these at ~12% of pairs, so a short scan finds one; the
-  // precondition is asserted so the test cannot rot into vacuity
+  // precondition (a real stretch of the anchor voice) is asserted so the test
+  // cannot rot into vacuity. Nothing counts it: a stretch is not an error.
   let found = null;
   outer: for (const key of ["G", "Db", "B", "Gb"]) for (const fLo of [1, 2, 3, 4]) {
+    const frets = [fLo, fLo + 2, fLo + 3];
     const probe = tetradPass({ key, scale: "harm", cycle: "sixths", bottom: 0, setIndex: 1,
-      placement: "grip", zone: { frets: [fLo, fLo + 2, fLo + 3], bind: true } });
-    if (probe.box.reached > 0) { found = { key, fLo, pass: probe }; break outer; }
+      placement: "grip", zone: { frets } });
+    const zi = probe.set.strings.indexOf(probe.zone.string);
+    const off = probe.steps.filter((st) => {
+      const pf = st.voicing.notes[zi].fret;
+      return pf !== 0 && !frets.includes(pf);
+    }).length;
+    if (off > 0) { found = probe; break outer; }
   }
-  assert.ok(found, "precondition: no reaching configuration found in the scan — re-derive from the measurements");
-  const p = found.pass;
-  for (const st of p.steps) assert.ok(st.voicing, "a reached bar is still VOICED — the throw must never fire");
-  assert.ok(p.box.reached >= 1, "the reach is a stated fact, not a silent fallback (§4.4)");
+  assert.ok(found, "precondition: no stretching configuration found in the scan — re-derive from the measurements");
+  for (const st of found.steps) assert.ok(st.voicing, "a stretching bar is still VOICED — the throw must never fire");
 });
 
-test("bind respects the seed: bar 1 keeps the requested bottom, reaching outside if it must", () => {
-  // the seed rule is the user's musical request; binding may not silently trade
-  // it away. With a high zone the seeded first chord reaches (grip seeds low).
+test("bound respects the seed: bar 1 keeps the requested bottom, stretching if it must", () => {
   const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
-    placement: "grip", zone: { frets: [10, 12, 13], bind: true } });
+    placement: "grip", zone: { frets: [10, 12, 13] } });
   assert.equal(p.steps[0].voicing.bass, 0, "bar 1 still has the requested bottom tone in the bass");
 });
 
-test("a zone string outside the set falls back to the set's lowest, and a bad frets list to the default", () => {
+test("the derived default's width is the span of a scale triple — 4 or 5, never anything else", () => {
+  for (const key of ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"])
+    for (const scaleType of ["major", "harm", "mel"])
+      for (let str = 1; str <= 6; str++) {
+        const f = defaultZoneFrets(key, scaleType, str);
+        const w = Math.max(...f) - Math.min(...f) + 1;
+        assert.ok(w === 4 || w === 5,
+          `${key} ${scaleType} string ${str}: width ${w} — three consecutive scale notes span 4 or 5, always`);
+      }
+});
+
+test("a zone string outside the set falls back to the set's lowest, and a bad frets list to the derived default", () => {
   const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, zone: { string: 1, frets: [] } });
   assert.equal(p.zone.string, SETS2[0].strings[0]);
-  assert.deepEqual(p.zone.frets, [5, 6, 7]);
+  assert.deepEqual(p.zone.frets, defaultZoneFrets("C", "major", SETS2[0].strings[0]));
 });
