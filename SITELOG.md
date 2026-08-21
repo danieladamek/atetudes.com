@@ -1,3 +1,22 @@
+## 2026-08-21 — The cards show the chart: four thumbnails captured from the shipped studies
+
+- The four study cards on `/` gain images — CAPTURED headlessly from the published studies by
+  `tools/capture_cards.py` (Playwright, file://, fresh context per study), never drawn, never
+  hand-edited. Each frame's state is asserted by the study's own readout BEFORE capture; a study
+  that drifts fails the script by name. One ratio (16:10, dsf=2), enforced on the saved artifact.
+- The frames: Metronome at its defaults (v1.4.4 — the frame table said v1.4.3; the range item
+  shipped v1.4.4 the same day); Triadetudes `D I · 2nd inv. · 1 of 8 · D major` (key D, pivots
+  seeded at string 2 fret 0); Tetradetudes `Dm7 iii-7 · drop2 · 1st inv. · 4 of 8 · Bb major`
+  (key Bb, zone at its lowest scale triple, stepped to 4 of 8 — Daniel's frame predates the
+  window ruling, and this is the reachable state that produces his exact readout); Modes
+  `Box 2 · frets 4–7 — A Ionian` with its full legend (captured at a 700px viewport, where the
+  page's own layout stacks board and legend into a near-16:10 union).
+- **Total added page weight: 142 kB** (73 + 14 + 21 + 34), all ≤120 kB each, quantized via
+  Pillow (neither oxipng nor pngquant is installed here — recorded in the script). Zero external
+  requests, zero console errors on `/`; `check_site.py` green; inspected at 1280 and 390.
+- Stopgap per the item: these four PNGs and the script die in the same commit that lands
+  `Site shell - live chart miniatures`.
+
 ## 2026-08-21 — DEPLOYED: the 15–300 range live in all three apps
 
 - Daniel authorized mid-session; `b0b0c6f` deployed (Pages run green, head `b0b0c6f`). Doctrine
