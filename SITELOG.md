@@ -1,3 +1,9 @@
+## 2026-08-21 — DEPLOYED: the four card thumbnails live
+
+- `579a99e` deployed alone (the dispatch's four piggyback commits had already shipped earlier
+  today); Pages run green, head `579a99e`. All four PNGs live and shasum-identical to the
+  committed files; the landing page references them and answers 200.
+
 ## 2026-08-21 — The cards show the chart: four thumbnails captured from the shipped studies
 
 - The four study cards on `/` gain images — CAPTURED headlessly from the published studies by
