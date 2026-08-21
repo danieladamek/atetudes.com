@@ -62,8 +62,12 @@ export default {
      * count-in and voice ride the right end of rows that already exist.
      * v0.1.9 (2026-08-20): the neck sounds — clicking any dot announces NOTE
      * (floor F3; the triad's every-dot-sounds idiom); the zone drag keeps its
-     * pointerdown, a moved drag suppresses the click. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.9",
+     * pointerdown, a moved drag suppresses the click. v0.1.10 (2026-08-20):
+     * the box looks draggable — a corner grip at bottom-left sets the LEFT
+     * edge (the box grows rightward), seed renders solid and consequence
+     * dashed, and the soft wall says so when a block chord reaches below the
+     * anchor (box.brokeLeft, tinted overhang; grip-only by derivation). */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.10",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

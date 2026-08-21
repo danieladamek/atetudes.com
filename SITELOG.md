@@ -1,3 +1,15 @@
+## 2026-08-20 — The box looks draggable — Tetradetudes v0.1.10
+
+- `static/studies/tetradetudes/study.html` → **v0.1.10** (door rebuilt from source, republished
+  byte-identical; URL unchanged). Update Log **260820.9**.
+- The isolation box: a corner grip at bottom-left sets the left edge (the box grows rightward);
+  seed renders solid, consequence dashed; when a block chord must reach below the anchor the box
+  extends left and SAYS SO — `brokeLeft` in the derivation, a tinted overhang plus a hint message
+  on the page. Grip-only by derivation; free never breaks (no wall exists there), pinned.
+- Gates: engine 483/483 (three soft-wall pins, red first) · door_locks 6938/0 (+49, corner-drag
+  and overhang gates, red first vs v0.1.9) · floor 9/7/0 with F3 green · four other studies
+  byte-identical. Committed, not pushed.
+
 ## 2026-08-20 — The neck sounds — Tetradetudes v0.1.9
 
 - `static/studies/tetradetudes/study.html` → **v0.1.9** (door rebuilt from source, republished

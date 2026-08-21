@@ -615,6 +615,49 @@ def run_door(pw, door_id):
         # timeline/score re-derived (a chip's title carries the beats, the pass
         # rebuilt — the stage's dots moving IS the re-derivation)
 
+        # ---- THE CORNER GRIP (260820.9): the drag surface is the bottom-left
+        # grip now — the user sets the LEFT edge, the box grows rightward.
+        # Asserted on the artifact (the hint's fret numbers move), not on a
+        # handler; and the drag must announce ZERO NOTEs — 93c5456's gesture
+        # story (a moved drag suppresses its click) holds for the new surface.
+        page.evaluate("""() => { window.__gripNotes = 0;
+          document.addEventListener('atetudes:note', () => window.__gripNotes++); }""")
+        grip = page.query_selector("#fretSvg .fs-grip-hit")
+        check(grip is not None, f"{tag} no corner grip to drag — the drag surface did not move to the corner")
+        gb = grip.bounding_box()
+        svg_w = page.query_selector("#fretSvg").bounding_box()["width"]
+        fret_px = svg_w * 71 / 1160
+        hint_pre = page.inner_text("#fsBoxHint")
+        gx, gy = gb["x"] + gb["width"] / 2, gb["y"] + gb["height"] / 2
+        page.mouse.move(gx, gy); page.mouse.down()
+        page.mouse.move(gx - 2 * fret_px, gy, steps=6); page.mouse.up()
+        page.wait_for_timeout(250)
+        hint_post = page.inner_text("#fsBoxHint")
+        check(hint_post != hint_pre and "zone" in hint_post.lower(),
+              f"{tag} dragging the corner grip did not move the left edge: {hint_pre!r} -> {hint_post!r}")
+        check(page.evaluate("() => window.__gripNotes") == 0,
+              f"{tag} a corner-grip drag announced NOTE — the moved-drag suppression broke for the new surface")
+
+        # ---- THE SOFT WALL RENDERS AS A MESSAGE (260820.9): above the seed's
+        # floor a block chord reaches below the anchor — the overhang is a
+        # tinted region and the hint SAYS SO (never drawn as a user drag); at
+        # the floor the wall holds and both disappear. Both directions, live.
+        check(page.eval_on_selector_all(".fs-overhang", "e => e.length") == 1,
+              f"{tag} the wall broke (anchor above the seed's floor) but no overhang is drawn")
+        check("reached left" in page.inner_text("#fsBoxHint"),
+              f"{tag} the wall broke but the hint does not say so — a box that quietly moved (§4.4)")
+        page.focus("#fretSvg")
+        for _ in range(14):
+            page.keyboard.press("ArrowLeft")            # anchor to fret 0 — the wall holds there
+        page.wait_for_timeout(250)
+        check(page.eval_on_selector_all(".fs-overhang", "e => e.length") == 0,
+              f"{tag} the wall holds at fret 0 but an overhang is still drawn")
+        check("reached left" not in page.inner_text("#fsBoxHint"),
+              f"{tag} the wall holds but the hint still claims it broke")
+        for _ in range(5):
+            page.keyboard.press("ArrowRight")           # back to the default anchor for later blocks
+        page.wait_for_timeout(200)
+
     if "arpIn" in r["controlsPresent"]:
         # ---- THE FIGURE CHAIN (extensions §1, audit A3/B4). Every stage is a
         # tested engine seam; the gate proves the WIRING end to end in the page.

@@ -179,9 +179,21 @@ export function tetradPass({
   /* THE BOX, as Triadetudes derives it: the zone grown to cover every chosen
    * voicing — "where the figure ended up living, a consequence of the
    * placement, not a setting." Returned so a stage can draw it without
-   * re-deriving it, and so a test can assert on it. */
-  let boxLo = Math.min(...zoneFrets), boxHi = Math.max(...zoneFrets);
+   * re-deriving it, and so a test can assert on it.
+   *
+   * THE SOFT WALL (260820): the zone minimum is the USER'S ANCHOR — the box's
+   * left edge by default. It extends left only when a chosen voicing genuinely
+   * sits below, and then it SAYS SO: `brokeLeft` is the fact a renderer must
+   * show differently from a user drag (§4.4 — a box that quietly moved).
+   * GRIP ONLY: grip is the placement the zone binds (pivotW 4) and the one
+   * whose seeded first chord can force a below-anchor block chord. Under free
+   * the anchor is released (pivotW 0, pinned) — below-zone voicings are the
+   * placement working, not a broken wall, so the flag stays false and the box
+   * stays purely descriptive. Both directions pinned in the suite. */
+  const anchorLo = Math.min(...zoneFrets);
+  let boxLo = anchorLo, boxHi = Math.max(...zoneFrets);
   for (const v of voicings) if (v) for (const n of v.notes) { boxLo = Math.min(boxLo, n.fret); boxHi = Math.max(boxHi, n.fret); }
+  const brokeLeft = placement === "grip" && boxLo < anchorLo;
 
   for (const [i, v] of voicings.entries())
     if (!v) throw new Error(`no voicing for ${chords[i].symbol} on ${set.label} within ${nfrets} frets`);
@@ -189,7 +201,7 @@ export function tetradPass({
   return {
     key, scale, cycle, bottom, setIndex, set, families, placement,
     zone: { string: zoneString, frets: [...zoneFrets] },
-    box: { fLo: boxLo, fHi: boxHi, strings: [...set.strings] },
+    box: { fLo: boxLo, fHi: boxHi, strings: [...set.strings], brokeLeft },
     rule: CYCLES[cycle].rule,
     steps: chords.map((c, i) => ({
       ...c, voicing: voicings[i], keys: keysOf(voicings[i]),

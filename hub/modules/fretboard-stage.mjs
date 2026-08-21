@@ -79,9 +79,12 @@ export const fretboardStage = {
 .fsTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .fsWin{flex:0 0 auto;margin-top:2px}
 .fsBoxHint{margin-top:6px}
-.fs-zone{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4;cursor:ew-resize}
-.fs-zone.fs-zone-on{stroke:var(--ink);stroke-width:2}
-.fs-zone-hit{fill:transparent;cursor:ew-resize}
+.fs-zone{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4}
+.fs-zone.fs-zone-on{stroke:var(--ink);stroke-width:2;stroke-dasharray:none}
+.fs-overhang{fill:#73737A;opacity:.13;pointer-events:none}
+.fs-anchor{stroke:var(--ink);stroke-width:2.6}
+.fs-grip{fill:var(--ink);cursor:ew-resize}
+.fs-grip-hit{fill:transparent;cursor:ew-resize}
 .readout{font-size:14px;margin:2px 2px 10px;color:var(--ink)}
 .readout b{font-size:16px}
 .readout .rosub{color:var(--gray);font-size:12.5px}
@@ -195,7 +198,12 @@ export const fretboardStage = {
       const ys = B.strings.map(fy), yLo = Math.min(...ys) - 17, yHi = Math.max(...ys) + 17;
       const xLo = B.fLo === 0 ? FX0 - 34 : FX0 + (B.fLo - 1) * FW + FW * 0.28;
       const xHi = Math.min(FX0 + B.fHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9);
-      const box = el("rect", { class: "fs-zone", x: xLo, y: yLo, width: xHi - xLo, height: yHi - yLo, rx: 12 }, zoneLayer);
+      /* SEED vs CONSEQUENCE, finally told apart (N7): the derived box is the
+       * DASHED rectangle — a consequence of the placement, not a setting —
+       * and everything the USER owns is SOLID: the zone strip, the anchor
+       * edge, and the corner grip that sets it. One property carries the
+       * whole distinction. */
+      el("rect", { class: "fs-zone", x: xLo, y: yLo, width: xHi - xLo, height: yHi - yLo, rx: 12 }, zoneLayer);
       // the ZONE itself, inside the box: the frets the optimizer is pulled toward
       const zf = pass.zone.frets;
       const zLo = Math.min(...zf), zHi = Math.max(...zf);
@@ -203,14 +211,29 @@ export const fretboardStage = {
       const zw = Math.min(FX0 + zHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9) - zx;
       const zy = fy(pass.zone.string);
       el("rect", { class: "fs-zone fs-zone-on", x: zx, y: zy - 19, width: zw, height: 38, rx: 10 }, zoneLayer);
-      // a wide invisible hit area for the drag, so a thin dashed line is not the target
-      const hit = el("rect", { class: "fs-zone-hit", x: zx - 10, y: zy - 26, width: zw + 20, height: 52 }, zoneLayer);
+      /* THE OVERHANG (the soft wall, 260820): when a block chord had to reach
+       * below the anchor, the reach is TINTED, never drawn as if the user
+       * dragged there — it carries exactly one message, and the anchor edge
+       * stays solid at the fret the user set. Grip-only by derivation
+       * (box.brokeLeft is false under free — no wall exists there). */
+      if (B.brokeLeft)
+        el("rect", { class: "fs-overhang", x: xLo, y: yLo, width: Math.max(0, zx - xLo), height: yHi - yLo, rx: 12 }, zoneLayer);
+      el("line", { class: "fs-anchor", x1: zx, y1: yLo, x2: zx, y2: yHi }, zoneLayer);
+      /* THE CORNER GRIP — bottom-left, where Daniel asked for it: the user
+       * sets the LEFT edge and the box grows rightward. The grip is the ONLY
+       * drag-start surface now (element-level ownership, 93c5456's gesture
+       * story inherited unchanged); the wide bar that read as nothing is
+       * gone. A generous invisible hit square keeps it grabbable. */
+      el("rect", { class: "fs-grip", x: zx - 7, y: yHi - 7, width: 14, height: 14, rx: 3 }, zoneLayer);
+      const gripHit = el("rect", { class: "fs-grip-hit", x: zx - 20, y: yHi - 20, width: 40, height: 40 }, zoneLayer);
       const start = (e) => { dragging = { x0: e.clientX, lo0: zLo }; e.preventDefault(); };
-      hit.addEventListener("pointerdown", start);
-      box.addEventListener("pointerdown", start);
+      gripHit.addEventListener("pointerdown", start);
       byId("fsBoxHint").hidden = false;
       byId("fsBoxHint").textContent =
-        `Isolation zone: frets ${zLo}–${zHi} on string ${pass.zone.string}. Drag it, or press ← → with the neck focused. ` +
+        `Isolation zone: frets ${zLo}–${zHi} on string ${pass.zone.string}. Drag the corner grip to set the left edge — the box grows rightward. Or press ← → with the neck focused. ` +
+        (B.brokeLeft
+          ? `The box reached left to fret ${B.fLo}: a block chord cannot be fretted inside the zone. `
+          : "") +
         (pass.placement === "grip"
           ? "Grip placement anchors every voicing to it."
           : `Placement is ${pass.placement}: the anchor is released, so the zone draws but does not pull — choose Grip in Shape & Motion to practise inside it.`);

@@ -337,6 +337,55 @@ test("the box is DERIVED — the zone grown to cover every chosen voicing, as Tr
   assert.ok(p.box.fLo <= 5 && p.box.fHi >= 7, "the box must contain the zone");
 });
 
+/* ============ the soft wall (260820, "the isolation box should be draggable") ============
+ * The left edge is the USER'S ANCHOR. By default the box's left edge IS the
+ * zone minimum; it extends left only when a chosen voicing genuinely sits
+ * below it — and then it SAYS SO: `box.brokeLeft` is the fact, not just a
+ * number that quietly moved (§4.4). WHICH PLACEMENTS MAY BREAK THE WALL is
+ * decided here from the engine's own definitions and pinned:
+ *   grip — pivotW 4, the zone binds; the seeded first chord sits at its
+ *          bottom-tone anchor whatever the zone, so a high zone forces a
+ *          genuine break. brokeLeft may be true.
+ *   free — pivotW 0, "THE ANCHOR IS RELEASED" (pinned above): there is no
+ *          wall to break, so brokeLeft is NEVER true under free — the box
+ *          stays purely descriptive. If free ever needed the flag, that
+ *          would be a finding, and this pin is where it would surface.
+ *   line — lineRule, unreachable in the door today (no line voicer); bound
+ *          by the same never rule until it exists to prove otherwise. */
+test("the wall breaks under grip when the seed must sit below a high zone — and SAYS SO", () => {
+  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
+    placement: "grip", zone: { frets: [10, 11, 12] } });
+  const lowest = Math.min(...p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret)));
+  assert.ok(lowest < 10, "precondition: the seeded first chord sits below the zone");
+  assert.equal(p.box.fLo, lowest, "the box extends left to cover the voicing that needed it");
+  assert.equal(p.box.brokeLeft, true,
+    "the box extended below the anchor and must SAY SO — a box that quietly moved is §4.4's defect");
+});
+
+test("the wall holds under grip when every voicing fits at or above the anchor", () => {
+  /* FINDING (260820): under grip with cycling fourths, the seeded first chord
+   * anchors at its bottom tone at LOW frets whatever the zone — so nearly
+   * every practical zone breaks the wall, and the only zone that does not is
+   * one whose anchor is already at the floor. The overhang will be a common
+   * sight, not an edge case; reported to Daniel with the item. */
+  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
+    placement: "grip", zone: { frets: [0, 1, 2] } });
+  const lowest = Math.min(...p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret)));
+  assert.ok(lowest >= 0, "precondition: nothing can sit below fret 0");
+  assert.equal(p.box.fLo, 0, "the default: the box's left edge IS the zone minimum");
+  assert.equal(p.box.brokeLeft, false, "nothing reached below the anchor, so the wall did not break");
+});
+
+test("free NEVER breaks the wall — there is no wall: the anchor does not bind (pivotW 0)", () => {
+  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
+    placement: "free", zone: { frets: [10, 11, 12] } });
+  const lowest = Math.min(...p.steps.flatMap((s) => s.voicing.notes.map((n) => n.fret)));
+  assert.ok(lowest < 10, "precondition: free placed voicings below the zone (it ignores it)");
+  assert.equal(p.box.fLo, lowest, "the box still COVERS the voicings — descriptive, not a wall");
+  assert.equal(p.box.brokeLeft, false,
+    "under free the anchor is released; below-zone voicings are not a broken wall");
+});
+
 test("a zone string outside the set falls back to the set's lowest, and a bad frets list to the default", () => {
   const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, zone: { string: 1, frets: [] } });
   assert.equal(p.zone.string, SETS2[0].strings[0]);
