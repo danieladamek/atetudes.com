@@ -1,3 +1,15 @@
+## 2026-08-20 — Binding, opt-in — Tetradetudes v0.1.11
+
+- `static/studies/tetradetudes/study.html` → **v0.1.11** (door rebuilt, republished byte-identical;
+  URL unchanged). Update Log **260820.11**.
+- A bind toggle on the neck board: the anchor voice hard-lands on the three zone notes; bars that
+  cannot reach outside and the hint counts them; the grip and arrows now write scale TRIPLES
+  (e5ba874 un-flattened at the user's seam). **Off = the pinned v0.1.10 path** — the engine's three
+  identity pins stayed green, untouched. Bind rides the zone in the stored config; a restored
+  entry reproduces bound (gate-asserted).
+- Gates: engine 487/487 (4 new pins, red first) · door_locks 7040/0 (+102, red first vs v0.1.10) ·
+  bite 10/10 · floor 9/7/0 · four other studies byte-identical. Committed, not pushed.
+
 ## 2026-08-20 — The box looks draggable — Tetradetudes v0.1.10
 
 - `static/studies/tetradetudes/study.html` → **v0.1.10** (door rebuilt from source, republished

@@ -655,8 +655,49 @@ def run_door(pw, door_id):
         check("reached left" not in page.inner_text("#fsBoxHint"),
               f"{tag} the wall holds but the hint still claims it broke")
         for _ in range(5):
-            page.keyboard.press("ArrowRight")           # back to the default anchor for later blocks
+            page.keyboard.press("ArrowRight")           # back toward the default anchor for later blocks
         page.wait_for_timeout(200)
+
+        # ---- BINDING, OPT-IN (260820.11): one click, and the anchor voice
+        # lands ON the zone notes — asserted on the DOTS (their transforms),
+        # never on a handler. The toggle-off identity is held by the engine's
+        # three choice pins (exact oracle, 17,280 band, default zone), which
+        # this build keeps green; here the page-level facts are exercised.
+        check(page.query_selector("#bindChk") is not None, f"{tag} no bind toggle on the stage")
+        page.check("#bindChk"); page.wait_for_timeout(300)
+        hint_b = page.inner_text("#fsBoxHint")
+        check("Bound: the anchor voice lands" in hint_b,
+              f"{tag} bind is on but the hint does not say what binds: {hint_b!r}")
+        m_fr = re.search(r"scale notes at frets ([0-9]+) · ([0-9]+) · ([0-9]+)", hint_b)
+        check(m_fr is not None, f"{tag} the bound hint does not name the three zone notes: {hint_b!r}")
+        zfrets = [int(x) for x in m_fr.groups()] if m_fr else []
+        m_reach = re.search(r"(\d+) bar\(s\) had no anchored shape", hint_b)
+        reached_n = int(m_reach.group(1)) if m_reach else 0
+        anchor_frets = []
+        for i in range(8):
+            page.click(f"#tlBars >> button >> nth={i}"); page.wait_for_timeout(120)
+            f = page.evaluate("""() => {
+              const SY0 = 34, SGAP = 34, FX0 = 46, FW = 71;
+              const yT = SY0 + 5 * SGAP;                       // string 6, the anchor string
+              for (const g of document.querySelectorAll('.fs-dot')) {
+                const m = /translate\(([-\d.]+)px[, ]+([-\d.]+)px\)/.exec(g.style.transform);
+                if (m && Math.abs(parseFloat(m[2]) - yT) < 1) {
+                  const x = parseFloat(m[1]);
+                  return x < FX0 ? 0 : Math.round((x - FX0) / FW + 0.5);
+                }
+              }
+              return null; }""")
+            anchor_frets.append(f)
+        check(all(f is not None for f in anchor_frets), f"{tag} could not read the anchor-string dot: {anchor_frets}")
+        off_zone = [f for f in anchor_frets if f is not None and f != 0 and f not in zfrets]
+        check(len(off_zone) <= reached_n,
+              f"{tag} bound, but {len(off_zone)} bar(s) sit OFF the zone notes with only {reached_n} declared "
+              f"reached ({anchor_frets} vs {zfrets}) — a silent reach is §4.4's defect")
+        check(len(anchor_frets) - len(off_zone) >= 6,
+              f"{tag} only {len(anchor_frets) - len(off_zone)}/8 bars anchored — binding is not binding")
+        page.uncheck("#bindChk"); page.wait_for_timeout(250)
+        check("Bound" not in page.inner_text("#fsBoxHint"),
+              f"{tag} bind unchecked but the hint still claims Bound — the toggle is one-way")
 
     if "arpIn" in r["controlsPresent"]:
         # ---- THE FIGURE CHAIN (extensions §1, audit A3/B4). Every stage is a
@@ -1090,6 +1131,9 @@ def run_door(pw, door_id):
             for _ in range(4):
                 page.keyboard.press("ArrowRight")
             page.wait_for_timeout(150)
+            # BIND IS CONFIG, not UI state (260820.11): saved on, restored on
+            page.check("#bindChk")
+            page.wait_for_timeout(150)
         first_before = page.inner_text("#tlBars button >> nth=0")
         page.fill("#journalIn", "the persistence round-trip entry")
         page.dispatch_event("#journalIn", "input")
@@ -1127,6 +1171,8 @@ def run_door(pw, door_id):
               return e && e.payload && e.payload.data && e.payload.data.zone; }""" % own_key)
             check(zone_saved and isinstance(zone_saved.get("frets"), list),
                   f"{tag} the saved entry carries no zone: {zone_saved!r}")
+            check(zone_saved and zone_saved.get("bind") is True,
+                  f"{tag} bind was on at save but the stored zone has no bind flag: {zone_saved!r}")
 
         # RELOAD. Everything in the page is gone; the log must not be.
         page.goto(html_path.as_uri())
@@ -1161,8 +1207,14 @@ def run_door(pw, door_id):
             page.click("#winSeg >> text=Box")
             page.wait_for_timeout(80)
             restored_hint = page.inner_text("#fsBoxHint")
-            check(zone_saved and f"frets {min(zone_saved['frets'])}–{max(zone_saved['frets'])}" in restored_hint,
+            # bind was saved ON, so the restored hint speaks the bound form and
+            # names the same three notes — and the checkbox is a view of it
+            check(zone_saved and "scale notes at frets " + " · ".join(str(f) for f in sorted(zone_saved["frets"])) in restored_hint,
                   f"{tag} restore did not bring the zone back: {restored_hint!r} vs {zone_saved!r}")
+            check("Bound: the anchor voice lands" in restored_hint,
+                  f"{tag} bind was saved on but the restored étude is unbound — the flag is UI state, not config")
+            check(page.is_checked("#bindChk"),
+                  f"{tag} restored bound but the toggle reads off — two states, not two views")
 
         # THE SHARED SCHEMA IS A FACT: one Triadetudes v1 log imports through the
         # engine's own fromTriadetudesV1 and renders as a foreign-app entry

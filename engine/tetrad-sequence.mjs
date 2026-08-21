@@ -172,8 +172,34 @@ export function tetradPass({
   const zoneString = zone && Number.isInteger(zone.string) && set.strings.includes(zone.string)
     ? zone.string : set.strings[0];
   const theZone = makeZone({ string: zoneString, frets: zoneFrets });
+
+  /* BINDING, OPT-IN (260820, measurements in notes/working/): with `zone.bind`
+   * the ANCHOR VOICE must land on one of the zone's frets (or an open string —
+   * positionless). Never the whole box: whole-box binding is structurally
+   * impossible for close and drop3 (measured 0% pass-feasible); the anchor-
+   * voice model is 100% feasible. A bar with NO anchored candidate REACHES
+   * OUTSIDE — the full pool, never a throw — and the reach is counted
+   * (`box.reached`), because a fallback nobody can see is §4.4's silent
+   * divergence. The seed outranks the bind: bar 1 keeps the requested bottom
+   * and reaches if it must — binding may not silently trade away the user's
+   * bass. With bind off this block is a no-op and the path is byte-for-byte
+   * the pinned one (the exact-oracle, 17,280-band and default-zone pins are
+   * the identity assertion). */
+  const bind = !!(zone && zone.bind === true);
+  const zi = set.strings.indexOf(zoneString);
+  let reached = 0;
+  const bindFilter = (pool) => {
+    if (!bind) return pool;
+    const anchored = pool.filter((v) => {
+      const pf = v.notes[zi].fret;
+      return pf === 0 || zoneFrets.includes(pf);
+    });
+    if (!anchored.length) { reached++; return pool; }
+    return anchored;
+  };
+  const boundCandidatesFor = (ch) => bindFilter(candidatesFor(ch));
   const voicings = chooseVoicings(chords, {
-    zone: theZone, placement, setLowHigh: set.strings, nfrets, candidatesFor,
+    zone: theZone, placement, setLowHigh: set.strings, nfrets, candidatesFor: boundCandidatesFor,
   });
 
   /* THE BOX, as Triadetudes derives it: the zone grown to cover every chosen
@@ -200,8 +226,8 @@ export function tetradPass({
 
   return {
     key, scale, cycle, bottom, setIndex, set, families, placement,
-    zone: { string: zoneString, frets: [...zoneFrets] },
-    box: { fLo: boxLo, fHi: boxHi, strings: [...set.strings], brokeLeft },
+    zone: { string: zoneString, frets: [...zoneFrets], ...(bind ? { bind: true } : {}) },
+    box: { fLo: boxLo, fHi: boxHi, strings: [...set.strings], brokeLeft, reached },
     rule: CYCLES[cycle].rule,
     steps: chords.map((c, i) => ({
       ...c, voicing: voicings[i], keys: keysOf(voicings[i]),

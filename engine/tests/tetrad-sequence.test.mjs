@@ -386,6 +386,76 @@ test("free NEVER breaks the wall — there is no wall: the anchor does not bind 
     "under free the anchor is released; below-zone voicings are not a broken wall");
 });
 
+/* ============ binding, opt-in (260820, slice 1 of the zone redesign) ============
+ * The measurements (notes/working/Isolation zone measurements 260820.md) are the
+ * spec: the ANCHOR VOICE binds to the three zone notes (the triad's pivot model,
+ * 100% pass-feasible), never the whole box; where a bar cannot, it REACHES
+ * OUTSIDE instead of throwing, and says so (box.reached; the overhang draws it).
+ * A TOGGLE, not a rule: with bind off, the path is byte-for-byte the pinned one
+ * — the three existing choice pins (the exact oracle, the 17,280 band, the
+ * default-zone pin) are the v0.1.10-identity assertion and stay untouched. */
+test("bind is a pure opt-in: absent and false are the identical, pinned path", () => {
+  for (const args of [
+    { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, placement: "grip", zone: { frets: [5, 7, 8] } },
+    { key: "A", scale: "mel", cycle: "fifths", bottom: 0, setIndex: 0, placement: "grip", zone: { frets: [7, 8, 10] } },
+    { key: "Eb", scale: "major", cycle: "thirds", bottom: 0, setIndex: 2, placement: "free", zone: { frets: [3, 5, 6] } },
+  ]) {
+    const off = tetradPass({ ...args, zone: { ...args.zone } });
+    const explicit = tetradPass({ ...args, zone: { ...args.zone, bind: false } });
+    assert.deepEqual(
+      explicit.steps.map((s) => s.voicing.notes.map((n) => n.fret)),
+      off.steps.map((s) => s.voicing.notes.map((n) => n.fret)),
+      "bind:false must be the identical path to no bind at all");
+    assert.equal(off.zone.bind, undefined, "an unbound pass does not grow a bind field");
+    assert.equal(off.box.reached, 0, "an unbound pass reaches nowhere by definition");
+  }
+});
+
+test("bind on: the anchor voice lands ON a zone note (or an open string) in every bar it can", () => {
+  for (const [key, scale, frets] of [
+    ["C", "major", [5, 7, 8]],       // A B C on string 6 — a real scale triple
+    ["A", "mel", [7, 8, 10]],        // B C D on string 6 (a real scale triple)
+    ["G", "major", [3, 5, 7]],
+  ]) {
+    const p = tetradPass({ key, scale, cycle: "fourths", bottom: 0, setIndex: 0,
+      placement: "grip", zone: { frets, bind: true } });
+    assert.equal(p.zone.bind, true, "a bound pass says it is bound");
+    const zi = p.set.strings.indexOf(p.zone.string);
+    let onZone = 0;
+    for (const st of p.steps) {
+      const pf = st.voicing.notes[zi].fret;
+      if (frets.includes(pf) || pf === 0) onZone++;
+    }
+    assert.equal(onZone, p.steps.length - p.box.reached,
+      `[${key} ${scale}] ${onZone}/8 anchored with ${p.box.reached} reached — every un-reached bar must anchor, exactly`);
+    assert.ok(p.box.reached <= 1, `[${key} ${scale}] ${p.box.reached} bars reached at a good triple — binding is barely binding`);
+  }
+});
+
+test("bind NEVER throws: a bar with no anchored candidate reaches outside and says so", () => {
+  // hunt a (config, triple) where some chord has zero anchor-bound candidates —
+  // the measurements put these at ~12% of pairs, so a short scan finds one; the
+  // precondition is asserted so the test cannot rot into vacuity
+  let found = null;
+  outer: for (const key of ["G", "Db", "B", "Gb"]) for (const fLo of [1, 2, 3, 4]) {
+    const probe = tetradPass({ key, scale: "harm", cycle: "sixths", bottom: 0, setIndex: 1,
+      placement: "grip", zone: { frets: [fLo, fLo + 2, fLo + 3], bind: true } });
+    if (probe.box.reached > 0) { found = { key, fLo, pass: probe }; break outer; }
+  }
+  assert.ok(found, "precondition: no reaching configuration found in the scan — re-derive from the measurements");
+  const p = found.pass;
+  for (const st of p.steps) assert.ok(st.voicing, "a reached bar is still VOICED — the throw must never fire");
+  assert.ok(p.box.reached >= 1, "the reach is a stated fact, not a silent fallback (§4.4)");
+});
+
+test("bind respects the seed: bar 1 keeps the requested bottom, reaching outside if it must", () => {
+  // the seed rule is the user's musical request; binding may not silently trade
+  // it away. With a high zone the seeded first chord reaches (grip seeds low).
+  const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0,
+    placement: "grip", zone: { frets: [10, 12, 13], bind: true } });
+  assert.equal(p.steps[0].voicing.bass, 0, "bar 1 still has the requested bottom tone in the bass");
+});
+
 test("a zone string outside the set falls back to the set's lowest, and a bad frets list to the default", () => {
   const p = tetradPass({ key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, zone: { string: 1, frets: [] } });
   assert.equal(p.zone.string, SETS2[0].strings[0]);

@@ -47,7 +47,7 @@ export const fretboardStage = {
   requires: { material: "tetrad" },
   mount_point: "boards",
   order: 20,
-  controls: ["fretSvg", "winSeg"],
+  controls: ["fretSvg", "winSeg", "bindChk"],
 
   /* the reference's board, verbatim: a readout line, then the neck SVG at the
    * board's full width. The step buttons this card used to carry are the
@@ -67,6 +67,8 @@ export const fretboardStage = {
       <button data-win="follow" title="the frozen study's auto-cropping window — the neck framed to the pass">Follow</button>
       <button data-win="box" title="the isolation zone as a movable box the optimizer honours (Grip placement)">Box</button>
     </div>
+    <label class="chk fsBind" title="bind: the anchor voice must land on one of the three zone notes — a bar that cannot reaches outside and the box says so. Off, the zone only pulls (today's behaviour).">
+      <input type="checkbox" id="bindChk" data-control="bindChk"> bind</label>
   </div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
   <div class="hint fsBoxHint" id="fsBoxHint" hidden></div>`,
@@ -78,6 +80,7 @@ export const fretboardStage = {
 #fretSvg .dot-label{font-weight:bold;pointer-events:none;user-select:none}
 .fsTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .fsWin{flex:0 0 auto;margin-top:2px}
+.fsBind{flex:0 0 auto;margin:4px 0 0 2px}
 .fsBoxHint{margin-top:6px}
 .fs-zone{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4}
 .fs-zone.fs-zone-on{stroke:var(--ink);stroke-width:2;stroke-dasharray:none}
@@ -190,7 +193,6 @@ export const fretboardStage = {
      * DRAGGABLE: dragging moves the ZONE (three frets), which is config, which
      * re-derives the pass, which moves the box. The user sets the zone; the
      * engine sets the box. ---- */
-    const zoneWidth = () => (pass.zone.frets.length || 3);
     const drawZone = () => {
       zoneLayer.textContent = "";
       if (win !== "box" || !pass) return;
@@ -230,7 +232,10 @@ export const fretboardStage = {
       gripHit.addEventListener("pointerdown", start);
       byId("fsBoxHint").hidden = false;
       byId("fsBoxHint").textContent =
-        `Isolation zone: frets ${zLo}–${zHi} on string ${pass.zone.string}. Drag the corner grip to set the left edge — the box grows rightward. Or press ← → with the neck focused. ` +
+        `Isolation zone: ${pass.zone.bind ? "scale notes at frets " + zf.join(" · ") : `frets ${zLo}–${zHi}`} on string ${pass.zone.string}. Drag the corner grip to set the left edge — the box grows rightward. Or press ← → with the neck focused. ` +
+        (pass.zone.bind
+          ? `Bound: the anchor voice lands on the zone notes${B.reached ? ` — ${B.reached} bar(s) had no anchored shape and reached outside` : ""}. `
+          : "") +
         (B.brokeLeft
           ? `The box reached left to fret ${B.fLo}: a block chord cannot be fretted inside the zone. `
           : "") +
@@ -239,19 +244,57 @@ export const fretboardStage = {
           : `Placement is ${pass.placement}: the anchor is released, so the zone draws but does not pull — choose Grip in Shape & Motion to practise inside it.`);
     };
 
-    /* the drag: pointer x → fret; announce the new zone as CONFIG */
+    /* the drag: pointer x → fret; announce the new zone as CONFIG.
+     *
+     * THE UN-FLATTENING (260820, the measurements' slice 1): the zone the USER
+     * sets is three consecutive SCALE notes on the anchor string — the triad
+     * app's st.pivotFrets model, which e5ba874 flattened to three adjacent
+     * frets. Width 4–5 falls out of the scale by construction; it is never
+     * set and never stored. The un-flattening lives HERE, at the seam where
+     * the user sets the zone: every drag and every arrow press writes a scale
+     * triple. The ENGINE's cold-load default stays the pinned literal
+     * ([5,6,7]) — a library default the oracle corpus and the default-zone
+     * pin were measured under (shape-motion's placement note is the
+     * precedent); making the cold default scale-derived changes unbound
+     * output and is exactly the slice-2 ruling Daniel makes with his ears. */
     const svgEl = () => byId("fretSvg");
+    const scaleFretsOnAnchor = () => {
+      const pcs = scaleNotes(cfg.key, cfg.scale).map((n) => n.pc);
+      const zs = pass ? pass.zone.string : 6;
+      const out = [];
+      for (let f = 0; f <= NFRETS; f++) if (pcs.includes((OPEN_MIDI[zs] + f) % 12)) out.push(f);
+      return out;
+    };
+    const tripleAt = (lo) => {
+      const sf = scaleFretsOnAnchor();
+      if (sf.length < 3) return null;                     // cannot happen for real scales; stay honest
+      let i = 0;
+      for (let k = 0; k < sf.length; k++) if (Math.abs(sf[k] - lo) < Math.abs(sf[i] - lo)) i = k;
+      i = Math.max(0, Math.min(sf.length - 3, i));
+      return [sf[i], sf[i + 1], sf[i + 2]];
+    };
     const fretAt = (clientX) => {
       const r = svgEl().getBoundingClientRect();
       const x = (clientX - r.left) * (1160 / r.width);
-      return Math.max(0, Math.min(NFRETS - (zoneWidth() - 1), Math.round((x - FX0) / FW + 0.5)));
+      return Math.max(0, Math.min(NFRETS, Math.round((x - FX0) / FW + 0.5)));
     };
     const setZoneLo = (lo) => {
-      const w = zoneWidth();
-      lo = Math.max(0, Math.min(NFRETS - (w - 1), lo));
-      const frets = Array.from({ length: w }, (_, i) => lo + i);
+      const frets = tripleAt(lo);
+      if (!frets) return;
       if (pass && frets.join() === pass.zone.frets.join()) return;
-      announce(d, CONFIG_CHANGED, { zone: { frets, string: pass.zone.string } });
+      announce(d, CONFIG_CHANGED, { zone: { ...(cfg.zone || {}), frets, string: pass.zone.string,
+        ...(cfg.zone && cfg.zone.bind ? { bind: true } : {}) } });
+    };
+    const stepZone = (dir) => {
+      const sf = scaleFretsOnAnchor();
+      const lo = Math.min(...pass.zone.frets);
+      let i = 0;
+      for (let k = 0; k < sf.length; k++) if (Math.abs(sf[k] - lo) < Math.abs(sf[i] - lo)) i = k;
+      i = Math.max(0, Math.min(sf.length - 3, i + dir));
+      const frets = [sf[i], sf[i + 1], sf[i + 2]];
+      if (frets.join() === pass.zone.frets.join()) return;
+      announce(d, CONFIG_CHANGED, { zone: { frets, string: pass.zone.string,
+        ...(cfg.zone && cfg.zone.bind ? { bind: true } : {}) } });
     };
     d.addEventListener("pointermove", (e) => {
       if (!dragging) return;
@@ -291,8 +334,8 @@ export const fretboardStage = {
     svgEl().setAttribute("tabindex", "0");
     svgEl().addEventListener("keydown", (e) => {
       if (win !== "box" || !pass) return;
-      if (e.key === "ArrowLeft") { setZoneLo(Math.min(...pass.zone.frets) - 1); e.preventDefault(); }
-      if (e.key === "ArrowRight") { setZoneLo(Math.min(...pass.zone.frets) + 1); e.preventDefault(); }
+      if (e.key === "ArrowLeft") { stepZone(-1); e.preventDefault(); }
+      if (e.key === "ArrowRight") { stepZone(1); e.preventDefault(); }
     });
 
     /* ---- THE WINDOW: Full shows the whole neck; FOLLOW is the frozen tetrad
@@ -424,7 +467,22 @@ export const fretboardStage = {
     /* PLAYING BELONGS TO THE TRANSPORT, NOT THE STAGE (Shell 1). The stage
      * owns WHERE the pass is and answers every move with the step it rendered;
      * it no longer decides WHEN, and the ◀ ▶ buttons are the Transport's. */
-    listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; build(); });
+    /* THE BIND TOGGLE (opt-in, never a default): bind rides the ZONE OBJECT,
+     * so it is config — it travels on the bus, lands in Shape & Motion's
+     * snapshot with the rest of the zone, and a restored étude reproduces
+     * bound. Enabling it also SNAPS the zone to the nearest scale triple
+     * (announced, visible — binding is defined over scale notes, and the
+     * pinned [5,6,7] literal is not one); disabling leaves the zone where it
+     * is. The checkbox is a VIEW of cfg.zone.bind, one state two views. */
+    byId("bindChk").addEventListener("change", (e) => {
+      const on = e.target.checked;
+      const lo = pass ? Math.min(...pass.zone.frets) : 5;
+      const frets = on ? (tripleAt(lo) || pass.zone.frets) : [...pass.zone.frets];
+      announce(d, CONFIG_CHANGED, { zone: { frets, string: pass ? pass.zone.string : 6,
+        ...(on ? { bind: true } : {}) } });
+    });
+    listen(d, CONFIG_CHANGED, (next) => { cfg = { ...cfg, ...next }; build();
+      byId("bindChk").checked = !!(cfg.zone && cfg.zone.bind); });
     /* another module asking to move — the stage owns the position */
     listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
     listen(d, STEP_CHANGED, (m) => {

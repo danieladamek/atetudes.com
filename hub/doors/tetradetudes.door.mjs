@@ -66,8 +66,13 @@ export default {
      * the box looks draggable — a corner grip at bottom-left sets the LEFT
      * edge (the box grows rightward), seed renders solid and consequence
      * dashed, and the soft wall says so when a block chord reaches below the
-     * anchor (box.brokeLeft, tinted overhang; grip-only by derivation). */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.10",
+     * anchor (box.brokeLeft, tinted overhang; grip-only by derivation).
+     * v0.1.11 (2026-08-20): binding, opt-in — the bind toggle hard-anchors
+     * the anchor voice to the three zone notes (the triad's pivot model,
+     * measurements 260820); the grip and arrows write scale TRIPLES now
+     * (e5ba874 un-flattened at the user's seam); a bar with no anchored
+     * shape reaches outside and the hint counts it. Off = the pinned path. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.11",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };
