@@ -37,7 +37,7 @@ export const metronomeCard = {
   </div>
   <div class="bpmrow">
     <span class="metrolabel">BPM</span>
-    <input type="range" id="bpmRange" data-control="bpmRange" min="30" max="200" value="72">
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
     <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
   </div>
   <div class="row2">

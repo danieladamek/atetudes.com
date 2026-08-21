@@ -112,7 +112,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.3</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.4.4</div>
 </header>
 
 <div class="cards">
@@ -125,7 +125,7 @@
     </div>
     <div class="bpmrow">
       <span style="font-size:12px;color:#9C9CA4">BPM</span>
-      <input type="range" id="bpmRange" min="30" max="200" value="72">
+      <input type="range" id="bpmRange" min="15" max="300" value="72">
       <span id="bpmVal" style="font-size:13px;width:30px;text-align:right">72</span>
     </div>
     <div class="row2">
@@ -187,7 +187,7 @@
   <div id="noteList"></div>
 </div>
 
-<footer>Metronome v1.4.3 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.4.4 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
@@ -256,7 +256,7 @@ function createTapTempo(o={}){
     taps.push(now);
     if(taps.length<2)return null;
     const r=taps.slice(-win),iv=(r[r.length-1]-r[0])/(r.length-1);
-    return Math.round(Math.min(200,Math.max(30,60/iv)));
+    return Math.round(Math.min(300,Math.max(15,60/iv)));
   };
 }
 /* ============ shared engine modules (hand-inlined, anti-drift pinned) ============

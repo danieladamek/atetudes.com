@@ -238,7 +238,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.12</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.13</div>
 </header>
 
 <div class="cards">
@@ -251,7 +251,7 @@
     </div>
     <div class="bpmrow">
       <span style="font-size:12px;color:#9C9CA4">BPM</span>
-      <input type="range" id="bpmRange" min="30" max="200" value="72">
+      <input type="range" id="bpmRange" min="15" max="300" value="72">
       <span id="bpmVal" style="font-size:13px;width:30px;text-align:right">72</span>
     </div>
     <div class="row2">
@@ -536,7 +536,7 @@
   </div>
 </div>
 
-<footer>Triadetudes v0.8.12 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.13 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -5134,7 +5134,7 @@ function createTapTempo(o={}){
     taps.push(now);
     if(taps.length<2)return null;
     const r=taps.slice(-win),iv=(r[r.length-1]-r[0])/(r.length-1);
-    return Math.round(Math.min(200,Math.max(30,60/iv)));
+    return Math.round(Math.min(300,Math.max(15,60/iv)));
   };
 }
 const SUB_OFFSETS={1:[],2:[0.5],3:[1/3,2/3],4:[0.25,0.5,0.75]};

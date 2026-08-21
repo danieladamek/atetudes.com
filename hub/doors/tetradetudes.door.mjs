@@ -76,8 +76,11 @@ export default {
      * the box IS the zone's span, one rigid dashed rectangle that dragging
      * TRANSLATES; binding is the default; the overhang, anchor strip,
      * brokeLeft and every reporter deleted. A note outside is a stretch in
-     * full colour, and that is the teaching. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.12",
+     * full colour, and that is the teaching. v0.1.13 (2026-08-21): the
+     * metronome range is 15–300 bpm (Daniel's call, first modification under
+     * the foundational-components ruling; the transport mirror moves with
+     * it, the tap clamp widens in metronome.mjs, re-inlined per census). */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.13",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

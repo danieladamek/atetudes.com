@@ -285,7 +285,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   </div>
   <div class="bpmrow">
     <span class="metrolabel">BPM</span>
-    <input type="range" id="bpmRange" data-control="bpmRange" min="30" max="200" value="72">
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
     <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
   </div>
   <div class="row2">
@@ -325,7 +325,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
-    <input type="range" id="bpmRange2" data-control="bpmRange2" min="30" max="200" value="72">
+    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="72">
     <span class="trVal" id="bpmVal2">72</span>
   </div>
   <div class="row2 alignEnd trSig">
@@ -4870,7 +4870,7 @@ function createTapTempo(o={}){
     taps.push(now);
     if(taps.length<2)return null;
     const r=taps.slice(-win),iv=(r[r.length-1]-r[0])/(r.length-1);
-    return Math.round(Math.min(200,Math.max(30,60/iv)));
+    return Math.round(Math.min(300,Math.max(15,60/iv)));
   };
 }
 
@@ -4920,7 +4920,7 @@ const metronomeCard = {
   </div>
   <div class="bpmrow">
     <span class="metrolabel">BPM</span>
-    <input type="range" id="bpmRange" data-control="bpmRange" min="30" max="200" value="72">
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
     <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
   </div>
   <div class="row2">
@@ -7975,7 +7975,7 @@ const transportCard = {
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
-    <input type="range" id="bpmRange2" data-control="bpmRange2" min="30" max="200" value="72">
+    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="72">
     <span class="trVal" id="bpmVal2">72</span>
   </div>
   <div class="row2 alignEnd trSig">
@@ -8513,7 +8513,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.12","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.13","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

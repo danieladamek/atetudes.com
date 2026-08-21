@@ -1,3 +1,12 @@
+## 2026-08-21 — The metronome range is 15–300 bpm — three studies changed
+
+- Metronome → **v1.4.4**, Triadetudes → **v0.8.13**, Tetradetudes → **v0.1.13** (door rebuilt,
+  republished byte-identical). URLs unchanged. Update Log **260821.2**.
+- Range 30–200 → 15–300 in all three (Daniel's call): slider markup, the transport mirrors, and
+  the tap clamp in byte-pinned `metronome.mjs`, re-inlined per the census. Asserted BY SOUND at
+  both extremes (red first on all three old builds). Tap tempo bottoms out at ~25 bpm (maxGap) —
+  recorded and pinned, Daniel's UX call whether to widen. The two untouched studies byte-identical.
+
 ## 2026-08-21 — The window is a position — Tetradetudes v0.1.12
 
 - `static/studies/tetradetudes/study.html` → **v0.1.12** (door rebuilt, republished byte-identical,

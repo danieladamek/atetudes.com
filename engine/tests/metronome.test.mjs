@@ -89,11 +89,20 @@ test("tap tempo: steady taps average to the tempo, gaps reset, extremes clamp", 
   // gap > 2.5s resets the window
   assert.equal(tap(10), null);
   assert.equal(tap(11), 60);
-  // clamping
+  // clamping — 15..300 since 2026-08-21 (Daniel: "expand the metronome range
+  // from 15 - 300 bpm", the first modification under the foundational-
+  // components ruling; was 30..200)
   tap = createTapTempo();
-  tap(0); assert.equal(tap(0.1), 200, "fast taps clamp to 200");
+  tap(0); assert.equal(tap(0.1), 300, "fast taps clamp to 300");
   tap = createTapTempo();
-  tap(0); assert.equal(tap(2.4), 30, "slow taps clamp to 30");
+  tap(0); assert.equal(tap(2.4), 25, "a 2.4s gap is 25 bpm — no longer clamped up to 30");
+  /* THE FLOOR IS UNREACHABLE BY TAP, and that is recorded rather than hidden:
+   * maxGap (2.5s) resets the window before any gap slow enough for <24 bpm
+   * can land, so tap output bottoms out at ~25 — 15 bpm is reached by the
+   * slider. Flagged to Daniel with the range item; raising maxGap is a
+   * separate UX call, not smuggled in here. */
+  tap = createTapTempo();
+  tap(0); assert.equal(tap(2.6), null, "a 4s beat cannot be tapped — the window resets first (maxGap 2.5)");
 });
 
 test("subdivision offsets: correct counts, all inside the beat, evenly spaced", () => {

@@ -541,6 +541,50 @@ def run_door(pw, door_id):
         check(page.eval_on_selector_all("#beatLamp span.acc", "e => e.length") == 1,
               f"{tag} re-checking accents did not restore the downbeat's .acc")
 
+        # ---- THE RANGE IS 15–300 (260821.2, Daniel's call — the first
+        # modification under the foundational-components ruling): asserted BY
+        # SOUND at each end, never by a slider attribute — a range widened in
+        # the markup and clamped in the logic is worse than not widening it.
+        # The transport's BPM mirror agrees at both extremes (one fact, two
+        # views). Demonstrated red against v0.1.12, where 15 clamps to 30
+        # (2s clicks, not 4s) and 300 to 200 (5 clicks in 1.5s, not 7).
+        bpm_found = page.input_value("#bpmRange")   # restore THIS at block end — a
+        # hardcoded restore clobbered the 120 an earlier section had set, and the
+        # follow-the-line gate's sampling window is tuned to it (found the hard way)
+        page.fill("#bpmRange", "15"); page.dispatch_event("#bpmRange", "input"); page.wait_for_timeout(150)
+        check(page.input_value("#bpmRange") == "15", f"{tag} the metronome slider refuses 15")
+        if page.query_selector("#bpmRange2"):
+            check(page.input_value("#bpmRange2") == "15",
+                  f"{tag} the transport mirror did not follow to 15 — two facts, not two views")
+        page.evaluate(AUDIO_TAP)
+        page.wait_for_timeout(8600)
+        ts15 = page.evaluate("() => window.__src.slice()")
+        gaps15 = [b - a for a, b in zip(ts15, ts15[1:])]
+        check(len(ts15) >= 2, f"{tag} no repeating click at 15 bpm ({len(ts15)} starts in 8.6s)")
+        check(bool(gaps15) and all(3500 <= g <= 4500 for g in gaps15),
+              f"{tag} clicks at 15 bpm are not four seconds apart: {[round(g) for g in gaps15]}")
+        page.fill("#bpmRange", "300"); page.dispatch_event("#bpmRange", "input"); page.wait_for_timeout(200)
+        check(page.input_value("#bpmRange") == "300", f"{tag} the metronome slider refuses 300")
+        if page.query_selector("#bpmRange2"):
+            check(page.input_value("#bpmRange2") == "300",
+                  f"{tag} the transport mirror did not follow to 300")
+            # and the mirror WRITES as well as reads: set 15 from the transport side
+            page.fill("#bpmRange2", "15"); page.dispatch_event("#bpmRange2", "input"); page.wait_for_timeout(150)
+            check(page.input_value("#bpmRange") == "15",
+                  f"{tag} the transport slider cannot drive the metronome to 15")
+            page.fill("#bpmRange", "300"); page.dispatch_event("#bpmRange", "input"); page.wait_for_timeout(200)
+        page.evaluate(AUDIO_TAP)
+        page.wait_for_timeout(1500)
+        n300 = page.evaluate("() => window.__src.length")
+        check(n300 >= 6,
+              f"{tag} only {n300} click(s) in 1.5s at 300 bpm — the clock does not reach 300 (200 bpm gives 5)")
+        # the lamp survives 300: the lit dot keeps moving at 5 beats a second
+        lit = lambda: page.evaluate("""() => [...document.querySelectorAll('#beatLamp span')]
+          .findIndex(d => (d.className || '').includes('on'))""")
+        l0 = lit(); page.wait_for_timeout(230); l1 = lit()
+        check(l0 != l1, f"{tag} the beat lamp froze at 300 bpm (dot {l0} twice, 230ms apart)")
+        page.fill("#bpmRange", bpm_found); page.dispatch_event("#bpmRange", "input"); page.wait_for_timeout(150)
+
         # leave it LIT into the orphan check: .trLit is a state this door has
         page.click("#playBtn")
         check(page.eval_on_selector_all(".trPlay.trLit", "e => e.length") == 1,

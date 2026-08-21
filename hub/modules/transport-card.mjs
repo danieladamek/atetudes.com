@@ -51,7 +51,7 @@ export const transportCard = {
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
-    <input type="range" id="bpmRange2" data-control="bpmRange2" min="30" max="200" value="72">
+    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="72">
     <span class="trVal" id="bpmVal2">72</span>
   </div>
   <div class="row2 alignEnd trSig">

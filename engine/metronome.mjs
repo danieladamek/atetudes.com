@@ -72,7 +72,7 @@ export function createTapTempo(o={}){
     taps.push(now);
     if(taps.length<2)return null;
     const r=taps.slice(-win),iv=(r[r.length-1]-r[0])/(r.length-1);
-    return Math.round(Math.min(200,Math.max(30,60/iv)));
+    return Math.round(Math.min(300,Math.max(15,60/iv)));
   };
 }
 
