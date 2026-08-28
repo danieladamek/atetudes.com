@@ -210,6 +210,71 @@ def run_door(pw, door_id):
         check(page.query_selector(f"#{cid}") is None,
               f"{tag} LOCKED control #{cid} is in the page — the lock is not holding")
 
+    # ---------------- MULTETUDES: the field (child 0) ------------------------
+    # Keyed on the DOOR, not on a control id — a gate block keyed to a control
+    # that later disappears skips in silence (the suite's own recorded defect),
+    # so the door demands its control instead of being gated by it.
+    if door_id == "multetudes":
+        check("fieldSvg" in r["controlsPresent"],
+              f"{tag} the multetudes door has no field board — fieldSvg is not in the partition")
+        # the field's dot count, derived HERE in different arithmetic and a
+        # different language, against the ARTIFACT (rendered SVG groups)
+        OPEN = {6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64}
+        MAJOR = [2, 2, 1, 2, 2, 2, 1]
+        NAME_PC = {"C": 0, "D": 2}
+
+        def field_pcs(root_pc):
+            out, acc = [root_pc], root_pc
+            for s in MAJOR[:6]:
+                acc += s
+                out.append(acc % 12)
+            return out
+
+        def expect_dots(pcs):
+            return sum(1 for s in OPEN for f in range(16) if (OPEN[s] + f) % 12 in pcs)
+
+        def dots_now():
+            return page.eval_on_selector_all("#fieldSvg [data-midi]", "e => e.length")
+
+        def root_dots_now():
+            return page.evaluate("""() => [...document.querySelectorAll('#fieldSvg [data-midi]')]
+              .filter(g => g.querySelector('text').textContent === 'R').length""")
+
+        def expect_pc(pcs, pc):
+            return sum(1 for s in OPEN for f in range(16) if (OPEN[s] + f) % 12 == pc and pc in pcs)
+
+        c_pcs = field_pcs(NAME_PC["C"])
+        check(dots_now() == expect_dots(c_pcs),
+              f"{tag} the field renders {dots_now()} dots; C major across six strings holds {expect_dots(c_pcs)}")
+        check(root_dots_now() == expect_pc(c_pcs, NAME_PC["C"]),
+              f"{tag} {root_dots_now()} dots wear R; C occurs {expect_pc(c_pcs, NAME_PC['C'])} times on the neck")
+        check("C major" in page.inner_text("#fdHint"),
+              f"{tag} the field hint does not name the key: {page.inner_text('#fdHint')!r}")
+        # the field is the KEY: changing it re-derives every dot (the bus is
+        # the wiring — harmony announces, the field derives from what it hears)
+        page.select_option("#keySel", "D")
+        page.wait_for_timeout(120)
+        d_pcs = field_pcs(NAME_PC["D"])
+        check(dots_now() == expect_dots(d_pcs) and root_dots_now() == expect_pc(d_pcs, NAME_PC["D"]),
+              f"{tag} the field did not re-derive for D major: {dots_now()} dots, "
+              f"{root_dots_now()} roots (want {expect_dots(d_pcs)}, {expect_pc(d_pcs, NAME_PC['D'])})")
+        check("D major" in page.inner_text("#fdHint"),
+              f"{tag} the field hint did not follow the key: {page.inner_text('#fdHint')!r}")
+        # a field dot SOUNDS (floor F3): clicking one announces NOTE with its midi
+        note_probe = """() => { window.__fdNote = null;
+          document.addEventListener('atetudes:note', e => window.__fdNote = e.detail.midi); }"""
+        page.evaluate(note_probe)
+        first_midi = page.evaluate("""() => +document.querySelector('#fieldSvg [data-midi]').dataset.midi""")
+        dot = page.query_selector("#fieldSvg [data-midi] circle")
+        dot.scroll_into_view_if_needed()
+        dot.click(force=True)
+        page.wait_for_timeout(80)
+        check(page.evaluate("() => window.__fdNote") == first_midi,
+              f"{tag} clicking a field dot did not announce its NOTE "
+              f"({page.evaluate('() => window.__fdNote')} vs {first_midi})")
+        page.select_option("#keySel", "C")          # leave the door as it booted
+        page.wait_for_timeout(120)
+
     # ---------------- exercise the door -------------------------------------
     # a page that loads is not a page that works — and the orphan-selector
     # check below is only honest once the door's states have been entered
@@ -670,6 +735,15 @@ def run_door(pw, door_id):
           document.addEventListener('atetudes:note', () => window.__gripNotes++); }""")
         grip = page.query_selector("#fretSvg .fs-grip-hit")
         check(grip is not None, f"{tag} no corner grip to drag — the drag surface did not move to the corner")
+        # RAW MOUSE NEEDS THE TARGET IN VIEW. page.mouse dispatches at viewport
+        # coordinates and Chromium clamps them to the viewport edge, so a grip
+        # below the fold receives NOTHING and the drag silently misses — the
+        # gate then fails downstream with a message about the app. It passed on
+        # tetradetudes only because that page happened to be short enough; the
+        # multetudes door's extra board pushed the grip past 900px and exposed
+        # it (260827). Scroll first, then measure — for every raw-mouse drag.
+        grip.scroll_into_view_if_needed()
+        page.wait_for_timeout(60)
         gb = grip.bounding_box()
         svg_w = page.query_selector("#fretSvg").bounding_box()["width"]
         fret_px = svg_w * 71 / 1160
@@ -692,7 +766,10 @@ def run_door(pw, door_id):
           return r ? { x: +r.getAttribute('x'), w: +r.getAttribute('width') } : null; }""")
         r0 = rect_of()
         check(r0 is not None, f"{tag} no window rectangle drawn in Box mode")
-        gb2 = page.query_selector("#fretSvg .fs-grip-hit").bounding_box()
+        grip2 = page.query_selector("#fretSvg .fs-grip-hit")
+        grip2.scroll_into_view_if_needed()        # same clamping hazard as above
+        page.wait_for_timeout(60)
+        gb2 = grip2.bounding_box()
         page.mouse.move(gb2["x"] + gb2["width"] / 2, gb2["y"] + gb2["height"] / 2); page.mouse.down()
         page.mouse.move(gb2["x"] + gb2["width"] / 2 - 3 * fret_px, gb2["y"] + gb2["height"] / 2, steps=6)
         page.mouse.up(); page.wait_for_timeout(250)

@@ -266,12 +266,57 @@ def m9_moved_voice_dead():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 10
+# MULTETUDES child 0: the field board stops re-deriving when the key changes.
+# The page still loads, renders a correct-looking C-major field, and errors
+# nowhere — only the door gate's field block (independent arithmetic against
+# the rendered artifact, after a key change) may catch it.
+def m10_field_frozen_on_key_change():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "      if (changed) build();",
+        "      /* frozen */")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the field did not re-derive" in r.stdout
+        record("the field no longer re-derives on a key change",
+               r.returncode != 0 and hit,
+               "suite exit %d; caught on the rendered dots, not the handler: %s"
+               % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutation 11
+# MULTETUDES child 0: the field's derivation walk quietly loses a string. The
+# module's own load-time assertion (walk vs closed-form count, different
+# arithmetic) must throw at mount, and the gate must go red on the artifact —
+# the assertion is seen to fail, not assumed able to.
+def m11_field_walk_loses_a_string():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "  const dots = [];\n  for (let s = 1; s <= 6; s++)",
+        "  const dots = [];\n  for (let s = 1; s <= 5; s++)")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the field renders" in r.stdout or "field-board: string" in r.stdout \
+            or "page errors" in r.stdout
+        record("the field walk loses a string",
+               r.returncode != 0 and hit,
+               "suite exit %d; the load assertion reached the gate: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
                m3_styles_shipped_regardless_of_reach, m4_markup_shipped_regardless_of_reach,
                m5_dynamic_import_and_lookup_by_string, m6_new_module_no_door_edited,
-               m7_checkbox_only_row_returns, m8_moved_accents_dead, m9_moved_voice_dead):
+               m7_checkbox_only_row_returns, m8_moved_accents_dead, m9_moved_voice_dead,
+               m10_field_frozen_on_key_change, m11_field_walk_loses_a_string):
         try:
             fn()
         except BuildBroken as e:
