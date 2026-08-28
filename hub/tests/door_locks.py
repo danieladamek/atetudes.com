@@ -231,7 +231,7 @@ def run_door(pw, door_id):
         # different language, against the ARTIFACT (rendered SVG groups)
         OPEN = {6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64}
         MAJOR = [2, 2, 1, 2, 2, 2, 1]
-        NAME_PC = {"C": 0, "D": 2}
+        NAME_PC = {"C": 0, "D": 2, "Bb": 10}
 
         def field_pcs(root_pc):
             out, acc = [root_pc], root_pc
@@ -253,13 +253,28 @@ def run_door(pw, door_id):
         def expect_pc(pcs, pc):
             return sum(1 for s in OPEN for f in range(16) if (OPEN[s] + f) % 12 == pc and pc in pcs)
 
-        c_pcs = field_pcs(NAME_PC["C"])
-        check(dots_now() == expect_dots(c_pcs),
-              f"{tag} the field renders {dots_now()} dots; C major across six strings holds {expect_dots(c_pcs)}")
-        check(root_dots_now() == expect_pc(c_pcs, NAME_PC["C"]),
-              f"{tag} {root_dots_now()} dots wear R; C occurs {expect_pc(c_pcs, NAME_PC['C'])} times on the neck")
-        check("C major" in page.inner_text("#fdHint"),
-              f"{tag} the field hint does not name the key: {page.inner_text('#fdHint')!r}")
+        bb_pcs = field_pcs(NAME_PC["Bb"])
+        check(dots_now() == expect_dots(bb_pcs),
+              f"{tag} the field renders {dots_now()} dots; B\u266d major across six strings holds {expect_dots(bb_pcs)}")
+        check(root_dots_now() == expect_pc(bb_pcs, NAME_PC["Bb"]),
+              f"{tag} {root_dots_now()} dots wear R; B\u266d occurs {expect_pc(bb_pcs, NAME_PC['Bb'])} times on the neck")
+        # THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
+        # frame — the B♭ tetrad block, the window from the 6th at the fifth
+        # position, one bar. Re-pinned here from the old C/six-string boot.
+        boot_hint = page.inner_text("#fdHint")
+        check("Bb major" in boot_hint, f"{tag} the boot key is not B\u266d: {boot_hint!r}")
+        check("Strings E–B–G–D" in boot_hint and "E–B–G–D–A" not in boot_hint,
+              f"{tag} the boot run is not 4-3-2-1: {boot_hint!r}")
+        check("from the 6th on string 4, frets 5–8" in boot_hint,
+              f"{tag} the boot window is not v0.9's (the 6th at the fifth position): {boot_hint!r}")
+        check("the tetrad, one of each (grip): 4 notes, 1+1+1+1" in boot_hint,
+              f"{tag} the boot object is not the tetrad block: {boot_hint!r}")
+        check("bar 1 of 1" in page.inner_text("#roLine"),
+              f"{tag} the boot étude is not a single bar: {page.inner_text('#roLine')!r}")
+        check(page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") == 4
+              and page.eval_on_selector_all("#stSvg ellipse", "e => e.length") >= 4
+              and page.eval_on_selector_all("#kySvg circle", "e => e.length") == 4,
+              f"{tag} the staff and the keys are not populated on first paint")
         # the field is the KEY: changing it re-derives every dot (the bus is
         # the wiring — harmony announces, the field derives from what it hears)
         page.select_option("#hcKey", "D")
@@ -270,6 +285,7 @@ def run_door(pw, door_id):
               f"{root_dots_now()} roots (want {expect_dots(d_pcs)}, {expect_pc(d_pcs, NAME_PC['D'])})")
         check("D major" in page.inner_text("#fdHint"),
               f"{tag} the field hint did not follow the key: {page.inner_text('#fdHint')!r}")
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(120)   # back to the boot key
         # a field dot SOUNDS (floor F3): clicking one announces NOTE with its midi
         note_probe = """() => { window.__fdNote = null;
           document.addEventListener('atetudes:note', e => window.__fdNote = e.detail.midi); }"""
@@ -322,41 +338,42 @@ def run_door(pw, door_id):
                   f"the notes it came from is a stored width")
 
         check_window("rest")
-        check("Strings E–B–G–D–A–E" in hint(),
-              f"{tag} the six-string run's derived label is not in the hint: {hint()!r}")
-        # the window steps — box shift, reversible, read off the artifact
+        check("Strings E–B–G–D" in hint(),
+              f"{tag} the boot run's derived label is not in the hint: {hint()!r}")
+        # the window steps — box shift, reversible, read off the artifact.
+        # The boot window starts on the 6th (G); one step up string 4 is A, the 7th.
         h0, f0 = hint(), frets_of()
         page.focus("#fieldSvg")
         page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)
-        check(frets_of() != f0 or ord_of() != ("root", "6"),
+        check(frets_of() != f0 or ord_of() != ("6th", "4"),
               f"{tag} ArrowRight did not step the window: {hint()!r}")
-        check(ord_of()[0] == "2nd", f"{tag} one step from the root must start on the 2nd: {hint()!r}")
+        check(ord_of()[0] == "7th", f"{tag} one step from the 6th must start on the 7th: {hint()!r}")
         check_window("after ArrowRight")
         page.keyboard.press("ArrowLeft"); page.wait_for_timeout(80)
         check(hint() == h0, f"{tag} step right then left did not return the same window")
         check_window("after ArrowLeft")
-        page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)   # park on the 2nd
+        page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)   # park on the 7th
         stepped_ord = ord_of()[0]
-        # dropping string 5: the set is a SET, the frame stays honest, and the
+        # dropping string 3: the set is a SET, the frame stays honest, and the
         # DESIGN SURVIVES — the start degree does not reset with the set
-        page.click('#fieldSvg [data-fdstr="5"]'); page.wait_for_timeout(100)
+        page.click('#fieldSvg [data-fdstr="3"]'); page.wait_for_timeout(100)
         check("(skipped)" in hint(), f"{tag} a skipped run must say so: {hint()!r}")
         check(ord_of()[0] == stepped_ord,
               f"{tag} changing the set RESET the design — the window must translate "
               f"({stepped_ord} -> {ord_of()[0]})")
-        check_window("after dropping string 5")
-        sq5_fill = page.get_attribute('#fieldSvg [data-fdstr="5"] rect', "fill")
-        check(sq5_fill == "#fff", f"{tag} the excluded string's square is not hollow: {sq5_fill}")
-        dim5 = page.evaluate("""() => {
+        check_window("after dropping string 3")
+        sq3_fill = page.get_attribute('#fieldSvg [data-fdstr="3"] rect', "fill")
+        check(sq3_fill == "#fff", f"{tag} the excluded string's square is not hollow: {sq3_fill}")
+        dim3 = page.evaluate("""() => {
           const m = /frets (\\d+)–(\\d+)/.exec(document.getElementById('fdHint').textContent);
           const [lo, hi] = [+m[1], +m[2]];
-          const dots = [...document.querySelectorAll('#fieldSvg [data-str="5"]')]
+          const dots = [...document.querySelectorAll('#fieldSvg [data-str="3"]')]
             .filter(g => +g.dataset.fret >= lo && +g.dataset.fret <= hi);
           return dots.length && dots.every(g => +g.getAttribute('opacity') < 0.28); }""")
-        check(dim5, f"{tag} the excluded string's dots inside the frame do not read as excluded")
-        page.click('#fieldSvg [data-fdstr="5"]'); page.wait_for_timeout(100)
-        check("(skipped)" not in hint(), f"{tag} re-adding string 5 did not restore the contiguous run")
-        check_window("after re-adding string 5")
+        check(dim3, f"{tag} the excluded string's dots inside the frame do not read as excluded")
+        page.click('#fieldSvg [data-fdstr="3"]'); page.wait_for_timeout(100)
+        check("(skipped)" not in hint(), f"{tag} re-adding string 3 did not restore the contiguous run")
+        check_window("after re-adding string 3")
         # THE ALIAS: a restored pre-run snapshot (setIndex + key, no strings)
         # translates through the enumeration it indexed, and the board
         # announces the RUN — never setIndex back (no dual-write). A LIVE
@@ -367,16 +384,16 @@ def run_door(pw, door_id):
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { setIndex: 1, families: ["drop2"] } }))""")
         page.wait_for_timeout(120)
-        check("E–B–G–D–A–E" in hint(),
+        check("Strings E–B–G–D" in hint() and "B–G–D–A" not in hint(),
               f"{tag} a live shape-half setIndex (no key) hijacked the field: {hint()!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
-          { detail: { key: 'D', setIndex: 2 } }))""")
+          { detail: { key: 'D', setIndex: 0 } }))""")
         page.wait_for_timeout(120)
-        check("Strings E–B–G–D" in hint() and "string 4" in hint(),
-              f"{tag} setIndex 2 did not migrate to the run it indexed: {hint()!r}")
+        check("Strings G–D–A–E" in hint() and "string 6" in hint(),
+              f"{tag} setIndex 0 did not migrate to the run it indexed: {hint()!r}")
         echoed = page.evaluate("""() => window.__fdCfg.find(m => m && m.strings)""")
         check_window("after the setIndex migration")
-        check(echoed is not None and echoed.get("strings") == [4, 3, 2, 1]
+        check(echoed is not None and echoed.get("strings") == [6, 5, 4, 3]
               and "setIndex" not in echoed,
               f"{tag} the migrated run was not announced as strings-without-setIndex: {echoed}")
         # SAVE, CHANGE, RESTORE: the étude restores byte-identically — the
@@ -399,11 +416,8 @@ def run_door(pw, door_id):
         check(page.eval_on_selector_all(".hist", "e => e.length") == 0,
               f"{tag} the exercise entry was not deleted — later notepad gates would miscount")
 
-        # leave the door as it booted: the shape half back to set 0 (the
-        # synthetic snapshots above moved Shape & Motion's own segment, and the
-        # later winSeg/bind gates read the tetrad neck's default geometry)
-        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
-          { detail: { setIndex: 0 } }))""")
+        # the recipes below were derived for C major — set it explicitly and
+        # return to the boot state at the end
         page.select_option("#hcKey", "C")
         page.wait_for_timeout(120)
 
@@ -515,10 +529,50 @@ def run_door(pw, door_id):
               and set(d0["label"] for d0 in r14) <= {"R", "3", "5", "7"},
               f"{tag} R14: tetrad lines must double somewhere and stay tetrad tones: {r14}")
         # leave the field as the door boots: R15
-        set_strings([6, 5, 4, 3, 2, 1])
         page.select_option("#hcTake", "one"); page.wait_for_timeout(30)
         page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(30)
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(60)
+        set_strings([4, 3, 2, 1])
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(60)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { startDeg: 5, nearFret: 5 } }))""")
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(60)
+        check("from the 6th on string 4, frets 5–8" in hint()
+              and "the tetrad, one of each (grip): 4 notes" in hint(),
+              f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
+
+        # ---- THE SEATING CHECK, EXTENDED TO PARTS (the parts primitive):
+        # WHICH PART sits in WHICH SEAT — last night's lesson one level down.
+        # The pad (journalIn) sits in row 1's 3fr cell WITHOUT the log; the
+        # log part (histList, under its own Practice log header) is its own
+        # board at the page foot, after the keys.
+        pad_cell = page.evaluate("""() => {
+          const cell = [...document.querySelectorAll('#cards .cardrow')][0].children[1];
+          const bh = cell.querySelector('.bh span');
+          return { pad: !!cell.querySelector('#journalIn'),
+                   log: !!cell.querySelector('#histList'),
+                   hdr: bh ? bh.textContent.trim() : null }; }""")
+        check(pad_cell["pad"] and not pad_cell["log"] and pad_cell["hdr"] == "Notepad",
+              f"{tag} row 1's cell must hold the pad alone under v0.9's 'Notepad' header: {pad_cell}")
+        log_seat = page.evaluate("""() => {
+          const boards = [...document.querySelectorAll('#boards > .board')];
+          const li = boards.findIndex(b => b.querySelector('#histList'));
+          const ki = boards.findIndex(b => b.querySelector('#kySvg'));
+          const lb = boards[li];
+          return { li, ki, last: li === boards.length - 1,
+                   hdr: lb ? !!lb.querySelector('.bh') : false,
+                   pad: lb ? !!lb.querySelector('#journalIn') : null }; }""")
+        check(log_seat["li"] >= 0 and log_seat["last"] and log_seat["li"] > log_seat["ki"],
+              f"{tag} the log part is not seated at the page foot after the keys: {log_seat}")
+        check(log_seat["hdr"] and not log_seat["pad"],
+              f"{tag} the log board must carry its own header and no pad: {log_seat}")
+        # one surface, two seats: a save from the row-1 pad files into the
+        # foot's list — the state is one, wherever the parts sit
+        page.fill("#journalIn", "the split is placement, not identity")
+        page.click("#saveEntry"); page.wait_for_timeout(120)
+        check(page.eval_on_selector_all("#boards .hist", "e => e.length") == 1
+              and page.input_value("#journalIn") == "",
+              f"{tag} a save from the pad did not file into the foot's log — two seats, one surface broke")
+        page.click(".hist .acts button.danger"); page.wait_for_timeout(80)
 
         # ---- THE RENDERED DIFF (the surface item, 2026-08-29): "identical is
         # asserted, not judged". v0.9 is opened beside the door and the layout
@@ -589,10 +643,11 @@ def run_door(pw, door_id):
               [...document.querySelectorAll('.card > h2, .bh > span, .metro h2')]
                 .map(e => e.textContent.replace(/\s+/g, ' ').trim().toLowerCase().replace(/[▾›‹⏮▶⏹⏭ⓘ]/g, '').replace(/[—(].*$/, '').trim())
                 .filter(t => t && !t.includes('saved'))""")
-        # allow-list, each citing the register: the gaps card is the prototype's
-        # self-audit (dropped); the "Notepad" title is the pad/log split the CSS
-        # ownership wall blocks — the pad lives inside the family Practice Log
-        want = [t for t in sections(proto) if t not in ("what this configuration hits", "notepad")]
+        # allow-list, citing the register: the gaps card is the prototype's
+        # self-audit (dropped). The "Notepad" section came OFF this list on
+        # 260830 — the parts split seats the pad under v0.9's own header, so
+        # the gate asserts it again.
+        want = [t for t in sections(proto) if t not in ("what this configuration hits",)]
         got = [t for t in sections(page) if t != "note"]
         for t in want:
             check(t in got, f"{tag} v0.9 section {t!r} is missing from the door "

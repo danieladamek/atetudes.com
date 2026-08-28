@@ -172,7 +172,12 @@ async function build(id) {
    * is reached; here the one remaining fact is checked — that it mounts at
    * "cards", because rows lay out the clock row only. */
   const rows = r.rows ?? [];
-  const rowed = new Set(rows.flatMap((row) => row.cards));
+  const rowKey = (entry) => (typeof entry === "string" ? entry : entry.part);
+  const rowed = new Set(rows.flatMap((row) => row.cards.map(rowKey)));
+  const rowHeading = new Map();
+  for (const row of rows)
+    for (const entry of row.cards)
+      if (typeof entry !== "string" && entry.heading) rowHeading.set(entry.part, entry.heading);
   const rowHtml = new Map();
   const rowedMounts = new Set();
   /* the door's seated parts, grouped by module — the resolver proved the ids
@@ -190,17 +195,33 @@ async function build(id) {
   placed.forEach((m, i) => {
     const seated = seatedBy.get(m.id) ?? new Map();
     const parts = partsOf(m.markup);
-    for (const name of seated.keys())
+    /* a part may also be seated by a ROW naming "id#name" — those extract
+     * exactly like seats and take the module's own wrapper (plus the row's
+     * optional heading, rendered as the standard board header) */
+    const rowedParts = [...rowed].filter((k) => k.startsWith(m.id + "#"))
+      .map((k) => k.split("#")[1]);
+    for (const name of [...seated.keys(), ...rowedParts])
       if (!parts.has(name))
         throw new Error(`the door seats "${m.id}#${name}", but the module marks no part "${name}" — ` +
           `the marked parts are: ${[...parts.keys()].join(", ") || "(none)"}`);
+    for (const name of rowedParts)
+      if (seated.has(name))
+        throw new Error(`"${m.id}#${name}" is both rowed and seated — one part, one seat`);
     placeables.push({ order: m.order ?? 0, idx: i, id: m.id,
       mount: m.mount_point ?? "cards", wrap_class: m.wrap_class,
-      html: markupWithout(m.markup, new Set(seated.keys())), rowable: true });
+      html: markupWithout(m.markup, new Set([...seated.keys(), ...rowedParts])), rowable: true });
     for (const [name, spec] of seated)
       placeables.push({ order: spec.order ?? 0, idx: i, id: m.id + "#" + name,
         mount: spec.mount_point, wrap_class: spec.wrap_class,
         html: parts.get(name), rowable: false });
+    for (const name of rowedParts) {
+      const key = m.id + "#" + name;
+      const heading = rowHeading.get(key);
+      placeables.push({ order: m.order ?? 0, idx: i, id: key,
+        mount: m.mount_point ?? "cards", wrap_class: m.wrap_class,
+        html: (heading ? `\n  <div class="bh"><span>${esc(heading)}</span></div>` : "")
+          + parts.get(name), rowable: true });
+    }
   });
   placeables.sort((a, b) => (a.order - b.order) || (a.idx - b.idx));
   for (const pl of placeables) {
@@ -216,7 +237,13 @@ async function build(id) {
     if (!rowHtml.has(id))
       throw new Error(`row names "${id}", which has no visible mount — a hidden module cannot be laid out`);
   const rowsHtml = rows.map((row) => ROW_WRAPPER.html(
-    row.cards.map((id) => rowHtml.get(id)).join("\n"), row.template)).join("\n");
+    row.cards.map((entry) => {
+      const html = rowHtml.get(rowKey(entry));
+      if (html === undefined)
+        throw new Error(`row entry "${rowKey(entry)}" produced no markup — a row that ` +
+          "emits a hole would ship a smaller, quieter page");
+      return html;
+    }).join("\n"), row.template)).join("\n");
   // a container's styles ship only if a module filled that container — a
   // module in a declared row still fills its own container's grammar
   const slotUsed = (k) => slots[k].length > 0 || rowedMounts.has(k);

@@ -416,6 +416,28 @@ def m16_card_moved_between_rows():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 17
+# MULTETUDES parts: a part moved between seats — the pad falls back into the
+# module's own seat, so the log rides row 1 and the page foot loses its board.
+# The page renders plausibly (everything present, just seated wrong); only the
+# part-level seating identity can see it — last night's lesson, one level down.
+def m17_part_moved_between_seats():
+    p, original, mutated = patch("hub/doors/multetudes.door.mjs",
+        '      cards: ["metronome-card", { part: "notepad-card#pad", heading: "Notepad" }] },',
+        '      cards: ["metronome-card", "notepad-card"] },')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = ("the log rides it" in r.stdout or "under v0.9's 'Notepad' header" in r.stdout) \
+            and "not seated at the page foot" in r.stdout
+        record("a part moved between seats",
+               r.returncode != 0 and hit,
+               "suite exit %d; the part-seating identity bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
@@ -425,7 +447,7 @@ def main():
                m10_field_frozen_on_key_change, m11_field_walk_loses_a_string,
                m12_set_change_resets_the_design, m13_live_setindex_hijacks_the_field,
                m14_take_collapses_into_placement, m15_scale_material_silently_halved,
-               m16_card_moved_between_rows):
+               m16_card_moved_between_rows, m17_part_moved_between_seats):
         try:
             fn()
         except BuildBroken as e:

@@ -48,8 +48,15 @@ export default {
   },
   /* THE DECLARED ROWS (v0.9's grid): placement of what the lock reached —
    * the resolver refuses a row naming anything it does not reach. */
+  /* THE JOURNAL SPLIT (register entry 4, ruled 2026-08-28): the PAD part
+   * rides row 1 under v0.9's own "Notepad" heading; the module's remainder —
+   * the Practice log header and the history — stays at the module's own
+   * mount, which is the page foot (boards, order 90). One module, one
+   * surface, one state; the split is PLACEMENT, and the family ruling that
+   * the log and the notepad are one item is about identity, untouched. */
   rows: [
-    { template: "1fr 3fr", cards: ["metronome-card", "notepad-card"] },
+    { template: "1fr 3fr",
+      cards: ["metronome-card", { part: "notepad-card#pad", heading: "Notepad" }] },
     { template: "2fr 1fr 1fr", cards: ["harmony-card", "progression-card", "presets-card"] },
   ],
   present: {

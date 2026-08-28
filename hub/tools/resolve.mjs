@@ -374,12 +374,20 @@ export async function resolveDoor(doorId) {
       if (row.template.split(/\s+/).length !== row.cards.length)
         throw new Error(`${rel(doorFile)}: row template "${row.template}" declares ` +
           `${row.template.split(/\s+/).length} columns for ${row.cards.length} card(s)`);
-      for (const id of row.cards) {
+      for (const entry of row.cards) {
+        /* an entry is a module id, or a PART with an optional door-given
+         * heading: { part: "id#name", heading } (the parts primitive) */
+        const key = typeof entry === "string" ? entry : entry && entry.part;
+        if (typeof key !== "string" || (typeof entry !== "string"
+            && !/^[\w-]+#[\w-]+$/.test(key)))
+          throw new Error(`${rel(doorFile)}: a row entry is a module id or { part: "id#name" }, ` +
+            `not ${JSON.stringify(entry)}`);
+        const id = key.split("#")[0];
         if (!rootIds.has(id))
           throw new Error(`${rel(doorFile)}: row names "${id}", which this lock does not reach — ` +
             `rows place reached modules, never extend or shrink the reach-set`);
-        if (seen.has(id)) throw new Error(`${rel(doorFile)}: "${id}" appears in two rows`);
-        seen.add(id);
+        if (seen.has(key)) throw new Error(`${rel(doorFile)}: "${key}" appears in two rows`);
+        seen.add(key);
       }
     }
   }

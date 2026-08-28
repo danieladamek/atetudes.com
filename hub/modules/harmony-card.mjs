@@ -76,7 +76,9 @@ export const harmonyCard = {
     /* PRIVATE (§4.2.3): the harmony half. `ref` re-roots the field (a mode);
      * `bass` is the reference under a chord and is child 5's — held at "none"
      * and its selector disabled until that engine lands. */
-    let cfg = { key: "C", scale: "major", object: "scale", take: "one", ref: 0, bass: "none" };
+    /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
+     * frame — the B♭ major tetrad block — as far as the engine allows. */
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", take: "one", ref: 0, bass: "none" };
 
     const fill = (sel, items, current) => {
       sel.textContent = "";

@@ -197,9 +197,11 @@ export const fieldBoard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "C", scale: "major", ref: 0,
-      strings: [6, 5, 4, 3, 2, 1], startDeg: 0, nearFret: 5,
-      object: "scale", take: "one", notesPer: 1 };
+    let cfg = { key: "Bb", scale: "major", ref: 0,
+      /* the boot state is v0.9's (register 11): the B♭ tetrad block on
+       * 4-3-2-1, the window from the 6th (G) at the fifth position */
+      strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5,
+      object: "tetrad", take: "one", notesPer: 1 };
     let curB = null;            // { fld, run, pos, region, aNotes } of the last build
     let dragging = null;
 

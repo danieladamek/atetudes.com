@@ -44,6 +44,13 @@ export const notepadCard = {
     "histList", "histCount", "clearConfirm", "clearSave", "clearDiscard",
     "clearCancel", "storeNote", "handoffNote"],
 
+  /* PART MARKERS (the parts primitive, 2026-08-30): the PAD — the note
+   * column — is marked `pad`, so a door may seat it away from the log (the
+   * multetudes door rows it beside the metronome under a "Notepad" heading,
+   * v0.9's own card). The log half, its header and the history column, stays
+   * at this module's own mount. A door that seats nothing renders every byte
+   * in place, markers stripped: one module, one surface, one state, wherever
+   * the parts sit. */
   markup: `
   <div class="bh"><span>Practice log — <span id="histCount" data-control="histCount">0</span> saved</span>
     <span id="storeNote" data-control="storeNote" class="storenote"></span></div>
@@ -53,7 +60,7 @@ export const notepadCard = {
       <span id="importMsg" class="hint"></span>
     </div>
     <div id="dragBar" title="drag to resize"></div>
-    <div class="jcol" id="noteCol">
+    <!--part:pad--><div class="jcol" id="noteCol">
       <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
         placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
@@ -72,7 +79,7 @@ export const notepadCard = {
         <button id="clearCancel" data-control="clearCancel">keep writing</button>
       </div>
       <div class="hint" id="handoffNote" data-control="handoffNote"></div>
-    </div>
+    </div><!--/part:pad-->
   </div>`,
 
   /* Every rule below names a token only this module ships. In the shipped
