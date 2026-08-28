@@ -279,10 +279,11 @@ def m10_field_frozen_on_key_change():
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "the field did not re-derive" in r.stdout
+        hit = ("the field did not re-derive" in r.stdout
+               or "the field hint did not follow the key" in r.stdout)
         record("the field no longer re-derives on a key change",
                r.returncode != 0 and hit,
-               "suite exit %d; caught on the rendered dots, not the handler: %s"
+               "suite exit %d; caught on the artifact (dots or hint), not the handler: %s"
                % (r.returncode, hit))
     finally:
         p.write_text(original)
@@ -400,10 +401,12 @@ def m15_scale_material_silently_halved():
 # bite, and this keeps it mutation-proven.
 def m16_card_moved_between_rows():
     p, original, mutated = patch("hub/doors/multetudes.door.mjs",
-        '    { template: "1fr 3fr", cards: ["metronome-card", "notepad-card"] },\n'
+        '    { template: "1fr 3fr",\n'
+        '      cards: ["metronome-card", { part: "notepad-card#pad", heading: "Notepad" }] },\n'
         '    { template: "2fr 1fr 1fr", cards: ["harmony-card", "progression-card", "presets-card"] },',
-        '    { template: "1fr 3fr", cards: ["metronome-card", "harmony-card"] },\n'
-        '    { template: "2fr 1fr 1fr", cards: ["notepad-card", "progression-card", "presets-card"] },')
+        '    { template: "1fr 3fr",\n'
+        '      cards: ["metronome-card", "harmony-card"] },\n'
+        '    { template: "2fr 1fr 1fr", cards: [{ part: "notepad-card#pad", heading: "Notepad" }, "progression-card", "presets-card"] },')
     try:
         p.write_text(mutated)
         build()
@@ -453,6 +456,9 @@ def main():
         except BuildBroken as e:
             record(fn.__name__, False, "the BUILD broke, so the suite never ran "
                    "against this mutation: " + str(e))
+        except AssertionError as e:
+            record(fn.__name__, False, "the mutation anchor rotted — the harness "
+                   "must be updated with the code it mutates: " + str(e))
     build()
     r = suite()
     green = r.returncode == 0
