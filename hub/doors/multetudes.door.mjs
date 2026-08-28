@@ -62,8 +62,11 @@ export default {
      * the engine children (1+) will carry it toward a first release.
      * v0.0.2 (2026-08-27, child 2): the field board gains the free string
      * set — selector, ratified window over the run, box shift, the setIndex
-     * migration alias — over engine/{field,position,string-run}.mjs. */
-    blurb: "one tool that holds many études — the skeleton door · v0.0.2",
+     * migration alias — over engine/{field,position,string-run}.mjs.
+     * v0.0.3 (2026-08-28, child 3a): the selection rail — Object · Take ·
+     * Placement over engine/selection.mjs (Route B); the line takes over the
+     * field; a scale switches placement off with the reason on the label. */
+    blurb: "one tool that holds many études — the skeleton door · v0.0.3",
     footer: "A hub door built from hub/doors/multetudes.door.mjs. Not a published study.",
   },
 };

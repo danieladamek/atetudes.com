@@ -57,8 +57,9 @@
  * window one scale note — box shift, the model's only travel.
  */
 import { field, notesOn } from "../../engine/field.mjs";
-import { positionOf, step, reanchor, regionOf } from "../../engine/position.mjs";
+import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
+import { diatonicTones, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { CONFIG_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 
@@ -111,19 +112,46 @@ export const fieldBoard = {
   /* above the tetrad neck (order 20): the field is the constant everything
    * else narrows, so it reads first among the boards */
   order: 18,
-  controls: ["fieldSvg"],
+  controls: ["fieldSvg", "fdObjSeg", "fdTakeSeg", "fdNSeg"],
 
+  /* the selection rail (child 3a): what sits on the field, and how it is
+   * taken. Object · Take · Placement — Take is NOT Placement, so they are two
+   * segments; under a scale both switch off WITH THE REASON ON THE LABEL
+   * (fdWhy), never a silently halved material. */
   markup: `
   <div class="bh"><span>The field</span></div>
+  <div class="fd-ctl">
+    <span class="fd-cap">Object</span>
+    <div class="seg" id="fdObjSeg" data-control="fdObjSeg">
+      <button data-obj="scale" class="on" title="the scale — every note the box offers">Scale</button>
+      <button data-obj="triad" title="the diatonic triad on the window's start degree">Triad</button>
+      <button data-obj="tetrad" title="the diatonic seventh chord on the window's start degree">Tetrad</button>
+    </div>
+    <span class="fd-cap">Take</span>
+    <div class="seg" id="fdTakeSeg" data-control="fdTakeSeg">
+      <button data-take="one" class="on" title="a voicing — one occurrence of each tone">one of each</button>
+      <button data-take="all" title="an arpeggio — every occurrence in the box">every occurrence</button>
+    </div>
+    <span class="fd-cap">Placement</span>
+    <div class="seg" id="fdNSeg" data-control="fdNSeg">
+      <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
+      <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+    </div>
+    <span class="fd-why" id="fdWhy"></span>
+  </div>
   <div class="hint" id="fdHint"></div>
   <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1240 260" tabindex="0"
-    aria-label="the field — every note of the key, the window, and the string set"></svg>`,
+    aria-label="the field — every note of the key, the window, the string set, and the selection"></svg>`,
 
   /* every rule names a token only this board ships */
   styles: `
 #fieldSvg{width:100%;height:auto;display:block;outline:none}
 #fdHint{margin:2px 2px 8px}
+.fd-ctl{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 2px 8px}
+.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;font-weight:bold}
+.fd-why{font-size:11px;color:#73737A;font-style:italic}
 .fd-dot{cursor:pointer}
+.fd-sel{cursor:pointer}
 .fd-lab{font-weight:bold;pointer-events:none;user-select:none}
 .fd-frame{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4;pointer-events:none}
 .fd-str{cursor:pointer}`,
@@ -134,7 +162,10 @@ export const fieldBoard = {
      * `strings` defaults to the six-string scale box — the generalisation the
      * ruling names as the point. */
     let cfg = { key: "C", scale: "major",
-      strings: [6, 5, 4, 3, 2, 1], startDeg: 0, nearFret: 5 };
+      strings: [6, 5, 4, 3, 2, 1], startDeg: 0, nearFret: 5,
+      /* the selection (child 3a): what sits on the field, and how it is taken.
+       * The skeleton boots as R15 — the six-string scale box. */
+      object: "scale", take: "one", notesPer: 1 };
     let cur = null;            // { fld, run, pos, region } of the last build
 
     const el = (t, a, p) => {
@@ -190,6 +221,40 @@ export const fieldBoard = {
         t.textContent = fam;
       }
 
+      /* THE SELECTION — what the controls narrowed the field to, full ink over
+       * the ghosts. Scale notes wear their field degree; chord notes wear
+       * their role, coloured by field degree (the prototype's convention: the
+       * field is the context, the window sits on a degree). Every fact is the
+       * engine's; the board only draws what the assertions passed. */
+      const pool = materialIn(pos, run.strings, fld);
+      let sel = [], selMsg = "";
+      if (cfg.object === "scale") {
+        sel = scaleTake(pool).notes;
+      } else {
+        const keyDeg = (pos.startDeg + fld.ref) % 7;
+        const tones = diatonicTones(fld, keyDeg, cfg.object === "triad" ? [0, 2, 4] : [0, 2, 4, 6]);
+        const r = cfg.take === "all"
+          ? everyOccurrence(tones, pool, { n: cfg.notesPer })
+          : oneOfEach(tones, pool, { n: cfg.notesPer, centre: pos.centre });
+        sel = r.notes || [];
+        if (r.missing && r.missing.length)
+          selMsg = `no ${r.missing.join(" or ")} in this frame`;
+        if (r.unplaceable)
+          selMsg = r.collide
+            ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
+            : "no placement fits";
+      }
+      for (const x of sel) {
+        const fam = FAM[x.deg];
+        const g = el("g", { class: "fd-sel", "data-selmidi": x.midi,
+          "data-selstr": x.string, "data-selfret": x.fret }, svg);
+        el("circle", { cx: fx(x.fret), cy: fy(x.string), r: 13, fill: FAM_COLOR[fam],
+          stroke: "#fff", "stroke-width": 2 }, g);
+        const t = el("text", { x: fx(x.fret), y: fy(x.string) + 3.6, "text-anchor": "middle",
+          "font-size": "10", fill: FAM_TEXT[fam], class: "fd-lab" }, g);
+        t.textContent = x.role || fam;
+      }
+
       /* THE WINDOW — one rigid dashed rectangle (the ruling's), spanning the
        * run's min..max strings by the window's frets. It never stretches,
        * never reports, never explains itself. */
@@ -217,10 +282,34 @@ export const fieldBoard = {
         t.textContent = s;
       }
 
+      /* the selection rail paints from the same build — segment states, and
+       * the two OFF-switch reasons, on the label rather than in silence */
+      const isScale = cfg.object === "scale";
+      for (const b of byId("fdObjSeg").querySelectorAll("button"))
+        b.classList.toggle("on", b.dataset.obj === cfg.object);
+      for (const b of byId("fdTakeSeg").querySelectorAll("button")) {
+        b.classList.toggle("on", b.dataset.take === cfg.take);
+        b.disabled = isScale;
+      }
+      for (const b of byId("fdNSeg").querySelectorAll("button")) {
+        b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
+        b.disabled = isScale;
+      }
+      byId("fdWhy").textContent = isScale
+        ? "a scale is not a chord — placement is off; the box offers every note, three per string at most (the hand's reach)"
+        : selMsg;
+
+      const per = {};
+      for (const x of sel) per[x.string] = (per[x.string] || 0) + 1;
+      const shape = run.strings.map((s) => per[s] || 0).join("+");
+      const takeWord = isScale ? "the scale take"
+        : `the ${cfg.object}, ${cfg.take === "all" ? "every occurrence" : "one of each"}` +
+          ` (${cfg.notesPer === 1 ? "grip" : "line"})`;
       byId("fdHint").textContent =
         `${cfg.key} ${SCALE_WORD[cfg.scale] || cfg.scale} — the whole field, ${dots.length} notes. ` +
         `Strings ${run.label}${run.contiguous ? "" : " (skipped)"} · ` +
-        `the window from the ${ORD[pos.startDeg]} on string ${anchor}, frets ${pos.fLo}–${pos.fHi}. ` +
+        `the window from the ${ORD[pos.startDeg]} on string ${anchor}, frets ${pos.fLo}–${pos.fHi} · ` +
+        `${takeWord}: ${sel.length} notes, ${shape} across the set. ` +
         `Click the numbers to choose strings; ← → step the window.`;
     };
 
@@ -229,7 +318,8 @@ export const fieldBoard = {
     const push = () => {
       build();
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
-        startDeg: cfg.startDeg, nearFret: cfg.nearFret });
+        startDeg: cfg.startDeg, nearFret: cfg.nearFret,
+        object: cfg.object, take: cfg.take, notesPer: cfg.notesPer });
     };
 
     /* a set change TRANSLATES the design: same start degree, the box sliding
@@ -251,15 +341,27 @@ export const fieldBoard = {
         setStrings(has ? cfg.strings.filter((x) => x !== s) : [...cfg.strings, s]);
         return;
       }
-      const hit = e.target.closest("[data-midi]");
+      // a selection dot sits over its ghost — same behaviour, top ink first
+      const selHit = e.target.closest("[data-selmidi]");
+      const hit = selHit || e.target.closest("[data-midi]");
       if (!hit) return;
-      announce(d, NOTE, { midi: +hit.dataset.midi });
+      const midi = +(selHit ? hit.dataset.selmidi : hit.dataset.midi);
+      const str = +(selHit ? hit.dataset.selstr : hit.dataset.str);
+      const fret = +(selHit ? hit.dataset.selfret : hit.dataset.fret);
+      announce(d, NOTE, { midi });
       // on the anchor string, a click also seats the window there
-      if (cur && +hit.dataset.str === Math.max(...cur.run.strings)) {
-        cfg = { ...cfg, startDeg: cur.fld.degOf(+hit.dataset.midi), nearFret: +hit.dataset.fret };
+      if (cur && str === Math.max(...cur.run.strings)) {
+        cfg = { ...cfg, startDeg: cur.fld.degOf(midi), nearFret: fret };
         push();
       }
     });
+
+    for (const b of byId("fdObjSeg").querySelectorAll("button"))
+      b.addEventListener("click", () => { cfg = { ...cfg, object: b.dataset.obj }; push(); });
+    for (const b of byId("fdTakeSeg").querySelectorAll("button"))
+      b.addEventListener("click", () => { cfg = { ...cfg, take: b.dataset.take }; push(); });
+    for (const b of byId("fdNSeg").querySelectorAll("button"))
+      b.addEventListener("click", () => { cfg = { ...cfg, notesPer: +b.dataset.nps }; push(); });
 
     byId("fieldSvg").addEventListener("keydown", (e) => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -272,7 +374,7 @@ export const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "startDeg", "nearFret"])
+      for (const k of ["key", "scale", "startDeg", "nearFret", "object", "take", "notesPer"])
         if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {

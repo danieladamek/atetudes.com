@@ -351,6 +351,48 @@ def m13_live_setindex_hijacks_the_field():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 14
+# MULTETUDES child 3a: TAKE COLLAPSES INTO PLACEMENT — choosing Line forces
+# the arpeggio. The page renders plausibly (more dots, all of them real chord
+# tones); only the artifact comparison of addresses across the Line click can
+# see that the ceiling CAUSED what it may only PERMIT.
+def m14_take_collapses_into_placement():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '        const r = cfg.take === "all"',
+        '        const r = (cfg.take === "all" || cfg.notesPer > 1)')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "Take and Placement have collapsed" in r.stdout
+        record("choosing Line forces the arpeggio",
+               r.returncode != 0 and hit,
+               "suite exit %d; the address comparison bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutation 15
+# MULTETUDES child 3a: THE SCALE MATERIAL SILENTLY HALVED — the category error
+# that already shipped once in the prototype. Placement applied to a scale
+# looks tidy on the neck; the recipe counts (R15's 12-18, R5's six) are what
+# catch it.
+def m15_scale_material_silently_halved():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "        sel = scaleTake(pool).notes;",
+        "        sel = scaleTake(pool, { reach: 1 }).notes;")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "R15: the six-string scale box offers" in r.stdout or "R5:" in r.stdout
+        record("the scale material silently halved",
+               r.returncode != 0 and hit,
+               "suite exit %d; the recipe counts bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
@@ -358,7 +400,8 @@ def main():
                m5_dynamic_import_and_lookup_by_string, m6_new_module_no_door_edited,
                m7_checkbox_only_row_returns, m8_moved_accents_dead, m9_moved_voice_dead,
                m10_field_frozen_on_key_change, m11_field_walk_loses_a_string,
-               m12_set_change_resets_the_design, m13_live_setindex_hijacks_the_field):
+               m12_set_change_resets_the_design, m13_live_setindex_hijacks_the_field,
+               m14_take_collapses_into_placement, m15_scale_material_silently_halved):
         try:
             fn()
         except BuildBroken as e:

@@ -397,6 +397,119 @@ def run_door(pw, door_id):
         page.select_option("#keySel", "C")
         page.wait_for_timeout(120)
 
+        # ---- child 3a: the selection — object, take, placement, the recipes ----
+        sel_dots = lambda: page.evaluate("""() =>
+          [...document.querySelectorAll('#fieldSvg .fd-sel')].map(g => ({
+            s: +g.dataset.selstr, f: +g.dataset.selfret,
+            label: g.querySelector('text').textContent }))""")
+
+        def per_string(dots):
+            c = {}
+            for d0 in dots:
+                c[d0["s"]] = c.get(d0["s"], 0) + 1
+            return c
+
+        def addrs(dots):
+            return sorted((d0["s"], d0["f"]) for d0 in dots)
+
+        def set_strings(target):
+            cur = page.evaluate("""() =>
+              [...document.querySelectorAll('#fieldSvg [data-fdstr]')]
+                .filter(g => g.querySelector('rect').getAttribute('fill') !== '#fff')
+                .map(g => +g.dataset.fdstr)""")
+            for s in sorted(set(cur) ^ set(target)):
+                page.click(f'#fieldSvg [data-fdstr="{s}"]')
+                page.wait_for_timeout(60)
+
+        # R15 — the six-string scale box: every note the box offers, the reach
+        # the only cap, PLACEMENT SWITCHED OFF WITH THE REASON ON THE LABEL
+        set_strings([6, 5, 4, 3, 2, 1])
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { startDeg: 0, nearFret: 5 } }))""")
+        page.click('#fdObjSeg >> text=Scale'); page.wait_for_timeout(100)
+        r15 = sel_dots()
+        check(12 <= len(r15) <= 18,
+              f"{tag} R15: the six-string scale box offers 12–18 notes, not {len(r15)}")
+        check(all(c <= 3 for c in per_string(r15).values()),
+              f"{tag} R15: a string carries more than the hand's reach: {per_string(r15)}")
+        check(page.eval_on_selector_all("#fdTakeSeg button:disabled", "e => e.length") == 2
+              and page.eval_on_selector_all("#fdNSeg button:disabled", "e => e.length") == 2,
+              f"{tag} a scale is not a chord — Take and Placement must switch OFF under it")
+        check("a scale is not a chord" in page.inner_text("#fdWhy"),
+              f"{tag} the off-switch must carry its reason on the label: {page.inner_text('#fdWhy')!r}")
+        # the tetrad, one of each, Grip: a voicing — one per string, four roles
+        page.click('#fdObjSeg >> text=Tetrad'); page.wait_for_timeout(100)
+        grip = sel_dots()
+        check(len(grip) == 4 and all(c == 1 for c in per_string(grip).values()),
+              f"{tag} a tetrad voicing at Grip is four notes, one per string: {grip}")
+        check(sorted(d0["label"] for d0 in grip) == ["3", "5", "7", "R"],
+              f"{tag} the four roles must all be worn: {[d0['label'] for d0 in grip]}")
+        # TAKE IS NOT PLACEMENT, on the artifact: Line must not move a note
+        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
+        check(addrs(sel_dots()) == addrs(grip),
+              f"{tag} raising the ceiling CHANGED the voicing — Take and Placement have collapsed "
+              f"({addrs(grip)} -> {addrs(sel_dots())})")
+        # every occurrence: the arpeggio doubles a string, and the two notes on
+        # one string are distinct dots at distinct frets — on the neck
+        page.click('#fdTakeSeg >> text=every occurrence'); page.wait_for_timeout(100)
+        arp = sel_dots()
+        check(len(arp) > 4, f"{tag} every-occurrence must offer more than the voicing ({len(arp)})")
+        doubled = {s: c for s, c in per_string(arp).items() if c >= 2}
+        check(bool(doubled), f"{tag} the arpeggio never doubled a string: {per_string(arp)}")
+        for s in doubled:
+            frets = sorted(d0["f"] for d0 in arp if d0["s"] == s)
+            check(len(set(frets)) == len(frets),
+                  f"{tag} two notes on string {s} share a fret — the collision law broke on the artifact")
+        # a selection dot SOUNDS (and it is the top ink over its ghost)
+        page.evaluate(note_probe)
+        first_sel = page.evaluate("""() => { const g = document.querySelector('#fieldSvg .fd-sel');
+          return +g.dataset.selmidi; }""")
+        page.evaluate("""() => document.querySelector('#fieldSvg .fd-sel circle')
+          .dispatchEvent(new MouseEvent('click', { bubbles: true }))""")
+        page.wait_for_timeout(80)
+        check(page.evaluate("() => window.__fdNote") == first_sel,
+              f"{tag} clicking a selection dot did not announce its NOTE")
+        # R7 — the fold: a triad on {3,2} at Line folds 2+1; and at Grip the
+        # same four... first the LOUD refusal: a tetrad on two strings at Grip
+        set_strings([3, 2])
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { startDeg: 0, nearFret: 5 } }))""")
+        page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(60)
+        page.click('#fdTakeSeg >> text=one of each'); page.wait_for_timeout(100)
+        check("no placement fits" in page.inner_text("#fdWhy"),
+              f"{tag} a tetrad on two strings at one-per-string must refuse LOUDLY: {page.inner_text('#fdWhy')!r}")
+        page.click('#fdObjSeg >> text=Triad'); page.wait_for_timeout(60)
+        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
+        r7 = sel_dots()
+        check(len(r7) == 3 and sorted(per_string(r7).values()) == [1, 2],
+              f"{tag} R7: a triad folded onto two strings is 2+1, not {per_string(r7)}")
+        # R5 — the scale, three per string, on two strings
+        set_strings([4, 3])
+        page.click('#fdObjSeg >> text=Scale'); page.wait_for_timeout(100)
+        r5 = sel_dots()
+        check(len(r5) == 6 and sorted(per_string(r5).values()) == [3, 3],
+              f"{tag} R5: three notes per string on two strings is six notes, not {per_string(r5)}")
+        # R11 — triad lines over {4,3,2}
+        set_strings([4, 3, 2])
+        page.click('#fdObjSeg >> text=Triad'); page.wait_for_timeout(60)
+        page.click('#fdTakeSeg >> text=every occurrence'); page.wait_for_timeout(100)
+        r11 = sel_dots()
+        check(len(r11) >= 4 and all(c <= 3 for c in per_string(r11).values())
+              and set(d0["label"] for d0 in r11) <= {"R", "3", "5"},
+              f"{tag} R11: triad lines must be triad tones only, ≤3 per string: {r11}")
+        # R14 — tetrad lines over {5,4,3,2}
+        set_strings([5, 4, 3, 2])
+        page.click('#fdObjSeg >> text=Tetrad'); page.wait_for_timeout(100)
+        r14 = sel_dots()
+        check(len(r14) >= 5 and any(c >= 2 for c in per_string(r14).values())
+              and set(d0["label"] for d0 in r14) <= {"R", "3", "5", "7"},
+              f"{tag} R14: tetrad lines must double somewhere and stay tetrad tones: {r14}")
+        # leave the field as the door boots: R15
+        set_strings([6, 5, 4, 3, 2, 1])
+        page.click('#fdTakeSeg >> text=one of each'); page.wait_for_timeout(30)
+        page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(30)
+        page.click('#fdObjSeg >> text=Scale'); page.wait_for_timeout(60)
+
     # ---------------- exercise the door -------------------------------------
     # a page that loads is not a page that works — and the orphan-selector
     # check below is only honest once the door's states have been entered
