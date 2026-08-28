@@ -277,6 +277,41 @@ def run_door(pw, door_id):
         hint = lambda: page.inner_text("#fdHint")
         ord_of = lambda: re.search(r"from the (\S+) on string (\d)", hint()).groups()
         frets_of = lambda: re.search(r"frets (\d+)–(\d+)", hint()).groups()
+
+        # THE WINDOW IS A POSITION: the width is DERIVED from three consecutive
+        # scale notes on the anchor string — never set, never stored. Four frets
+        # when the two steps are whole-whole, five when one is bigger; and it
+        # must equal the anchor triple's own span, not merely stay put. The
+        # triple is read off the ARTIFACT — the anchor string's dots inside the
+        # frame — never by re-running the engine's arithmetic, or this proves
+        # only that pivotWindow agrees with itself. (Ratified 2026-08-28, the
+        # stronger pin; "width unchanged across a drag" asserted an accident.)
+        width_of = lambda: int(frets_of()[1]) - int(frets_of()[0]) + 1
+
+        def span_of_anchor_triple():
+            lo, hi = (int(x) for x in frets_of())
+            anchor = int(ord_of()[1])
+            frets = page.evaluate("""([a, lo, hi]) =>
+              [...document.querySelectorAll('#fieldSvg [data-str="' + a + '"]')]
+                .map(g => +g.dataset.fret).filter(f => f >= lo && f <= hi)""",
+                [anchor, lo, hi])
+            check(len(frets) == 3,
+                  f"{tag} the frame holds {len(frets)} anchor-string scale notes "
+                  f"({frets}) — the window IS three consecutive scale notes, no more, no fewer")
+            return (max(frets) - min(frets) + 1) if frets else -1
+
+        def check_window(where):
+            w = width_of()
+            check(w in (4, 5),
+                  f"{tag} the window is {w} frets at {where} — the ruling derives it "
+                  f"from three consecutive scale notes, so it is 4 or 5, never else")
+            span = span_of_anchor_triple()
+            check(w == span,
+                  f"{tag} the window is {w} frets at {where} but its anchor triple "
+                  f"spans {span} — the width is DERIVED, and a width that outlives "
+                  f"the notes it came from is a stored width")
+
+        check_window("rest")
         check("Strings E–B–G–D–A–E" in hint(),
               f"{tag} the six-string run's derived label is not in the hint: {hint()!r}")
         # the window steps — box shift, reversible, read off the artifact
@@ -286,8 +321,10 @@ def run_door(pw, door_id):
         check(frets_of() != f0 or ord_of() != ("root", "6"),
               f"{tag} ArrowRight did not step the window: {hint()!r}")
         check(ord_of()[0] == "2nd", f"{tag} one step from the root must start on the 2nd: {hint()!r}")
+        check_window("after ArrowRight")
         page.keyboard.press("ArrowLeft"); page.wait_for_timeout(80)
         check(hint() == h0, f"{tag} step right then left did not return the same window")
+        check_window("after ArrowLeft")
         page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)   # park on the 2nd
         stepped_ord = ord_of()[0]
         # dropping string 5: the set is a SET, the frame stays honest, and the
@@ -297,6 +334,7 @@ def run_door(pw, door_id):
         check(ord_of()[0] == stepped_ord,
               f"{tag} changing the set RESET the design — the window must translate "
               f"({stepped_ord} -> {ord_of()[0]})")
+        check_window("after dropping string 5")
         sq5_fill = page.get_attribute('#fieldSvg [data-fdstr="5"] rect', "fill")
         check(sq5_fill == "#fff", f"{tag} the excluded string's square is not hollow: {sq5_fill}")
         dim5 = page.evaluate("""() => {
@@ -308,6 +346,7 @@ def run_door(pw, door_id):
         check(dim5, f"{tag} the excluded string's dots inside the frame do not read as excluded")
         page.click('#fieldSvg [data-fdstr="5"]'); page.wait_for_timeout(100)
         check("(skipped)" not in hint(), f"{tag} re-adding string 5 did not restore the contiguous run")
+        check_window("after re-adding string 5")
         # THE ALIAS: a restored pre-run snapshot (setIndex + key, no strings)
         # translates through the enumeration it indexed, and the board
         # announces the RUN — never setIndex back (no dual-write). A LIVE
@@ -326,6 +365,7 @@ def run_door(pw, door_id):
         check("Strings E–B–G–D" in hint() and "string 4" in hint(),
               f"{tag} setIndex 2 did not migrate to the run it indexed: {hint()!r}")
         echoed = page.evaluate("""() => window.__fdCfg.find(m => m && m.strings)""")
+        check_window("after the setIndex migration")
         check(echoed is not None and echoed.get("strings") == [4, 3, 2, 1]
               and "setIndex" not in echoed,
               f"{tag} the migrated run was not announced as strings-without-setIndex: {echoed}")
@@ -340,6 +380,7 @@ def run_door(pw, door_id):
         page.click(".hist .acts button >> text=Restore étude"); page.wait_for_timeout(150)
         check(hint() == saved_hint,
               f"{tag} the restored étude is not the saved one:\n  saved    {saved_hint!r}\n  restored {hint()!r}")
+        check_window("after Restore")
         entry_after = page.evaluate(
             "() => JSON.stringify(JSON.parse(localStorage.getItem('multetudes.v1.log')).entries[0])")
         check(entry_before == entry_after,
