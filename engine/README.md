@@ -78,6 +78,17 @@ engine/
 │                        shift; regionOf() names the drawn rectangle apart
 │                        from isolation.mjs's single-string zone (G9);
 │                        materialIn() is the UNCAPPED pool (pure)
+├── selection.mjs        THE SELECTION (Multetudes, Route B): the second
+│                        placement path, native over field/position/string-run
+│                        and the only module that knows a string can carry
+│                        more than one note. oneOfEach (a voicing: THE VOICING
+│                        RULE — spread before tightening — then the §6.1.2
+│                        key; ceiling checked on the COMBINATION), every-
+│                        Occurrence (the arpeggio, ≤n per string), scaleTake
+│                        (placement off, the reach the only cap). Pinned to
+│                        agree with isolation.mjs's lineVoicing at one note
+│                        per string; divergence at n>1 deliberate and pinned
+│                        by name (pure)
 ├── string-run.mjs       THE FREE STRING SET (Multetudes): any run of strings,
 │                        contiguous or skipped, stored as the array itself;
 │                        labels derived from the open strings' pitch classes
@@ -110,6 +121,12 @@ engine/
     ├── field.test.mjs                the two degrees pinned apart; the chord/
     │                                 bass path pinned to keyDeg; the tuning
     │                                 pinned equal across its two modules
+    ├── selection.test.mjs            THE CONFORMANCE CASE (the §6.1.2 choice,
+    │                                 pinned against lineVoicing at n=1, joint
+    │                                 refusals included); the divergence pin
+    │                                 with its counterexample; Take-is-not-
+    │                                 Placement as a corpus theorem; the
+    │                                 collision law at the data level
     ├── position.test.mjs             the pivotWindow differential; the
     │                                 Ionian/Dorian same-box identity pin; the
     │                                 e5ba874 no-adjacent-frets pin; the
