@@ -64,6 +64,20 @@ engine/
 │                        own table, consumed), the beat→step attack, count-in
 │                        and the loop counter. Owns NO clock — beats are
 │                        injected, so the walk is testable without one
+├── field.mjs            THE FIELD (Multetudes): a key, a scale, and a
+│                        reference tone that re-roots it — the same seven
+│                        notes read against a different centre, which is what
+│                        a mode is. Both degrees on every note: deg (vs the
+│                        reference — colours/labels) and keyDeg (into the
+│                        scale — chords/bass). Tuning derived from its named
+│                        rule, pinned equal to tetrad-sequence's (pure)
+├── position.mjs         THE POSITION (Multetudes): the ratified window (C5,
+│                        260821) as a value — three consecutive scale notes on
+│                        the anchor string, derived through string-sets.mjs's
+│                        pivotWindow, never reimplemented; step() is box
+│                        shift; regionOf() names the drawn rectangle apart
+│                        from isolation.mjs's single-string zone (G9);
+│                        materialIn() is the UNCAPPED pool (pure)
 ├── string-sets.mjs      slot/degree translation across string sets (pure)
 ├── motion.mjs           the motion grammar: figures, approaches, resolution against
 │                        a chord context; the sketchpad's emitter (pure)
@@ -86,6 +100,13 @@ engine/
 │                        motion grammar; padInsert = the caret-preserving seam
 └── tests/
     ├── chord.test.mjs
+    ├── field.test.mjs                the two degrees pinned apart; the chord/
+    │                                 bass path pinned to keyDeg; the tuning
+    │                                 pinned equal across its two modules
+    ├── position.test.mjs             the pivotWindow differential; the
+    │                                 Ionian/Dorian same-box identity pin; the
+    │                                 e5ba874 no-adjacent-frets pin; the
+    │                                 uncapped pool
     ├── upper-structure.test.mjs      roadmap §3.1's decomposition table as corpus
     ├── metronome.test.mjs            includes the study-inline anti-drift pin
     ├── atchart.test.mjs
