@@ -356,6 +356,34 @@ export async function resolveDoor(doorId) {
     throw new Error("style ownership violations (the CSS partition is what makes markup prunable):\n  " +
       violations.join("\n  "));
 
+  /* ROWS (shell.mjs ROW_WRAPPER): placement of what the lock already reached.
+   * Validated here because this is the one place the reach-set exists: a row
+   * naming an unreached module is an error naming it — a door that lays out a
+   * module its lock pruned would otherwise render smaller and quieter than
+   * declared, the one failure mode a door must not have. */
+  const rows = door.rows ?? [];
+  {
+    if (!Array.isArray(rows)) throw new Error(`${rel(doorFile)}: rows must be an array of { template, cards }`);
+    const seen = new Set();
+    const rootIds = new Set(roots.map((m) => m.id));
+    for (const row of rows) {
+      if (!row || typeof row.template !== "string" || !row.template.trim())
+        throw new Error(`${rel(doorFile)}: a row needs a grid template string`);
+      if (!Array.isArray(row.cards) || !row.cards.length)
+        throw new Error(`${rel(doorFile)}: a row needs the card module ids it carries`);
+      if (row.template.split(/\s+/).length !== row.cards.length)
+        throw new Error(`${rel(doorFile)}: row template "${row.template}" declares ` +
+          `${row.template.split(/\s+/).length} columns for ${row.cards.length} card(s)`);
+      for (const id of row.cards) {
+        if (!rootIds.has(id))
+          throw new Error(`${rel(doorFile)}: row names "${id}", which this lock does not reach — ` +
+            `rows place reached modules, never extend or shrink the reach-set`);
+        if (seen.has(id)) throw new Error(`${rel(doorFile)}: "${id}" appears in two rows`);
+        seen.add(id);
+      }
+    }
+  }
+
   const present = [...new Set(roots.flatMap((m) => m.controls))].sort();
   const absent = [...new Set(prunedMods.flatMap((m) => m.controls))].sort();
   const both = present.filter((c) => absent.includes(c));
@@ -366,6 +394,7 @@ export async function resolveDoor(doorId) {
     door: doorId,
     lock: door.lock,
     present: door.present,
+    rows,
     modulesIn: roots.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,
       controls: m.controls, owns: [...owned.get(m.id)].sort() })),
     modulesOut: prunedMods.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,

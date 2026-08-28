@@ -24,6 +24,35 @@ export function inlineForm(src) {
   return src.replace(IMPORT_LINE, "").replace(/^export\s+/gm, "").trim();
 }
 
+/* A ROW THAT DECLARES ITS COLUMN TEMPLATE (Multetudes child 8, 2026-08-29 —
+ * the one missing primitive, measured): the flex cards row divides space
+ * EVENLY, and no grammar existed for "a quarter beside three quarters". A
+ * door may declare `rows` — each names a grid template and the card modules
+ * that sit in it — and the build lays those cards on a grid instead of the
+ * flex flow. THE LAW THIS KEEPS: rows are PLACEMENT of what the lock already
+ * reached, exactly as a module's own `order` is — they can never add or
+ * remove reach (the resolver refuses a row naming an unreached module, by
+ * name), and a reached card no row names still flows into the ordinary
+ * cards row.
+ *
+ * WHY THIS LIVES HERE AND NOT IN hub/shell.mjs, recorded because the first
+ * draft learned it the hard way: shell.mjs's SOURCE is inlined verbatim into
+ * every built door, so ANY addition to it changes every door's bytes — and
+ * the primitive's own gate is that row-less doors rebuild byte-identically.
+ * The shell has two halves: the inlined page grammar (shell.mjs) and the
+ * build-time emitters (this file, which ships in nothing). A wrapper the
+ * page never executes is build grammar, so it sits in the build half, and
+ * its styles ship only for a door that declares rows — the same rule that
+ * keeps `.board` from outliving the last board. */
+const ROW_WRAPPER = {
+  html: (inner, template) =>
+    `<div class="cardrow" style="grid-template-columns:${template}">${inner}\n</div>`,
+  styles: `
+.cardrow{display:grid;gap:12px;margin-bottom:12px;align-items:stretch}
+.cardrow>.card{min-width:0}
+`,
+};
+
 /* Each module is inlined inside its own IIFE that returns its exports, and
  * its imports are destructured from the namespaces of the modules already
  * emitted. This is the shipped study's own convention (`const CHORD = (() =>
@@ -91,20 +120,40 @@ async function build(id) {
   const placed = [...mods].map((m, i) => ({ m, i }))
     .sort((a, b) => ((a.m.order ?? 0) - (b.m.order ?? 0)) || (a.i - b.i))
     .map((x) => x.m);
+  /* DECLARED ROWS (shell.ROW_WRAPPER): a rowed card renders inside its row's
+   * grid instead of the flex flow. The resolver already proved every rowed id
+   * is reached; here the one remaining fact is checked — that it mounts at
+   * "cards", because rows lay out the clock row only. */
+  const rows = r.rows ?? [];
+  const rowed = new Set(rows.flatMap((row) => row.cards));
+  const cardHtml = new Map();
   for (const m of placed) {
     const where = m.mount_point ?? "cards";
     const wrap = shell.WRAPPERS[where];
     if (!wrap) throw new Error(`${m.id}: unknown mount point "${where}" — the shell offers ${Object.keys(shell.WRAPPERS).join(", ")}`);
-    slots[where].push(wrap.html(m.markup, m.wrap_class));
+    const html = wrap.html(m.markup, m.wrap_class);
+    if (where === "cards" && rowed.has(m.id)) cardHtml.set(m.id, html);
+    else slots[where].push(html);
   }
-  // a container's styles ship only if a module filled that container
+  for (const id of rowed)
+    if (!cardHtml.has(id))
+      throw new Error(`row names "${id}", which does not mount at "cards" — rows lay out the clock rows only`);
+  const rowsHtml = rows.map((row) => ROW_WRAPPER.html(
+    row.cards.map((id) => cardHtml.get(id)).join("\n"), row.template)).join("\n");
+  // a container's styles ship only if a module filled that container — a card
+  // in a declared row still fills the cards container's grammar
+  const slotUsed = (k) => slots[k].length > 0 || (k === "cards" && cardHtml.size > 0);
   const styles = shell.SHELL_STYLES
-    + Object.entries(slots).filter(([, v]) => v.length)
-        .map(([k]) => shell.WRAPPERS[k].styles).join("\n")
+    + Object.keys(slots).filter(slotUsed)
+        .map((k) => shell.WRAPPERS[k].styles).join("\n")
+    + (rows.length ? ROW_WRAPPER.styles : "")
     + mods.map((m) => m.styles ?? "").join("\n");
+  const cardsArea = rows.length
+    ? `<div id="cards">${rowsHtml}${slots.cards.length
+        ? '\n<div class="cards">' + slots.cards.join("\n") + "\n</div>" : ""}\n</div>`
+    : `<div class="cards" id="cards">${slots.cards.join("\n")}\n</div>`;
   const markup = shell.SHELL_MARKUP
-    .replace('<div class="cards" id="cards"></div>',
-      `<div class="cards" id="cards">${slots.cards.join("\n")}\n</div>`)
+    .replace('<div class="cards" id="cards"></div>', cardsArea)
     .replace('<div id="hidden"></div>', slots.hidden.join("\n"))
     .replace('<div id="strips"></div>',
       `<div id="strips">${slots.strips.join("\n")}\n</div>`)
