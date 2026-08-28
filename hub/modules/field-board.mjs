@@ -1,73 +1,56 @@
-/* field-board.mjs — THE FIELD, and now THE WINDOW AND THE SET on it
- * (Multetudes children 0 and 2).
+/* field-board.mjs — ON THE NECK: Multetudes' neck, v0.9's card (children 0,
+ * 2, 3a; the surface rework of 2026-08-29 under the identical-to-v0.9
+ * ruling).
  *
- * Child 0: the brief's model (multetudes-prd.md §2.1) — choose a key and the
- * whole neck shows every note of it, subdued; everything else the app will do
- * is a NARROWING of that constant field. Child 2 adds the first two
- * narrowings the model names: THE POSITION (the ratified window — C5,
- * 260821 — three consecutive scale notes on the anchor string wide, by the
- * strings of the set tall) and THE SET (any run of strings, contiguous or
- * skipped — `{6,4,3,1}` as legal as `{4,3,2,1}`).
+ * THIS BOARD IS MULTETUDES' ON THE NECK. The two-necks question was resolved
+ * by the 2026-08-28 afternoon ruling: v0.9 has one neck, the kill-condition
+ * measurement is finished, so the door stops mounting the tetrad board and
+ * this board carries the component's name. fretboard-stage.mjs is untouched —
+ * the family component was not modified to fit; a different neck for a
+ * different app is the register's business, and the entry exists.
  *
- * WHAT COUNTS AS A PRE-RUN IDENTITY (the migration's trigger): a message that
- * carries `setIndex` and a `key` but no `strings` — the shape of a RESTORED
- * SNAPSHOT (the notepad announces the whole merged config) from before the
- * run existed, or an imported tetrad-family log. Shape & Motion's own live
- * announcements carry setIndex WITHOUT a key (it owns the shape half only),
- * and deliberately do not migrate: in this skeleton its segment governs the
- * tetrad boards and this selector governs the field — two set controls,
- * coexisting, and reconciling them is the app-surface child's decision, not
- * this one's (§4.4: stated, not silent). A first draft keyed the migration on
- * a mount-time flag instead and was seen wrong: modules mount in import
- * order, not page order, so Shape & Motion's mount default arrived after the
- * flag flipped and hijacked the six-string field on a cold load.
+ * WHAT IT RENDERS (v0.9's card, structurally verbatim): the neck with the
+ * field ghosted; the window (the ratified rigid rectangle) with its MOVE GRIP
+ * and two EDGE HANDLES; the string-set squares and the pattern-bracket gutter
+ * right of fret 15 (the bracket itself is 3b's and stays empty until then);
+ * the right rail — Placement, the figure address and input (inert, 3b), and
+ * the box-gesture prose behind the ⓘ; the transport rail (metronome check,
+ * bar split, voice) and the mixer (harmony · bass) beneath; the legend.
+ *
+ * WHAT IT OWNS vs HEARS (§4.2.3): owns the run (`strings`), the window's
+ * design (`startDeg`, `nearFret`) and the ceiling (`notesPer`); hears key,
+ * scale, object, take and the reference from the Harmony card and derives
+ * everything it draws. The mixer and voice announce MIXER; the metronome
+ * check is a second view of CLOCK_STATE.click (one state, two views — the
+ * family's own rule); the pulse dot renders BEAT.
  *
  * WHAT IS DERIVED, AND FROM WHERE (golden rule 1):
  *   the field                engine/field.mjs      field() / notesOn()
  *   the window               engine/position.mjs   positionOf/step/reanchor/regionOf
  *   the run and its label    engine/string-run.mjs makeRun / fromSetIndex
- * Nothing musical is restated here; the board asserts the derivation before
- * drawing (deriveField's closed-form count — different arithmetic than the
- * walk it checks) and draws only what the assertions passed.
+ *   the selection            engine/selection.mjs  oneOfEach/everyOccurrence/scaleTake
+ * Nothing musical is restated here; deriveField asserts the walk against a
+ * closed-form count before anything draws.
  *
- * THE SET IS CONFIG AND THE RUN IS THE IDENTITY: this board owns `strings`
- * (the array itself, stored as such) plus the window's design (`startDeg`
- * against the reference, `nearFret` its resolved seat). `setIndex` is
- * accepted as a LOAD-TIME MIGRATION ALIAS only — a message carrying setIndex
- * and no strings (a restored pre-run étude, or Shape & Motion's own segment
- * in this skeleton) translates through engine/string-run.mjs's fromSetIndex
- * against the same enumeration the old identity indexed. Nothing ever writes
- * setIndex back (no dual-write). The mount-time replay is NOT adopted: the
- * bus replays Shape & Motion's default to every late subscriber, and a
- * default is not a user's act — only messages after mount migrate.
- *
- * CHANGING THE SET TRANSLATES THE DESIGN INSTEAD OF RESETTING IT (the
- * relative-state doctrine, G16): the start degree survives, the anchor moves
- * to the new run's lowest-pitch string, and the box slides near its old
- * centre — engine/position.mjs's reanchor, unrepeated.
- *
- * A SKIPPED SET DRAWS HONESTLY: the frame spans the run's min..max strings;
- * a string excluded inside the span keeps its selector square hollow AND its
- * ghost dots inside the frame dim to less than half the field's own subdue —
- * excluded reads as excluded, at the neck, not only in the gutter.
- *
- * THE DOTS SOUND (floor F3): every dot carries data-midi, one delegated
- * click announces NOTE. On the anchor string a click ALSO seats the window
- * there (the prototype's gesture), and with the neck focused ← → step the
- * window one scale note — box shift, the model's only travel.
+ * The setIndex migration, the coexistence rule for live shape-half messages,
+ * and the design-translating set change are unchanged from children 2–3a and
+ * keep their mutation proofs (bite 10–15).
  */
 import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
-import { CONFIG_CHANGED, NOTE, listen, announce } from "../bus.mjs";
+import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
+import { SPLITS } from "../../engine/drill.mjs";
+import { CONFIG_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "../bus.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
-/* the reference's neck geometry, verbatim; the viewBox is 80 wider to seat
- * the selector column right of fret 15, as the prototype draws it */
+/* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
+ * the set squares AND the pattern-bracket gutter, as v0.9 draws them */
 const NFRETS = 15, FX0 = 46, FW = 71, SY0 = 34, SGAP = 34;
 const STR_X = FX0 + NFRETS * FW + 42;
+const BRK_X = FX0 + NFRETS * FW + 76;
 const fx = (f) => (f === 0 ? FX0 - 22 : FX0 + (f - 0.5) * FW);
 const fy = (str) => SY0 + (str - 1) * SGAP;
 const FAM = ["R", "2", "3", "4", "5", "6", "7"];
@@ -109,64 +92,116 @@ export const fieldBoard = {
   layer: "surface",
   requires: { field: true },
   mount_point: "boards",
-  /* above the tetrad neck (order 20): the field is the constant everything
-   * else narrows, so it reads first among the boards */
   order: 18,
-  controls: ["fieldSvg", "fdObjSeg", "fdTakeSeg", "fdNSeg"],
+  controls: ["fieldSvg", "fdNSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
+    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn"],
 
-  /* the selection rail (child 3a): what sits on the field, and how it is
-   * taken. Object · Take · Placement — Take is NOT Placement, so they are two
-   * segments; under a scale both switch off WITH THE REASON ON THE LABEL
-   * (fdWhy), never a silently halved material. */
   markup: `
-  <div class="bh"><span>The field</span></div>
-  <div class="fd-ctl">
-    <span class="fd-cap">Object</span>
-    <div class="seg" id="fdObjSeg" data-control="fdObjSeg">
-      <button data-obj="scale" class="on" title="the scale — every note the box offers">Scale</button>
-      <button data-obj="triad" title="the diatonic triad on the window's start degree">Triad</button>
-      <button data-obj="tetrad" title="the diatonic seventh chord on the window's start degree">Tetrad</button>
+  <div class="bh"><span>On the neck</span></div>
+  <div class="fd-wrap">
+    <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
+      aria-label="the neck — the field, the window, the string set, and the selection"></svg>
+    <div class="fd-rail" id="fdRail">
+      <div class="fd-railtop"><button id="fdRailBtn" data-control="fdRailBtn"
+        title="collapse this rail">›</button></div>
+      <div class="fd-cap">Placement</div>
+      <div class="seg" id="fdNSeg" data-control="fdNSeg">
+        <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
+        <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+      </div>
+      <div class="fd-cap">The figure is</div>
+      <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
+        <button data-addr="pattern" class="on" disabled>pattern</button>
+        <button data-addr="tones" disabled>tones</button>
+      </div>
+      <div class="fd-cap">Figure</div>
+      <input type="text" id="fdFigIn" data-control="fdFigIn" placeholder="4,3,4,3,2,1"
+        autocomplete="off" disabled>
+      <div class="hint fd-fignote" id="fdFigNote">Inert — the figure and its string-number
+      address arrive with child 3b. The bracket beside the strings will show where each
+      step lands.</div>
+      <div class="hint info"><b>Moving the box.</b> Drag the ■ grip to move it — across frets,
+      and across strings with it. Drag the ● handles on its top and bottom edges to choose which
+      strings it spans. With the neck focused, ← → step the frame one scale note and
+      ↑ ↓ slide the whole set across the strings. Clicking any note on the anchor string
+      seats the frame there. The numbered squares choose the strings one by one — skips are
+      how you ask for a spread.</div>
     </div>
-    <span class="fd-cap">Take</span>
-    <div class="seg" id="fdTakeSeg" data-control="fdTakeSeg">
-      <button data-take="one" class="on" title="a voicing — one occurrence of each tone">one of each</button>
-      <button data-take="all" title="an arpeggio — every occurrence in the box">every occurrence</button>
-    </div>
-    <span class="fd-cap">Placement</span>
-    <div class="seg" id="fdNSeg" data-control="fdNSeg">
-      <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-      <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
-    </div>
-    <span class="fd-why" id="fdWhy"></span>
   </div>
+  <div class="fd-railrow">
+    <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
+    <span class="fd-pulse" id="fdPulse"></span>
+    <span class="fd-lab2">bar split</span>
+    <select id="fdSplit" data-control="fdSplit" disabled
+      title="the bar split walks the étude — arrives with child 7"></select>
+    <span class="fd-lab2">voice</span>
+    <select id="fdVoice" data-control="fdVoice"></select>
+  </div>
+  <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
+    <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
+    <span class="fd-lab2 fd-mixlab">harmony</span>
+    <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
+    <span class="fd-val" id="fdHarmVal">100</span>
+  </div>
+  <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
+    <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
+    <span class="fd-lab2 fd-mixlab">bass</span>
+    <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
+    <span class="fd-val" id="fdBassVal">100</span>
+  </div>
+  <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
+  owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
+  deliberately: a line, an arpeggio and a block chord are all harmonic relationships, and "chord"
+  is too narrow for what this app puts on the neck. The bass channel waits on child 5's fretted
+  reference.</div>
   <div class="hint" id="fdHint"></div>
-  <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1240 260" tabindex="0"
-    aria-label="the field — every note of the key, the window, the string set, and the selection"></svg>`,
+  <div class="fd-legend" id="fdLegend"></div>`,
 
-  /* every rule names a token only this board ships */
   styles: `
-#fieldSvg{width:100%;height:auto;display:block;outline:none}
-#fdHint{margin:2px 2px 8px}
-.fd-ctl{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 2px 8px}
-.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;font-weight:bold}
-.fd-why{font-size:11px;color:#73737A;font-style:italic}
+#fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
+.fd-wrap{display:flex;gap:12px;align-items:flex-start}
+.fd-rail{flex:0 0 170px}
+.fd-rail.fd-shut{flex:0 0 30px;overflow:hidden}
+.fd-rail.fd-shut>*{display:none}
+.fd-rail.fd-shut>.fd-railtop{display:flex}
+.fd-railtop{display:flex;justify-content:flex-end;margin-bottom:2px}
+#fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
+  background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
+.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
+  font-weight:bold;margin:9px 0 5px}
+.fd-fignote{margin-top:6px}
+#fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
+.fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
+  border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
+.fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
+  border:1px solid var(--line);border-radius:6px;color:var(--ink)}
+.fd-lab2{font-size:12px;color:var(--gray)}
+.fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
+.fd-mixrow{max-width:376px;margin-top:8px}
+.fd-mixlab{width:52px}
+.fd-val{font-size:13px;width:30px;text-align:right}
+.fd-legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
+.fd-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;
+  margin-right:3px}
+.fd-legend span{display:inline-block;margin-right:11px}
+#fdHint{margin:8px 2px 0}
 .fd-dot{cursor:pointer}
 .fd-sel{cursor:pointer}
 .fd-lab{font-weight:bold;pointer-events:none;user-select:none}
 .fd-frame{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4;pointer-events:none}
+.fd-grip{fill:var(--ink);cursor:move}
+.fd-gripv{fill:#fff;stroke:var(--ink);stroke-width:1.6;cursor:ns-resize}
+.fd-hit{fill:transparent}
 .fd-str{cursor:pointer}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    /* PRIVATE (§4.2.3): this board owns the set and the window's design.
-     * `strings` defaults to the six-string scale box — the generalisation the
-     * ruling names as the point. */
-    let cfg = { key: "C", scale: "major",
+    let cfg = { key: "C", scale: "major", ref: 0,
       strings: [6, 5, 4, 3, 2, 1], startDeg: 0, nearFret: 5,
-      /* the selection (child 3a): what sits on the field, and how it is taken.
-       * The skeleton boots as R15 — the six-string scale box. */
       object: "scale", take: "one", notesPer: 1 };
-    let cur = null;            // { fld, run, pos, region } of the last build
+    let curB = null;            // { fld, run, pos, region, aNotes } of the last build
+    let dragging = null;
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -176,15 +211,15 @@ export const fieldBoard = {
     };
 
     const build = () => {
-      // derive + assert, then draw — the field, the run, the window
-      const fld = field({ key: cfg.key, scale: cfg.scale });
+      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
       const dots = deriveField(fld);
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret });
       const region = regionOf(pos, run.strings);
-      cur = { fld, run, pos, region };
+      const aNotes = notesOn(anchor, fld);
+      curB = { fld, run, pos, region, aNotes };
 
       const svg = byId("fieldSvg");
       svg.textContent = "";
@@ -196,17 +231,18 @@ export const fieldBoard = {
       for (const mf of [3, 5, 7, 9, 12]) {
         el("circle", { cx: FX0 + (mf - 0.5) * FW, cy: fy(6) + 26, r: 3.4, fill: "#D8D8DC" }, svg);
         if (mf === 12) el("circle", { cx: FX0 + (mf - 0.5) * FW + 10, cy: fy(6) + 26, r: 3.4, fill: "#D8D8DC" }, svg);
-        const tx = el("text", { x: FX0 + (mf - 0.5) * FW, y: fy(1) - 22, "text-anchor": "middle",
-          "font-size": "10", fill: "#B9B9BF" }, svg);
-        tx.textContent = mf;
+      }
+      for (let f = 1; f <= NFRETS; f++) {           // v0.9 numbers every fret
+        const tx = el("text", { x: fx(f), y: fy(1) - 22, "text-anchor": "middle",
+          "font-size": "9.5", fill: "#B9B9BF" }, svg);
+        tx.textContent = f;
       }
       for (let s = 1; s <= 6; s++)
         el("line", { x1: FX0 - 30, y1: fy(s), x2: FX0 + NFRETS * FW, y2: fy(s),
           stroke: "#B9B9BF", "stroke-width": s >= 4 ? 1.8 : 1.1 }, svg);
 
-      /* the field, subdued at the study's own 0.28 — and HONESTY FOR A SKIP:
-       * a string excluded from the run dims further inside the frame, so
-       * "excluded" is visible at the neck itself */
+      /* the field, subdued — and honesty for a skip: an excluded string's
+       * dots dim further inside the frame */
       const inRun = new Set(run.strings);
       for (const dot of dots) {
         const fam = FAM[dot.deg];
@@ -221,11 +257,7 @@ export const fieldBoard = {
         t.textContent = fam;
       }
 
-      /* THE SELECTION — what the controls narrowed the field to, full ink over
-       * the ghosts. Scale notes wear their field degree; chord notes wear
-       * their role, coloured by field degree (the prototype's convention: the
-       * field is the context, the window sits on a degree). Every fact is the
-       * engine's; the board only draws what the assertions passed. */
+      /* THE SELECTION — what the controls narrowed the field to */
       const pool = materialIn(pos, run.strings, fld);
       let sel = [], selMsg = "";
       if (cfg.object === "scale") {
@@ -255,21 +287,33 @@ export const fieldBoard = {
         t.textContent = x.role || fam;
       }
 
-      /* THE WINDOW — one rigid dashed rectangle (the ruling's), spanning the
-       * run's min..max strings by the window's frets. It never stretches,
-       * never reports, never explains itself. */
+      /* THE WINDOW — one rigid dashed rectangle, with v0.9's gesture surfaces:
+       * the ■ move grip at bottom-left, and the two ● edge handles */
       const ys = [fy(region.strHi) - 17, fy(region.strLo) + 17];
       const xLo = pos.fLo === 0 ? FX0 - 34 : FX0 + (pos.fLo - 1) * FW + FW * 0.28;
       const xHi = Math.min(FX0 + pos.fHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9);
       el("rect", { class: "fd-frame", x: xLo, y: ys[0], width: xHi - xLo,
         height: ys[1] - ys[0], rx: 12 }, svg);
+      const grip = el("rect", { class: "fd-grip", x: xLo - 7, y: ys[1] - 7, width: 14, height: 14, rx: 3 }, svg);
+      const gt = el("title", {}, grip); gt.textContent = "drag: move the box, across frets and strings";
+      const gripHit = el("rect", { class: "fd-hit", x: xLo - 20, y: ys[1] - 20, width: 40, height: 40 }, svg);
+      const edge = (y, which) => {
+        const cx = (xLo + xHi) / 2;
+        const h = el("circle", { class: "fd-gripv", cx, cy: y, r: 5.5 }, svg);
+        const tt = el("title", {}, h); tt.textContent = "drag: how many strings tall, from this edge";
+        const hit = el("circle", { class: "fd-hit", cx, cy: y, r: 16 }, svg);
+        for (const n of [h, hit]) n.addEventListener("pointerdown", (e) => startDrag(e, which));
+      };
+      edge(ys[0], "size-top"); edge(ys[1], "size-bottom");
+      for (const n of [grip, gripHit]) n.addEventListener("pointerdown", (e) => startDrag(e, "move"));
 
-      /* THE SELECTOR: the string numbers, as squares — filled in the run,
-       * hollow out of it (the prototype's reading, kept). The number IS the
-       * control. */
+      /* the gutter: the set squares, then the pattern-bracket column (3b's) */
       const capT = el("text", { x: STR_X, y: fy(1) - 22, "text-anchor": "middle",
         "font-size": "8.5", fill: "#B9B9BF" }, svg);
       capT.textContent = "set";
+      const capB = el("text", { x: BRK_X + 10, y: fy(1) - 22, "text-anchor": "middle",
+        "font-size": "8.5", fill: "#B9B9BF" }, svg);
+      capB.textContent = "pattern";
       for (let s = 1; s <= 6; s++) {
         const on = inRun.has(s);
         const g = el("g", { class: "fd-str", "data-fdstr": s }, svg);
@@ -282,55 +326,95 @@ export const fieldBoard = {
         t.textContent = s;
       }
 
-      /* the selection rail paints from the same build — segment states, and
-       * the two OFF-switch reasons, on the label rather than in silence */
-      const isScale = cfg.object === "scale";
-      for (const b of byId("fdObjSeg").querySelectorAll("button"))
-        b.classList.toggle("on", b.dataset.obj === cfg.object);
-      for (const b of byId("fdTakeSeg").querySelectorAll("button")) {
-        b.classList.toggle("on", b.dataset.take === cfg.take);
-        b.disabled = isScale;
-      }
+      /* the rail paints from the same build */
       for (const b of byId("fdNSeg").querySelectorAll("button")) {
         b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
-        b.disabled = isScale;
+        b.disabled = cfg.object === "scale";
       }
-      byId("fdWhy").textContent = isScale
-        ? "a scale is not a chord — placement is off; the box offers every note, three per string at most (the hand's reach)"
-        : selMsg;
 
       const per = {};
       for (const x of sel) per[x.string] = (per[x.string] || 0) + 1;
       const shape = run.strings.map((s) => per[s] || 0).join("+");
+      const isScale = cfg.object === "scale";
       const takeWord = isScale ? "the scale take"
         : `the ${cfg.object}, ${cfg.take === "all" ? "every occurrence" : "one of each"}` +
           ` (${cfg.notesPer === 1 ? "grip" : "line"})`;
+      const reading = cfg.ref
+        ? `${fld.refNote.name} ${fld.modeName} (the ${cfg.key} ${SCALE_WORD[cfg.scale]} collection)`
+        : `${cfg.key} ${SCALE_WORD[cfg.scale] || cfg.scale}`;
       byId("fdHint").textContent =
-        `${cfg.key} ${SCALE_WORD[cfg.scale] || cfg.scale} — the whole field, ${dots.length} notes. ` +
+        `${reading} — the whole field, ${dots.length} notes. ` +
         `Strings ${run.label}${run.contiguous ? "" : " (skipped)"} · ` +
         `the window from the ${ORD[pos.startDeg]} on string ${anchor}, frets ${pos.fLo}–${pos.fHi} · ` +
-        `${takeWord}: ${sel.length} notes, ${shape} across the set. ` +
-        `Click the numbers to choose strings; ← → step the window.`;
+        `${takeWord}: ${sel.length} notes, ${shape} across the set.` +
+        (isScale ? " Placement is off — a scale is not a chord; the box offers every note, three per string at most (the hand's reach)."
+          : (selMsg ? ` ${selMsg}.` : "")) +
+        ` Click the numbers to choose strings; ← → step the window.`;
+      byId("fdLegend").innerHTML = FAM.map((f2) =>
+        `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
+        + `<span style="margin-left:8px">colour = function against ${cfg.ref ? "the reference tone" : "the key"}</span>`;
     };
 
-    /* the board announces ITS OWN facts — the run, and the window's design.
-     * setIndex is never written back (no dual-write). */
     const push = () => {
       build();
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
-        startDeg: cfg.startDeg, nearFret: cfg.nearFret,
-        object: cfg.object, take: cfg.take, notesPer: cfg.notesPer });
+        startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer });
     };
 
-    /* a set change TRANSLATES the design: same start degree, the box sliding
-     * near its old centre — then the resolved seat is stored, so a restore
-     * reproduces the window byte for byte */
     const setStrings = (next) => {
-      const fld = cur.fld;
-      const moved = reanchor(cur.pos, next, fld);
+      const fld = curB.fld;
+      const moved = reanchor(curB.pos, next, fld);
       cfg = { ...cfg, strings: next, startDeg: moved.startDeg, nearFret: moved.fLo };
       push();
     };
+
+    /* ---- v0.9's box gestures: move (frets AND strings) and edge-resize ---- */
+    const svgPt = (e) => {
+      const svg = byId("fieldSvg");
+      const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+      return { x: vb.x + (e.clientX - r.left) / r.width * vb.width,
+        y: vb.y + (e.clientY - r.top) / r.height * vb.height };
+    };
+    const stringAt = (y) => Math.max(1, Math.min(6, Math.round((y - SY0) / SGAP) + 1));
+    const startDrag = (e, kind) => {
+      e.preventDefault(); e.stopPropagation();
+      const p0 = svgPt(e);
+      dragging = { kind, p0, strings0: [...cfg.strings],
+        i0: curB.aNotes.findIndex((n) => n.fret === curB.pos.fLo), moved: false };
+    };
+    d.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const p = svgPt(e);
+      if (dragging.kind === "move") {
+        const di = Math.round((p.x - dragging.p0.x) / FW);
+        const ds = stringAt(p.y) - stringAt(dragging.p0.y);
+        const aN = curB.aNotes;
+        const ni = Math.max(0, Math.min(aN.length - 3, dragging.i0 + di));
+        let next = { ...cfg };
+        if (aN[ni].fret !== curB.pos.fLo)
+          next = { ...next, startDeg: aN[ni].deg, nearFret: aN[ni].fret };
+        const cand = dragging.strings0.map((s) => s + ds);
+        const okStrings = ds !== 0 && !cand.some((s) => s < 1 || s > 6);
+        if (next.startDeg !== cfg.startDeg || next.nearFret !== cfg.nearFret || okStrings) {
+          dragging.moved = true;
+          cfg = next;
+          if (okStrings) { setStrings(cand); return; }
+          push();
+        }
+      } else {
+        const at = stringAt(p.y);
+        const lo = Math.min(...dragging.strings0), hi = Math.max(...dragging.strings0);
+        let a = lo, b = hi;
+        if (dragging.kind === "size-top") a = Math.min(at, hi); else b = Math.max(at, lo);
+        const run = [];
+        for (let s = a; s <= b; s++) run.push(s);
+        if (run.join() !== [...cfg.strings].sort((x, y) => x - y).join()) {
+          dragging.moved = true;
+          setStrings(run);
+        }
+      }
+    });
+    d.addEventListener("pointerup", () => { dragging = null; });
 
     byId("fieldSvg").addEventListener("click", (e) => {
       const sq = e.target.closest("[data-fdstr]");
@@ -341,7 +425,6 @@ export const fieldBoard = {
         setStrings(has ? cfg.strings.filter((x) => x !== s) : [...cfg.strings, s]);
         return;
       }
-      // a selection dot sits over its ghost — same behaviour, top ink first
       const selHit = e.target.closest("[data-selmidi]");
       const hit = selHit || e.target.closest("[data-midi]");
       if (!hit) return;
@@ -349,53 +432,109 @@ export const fieldBoard = {
       const str = +(selHit ? hit.dataset.selstr : hit.dataset.str);
       const fret = +(selHit ? hit.dataset.selfret : hit.dataset.fret);
       announce(d, NOTE, { midi });
-      // on the anchor string, a click also seats the window there
-      if (cur && str === Math.max(...cur.run.strings)) {
-        cfg = { ...cfg, startDeg: cur.fld.degOf(midi), nearFret: fret };
+      if (curB && str === Math.max(...curB.run.strings)) {
+        cfg = { ...cfg, startDeg: curB.fld.degOf(midi), nearFret: fret };
         push();
       }
     });
 
-    for (const b of byId("fdObjSeg").querySelectorAll("button"))
-      b.addEventListener("click", () => { cfg = { ...cfg, object: b.dataset.obj }; push(); });
-    for (const b of byId("fdTakeSeg").querySelectorAll("button"))
-      b.addEventListener("click", () => { cfg = { ...cfg, take: b.dataset.take }; push(); });
+    byId("fieldSvg").addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        const next = step(curB.pos, e.key === "ArrowRight" ? 1 : -1, curB.fld);
+        cfg = { ...cfg, startDeg: next.startDeg, nearFret: next.fLo };
+        push();
+        e.preventDefault();
+      }
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        const dstr = e.key === "ArrowUp" ? -1 : 1;
+        const cand = cfg.strings.map((s) => s + dstr);
+        if (!cand.some((s) => s < 1 || s > 6)) setStrings(cand);
+        e.preventDefault();
+      }
+    });
+
     for (const b of byId("fdNSeg").querySelectorAll("button"))
       b.addEventListener("click", () => { cfg = { ...cfg, notesPer: +b.dataset.nps }; push(); });
 
-    byId("fieldSvg").addEventListener("keydown", (e) => {
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-      const next = step(cur.pos, e.key === "ArrowRight" ? 1 : -1, cur.fld);
-      cfg = { ...cfg, startDeg: next.startDeg, nearFret: next.fLo };
-      push();
-      e.preventDefault();
+    byId("fdRailBtn").addEventListener("click", () => {
+      const r = byId("fdRail");
+      r.classList.toggle("fd-shut");
+      byId("fdRailBtn").textContent = r.classList.contains("fd-shut") ? "‹" : "›";
     });
+
+    /* ---- the transport rail and the mixer: bus views, never owners ---- */
+    byId("fdMetChk").addEventListener("change", (e) =>
+      announce(d, CLOCK, { click: e.target.checked }));
+    listen(d, CLOCK_STATE, (m) => {
+      if (m && typeof m.click === "boolean") byId("fdMetChk").checked = m.click;
+    });
+    let pulseT = null;
+    listen(d, BEAT, () => {
+      const p = byId("fdPulse");
+      p.style.background = "#B82929";
+      if (pulseT) d.defaultView.clearTimeout(pulseT);
+      pulseT = d.defaultView.setTimeout(() => { p.style.background = ""; }, 70);
+    });
+    {
+      const sp = byId("fdSplit");
+      for (const opt of (SPLITS[4] || []).map((x) => (Array.isArray(x) ? x.join("+") : String(x)))) {
+        const o = d.createElement("option"); o.value = opt; o.textContent = opt;
+        sp.appendChild(o);
+      }
+    }
+    {
+      const v = byId("fdVoice");
+      for (const name of NOTE_VOICE_NAMES) {
+        const o = d.createElement("option"); o.value = name; o.textContent = name;
+        v.appendChild(o);
+      }
+      v.addEventListener("change", (e) => announce(d, MIXER, { voice: e.target.value }));
+    }
+    for (const [slId, muteId, valId, chan] of
+      [["fdHarmVol", "fdHarmMute", "fdHarmVal", "chord"], ["fdBassVol", "fdBassMute", "fdBassVal", "bass"]]) {
+      const sl = byId(slId), mute = byId(muteId), val = byId(valId);
+      let last = 100;
+      const paint = () => {
+        const lvl = +sl.value;
+        val.textContent = lvl;
+        mute.setAttribute("aria-pressed", lvl === 0 ? "true" : "false");
+        mute.textContent = lvl === 0 ? "\u{1F507}" : "\u{1F50A}";
+      };
+      const pushLvl = () => { paint(); announce(d, MIXER, { [chan]: +sl.value / 100 }); };
+      sl.addEventListener("input", pushLvl);
+      mute.addEventListener("click", () => {
+        const curLvl = +sl.value;
+        if (curLvl > 0) { last = curLvl; sl.value = 0; } else sl.value = last || 100;
+        pushLvl();
+      });
+      paint();
+    }
 
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "startDeg", "nearFret", "object", "take", "notesPer"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer"])
         if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {
         cfg = { ...cfg, strings: [...m.strings] }; changed = true;
       } else if ("setIndex" in m && !("strings" in m) && "key" in m
-          && Number.isInteger(m.setIndex) && cur) {
-        /* THE ALIAS: a restored pre-run identity (setIndex + key, no run —
-         * see the header), translated against the enumeration it indexed.
-         * Adopt-and-announce: the translated run must reach the bus, or a
-         * snapshot taken now would carry the stale strings. */
+          && Number.isInteger(m.setIndex) && curB) {
+        /* THE ALIAS: a restored pre-run identity (setIndex + key, no run),
+         * translated against the enumeration it indexed. Adopt-and-announce;
+         * never write setIndex back. A live shape-half message (setIndex
+         * without key) deliberately does not migrate — the guard's history
+         * is bite mutation 13. */
         const run = fromSetIndex(m.setIndex, STRING_SETS);
         if (run.strings.join() !== cfg.strings.join()) {
-          const moved = reanchor(cur.pos, run.strings, cur.fld);
+          const moved = reanchor(curB.pos, run.strings, curB.fld);
           cfg = { ...cfg, strings: run.strings, startDeg: moved.startDeg, nearFret: moved.fLo };
-          push();                      // announces strings — never setIndex
+          push();
           return;
         }
       }
       if (changed) build();
     });
-    booted = true;                     // the replay above was mount-time state
 
     push();
   },

@@ -168,10 +168,20 @@ def run_door(pw, door_id):
     # ---------------- 3. the markup/style grep ------------------------------
     # every id and class a pruned module owns, in any of the three forms it
     # could survive as: an element, a selector, or a bare mention
+    # the selector forms match with a BOUNDARY: '.cur' must not hit
+    # '.currentTime' (audio-card's, reached) — the marker lesson (a
+    # non-distinctive probe fails a door that is correct) arriving in the
+    # markup grep, found by the first door to prune chord-timeline while
+    # carrying audio (260829)
     for tok in r["tokensAbsent"]:
-        for form in (f'id="{tok}"', f'class="{tok}"', f"#{tok}", f".{tok}"):
+        for form in (f'id="{tok}"', f'class="{tok}"'):
             check(form not in html,
                   f"{tag} built file contains {form!r} — {tok} belongs to a module "
+                  f"this lock prunes, so neither its markup nor its styles may ship")
+        for pre in ("#", "."):
+            pat = re.compile(re.escape(pre + tok) + r"(?![\w-])")
+            check(not pat.search(html),
+                  f"{tag} built file contains {pre + tok!r} — {tok} belongs to a module "
                   f"this lock prunes, so neither its markup nor its styles may ship")
     check(r["tokensAbsent"] or not r["modulesOut"],
           f"{tag} modules were pruned but own no markup tokens — the markup grep is vacuous")
@@ -252,7 +262,7 @@ def run_door(pw, door_id):
               f"{tag} the field hint does not name the key: {page.inner_text('#fdHint')!r}")
         # the field is the KEY: changing it re-derives every dot (the bus is
         # the wiring — harmony announces, the field derives from what it hears)
-        page.select_option("#keySel", "D")
+        page.select_option("#hcKey", "D")
         page.wait_for_timeout(120)
         d_pcs = field_pcs(NAME_PC["D"])
         check(dots_now() == expect_dots(d_pcs) and root_dots_now() == expect_pc(d_pcs, NAME_PC["D"]),
@@ -394,7 +404,7 @@ def run_door(pw, door_id):
         # later winSeg/bind gates read the tetrad neck's default geometry)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { setIndex: 0 } }))""")
-        page.select_option("#keySel", "C")
+        page.select_option("#hcKey", "C")
         page.wait_for_timeout(120)
 
         # ---- child 3a: the selection — object, take, placement, the recipes ----
@@ -426,19 +436,19 @@ def run_door(pw, door_id):
         set_strings([6, 5, 4, 3, 2, 1])
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 0, nearFret: 5 } }))""")
-        page.click('#fdObjSeg >> text=Scale'); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(100)
         r15 = sel_dots()
         check(12 <= len(r15) <= 18,
               f"{tag} R15: the six-string scale box offers 12–18 notes, not {len(r15)}")
         check(all(c <= 3 for c in per_string(r15).values()),
               f"{tag} R15: a string carries more than the hand's reach: {per_string(r15)}")
-        check(page.eval_on_selector_all("#fdTakeSeg button:disabled", "e => e.length") == 2
+        check(page.get_attribute("#hcTake", "disabled") is not None
               and page.eval_on_selector_all("#fdNSeg button:disabled", "e => e.length") == 2,
               f"{tag} a scale is not a chord — Take and Placement must switch OFF under it")
-        check("a scale is not a chord" in page.inner_text("#fdWhy"),
-              f"{tag} the off-switch must carry its reason on the label: {page.inner_text('#fdWhy')!r}")
+        check("a scale is not a chord" in hint() and "Take — a scale takes the whole box" in page.inner_text("#hcTakeLab"),
+              f"{tag} the off-switch must carry its reason on the label: {hint()!r}")
         # the tetrad, one of each, Grip: a voicing — one per string, four roles
-        page.click('#fdObjSeg >> text=Tetrad'); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(100)
         grip = sel_dots()
         check(len(grip) == 4 and all(c == 1 for c in per_string(grip).values()),
               f"{tag} a tetrad voicing at Grip is four notes, one per string: {grip}")
@@ -451,7 +461,7 @@ def run_door(pw, door_id):
               f"({addrs(grip)} -> {addrs(sel_dots())})")
         # every occurrence: the arpeggio doubles a string, and the two notes on
         # one string are distinct dots at distinct frets — on the neck
-        page.click('#fdTakeSeg >> text=every occurrence'); page.wait_for_timeout(100)
+        page.select_option("#hcTake", "all"); page.wait_for_timeout(100)
         arp = sel_dots()
         check(len(arp) > 4, f"{tag} every-occurrence must offer more than the voicing ({len(arp)})")
         doubled = {s: c for s, c in per_string(arp).items() if c >= 2}
@@ -475,40 +485,159 @@ def run_door(pw, door_id):
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 0, nearFret: 5 } }))""")
         page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(60)
-        page.click('#fdTakeSeg >> text=one of each'); page.wait_for_timeout(100)
-        check("no placement fits" in page.inner_text("#fdWhy"),
-              f"{tag} a tetrad on two strings at one-per-string must refuse LOUDLY: {page.inner_text('#fdWhy')!r}")
-        page.click('#fdObjSeg >> text=Triad'); page.wait_for_timeout(60)
+        page.select_option("#hcTake", "one"); page.wait_for_timeout(100)
+        check("no placement fits" in hint(),
+              f"{tag} a tetrad on two strings at one-per-string must refuse LOUDLY: {hint()!r}")
+        page.select_option("#hcObj", "triad"); page.wait_for_timeout(60)
         page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
         r7 = sel_dots()
         check(len(r7) == 3 and sorted(per_string(r7).values()) == [1, 2],
               f"{tag} R7: a triad folded onto two strings is 2+1, not {per_string(r7)}")
         # R5 — the scale, three per string, on two strings
         set_strings([4, 3])
-        page.click('#fdObjSeg >> text=Scale'); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(100)
         r5 = sel_dots()
         check(len(r5) == 6 and sorted(per_string(r5).values()) == [3, 3],
               f"{tag} R5: three notes per string on two strings is six notes, not {per_string(r5)}")
         # R11 — triad lines over {4,3,2}
         set_strings([4, 3, 2])
-        page.click('#fdObjSeg >> text=Triad'); page.wait_for_timeout(60)
-        page.click('#fdTakeSeg >> text=every occurrence'); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "triad"); page.wait_for_timeout(60)
+        page.select_option("#hcTake", "all"); page.wait_for_timeout(100)
         r11 = sel_dots()
         check(len(r11) >= 4 and all(c <= 3 for c in per_string(r11).values())
               and set(d0["label"] for d0 in r11) <= {"R", "3", "5"},
               f"{tag} R11: triad lines must be triad tones only, ≤3 per string: {r11}")
         # R14 — tetrad lines over {5,4,3,2}
         set_strings([5, 4, 3, 2])
-        page.click('#fdObjSeg >> text=Tetrad'); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(100)
         r14 = sel_dots()
         check(len(r14) >= 5 and any(c >= 2 for c in per_string(r14).values())
               and set(d0["label"] for d0 in r14) <= {"R", "3", "5", "7"},
               f"{tag} R14: tetrad lines must double somewhere and stay tetrad tones: {r14}")
         # leave the field as the door boots: R15
         set_strings([6, 5, 4, 3, 2, 1])
-        page.click('#fdTakeSeg >> text=one of each'); page.wait_for_timeout(30)
+        page.select_option("#hcTake", "one"); page.wait_for_timeout(30)
         page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(30)
-        page.click('#fdObjSeg >> text=Scale'); page.wait_for_timeout(60)
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(60)
+
+        # ---- THE RENDERED DIFF (the surface item, 2026-08-29): "identical is
+        # asserted, not judged". v0.9 is opened beside the door and the layout
+        # facts are DERIVED FROM BOTH ARTIFACTS — never hand-pinned numbers —
+        # then compared, at 1280 and at 390. The allow-list is explicit and
+        # every entry cites the divergence register:
+        #   · live engine output (derived dots ≠ the prototype's stored ones)
+        #   · regions whose child has not landed (progression, timeline bars,
+        #     the bass clef, figures) — asserted VISIBLY inert elsewhere
+        #   · register entries: the page chrome & control metrics (shell-owned,
+        #     untouchable without republishing the family), the pad/log split
+        #     (the CSS ownership wall), the gaps card (prototype self-audit,
+        #     dropped), the collapse chevron (family idiom, kept).
+        proto = ctx.new_page()
+        proto.goto((REPO / "notes/prototypes/multetudes-v0.9.html").as_uri())
+        proto.wait_for_selector(".wrap", state="attached")
+        proto.wait_for_timeout(200)
+
+        def row_ratios(pg, sel):
+            """the widths of a row's children, as fractions of their sum"""
+            return pg.evaluate("""(sel) => {
+              const kids = [...document.querySelectorAll(sel)];
+              const ws = kids.map(k => k.getBoundingClientRect().width);
+              const t = ws.reduce((a, b) => a + b, 0);
+              return ws.map(w => w / t); }""", sel)
+
+        def compare_rows(where, strict=True):
+            pairs = [
+                ("row 1 (metronome | journal)", ".row1 > *", "#cards .cardrow:nth-of-type(1) > *"),
+                ("row 2 (harmony | progression | presets)", ".row2 > *", "#cards .cardrow:nth-of-type(2) > *"),
+            ]
+            for name, psel, dsel in pairs:
+                a = row_ratios(proto, psel)
+                b = row_ratios(page, dsel)
+                if strict:
+                    check(len(a) == len(b) and all(abs(x - y) < 0.025 for x, y in zip(a, b)),
+                          f"{tag} {name} proportions diverge from v0.9 at {where}: "
+                          f"v0.9 {[round(x, 3) for x in a]} vs door {[round(y, 3) for y in b]}")
+                else:
+                    # phone width: both pages floor at min-content, and the two
+                    # pages' min-contents differ (register: phone-width grid
+                    # compression). The structural halves still must agree.
+                    check(len(a) == len(b) and all(x > 0 for x in b),
+                          f"{tag} {name} lost a member at {where}: v0.9 {len(a)} vs door {len(b)}")
+
+        compare_rows("1280")
+        # WHO sits in each row, not only how wide — the first red run of this
+        # gate proved ratios alone measure nothing: swapping Harmony and the
+        # journal between rows left every ratio identical. Identity is read
+        # off the artifact by each card's own controls, in v0.9's seating:
+        # row 1 = the clock beside the journal; row 2 = harmony, progression,
+        # presets, in that order.
+        seating = page.evaluate("""() =>
+          [...document.querySelectorAll('#cards .cardrow')].map(row =>
+            [...row.children].map(cell => {
+              for (const [id, name] of [["metroBtn","metronome"],["journalIn","journal"],
+                ["hcKey","harmony"],["pgCycle","progression"],["psSel","presets"]])
+                if (cell.querySelector('#' + id)) return name;
+              return "?"; }))""")
+        check(seating == [["metronome", "journal"], ["harmony", "progression", "presets"]],
+              f"{tag} the rows seat the wrong cards: {seating} — v0.9 seats "
+              f"[[metronome, journal], [harmony, progression, presets]]")
+        # the section sequence, derived from both pages and mapped through the
+        # allow-list: the gaps card is dropped (register), and the practice
+        # log rides the journal into row 1 (register — the ownership wall)
+        def sections(pg):
+            return pg.evaluate("""() =>
+              [...document.querySelectorAll('.card > h2, .bh > span, .metro h2')]
+                .map(e => e.textContent.replace(/\s+/g, ' ').trim().toLowerCase().replace(/[▾›‹⏮▶⏹⏭ⓘ]/g, '').replace(/[—(].*$/, '').trim())
+                .filter(t => t && !t.includes('saved'))""")
+        # allow-list, each citing the register: the gaps card is the prototype's
+        # self-audit (dropped); the "Notepad" title is the pad/log split the CSS
+        # ownership wall blocks — the pad lives inside the family Practice Log
+        want = [t for t in sections(proto) if t not in ("what this configuration hits", "notepad")]
+        got = [t for t in sections(page) if t != "note"]
+        for t in want:
+            check(t in got, f"{tag} v0.9 section {t!r} is missing from the door "
+                            f"(door sections: {got})")
+        neck_i = [i for i, t in enumerate(got) if "neck" in t]
+        staff_i = [i for i, t in enumerate(got) if "étude" in t]
+        keys_i = [i for i, t in enumerate(got) if "keys" in t]
+        check(neck_i and staff_i and keys_i and neck_i[0] < staff_i[0] < keys_i[0],
+              f"{tag} the boards are out of v0.9's order: {got}")
+        # the degree palette, sampled from BOTH artifacts (never a hand pin):
+        # v0.9's stored dots and the door's derived dots must wear one palette
+        pal_proto = proto.evaluate("""() => { const out = {};
+          for (const t of [...document.querySelectorAll('#neck g text')]) {
+            const lab = t.textContent.trim();
+            const c = t.parentElement.querySelector('circle');
+            if (c && /^(R|[2-7])$/.test(lab) && !(lab in out)) out[lab] = c.getAttribute('fill');
+          } return out; }""")
+        pal_door = page.evaluate("""() => { const out = {};
+          for (const g of [...document.querySelectorAll('#fieldSvg .fd-dot')]) {
+            const lab = g.querySelector('text').textContent.trim();
+            const c = g.querySelector('circle');
+            if (/^(R|[2-7])$/.test(lab) && !(lab in out)) out[lab] = c.getAttribute('fill');
+          } return out; }""")
+        check(len(pal_proto) == 7 and pal_proto == pal_door,
+              f"{tag} the degree palette diverges from v0.9: {pal_proto} vs {pal_door}")
+        # inert regions are VISIBLY inert — the face says which child, nowhere blank
+        for sel, child in [("#pgNote", "child 7"), ("#tlScroll", "child 7"), ("#fdFigNote", "child 3b")]:
+            txt = page.inner_text(sel)
+            check(("inert" in txt.lower() or "arrives" in txt.lower()) and child in txt.lower(),
+                  f"{tag} inert region {sel} does not say so on its face: {txt!r}")
+        # and at 390 — the same derived comparisons, phone width
+        page.set_viewport_size({"width": 390, "height": 844})
+        proto.set_viewport_size({"width": 390, "height": 844})
+        page.wait_for_timeout(120); proto.wait_for_timeout(120)
+        compare_rows("390", strict=False)
+        page.set_viewport_size({"width": 1280, "height": 900})
+        proto.set_viewport_size({"width": 1280, "height": 900})
+        page.wait_for_timeout(120)
+        # the neck rail collapses and returns — exercised, so its state
+        # rules are matched in a DOM that really entered them
+        page.click("#fdRailBtn"); page.wait_for_timeout(60)
+        check(page.eval_on_selector_all(".fd-rail.fd-shut", "e => e.length") == 1,
+              f"{tag} the rail toggle did not collapse the rail")
+        page.click("#fdRailBtn"); page.wait_for_timeout(60)
+        proto.close()
 
     # ---------------- exercise the door -------------------------------------
     # a page that loads is not a page that works — and the orphan-selector
@@ -1707,7 +1836,7 @@ def run_door(pw, door_id):
     # shared row stretch together — the triad app's own behaviour — so one
     # collapsed card keeps the row's height while its neighbour stands. The
     # honest claim: collapse EVERY card in the row and the row itself shrinks.
-    rowmates = [p2 for p2 in page.query_selector_all(".cards > .card") if p2.bounding_box() and abs(p2.bounding_box()["y"] - panel.bounding_box()["y"]) < 2]
+    rowmates = [p2 for p2 in page.query_selector_all(".cards > .card, .cardrow > *") if p2.bounding_box() and abs(p2.bounding_box()["y"] - panel.bounding_box()["y"]) < 2]
     toggled = []                                          # exactly the cards THIS loop collapsed
     for p2 in rowmates:
         if "clpsd" not in (p2.get_attribute("class") or ""):
@@ -1841,6 +1970,13 @@ def run_door(pw, door_id):
     page.wait_for_timeout(60)
     check(page.query_selector(".clpsd") is not None,
           f"{tag} no panel is collapsed going into the orphan check — .clpsd rules would orphan")
+    # multetudes: the neck rail SHUT going into the orphan check, so its state
+    # rules match a DOM that really entered the state; re-expanded after the
+    # shots with the collapsed panels (the same lesson as .clpsd and the mute)
+    rail_shut_for_check = False
+    if door_id == "multetudes" and page.query_selector(".fd-rail.fd-shut") is None:
+        page.click("#fdRailBtn"); page.wait_for_timeout(60)
+        rail_shut_for_check = True
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped
     # metronome would call them orphans
@@ -1873,6 +2009,8 @@ def run_door(pw, door_id):
         btn = p.query_selector(".clpsBtn")
         if btn:
             btn.click()
+    if rail_shut_for_check:
+        page.click("#fdRailBtn")
     page.wait_for_timeout(40)
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") == "true":
         muted_for_check.click(); page.wait_for_timeout(40)

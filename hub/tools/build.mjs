@@ -49,7 +49,6 @@ const ROW_WRAPPER = {
     `<div class="cardrow" style="grid-template-columns:${template}">${inner}\n</div>`,
   styles: `
 .cardrow{display:grid;gap:12px;margin-bottom:12px;align-items:stretch}
-.cardrow>.card{min-width:0}
 `,
 };
 
@@ -126,31 +125,36 @@ async function build(id) {
    * "cards", because rows lay out the clock row only. */
   const rows = r.rows ?? [];
   const rowed = new Set(rows.flatMap((row) => row.cards));
-  const cardHtml = new Map();
+  const rowHtml = new Map();
+  const rowedMounts = new Set();
   for (const m of placed) {
     const where = m.mount_point ?? "cards";
     const wrap = shell.WRAPPERS[where];
     if (!wrap) throw new Error(`${m.id}: unknown mount point "${where}" — the shell offers ${Object.keys(shell.WRAPPERS).join(", ")}`);
     const html = wrap.html(m.markup, m.wrap_class);
-    if (where === "cards" && rowed.has(m.id)) cardHtml.set(m.id, html);
+    if (where !== "hidden" && rowed.has(m.id)) { rowHtml.set(m.id, html); rowedMounts.add(where); }
     else slots[where].push(html);
   }
   for (const id of rowed)
-    if (!cardHtml.has(id))
-      throw new Error(`row names "${id}", which does not mount at "cards" — rows lay out the clock rows only`);
+    if (!rowHtml.has(id))
+      throw new Error(`row names "${id}", which has no visible mount — a hidden module cannot be laid out`);
   const rowsHtml = rows.map((row) => ROW_WRAPPER.html(
-    row.cards.map((id) => cardHtml.get(id)).join("\n"), row.template)).join("\n");
-  // a container's styles ship only if a module filled that container — a card
-  // in a declared row still fills the cards container's grammar
-  const slotUsed = (k) => slots[k].length > 0 || (k === "cards" && cardHtml.size > 0);
+    row.cards.map((id) => rowHtml.get(id)).join("\n"), row.template)).join("\n");
+  // a container's styles ship only if a module filled that container — a
+  // module in a declared row still fills its own container's grammar
+  const slotUsed = (k) => slots[k].length > 0 || rowedMounts.has(k);
   const styles = shell.SHELL_STYLES
     + Object.keys(slots).filter(slotUsed)
         .map((k) => shell.WRAPPERS[k].styles).join("\n")
     + (rows.length ? ROW_WRAPPER.styles : "")
     + mods.map((m) => m.styles ?? "").join("\n");
+  /* a rows-only door still carries a .cards element (hidden, empty) so the
+   * shell's always-shipped .cards rule has something to match — the orphan
+   * gate is the authority and a selector with nothing to match is a trace */
   const cardsArea = rows.length
     ? `<div id="cards">${rowsHtml}${slots.cards.length
-        ? '\n<div class="cards">' + slots.cards.join("\n") + "\n</div>" : ""}\n</div>`
+        ? '\n<div class="cards">' + slots.cards.join("\n") + "\n</div>"
+        : '\n<div class="cards" hidden></div>'}\n</div>`
     : `<div class="cards" id="cards">${slots.cards.join("\n")}\n</div>`;
   const markup = shell.SHELL_MARKUP
     .replace('<div class="cards" id="cards"></div>', cardsArea)

@@ -1,72 +1,68 @@
-/* MULTETUDES — the skeleton door, and the kill condition (child 0).
+/* MULTETUDES — one tool that holds many études.
  *
- * ONE TOOL THAT HOLDS MANY ÉTUDES (multetudes-prd.md). The brief's one hard
- * instruction: Multetudes is built as a hub door from birth, never
- * hand-authored — a one-scope application cannot become a door by extraction,
- * only by rewrite (family spec §4.2.3), and Multetudes is a bigger surface
- * than the app that proved it.
+ * Built as a hub door from birth (multetudes-prd.md §5, the one hard
+ * instruction). Child 0 measured the kill condition on the widest lock the
+ * build had (414.5 kB · 32 modules · 45 ms, zero errors — Update Log
+ * 260827.1); it did not fire, and that measurement is FINISHED.
  *
- * THIS DOOR IS DELIBERATELY EMPTY OF MUSICAL ENGINE. It exists to answer one
- * question with evidence, before the engine work is spent: can a door at THIS
- * width load and run offline from file:// with the network disabled and zero
- * console errors? Charter §5 outranks the consolidation; if this cannot, the
- * consolidation stops and becomes doors instead (the item names that as a
- * legitimate outcome).
+ * THE SURFACE (v0.0.4, 2026-08-29 — the identical-to-v0.9 ruling, Daniel
+ * 2026-08-28): the door now builds v0.9's page. Two declared rows (the row
+ * primitive, hub/tools/build.mjs) — Metronome beside the journal at 1fr 3fr,
+ * Harmony · Progression · Presets at 2fr 1fr 1fr — then the chart line, ONE
+ * neck, the readout, the étude, the keys.
  *
- * THE LOCK IS THE SUPERSET — every key any module requires today:
+ * WHAT THIS VERSION STOPS MOUNTING, stated because a door that quietly stops
+ * mounting components is §4.4's silent divergence (also in Update Log
+ * 260829.x): the SEVEN tetrad-pass modules are out — material:"tetrad" left
+ * the lock (fretboard-stage, harmony-panel, shape-motion, chord-timeline,
+ * score-board, keyboard-strip) and transport:true with it (transport-card).
+ * The reasons, per component: v0.9 has ONE neck, and the two-necks keep-both
+ * ruling was superseded 2026-08-28 by identical-to-v0.9 once the kill
+ * measurement was done; the tetrad boards (timeline, staff, keys) and the
+ * transport's walk all derive from tetradPass, which the field path does not
+ * drive — mounted, they would render a disconnected C-major tetrad cycle,
+ * which is not inert, it is WRONG. Multetudes' On The Neck is field-board;
+ * its staff and keys are its own boards (register entries — the family
+ * components were NOT modified to fit); the transport returns with child 7's
+ * progression and walk.
  *
- *   material: "tetrad"   the only material value the module universe knows.
- *                        It reaches the six foundational components' current
- *                        implementations — On The Neck (fretboard-stage), The
- *                        Étude Staff (score-board), On the Keys
- *                        (keyboard-strip) — plus Harmony, Shape & Motion and
- *                        the timeline, all UNMODIFIED (the ruling: presence is
- *                        optional, identity is mandatory; this door chooses to
- *                        be present for all six).
- *   notepad: true        The Practice Log (the ruling: the log and the notepad
- *                        are one item) and the six engine modules behind it.
- *   audio: true          the hub's ears.
- *   transport: true      the Transport card.
- *   field: true          THE ONE NEW KEY, required by hub/modules/field-board.mjs
- *                        (new tonight): the field — key/scale ghosted across
- *                        all six strings — which is Multetudes' first surface
- *                        and the only thing this door adds to the width the
- *                        build had already resolved. The key joins the lock on
- *                        the day a module requires it (§4.2.1's fail-closed
- *                        law), which is today.
- *
- * The reach-set is therefore the widest the build has resolved: everything
- * tetradetudes ships, plus the field board. That is what makes the built file
- * representative for the kill-condition measurement (bytes · parse time from
- * file:// · module count — the three numbers the Update Log entry must carry).
- *
- * §4.4 note, written rather than silent: this skeleton shows TWO necks — the
- * tetrad "On the neck" board (the foundational component, unmodified) above
- * nothing it configures for Multetudes yet, and "The field" board. That is a
- * deliberate property of a measurement skeleton, not a design: the final
- * surface (child 8) decides what Multetudes' On The Neck is, and modifying
- * fretboard-stage to fit tonight is exactly what the item forbids.
+ * The lock:
+ *   field: true            On The Neck (field-board) — children 0–3a.
+ *   notepad: true          The Practice Log (the family's own notepad-card,
+ *                          unmodified), placed by row into v0.9's notepad seat
+ *                          — the pad/log split is a register entry (the CSS
+ *                          ownership wall; see the divergence register).
+ *   audio: true            the hub's ears — dots, keys and staff still sound.
+ *   surface: "multetudes"  v0.9's cards and boards: harmony-card,
+ *                          progression-card (inert — child 7), presets-card,
+ *                          timeline-strip (inert — child 7), readout-strip,
+ *                          staff-board, keys-board.
  */
 export default {
   id: "multetudes",
   lock: {
-    material: "tetrad",
+    field: true,
     notepad: true,
     audio: true,
-    transport: true,
-    field: true,
+    surface: "multetudes",
   },
+  /* THE DECLARED ROWS (v0.9's grid): placement of what the lock reached —
+   * the resolver refuses a row naming anything it does not reach. */
+  rows: [
+    { template: "1fr 3fr", cards: ["metronome-card", "notepad-card"] },
+    { template: "2fr 1fr 1fr", cards: ["harmony-card", "progression-card", "presets-card"] },
+  ],
   present: {
     title: "Multetudes",
-    /* versioned like every sibling; v0.0.x while the door is a skeleton —
-     * the engine children (1+) will carry it toward a first release.
-     * v0.0.2 (2026-08-27, child 2): the field board gains the free string
-     * set — selector, ratified window over the run, box shift, the setIndex
-     * migration alias — over engine/{field,position,string-run}.mjs.
-     * v0.0.3 (2026-08-28, child 3a): the selection rail — Object · Take ·
-     * Placement over engine/selection.mjs (Route B); the line takes over the
-     * field; a scale switches placement off with the reason on the label. */
-    blurb: "one tool that holds many études — the skeleton door · v0.0.3",
-    footer: "A hub door built from hub/doors/multetudes.door.mjs. Not a published study.",
+    /* v0.0.1 (260827, child 0): the skeleton — the kill condition measured,
+     * did not fire. v0.0.2 (260827, child 2): the free string set. v0.0.3
+     * (260828, child 3a): the selection rail over engine/selection.mjs.
+     * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
+     * the harmony/progression/presets cards, the chart line, the readout,
+     * the étude and the keys; the tetrad-pass modules unmounted (see above). */
+    blurb: "one tool that holds many études · v0.0.4",
+    footer: "A hub door built from hub/doors/multetudes.door.mjs. Not a published study. " +
+      "Colour is function against the key — or the reference, when one re-roots the field. " +
+      "The bracket right of the string numbers will be an order once figures land (child 3b).",
   },
 };

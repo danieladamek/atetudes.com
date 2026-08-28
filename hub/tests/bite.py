@@ -316,7 +316,7 @@ def m11_field_walk_loses_a_string():
 # toggled sequence (the design's start degree read off the hint) can see it.
 def m12_set_change_resets_the_design():
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        "      const moved = reanchor(cur.pos, next, fld);\n"
+        "      const moved = reanchor(curB.pos, next, fld);\n"
         "      cfg = { ...cfg, strings: next, startDeg: moved.startDeg, nearFret: moved.fLo };",
         "      cfg = { ...cfg, strings: next, startDeg: 0, nearFret: 5 };")
     try:
@@ -393,6 +393,29 @@ def m15_scale_material_silently_halved():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 16
+# MULTETUDES surface: a card moved between rows. The first red run of the diff
+# gate proved width ratios alone measure nothing here — the seating identity
+# check (who sits in each row, read off each card's own controls) is what must
+# bite, and this keeps it mutation-proven.
+def m16_card_moved_between_rows():
+    p, original, mutated = patch("hub/doors/multetudes.door.mjs",
+        '    { template: "1fr 3fr", cards: ["metronome-card", "notepad-card"] },\n'
+        '    { template: "2fr 1fr 1fr", cards: ["harmony-card", "progression-card", "presets-card"] },',
+        '    { template: "1fr 3fr", cards: ["metronome-card", "harmony-card"] },\n'
+        '    { template: "2fr 1fr 1fr", cards: ["notepad-card", "progression-card", "presets-card"] },')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the rows seat the wrong cards" in r.stdout
+        record("a card moved between rows",
+               r.returncode != 0 and hit,
+               "suite exit %d; the seating identity check bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
@@ -401,7 +424,8 @@ def main():
                m7_checkbox_only_row_returns, m8_moved_accents_dead, m9_moved_voice_dead,
                m10_field_frozen_on_key_change, m11_field_walk_loses_a_string,
                m12_set_change_resets_the_design, m13_live_setindex_hijacks_the_field,
-               m14_take_collapses_into_placement, m15_scale_material_silently_halved):
+               m14_take_collapses_into_placement, m15_scale_material_silently_halved,
+               m16_card_moved_between_rows):
         try:
             fn()
         except BuildBroken as e:

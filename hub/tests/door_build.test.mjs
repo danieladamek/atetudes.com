@@ -53,6 +53,7 @@ function markers(rel, retained) {
   return { names, lines };
 }
 
+const escapeRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const has = (html, m) => new RegExp("\\b" + m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(html);
 
 test("hub: every door resolves — ownership rule and the static-derivation bans hold", async () => {
@@ -83,11 +84,18 @@ test("hub: every door builds, and the artifact carries exactly its reach-set", a
         `[${d}] built file carries no marker of REACHED ${rel}`);
     }
     // markup and styles: a pruned module's tokens in any form they could survive
-    for (const tok of r.tokensAbsent)
-      for (const form of [`id="${tok}"`, `class="${tok}"`, `#${tok}`, `.${tok}`])
+    for (const tok of r.tokensAbsent) {
+      for (const form of [`id="${tok}"`, `class="${tok}"`])
         assert.ok(!html.includes(form),
           `[${d}] built file contains ${form} — its module is pruned, so neither its ` +
           `markup nor its styles may ship`);
+      // boundary-matched: ".cur" must not hit ".currentTime" — the marker
+      // lesson in the markup grep (mirrors door_locks.py, 260829)
+      for (const pre of ["#", "."])
+        assert.ok(!new RegExp(escapeRe(pre + tok) + "(?![\\w-])").test(html),
+          `[${d}] built file contains ${pre}${tok} — its module is pruned, so neither its ` +
+          `markup nor its styles may ship`);
+    }
     assert.ok(r.tokensAbsent.length || !r.modulesOut.length,
       `[${d}] modules were pruned but own no markup tokens — the markup grep is vacuous`);
     for (const c of r.controlsAbsent)
