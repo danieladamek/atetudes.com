@@ -384,6 +384,30 @@ export async function resolveDoor(doorId) {
     }
   }
 
+  /* SEATS (the parts primitive, build half): a door may seat a module's
+   * named part away from the module's own mount. The reach law is validated
+   * here — a seat naming an unreached module is refused by name; whether the
+   * part EXISTS in that module's markup is the build's to check, where the
+   * markup is. */
+  const seats = door.seats ?? [];
+  {
+    if (!Array.isArray(seats)) throw new Error(`${rel(doorFile)}: seats must be an array of { part, mount_point, order? }`);
+    const rootIds = new Set(roots.map((m) => m.id));
+    const seen = new Set();
+    for (const st of seats) {
+      if (!st || typeof st.part !== "string" || !/^[\w-]+#[\w-]+$/.test(st.part))
+        throw new Error(`${rel(doorFile)}: a seat names "moduleId#partName", not ${JSON.stringify(st && st.part)}`);
+      const id = st.part.split("#")[0];
+      if (!rootIds.has(id))
+        throw new Error(`${rel(doorFile)}: seat "${st.part}" names "${id}", which this lock does not reach — ` +
+          `seats place reached modules' parts, never extend the reach-set`);
+      if (seen.has(st.part)) throw new Error(`${rel(doorFile)}: "${st.part}" is seated twice`);
+      seen.add(st.part);
+      if (typeof st.mount_point !== "string" || !st.mount_point)
+        throw new Error(`${rel(doorFile)}: seat "${st.part}" needs a mount_point`);
+    }
+  }
+
   const present = [...new Set(roots.flatMap((m) => m.controls))].sort();
   const absent = [...new Set(prunedMods.flatMap((m) => m.controls))].sort();
   const both = present.filter((c) => absent.includes(c));
@@ -395,6 +419,7 @@ export async function resolveDoor(doorId) {
     lock: door.lock,
     present: door.present,
     rows,
+    seats,
     modulesIn: roots.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,
       controls: m.controls, owns: [...owned.get(m.id)].sort() })),
     modulesOut: prunedMods.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,

@@ -52,6 +52,54 @@ const ROW_WRAPPER = {
 `,
 };
 
+/* NAMED PARTS (the parts primitive, 2026-08-30 — register entry 4's route):
+ * a module's markup may mark regions as a named part —
+ *
+ *   <!--part:log--> … <!--/part:log-->
+ *
+ * (several regions may share one name; they concatenate in source order), and
+ * a DOOR may seat a part away from the module's own mount:
+ *
+ *   seats: [{ part: "notepad-card#log", mount_point: "boards", order: 96 }]
+ *
+ * A door that seats nothing gets the DEFAULT ASSEMBLY: the markers are
+ * stripped and every byte of markup renders at the module's own seat, in
+ * source order — so a door that never heard of parts builds the exact page it
+ * always built. THE LAW THIS KEEPS is the row primitive's own: seating is
+ * PLACEMENT of what the lock already reached — one module, one state, one
+ * mount of script; only markup regions move. That is why the journal can sit
+ * pad-in-row-1, log-at-the-foot without a second importer of
+ * notepad-surface.mjs — the CSS ownership wall (register entry 4) never
+ * fires, because the RESOLVER never sees a new module. And like the row
+ * primitive, this lives in the build half, which ships in nothing: the
+ * additive proof (other doors byte-identical) gates it. */
+const PART_OPEN = /<!--part:([\w-]+)-->/g;
+const PART_REGION = /<!--part:([\w-]+)-->([\s\S]*?)<!--\/part:\1-->/g;
+
+/** the named parts of a markup string: Map(name → concatenated regions) */
+function partsOf(markup) {
+  const out = new Map();
+  for (const m of markup.matchAll(PART_REGION))
+    out.set(m[1], (out.get(m[1]) ?? "") + m[2]);
+  // an unpaired marker is a silent half-part — refuse it by name
+  const opens = [...markup.matchAll(PART_OPEN)].length;
+  const paired = [...markup.matchAll(PART_REGION)].length;
+  if (opens !== paired)
+    throw new Error(`a part marker is unpaired (${opens} opens, ${paired} paired regions) — ` +
+      "an unpaired marker would ship half a part in silence");
+  return out;
+}
+
+/** the module's markup with `seated` parts removed and all markers stripped —
+ * the default assembly when `seated` is empty. NO trim: the old path passed
+ * markup through verbatim, and a stripped leading newline is a byte moved in
+ * every door (the additive proof caught exactly that on this function's first
+ * draft, 2026-08-30). */
+function markupWithout(markup, seated) {
+  return markup
+    .replace(PART_REGION, (whole, name, inner) => (seated.has(name) ? "" : inner));
+}
+
 /* Each module is inlined inside its own IIFE that returns its exports, and
  * its imports are destructured from the namespaces of the modules already
  * emitted. This is the shipped study's own convention (`const CHORD = (() =>
@@ -127,13 +175,42 @@ async function build(id) {
   const rowed = new Set(rows.flatMap((row) => row.cards));
   const rowHtml = new Map();
   const rowedMounts = new Set();
-  for (const m of placed) {
-    const where = m.mount_point ?? "cards";
-    const wrap = shell.WRAPPERS[where];
-    if (!wrap) throw new Error(`${m.id}: unknown mount point "${where}" — the shell offers ${Object.keys(shell.WRAPPERS).join(", ")}`);
-    const html = wrap.html(m.markup, m.wrap_class);
-    if (where !== "hidden" && rowed.has(m.id)) { rowHtml.set(m.id, html); rowedMounts.add(where); }
-    else slots[where].push(html);
+  /* the door's seated parts, grouped by module — the resolver proved the ids
+   * are reached; the part names are checked here against the markup itself */
+  const seatedBy = new Map();
+  for (const st of (r.seats ?? [])) {
+    const [id, name] = st.part.split("#");
+    (seatedBy.get(id) ?? seatedBy.set(id, new Map()).get(id)).set(name, st);
+  }
+  /* one ordered list of PLACEABLES — the modules (their markup minus any
+   * seated parts, markers stripped either way) and the seated parts, each
+   * with its own order. With no seats this reduces exactly to the old loop:
+   * the placed list was already order-sorted and the sort below is stable. */
+  const placeables = [];
+  placed.forEach((m, i) => {
+    const seated = seatedBy.get(m.id) ?? new Map();
+    const parts = partsOf(m.markup);
+    for (const name of seated.keys())
+      if (!parts.has(name))
+        throw new Error(`the door seats "${m.id}#${name}", but the module marks no part "${name}" — ` +
+          `the marked parts are: ${[...parts.keys()].join(", ") || "(none)"}`);
+    placeables.push({ order: m.order ?? 0, idx: i, id: m.id,
+      mount: m.mount_point ?? "cards", wrap_class: m.wrap_class,
+      html: markupWithout(m.markup, new Set(seated.keys())), rowable: true });
+    for (const [name, spec] of seated)
+      placeables.push({ order: spec.order ?? 0, idx: i, id: m.id + "#" + name,
+        mount: spec.mount_point, wrap_class: spec.wrap_class,
+        html: parts.get(name), rowable: false });
+  });
+  placeables.sort((a, b) => (a.order - b.order) || (a.idx - b.idx));
+  for (const pl of placeables) {
+    const wrap = shell.WRAPPERS[pl.mount];
+    if (!wrap) throw new Error(`${pl.id}: unknown mount point "${pl.mount}" — the shell offers ${Object.keys(shell.WRAPPERS).join(", ")}`);
+    if (!pl.rowable && pl.mount === "hidden")
+      throw new Error(`${pl.id}: a part cannot be seated hidden — a part that ships invisibly is half a module in silence`);
+    const html = wrap.html(pl.html, pl.wrap_class);
+    if (pl.rowable && pl.mount !== "hidden" && rowed.has(pl.id)) { rowHtml.set(pl.id, html); rowedMounts.add(pl.mount); }
+    else slots[pl.mount].push(html);
   }
   for (const id of rowed)
     if (!rowHtml.has(id))
