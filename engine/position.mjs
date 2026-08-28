@@ -119,6 +119,22 @@ export function materialIn(pos, strings, fld) {
   return out;
 }
 
+/** reanchor(position, strings, field) → the same DESIGN on a new set: the
+ * relative-state doctrine's mechanism for the window (Multetudes child 2).
+ * The design is anchor-relative — start degree against the reference — so a
+ * set change keeps the start degree, moves the anchor to the new set's
+ * lowest-pitch string, and re-derives NEAR THE OLD CENTRE so the box slides
+ * rather than jumping (pivotWindow's own nearest rule, unrepeated). The
+ * design survives; nothing resets. */
+export function reanchor(pos, strings, fld) {
+  const anchorString = Math.max(...strings);       // lowest pitch in the set
+  const next = positionOf({ field: fld, anchorString,
+    startDegree: pos.startDeg, nearFret: Math.round(pos.centre) });
+  if (next.startDeg !== pos.startDeg)
+    throw new Error("reanchor: the design's start degree did not survive the set change");
+  return next;
+}
+
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */
 
 {

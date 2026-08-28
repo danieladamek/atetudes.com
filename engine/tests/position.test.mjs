@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { field, notesOn } from "../field.mjs";
-import { positionOf, step, regionOf, materialIn } from "../position.mjs";
+import { positionOf, step, regionOf, materialIn, reanchor } from "../position.mjs";
 import { pivotWindow } from "../string-sets.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -104,6 +104,44 @@ test("the region: a set is a SET — {6,4,3,1} is as legal as {4,3,2,1}, and the
   assert.throws(() => regionOf(p, [4, 3, 2, 1]), /anchor/,
     "a region that quietly dropped its anchor would be the silent-failure class");
   assert.throws(() => regionOf(p, [4, 4, 3]), /repeats/);
+});
+
+test("reanchor: changing the set translates the design instead of resetting it", () => {
+  const f = field({ key: "Bb", scale: "major", ref: 1 });   // C Dorian
+  const p = positionOf({ field: f, anchorString: 6, startDegree: 4, nearFret: 3 });
+  // the set loses string 6; the anchor moves to the new lowest-pitch string,
+  // the START DEGREE survives, and the box lands near where it was
+  const moved = reanchor(p, [5, 4, 3, 2], f);
+  assert.equal(moved.anchorString, 5);
+  assert.equal(moved.startDeg, p.startDeg, "the design is the start degree — it must survive");
+  // the box slides AS LITTLE AS THE FIELD ALLOWS: among the window-fitting
+  // occurrences of the start degree on the new anchor, the nearest to the old
+  // centre wins. (A first draft asserted a fixed slide distance and was seen
+  // red on clean sources — G lives only at fret 10 on string 5 here, so the
+  // box MUST travel. The assertion describes the mechanism, not a hope.)
+  const occs = notesOn(5, f).filter((n) => n.deg === p.startDeg);
+  const fitting = occs.filter((n) => notesOn(5, f).findIndex((x) => x.fret === n.fret)
+    <= notesOn(5, f).length - 3);
+  const nearest = fitting.reduce((a, b) =>
+    Math.abs(b.fret - p.centre) < Math.abs(a.fret - p.centre) ? b : a);
+  assert.equal(moved.fLo, nearest.fret, "the box lands on the nearest occurrence the window fits");
+  // and back to a set anchored on string 6: G at fret 15 cannot start a full
+  // window, so the design lands back on the original box — asserted through
+  // the same mechanism, not assumed as a round-trip law
+  const back = reanchor(moved, [6, 4, 3, 1], f);
+  assert.equal(back.startDeg, p.startDeg);
+  assert.deepEqual(back.frets, p.frets, "here the only window-fitting G on string 6 is the original");
+  // the case that separates NEAR-THE-OLD-CENTRE from any fixed habit: A (deg 5
+  // here) starts a window on string 5 at fret 0 AND fret 12, so only reading
+  // the old centre picks correctly. From a box centred ~6.3, fret 12 is the
+  // nearer start; a reanchor that reached for the nut would land on 0. (The
+  // first fixture alone could not see this — G fits one window on string 5 —
+  // which the doctrine's sabotage run exposed: the sabotage did not bite.)
+  const pA = positionOf({ field: f, anchorString: 4, startDegree: 5, nearFret: 7 });
+  assert.deepEqual(pA.frets, [7, 8, 10], "A–B♭–C on string 4, centred 8.3");
+  const movedA = reanchor(pA, [5, 4, 3, 2], f);
+  assert.equal(movedA.fLo, 12,
+    "|12−8| beats |0−8| — the nearer of the two window-fitting A's wins");
 });
 
 test("materialIn is UNCAPPED: the pool holds every field note the window offers", () => {

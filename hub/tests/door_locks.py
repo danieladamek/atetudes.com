@@ -272,7 +272,88 @@ def run_door(pw, door_id):
         check(page.evaluate("() => window.__fdNote") == first_midi,
               f"{tag} clicking a field dot did not announce its NOTE "
               f"({page.evaluate('() => window.__fdNote')} vs {first_midi})")
-        page.select_option("#keySel", "C")          # leave the door as it booted
+
+        # ---- child 2: the window, the set, the translation, the alias ----
+        hint = lambda: page.inner_text("#fdHint")
+        ord_of = lambda: re.search(r"from the (\S+) on string (\d)", hint()).groups()
+        frets_of = lambda: re.search(r"frets (\d+)–(\d+)", hint()).groups()
+        check("Strings E–B–G–D–A–E" in hint(),
+              f"{tag} the six-string run's derived label is not in the hint: {hint()!r}")
+        # the window steps — box shift, reversible, read off the artifact
+        h0, f0 = hint(), frets_of()
+        page.focus("#fieldSvg")
+        page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)
+        check(frets_of() != f0 or ord_of() != ("root", "6"),
+              f"{tag} ArrowRight did not step the window: {hint()!r}")
+        check(ord_of()[0] == "2nd", f"{tag} one step from the root must start on the 2nd: {hint()!r}")
+        page.keyboard.press("ArrowLeft"); page.wait_for_timeout(80)
+        check(hint() == h0, f"{tag} step right then left did not return the same window")
+        page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)   # park on the 2nd
+        stepped_ord = ord_of()[0]
+        # dropping string 5: the set is a SET, the frame stays honest, and the
+        # DESIGN SURVIVES — the start degree does not reset with the set
+        page.click('#fieldSvg [data-fdstr="5"]'); page.wait_for_timeout(100)
+        check("(skipped)" in hint(), f"{tag} a skipped run must say so: {hint()!r}")
+        check(ord_of()[0] == stepped_ord,
+              f"{tag} changing the set RESET the design — the window must translate "
+              f"({stepped_ord} -> {ord_of()[0]})")
+        sq5_fill = page.get_attribute('#fieldSvg [data-fdstr="5"] rect', "fill")
+        check(sq5_fill == "#fff", f"{tag} the excluded string's square is not hollow: {sq5_fill}")
+        dim5 = page.evaluate("""() => {
+          const m = /frets (\\d+)–(\\d+)/.exec(document.getElementById('fdHint').textContent);
+          const [lo, hi] = [+m[1], +m[2]];
+          const dots = [...document.querySelectorAll('#fieldSvg [data-str="5"]')]
+            .filter(g => +g.dataset.fret >= lo && +g.dataset.fret <= hi);
+          return dots.length && dots.every(g => +g.getAttribute('opacity') < 0.28); }""")
+        check(dim5, f"{tag} the excluded string's dots inside the frame do not read as excluded")
+        page.click('#fieldSvg [data-fdstr="5"]'); page.wait_for_timeout(100)
+        check("(skipped)" not in hint(), f"{tag} re-adding string 5 did not restore the contiguous run")
+        # THE ALIAS: a restored pre-run snapshot (setIndex + key, no strings)
+        # translates through the enumeration it indexed, and the board
+        # announces the RUN — never setIndex back (no dual-write). A LIVE
+        # Shape & Motion push (setIndex without key) must NOT migrate: two set
+        # controls coexist in this skeleton, by written decision.
+        page.evaluate("""() => { window.__fdCfg = [];
+          document.addEventListener('atetudes:config', e => window.__fdCfg.push(e.detail)); }""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { setIndex: 1, families: ["drop2"] } }))""")
+        page.wait_for_timeout(120)
+        check("E–B–G–D–A–E" in hint(),
+              f"{tag} a live shape-half setIndex (no key) hijacked the field: {hint()!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'D', setIndex: 2 } }))""")
+        page.wait_for_timeout(120)
+        check("Strings E–B–G–D" in hint() and "string 4" in hint(),
+              f"{tag} setIndex 2 did not migrate to the run it indexed: {hint()!r}")
+        echoed = page.evaluate("""() => window.__fdCfg.find(m => m && m.strings)""")
+        check(echoed is not None and echoed.get("strings") == [4, 3, 2, 1]
+              and "setIndex" not in echoed,
+              f"{tag} the migrated run was not announced as strings-without-setIndex: {echoed}")
+        # SAVE, CHANGE, RESTORE: the étude restores byte-identically — the
+        # hint reproduces exactly, and the stored entry's bytes never move
+        saved_hint = hint()
+        page.click("#saveEntry"); page.wait_for_timeout(120)
+        entry_before = page.evaluate(
+            "() => JSON.stringify(JSON.parse(localStorage.getItem('multetudes.v1.log')).entries[0])")
+        page.click('#fieldSvg [data-fdstr="2"]'); page.wait_for_timeout(100)
+        check(hint() != saved_hint, f"{tag} changing the set changed nothing to restore")
+        page.click(".hist .acts button >> text=Restore étude"); page.wait_for_timeout(150)
+        check(hint() == saved_hint,
+              f"{tag} the restored étude is not the saved one:\n  saved    {saved_hint!r}\n  restored {hint()!r}")
+        entry_after = page.evaluate(
+            "() => JSON.stringify(JSON.parse(localStorage.getItem('multetudes.v1.log')).entries[0])")
+        check(entry_before == entry_after,
+              f"{tag} restore rewrote the saved entry — no dual-write, no reinterpretation")
+        page.click(".hist .acts button.danger"); page.wait_for_timeout(100)
+        check(page.eval_on_selector_all(".hist", "e => e.length") == 0,
+              f"{tag} the exercise entry was not deleted — later notepad gates would miscount")
+
+        # leave the door as it booted: the shape half back to set 0 (the
+        # synthetic snapshots above moved Shape & Motion's own segment, and the
+        # later winSeg/bind gates read the tetrad neck's default geometry)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { setIndex: 0 } }))""")
+        page.select_option("#keySel", "C")
         page.wait_for_timeout(120)
 
     # ---------------- exercise the door -------------------------------------

@@ -310,13 +310,55 @@ def m11_field_walk_loses_a_string():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 12
+# MULTETUDES child 2: a set change RESETS the window instead of translating
+# it. The page loads clean and looks right; only the gate's stepped-then-
+# toggled sequence (the design's start degree read off the hint) can see it.
+def m12_set_change_resets_the_design():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "      const moved = reanchor(cur.pos, next, fld);\n"
+        "      cfg = { ...cfg, strings: next, startDeg: moved.startDeg, nearFret: moved.fLo };",
+        "      cfg = { ...cfg, strings: next, startDeg: 0, nearFret: 5 };")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "RESET the design" in r.stdout
+        record("a set change resets the window's design",
+               r.returncode != 0 and hit,
+               "suite exit %d; the translation gate bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutation 13
+# MULTETUDES child 2: the setIndex migration loses its restored-snapshot guard
+# and a LIVE shape-half announcement hijacks the field's six-string run — the
+# defect the cold-load debugging actually found (mount order is import order).
+def m13_live_setindex_hijacks_the_field():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '      } else if ("setIndex" in m && !("strings" in m) && "key" in m',
+        '      } else if ("setIndex" in m && !("strings" in m)')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "hijacked the field" in r.stdout or "derived label is not in the hint" in r.stdout
+        record("a live shape-half setIndex hijacks the field",
+               r.returncode != 0 and hit,
+               "suite exit %d; the coexistence gate bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
                m3_styles_shipped_regardless_of_reach, m4_markup_shipped_regardless_of_reach,
                m5_dynamic_import_and_lookup_by_string, m6_new_module_no_door_edited,
                m7_checkbox_only_row_returns, m8_moved_accents_dead, m9_moved_voice_dead,
-               m10_field_frozen_on_key_change, m11_field_walk_loses_a_string):
+               m10_field_frozen_on_key_change, m11_field_walk_loses_a_string,
+               m12_set_change_resets_the_design, m13_live_setindex_hijacks_the_field):
         try:
             fn()
         except BuildBroken as e:

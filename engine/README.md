@@ -78,6 +78,13 @@ engine/
 │                        shift; regionOf() names the drawn rectangle apart
 │                        from isolation.mjs's single-string zone (G9);
 │                        materialIn() is the UNCAPPED pool (pure)
+├── string-run.mjs       THE FREE STRING SET (Multetudes): any run of strings,
+│                        contiguous or skipped, stored as the array itself;
+│                        labels derived from the open strings' pitch classes
+│                        (never enumerated — greped); fromSetIndex the
+│                        load-time migration alias; translateFigure wires
+│                        string-sets.mjs and rules the unequal-size case:
+│                        exact growing, clamp-to-top-and-REPORT shrinking (pure)
 ├── string-sets.mjs      slot/degree translation across string sets (pure)
 ├── motion.mjs           the motion grammar: figures, approaches, resolution against
 │                        a chord context; the sketchpad's emitter (pure)
