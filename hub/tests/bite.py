@@ -603,6 +603,26 @@ def m24_the_boot_refuses_its_second_bar():
         p.write_text(original)
 
 
+def m25_take_does_movement_duty_again():
+    # Daniel's 260905 model correction, regressed: the walk derives the
+    # spread from the MATERIAL again ("The Take field ... is doing movement
+    # (partial) duty here which it shouldn't be"). The decoupling pins must
+    # name the forbidden coupling from the sound itself.
+    p, original, mutated = patch("hub/modules/etude-walk.mjs",
+        'const spread = cfg.object === "scale" || cfg.movement === "arpeggio";',
+        'const spread = cfg.object === "scale" || cfg.take === "all";')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "must not forbid the movement" in r.stdout or "must \nnot decide the movement" in r.stdout or "not decide the movement" in r.stdout
+        record("Take does movement duty again",
+               r.returncode != 0 and hit,
+               "suite exit %d; a decoupling pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -654,7 +674,7 @@ def main():
                m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window,
                m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving,
                m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window,
-               m24_the_boot_refuses_its_second_bar)
+               m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again)
     preflight(fns)
     for fn in fns:
         try:

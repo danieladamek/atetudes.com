@@ -65,6 +65,7 @@ export const staffBoard = {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
+      movement: "block",
       address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
     let meter = 4;
@@ -165,7 +166,9 @@ export const staffBoard = {
 
         const figHere = ci === index && fig.order && fig.order.length ? fig.order : null;
         const seq = figHere || sels[ci];
-        const stacked = !figHere && cfg.object !== "scale" && cfg.take !== "all";
+        /* 260905: A CHORD STACKS; A RUN DOES NOT — and which one this bar is
+         * became the MOVEMENT control's fact, not Take's (Take is material) */
+        const stacked = !figHere && cfg.object !== "scale" && cfg.movement !== "arpeggio";
         seq.forEach((nt, k) => {
           const st = stepOf(nt.midi), y = yTreble(st);
           const x = stacked ? x0 + BW * 0.34

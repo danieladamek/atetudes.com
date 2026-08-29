@@ -589,7 +589,7 @@ def run_door(pw, door_id):
         # carries the styles for its own seg (the minis' own idiom). Pinned
         # at the COMPUTED STYLE: exactly one .on per group, visibly darker
         # than its sibling, and it follows a click.
-        for seg in ("fdNSeg", "fdAddrSeg", "pgSrcSeg"):
+        for seg in ("fdNSeg", "fdMoveSeg", "fdAddrSeg", "pgSrcSeg"):
             st = page.evaluate("""(seg) => {
               const on = [...document.querySelectorAll('#' + seg + ' button.on')];
               const off = document.querySelector('#' + seg + ' button:not(.on)');
@@ -910,12 +910,9 @@ def run_door(pw, door_id):
               f"{tag} the chord must hold its WHOLE span — six steps sounded, the advance on the "
               f"next downbeat (the cold play skipped its first chord for a night and a counting "
               f"pin let it; got advance at {((adv[0]['t']-first[0]['t'])/1000.0) if adv else None})")
-        # no figure: a voicing is ONE attack; an arpeggio runs low → high.
-        # Back on BAR 0 first: the figure test advanced the walk to bar 2
-        # (E♭maj7), whose grip HONESTLY cannot place in the boot window (the
-        # 5 and 7 share string 3 — the collide case) and is therefore silent
-        # — a real behaviour, pinned as a question for Daniel, not a stage
-        # for this pin.
+        # no figure: MOVEMENT decides — updated 260905 (these pins previously
+        # asserted the coupling Daniel corrected: take=all forced the spread).
+        # Back on BAR 0 first, as before.
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
         page.select_option("#hcTake", "one"); page.click('#fdNSeg >> text=Grip')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
@@ -926,9 +923,11 @@ def run_door(pw, door_id):
         page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
         heard = page.evaluate("() => window.__nt")
         check(len(heard) >= 4 and (heard[3]["t"] - heard[0]["t"]) < 40,
-              f"{tag} a voicing with no figure sounds TOGETHER: "
+              f"{tag} block movement (the default) sounds TOGETHER: "
               f"{[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:5]]}")
-        page.select_option("#hcTake", "all")
+        # THE DECOUPLING, both directions:
+        # (a) one-of-each + arpeggio — the combination Take used to FORBID
+        page.click('#fdMoveSeg >> text=arpeggio')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
@@ -937,15 +936,29 @@ def run_door(pw, door_id):
         page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
         heard = page.evaluate("() => window.__nt")
         adv = page.evaluate("() => window.__adv")
-        # the advancing echo is LOGGED after the new chord's first note (the
-        # note fires inside the nested dispatch) — cut with a margin well
-        # inside the ~step gap, derived from nothing timing-critical
         cut = (adv[0]["t"] - 50) if adv else float("inf")
-        arp = [h["m"] for h in heard if h["t"] < cut]     # THIS chord's notes only
+        arp = [h["m"] for h in heard if h["t"] < cut]
         check(len(arp) >= 3 and arp == sorted(arp)
               and (heard[1]["t"] - heard[0]["t"]) > 60,
-              f"{tag} an arpeggio with no figure runs LOW TO HIGH across the span: {arp}")
-        page.select_option("#hcTake", "one"); page.wait_for_timeout(150)
+              f"{tag} one-of-each + ARPEGGIO must spread low → high — choosing the "
+              f"material must not forbid the movement: {arp}")
+        # (b) every-occurrence + block — the combination Take used to FORCE
+        # apart. At Line, so the box offers its true seven-note cluster
+        # (Grip's one-per-string cap would leave only four).
+        page.click('#fdMoveSeg >> text=block'); page.select_option("#hcTake", "all")
+        page.click('#fdNSeg >> text=Line')
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(150)
+        page.evaluate("() => { window.__nt = [] }")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(350)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        heard = page.evaluate("() => window.__nt")
+        check(len(heard) >= 5 and (heard[len(heard) - 1]["t"] - heard[0]["t"]) < 40,
+              f"{tag} every-occurrence + BLOCK must sound together — the material must "
+              f"not decide the movement: {[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:8]]}")
+        page.select_option("#hcTake", "one"); page.click('#fdNSeg >> text=Grip')
+        page.wait_for_timeout(150)
         # THE SPLIT, AT THE ARTIFACT: 1+1+1+1 must change when the next chord
         # ARRIVES — one bar per beat, not per metric bar (Daniel's finding:
         # the timeline drew it and the sound ignored it)
@@ -974,6 +987,20 @@ def run_door(pw, door_id):
               f"{tag} the reverse mismatch must be named too: {page.inner_text('#fdFigNote')!r}")
         page.click('#fdAddrSeg >> text=pattern'); page.wait_for_timeout(80)
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
+
+        # ---- 260905 item 2: TAKE IS MATERIAL, MOVEMENT IS THE RAIL'S ----
+        # Daniel: "The Take field in Harmony is doing movement (partial) duty
+        # here which it shouldn't be." The vocabulary is pinned so it cannot
+        # drift back: Harmony's Take options speak material only; the rail's
+        # control speaks his two movement words.
+        take_opts = page.eval_on_selector_all("#hcTake option", "es => es.map(e => e.textContent)")
+        check(all("arpeggio" not in t and "voicing" not in t for t in take_opts)
+              and any("one of each" in t for t in take_opts)
+              and any("every occurrence" in t for t in take_opts),
+              f"{tag} Take must speak MATERIAL, not movement: {take_opts}")
+        move_btns = page.eval_on_selector_all("#fdMoveSeg button", "es => es.map(e => e.textContent.trim())")
+        check(move_btns == ["block", "arpeggio"],
+              f"{tag} the rail's movement control carries Daniel's two words: {move_btns}")
 
         # ---- 260903: SOUND ⊆ SIGHT — corrected 260904 ----
         # The invariant is ONE-DIRECTIONAL, as ruled: the app must never

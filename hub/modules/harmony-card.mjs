@@ -55,8 +55,8 @@ export const harmonyCard = {
   <div class="hc-grid">
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
     <div><label id="hcTakeLab">Take</label><select id="hcTake" data-control="hcTake">
-      <option value="one">a voicing — one of each tone</option>
-      <option value="all">an arpeggio — every one in the box</option>
+      <option value="one">one of each tone</option>
+      <option value="all">every occurrence in the box</option>
     </select></div>
   </div>
   <label id="hcDyadLab" hidden>Which two tones</label>

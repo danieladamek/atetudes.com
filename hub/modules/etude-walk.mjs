@@ -63,7 +63,7 @@ export const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "",
+      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "block",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -116,7 +116,11 @@ export const etudeWalk = {
       /* THE SCHEDULE: the figure's order through orderBy — the same value
        * the bracket and the polyline draw — or the take's own shape */
       const fig = orderBy(cfg.address, cfg.figure, sel);
-      const spread = cfg.object === "scale" || cfg.take === "all";
+      /* 260905, the coupling severed: Take chooses the MATERIAL, the rail's
+       * Movement control chooses together-or-sequence (a scale stays a run —
+       * the box has no chord to sound as one). A typed figure sequences
+       * regardless, as ruled. */
+      const spread = cfg.object === "scale" || cfg.movement === "arpeggio";
       const { events } = walkSchedule(sel, fig.err ? null : fig.order,
         chordBeats(prog), bpm, { spread, refMidi });
       clearPending();

@@ -95,7 +95,7 @@ export const fieldBoard = {
   requires: { field: true },
   mount_point: "boards",
   order: 18,
-  controls: ["fieldSvg", "fdNSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
+  controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn"],
 
   markup: `
@@ -110,6 +110,13 @@ export const fieldBoard = {
       <div class="seg" id="fdNSeg" data-control="fdNSeg">
         <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
         <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+      </div>
+      <div class="fd-cap">Movement</div>
+      <div class="seg" id="fdMoveSeg" data-control="fdMoveSeg">
+        <button data-move="block" class="on"
+          title="the notes sound together — a chord">block</button>
+        <button data-move="arpeggio"
+          title="the notes sound in sequence, low to high across the bar">arpeggio</button>
       </div>
       <div class="fd-cap">The figure is</div>
       <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
@@ -192,11 +199,11 @@ export const fieldBoard = {
  * door's lock never mounts — so the .on state was applied and invisible.
  * Same facts, this module's own selectors (the minis' idiom); the shell
  * stays untouched. */
-#fdNSeg,#fdAddrSeg{display:flex;flex-wrap:wrap;gap:6px}
-#fdNSeg button,#fdAddrSeg button{font:inherit;font-size:12.5px;padding:5px 9px;
+#fdNSeg,#fdMoveSeg,#fdAddrSeg{display:flex;flex-wrap:wrap;gap:6px}
+#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button{font:inherit;font-size:12.5px;padding:5px 9px;
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-#fdNSeg button.on,#fdAddrSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-#fdNSeg button:disabled,#fdAddrSeg button:disabled{opacity:.45;cursor:not-allowed}
+#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#fdNSeg button:disabled,#fdMoveSeg button:disabled,#fdAddrSeg button:disabled{opacity:.45;cursor:not-allowed}
 .fd-dot{cursor:pointer}
 .fd-sel{cursor:pointer}
 .fd-lab{font-weight:bold;pointer-events:none;user-select:none}
@@ -219,6 +226,14 @@ export const fieldBoard = {
        * boot-placement pin's search, not by taste. */
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
       object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
+      /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
+       * Harmony is doing movement (partial) duty here which it shouldn't
+       * be."). Take is MATERIAL — which notes exist (one of each · every
+       * occurrence) — and lives in Harmony. Movement — together or in
+       * sequence — lives HERE with Placement and The Figure, where the
+       * motion lives: block · arpeggio, his two words. A typed figure still
+       * sequences regardless (the night-7 ruling, now in its proper home). */
+      movement: "block",
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -422,6 +437,10 @@ export const fieldBoard = {
         b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
         b.disabled = cfg.object === "scale";
       }
+      for (const b of byId("fdMoveSeg").querySelectorAll("button")) {
+        b.classList.toggle("on", b.dataset.move === cfg.movement);
+        b.disabled = cfg.object === "scale";
+      }
       for (const b of byId("fdAddrSeg").querySelectorAll("button"))
         b.classList.toggle("on", b.dataset.addr === cfg.address);
       byId("fdFigIn").placeholder = cfg.address === "pattern" ? "4,3,4,3,2,1" : "R-3-7-5";
@@ -471,7 +490,7 @@ export const fieldBoard = {
       build();
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
         startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer,
-        address: cfg.address, figure: cfg.figure });
+        address: cfg.address, figure: cfg.figure, movement: cfg.movement });
     };
 
     const setStrings = (next) => {
@@ -554,6 +573,13 @@ export const fieldBoard = {
         cfg = { ...cfg, startDeg: curB.fld.degOf(midi), nearFret: fret };
         push();
       }
+    });
+
+    byId("fdMoveSeg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-move]");
+      if (!b || b.disabled) return;
+      cfg = { ...cfg, movement: b.dataset.move };
+      push();
     });
 
     byId("fieldSvg").addEventListener("keydown", (e) => {
@@ -647,7 +673,7 @@ export const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "bass", "source", "cycle", "form", "custom", "start"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start"])
         if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
       if ("dyad" in m && Array.isArray(m.dyad) && m.dyad.join() !== cfg.dyad.join()) {
         cfg = { ...cfg, dyad: [...m.dyad] }; changed = true;
