@@ -593,8 +593,13 @@ def run_door(pw, door_id):
           [...document.querySelectorAll('#stSvg ellipse[data-stfig]')].map(e => +e.getAttribute('cx'))""")
         check(len(st_xs) == 6 and len(set(st_xs)) == 6,
               f"{tag} the staff must draw the 6-step figure as a run: {len(st_xs)} figure heads, {len(set(st_xs))} x-positions")
-        # tones: derived bracket, greyed
-        page.click('#fdAddrSeg >> text=tones'); page.wait_for_timeout(120)
+        # tones: derived bracket, greyed — with a TONES figure (260902: the
+        # old pattern-shaped figure is now refused by the mode-mismatch
+        # notice instead of being half-read, so the block types the tones
+        # alphabet; the mismatch itself is pinned in the 260902 block)
+        page.click('#fdAddrSeg >> text=tones'); page.wait_for_timeout(80)
+        page.fill("#fdFigIn", "R-3-5-7"); page.dispatch_event("#fdFigIn", "input")
+        page.wait_for_timeout(120)
         bt = brackets()
         typed = {k: v for k, v in bt.items() if v["text"] and "{" in v["text"] and v["fill"] == "#B9B9BF"}
         check(len(typed) >= 1, f"{tag} under tones the bracket is derived and greyed: {bt}")
@@ -797,10 +802,125 @@ def run_door(pw, door_id):
         check(page.evaluate("() => window.__wk.length") == wk0
               and page.inner_text("#metroBtn") == "Start",
               f"{tag} Stop must halt the walk and the clock together")
+
+        # ---- 260902: THE FIGURE REACHES THE SOUND — order and TIMES, not counts ----
+        # (a pin asserting "six NOTEs were announced" passes on the simultaneous
+        # bug this block exists to catch; these pins read the schedule itself)
+        # the spans below assume the boot cycle's four-beat bars — seat it
+        # (the block above leaves the two-bar chart custom playing, whose
+        # 2-beat Cm7 is CORRECT and failed these pins' first run honestly)
+        page.click('#pgSrcSeg >> text=cycle'); page.wait_for_timeout(120)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(120)
+        page.evaluate("""() => { window.__nt = []; window.__adv = [];
+          document.addEventListener('atetudes:note', e =>
+            window.__nt.push({ m: e.detail.midi, t: performance.now() }));
+          document.addEventListener('atetudes:step', e => {
+            if (e.detail && e.detail.request !== true)
+              window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }""")
+        page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
+        page.select_option("#hcTake", "all"); page.click('#fdNSeg >> text=Line')
+        page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
+        page.wait_for_timeout(200)
+        # the expected sequence, DERIVED FROM THE ARTIFACT: the neck's own
+        # figorder steps mapped to their selected midis
+        want_midis = page.evaluate("""() => {
+          const sel = {};
+          for (const g of document.querySelectorAll('#fieldSvg .fd-sel'))
+            sel[g.dataset.selstr + '/' + g.dataset.selfret] = +g.dataset.selmidi;
+          return (document.querySelector('#fieldSvg').getAttribute('data-figorder') || '')
+            .split(',').map(k => sel[k]); }""")
+        check(len(want_midis) == 6 and all(m for m in want_midis),
+              f"{tag} the neck must offer a 6-step figure to walk: {want_midis}")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1150)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        heard = page.evaluate("() => window.__nt")
+        first = heard[:6]
+        span = 4 * 60.0 / 240.0
+        step = span / 6
+        check([h["m"] for h in first] == want_midis,
+              f"{tag} the walk must sound THE FIGURE'S ORDER, the same value the bracket draws: "
+              f"heard {[h['m'] for h in first]}, the neck says {want_midis}")
+        deltas = [(first[i + 1]["t"] - first[i]["t"]) / 1000.0 for i in range(5)]
+        check(all(abs(dl - step) < 0.07 for dl in deltas),
+              f"{tag} the steps must divide the chord's span evenly (~{step:.3f}s): {deltas}")
+        adv = page.evaluate("() => window.__adv")
+        check(len(heard) >= 6 and adv and (adv[0]["t"] - first[0]["t"]) / 1000.0 > span * 0.9,
+              f"{tag} the chord must hold its WHOLE span — six steps sounded, the advance on the "
+              f"next downbeat (the cold play skipped its first chord for a night and a counting "
+              f"pin let it; got advance at {((adv[0]['t']-first[0]['t'])/1000.0) if adv else None})")
+        # no figure: a voicing is ONE attack; an arpeggio runs low → high.
+        # Back on BAR 0 first: the figure test advanced the walk to bar 2
+        # (E♭maj7), whose grip HONESTLY cannot place in the boot window (the
+        # 5 and 7 share string 3 — the collide case) and is therefore silent
+        # — a real behaviour, pinned as a question for Daniel, not a stage
+        # for this pin.
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
+        page.select_option("#hcTake", "one"); page.click('#fdNSeg >> text=Grip')
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+        page.evaluate("() => { window.__nt = [] }")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(350)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        heard = page.evaluate("() => window.__nt")
+        check(len(heard) >= 4 and (heard[3]["t"] - heard[0]["t"]) < 40,
+              f"{tag} a voicing with no figure sounds TOGETHER: "
+              f"{[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:5]]}")
+        page.select_option("#hcTake", "all")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(150)
+        page.evaluate("() => { window.__nt = []; window.__adv = [] }")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1150)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        heard = page.evaluate("() => window.__nt")
+        adv = page.evaluate("() => window.__adv")
+        # the advancing echo is LOGGED after the new chord's first note (the
+        # note fires inside the nested dispatch) — cut with a margin well
+        # inside the ~step gap, derived from nothing timing-critical
+        cut = (adv[0]["t"] - 50) if adv else float("inf")
+        arp = [h["m"] for h in heard if h["t"] < cut]     # THIS chord's notes only
+        check(len(arp) >= 3 and arp == sorted(arp)
+              and (heard[1]["t"] - heard[0]["t"]) > 60,
+              f"{tag} an arpeggio with no figure runs LOW TO HIGH across the span: {arp}")
+        page.select_option("#hcTake", "one"); page.wait_for_timeout(150)
+        # THE SPLIT, AT THE ARTIFACT: 1+1+1+1 must change when the next chord
+        # ARRIVES — one bar per beat, not per metric bar (Daniel's finding:
+        # the timeline drew it and the sound ignored it)
+        page.select_option("#fdSplit", "1+1+1+1"); page.dispatch_event("#fdSplit", "change")
+        page.wait_for_timeout(150)
+        page.evaluate("() => { window.__adv = [] }")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1400)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        adv = page.evaluate("() => window.__adv")
+        beat = 60.0 / 240.0
+        adv_d = [(adv[i + 1]["t"] - adv[i]["t"]) / 1000.0 for i in range(len(adv) - 1)]
+        check(len(adv) >= 3 and all(abs(dl - beat) < 0.09 for dl in adv_d),
+              f"{tag} under 1+1+1+1 the chords must ARRIVE every beat (~{beat:.2f}s): {adv_d}")
+        page.select_option("#fdSplit", "4"); page.dispatch_event("#fdSplit", "change")
+        page.wait_for_timeout(120)
+        # THE MODE MISMATCH is named on the face, with the switch offered
+        page.fill("#fdFigIn", "R-3-5-7"); page.dispatch_event("#fdFigIn", "input")
+        page.wait_for_timeout(150)
+        note = page.inner_text("#fdFigNote")
+        check("reads as a TONES figure" in note and "switch it to tones" in note,
+              f"{tag} R-3-5-7 under pattern must name the likely mode, not report string 5: {note!r}")
+        page.click('#fdAddrSeg >> text=tones'); page.wait_for_timeout(120)
+        page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
+        page.wait_for_timeout(150)
+        check("reads as a string PATTERN" in page.inner_text("#fdFigNote"),
+              f"{tag} the reverse mismatch must be named too: {page.inner_text('#fdFigNote')!r}")
+        page.click('#fdAddrSeg >> text=pattern'); page.wait_for_timeout(80)
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
         # back to the boot state
         page.fill("#bpmRange", "72"); page.dispatch_event("#bpmRange", "input")
         page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")
-        page.fill("#pgCustom", ""); page.dispatch_event("#pgCustom", "input")
+        # pgCustom is HIDDEN once the source is back on cycle (the 260902
+        # block seats the cycle early) — clear it without a visibility wait
+        page.evaluate("""() => { const c = document.querySelector('#pgCustom');
+          c.value = ''; c.dispatchEvent(new Event('input', { bubbles: true })); }""")
         page.click('#pgSrcSeg >> text=cycle'); page.wait_for_timeout(150)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")

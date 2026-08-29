@@ -535,6 +535,26 @@ def m21_typed_romans_stop_resolving():
         p.write_text(original)
 
 
+def m22_the_figure_never_reaches_the_sound():
+    # Daniel's 260902 headline finding, reintroduced: every scheduled event
+    # at time zero — the selection sounds at the chord change and the figure
+    # is derived, drawn, asserted and discarded. Only a pin that reads the
+    # TIMES can bite; a count of NOTE announcements passes this mutation.
+    p, original, mutated = patch("engine/progression.mjs",
+        "const events = seq.map((nt, k) => ({ midi: nt.midi, at: together ? 0 : k * step }));",
+        "const events = seq.map((nt) => ({ midi: nt.midi, at: 0 }));")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "divide the chord's span evenly" in r.stdout
+        record("the figure never reaches the sound",
+               r.returncode != 0 and hit,
+               "suite exit %d; the TIMES pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -584,7 +604,8 @@ def main():
                m14_take_collapses_into_placement, m15_scale_material_silently_halved,
                m16_card_moved_between_rows, m17_part_moved_between_seats,
                m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window,
-               m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving)
+               m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving,
+               m22_the_figure_never_reaches_the_sound)
     preflight(fns)
     for fn in fns:
         try:
