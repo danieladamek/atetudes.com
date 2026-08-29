@@ -47,9 +47,20 @@ def record(name, ok, detail):
     print(("  BITES    " if ok else "  NO BITE  ") + name + " — " + detail)
 
 
+PREFLIGHT = {"on": False, "rotted": [], "checked": 0}
+
+
 def patch(path, find, replace):
     p = REPO / path
     original = p.read_text()
+    if PREFLIGHT["on"]:
+        # THE ANCHOR PREFLIGHT (260902): validate only — return a
+        # byte-identical triple so the mutation body runs without mutating,
+        # and every anchor (m5 carries two) is checked in one sub-second pass
+        PREFLIGHT["checked"] += 1
+        if find not in original:
+            PREFLIGHT["rotted"].append(f"{path}: {find.strip()[:70]!r}")
+        return p, original, original
     assert find in original, f"mutation anchor not found in {path}"
     return p, original, original.replace(find, replace, 1)
 
@@ -524,9 +535,47 @@ def m21_typed_romans_stop_resolving():
         p.write_text(original)
 
 
+MUTATIONS = None      # bound in main() — the one list, preflighted then run
+
+
+def preflight(fns):
+    """Every anchor checked against its file BEFORE any mutation runs. Two of
+    the last three nights lost a full ~80-minute harness run to a rotted
+    anchor (m16, then m19); the 260830 rot guard made rot visible at the end
+    of the run — this makes it visible at the START. Subprocess helpers are
+    stubbed and patch() returns byte-identical writes, so the bodies run
+    without side effects and multi-patch mutations are covered whole."""
+    import types
+    g = globals()
+    real = {k: g[k] for k in ("sh", "build", "suite", "record")}
+    fake = types.SimpleNamespace(returncode=0, stdout="", stderr="")
+    g["sh"] = lambda *a, **k: fake
+    g["build"] = lambda *a, **k: None
+    g["suite"] = lambda *a, **k: fake
+    g["record"] = lambda *a, **k: None
+    PREFLIGHT["on"] = True
+    try:
+        for fn in fns:
+            try:
+                fn()
+            except Exception as e:  # noqa: BLE001 — a crash here is rot too
+                PREFLIGHT["rotted"].append(f"{fn.__name__}: preflight crashed: {e}")
+    finally:
+        PREFLIGHT["on"] = False
+        for k, v in real.items():
+            g[k] = v
+    if PREFLIGHT["rotted"]:
+        print(f"ANCHOR PREFLIGHT: {len(PREFLIGHT['rotted'])} rotted "
+              f"(of {PREFLIGHT['checked']} checked) — fix before running anything:")
+        for r in PREFLIGHT["rotted"]:
+            print("  ROTTED  " + r)
+        sys.exit(1)
+    print(f"anchor preflight: {PREFLIGHT['checked']} anchors checked, none rotted\n")
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
-    for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
+    fns = (m1_shell_styles_a_module, m2_module_styles_another_module,
                m3_styles_shipped_regardless_of_reach, m4_markup_shipped_regardless_of_reach,
                m5_dynamic_import_and_lookup_by_string, m6_new_module_no_door_edited,
                m7_checkbox_only_row_returns, m8_moved_accents_dead, m9_moved_voice_dead,
@@ -535,7 +584,9 @@ def main():
                m14_take_collapses_into_placement, m15_scale_material_silently_halved,
                m16_card_moved_between_rows, m17_part_moved_between_seats,
                m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window,
-               m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving):
+               m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving)
+    preflight(fns)
+    for fn in fns:
         try:
             fn()
         except BuildBroken as e:
