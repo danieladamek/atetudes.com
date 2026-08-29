@@ -464,6 +464,25 @@ def m18_repeat_stops_being_the_ordinal():
         p.write_text(original)
 
 
+def m19_chord_reroots_at_the_window():
+    # tonight's found defect, reintroduced: rooting the chord at the window's
+    # anchor degree boots the door on Gm7 where the ruling (register 11) and
+    # v0.9 hold the B-flat tetrad block. The strengthened boot pin must bite.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "        const keyDeg = fld.ref % 7;",
+        "        const keyDeg = (pos.startDeg + fld.ref) % 7;")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the boot block is not v0.9's B\u266d tetrad" in r.stdout
+        record("the chord reroots at the window's anchor degree",
+               r.returncode != 0 and hit,
+               "suite exit %d; the boot-block pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
@@ -474,7 +493,7 @@ def main():
                m12_set_change_resets_the_design, m13_live_setindex_hijacks_the_field,
                m14_take_collapses_into_placement, m15_scale_material_silently_halved,
                m16_card_moved_between_rows, m17_part_moved_between_seats,
-               m18_repeat_stops_being_the_ordinal):
+               m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window):
         try:
             fn()
         except BuildBroken as e:

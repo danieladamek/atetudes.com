@@ -26,10 +26,10 @@ const KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const SCALES = [["major", "Major"], ["harm", "Harmonic minor"], ["mel", "Melodic minor"]];
 const OBJECTS = [
   ["scale", "Scale or mode", true],
-  ["dyad", "Dyad", false],          // child 4
+  ["dyad", "Dyad", true],           // child 4: two chord tones, by role
   ["triad", "Triad", true],
   ["tetrad", "Tetrad", true],
-  ["shell", "Shell", false],        // child 4
+  ["shell", "Shell", true],         // child 4: R + the guide tones
 ];
 
 export const harmonyCard = {
@@ -38,7 +38,7 @@ export const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcTake", "hcRef"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcTake", "hcRef", "hcDyad"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -59,6 +59,8 @@ export const harmonyCard = {
       <option value="all">an arpeggio — every one in the box</option>
     </select></div>
   </div>
+  <label id="hcDyadLab" hidden>Which two tones</label>
+  <select id="hcDyad" data-control="hcDyad" hidden></select>
   <div class="hc-cap">the reference underneath</div>
   <label id="hcRefLab">Reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
@@ -69,7 +71,8 @@ export const harmonyCard = {
 .hc-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
   font-weight:bold;margin:10px 0 5px}
 #hcNote{margin-top:7px}
-#hcRef{width:100%}`,
+#hcRef,#hcDyad{width:100%}
+#hcDyadLab[hidden],#hcDyad[hidden]{display:none}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -78,7 +81,7 @@ export const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
-    let cfg = { key: "Bb", scale: "major", object: "tetrad", take: "one", ref: 0, bass: "none" };
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", take: "one", ref: 0, bass: "none", dyad: [3, 7] };
 
     const fill = (sel, items, current) => {
       sel.textContent = "";
@@ -97,6 +100,17 @@ export const harmonyCard = {
       fill(byId("hcObj"), OBJECTS.map(([v, l, live]) => ({ value: v, label: l,
         disabled: !live, title: live ? "" : "arrives with child 4 (dyads, and the chord vocabulary)" })),
         cfg.object);
+      /* THE DYAD MENU (child 4): v0.9's six pairs — every 2-subset of the
+       * chord-tone degrees {1,3,5,7}, guide tones first. The pair LIST is
+       * combinatorics, the labels are derived from the degrees; what a pair
+       * MEANS in offsets is objectOffsets' business, stated once. */
+      const DEGNAME = { 1: "Root", 3: "3rd", 5: "5th", 7: "7th" };
+      const PAIRS = [[3, 7], [1, 3], [1, 5], [1, 7], [3, 5], [5, 7]];
+      fill(byId("hcDyad"), PAIRS.map((p) => ({ value: p.join(","),
+        label: `${DEGNAME[p[0]]} + ${DEGNAME[p[1]]}` + (p[0] === 3 && p[1] === 7 ? " \u2014 guide tones" : "") })),
+        cfg.dyad.join(","));
+      byId("hcDyadLab").hidden = cfg.object !== "dyad";
+      byId("hcDyad").hidden = cfg.object !== "dyad";
       const isScale = cfg.object === "scale";
       byId("hcTake").value = cfg.take;
       byId("hcTake").disabled = isScale;
@@ -130,17 +144,19 @@ export const harmonyCard = {
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
-    const MINE = ["key", "scale", "object", "take", "ref", "bass"];
+    const MINE = ["key", "scale", "object", "take", "ref", "bass", "dyad"];
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of MINE) if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+      for (const k of MINE) if (k in m && !same(m[k], cfg[k])) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
       if (changed) render();
     });
 
     byId("hcKey").addEventListener("change", (e) => { cfg = { ...cfg, key: e.target.value }; push(); });
     byId("hcScale").addEventListener("change", (e) => { cfg = { ...cfg, scale: e.target.value }; push(); });
     byId("hcObj").addEventListener("change", (e) => { cfg = { ...cfg, object: e.target.value }; push(); });
+    byId("hcDyad").addEventListener("change", (e) => { cfg = { ...cfg, dyad: e.target.value.split(",").map(Number) }; push(); });
     byId("hcTake").addEventListener("change", (e) => { cfg = { ...cfg, take: e.target.value }; push(); });
     byId("hcRef").addEventListener("change", (e) => {
       const v = e.target.value;

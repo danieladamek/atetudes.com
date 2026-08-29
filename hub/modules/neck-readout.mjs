@@ -14,7 +14,7 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { diatonicTones, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, listen } from "../bus.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
@@ -42,7 +42,7 @@ export const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1 };
+      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] };
 
     const render = () => {
       const asserts = [], fails = [];
@@ -63,8 +63,13 @@ export const neckReadout = {
         let sel = [], msg = "";
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
         else {
-          const tones = diatonicTones(fld, (pos.startDeg + fld.ref) % 7,
-            cfg.object === "triad" ? [0, 2, 4] : [0, 2, 4, 6]);
+          /* the chord roots at the CURRENT TONIC (fld.ref; the key until a mode
+                   * re-roots it) — startDeg anchors only the WINDOW. Corrected 260831:
+                   * rooting at startDeg booted the door on Gm7 where v0.9 and the ruled
+                   * boot (register 11) hold the B♭maj7 block. The timeline's chords
+                   * arrive with child 7 and will own this value. */
+          const tones = diatonicTones(fld, fld.ref % 7,
+            objectOffsets(cfg.object, cfg.dyad));
           const r = cfg.take === "all"
             ? everyOccurrence(tones, pool, { n: cfg.notesPer })
             : oneOfEach(tones, pool, { n: cfg.notesPer, centre: pos.centre });

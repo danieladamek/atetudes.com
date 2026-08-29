@@ -42,6 +42,14 @@ engine/
 │                        drop-2, drop-3, the shells (arity 3, a separate stream)
 │                        and rootless 3-5-7-9. Voicing only — chord VOCABULARY
 │                        stays in chord.mjs. Feeds isolation.mjs's candidatesFor
+├── triad-voicings.mjs   THE TRIAD CANDIDATE GENERATOR (Multetudes child 4),
+│                        extracted from the shelved Triadetudes study and
+│                        pinned DIFFERENTIALLY against it through the
+│                        read-only loader, candidate for candidate. One rule
+│                        (a rotation walked strictly up the set), no shape
+│                        tables; quality from chord.mjs; the inversion READ
+│                        BACK from the result; more than three tones refuses
+│                        by name — the coreTetrad silent-slice lesson (pure)
 ├── tetrad-sequence.mjs  THE DERIVED PASS: a scale, a cycle, and the voiced
 │                        chords that walk it. Diatonic tetrads by stacking
 │                        scale thirds; cycles as one integer each; the bottom

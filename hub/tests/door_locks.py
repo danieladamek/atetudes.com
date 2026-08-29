@@ -275,6 +275,16 @@ def run_door(pw, door_id):
               and page.eval_on_selector_all("#stSvg ellipse", "e => e.length") >= 4
               and page.eval_on_selector_all("#kySvg circle", "e => e.length") == 4,
               f"{tag} the staff and the keys are not populated on first paint")
+        # ... and the block is THE B♭ TETRAD — the chord roots at the KEY, not
+        # at the window's anchor degree. Found 260831 (child 4): the door
+        # booted on Gm7 (the startDeg chord) while v0.9 boots on B♭maj7 in the
+        # same window; the count-of-4 pin above let the wrong chord hide.
+        boot_sel = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-sel')]
+          .map(g => [+g.dataset.selstr, +g.dataset.selfret,
+                     g.querySelector('text').textContent.trim()])
+          .sort((a, b) => a[0] - b[0])""")
+        check(boot_sel == [[1, 6, "R"], [2, 6, "5"], [3, 7, "3"], [4, 7, "7"]],
+              f"{tag} the boot block is not v0.9's B♭ tetrad (R on B♭): {boot_sel}")
         # the field is the KEY: changing it re-derives every dot (the bus is
         # the wiring — harmony announces, the field derives from what it hears)
         page.select_option("#hcKey", "D")
@@ -588,6 +598,59 @@ def run_door(pw, door_id):
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
         page.select_option("#hcTake", "one"); page.wait_for_timeout(60)
         page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(80)
+
+        # ---- child 4: dyads, the shell, and the one derivation ----
+        roles = lambda: sorted(set(page.eval_on_selector_all(
+            "#fieldSvg .fd-sel text", "es => es.map(e => e.textContent.trim())")))
+        # the objects went live: dyad and shell are choosable, not promises
+        obj_state = page.evaluate("""() =>
+          Object.fromEntries([...document.querySelectorAll('#hcObj option')]
+            .map(o => [o.value, o.disabled]))""")
+        check(obj_state.get("dyad") is False and obj_state.get("shell") is False,
+              f"{tag} dyad and shell must be live objects (child 4): {obj_state}")
+        # the SHELL is R + the guide tones — three roles, never the 5th
+        page.select_option("#hcObj", "shell"); page.wait_for_timeout(150)
+        check(roles() == ["3", "7", "R"],
+              f"{tag} a shell must wear exactly R, 3, 7 on the field: {roles()}")
+        # the DYAD defaults to the guide tones, and its menu only shows here
+        page.select_option("#hcObj", "dyad"); page.wait_for_timeout(150)
+        check(not page.evaluate("() => document.querySelector('#hcDyad').hidden")
+              and page.input_value("#hcDyad") == "3,7",
+              f"{tag} the dyad menu must appear, defaulted to the guide tones")
+        check(roles() == ["3", "7"],
+              f"{tag} the default dyad is 3rd + 7th, nothing else: {roles()}")
+        # any two tones by role: Root + 5th re-derives the field's dots
+        page.select_option("#hcDyad", "1,5"); page.wait_for_timeout(150)
+        check(roles() == ["5", "R"],
+              f"{tag} the Root + 5th dyad must wear exactly R and 5: {roles()}")
+        # the choice travels the bus: the staff re-derives from the same value
+        st_n = page.eval_on_selector_all("#stSvg ellipse", "e => e.length")
+        check(st_n == 2, f"{tag} the staff must speak the dyad too (2 heads, got {st_n})")
+        page.select_option("#hcDyad", "3,7"); page.wait_for_timeout(80)
+        # the recipes the item names, each one exercised, none merely listed
+        # R4's expectation is THE ORACLE'S: v0.9 itself places only the 3rd
+        # on strings 3-2 (the 7th lies outside every root-anchored window
+        # there) — so the pin asserts the partial take AND the loud absence,
+        # not a wish. Verified against v0.9 live, 260831.
+        for label, want in [("R4 · dyads across two strings", ["3"]),
+                            ("R9 · block triads", ["3", "5", "R"]),
+                            ("R11 · triad lines", ["3", "5", "R"]),
+                            ("R17 · a shell", ["3", "7", "R"]),
+                            ("R26 · a guide-tone dyad", ["3", "7"])]:
+            page.select_option("#psSel", label=label); page.wait_for_timeout(150)
+            check(roles() == want,
+                  f"{tag} recipe {label!r} must build wearing {want}: {roles()}")
+            if label.startswith("R4"):
+                check("no 7 in this frame" in page.inner_text("#fdHint"),
+                      f"{tag} R4's starved 7th must be loud on the face: {page.inner_text('#fdHint')!r}")
+        # back to the boot state (the recipes reseeded the run — restore it
+        # over the bus, the same channel the harness already speaks)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(60)
+        page.evaluate("""() => { const s = document.querySelector('#psSel'); s.selectedIndex = 0; }""")
+        page.select_option("#hcTake", "one"); page.wait_for_timeout(60)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5, notesPer: 1 } }))""")
+        page.wait_for_timeout(120)
 
         # ---- THE SEATING CHECK, EXTENDED TO PARTS (the parts primitive):
         # WHICH PART sits in WHICH SEAT — last night's lesson one level down.

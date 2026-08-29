@@ -39,7 +39,7 @@
 import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
-import { diatonicTones, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
@@ -201,7 +201,7 @@ export const fieldBoard = {
       /* the boot state is v0.9's (register 11): the B♭ tetrad block on
        * 4-3-2-1, the window from the 6th (G) at the fifth position */
       strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5,
-      object: "tetrad", take: "one", notesPer: 1,
+      object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -269,8 +269,13 @@ export const fieldBoard = {
       if (cfg.object === "scale") {
         sel = scaleTake(pool).notes;
       } else {
-        const keyDeg = (pos.startDeg + fld.ref) % 7;
-        const tones = diatonicTones(fld, keyDeg, cfg.object === "triad" ? [0, 2, 4] : [0, 2, 4, 6]);
+        /* the chord roots at the CURRENT TONIC (fld.ref; the key until a mode
+                 * re-roots it) — startDeg anchors only the WINDOW. Corrected 260831:
+                 * rooting at startDeg booted the door on Gm7 where v0.9 and the ruled
+                 * boot (register 11) hold the B♭maj7 block. The timeline's chords
+                 * arrive with child 7 and will own this value. */
+        const keyDeg = fld.ref % 7;
+        const tones = diatonicTones(fld, keyDeg, objectOffsets(cfg.object, cfg.dyad));
         const r = cfg.take === "all"
           ? everyOccurrence(tones, pool, { n: cfg.notesPer })
           : oneOfEach(tones, pool, { n: cfg.notesPer, centre: pos.centre });
@@ -573,9 +578,28 @@ export const fieldBoard = {
       let changed = false;
       for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure"])
         if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+      if ("dyad" in m && Array.isArray(m.dyad) && m.dyad.join() !== cfg.dyad.join()) {
+        cfg = { ...cfg, dyad: [...m.dyad] }; changed = true;
+      }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {
-        cfg = { ...cfg, strings: [...m.strings] }; changed = true;
+        cfg = { ...cfg, strings: [...m.strings] };
+        /* a run arriving WITHOUT its own window (a preset) RESEEDS the
+         * window to v0.9's default — the first anchor-string note at or
+         * above the fifth fret (v0.9 line 840's rule, re-derived) — because
+         * carrying the old anchor's degree to a new anchor is a different
+         * window than v0.9 frames. A run WITH startDeg (a restored étude)
+         * keeps the window it was saved with. Corrected 260831 (child 4):
+         * R17 kept the 6th's window on the new anchor and starved the
+         * shell's 3rd where v0.9 re-frames to hold all three tones. */
+        if (!("startDeg" in m) && curB) {
+          const an = notesOn(Math.max(...cfg.strings), curB.fld);
+          const seed = an.find((n) => n.fret >= 5) || an[an.length - 1];
+          cfg = { ...cfg, startDeg: seed.deg, nearFret: seed.fret };
+          push();                    // adopt-and-announce: the mirrors need the window too
+          return;
+        }
+        changed = true;
       } else if ("setIndex" in m && !("strings" in m) && "key" in m
           && Number.isInteger(m.setIndex) && curB) {
         /* THE ALIAS: a restored pre-run identity (setIndex + key, no run),

@@ -16,13 +16,14 @@
  */
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
-import { diatonicTones, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
 
 /* label · the config it seeds. `take` defaults back to "one" exactly as v0.9
  * resets it, so a preset states only what it means. */
 export const PRESETS = [
   ["R1 · a mode along one string", { strings: [2], notesPer: 3, object: "scale" }],
+  ["R4 · dyads across two strings", { strings: [3, 2], notesPer: 1, object: "dyad" }],
   ["R5 · the scale, three per string, on two", { strings: [4, 3], notesPer: 3, object: "scale" }],
   ["R7 · a triad folded onto two strings", { strings: [3, 2], notesPer: 3, object: "triad" }],
   ["R9 · block triads", { strings: [4, 3, 2], notesPer: 1, object: "triad" }],
@@ -31,6 +32,8 @@ export const PRESETS = [
   ["R14 · tetrad lines", { strings: [4, 3, 2, 1], notesPer: 3, object: "tetrad", take: "all" }],
   ["R15 · the six-string scale box", { strings: [6, 5, 4, 3, 2, 1], notesPer: 3, object: "scale" }],
   ["R16 · an open voicing on a skipped set", { strings: [6, 4, 3, 1], notesPer: 1, object: "tetrad" }],
+  ["R17 · a shell", { strings: [6, 4, 3], notesPer: 1, object: "shell" }],
+  ["R26 · a guide-tone dyad", { strings: [4, 3], notesPer: 1, object: "dyad", dyad: [3, 7] }],
 ];
 
 export const presetsCard = {
@@ -88,7 +91,7 @@ export const presetsCard = {
     let take;
     if (p.object === "scale") take = scaleTake(pool);
     else {
-      const tones = diatonicTones(fld, 0, p.object === "triad" ? [0, 2, 4] : [0, 2, 4, 6]);
+      const tones = diatonicTones(fld, 0, objectOffsets(p.object, p.dyad));
       take = (p.take === "all")
         ? everyOccurrence(tones, pool, { n: p.notesPer })
         : oneOfEach(tones, pool, { n: p.notesPer, centre: pos.centre });

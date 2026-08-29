@@ -81,10 +81,34 @@ const mod12 = (x) => ((x % 12) + 12) % 12;
 /** the roles a diatonic stack wears, by scale-step offset */
 const OFFSET_ROLE = { 0: "R", 2: "3", 4: "5", 6: "7" };
 
+/** objectOffsets(object, dyad) → the scale-step offsets an object selects,
+ * or null for a scale (the whole box — scaleTake's territory). CHILD 4's
+ * consolidation: this derivation was spelled `object === "triad" ? [0,2,4]
+ * : [0,2,4,6]` in FIVE hub modules — the duplicated-fact defect in exactly
+ * the shape coreTetrad's error message warned about. One derivation now:
+ *   - a stack of diatonic thirds is offsets 2i (triad n=3, tetrad n=4);
+ *   - a DYAD is any two chord tones named by degree (default 3+7, the guide
+ *     tones): offset = degree − 1, pitch-class math, never a pair table;
+ *   - a SHELL is the root under the guide-tone dyad: degrees [1,3,7].
+ * Unknown objects and malformed dyads refuse by name (the loud-refusal law). */
+export function objectOffsets(object, dyad = [3, 7]) {
+  if (object === "scale") return null;
+  if (object === "triad" || object === "tetrad")
+    return Array.from({ length: object === "triad" ? 3 : 4 }, (_, i) => 2 * i);
+  if (object === "shell") return [1, 3, 7].map((d) => d - 1);
+  if (object === "dyad") {
+    if (!Array.isArray(dyad) || dyad.length !== 2 || dyad[0] === dyad[1] ||
+        dyad.some((d) => ![1, 3, 5, 7].includes(d)))
+      throw new Error(`objectOffsets: a dyad is two distinct chord-tone degrees from 1/3/5/7, not ${JSON.stringify(dyad)}`);
+    return dyad.map((d) => d - 1);
+  }
+  throw new Error(`objectOffsets: "${object}" is not an object this engine knows`);
+}
+
 /** diatonicTones(field, keyDeg, offsets) → [{ role, pc, keyDeg }] — the stack
  * of scale thirds on a degree, BY keyDeg (chords read keyDeg; child 1's law).
- * Chord VOCABULARY — qualities, dyad menus, shells — stays child 4's; this is
- * only the stack the field itself implies. */
+ * Offsets normally arrive from objectOffsets; this is only the stack the
+ * field itself implies. */
 export function diatonicTones(fld, keyDeg, offsets = [0, 2, 4, 6]) {
   if (!Number.isInteger(keyDeg) || keyDeg < 0 || keyDeg > 6)
     throw new Error(`diatonicTones: keyDeg 0..6, not ${keyDeg}`);
@@ -369,4 +393,18 @@ export function bracketOf(order) {
   const arp = everyOccurrence(tet, pool4, { n: 3 });
   if (!Object.values(perString(arp.notes)).some((c) => c >= 2))
     throw new Error("selection: every-occurrence in a 4-5 fret window must double a string somewhere");
+
+  // THE ONE DERIVATION (child 4): every object's offsets from the same place,
+  // and every offset wears a named role — the guide-tone dyad reads 3 then 7
+  const oo = objectOffsets;
+  if (JSON.stringify(oo("tetrad")) !== "[0,2,4,6]" || JSON.stringify(oo("triad")) !== "[0,2,4]" ||
+      JSON.stringify(oo("shell")) !== "[0,2,6]" || JSON.stringify(oo("dyad")) !== "[2,6]" ||
+      oo("scale") !== null)
+    throw new Error("selection: objectOffsets does not derive the five objects");
+  if (diatonicTones(fld, 0, oo("dyad", [3, 7])).map((t) => t.role).join("") !== "37")
+    throw new Error("selection: the default dyad is not the guide tones");
+  for (const bad of [() => oo("chord"), () => oo("dyad", [3, 3]), () => oo("dyad", [2, 7])]) {
+    let threw = false; try { bad(); } catch { threw = true; }
+    if (!threw) throw new Error("selection: objectOffsets accepted what it must refuse by name");
+  }
 }
