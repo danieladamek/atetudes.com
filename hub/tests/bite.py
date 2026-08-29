@@ -443,7 +443,9 @@ def m17_part_moved_between_seats():
         p.write_text(mutated)
         build()
         r = suite()
-        hit = ("the log rides it" in r.stdout or "under v0.9's 'Notepad' header" in r.stdout) \
+        # ("the log rides it" was a dead OR-arm — found by the grep preflight
+        # on its own first run, 260905; the living arm carries the bite)
+        hit = ("under v0.9's 'Notepad' header" in r.stdout) \
             and "not seated at the page foot" in r.stdout
         record("a part moved between seats",
                r.returncode != 0 and hit,
@@ -615,7 +617,7 @@ def m25_take_does_movement_duty_again():
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "must not forbid the movement" in r.stdout or "must \nnot decide the movement" in r.stdout or "not decide the movement" in r.stdout
+        hit = "must not forbid the movement" in r.stdout or "not decide the movement" in r.stdout
         record("Take does movement duty again",
                r.returncode != 0 and hit,
                "suite exit %d; a decoupling pin bit: %s" % (r.returncode, hit))
@@ -672,13 +674,41 @@ def preflight(fns):
         PREFLIGHT["on"] = False
         for k, v in real.items():
             g[k] = v
+    # THE GREP-TARGET PREFLIGHT (260905, the carried item): m23's expected
+    # message rotted when a pin was renamed, and the anchor pass cannot see
+    # it. Cheap version, no suite run: every `"…" in r.stdout` literal in
+    # this file's own source must appear somewhere in door_locks.py — a
+    # renamed pin message now fails HERE, in a second, by name.
+    import re as _re
+    src = (REPO / "hub" / "tests" / "bite.py").read_text()
+    gates = (REPO / "hub" / "tests" / "door_locks.py").read_text()
+    # both sides normalised past Python's own seams: f-string line wraps and
+    # quote boundaries dissolve, whitespace collapses. Targets that quote
+    # RUNTIME values (interpolated lists etc.) are skipped — the check is for
+    # renamed pin messages (the m23 rot), not for output simulation.
+    norm = lambda t: _re.sub(r"\s+", " ", t.replace('\\u266d', '\u266d')
+        .replace('f"', '').replace('"', ''))
+    # module load-assertion texts surface through the gate's output too
+    # (m11 greps field-board's own error), so the searched corpus is the
+    # gate PLUS every hub module and engine source
+    from pathlib import Path as _P
+    corpus = [gates]
+    for pat in ("hub/modules", "engine"):
+        for p in sorted((_P(REPO) / pat).glob("*.mjs")):
+            corpus.append(p.read_text())
+    gates_n = norm("\n".join(corpus))
+    greps = [g for g in _re.findall(r'"([^"\n]{12,})" in r\.stdout', src)
+             if "['" not in g and "…" not in g]
+    for gtext in greps:
+        if norm(gtext) not in gates_n:
+            PREFLIGHT["rotted"].append(f"grep target not in door_locks.py: {gtext!r}")
     if PREFLIGHT["rotted"]:
         print(f"ANCHOR PREFLIGHT: {len(PREFLIGHT['rotted'])} rotted "
-              f"(of {PREFLIGHT['checked']} checked) — fix before running anything:")
+              f"(of {PREFLIGHT['checked']} anchors + {len(greps)} grep targets) — fix first:")
         for r in PREFLIGHT["rotted"]:
             print("  ROTTED  " + r)
         sys.exit(1)
-    print(f"anchor preflight: {PREFLIGHT['checked']} anchors checked, none rotted\n")
+    print(f"anchor preflight: {PREFLIGHT['checked']} anchors and {len(greps)} grep targets checked, none rotted\n")
 
 
 def main():
