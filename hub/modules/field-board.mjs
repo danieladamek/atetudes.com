@@ -40,6 +40,7 @@ import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
+import { placeReference } from "../../engine/reference.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
@@ -201,7 +202,7 @@ export const fieldBoard = {
       /* the boot state is v0.9's (register 11): the B♭ tetrad block on
        * 4-3-2-1, the window from the 6th (G) at the fifth position */
       strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5,
-      object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
+      object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -286,6 +287,24 @@ export const fieldBoard = {
           selMsg = r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
             : "no placement fits";
+      }
+      /* THE REFERENCE (child 5): a real fretted note on string 5 or 6,
+       * outside the isolation — v0.9's hollow dashed circle (line 919). A
+       * stretch keeps full colour, unmarked (the ruling); the flag feeds the
+       * hint's prose. A refusal is a reason, said in the hint BY NAME. */
+      let refP = { note: null, stretch: false, reason: null };
+      if (cfg.object !== "scale" && cfg.bass !== "none") {
+        refP = placeReference(cfg.bass, fld.ref % 7, fld, run.strings, pos);
+        if (refP.note) {
+          const rf = FAM[refP.note.deg];
+          const g = el("g", { class: "fd-ref", "data-refstr": refP.note.string,
+            "data-reffret": refP.note.fret, "data-refstretch": String(refP.stretch) }, svg);
+          el("circle", { cx: fx(refP.note.fret), cy: fy(refP.note.string), r: 12, fill: "none",
+            stroke: FAM_COLOR[rf], "stroke-width": 2.4, "stroke-dasharray": "3 2.5" }, g);
+          const t = el("text", { x: fx(refP.note.fret), y: fy(refP.note.string) + 3.4,
+            "text-anchor": "middle", "font-size": "9", fill: "#73737A", class: "fd-lab" }, g);
+          t.textContent = rf;
+        }
       }
       for (const x of sel) {
         const fam = FAM[x.deg];
@@ -408,6 +427,9 @@ export const fieldBoard = {
         (fig.err ? "" : (fig.order ? ` Figure: ${fig.order.length} steps as ${cfg.address === "pattern" ? "a pattern" : "tones"}.` : "")) +
         (isScale ? " Placement is off — a scale is not a chord; the box offers every note, three per string at most (the hand's reach)."
           : (selMsg ? ` ${selMsg}.` : "")) +
+        (refP.note
+          ? ` Reference: string ${refP.note.string}, fret ${refP.note.fret}${refP.stretch ? " — a stretch past the box" : ""}.`
+          : (refP.reason ? ` Reference refused: ${refP.reason}.` : "")) +
         ` Click the numbers to choose strings; ← → step the window.`;
       byId("fdLegend").innerHTML = FAM.map((f2) =>
         `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
@@ -576,7 +598,7 @@ export const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "bass"])
         if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
       if ("dyad" in m && Array.isArray(m.dyad) && m.dyad.join() !== cfg.dyad.join()) {
         cfg = { ...cfg, dyad: [...m.dyad] }; changed = true;

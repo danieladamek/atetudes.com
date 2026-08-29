@@ -42,6 +42,15 @@ engine/
 │                        drop-2, drop-3, the shells (arity 3, a separate stream)
 │                        and rootless 3-5-7-9. Voicing only — chord VOCABULARY
 │                        stays in chord.mjs. Feeds isolation.mjs's candidatesFor
+├── reference.mjs        THE REFERENCE TONE (Multetudes child 5): a real
+│                        fretted note on string 5 or 6, chosen against the
+│                        window — v0.9's placeBass re-derived, refusal BY
+│                        NAME when both strings are taken, a reach past the
+│                        box flagged as a stretch. The composite is NAMED BY
+│                        READ-BACK: a suffix assembled from degree rules must
+│                        reproduce the pc set through parseChord — chord.mjs
+│                        stays the one vocabulary owner — or the stack is
+│                        honestly unnamed (pure)
 ├── triad-voicings.mjs   THE TRIAD CANDIDATE GENERATOR (Multetudes child 4),
 │                        extracted from the shelved Triadetudes study and
 │                        pinned DIFFERENTIALLY against it through the

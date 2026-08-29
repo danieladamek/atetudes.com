@@ -483,6 +483,24 @@ def m19_chord_reroots_at_the_window():
         p.write_text(original)
 
 
+def m20_reference_refusal_goes_silent():
+    # child 5's law: both reference strings taken is a fact the FACE must say.
+    # Silence the hint's refusal clause and the by-name pin must bite.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '          : (refP.reason ? ` Reference refused: ${refP.reason}.` : "")) +',
+        '          : "") +')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "must refuse the reference BY NAME on the face" in r.stdout
+        record("the reference refusal goes silent",
+               r.returncode != 0 and hit,
+               "suite exit %d; the by-name refusal pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
@@ -493,7 +511,8 @@ def main():
                m12_set_change_resets_the_design, m13_live_setindex_hijacks_the_field,
                m14_take_collapses_into_placement, m15_scale_material_silently_halved,
                m16_card_moved_between_rows, m17_part_moved_between_seats,
-               m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window):
+               m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window,
+               m20_reference_refusal_goes_silent):
         try:
             fn()
         except BuildBroken as e:

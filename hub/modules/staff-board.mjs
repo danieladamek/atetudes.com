@@ -22,6 +22,7 @@ import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
+import { placeReference } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, CLOCK_STATE, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 
@@ -46,9 +47,8 @@ export const staffBoard = {
   <span class="mini" id="stMini" data-control="stMini"></span>
   <div class="bh"><span>The étude — end to end</span></div>
   <div class="hint info">Treble carries the material, written an octave above where it sounds —
-  the 8 under the clef. The bass clef carries the reference tone once child 5 frets it; the full
-  progression of bars arrives with child 7. Until then the étude holds one bar: the selection on
-  the window's start degree.</div>
+  the 8 under the clef. The bass clef carries the reference tone, at sounding pitch, when one is
+  chosen; the full progression of bars arrives with child 7. Until then the étude holds one bar.</div>
   <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>`,
 
   styles: `
@@ -62,7 +62,7 @@ export const staffBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
+      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
       address: "pattern", figure: "" };
     let meter = 4;
 
@@ -146,9 +146,9 @@ export const staffBoard = {
       const lab = el("text", { x: X0 + 7, y: labY, "font-size": "12.5", "font-weight": "bold", fill: "#212126" }, svg);
       lab.textContent = cfg.object === "scale"
         ? (cfg.ref ? `${fld.refNote.name} ${fld.modeName}` : `${cfg.key} — the scale in the box`)
-        : `the ${cfg.object} on the ${["root", "2nd", "3rd", "4th", "5th", "6th", "7th"][pos.startDeg]}`;
+        : `the ${cfg.object} on the ${["root", "2nd", "3rd", "4th", "5th", "6th", "7th"][fld.ref % 7]}`;
       const rl = el("text", { x: X0 + 7, y: labY + 11, "font-size": "9.5", fill: "#B9B9BF" }, svg);
-      rl.textContent = "bar 1 of 1 — the progression arrives with child 7; chord names with child 4";
+      rl.textContent = "bar 1 of 1 — the progression arrives with child 7";
 
       seq.forEach((nt, k) => {
         const s = stepOf(nt.midi), y = yTreble(s);
@@ -166,6 +166,29 @@ export const staffBoard = {
         t.textContent = nt.role || fam;
       });
 
+      /* THE REFERENCE on the bass clef (child 5): sounding pitch, the
+       * bottom line G2 as the step origin, ledgers derived the treble way */
+      if (cfg.object !== "scale" && cfg.bass !== "none") {
+        const rp = placeReference(cfg.bass, fld.ref % 7, fld, cfg.strings, pos);
+        if (rp.note) {
+          const m0 = rp.note.midi, pc = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;
+          const sp = fld.notes.find((n) => n.pc === pc);
+          if (!sp) throw new Error("staff-board: the reference is off the field — nothing off the field is drawable");
+          const bStep = oct * 7 + LETTERS.indexOf(sp.name[0]);
+          const yBass = (q) => BY + GAP * 8 - (q - (2 * 7 + 4)) * GAP;
+          const bx = X0 + BW * 0.34, by = yBass(bStep);
+          for (let q = (2 * 7 + 4) - 2; bStep <= q; q -= 2)
+            el("line", { x1: bx - 9, y1: yBass(q), x2: bx + 9, y2: yBass(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
+          for (let q = (2 * 7 + 4) + 10; bStep >= q; q += 2)
+            el("line", { x1: bx - 9, y1: yBass(q), x2: bx + 9, y2: yBass(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
+          const rf = FAM[rp.note.deg];
+          el("ellipse", { cx: bx, cy: by, rx: 6.4, ry: 5, fill: FAM_COLOR[rf],
+            transform: `rotate(-18 ${bx} ${by})`, "data-strefmidi": m0 }, svg);
+          const rt = el("text", { x: bx, y: by + 3, "text-anchor": "middle", "font-size": "7.5",
+            fill: FAM_TEXT[rf], "font-weight": "bold", class: "st-lab" }, svg);
+          rt.textContent = rf;
+        }
+      }
       el("line", { x1: X0 + W, y1: TY, x2: X0 + W, y2: TY + GAP * 8, stroke: "#212126", "stroke-width": 2.6 }, svg);
       el("line", { x1: X0 + W, y1: BY, x2: X0 + W, y2: BY + GAP * 8, stroke: "#212126", "stroke-width": 2.6 }, svg);
 

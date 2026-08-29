@@ -11,10 +11,11 @@
  * that derivation, and paints the count. A failing check paints RED — the
  * prototype's honesty, kept.
  */
-import { field } from "../../engine/field.mjs";
+import { field, OPEN_MIDI } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { placeReference, compositeOver } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, listen } from "../bus.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
@@ -42,7 +43,8 @@ export const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] };
+      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
+      bass: "none" };
 
     const render = () => {
       const asserts = [], fails = [];
@@ -107,6 +109,26 @@ export const neckReadout = {
           const shape = run.strings.map((s) => per[s] || 0).join("+");
           const isLine = Object.values(per).some((c) => c > 1);
           bits.push(`${shape} across the set <span class="ro-dim">(${isLine ? "a line" : "a block"})</span>`);
+        }
+        /* THE REFERENCE, fretted and NAMED (child 5): the readout says what
+         * the stack becomes over it — R19's sentence. The name arrives from
+         * compositeOver's read-back through chord.mjs, or honestly not at
+         * all; a refusal is spoken by name, never blanked. */
+        if (cfg.object !== "scale" && cfg.bass !== "none") {
+          const rp = placeReference(cfg.bass, fld.ref % 7, fld, run.strings, pos);
+          check("the reference is a real fretted note or refused by name", () =>
+            rp.note
+              ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
+              : typeof rp.reason === "string" && rp.reason.length > 0);
+          if (rp.note) {
+            const tones = diatonicTones(fld, fld.ref % 7, objectOffsets(cfg.object, cfg.dyad));
+            const comp = compositeOver(fld, rp.note.keyDeg, tones.map((t) => t.pc));
+            bits.push(`over <b>${comp.bassName}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
+              + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : "")
+              + (comp.name ? `: the stack is <b>${comp.name}</b>` : ' <span class="ro-dim">(an unnamed stack — no honest symbol reads back)</span>'));
+          } else {
+            bits.push(`<span style="color:#B82929">reference refused: ${rp.reason}</span>`);
+          }
         }
         if (msg) bits.push(`<span style="color:#B82929">${msg}</span>`);
       } catch (e) {

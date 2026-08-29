@@ -652,6 +652,63 @@ def run_door(pw, door_id):
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5, notesPer: 1 } }))""")
         page.wait_for_timeout(120)
 
+        # ---- child 5: the reference tone, fretted and named ----
+        ref_el = lambda: page.evaluate("""() => { const g = document.querySelector('#fieldSvg .fd-ref');
+          return g ? { s: g.dataset.refstr, f: g.dataset.reffret, st: g.dataset.refstretch } : null }""")
+        # the three relative options are live; at boot there is NO reference
+        ref_opts = page.evaluate("""() =>
+          Object.fromEntries([...document.querySelectorAll('#hcRef option')]
+            .map(o => [o.value, o.disabled]))""")
+        check(ref_opts.get("root") is False and ref_opts.get("third") is False
+              and ref_opts.get("fifth") is False,
+              f"{tag} the three relative references must be live (child 5): {ref_opts}")
+        check(ref_el() is None
+              and page.eval_on_selector_all("#stSvg [data-strefmidi]", "e => e.length") == 0,
+              f"{tag} at boot (bass none) neither neck nor bass clef may show a reference")
+        # a 3rd below the B♭ chord: G, string 6 fret 3 — OUTSIDE the 5-8 box,
+        # so it is a STRETCH, full colour, said in prose; the readout NAMES the
+        # composite — R19's own sentence: the tetrad plus one note IS Gm9
+        page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        rr = ref_el()
+        check(rr == {"s": "6", "f": "3", "st": "true"},
+              f"{tag} a 3rd below B♭ must fret G on string 6 fret 3, a stretch: {rr}")
+        check("a stretch past the box" in page.inner_text("#fdHint"),
+              f"{tag} the stretch must be said in the hint: {page.inner_text('#fdHint')!r}")
+        ro = page.inner_text("#roLine")
+        check("Gm9" in ro and "over G" in ro,
+              f"{tag} the readout must name the composite (R19: the stack is Gm9): {ro!r}")
+        st_ref = page.eval_on_selector_all("#stSvg [data-strefmidi]",
+            "es => es.map(e => +e.getAttribute('data-strefmidi'))")
+        check(st_ref == [43],
+              f"{tag} the bass clef must carry the fretted G (midi 43) at sounding pitch: {st_ref}")
+        # R18's shape: a set that TAKES string 6 pushes the reference to 5
+        page.select_option("#hcRef", "root"); page.wait_for_timeout(100)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [6, 4, 3, 1], startDeg: 5, nearFret: 5 } }))""")
+        page.wait_for_timeout(200)
+        rr = ref_el()
+        check(rr is not None and rr["s"] == "5",
+              f"{tag} with string 6 in the set the reference must sit on 5 (R18): {rr}")
+        # both reference strings taken → REFUSED BY NAME on the face
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [6, 5, 4, 3], startDeg: 5, nearFret: 5 } }))""")
+        page.wait_for_timeout(200)
+        check(ref_el() is None
+              and "strings 5 and 6 are both in the set" in page.inner_text("#fdHint"),
+              f"{tag} a full set must refuse the reference BY NAME on the face: "
+              f"{page.inner_text('#fdHint')!r}")
+        # R19 as a preset seeds the whole sentence in one gesture
+        page.select_option("#psSel", label="R19 · a tetrad over a third below")
+        page.wait_for_timeout(250)
+        check(roles() == ["3", "5", "7", "R"] and "Gm9" in page.inner_text("#roLine"),
+              f"{tag} R19 must build the tetrad and name Gm9: {roles()}, {page.inner_text('#roLine')!r}")
+        # back to the boot state
+        page.select_option("#hcRef", "none"); page.wait_for_timeout(60)
+        page.evaluate("""() => { const s = document.querySelector('#psSel'); s.selectedIndex = 0; }""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5, notesPer: 1 } }))""")
+        page.wait_for_timeout(120)
+
         # ---- THE SEATING CHECK, EXTENDED TO PARTS (the parts primitive):
         # WHICH PART sits in WHICH SEAT — last night's lesson one level down.
         # The pad (journalIn) sits in row 1's 3fr cell WITHOUT the log; the

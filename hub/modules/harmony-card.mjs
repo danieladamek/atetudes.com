@@ -130,15 +130,20 @@ export const harmonyCard = {
           ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the reference, not the key.`
           : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.";
       } else {
+        /* THE THREE RELATIVE OPTIONS (child 5, ruled 260831): root, a 3rd
+         * below, a 5th below — relative to the chord, so they will follow the
+         * changes when child 7 brings them. A FIXED reference is deliberately
+         * unbuilt: with one bar, fixed and relative are indistinguishable. */
         fill(byId("hcRef"), [
           { value: "none", label: "none" },
-          { value: "root", label: "the root", disabled: true, title: "arrives with child 5 (the reference tone, fretted and named)" },
-          { value: "third", label: "a 3rd below", disabled: true, title: "arrives with child 5" },
-          { value: "fifth", label: "a 5th below", disabled: true, title: "arrives with child 5" },
+          { value: "root", label: "the root" },
+          { value: "third", label: "a 3rd below" },
+          { value: "fifth", label: "a 5th below" },
         ], cfg.bass);
         byId("hcRefLab").textContent = "Bass / reference tone";
-        byId("hcNote").textContent =
-          "The reference the harmony sits on — string 5 or 6, outside the isolation. Fretting and naming it arrives with child 5; until then it stays none.";
+        byId("hcNote").textContent = cfg.bass === "none"
+          ? "The reference the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
+          : "A real fretted note on string 5 or 6, chosen against the window — the neck shows it hollow, the readout names what the stack becomes over it.";
       }
     };
 

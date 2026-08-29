@@ -33,6 +33,7 @@ export const PRESETS = [
   ["R15 · the six-string scale box", { strings: [6, 5, 4, 3, 2, 1], notesPer: 3, object: "scale" }],
   ["R16 · an open voicing on a skipped set", { strings: [6, 4, 3, 1], notesPer: 1, object: "tetrad" }],
   ["R17 · a shell", { strings: [6, 4, 3], notesPer: 1, object: "shell" }],
+  ["R19 · a tetrad over a third below", { strings: [4, 3, 2, 1], notesPer: 1, object: "tetrad", bass: "third" }],
   ["R26 · a guide-tone dyad", { strings: [4, 3], notesPer: 1, object: "dyad", dyad: [3, 7] }],
 ];
 
