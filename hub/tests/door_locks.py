@@ -265,7 +265,7 @@ def run_door(pw, door_id):
         check("Bb major" in boot_hint, f"{tag} the boot key is not B\u266d: {boot_hint!r}")
         check("Strings E–B–G–D" in boot_hint and "E–B–G–D–A" not in boot_hint,
               f"{tag} the boot run is not 4-3-2-1: {boot_hint!r}")
-        check("from the 6th on string 4, frets 5–8" in boot_hint,
+        check("from the 5th on string 4, frets 3–7" in boot_hint,
               f"{tag} the boot window is not v0.9's (the 6th at the fifth position): {boot_hint!r}")
         check("the tetrad, one of each (grip): 4 notes, 1+1+1+1" in boot_hint,
               f"{tag} the boot object is not the tetrad block: {boot_hint!r}")
@@ -295,6 +295,25 @@ def run_door(pw, door_id):
           .sort((a, b) => a[0] - b[0])""")
         check(boot_sel == [[1, 6, "R"], [2, 6, "5"], [3, 7, "3"], [4, 7, "7"]],
               f"{tag} the boot block is not v0.9's B♭ tetrad (R on B♭): {boot_sel}")
+        # THE BOOT PROGRESSION PLACES END TO END (260904): a first run must
+        # not refuse at bar 2 — that teaches the wrong thing first. The pin
+        # CHOOSES the boot window rather than taste: the engine-side search
+        # (260904 report) found frets 3–7 (the 5th at the third position) the
+        # only family on strings 4-3-2-1 that keeps the RULED B♭ block
+        # (register 11 — same four notes, untouched above) AND places every
+        # bar. Asserted bar by bar, each chord NAMED — this is exactly how
+        # the Gm7 boot survived two green nights: nothing walked the bars.
+        for ci in range(8):
+            page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(120)
+            chip = page.eval_on_selector_all("#tlScroll button.tl-cur",
+                "es => es.map(e => e.getAttribute('data-tlchip'))")
+            n_sel = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
+            check(n_sel == 4 and "no placement fits" not in page.inner_text("#fdHint"),
+                  f"{tag} boot bar {ci + 1} ({chip}) must place its grip whole: "
+                  f"{n_sel} notes drawn — {page.inner_text('#fdHint')[:160]!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(120)
         # the field is the KEY: changing it re-derives every dot (the bus is
         # the wiring — harmony announces, the field derives from what it hears)
         page.select_option("#hcKey", "D")
@@ -361,13 +380,15 @@ def run_door(pw, door_id):
         check("Strings E–B–G–D" in hint(),
               f"{tag} the boot run's derived label is not in the hint: {hint()!r}")
         # the window steps — box shift, reversible, read off the artifact.
-        # The boot window starts on the 6th (G); one step up string 4 is A, the 7th.
+        # Updated 260904 with the boot move (frets 3–7, the placement pin's
+        # choice): the boot starts on the 5th (F); one step up string 4 is G,
+        # the 6th — the values move with the ruled boot, the behaviour stands.
         h0, f0 = hint(), frets_of()
         page.focus("#fieldSvg")
         page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)
-        check(frets_of() != f0 or ord_of() != ("6th", "4"),
+        check(frets_of() != f0 or ord_of() != ("5th", "4"),
               f"{tag} ArrowRight did not step the window: {hint()!r}")
-        check(ord_of()[0] == "7th", f"{tag} one step from the 6th must start on the 7th: {hint()!r}")
+        check(ord_of()[0] == "6th", f"{tag} one step from the 5th must start on the 6th: {hint()!r}")
         check_window("after ArrowRight")
         page.keyboard.press("ArrowLeft"); page.wait_for_timeout(80)
         check(hint() == h0, f"{tag} step right then left did not return the same window")
@@ -554,9 +575,9 @@ def run_door(pw, door_id):
         set_strings([4, 3, 2, 1])
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(60)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
-          { detail: { startDeg: 5, nearFret: 5 } }))""")
+          { detail: { startDeg: 4, nearFret: 3 } }))""")
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(60)
-        check("from the 6th on string 4, frets 5–8" in hint()
+        check("from the 5th on string 4, frets 3–7" in hint()
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
@@ -667,7 +688,7 @@ def run_door(pw, door_id):
         page.evaluate("""() => { const s = document.querySelector('#psSel'); s.selectedIndex = 0; }""")
         page.select_option("#hcTake", "one"); page.wait_for_timeout(60)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
-          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5, notesPer: 1 } }))""")
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, notesPer: 1 } }))""")
         page.wait_for_timeout(120)
 
         # ---- child 5: the reference tone, fretted and named ----
@@ -683,15 +704,26 @@ def run_door(pw, door_id):
         check(ref_el() is None
               and page.eval_on_selector_all("#stSvg [data-strefmidi]", "e => e.length") == 0,
               f"{tag} at boot (bass none) neither neck nor bass clef may show a reference")
-        # a 3rd below the B♭ chord: G, string 6 fret 3 — OUTSIDE the 5-8 box,
-        # so it is a STRETCH, full colour, said in prose; the readout NAMES the
-        # composite — R19's own sentence: the tetrad plus one note IS Gm9
+        # a 3rd below the B♭ chord: G, string 6 fret 3 — updated 260904: the
+        # boot window moved to frets 3–7 (the boot-placement pin's choice),
+        # so the G now sits INSIDE the box and the flag reads false. The
+        # STRETCH behaviour keeps its own live demonstration below against
+        # the old window, deliberately dispatched — updated, never relaxed.
         page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
         rr = ref_el()
+        check(rr == {"s": "6", "f": "3", "st": "false"},
+              f"{tag} a 3rd below B♭ must fret G on string 6 fret 3, in the 3–7 box: {rr}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { startDeg: 5, nearFret: 5 } }))""")
+        page.wait_for_timeout(200)
+        rr = ref_el()
         check(rr == {"s": "6", "f": "3", "st": "true"},
-              f"{tag} a 3rd below B♭ must fret G on string 6 fret 3, a stretch: {rr}")
+              f"{tag} under the old 5–8 window the same G IS a stretch: {rr}")
         check("a stretch past the box" in page.inner_text("#fdHint"),
               f"{tag} the stretch must be said in the hint: {page.inner_text('#fdHint')!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { startDeg: 4, nearFret: 3 } }))""")
+        page.wait_for_timeout(200)
         ro = page.inner_text("#roLine")
         check("Gm9" in ro and "over G" in ro,
               f"{tag} the readout must name the composite (R19: the stack is Gm9): {ro!r}")
@@ -703,14 +735,14 @@ def run_door(pw, door_id):
         # R18's shape: a set that TAKES string 6 pushes the reference to 5
         page.select_option("#hcRef", "root"); page.wait_for_timeout(100)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
-          { detail: { key: 'Bb', strings: [6, 4, 3, 1], startDeg: 5, nearFret: 5 } }))""")
+          { detail: { key: 'Bb', strings: [6, 4, 3, 1], startDeg: 4, nearFret: 3 } }))""")
         page.wait_for_timeout(200)
         rr = ref_el()
         check(rr is not None and rr["s"] == "5",
               f"{tag} with string 6 in the set the reference must sit on 5 (R18): {rr}")
         # both reference strings taken → REFUSED BY NAME on the face
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
-          { detail: { key: 'Bb', strings: [6, 5, 4, 3], startDeg: 5, nearFret: 5 } }))""")
+          { detail: { key: 'Bb', strings: [6, 5, 4, 3], startDeg: 4, nearFret: 3 } }))""")
         page.wait_for_timeout(200)
         check(ref_el() is None
               and "strings 5 and 6 are both in the set" in page.inner_text("#fdHint"),
@@ -725,7 +757,7 @@ def run_door(pw, door_id):
         page.select_option("#hcRef", "none"); page.wait_for_timeout(60)
         page.evaluate("""() => { const s = document.querySelector('#psSel'); s.selectedIndex = 0; }""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
-          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5, notesPer: 1 } }))""")
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, notesPer: 1 } }))""")
         page.wait_for_timeout(120)
 
         # ---- child 7: the progression — cycles, forms, typed changes ----
@@ -915,15 +947,15 @@ def run_door(pw, door_id):
         page.click('#fdAddrSeg >> text=pattern'); page.wait_for_timeout(80)
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
 
-        # ---- 260903: SOUND ≡ SIGHT — the walk and the board pinned equal ----
-        # Two independent derivations of the same selection (§4.2.3 forbids
-        # sharing state, so they share CONFIG) — and two paths never asserted
-        # to agree will eventually disagree. Asserted at the two artifacts
-        # Daniel actually meets: the NOTE stream and the drawn dots. Per bar:
-        # the set of sounded midis EQUALS the drawn selection plus the drawn
-        # reference. A silent bar showing nothing (with its reason in the
-        # hint) passes; a sounded note with nothing drawn — or a drawn note
-        # never sounded — fails BY BAR AND BY MIDI.
+        # ---- 260903: SOUND ⊆ SIGHT — corrected 260904 ----
+        # The invariant is ONE-DIRECTIONAL, as ruled: the app must never
+        # sound a note it does not show. The converse is not required and not
+        # desirable — the ghosted field draws fifty notes that never sound,
+        # and a drawn-but-silent reference under a refused bar is CORRECT
+        # (260904's ruling). The 260903 pin was tightened in the wrong
+        # direction (equality): it would have gone red on the correct change
+        # and invited exactly the backwards fix. Per bar: sounded ⊆ drawn
+        # (selection plus reference), failures BY BAR AND BY MIDI.
         page.evaluate("""() => { window.__cf = { bars: [], notes: [] };
           document.addEventListener('atetudes:note', e =>
             window.__cf.notes.push({ m: e.detail.midi, t: performance.now() }));
@@ -963,23 +995,48 @@ def run_door(pw, door_id):
                 t1 = bars[k + 1]["t"] - 50
                 sounded = sorted({n["m"] for n in notes if t0 <= n["t"] < t1})
                 shown = sorted(set(bar["drawn"]) | ({bar["ref"]} if bar["ref"] is not None else set()))
-                span_ms = bars[k + 1]["t"] - bar["t"]
-                check(sounded == shown,
-                      f"{tag} [{label}] bar snapshot i={bar['i']}: SOUND must equal SIGHT — "
-                      f"sounded {sounded}, drawn {shown} (bar span {span_ms and round(span_ms)}ms; "
-                      f"notes near: {[(n['m'], round(n['t']-bar['t'])) for n in notes if bar['t']-300 <= n['t'] < bar['t']+1300]})")
+                stray = [m for m in sounded if m not in shown]
+                check(not stray,
+                      f"{tag} [{label}] bar snapshot i={bar['i']}: SOUND must be a SUBSET of SIGHT — "
+                      f"sounded {sounded}, drawn {shown}, never-shown {stray}")
                 compared[0] += 1
             return bars
 
         # config 1 — the boot cycle at Grip: bar 2 is DANIEL'S BAR, identified:
         # empty selection, the reference alone both drawn and sounded
-        bars1 = sound_sight_pass("boot grip + ref")
-        daniel = [b for b in bars1 if b["i"] == 1]
-        check(daniel and daniel[0]["drawn"] == [] and daniel[0]["ref"] == 48,
-              f"{tag} bar 2 (E♭maj7) must show the empty selection with the fretted C ref: {daniel}")
-        check("Only the reference sounds in this bar" in page.inner_text("#fdHint")
+        # config 1 runs against the OLD 5–8 window, deliberately dispatched:
+        # the boot now PLACES every bar (the 260904 pin), so the refusal the
+        # ruling is proven on must be created — E♭maj7 still collides there
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { startDeg: 5, nearFret: 5 } }))""")
+        page.wait_for_timeout(200)
+        bars1 = sound_sight_pass("old 5-8 window grip + ref (the refusal corpus)")
+        # THE REFUSED BAR IS SILENT (Daniel's ruling, 260904): the reference
+        # is "the reference tone on the bottom end for all of the harmony
+        # that sits on top of it" — with no harmony on top it has nothing to
+        # be under. Drawn, yes (informative, legal under the subset pin);
+        # sounded, no. Asserted on the refusing bar IDENTIFIED: drawn
+        # selection empty, ref ring present, and the NOTE stream for that
+        # bar EMPTY.
+        cf1 = page.evaluate("() => window.__cf")
+        refused = [(k, b) for k, b in enumerate(cf1["bars"][:-1]) if b["drawn"] == []]
+        check(refused,
+              f"{tag} the corpus must contain a refusing bar to prove the ruling on "
+              f"(none refused — the corpus lost its teeth)")
+        for k, b in refused:
+            t0, t1 = b["t"] - 50, cf1["bars"][k + 1]["t"] - 50
+            sounded = sorted({n["m"] for n in cf1["notes"] if t0 <= n["t"] < t1})
+            check(b["ref"] is not None and sounded == [],
+                  f"{tag} a refused bar (i={b['i']}) must be SILENT with the ref drawn: "
+                  f"ref {b['ref']}, sounded {sounded}")
+        check("nothing sits on top" in page.inner_text("#fdHint")
               if page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") == 0 else True,
-              f"{tag} an empty bar with a live reference must say the bass alone carries it")
+              f"{tag} the refused bar's face must say why the reference stays silent: "
+              f"{page.inner_text('#fdHint')!r}")
+        # back to the boot window for config 2
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { startDeg: 4, nearFret: 3 } }))""")
+        page.wait_for_timeout(200)
         # config 2 — the window STEPPED (the announce every mover must make)
         # and the arpeggio take: the class the hypothesis feared, exercised
         page.focus("#fieldSvg"); page.press("#fieldSvg", "ArrowRight"); page.wait_for_timeout(200)

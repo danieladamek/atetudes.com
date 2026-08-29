@@ -69,7 +69,7 @@ export const timelineStrip = {
     let cfg = { key: "Bb", scale: "major", ref: 0,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       object: "tetrad", dyad: [3, 7], bass: "none",
-      strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5, split: null };
+      strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, split: null };
     let meter = 4;
     let index = 0;
 

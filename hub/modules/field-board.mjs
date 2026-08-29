@@ -201,8 +201,13 @@ export const fieldBoard = {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0,
       /* the boot state is v0.9's (register 11): the B♭ tetrad block on
-       * 4-3-2-1, the window from the 6th (G) at the fifth position */
-      strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5,
+       * 4-3-2-1. The WINDOW moved 260904: the 5th (F) at the third
+       * position, frets 3-7 — the only window family on this string set that
+       * keeps the ruled B-flat block (register 11 — the same four notes) AND
+       * places every bar of the boot cycle; the old 6th-at-the-fifth window
+       * refused E-flat maj7 at bar 2, teaching refusal first. Chosen by the
+       * boot-placement pin's search, not by taste. */
+      strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
       object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
@@ -442,7 +447,9 @@ export const fieldBoard = {
           : (selMsg ? ` ${selMsg}.` : "")) +
         (refP.note
           ? ` Reference: string ${refP.note.string}, fret ${refP.note.fret}${refP.stretch ? " — a stretch past the box" : ""}.`
-            + (!isScale && !sel.length ? " Only the reference sounds in this bar." : "")
+            + (!isScale && !sel.length
+              ? " The reference is drawn but stays silent — nothing sits on top of it."
+              : "")
           : (refP.reason ? ` Reference refused: ${refP.reason}.` : "")) +
         ` Click the numbers to choose strings; ← → step the window.`;
       byId("fdLegend").innerHTML = FAM.map((f2) =>

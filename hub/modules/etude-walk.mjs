@@ -62,7 +62,7 @@ export const etudeWalk = {
   mount(ctx) {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1,
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
       dyad: [3, 7], bass: "none", address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
@@ -100,8 +100,16 @@ export const etudeWalk = {
           : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || [];
       }
+      /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
+       * ruling, 260904). His own ratification is the reason: the reference
+       * is "the reference tone on the bottom end for all of the harmony
+       * that sits on top of it" — with no harmony on top, it has nothing to
+       * be under. The bar is SILENT with the reason on the face; the boards
+       * still DRAW the ref (where it would sit is informative, and the
+       * sound⊆sight pin permits drawn-but-silent). A scale take keeps no
+       * reference path at all, as before. */
       let refMidi = null;
-      if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree >= 0) {
+      if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree >= 0 && sel.length) {
         const rp = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
         if (rp.note) refMidi = rp.note.midi;
       }

@@ -565,15 +565,40 @@ def m23_the_walk_goes_deaf_to_the_window():
         """      const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
         startDegree: cfg.startDeg, nearFret: cfg.nearFret });""",
         """      const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
-        startDegree: 5, nearFret: 5 });""")
+        startDegree: 0, nearFret: 1 });""")
+    # (260904: the deaf window moved to 8–12 — the boot became 3–7 and the
+    # corpus's stepped/old windows cover 5–8, so 5/5 would silently agree)
     try:
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "SOUND must equal SIGHT" in r.stdout
+        # (260904: the pin's message moved with the subset correction — the
+        # GREP target rotted where the anchor did not; the preflight checks
+        # anchors only, so this species still costs a run to find)
+        hit = "SOUND must be a SUBSET of SIGHT" in r.stdout
         record("the walk goes deaf to the window",
                r.returncode != 0 and hit,
                "suite exit %d; the sound-equals-sight pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m24_the_boot_refuses_its_second_bar():
+    # 260904's placement pin guards the first-run experience: every bar of
+    # the boot progression places. Regress the boot to the old 6th-at-the-
+    # fifth window (the owner of startDeg/nearFret is field-board's default)
+    # and bar 2's E-flat maj7 refuses again — the pin must name the bar.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "      strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,",
+        "      strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5,")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "must place its grip whole" in r.stdout
+        record("the boot refuses its second bar",
+               r.returncode != 0 and hit,
+               "suite exit %d; the boot-placement pin bit: %s" % (r.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -628,7 +653,8 @@ def main():
                m16_card_moved_between_rows, m17_part_moved_between_seats,
                m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window,
                m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving,
-               m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window)
+               m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window,
+               m24_the_boot_refuses_its_second_bar)
     preflight(fns)
     for fn in fns:
         try:

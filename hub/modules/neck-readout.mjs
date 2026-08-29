@@ -44,7 +44,7 @@ export const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
       bass: "none" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
     let index = 0;
