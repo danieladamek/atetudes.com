@@ -232,6 +232,104 @@ export function scaleTake(pool, { reach = 3 } = {}) {
   return { notes: assertAddressable(out, "scaleTake") };
 }
 
+/* ---------------- THE STRINGS-ADDRESS (child 3b) ----------------
+ *
+ * Daniel, reading his own wireframe aloud: "the fourth string gets played
+ * first, the third string gets played second, the fourth string gets played
+ * again third…" → 4,3,4,3,2,1. A PATTERN names strings, in play order, with
+ * repeats — AND A REPEAT IS THE ORDINAL, walking that string's notes low →
+ * high. Nothing in either shipped grammar can say "the second note on string
+ * 3"; under this address nothing needs to — G3 and half of G18 dissolve.
+ * TONES names roles instead (R 3 5 7 — the dyad roles ride the same
+ * alphabet). Both parse against a SELECTION directly; there is no slot
+ * address here at all, and the legacy one is untouched (child 3c, possibly
+ * never).
+ *
+ * THE VOCABULARY COLLISION, §4.4-stated rather than silent: drill.mjs also
+ * says PATTERN, meaning a SLOT walk over a set — and the alphabets overlap
+ * ("1,2,3,4" parses in both, meaning different things), so mutual loud
+ * refusal is impossible. What keeps the two apart is that they never share
+ * an input path: drill's parsePattern is reached only by the tetrad pass's
+ * figure chain, this one only by the Multetudes boards, and the surface
+ * labels the control "The figure is: pattern — string numbers". The PRD §2.6
+ * ratifies PATTERN = string numbers for Multetudes; renaming drill's word
+ * instead is a C3 rename with the carrier census behind it — priced in the
+ * register (entry 12), deferred, possibly to 3c.
+ *
+ * APPROACHES (absorbed from child 6): grammar-compatible, deliberately not
+ * built. The old refusal reason — slot mode cannot address a target — is
+ * DISSOLVED by this address: "(­1,+2)4" would name a fully determined
+ * target (the next note on string 4). What remains is a rendering law, not
+ * a grammar problem: an approach note is CHROMATIC, off the field, and the
+ * field's law for off-field notes (everything drawn is a field note,
+ * asserted) has no ruling yet. So parentheses are REFUSED BY NAME — never
+ * silently dropped, which is what v0.9's regex did — until that ruling
+ * exists. Register entry 12 carries the reason and the cost.
+ */
+
+/** the addresses each string of a selection offers — the always-on faint
+ * bracket's content: string → how many ordinals it holds */
+export function offersOn(notes) {
+  const per = {};
+  for (const n of notes) per[n.string] = (per[n.string] || 0) + 1;
+  return per;
+}
+
+/**
+ * orderBy(address, text, notes) → { order, err }
+ *
+ * address "pattern": text is string numbers in play order; a repeat is the
+ * ordinal, walking that string's selected notes low → high and WRAPPING past
+ * the last (v0.9's own rule, kept — the reference for behaviour).
+ * address "tones": text names roles (R 3 5 7); each lands on the selection's
+ * note wearing that role.
+ * No tokens → { order: null, err: null } (a block — nothing to order).
+ * Errors are VALUES, loud on the face, never throws: the surface owes the
+ * user the reason, not a dead console.
+ */
+export function orderBy(address, text, notes) {
+  const raw = String(text || "").toUpperCase();
+  if (/[()]/.test(raw))
+    return { order: null, err: "approaches — (…) — are not built yet: an approach note is " +
+      "chromatic, off the field, and the field's rendering law for off-field notes is undecided" };
+  if (/[\[\]]/.test(raw))
+    return { order: null, err: "[…] is a TARGET in the ratified motion grammar — the order bracket is { }" };
+  const toks = address === "pattern" ? (raw.match(/[1-6]/g) || []) : (raw.match(/R|[357]/g) || []);
+  if (!toks.length) return { order: null, err: null };
+  const order = [];
+  const used = {};
+  for (const tok of toks) {
+    if (address === "pattern") {
+      const s = +tok;
+      const onStr = notes.filter((n) => n.string === s).sort((a, b) => a.fret - b.fret);
+      if (!onStr.length)
+        return { order: null, err: `string ${s} carries nothing in this selection` };
+      const k = (used[s] || 0) % onStr.length;      // A REPEAT IS THE ORDINAL, wrapping
+      used[s] = (used[s] || 0) + 1;
+      order.push(onStr[k]);
+    } else {
+      const hit = notes.find((n) => n.role === tok);
+      if (!hit)
+        return { order: null, err: `this selection carries no ${tok === "R" ? "root" : tok + (tok === "3" ? "rd" : "th")}` };
+      order.push(hit);
+    }
+  }
+  // derived, then asserted: every ordered step is a note of the selection
+  for (const n of order)
+    if (!notes.includes(n)) throw new Error("orderBy: an ordered step left the selection");
+  return { order, err: null };
+}
+
+/** the bracket beside each string: which steps of the order land there —
+ * {1,3} beside string 4 means steps 1 and 3. Derived from the order itself,
+ * never tracked separately. */
+export function bracketOf(order) {
+  const per = {};
+  if (!order) return per;
+  order.forEach((n, i) => { (per[n.string] ??= []).push(i + 1); });
+  return per;
+}
+
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */
 
 {

@@ -441,6 +441,29 @@ def m17_part_moved_between_seats():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 18
+# MULTETUDES child 3b: THE REPEAT STOPS BEING THE ORDINAL — every repeat of a
+# string plays its first note again. The page renders plausibly (a figure, a
+# polyline, a bracket); only the artifact's ordered addresses can see that
+# step 3 never reached string 4's second note.
+def m18_repeat_stops_being_the_ordinal():
+    p, original, mutated = patch("engine/selection.mjs",
+        "      const k = (used[s] || 0) % onStr.length;      // A REPEAT IS THE ORDINAL, wrapping\n"
+        "      used[s] = (used[s] || 0) + 1;\n"
+        "      order.push(onStr[k]);",
+        "      order.push(onStr[0]);")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "must play string 4's two notes low->high" in r.stdout
+        record("the repeat stops being the ordinal",
+               r.returncode != 0 and hit,
+               "suite exit %d; the ordered-address hook bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
@@ -450,7 +473,8 @@ def main():
                m10_field_frozen_on_key_change, m11_field_walk_loses_a_string,
                m12_set_change_resets_the_design, m13_live_setindex_hijacks_the_field,
                m14_take_collapses_into_placement, m15_scale_material_silently_halved,
-               m16_card_moved_between_rows, m17_part_moved_between_seats):
+               m16_card_moved_between_rows, m17_part_moved_between_seats,
+               m18_repeat_stops_being_the_ordinal):
         try:
             fn()
         except BuildBroken as e:

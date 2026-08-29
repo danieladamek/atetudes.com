@@ -39,7 +39,7 @@
 import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
-import { diatonicTones, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { diatonicTones, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
@@ -111,15 +111,14 @@ export const fieldBoard = {
       </div>
       <div class="fd-cap">The figure is</div>
       <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
-        <button data-addr="pattern" class="on" disabled>pattern</button>
-        <button data-addr="tones" disabled>tones</button>
+        <button data-addr="pattern" class="on"
+          title="a sequence of STRING numbers — 4,3,4,3,2,1; a repeat is the ordinal">pattern</button>
+        <button data-addr="tones" title="roles — R, 3, 5, 7">tones</button>
       </div>
       <div class="fd-cap">Figure</div>
       <input type="text" id="fdFigIn" data-control="fdFigIn" placeholder="4,3,4,3,2,1"
-        autocomplete="off" disabled>
-      <div class="hint fd-fignote" id="fdFigNote">Inert — the figure and its string-number
-      address arrive with child 3b. The bracket beside the strings will show where each
-      step lands.</div>
+        autocomplete="off">
+      <div class="hint fd-fignote" id="fdFigNote"></div>
       <div class="hint info"><b>Moving the box.</b> Drag the ■ grip to move it — across frets,
       and across strings with it. Drag the ● handles on its top and bottom edges to choose which
       strings it spans. With the neck focused, ← → step the frame one scale note and
@@ -190,6 +189,7 @@ export const fieldBoard = {
 .fd-sel{cursor:pointer}
 .fd-lab{font-weight:bold;pointer-events:none;user-select:none}
 .fd-frame{fill:none;stroke:#73737A;stroke-width:1.6;stroke-dasharray:6 4;pointer-events:none}
+.fd-brk{pointer-events:none;user-select:none}
 .fd-grip{fill:var(--ink);cursor:move}
 .fd-gripv{fill:#fff;stroke:var(--ink);stroke-width:1.6;cursor:ns-resize}
 .fd-hit{fill:transparent}
@@ -201,7 +201,11 @@ export const fieldBoard = {
       /* the boot state is v0.9's (register 11): the B♭ tetrad block on
        * 4-3-2-1, the window from the 6th (G) at the fifth position */
       strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5,
-      object: "tetrad", take: "one", notesPer: 1 };
+      object: "tetrad", take: "one", notesPer: 1,
+      /* the figure (child 3b): the address vocabulary and the user's text,
+       * verbatim — every consumer parses through selection.mjs's orderBy,
+       * nothing pre-digested */
+      address: "pattern", figure: "" };
     let curB = null;            // { fld, run, pos, region, aNotes } of the last build
     let dragging = null;
 
@@ -289,6 +293,17 @@ export const fieldBoard = {
         t.textContent = x.role || fam;
       }
 
+      /* THE FIGURE'S ORDER (child 3b): parsed against the selection itself,
+       * drawn as v0.9 draws it — a dashed line through the ordered notes —
+       * and exposed on the artifact as data-figorder for the gate */
+      const fig = orderBy(cfg.address, cfg.figure, sel);
+      if (fig.order && fig.order.length > 1)
+        el("polyline", { points: fig.order.map((n) => fx(n.fret) + "," + fy(n.string)).join(" "),
+          fill: "none", stroke: "#212126", "stroke-width": 1.3,
+          "stroke-dasharray": "4 3", opacity: 0.45, "pointer-events": "none" }, svg);
+      svg.setAttribute("data-figorder",
+        fig.order ? fig.order.map((n) => n.string + "/" + n.fret).join(",") : "");
+
       /* THE WINDOW — one rigid dashed rectangle, with v0.9's gesture surfaces:
        * the ■ move grip at bottom-left, and the two ● edge handles */
       const ys = [fy(region.strHi) - 17, fy(region.strLo) + 17];
@@ -316,6 +331,8 @@ export const fieldBoard = {
       const capB = el("text", { x: BRK_X + 10, y: fy(1) - 22, "text-anchor": "middle",
         "font-size": "8.5", fill: "#B9B9BF" }, svg);
       capB.textContent = "pattern";
+      const brSteps = bracketOf(fig.order);
+      const offers = offersOn(sel);
       for (let s = 1; s <= 6; s++) {
         const on = inRun.has(s);
         const g = el("g", { class: "fd-str", "data-fdstr": s }, svg);
@@ -326,12 +343,46 @@ export const fieldBoard = {
           "font-size": "11.5", "font-weight": on ? "bold" : "normal",
           fill: on ? "#fff" : "#73737A", class: "fd-lab" }, g);
         t.textContent = s;
+        /* THE ORDER BRACKET — always on. Faint before anything is typed,
+         * showing the ordinals the string offers; full ink under a typed
+         * pattern; greyed under tones, because there it is derived. { }
+         * deliberately: [ ] is a target and ( ) an approach in the ratified
+         * motion grammar. */
+        if (!on) continue;
+        let text2 = null, fill2 = "#D8D8DC";
+        if (fig.order && brSteps[s]) {
+          text2 = "{" + brSteps[s].join(",") + "}";
+          fill2 = cfg.address === "pattern" ? "#212126" : "#B9B9BF";
+        } else if (!fig.order && offers[s]) {
+          text2 = "{" + Array.from({ length: offers[s] }, (x, i) => i + 1).join(",") + "}";
+        }
+        if (text2) {
+          const bt = el("text", { x: BRK_X, y: fy(s) + 4, "font-size": "11.5",
+            fill: fill2, "font-weight": cfg.address === "pattern" && fig.order ? "600" : "400",
+            "font-family": "ui-monospace,SFMono-Regular,Menlo,monospace",
+            class: "fd-brk", "data-fdbrk": s }, svg);
+          bt.textContent = text2;
+        }
       }
 
       /* the rail paints from the same build */
       for (const b of byId("fdNSeg").querySelectorAll("button")) {
         b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
         b.disabled = cfg.object === "scale";
+      }
+      for (const b of byId("fdAddrSeg").querySelectorAll("button"))
+        b.classList.toggle("on", b.dataset.addr === cfg.address);
+      byId("fdFigIn").placeholder = cfg.address === "pattern" ? "4,3,4,3,2,1" : "R-3-7-5";
+      if (byId("fdFigIn").value !== cfg.figure) byId("fdFigIn").value = cfg.figure;
+      const noteEl = byId("fdFigNote");
+      if (fig.err) {
+        noteEl.textContent = "figure: " + fig.err;
+        noteEl.style.color = "#B82929"; noteEl.style.fontStyle = "normal";
+      } else {
+        noteEl.style.color = ""; noteEl.style.fontStyle = "";
+        noteEl.textContent = cfg.address === "pattern"
+          ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
+          : "Tones name roles — R, 3, 5, 7. The bracket still shows the order, greyed, because it is derived rather than typed.";
       }
 
       const per = {};
@@ -349,6 +400,7 @@ export const fieldBoard = {
         `Strings ${run.label}${run.contiguous ? "" : " (skipped)"} · ` +
         `the window from the ${ORD[pos.startDeg]} on string ${anchor}, frets ${pos.fLo}–${pos.fHi} · ` +
         `${takeWord}: ${sel.length} notes, ${shape} across the set.` +
+        (fig.err ? "" : (fig.order ? ` Figure: ${fig.order.length} steps as ${cfg.address === "pattern" ? "a pattern" : "tones"}.` : "")) +
         (isScale ? " Placement is off — a scale is not a chord; the box offers every note, three per string at most (the hand's reach)."
           : (selMsg ? ` ${selMsg}.` : "")) +
         ` Click the numbers to choose strings; ← → step the window.`;
@@ -360,7 +412,8 @@ export const fieldBoard = {
     const push = () => {
       build();
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
-        startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer });
+        startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer,
+        address: cfg.address, figure: cfg.figure });
     };
 
     const setStrings = (next) => {
@@ -457,6 +510,9 @@ export const fieldBoard = {
 
     for (const b of byId("fdNSeg").querySelectorAll("button"))
       b.addEventListener("click", () => { cfg = { ...cfg, notesPer: +b.dataset.nps }; push(); });
+    for (const b of byId("fdAddrSeg").querySelectorAll("button"))
+      b.addEventListener("click", () => { cfg = { ...cfg, address: b.dataset.addr }; push(); });
+    byId("fdFigIn").addEventListener("input", (e) => { cfg = { ...cfg, figure: e.target.value }; push(); });
 
     byId("fdRailBtn").addEventListener("click", () => {
       const r = byId("fdRail");
@@ -515,7 +571,7 @@ export const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure"])
         if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {

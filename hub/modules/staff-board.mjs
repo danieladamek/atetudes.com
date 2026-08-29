@@ -21,7 +21,7 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { diatonicTones, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { diatonicTones, oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, CLOCK_STATE, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 
@@ -62,7 +62,8 @@ export const staffBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1 };
+      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1,
+      address: "pattern", figure: "" };
     let meter = 4;
 
     const el = (t, a, p) => {
@@ -126,8 +127,11 @@ export const staffBoard = {
       };
       const yTreble = (s) => TY + GAP * 8 - (s - (4 * 7 + 2)) * GAP;
 
-      const stacked = cfg.object !== "scale" && cfg.take !== "all";
-      const seq = sel;
+      /* A CHORD STACKS; A RUN DOES NOT (v0.9's rule) — and a FIGURE is a
+       * run through the selection, in its own order (child 3b) */
+      const fig = orderBy(cfg.address, cfg.figure, sel);
+      const stacked = !fig.order && cfg.object !== "scale" && cfg.take !== "all";
+      const seq = fig.order && fig.order.length ? fig.order : sel;
       const allSteps = seq.map((n) => stepOf(n.midi));
       for (const s of allSteps)
         if (!Number.isInteger(s)) throw new Error("staff-board: a written step failed to derive");

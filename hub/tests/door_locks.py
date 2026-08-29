@@ -540,6 +540,55 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- child 3b: the strings-address and the order bracket ----
+        brackets = lambda: page.evaluate("""() =>
+          Object.fromEntries([...document.querySelectorAll('.fd-brk')]
+            .map(t => [t.dataset.fdbrk, { text: t.textContent, fill: t.getAttribute('fill') }]))""")
+        figorder = lambda: (page.get_attribute("#fieldSvg", "data-figorder") or "")
+        # ALWAYS ON: before anything is typed the bracket shows, faint, what
+        # each in-run string offers
+        b0 = brackets()
+        check(len(b0) == 4 and all(v["fill"] == "#D8D8DC" for v in b0.values()),
+              f"{tag} the order bracket must be always-on and faint before a figure: {b0}")
+        # the item's case: every occurrence at Line doubles string 4, and
+        # 4,3,4,3,2,1 walks its two notes low → high — THE REPEAT IS THE ORDINAL
+        page.select_option("#hcTake", "all"); page.wait_for_timeout(80)
+        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
+        page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
+        page.wait_for_timeout(150)
+        steps = [x.split("/") for x in figorder().split(",")]
+        check(len(steps) == 6 and steps[0][0] == "4" and steps[2][0] == "4"
+              and int(steps[2][1]) > int(steps[0][1]),
+              f"{tag} 4,3,4,3,2,1 at Line must play string 4's two notes low->high: {figorder()}")
+        b1 = brackets()
+        check(b1["4"]["text"] == "{1,3}" and b1["3"]["text"] == "{2,4}"
+              and b1["2"]["text"] == "{5}" and b1["1"]["text"] == "{6}",
+              f"{tag} the bracket must read {{6}} {{5}} {{2,4}} {{1,3}} on strings 1-4: {b1}")
+        check(all(v["fill"] == "#212126" for v in b1.values()),
+              f"{tag} a TYPED pattern's bracket is full ink: {b1}")
+        # the staff draws the figure as a run — six noteheads, spread, not a stack
+        st_xs = page.evaluate("""() =>
+          [...document.querySelectorAll('#stSvg ellipse')].map(e => +e.getAttribute('cx'))""")
+        check(len(st_xs) == 6 and len(set(st_xs)) == 6,
+              f"{tag} the staff must draw the 6-step figure as a run: {len(st_xs)} heads, {len(set(st_xs))} x-positions")
+        # tones: derived bracket, greyed
+        page.click('#fdAddrSeg >> text=tones'); page.wait_for_timeout(120)
+        bt = brackets()
+        typed = {k: v for k, v in bt.items() if v["text"] and "{" in v["text"] and v["fill"] == "#B9B9BF"}
+        check(len(typed) >= 1, f"{tag} under tones the bracket is derived and greyed: {bt}")
+        # refusals, loud on the face
+        page.click('#fdAddrSeg >> text=pattern'); page.wait_for_timeout(80)
+        page.fill("#fdFigIn", "(-1,+2)4"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
+        check("approaches" in page.inner_text("#fdFigNote") and "off the field" in page.inner_text("#fdFigNote"),
+              f"{tag} an approach must refuse by name on the face: {page.inner_text('#fdFigNote')!r}")
+        page.fill("#fdFigIn", "5"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
+        check("string 5 carries nothing" in page.inner_text("#fdFigNote"),
+              f"{tag} an absent string must refuse by name: {page.inner_text('#fdFigNote')!r}")
+        # back to the boot state
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
+        page.select_option("#hcTake", "one"); page.wait_for_timeout(60)
+        page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(80)
+
         # ---- THE SEATING CHECK, EXTENDED TO PARTS (the parts primitive):
         # WHICH PART sits in WHICH SEAT — last night's lesson one level down.
         # The pad (journalIn) sits in row 1's 3fr cell WITHOUT the log; the
@@ -674,7 +723,8 @@ def run_door(pw, door_id):
         check(len(pal_proto) == 7 and pal_proto == pal_door,
               f"{tag} the degree palette diverges from v0.9: {pal_proto} vs {pal_door}")
         # inert regions are VISIBLY inert — the face says which child, nowhere blank
-        for sel, child in [("#pgNote", "child 7"), ("#tlScroll", "child 7"), ("#fdFigNote", "child 3b")]:
+        # #fdFigNote left this list on 260831 — child 3b made the figure live
+        for sel, child in [("#pgNote", "child 7"), ("#tlScroll", "child 7")]:
             txt = page.inner_text(sel)
             check(("inert" in txt.lower() or "arrives" in txt.lower()) and child in txt.lower(),
                   f"{tag} inert region {sel} does not say so on its face: {txt!r}")
