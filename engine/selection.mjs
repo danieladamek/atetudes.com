@@ -357,6 +357,18 @@ export function orderBy(address, text, notes) {
       "chromatic, off the field, and the field's rendering law for off-field notes is undecided" };
   if (/[\[\]]/.test(raw))
     return { order: null, err: "[…] is a TARGET in the ratified motion grammar — the order bracket is { }" };
+  /* THE MODE MISMATCH, noticed by the alphabet (260902 — Daniel typed
+   * R-3-5-7 under pattern and was told a true-but-useless fact about string
+   * 5). R and 7 are not string numbers; 1/2/4/6 are not tone names. A figure
+   * carrying the OTHER mode's letters is named as such, with the switch
+   * offered, instead of half-reading it in the wrong alphabet. Tokens legal
+   * in both alphabets (3, 5) stay ambiguous and read as the current mode. */
+  if (address === "pattern" && /R|7/.test(raw))
+    return { order: null, err: "this reads as a TONES figure (R and 7 are roles, not strings) — " +
+      "the address is set to pattern; switch it to tones" };
+  if (address !== "pattern" && /[12468]/.test(raw))
+    return { order: null, err: "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
+      "the address is set to tones; switch it to pattern" };
   const toks = address === "pattern" ? (raw.match(/[1-6]/g) || []) : (raw.match(/R|[357]/g) || []);
   if (!toks.length) return { order: null, err: null };
   const order = [];

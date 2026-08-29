@@ -100,3 +100,17 @@ test("no tokens is a block, not an error", () => {
   assert.deepEqual(orderBy("pattern", "", sel), { order: null, err: null });
   assert.deepEqual(orderBy("tones", "  ", sel), { order: null, err: null });
 });
+
+test("THE MODE MISMATCH is named, not half-read (260902): R-3-5-7 under pattern offers the switch", () => {
+  const { pos, pool, tones } = fixture();
+  const sel = everyOccurrence(tones, pool, { n: 3 }).notes;
+  const r = orderBy("pattern", "R-3-5-7", sel);
+  assert.equal(r.order, null);
+  assert.match(r.err, /reads as a TONES figure/);
+  assert.match(r.err, /switch it to tones/);
+  const p = orderBy("tones", "4,3,4,3,2,1", sel);
+  assert.equal(p.order, null);
+  assert.match(p.err, /reads as a string PATTERN/);
+  // 3 and 5 live in both alphabets: ambiguous stays with the current mode
+  assert.equal(orderBy("pattern", "3", sel).err, null);
+});

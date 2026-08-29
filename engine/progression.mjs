@@ -145,16 +145,27 @@ export function progressionOf(cfg, key, scale = "major") {
   }
 }
 
-/** beats per chord: a bar's chords take the meter's beats. When the chosen
- * split has exactly as many slots as the bar has chords, the split's slots
- * ARE the beats (the family transport's own sentence: "chords take the
- * bar's slots in order"); otherwise the meter divides evenly, remainder to
- * the front — an integer partition, derived, summing to the meter. */
+/** beats per chord — the family transport's own sentence, "chords take the
+ * bar's slots in order", applied whole (corrected 260902 — Daniel's finding:
+ * 1+1+1+1 audibly did nothing):
+ *   - a bar with as many chords as the split has slots: the slots ARE the
+ *     beats;
+ *   - a bar with ONE chord under a multi-slot split: the chord takes the
+ *     NEXT SLOT of the split's cycle — so under 1+1+1+1 a cycle's chords
+ *     change every beat, four to the metric bar, exactly as v0.9's
+ *     regrouping sounds (register 14 amended: the timing follows v0.9, the
+ *     bar GROUPING still follows the chart);
+ *   - otherwise the meter divides evenly, remainder to the front — an
+ *     integer partition, derived, summing to the meter. */
 export function beatsOf(bars, meter = 4, split = null) {
   const out = [];
+  let slot = 0;                    // the split cycle, walked across one-chord bars
   for (const bar of bars) {
     const n = bar.length;
     if (split && Array.isArray(split) && split.length === n) { out.push([...split]); continue; }
+    if (split && Array.isArray(split) && split.length > 1 && n === 1) {
+      out.push([split[slot % split.length]]); slot++; continue;
+    }
     const base = Math.floor(meter / n), extra = meter - base * n;
     const beats = bar.map((_, i) => base + (i < extra ? 1 : 0));
     if (beats.reduce((a, b) => a + b, 0) !== meter)
@@ -162,6 +173,47 @@ export function beatsOf(bars, meter = 4, split = null) {
     out.push(beats);
   }
   return out;
+}
+
+/**
+ * walkSchedule(sel, order, beats, bpm, opts) → { events: [{midi, at}], span }
+ * — THE TIME DIMENSION (260902, Daniel's headline finding: the figure never
+ * reached the sound). Everything derived, no magic milliseconds:
+ *   span         = beats × 60/bpm seconds — the chord's own duration;
+ *   figure typed (order) — IT SEQUENCES, WHATEVER THE TAKE: step k sounds at
+ *                  k · span/steps. The steps divide the chord's own span
+ *                  evenly and never spill into the next chord;
+ *   no figure    — a VOICING (spread=false) sounds together at 0; an
+ *                  ARPEGGIO or a scale (spread=true) sounds low → high
+ *                  across the span, the run the take already implies;
+ *   opts.refMidi — the fretted reference, under the chord, at 0.
+ * Nothing truncates: any number of steps subdivides the span (the report
+ * states why the "more steps than the span can carry" case cannot arise
+ * under even subdivision). Every schedule is asserted before it is returned:
+ * times ascending within [0, span), the event count equal to the material's.
+ */
+export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null } = {}) {
+  if (!(beats > 0) || !(bpm > 0))
+    throw new Error("walkSchedule: beats and bpm must be positive — the span is derived from them");
+  const span = beats * 60 / bpm;
+  const seq = order && order.length ? order
+    : spread ? [...sel].sort((a, b) => a.midi - b.midi)
+    : sel;
+  const together = !(order && order.length) && !spread;
+  const step = seq.length > 1 && !together ? span / seq.length : 0;
+  const events = seq.map((nt, k) => ({ midi: nt.midi, at: together ? 0 : k * step }));
+  if (refMidi != null) events.unshift({ midi: refMidi, at: 0 });
+  for (let i = 1; i < events.length; i++)
+    if (events[i].at < events[i - 1].at)
+      throw new Error("walkSchedule: the schedule must ascend — time only runs forward");
+  for (const e of events)
+    if (e.at < 0 || e.at >= span - 1e-9)
+      throw new Error("walkSchedule: a step left the chord's span — steps never spill into the next chord " +
+        "(a step AT the span is the next chord's downbeat, which is spilling)");
+  const expected = seq.length + (refMidi != null ? 1 : 0);
+  if (events.length !== expected)
+    throw new Error("walkSchedule: an event went missing — the schedule must carry every note it was given");
+  return { events, span };
 }
 
 /** the canonical chart body for a progression's bars — THROUGH the format

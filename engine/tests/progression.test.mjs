@@ -9,7 +9,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { progressionOf, cycleDegreesWalk, beatsOf, chartBodyOf, chordAt } from "../progression.mjs";
+import { progressionOf, cycleDegreesWalk, beatsOf, chartBodyOf, chordAt, walkSchedule } from "../progression.mjs";
 import { CYCLES } from "../tetrad-sequence.mjs";
 import { STRUCTURES, chartBody } from "../structures.mjs";
 import { objectTones, fieldPartition, objectOffsets, diatonicTones } from "../selection.mjs";
@@ -73,8 +73,9 @@ test("typed changes: romans resolve by the case rule, symbols parse, and a bad t
 test("beatsOf: a matching split's slots ARE the beats; otherwise the meter partitions, front-loaded, summing exactly", () => {
   const p = progressionOf({ source: "form", form: "ii-V-I" }, "Bb");
   assert.deepEqual(beatsOf(p.bars, 4), [[2, 2], [4]]);
-  assert.deepEqual(beatsOf(p.bars, 4, [3, 1]), [[3, 1], [4]],
-    "a two-slot split serves the two-chord bar and leaves the one-chord bar whole");
+  assert.deepEqual(beatsOf(p.bars, 4, [3, 1]), [[3, 1], [3]],
+    "a two-slot split serves the two-chord bar whole; the one-chord bar takes the cycle's next slot " +
+    "(corrected 260902 — the old pin asserted the behaviour Daniel heard doing nothing)");
   assert.deepEqual(beatsOf([[0, 1, 2]], 4), [[2, 1, 1]], "4 into 3, remainder to the front");
 });
 
@@ -115,4 +116,38 @@ test("THE CHIP LINE, identified not counted: cycling 4ths in B\u266d, every symb
   // an off-key-rooted typed chord analyses as em-dash, never a wrong numeral
   const e7 = progressionOf({ source: "custom", custom: "E7" }, "Bb");
   assert.equal(chordAt(e7, 0, fld, "tetrad").roman, "\u2014");
+});
+
+test("THE TIME DIMENSION: a six-step figure divides a four-beat chord's span evenly — order AND times", () => {
+  const sel = [{ midi: 60 }, { midi: 64 }, { midi: 55 }, { midi: 67 }];
+  const order = [50, 55, 52, 57, 59, 64].map((m) => ({ midi: m }));
+  const { events, span } = walkSchedule(sel, order, 4, 60);
+  assert.equal(span, 4);                                  // 4 beats at 60bpm = 4 s, derived
+  assert.deepEqual(events.map((e) => e.midi), [50, 55, 52, 57, 59, 64],
+    "the figure's ORDER is the schedule's order — the take chose the material, the figure the time");
+  const step = span / 6;
+  events.forEach((e, k) => assert.ok(Math.abs(e.at - k * step) < 1e-9,
+    `step ${k} must sound at ${k}·span/6 — a pin that counts is not a pin that identifies`));
+  assert.ok(events[events.length - 1].at < span, "the last step never spills into the next chord");
+});
+
+test("no figure: a voicing sounds together; an arpeggio (and a scale) runs low → high across the span", () => {
+  const sel = [{ midi: 60 }, { midi: 64 }, { midi: 55 }, { midi: 67 }];
+  const v = walkSchedule(sel, null, 4, 120);
+  assert.ok(v.events.every((e) => e.at === 0), "a voicing is one attack");
+  const a = walkSchedule(sel, null, 4, 120, { spread: true });
+  assert.deepEqual(a.events.map((e) => e.midi), [55, 60, 64, 67], "low to high");
+  assert.deepEqual(a.events.map((e) => e.at), [0, 0.5, 1, 1.5], "evenly across 2 s (4 beats at 120)");
+  const r = walkSchedule(sel, null, 4, 120, { refMidi: 43 });
+  assert.deepEqual(r.events[0], { midi: 43, at: 0 }, "the reference sounds under the chord, at 0");
+});
+
+test("THE SPLIT CYCLE: a one-chord bar takes the next slot — 1+1+1+1 makes a cycle change chords every beat", () => {
+  assert.deepEqual(beatsOf([[0], [1], [2], [3]], 4, [1, 1, 1, 1]), [[1], [1], [1], [1]]);
+  assert.deepEqual(beatsOf([[0], [1], [2]], 4, [2, 2]), [[2], [2], [2]]);
+  assert.deepEqual(beatsOf([[0], [1], [2]], 4, [2, 1, 1]), [[2], [1], [1]],
+    "the cycle walks the slots in order across the bars");
+  assert.deepEqual(beatsOf([[0, 1], [2]], 4, [3, 1]), [[3, 1], [3]],
+    "a matching bar takes the slots whole; the single-chord bar cycles");
+  assert.deepEqual(beatsOf([[0], [1]], 4, null), [[4], [4]], "no split: the bar's meter, as before");
 });
