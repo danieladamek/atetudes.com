@@ -242,6 +242,7 @@ export const fieldBoard = {
     let index = 0;                 // the étude's place — the chart line owns it
     let curB = null;            // { fld, run, pos, region, aNotes } of the last build
     let dragging = null;
+    let pulseTimers = [];       // the sounding-note pulse (260905, item 5)
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -368,6 +369,12 @@ export const fieldBoard = {
         el("polyline", { points: fig.order.map((n) => fx(n.fret) + "," + fy(n.string)).join(" "),
           fill: "none", stroke: "#212126", "stroke-width": 1.3,
           "stroke-dasharray": "4 3", opacity: 0.45, "pointer-events": "none" }, svg);
+      /* THE SOUNDING-NOTE PULSE LAYER (260905, item 5 — the family idiom
+       * from fretboard-stage: "what you see pulsing is what you hear").
+       * Inherited by listening to NOTE — the walk times its announcements,
+       * so arrival IS sounding time; the stage schedules its own because it
+       * hears ATTACK instead. Same ring: r 19, ink, 2.4, gone in 320ms. */
+      el("g", { class: "fd-pulselayer" }, svg);
       svg.setAttribute("data-figorder",
         fig.order ? fig.order.map((n) => n.string + "/" + n.fret).join(",") : "");
 
@@ -551,6 +558,25 @@ export const fieldBoard = {
     listen(d, STEP_CHANGED, (m) => {
       if (!m || m.request === true || typeof m.index !== "number") return;
       if (m.index !== index) { index = m.index; build(); }
+    });
+
+    /* what you see pulsing is what you hear (fretboard-stage's own words) —
+     * the ring drawn AT THE DRAWN DOT's own coordinates, never recomputed */
+    listen(d, NOTE, (m) => {
+      if (!m || typeof m.midi !== "number") return;
+      const svg = byId("fieldSvg");
+      const layer = svg && svg.querySelector(".fd-pulselayer");
+      if (!layer) return;
+      const hits = [
+        ...svg.querySelectorAll(`.fd-sel[data-selmidi="${m.midi}"] circle`),
+        ...[...svg.querySelectorAll(`.fd-ref[data-refmidi="${m.midi}"] circle`)],
+      ];
+      for (const c of hits) {
+        const ring = el("circle", { class: "fd-pulse", cx: c.getAttribute("cx"),
+          cy: c.getAttribute("cy"), r: 19, fill: "none", stroke: "#212126",
+          "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
+        pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), 320));
+      }
     });
 
     byId("fieldSvg").addEventListener("click", (e) => {

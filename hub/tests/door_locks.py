@@ -959,6 +959,49 @@ def run_door(pw, door_id):
               f"not decide the movement: {[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:8]]}")
         page.select_option("#hcTake", "one"); page.click('#fdNSeg >> text=Grip')
         page.wait_for_timeout(150)
+
+        # ---- 260905 item 5: THE PULSE — what you see pulsing is what you hear
+        # (fretboard-stage's own ratified words; this board finally inherits
+        # the idiom by listening to NOTE). Pinned IDENTIFIED: each ring sits
+        # at the exact coordinates of a drawn dot whose midi was heard.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.fill("#bpmRange", "120"); page.dispatch_event("#bpmRange", "input")
+        page.wait_for_timeout(150)
+        page.evaluate("() => { window.__nt = [] }")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(180)
+        pulse = page.evaluate("""() => {
+          const rings = [...document.querySelectorAll('#fieldSvg .fd-pulse')]
+            .map(r => [r.getAttribute('cx'), r.getAttribute('cy')]);
+          const dots = {};
+          for (const g of document.querySelectorAll('#fieldSvg .fd-sel')) {
+            const c = g.querySelector('circle');
+            dots[c.getAttribute('cx') + ',' + c.getAttribute('cy')] = +g.dataset.selmidi;
+          }
+          return { rings, dotAt: rings.map(([x, y]) => dots[x + ',' + y] ?? null) }; }""")
+        heard = [n["m"] for n in page.evaluate("() => window.__nt")]
+        check(len(pulse["rings"]) == 4
+              and all(m is not None and m in heard for m in pulse["dotAt"]),
+              f"{tag} a BLOCK's four notes must pulse AT their drawn dots as they sound: "
+              f"rings {pulse['rings']}, midis {pulse['dotAt']}, heard {heard}")
+        page.wait_for_timeout(500)
+        check(page.eval_on_selector_all("#fieldSvg .fd-pulse", "e => e.length") == 0,
+              f"{tag} the pulse must fade — a ring that stays is a marker, not a pulse")
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(200)
+        # and in ARPEGGIO movement the rings arrive one at a time
+        page.click('#fdMoveSeg >> text=arpeggio')
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(150)
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(700)
+        midbar = page.eval_on_selector_all("#fieldSvg .fd-pulse", "e => e.length")
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        check(1 <= midbar <= 2,
+              f"{tag} an ARPEGGIO pulses one dot at a time, not the chord at once: {midbar} rings mid-bar")
+        page.click('#fdMoveSeg >> text=block')
+        page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
+        page.wait_for_timeout(100)
+
         # THE SPLIT, AT THE ARTIFACT: 1+1+1+1 must change when the next chord
         # ARRIVES — one bar per beat, not per metric bar (Daniel's finding:
         # the timeline drew it and the sound ignored it)
