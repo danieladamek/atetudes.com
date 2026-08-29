@@ -126,7 +126,14 @@ export const timelineStrip = {
       const n = lengthNow();
       index = ((i % n) + n) % n;
       render();
-      announce(d, STEP_CHANGED, { index });
+      /* ATTACK-BORNE (260905, item 3's cause): audio-card sounds plain step
+       * echoes through its tetrad pass — legitimate in the tetrad doors,
+       * WRONG here, where it played a disconnected four-voice chord on every
+       * bar's downbeat (and on every chip click), straight into WebAudio and
+       * invisible to the NOTE stream. In THIS door every step sound travels
+       * on the walk's schedule, so every echo carries the family's own flag
+       * for exactly that: the sound already travelled. */
+      announce(d, STEP_CHANGED, { index, attack: true });
     };
 
     listen(d, CONFIG_CHANGED, (m) => {
@@ -152,6 +159,6 @@ export const timelineStrip = {
     });
 
     render();
-    announce(d, STEP_CHANGED, { index });    // boot: the boards hear bar 1 exists
+    announce(d, STEP_CHANGED, { index, attack: true });   // boot echo — attack-borne too
   },
 };

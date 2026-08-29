@@ -1002,6 +1002,40 @@ def run_door(pw, door_id):
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(100)
 
+        # ---- 260905 item 3: THE SCHEDULE IS THE ONLY SOUNDING PATH ----
+        # Daniel heard a full chord on beat one in arpeggio mode. Every
+        # NOTE-stream trace was blind to it, because the second path never
+        # announced NOTE: audio-card derives a tetrad pass from this door's
+        # config and SOUNDS it on every plain step echo, straight into
+        # WebAudio. sounded⊆drawn cannot see un-announced audio — this pin
+        # closes that blindness at the AudioContext itself: with the click
+        # muted, raw source starts must EQUAL the NOTE count, and a chip
+        # click while stopped must start nothing.
+        page.evaluate("""() => { window.__raw = [];
+          for (const C of [AudioBufferSourceNode, OscillatorNode]) {
+            const P = C.prototype.start;
+            C.prototype.start = function(...a) { window.__raw.push(performance.now());
+              return P.apply(this, a); }; } }""")
+        page.evaluate("() => { window.__raw = []; window.__nt = [] }")
+        page.click('#tlScroll button >> nth=2'); page.wait_for_timeout(400)
+        silent = page.evaluate("() => [window.__nt.length, window.__raw.length]")
+        check(silent == [0, 0],
+              f"{tag} a chip click while stopped must start NO audio — the echo is "
+              f"attack-borne in this door (NOTEs {silent[0]}, raw starts {silent[1]})")
+        page.uncheck("#fdMetChk"); page.wait_for_timeout(150)
+        page.evaluate("() => { window.__raw = []; window.__nt = [] }")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1400)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(300)
+        counts = page.evaluate("() => [window.__nt.length, window.__raw.length]")
+        check(counts[0] >= 3 and counts[0] == counts[1],
+              f"{tag} with the click muted, every raw audio start must BE an announced "
+              f"NOTE — the walk's schedule is the only sounding path (NOTEs {counts[0]}, "
+              f"raw starts {counts[1]})")
+        page.check("#fdMetChk"); page.wait_for_timeout(150)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(120)
+
         # THE SPLIT, AT THE ARTIFACT: 1+1+1+1 must change when the next chord
         # ARRIVES — one bar per beat, not per metric bar (Daniel's finding:
         # the timeline drew it and the sound ignored it)

@@ -623,6 +623,26 @@ def m25_take_does_movement_duty_again():
         p.write_text(original)
 
 
+def m26_the_second_sounding_path_returns():
+    # 260905 item 3's cause, reintroduced: the strip's step echo loses its
+    # attack flag and audio-card sounds its disconnected tetrad pass on
+    # every echo — straight into WebAudio, invisible to the NOTE stream.
+    # Only the AudioContext-level pin can bite.
+    p, original, mutated = patch("hub/modules/timeline-strip.mjs",
+        "      announce(d, STEP_CHANGED, { index, attack: true });",
+        "      announce(d, STEP_CHANGED, { index });")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "must start NO audio" in r.stdout or "only sounding path" in r.stdout
+        record("the second sounding path returns",
+               r.returncode != 0 and hit,
+               "suite exit %d; the AudioContext pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -674,7 +694,8 @@ def main():
                m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window,
                m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving,
                m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window,
-               m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again)
+               m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again,
+               m26_the_second_sounding_path_returns)
     preflight(fns)
     for fn in fns:
         try:
