@@ -1,34 +1,50 @@
-/* etude-walk.mjs — THE WALK (child 7): the transport the door's own header
- * promised back ("the transport returns with child 7's progression and
- * walk"). Multetudes' étude is the progression: Play walks the bars.
+/* etude-walk.mjs — THE WALK (child 7; the TIME DIMENSION 260902): Play
+ * walks the bars, and THE FIGURE WALKS THE SELECTION ACROSS THE CHORD'S
+ * BEATS — Daniel's headline finding was that it did not: every note was
+ * announced in one synchronous loop, the figure derived, drawn, asserted
+ * and then discarded before anything sounded. Now the schedule is DERIVED
+ * (walkSchedule — golden rule 1: span = beats × 60/bpm, step = span/steps,
+ * no magic milliseconds) and the announcements are TIMED:
+ *
+ *   figure typed  it SEQUENCES, whatever the Take — the Take chooses the
+ *                 material, the figure the order and the time (v0.9's
+ *                 model: a picking pattern applies to whatever is under
+ *                 the hand). The order comes from selection.mjs's orderBy —
+ *                 the SAME derivation the bracket and the polyline draw —
+ *                 never from the Triadetudes chain (drill/figure address by
+ *                 slot; §4.2.3: the walk derives its own sound the way a
+ *                 board derives its own pixels).
+ *   no figure     a VOICING sounds together, as before; an ARPEGGIO (and a
+ *                 scale) runs low → high across the chord's span.
+ *   the timing    step 0 sounds NOW (the cold-play guarantee, 260819.2 —
+ *                 the first chord of a cold Play was silent once already);
+ *                 later steps are announced by view.setTimeout at their
+ *                 derived offsets, cancelled on advance and on stop. The
+ *                 NOTE contract carries no onset and audio-card plays on
+ *                 arrival, so the walk times the ANNOUNCEMENTS — the cost
+ *                 of touching neither the bus nor a foundational component
+ *                 (the alternative is priced in the 260902 report).
  *
  * THE CONTRACT, all of it already ratified (bus.mjs):
- *   PLAY {run:true}   the minis' ▶ — this module arms and starts the grid
- *                     through CLOCK {run:true, owner:"transport"}.
- *   BEAT              the clock owner's pulse. Each chord holds its DERIVED
- *                     beats (beatsOf — "chords take the bar's slots in
- *                     order"); when they run out the walk REQUESTS the next
- *                     step. The chart line owns the position: it wraps and
- *                     echoes, this module never sets the index itself.
- *   STEP_CHANGED echo while armed, an arrived chord SOUNDS — each selected
- *                     note (and the fretted reference) travels as NOTE
- *                     {midi}, the family's one-note message; audio-card
- *                     voices it at the chord level, so the mixer's mutes
- *                     hold. The COLD PLAY sounds the current chord at once
- *                     (260819.2 — the first chord of a cold Play was silent
- *                     once already; not again).
- *   CLOCK_STATE       running:false disarms — the mini's ⏹ stops the clock
- *                     and the walk falls silent with it, one stop cascaded.
- *
- * The selection is DERIVED HERE, independently, through the same engine
- * every board uses (§4.2.3 — the walk renders sound the way a board renders
- * pixels; it reads no board's state).
+ *   PLAY {run:true}   arm, and start the grid through CLOCK
+ *                     {run:true, owner:"transport"}.
+ *   BEAT              the clock owner's pulse; each chord spends its
+ *                     DERIVED beats (beatsOf — meter and split cycle), then
+ *                     the walk REQUESTS the next step. The chart line owns
+ *                     the position: it wraps and echoes.
+ *   STEP_CHANGED echo while armed, an arrived chord's SCHEDULE sounds, each
+ *                     event as NOTE {midi} at its derived time; the mixer's
+ *                     mutes hold, the reference rides at 0.
+ *   CLOCK_STATE       running:false disarms and cancels every pending step;
+ *                     meter and bpm are ADOPTED here from their owner (the
+ *                     metronome — 260902: meter was hardcoded 4 and the
+ *                     split audibly did nothing).
  */
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
-import { progressionOf, chordAt, beatsOf } from "../../engine/progression.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
+import { progressionOf, chordAt, beatsOf, walkSchedule } from "../../engine/progression.mjs";
 import { placeReference } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE,
   listen, announce } from "../bus.mjs";
@@ -47,11 +63,15 @@ export const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none",
+      dyad: [3, 7], bass: "none", address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
-    let meter = 4;
+    let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
-    let armed = false, beatsLeft = 0;
+    let armed = false;
+    let spent = 0;          // beats this chord has consumed; its own downbeat counts as 1
+    let advancing = false;  // true only inside the walk's own on-beat advance
+    let timers = [];
+    const clearPending = () => { for (const t of timers) d.defaultView.clearTimeout(t); timers = []; };
 
     const derive = () => {
       const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
@@ -80,39 +100,68 @@ export const etudeWalk = {
           : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || [];
       }
-      for (const nt of sel) announce(d, NOTE, { midi: nt.midi });
+      let refMidi = null;
       if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree >= 0) {
         const rp = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
-        if (rp.note) announce(d, NOTE, { midi: rp.note.midi });
+        if (rp.note) refMidi = rp.note.midi;
+      }
+      /* THE SCHEDULE: the figure's order through orderBy — the same value
+       * the bracket and the polyline draw — or the take's own shape */
+      const fig = orderBy(cfg.address, cfg.figure, sel);
+      const spread = cfg.object === "scale" || cfg.take === "all";
+      const { events } = walkSchedule(sel, fig.err ? null : fig.order,
+        chordBeats(prog), bpm, { spread, refMidi });
+      clearPending();
+      for (const ev of events) {
+        if (ev.at <= 0) { announce(d, NOTE, { midi: ev.midi }); continue; }
+        timers.push(d.defaultView.setTimeout(() => {
+          if (armed) announce(d, NOTE, { midi: ev.midi });
+        }, ev.at * 1000));
       }
     };
 
     listen(d, PLAY, (m) => {
       if (!m || m.run !== true || armed) return;
       armed = true;
-      announce(d, CLOCK, { run: true, owner: "transport" });
-      const { prog } = derive();
-      beatsLeft = chordBeats(prog);
+      /* THE ORDER MATTERS (260902 — found by reading the schedule's own
+       * trace): the metronome's first BEAT arrives SYNCHRONOUSLY inside
+       * announce(CLOCK), and with beatsLeft still 0 the walk requested the
+       * next bar at once — every cold play since 260901 SKIPPED ITS FIRST
+       * CHORD, and the gate's step pin only counted, so it passed. The
+       * beats are seated and the chord sounded BEFORE the clock starts. */
+      spent = 0;                             // the clock's first downbeat is this chord's beat 1
       soundCurrent();                        // the cold play sounds NOW
+      announce(d, CLOCK, { run: true, owner: "transport" });
     });
     listen(d, BEAT, () => {
       if (!armed) return;
-      beatsLeft -= 1;
-      if (beatsLeft <= 0)
+      /* a chord holds its derived beats WHOLE: its own downbeat is beat 1,
+       * and the advance lands on the NEXT downbeat (260902 — the first fix
+       * seated the count before the clock, then the trace showed the chord
+       * still losing its last beat to its own downbeat) */
+      spent += 1;
+      if (spent > chordBeats(derive().prog)) {
+        advancing = true;
         announce(d, STEP_CHANGED, { index: index + 1, request: true });
+        advancing = false;
+      }
     });
     listen(d, STEP_CHANGED, (m) => {
       if (!m || m.request === true || typeof m.index !== "number") return;
       const moved = m.index !== index;
       index = m.index;
       if (armed && moved) {
-        const { prog } = derive();
-        beatsLeft = chordBeats(prog);
+        /* an on-beat advance: the beat that carried it is the NEW chord's
+         * beat 1. A manual jump (a chip click) starts fresh at 0. */
+        spent = advancing ? 1 : 0;
         soundCurrent();
       }
     });
     listen(d, CLOCK_STATE, (m) => {
-      if (m && m.running === false) armed = false;
+      if (!m) return;
+      if (typeof m.meter === "number") meter = m.meter;
+      if (typeof m.bpm === "number") bpm = m.bpm;
+      if (m.running === false) { armed = false; clearPending(); }
     });
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
