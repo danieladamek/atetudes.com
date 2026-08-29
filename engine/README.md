@@ -42,6 +42,15 @@ engine/
 │                        drop-2, drop-3, the shells (arity 3, a separate stream)
 │                        and rootless 3-5-7-9. Voicing only — chord VOCABULARY
 │                        stays in chord.mjs. Feeds isolation.mjs's candidatesFor
+├── progression.mjs      THE PROGRESSION (Multetudes child 7): cycle · form ·
+│                        custom into one walkable shape. The bar count is
+│                        DERIVED (the walk comes home; nothing says "eight");
+│                        forms keep their own bars (| Cm7 F7 | is one bar —
+│                        the chart round trip is byte-clean because of it); a
+│                        custom line with | parses through parseAtchart
+│                        itself; bad tokens refuse BY NAME with a live
+│                        fallback. beatsOf divides a bar's beats among its
+│                        chords ("chords take the bar's slots in order") (pure)
 ├── reference.mjs        THE REFERENCE TONE (Multetudes child 5): a real
 │                        fretted note on string 5 or 6, chosen against the
 │                        window — v0.9's placeBass re-derived, refusal BY

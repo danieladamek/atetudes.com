@@ -73,6 +73,7 @@
  *
  * Pure: no DOM, no globals, load-time structural assertions.
  */
+import { parseChord } from "./chord.mjs";
 import { field } from "./field.mjs";
 import { positionOf, materialIn } from "./position.mjs";
 
@@ -103,6 +104,44 @@ export function objectOffsets(object, dyad = [3, 7]) {
     return dyad.map((d) => d - 1);
   }
   throw new Error(`objectOffsets: "${object}" is not an object this engine knows`);
+}
+
+/** objectTones(parsed, object, dyad) → { tones:[{role,pc}], absent:[role…] }
+ * — the object's tones ON AN ABSOLUTE CHORD (child 7: forms and typed
+ * changes carry their own roots and qualities; the diatonic path stays
+ * diatonicTones). The POSITIONS come from objectOffsets — the one place the
+ * object vocabulary lives — halved: a scale offset 2i is stack position i,
+ * because chord.mjs constructs intervals as [triad, seventh, extensions…],
+ * so positions 0..3 ARE the R/3/5/7 slots by construction (v0.9's
+ * ROLE_BY_INDEX rule: the role names the SLOT — C6's fourth voice wears
+ * "7", the seventh-slot, as v0.9 labels it). A slot the chord does not
+ * carry is ABSENT, BY NAME — a dyad's 7 on a plain triad, a tetrad's 7 on
+ * "C" — never silently narrowed (the coreTetrad lesson, third sighting). */
+export function objectTones(parsed, object, dyad = [3, 7]) {
+  if (!parsed || !parsed.root || !Array.isArray(parsed.intervals))
+    throw new Error("objectTones expects parseChord() output");
+  const offsets = objectOffsets(object, dyad);
+  if (offsets === null)
+    throw new Error("objectTones: a scale is not a chord object — the scale path is scaleTake's");
+  const SLOT_ROLE = ["R", "3", "5", "7"];
+  const tones = [], absent = [];
+  for (const off of offsets) {
+    const i = off / 2;
+    if (i < parsed.intervals.length)
+      tones.push({ role: SLOT_ROLE[i], pc: (((parsed.root.pc + parsed.intervals[i]) % 12) + 12) % 12 });
+    else absent.push(SLOT_ROLE[i]);
+  }
+  return { tones, absent };
+}
+
+/** fieldPartition(tones, fld) → { inKey, offKey } — which of a chord's tones
+ * the FIELD can carry at all. The field is the key, so a tone outside the
+ * key can never be material: NOT IN THE KEY is a different absence from NOT
+ * IN THIS FRAME, and both are teaching (child 7's own deliverable). */
+export function fieldPartition(tones, fld) {
+  const inKey = [], offKey = [];
+  for (const t of tones) (fld.degOf(t.pc) >= 0 ? inKey : offKey).push(t);
+  return { inKey, offKey };
 }
 
 /** diatonicTones(field, keyDeg, offsets) → [{ role, pc, keyDeg }] — the stack
@@ -407,4 +446,16 @@ export function bracketOf(order) {
     let threw = false; try { bad(); } catch { threw = true; }
     if (!threw) throw new Error("selection: objectOffsets accepted what it must refuse by name");
   }
+
+  // THE ABSOLUTE PATH (child 7): a typed chord's object tones, slots absent
+  // BY NAME, and the key partition telling frame-absence from key-absence
+  const ot = objectTones(parseChord("Bb7"), "tetrad");
+  if (ot.tones.length !== 4 || ot.absent.length)
+    throw new Error("selection: the tetrad of a seventh chord is four tones, none absent");
+  const part = fieldPartition(ot.tones, fld);   // fld is C major here: Bb7's Bb and F are off-key? no — Bb IS off C major
+  if (part.inKey.length + part.offKey.length !== 4)
+    throw new Error("selection: fieldPartition must place every tone on one side");
+  const dy = objectTones(parseChord("C"), "dyad", [3, 7]);
+  if (dy.tones.length !== 1 || dy.absent.join() !== "7")
+    throw new Error("selection: a dyad's 7 on a plain triad must be ABSENT BY NAME, never silently narrowed");
 }

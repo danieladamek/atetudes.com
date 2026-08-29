@@ -1,0 +1,201 @@
+/* progression.mjs — THE PROGRESSION (Multetudes child 7): three sources —
+ * cycle · form · custom — derived into one shape every board can walk.
+ *
+ * THE BAR COUNT IS DERIVED, NEVER SET (PRD §2.7). A cycle's length is the
+ * walk itself: step through the seven degrees until home returns, plus the
+ * bar that lands home. Seven is prime, so every step 1–5 visits all seven —
+ * eight bars — but the code WALKS rather than knowing that: the count comes
+ * out of the loop, and the load assertion checks the walk visited every
+ * degree exactly once (home twice, at both ends). Setting the count by hand
+ * only ever padded the tail with duplicates; there is no bar-count input
+ * anywhere in this module's shape.
+ *
+ * A FORM IS A DEGREE PATTERN WITH QUALITIES (structures.mjs — the module
+ * name stays `structures`; "form" is the surface's word and PRD §2.7 is the
+ * written reason). Resolution is resolveRoman's pitch-class math; nothing
+ * here or there holds a typed chord table, and structures' own grep test
+ * asserts it. THE CASE RULE IS LOAD-BEARING: ii7 is a MINOR seventh — the
+ * absolute sentence "ii–V–I in B♭ is Cm7 F7 B♭maj7" is asserted in this
+ * module's tests against the strings themselves, not against resolveRoman
+ * (which would be circular).
+ *
+ * A FORM KEEPS ITS OWN BARS. v0.9 flattened a structure's chords and
+ * regrouped them by the metronome split, which loses the form's own bar
+ * structure (| Cm7 F7 | is one bar, and the chart format records that
+ * fact explicitly). The door keeps the grouping — the chart round trip
+ * (§8: the file is the only handoff channel) is byte-clean only because it
+ * does. Registered divergence; the split then divides a bar's beats among
+ * its chords instead of regrouping them (beatsOf).
+ *
+ * CUSTOM IS TYPED CHANGES — parseChord's UI at last (G28). Romans resolve
+ * through resolveRoman (the case rule again); symbols parse through
+ * parseChord; a line with `|` is a CHART LINE and parses through
+ * parseAtchart itself — the same engine that reads the file — which is what
+ * makes the palette → note → progression round trip byte-clean rather than
+ * nearly-clean. A token neither path accepts is REFUSED BY NAME: the error
+ * is a value carrying the token, never a silent drop (v0.9 dropped bad
+ * tokens silently — improved, registered).
+ *
+ * Pure: no DOM, no globals, load-time structural assertions.
+ */
+import { CYCLES } from "./tetrad-sequence.mjs";
+import { resolveStructure } from "./structures.mjs";
+import { parseChord, resolveRoman } from "./chord.mjs";
+import { parseAtchart, serializeAtchart } from "./atchart.mjs";
+
+const mod7 = (x) => ((x % 7) + 7) % 7;
+
+/** the derived walk: home, every degree the step visits, home again.
+ * The COUNT is an output — nothing here says "eight". */
+export function cycleDegreesWalk(cycle, start = 0) {
+  const c = CYCLES[cycle];
+  if (!c) throw new Error(`progression: unknown cycle "${cycle}" — the named ones are ${Object.keys(CYCLES).join(", ")}`);
+  if (!Number.isInteger(start) || start < 0 || start > 6)
+    throw new Error(`progression: start is a degree 0..6, not ${start}`);
+  const seq = [start];
+  let d = mod7(start + c.step);
+  while (d !== start) {
+    seq.push(d);
+    if (seq.length > 7)
+      throw new Error(`progression: the ${cycle} walk did not come home in seven moves — ` +
+        "the derived bar count is broken and the arithmetic must be looked at, not padded");
+    d = mod7(d + c.step);
+  }
+  seq.push(start);                                 // the bar that lands home
+  // derived, then asserted: every degree once, home twice at the ends
+  const counts = new Array(7).fill(0);
+  for (const x of seq) counts[x]++;
+  if (counts[start] !== 2 || counts.some((n, i) => i !== start && n !== 1))
+    throw new Error(`progression: the ${cycle} walk from ${start} is not one visit per degree`);
+  return seq;
+}
+
+/**
+ * progressionOf({source, cycle, form, custom, start}, key, scale) →
+ *   { chords, bars, err }
+ *   chords  flat: {kind:"diatonic", degree} | {kind:"abs", symbol, parsed}
+ *   bars    grouping: arrays of indices into chords
+ *   err     null, or the refusal BY NAME (the fallback bars still stand, so
+ *           a board never crashes on a half-typed line — but the face says)
+ */
+export function progressionOf(cfg, key, scale = "major") {
+  const src = (cfg && cfg.source) || "cycle";
+  const fallback = () => {
+    const chords = [{ kind: "diatonic", degree: 0 }];
+    return { chords, bars: [[0]] };
+  };
+  try {
+    if (src === "cycle") {
+      const seq = cycleDegreesWalk(cfg.cycle || "fourths", cfg.start ?? 0);
+      return { chords: seq.map((degree) => ({ kind: "diatonic", degree })),
+        bars: seq.map((_, i) => [i]), err: null };
+    }
+    if (src === "form") {
+      const st = resolveStructure(cfg.form || "ii-V-I", key);
+      const chords = [], bars = [];
+      for (const bar of st.bars) {
+        const b = [];
+        for (const symbol of bar) {
+          b.push(chords.length);
+          chords.push({ kind: "abs", symbol, parsed: parseChord(symbol) });
+        }
+        bars.push(b);
+      }
+      return { chords, bars, err: null };
+    }
+    if (src === "custom") {
+      const text = String(cfg.custom || "").trim();
+      if (!text) return { ...fallback(), err: null };     // empty is a block, not an error
+      if (text.includes("|")) {
+        // THE CHART CHANNEL: the very parser that reads the file reads this
+        const at = parseAtchart("---\natchart: 1\n---\n```chart\n" + text + "\n```\n");
+        const chords = [], bars = [];
+        for (const sec of at.sections)
+          for (const bar of sec.bars) {
+            const b = [];
+            for (const ch of bar.chords) {
+              b.push(chords.length);
+              chords.push({ kind: "abs", symbol: ch.symbol, parsed: ch.parsed });
+            }
+            bars.push(b);
+          }
+        if (!chords.length) throw new Error("the chart line holds no chords");
+        return { chords, bars, err: null };
+      }
+      const toks = text.split(/[\s,]+/).filter(Boolean);
+      const chords = [];
+      for (const tok of toks) {
+        const r = resolveRoman(tok, key, scale);
+        if (r) { chords.push({ kind: "abs", symbol: r.symbol, parsed: r.parsed }); continue; }
+        try { chords.push({ kind: "abs", symbol: parseChord(tok).symbol, parsed: parseChord(tok) }); }
+        catch (e) {
+          // REFUSED BY NAME — the token travels in the error (v0.9 dropped it silently)
+          return { ...fallback(),
+            err: `"${tok}" is neither a roman numeral nor a chord symbol — ${String(e.message || e)}` };
+        }
+      }
+      return { chords, bars: chords.map((_, i) => [i]), err: null };
+    }
+    throw new Error(`unknown progression source "${src}"`);
+  } catch (e) {
+    return { ...fallback(), err: String(e.message || e) };
+  }
+}
+
+/** beats per chord: a bar's chords take the meter's beats. When the chosen
+ * split has exactly as many slots as the bar has chords, the split's slots
+ * ARE the beats (the family transport's own sentence: "chords take the
+ * bar's slots in order"); otherwise the meter divides evenly, remainder to
+ * the front — an integer partition, derived, summing to the meter. */
+export function beatsOf(bars, meter = 4, split = null) {
+  const out = [];
+  for (const bar of bars) {
+    const n = bar.length;
+    if (split && Array.isArray(split) && split.length === n) { out.push([...split]); continue; }
+    const base = Math.floor(meter / n), extra = meter - base * n;
+    const beats = bar.map((_, i) => base + (i < extra ? 1 : 0));
+    if (beats.reduce((a, b) => a + b, 0) !== meter)
+      throw new Error("progression: a bar's beats must sum to the meter");
+    out.push(beats);
+  }
+  return out;
+}
+
+/** the canonical chart body for a progression's bars — THROUGH the format
+ * engine, so reading a palette-written chart and re-serialising it is a
+ * byte fixed point (asserted in the tests, demanded by §8). */
+export function chartBodyOf(chords, bars, fld) {
+  const sym = (ci) => {
+    const c = chords[ci];
+    if (c.kind === "abs") return c.symbol;
+    throw new Error("progression: a diatonic bar has no absolute symbol without a naming field");
+  };
+  const raw = "| " + bars.map((b) => b.map(sym).join(" ")).join(" | ") + " |";
+  const doc = "---\natchart: 1\n---\n```chart\n" + raw + "\n```\n";
+  const out = serializeAtchart(parseAtchart(doc));
+  return out.slice(out.indexOf("```chart\n") + 9, out.lastIndexOf("\n```"));
+}
+
+/* ---------------- load-time structural assertions (golden rule 1) ---------------- */
+
+{
+  // every cycle's walk comes home in eight bars — the count DERIVED, here
+  // merely witnessed (and the witness would catch a broken step table)
+  for (const cy of Object.keys(CYCLES)) {
+    const seq = cycleDegreesWalk(cy, 0);
+    if (seq.length !== 8)
+      throw new Error(`progression: the ${cy} walk derived ${seq.length} bars — expected the seven degrees plus home`);
+  }
+  // the case rule, absolutely: ii–V–I in B♭ IS Cm7 F7 B♭maj7 — the minor
+  // seventh, never the dominant. Asserted against the strings themselves.
+  const p = progressionOf({ source: "form", form: "ii-V-I" }, "Bb");
+  const line = p.chords.map((c) => c.symbol).join(" ");
+  if (line !== "Cm7 F7 Bbmaj7")
+    throw new Error(`progression: ii–V–I in Bb must be "Cm7 F7 Bbmaj7", not "${line}" — the numeral's case names the quality`);
+  if (p.bars.length !== 2 || p.bars[0].length !== 2)
+    throw new Error("progression: ii–V–I keeps its own bars — | Cm7 F7 | Bbmaj7 |");
+  // a bad custom token refuses BY NAME, and the fallback keeps a board alive
+  const bad = progressionOf({ source: "custom", custom: "Cm7 Qx7" }, "Bb");
+  if (!bad.err || !bad.err.includes('"Qx7"') || bad.chords.length !== 1)
+    throw new Error("progression: a bad token must refuse by name and fall back to the tonic bar");
+}
