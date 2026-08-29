@@ -187,6 +187,16 @@ export const fieldBoard = {
   margin-right:3px}
 .fd-legend span{display:inline-block;margin-right:11px}
 #fdHint{margin:8px 2px 0}
+/* the seg's visual grammar, scoped to this module's own markup (260905):
+ * the shell defines these rules in its STRIPS chrome block, which this
+ * door's lock never mounts — so the .on state was applied and invisible.
+ * Same facts, this module's own selectors (the minis' idiom); the shell
+ * stays untouched. */
+#fdNSeg,#fdAddrSeg{display:flex;flex-wrap:wrap;gap:6px}
+#fdNSeg button,#fdAddrSeg button{font:inherit;font-size:12.5px;padding:5px 9px;
+  border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
+#fdNSeg button.on,#fdAddrSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#fdNSeg button:disabled,#fdAddrSeg button:disabled{opacity:.45;cursor:not-allowed}
 .fd-dot{cursor:pointer}
 .fd-sel{cursor:pointer}
 .fd-lab{font-weight:bold;pointer-events:none;user-select:none}

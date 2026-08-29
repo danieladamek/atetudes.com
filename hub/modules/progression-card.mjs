@@ -60,6 +60,15 @@ export const progressionCard = {
   styles: `
 .pg-hid{display:none}
 #pgNote{margin-top:8px}
+/* the seg's visual grammar, scoped to this module's own markup (260905):
+ * the shell defines these rules in its STRIPS chrome block, which this
+ * door's lock never mounts — so the .on state was applied and invisible.
+ * Same facts, this module's own selectors (the minis' idiom); the shell
+ * stays untouched. */
+#pgSrcSeg{display:flex;flex-wrap:wrap;gap:6px}
+#pgSrcSeg button{font:inherit;font-size:12.5px;padding:5px 9px;
+  border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
+#pgSrcSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 #pgNote.pg-err{color:#B82929;font-weight:bold}
 #pgCycle,#pgForm,#pgStart,#pgCustom{width:100%}
 #pgChartBtn{font:inherit;font-size:12px;margin-top:6px;padding:4px 10px;

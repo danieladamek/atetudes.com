@@ -581,6 +581,34 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260905 item 1: THE SELECTED SEGMENT IS VISIBLE ----
+        # Daniel could not tell Grip from Line: the .on class was applied all
+        # along, but the shell's `.seg` styles live in its STRIPS chrome
+        # block, which this door's lock never mounts — the rule rode the
+        # build only as inlined source, never as live CSS. Each module now
+        # carries the styles for its own seg (the minis' own idiom). Pinned
+        # at the COMPUTED STYLE: exactly one .on per group, visibly darker
+        # than its sibling, and it follows a click.
+        for seg in ("fdNSeg", "fdAddrSeg", "pgSrcSeg"):
+            st = page.evaluate("""(seg) => {
+              const on = [...document.querySelectorAll('#' + seg + ' button.on')];
+              const off = document.querySelector('#' + seg + ' button:not(.on)');
+              const bg = (el) => getComputedStyle(el).backgroundColor;
+              return { n: on.length, onBg: on.length ? bg(on[0]) : null, offBg: bg(off) };
+            }""", seg)
+            check(st["n"] == 1 and st["onBg"] != st["offBg"]
+                  and st["onBg"] == "rgb(33, 33, 38)",
+                  f"{tag} #{seg}: the chosen segment must WEAR its choice (ink on, "
+                  f"one per group): {st}")
+        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
+        line_on = page.evaluate("""() => {
+          const b = [...document.querySelectorAll('#fdNSeg button')]
+            .find(x => x.textContent.trim() === 'Line');
+          return b.classList.contains('on') && getComputedStyle(b).backgroundColor; }""")
+        check(line_on == "rgb(33, 33, 38)",
+              f"{tag} the .on must FOLLOW a click, visibly: {line_on}")
+        page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(100)
+
         # ---- child 3b: the strings-address and the order bracket ----
         brackets = lambda: page.evaluate("""() =>
           Object.fromEntries([...document.querySelectorAll('.fd-brk')]
