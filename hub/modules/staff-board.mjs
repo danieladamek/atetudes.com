@@ -7,12 +7,13 @@
  * reaches G6 five ledger lines up and a fixed area clips it. A CHORD STACKS;
  * A RUN DOES NOT — v0.9's own rule, kept.
  *
- * ONE BAR TONIGHT: the progression is child 7, so the étude holds the current
- * selection as its single bar, visibly labelled as such. This board is a
- * REGISTER ENTRY: the family's Étude Staff (score-board.mjs) derives from the
- * tetrad pass and cannot draw the field's selection without modification —
- * which the rules forbid — so Multetudes carries its own staff until the
- * progression lands and the reconciliation is decided.
+ * END TO END AT LAST (child 7): every bar of the derived progression, each
+ * chord a column (v0.9's own geometry: BW = W / N), the current bar shaded,
+ * click a bar to jump (a STEP_CHANGED request — the chart line owns the
+ * position and echoes). The figure and the fret labels ride only the
+ * current bar, exactly as v0.9 draws them. This board remains a REGISTER
+ * ENTRY (the family's score-board derives from the tetrad pass); with the
+ * progression landed the reconciliation is Daniel's release-work call.
  *
  * Every notehead is DERIVED: midi → written step through the field's own
  * spelling (the letter index arithmetic v0.9 uses), asserted before drawing —
@@ -23,7 +24,8 @@ import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
 import { placeReference } from "../../engine/reference.mjs";
-import { CONFIG_CHANGED, CLOCK_STATE, NOTE, listen, announce } from "../bus.mjs";
+import { progressionOf, chordAt } from "../../engine/progression.mjs";
+import { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -63,8 +65,11 @@ export const staffBoard = {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
-      address: "pattern", figure: "" };
+      address: "pattern", figure: "",
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
     let meter = 4;
+    let index = 0;
+    let barsX = [];                 // per-chord x ranges, for click-to-jump
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -84,24 +89,25 @@ export const staffBoard = {
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret });
       const pool = materialIn(pos, run.strings, fld);
-      let sel = [];
-      if (cfg.object === "scale") sel = scaleTake(pool).notes;
-      else {
-        /* the chord roots at the CURRENT TONIC (fld.ref; the key until a mode
-                 * re-roots it) — startDeg anchors only the WINDOW. Corrected 260831:
-                 * rooting at startDeg booted the door on Gm7 where v0.9 and the ruled
-                 * boot (register 11) hold the B♭maj7 block. The timeline's chords
-                 * arrive with child 7 and will own this value. */
-        const tones = diatonicTones(fld, fld.ref % 7,
-          objectOffsets(cfg.object, cfg.dyad));
+
+      /* THE PROGRESSION (child 7): every bar derived through the ONE
+       * derivation; the per-bar selection through the same take the single
+       * bar always used. A scale object keeps one selection for every bar
+       * (v0.9's rule: the box is the material, the bars move the analysis). */
+      const prog = progressionOf(cfg, cfg.key, cfg.scale);
+      if (index >= prog.chords.length) index = 0;
+      const N = prog.chords.length;
+      const scaleSel = cfg.object === "scale" ? scaleTake(pool).notes : null;
+      const selOf = (c) => {
+        if (cfg.object === "scale") return scaleSel;
         const r = cfg.take === "all"
-          ? everyOccurrence(tones, pool, { n: cfg.notesPer })
-          : oneOfEach(tones, pool, { n: cfg.notesPer, centre: pos.centre });
-        sel = r.notes || [];
-      }
+          ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
+          : oneOfEach(c.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+        return r.notes || [];
+      };
 
       /* the staves — v0.9's geometry: five lines each, the 8 under the treble */
-      const X0 = 58, W = 1290 - X0 - 14, BW = W;
+      const X0 = 58, W = 1290 - X0 - 14, BW = W / N;
       const TY = 58, BY = 168, GAP = 8;
       const line = (y, x1, x2, w) =>
         el("line", { x1, y1: y, x2, y2: y, stroke: "#B9B9BF", "stroke-width": w || 1 }, svg);
@@ -119,10 +125,8 @@ export const staffBoard = {
       };
       ts(TY, String(meter)); ts(TY + GAP * 4, "4"); ts(BY, String(meter)); ts(BY + GAP * 4, "4");
 
-      /* WRITTEN AN OCTAVE ABOVE (v0.9's rule): everything below reads the
-       * written pitch. The step comes from the FIELD'S OWN SPELLING — the
-       * letter climbs one per degree — and is asserted a real spelled note
-       * before it draws (golden rule 1: derived, never copied). */
+      /* WRITTEN AN OCTAVE ABOVE (v0.9's rule) — the step from the FIELD'S OWN
+       * SPELLING, asserted a real spelled note before it draws */
       const WRITTEN = 12;
       const stepOf = (m0) => {
         const m2 = m0 + WRITTEN, pc = mod(m2, 12), oct = Math.floor(m2 / 12) - 1;
@@ -131,64 +135,84 @@ export const staffBoard = {
         return oct * 7 + LETTERS.indexOf(sp.name[0]);
       };
       const yTreble = (s) => TY + GAP * 8 - (s - (4 * 7 + 2)) * GAP;
+      const yBass = (q) => BY + GAP * 8 - (q - (2 * 7 + 4)) * GAP;
 
-      /* A CHORD STACKS; A RUN DOES NOT (v0.9's rule) — and a FIGURE is a
-       * run through the selection, in its own order (child 3b) */
-      const fig = orderBy(cfg.address, cfg.figure, sel);
-      const stacked = !fig.order && cfg.object !== "scale" && cfg.take !== "all";
-      const seq = fig.order && fig.order.length ? fig.order : sel;
-      const allSteps = seq.map((n) => stepOf(n.midi));
-      for (const s of allSteps)
-        if (!Number.isInteger(s)) throw new Error("staff-board: a written step failed to derive");
+      /* the label band above the HIGHEST note in the whole étude (v0.9's
+       * register fix), so no bar's run collides with the names */
+      const chords = prog.chords.map((_, ci) => chordAt(prog, ci, fld, cfg.object, cfg.dyad));
+      const sels = chords.map((c) => selOf(c));
+      const fig = orderBy(cfg.address, cfg.figure, sels[index] || []);
+      const allSteps = [];
+      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi));
+      if (fig.order) for (const nt of fig.order) allSteps.push(stepOf(nt.midi));
       const topStep = allSteps.length ? Math.max(...allSteps) : (4 * 7 + 2) + 8;
       const labY = Math.min(TY - 30, yTreble(topStep) - 20);
 
-      const lab = el("text", { x: X0 + 7, y: labY, "font-size": "12.5", "font-weight": "bold", fill: "#212126" }, svg);
-      lab.textContent = cfg.object === "scale"
-        ? (cfg.ref ? `${fld.refNote.name} ${fld.modeName}` : `${cfg.key} — the scale in the box`)
-        : `the ${cfg.object} on the ${["root", "2nd", "3rd", "4th", "5th", "6th", "7th"][fld.ref % 7]}`;
-      const rl = el("text", { x: X0 + 7, y: labY + 11, "font-size": "9.5", fill: "#B9B9BF" }, svg);
-      rl.textContent = "bar 1 of 1 — the progression arrives with child 7";
+      barsX = [];
+      chords.forEach((c, ci) => {
+        const x0 = X0 + ci * BW;
+        barsX.push([x0, x0 + BW]);
+        if (ci) el("line", { x1: x0, y1: TY, x2: x0, y2: TY + GAP * 8, stroke: "#D8D8DC", "stroke-width": 1 }, svg);
+        if (ci) el("line", { x1: x0, y1: BY, x2: x0, y2: BY + GAP * 8, stroke: "#D8D8DC", "stroke-width": 1 }, svg);
+        if (ci === index)
+          el("rect", { x: x0, y: labY - 14, width: BW, height: (BY + GAP * 8) - (labY - 14),
+            fill: "#B82929", opacity: 0.055, "data-stcur": ci }, svg);
+        const lab = el("text", { x: x0 + 7, y: labY, "font-size": "12.5", "font-weight": "bold",
+          fill: "#212126", class: "st-sym" }, svg);
+        lab.textContent = c.symbol;
+        const rl = el("text", { x: x0 + 7, y: labY + 11, "font-size": "9.5", fill: "#B9B9BF" }, svg);
+        rl.textContent = ci === index ? `${c.roman} \u00b7 bar ${ci + 1} of ${N}` : c.roman;
 
-      seq.forEach((nt, k) => {
-        const s = stepOf(nt.midi), y = yTreble(s);
-        const x = stacked ? X0 + BW * 0.34
-          : X0 + BW * 0.2 + (BW * 0.62) * (k / Math.max(1, seq.length - 1));
-        for (let q = (4 * 7 + 2) - 2; s <= q; q -= 2)
-          el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
-        for (let q = (4 * 7 + 2) + 10; s >= q; q += 2)
-          el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
-        const fam = FAM[nt.deg];
-        el("ellipse", { cx: x, cy: y, rx: 6.4, ry: 5, fill: FAM_COLOR[fam],
-          transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi }, svg);
-        const t = el("text", { x, y: y + 3, "text-anchor": "middle", "font-size": "7.5",
-          fill: FAM_TEXT[fam], "font-weight": "bold", class: "st-lab" }, svg);
-        t.textContent = nt.role || fam;
-      });
+        const figHere = ci === index && fig.order && fig.order.length ? fig.order : null;
+        const seq = figHere || sels[ci];
+        const stacked = !figHere && cfg.object !== "scale" && cfg.take !== "all";
+        seq.forEach((nt, k) => {
+          const st = stepOf(nt.midi), y = yTreble(st);
+          const x = stacked ? x0 + BW * 0.34
+            : x0 + BW * 0.2 + (BW * 0.62) * (k / Math.max(1, seq.length - 1));
+          for (let q = (4 * 7 + 2) - 2; st <= q; q -= 2)
+            el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
+          for (let q = (4 * 7 + 2) + 10; st >= q; q += 2)
+            el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
+          const fam = FAM[nt.deg];
+          const head = { cx: x, cy: y, rx: 6.4, ry: 5, fill: FAM_COLOR[fam],
+            transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi };
+          if (figHere) head["data-stfig"] = k;    // the figure's own steps, addressable
+          el("ellipse", head, svg);
+          const t = el("text", { x, y: y + 3, "text-anchor": "middle", "font-size": "7.5",
+            fill: FAM_TEXT[fam], "font-weight": "bold", class: "st-lab" }, svg);
+          t.textContent = nt.role || fam;
+          if (ci === index) {
+            const fr = el("text", { x, y: TY + GAP * 8 + 15 + (stacked ? k * 10 : 0),
+              "text-anchor": "middle", "font-size": "8.5", fill: "#B9B9BF" }, svg);
+            fr.textContent = nt.string + "/" + nt.fret;
+          }
+        });
 
-      /* THE REFERENCE on the bass clef (child 5): sounding pitch, the
-       * bottom line G2 as the step origin, ledgers derived the treble way */
-      if (cfg.object !== "scale" && cfg.bass !== "none") {
-        const rp = placeReference(cfg.bass, fld.ref % 7, fld, cfg.strings, pos);
-        if (rp.note) {
-          const m0 = rp.note.midi, pc = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;
-          const sp = fld.notes.find((n) => n.pc === pc);
-          if (!sp) throw new Error("staff-board: the reference is off the field — nothing off the field is drawable");
-          const bStep = oct * 7 + LETTERS.indexOf(sp.name[0]);
-          const yBass = (q) => BY + GAP * 8 - (q - (2 * 7 + 4)) * GAP;
-          const bx = X0 + BW * 0.34, by = yBass(bStep);
-          for (let q = (2 * 7 + 4) - 2; bStep <= q; q -= 2)
-            el("line", { x1: bx - 9, y1: yBass(q), x2: bx + 9, y2: yBass(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
-          for (let q = (2 * 7 + 4) + 10; bStep >= q; q += 2)
-            el("line", { x1: bx - 9, y1: yBass(q), x2: bx + 9, y2: yBass(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
-          const rf = FAM[rp.note.deg];
-          el("ellipse", { cx: bx, cy: by, rx: 6.4, ry: 5, fill: FAM_COLOR[rf],
-            transform: `rotate(-18 ${bx} ${by})`, "data-strefmidi": m0 }, svg);
-          const rt = el("text", { x: bx, y: by + 3, "text-anchor": "middle", "font-size": "7.5",
-            fill: FAM_TEXT[rf], "font-weight": "bold", class: "st-lab" }, svg);
-          rt.textContent = rf;
+        /* THE REFERENCE on the bass clef, PER BAR (child 5 meets child 7):
+         * sounding pitch, outlined as v0.9 draws it — the fill was this
+         * door's own night-5 divergence, corrected to the prototype now the
+         * bass line is a line. An off-key root has no degree to hang a
+         * relative reference on; the readout says so, the staff skips. */
+        if (cfg.object !== "scale" && cfg.bass !== "none" && c.degree >= 0) {
+          const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos);
+          if (rp.note) {
+            const m0 = rp.note.midi, pc2 = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;
+            const sp = fld.notes.find((n) => n.pc === pc2);
+            if (!sp) throw new Error("staff-board: the reference is off the field — nothing off the field is drawable");
+            const bStep = oct * 7 + LETTERS.indexOf(sp.name[0]);
+            const bx = x0 + BW * 0.34, by = yBass(bStep);
+            for (let q = (2 * 7 + 4) - 2; bStep <= q; q -= 2)
+              el("line", { x1: bx - 9, y1: yBass(q), x2: bx + 9, y2: yBass(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
+            for (let q = (2 * 7 + 4) + 10; bStep >= q; q += 2)
+              el("line", { x1: bx - 9, y1: yBass(q), x2: bx + 9, y2: yBass(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
+            const rf = FAM[rp.note.deg];
+            el("ellipse", { cx: bx, cy: by, rx: 5.4, ry: 4.2, fill: "none",
+              stroke: FAM_COLOR[rf], "stroke-width": 1.8,
+              transform: `rotate(-18 ${bx} ${by})`, "data-strefmidi": m0 }, svg);
+          }
         }
-      }
+      });
       el("line", { x1: X0 + W, y1: TY, x2: X0 + W, y2: TY + GAP * 8, stroke: "#212126", "stroke-width": 2.6 }, svg);
       el("line", { x1: X0 + W, y1: BY, x2: X0 + W, y2: BY + GAP * 8, stroke: "#212126", "stroke-width": 2.6 }, svg);
 
@@ -203,7 +227,13 @@ export const staffBoard = {
 
     byId("stSvg").addEventListener("click", (e) => {
       const hit = e.target.closest("[data-stmidi]");
-      if (hit) announce(d, NOTE, { midi: +hit.dataset.stmidi });
+      if (hit) { announce(d, NOTE, { midi: +hit.dataset.stmidi }); return; }
+      /* click a bar to jump — a REQUEST; the chart line owns the position */
+      const svgRoot = byId("stSvg");
+      const r = svgRoot.getBoundingClientRect(), vb = svgRoot.viewBox.baseVal;
+      const vx = vb.x + (e.clientX - r.left) / r.width * vb.width;
+      const ci = barsX.findIndex(([a, b]) => vx >= a && vx < b);
+      if (ci >= 0) announce(d, STEP_CHANGED, { index: ci, request: true });
     });
 
     listen(d, CONFIG_CHANGED, (m) => {
@@ -214,6 +244,10 @@ export const staffBoard = {
     });
     listen(d, CLOCK_STATE, (m) => {
       if (m && typeof m.meter === "number" && m.meter !== meter) { meter = m.meter; render(); }
+    });
+    listen(d, STEP_CHANGED, (m) => {
+      if (!m || m.request === true || typeof m.index !== "number") return;
+      if (m.index !== index) { index = m.index; render(); }
     });
     mountMini(ctx, byId("stMini"));
     render();

@@ -269,8 +269,18 @@ def run_door(pw, door_id):
               f"{tag} the boot window is not v0.9's (the 6th at the fifth position): {boot_hint!r}")
         check("the tetrad, one of each (grip): 4 notes, 1+1+1+1" in boot_hint,
               f"{tag} the boot object is not the tetrad block: {boot_hint!r}")
-        check("bar 1 of 1" in page.inner_text("#roLine"),
-              f"{tag} the boot étude is not a single bar: {page.inner_text('#roLine')!r}")
+        # child 7: the boot étude is v0.9's — the cycling-4ths walk, derived
+        # to eight bars, IDENTIFIED chip by chip (a count-only pin hid a
+        # wrong chord for two nights; a wrong line must name itself)
+        check("bar 1 of 8" in page.inner_text("#roLine"),
+              f"{tag} the boot étude is not the derived eight bars: {page.inner_text('#roLine')!r}")
+        check(page.get_attribute("#tlScroll", "data-tlline")
+              == "Bbmaj7 Ebmaj7 Am7b5 Dm7 Gm7 Cm7 F7 Bbmaj7",
+              f"{tag} the boot chart line is not cycling 4ths in B\u266d: "
+              f"{page.get_attribute('#tlScroll', 'data-tlline')!r}")
+        check(page.eval_on_selector_all("#tlScroll button.tl-cur",
+                "es => es.map(e => e.getAttribute('data-tlchip'))") == ["Bbmaj7"],
+              f"{tag} the boot's current chip is not bar 1's B\u266dmaj7")
         check(page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") == 4
               and page.eval_on_selector_all("#stSvg ellipse", "e => e.length") >= 4
               and page.eval_on_selector_all("#kySvg circle", "e => e.length") == 4,
@@ -576,11 +586,13 @@ def run_door(pw, door_id):
               f"{tag} the bracket must read {{6}} {{5}} {{2,4}} {{1,3}} on strings 1-4: {b1}")
         check(all(v["fill"] == "#212126" for v in b1.values()),
               f"{tag} a TYPED pattern's bracket is full ink: {b1}")
-        # the staff draws the figure as a run — six noteheads, spread, not a stack
+        # the staff draws the figure as a run — six marked steps in the
+        # CURRENT bar, spread, not a stack (the other bars carry their own
+        # selections now — child 7 — so the figure's heads are addressed)
         st_xs = page.evaluate("""() =>
-          [...document.querySelectorAll('#stSvg ellipse')].map(e => +e.getAttribute('cx'))""")
+          [...document.querySelectorAll('#stSvg ellipse[data-stfig]')].map(e => +e.getAttribute('cx'))""")
         check(len(st_xs) == 6 and len(set(st_xs)) == 6,
-              f"{tag} the staff must draw the 6-step figure as a run: {len(st_xs)} heads, {len(set(st_xs))} x-positions")
+              f"{tag} the staff must draw the 6-step figure as a run: {len(st_xs)} figure heads, {len(set(st_xs))} x-positions")
         # tones: derived bracket, greyed
         page.click('#fdAddrSeg >> text=tones'); page.wait_for_timeout(120)
         bt = brackets()
@@ -625,7 +637,8 @@ def run_door(pw, door_id):
               f"{tag} the Root + 5th dyad must wear exactly R and 5: {roles()}")
         # the choice travels the bus: the staff re-derives from the same value
         st_n = page.eval_on_selector_all("#stSvg ellipse", "e => e.length")
-        check(st_n == 2, f"{tag} the staff must speak the dyad too (2 heads, got {st_n})")
+        check(st_n == 16,
+              f"{tag} the staff must speak the dyad in every bar — 2 heads × the derived 8 (got {st_n})")
         page.select_option("#hcDyad", "3,7"); page.wait_for_timeout(80)
         # the recipes the item names, each one exercised, none merely listed
         # R4's expectation is THE ORACLE'S: v0.9 itself places only the 3rd
@@ -679,8 +692,9 @@ def run_door(pw, door_id):
               f"{tag} the readout must name the composite (R19: the stack is Gm9): {ro!r}")
         st_ref = page.eval_on_selector_all("#stSvg [data-strefmidi]",
             "es => es.map(e => +e.getAttribute('data-strefmidi'))")
-        check(st_ref == [43],
-              f"{tag} the bass clef must carry the fretted G (midi 43) at sounding pitch: {st_ref}")
+        check(st_ref == [43, 48, 41, 46, 51, 45, 50, 43],
+              f"{tag} the bass clef must walk a 3rd below every bar of the cycle "
+              f"(G C F B\u266d E\u266d A D G): {st_ref}")
         # R18's shape: a set that TAKES string 6 pushes the reference to 5
         page.select_option("#hcRef", "root"); page.wait_for_timeout(100)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
@@ -708,6 +722,89 @@ def run_door(pw, door_id):
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5, notesPer: 1 } }))""")
         page.wait_for_timeout(120)
+
+        # ---- child 7: the progression — cycles, forms, typed changes ----
+        tlline = lambda: page.get_attribute("#tlScroll", "data-tlline") or ""
+        # THE FORM AND THE CASE RULE, on the face: ii–V–I in B♭ is Cm7 F7
+        # B♭maj7 — the minor seventh. A dominant here is the signature defect.
+        page.click('#pgSrcSeg >> text=form'); page.wait_for_timeout(150)
+        page.select_option("#pgForm", "ii-V-I"); page.wait_for_timeout(200)
+        check(tlline() == "Cm7 F7 Bbmaj7",
+              f"{tag} ii–V–I in B♭ must read Cm7 F7 Bbmaj7 on the chart line: {tlline()!r}")
+        check(page.get_attribute("#tlScroll", "data-tlbars") == "2",
+              f"{tag} ii–V–I keeps its own bars — | Cm7 F7 | B♭maj7 | is two")
+        # Start on means nothing under a form — it must not stand there
+        check(page.evaluate("() => getComputedStyle(document.querySelector('#pgStart')).display") == "none",
+              f"{tag} 'Start on' must hide under a form — a control that means nothing misleads")
+        page.click('#pgSrcSeg >> text=cycle'); page.wait_for_timeout(150)
+        check(page.evaluate("() => getComputedStyle(document.querySelector('#pgStart')).display") != "none",
+              f"{tag} 'Start on' must show under a cycle")
+        # NO BAR-COUNT CONTROL EXISTS — derived means underivable by hand
+        check(page.eval_on_selector_all("#cards [data-control]",
+                """es => es.filter(e => /bars?/i.test(e.id) && e.tagName !== 'DIV').length""") == 0
+              and "8 bars, derived" in page.inner_text("#pgNote"),
+              f"{tag} the bar count must be derived and say so, with no control: {page.inner_text('#pgNote')!r}")
+        # TWELVE-BAR BLUES: the off-key tone says WHICH absence it is, on two faces
+        page.click('#pgSrcSeg >> text=form'); page.wait_for_timeout(100)
+        page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(200)
+        check(tlline() == "Bb7 Eb7 Bb7 Bb7 Eb7 Eb7 Bb7 Bb7 F7 Eb7 Bb7 F7",
+              f"{tag} twelve-bar blues in B♭, chip for chip: {tlline()!r}")
+        for face in ("#roLine", "#fdHint"):
+            check("not in the key" in page.inner_text(face),
+                  f"{tag} B♭7's 7th must be reported NOT IN THE KEY on {face}: "
+                  f"{page.inner_text(face)!r}")
+        check("in this frame" not in page.inner_text("#roLine"),
+              f"{tag} an off-key tone must not be misreported as a frame absence")
+        # THE POSITION: a chip click jumps every mirror (the strip owns it)
+        page.click('#tlScroll button >> nth=8'); page.wait_for_timeout(150)
+        check("bar 9 of 12" in page.inner_text("#roLine") and "F7" in page.inner_text("#roLine"),
+              f"{tag} chip 9 must put every mirror on F7: {page.inner_text('#roLine')!r}")
+        check(page.eval_on_selector_all("#stSvg [data-stcur]", "es => es.map(e => +e.dataset.stcur)") == [8],
+              f"{tag} the staff must shade the jumped-to bar")
+        # TYPED CHANGES (G28 closes): romans by the case rule, refusal BY NAME
+        page.click('#pgSrcSeg >> text=custom'); page.wait_for_timeout(100)
+        page.fill("#pgCustom", "ii7 V7 Imaj7"); page.dispatch_event("#pgCustom", "input")
+        page.wait_for_timeout(200)
+        check(tlline() == "Cm7 F7 Bbmaj7",
+              f"{tag} typed romans must resolve by the case rule: {tlline()!r}")
+        page.fill("#pgCustom", "Cm7 Qx7"); page.dispatch_event("#pgCustom", "input")
+        page.wait_for_timeout(200)
+        note = page.inner_text("#pgNote")
+        check("Qx7" in note and "neither" in note,
+              f"{tag} a bad token must be refused BY NAME on the card's face: {note!r}")
+        # THE CHART ROUND TRIP, through the page: pad fence → button → custom,
+        # byte for byte — §8's one handoff channel, closing
+        page.fill("#journalIn", "worked out in the metronome app\n```chart\n| Cm7 F7 | Bbmaj7 |\n```\n")
+        page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(500)
+        check(page.evaluate("() => !document.querySelector('#pgChartBtn').disabled"),
+              f"{tag} a chart in the pad must arm the read-back button")
+        page.click("#pgChartBtn"); page.wait_for_timeout(200)
+        check(page.input_value("#pgCustom") == "| Cm7 F7 | Bbmaj7 |",
+              f"{tag} the note's chart must land in the line BYTE-IDENTICAL: {page.input_value('#pgCustom')!r}")
+        check(tlline() == "Cm7 F7 Bbmaj7" and page.get_attribute("#tlScroll", "data-tlbars") == "2",
+              f"{tag} the read-back chart must be the progression, bars intact: {tlline()!r}")
+        # THE WALK: Play walks the bars, Stop halts them — the promised transport
+        page.fill("#bpmRange", "260"); page.dispatch_event("#bpmRange", "input")
+        page.evaluate("""() => { window.__wk = [];
+          document.addEventListener('atetudes:step', e => {
+            if (e.detail && e.detail.request !== true) window.__wk.push(e.detail.index); }); }""")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(2600)
+        check(page.evaluate("() => window.__wk.length") >= 2,
+              f"{tag} Play must walk the bars: steps {page.evaluate('() => window.__wk')}")
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        wk0 = page.evaluate("() => window.__wk.length")
+        page.wait_for_timeout(900)
+        check(page.evaluate("() => window.__wk.length") == wk0
+              and page.inner_text("#metroBtn") == "Start",
+              f"{tag} Stop must halt the walk and the clock together")
+        # back to the boot state
+        page.fill("#bpmRange", "72"); page.dispatch_event("#bpmRange", "input")
+        page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")
+        page.fill("#pgCustom", ""); page.dispatch_event("#pgCustom", "input")
+        page.click('#pgSrcSeg >> text=cycle'); page.wait_for_timeout(150)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(150)
 
         # ---- THE SEATING CHECK, EXTENDED TO PARTS (the parts primitive):
         # WHICH PART sits in WHICH SEAT — last night's lesson one level down.
@@ -842,12 +939,12 @@ def run_door(pw, door_id):
           } return out; }""")
         check(len(pal_proto) == 7 and pal_proto == pal_door,
               f"{tag} the degree palette diverges from v0.9: {pal_proto} vs {pal_door}")
-        # inert regions are VISIBLY inert — the face says which child, nowhere blank
-        # #fdFigNote left this list on 260831 — child 3b made the figure live
-        for sel, child in [("#pgNote", "child 7"), ("#tlScroll", "child 7")]:
-            txt = page.inner_text(sel)
-            check(("inert" in txt.lower() or "arrives" in txt.lower()) and child in txt.lower(),
-                  f"{tag} inert region {sel} does not say so on its face: {txt!r}")
+        # THE INERT LIST IS EMPTY (child 7, the last child): nothing on the
+        # page may carry an inert notice any more — asserted on the whole
+        # artifact, not a shrinking list (a list forgets; a page cannot)
+        page_text = page.inner_text("body").lower()
+        check("inert" not in page_text and "arrives with child" not in page_text,
+              f"{tag} the page still carries an inert notice somewhere")
         # and at 390 — the same derived comparisons, phone width
         page.set_viewport_size({"width": 390, "height": 844})
         proto.set_viewport_size({"width": 390, "height": 844})
@@ -2202,6 +2299,15 @@ def run_door(pw, door_id):
     if door_id == "multetudes" and page.query_selector(".fd-rail.fd-shut") is None:
         page.click("#fdRailBtn"); page.wait_for_timeout(60)
         rail_shut_for_check = True
+    # multetudes: the REFUSAL state and the COMPOSITE chip going into the
+    # check — #pgNote.pg-err and .tl-us are STATE rules, and a check against
+    # a door that never refused would call them orphans (the .clpsd lesson)
+    err_state_for_check = False
+    if door_id == "multetudes":
+        page.click('#pgSrcSeg >> text=custom'); page.wait_for_timeout(80)
+        page.fill("#pgCustom", "Qx7"); page.dispatch_event("#pgCustom", "input")
+        page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        err_state_for_check = True
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped
     # metronome would call them orphans
@@ -2236,6 +2342,10 @@ def run_door(pw, door_id):
             btn.click()
     if rail_shut_for_check:
         page.click("#fdRailBtn")
+    if err_state_for_check:
+        page.select_option("#hcRef", "none")
+        page.fill("#pgCustom", ""); page.dispatch_event("#pgCustom", "input")
+        page.click('#pgSrcSeg >> text=cycle')
     page.wait_for_timeout(40)
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") == "true":
         muted_for_check.click(); page.wait_for_timeout(40)

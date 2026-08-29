@@ -34,9 +34,12 @@
  *                          ownership wall; see the divergence register).
  *   audio: true            the hub's ears — dots, keys and staff still sound.
  *   surface: "multetudes"  v0.9's cards and boards: harmony-card,
- *                          progression-card (inert — child 7), presets-card,
- *                          timeline-strip (inert — child 7), readout-strip,
- *                          staff-board, keys-board.
+ *                          progression-card (LIVE — child 7), presets-card,
+ *                          timeline-strip (the chart line, live; owns the
+ *                          position), readout-strip, staff-board (end to
+ *                          end), keys-board, and etude-walk — the transport
+ *                          the header below promised back, returned with
+ *                          child 7's progression and walk as stated.
  */
 export default {
   id: "multetudes",
@@ -67,9 +70,14 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
-    blurb: "one tool that holds many études · v0.0.4",
+    /* v0.0.5 (260901, child 7): the progression — cycle · form · custom,
+     * the bar count derived, the chart line and the étude staff live end to
+     * end, typed changes through parseChord, the chart round trip closed,
+     * and the walk (Play walks the bars through the family's own bus
+     * contract). */
+    blurb: "one tool that holds many études · v0.0.5",
     footer: "A hub door built from hub/doors/multetudes.door.mjs. Not a published study. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
-      "The bracket right of the string numbers will be an order once figures land (child 3b).",
+      "The bracket right of the string numbers is the figure's order (child 3b).",
   },
 };

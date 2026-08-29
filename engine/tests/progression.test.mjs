@@ -9,7 +9,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { progressionOf, cycleDegreesWalk, beatsOf, chartBodyOf } from "../progression.mjs";
+import { progressionOf, cycleDegreesWalk, beatsOf, chartBodyOf, chordAt } from "../progression.mjs";
 import { CYCLES } from "../tetrad-sequence.mjs";
 import { STRUCTURES, chartBody } from "../structures.mjs";
 import { objectTones, fieldPartition, objectOffsets, diatonicTones } from "../selection.mjs";
@@ -102,4 +102,17 @@ test("a slot the chord cannot fill is ABSENT BY NAME — the coreTetrad lesson h
   assert.deepEqual(dy.absent, ["7"]);
   assert.deepEqual(dy.tones.map((t) => t.role), ["3"]);
   assert.throws(() => objectTones(c, "scale"), /scale is not a chord object/);
+});
+
+test("THE CHIP LINE, identified not counted: cycling 4ths in B\u266d, every symbol and its roman", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const p = progressionOf({ source: "cycle", cycle: "fourths", start: 0 }, "Bb");
+  const line = p.chords.map((_, i) => { const c = chordAt(p, i, fld, "tetrad");
+    return c.symbol + ":" + c.roman; }).join(" ");
+  assert.equal(line,
+    "Bbmaj7:I Ebmaj7:IV Am7b5:vii\u00b0 Dm7:iii Gm7:vi Cm7:ii F7:V Bbmaj7:I",
+    "eight bars, each named and analysed — a count-only pin let a wrong chord boot for two nights");
+  // an off-key-rooted typed chord analyses as em-dash, never a wrong numeral
+  const e7 = progressionOf({ source: "custom", custom: "E7" }, "Bb");
+  assert.equal(chordAt(e7, 0, fld, "tetrad").roman, "\u2014");
 });

@@ -181,7 +181,26 @@ export const notepadCard = {
       return parts.join(" · ") || "no configuration attached";
     };
 
-    createNotepadSurface({
+    /* THE CHART CHANNEL (child 7): the pad's one ```chart fence, announced
+     * so the progression can read the note back — §8's handoff closing. The
+     * fence pair is scanned here (first opener to its closer, the same shape
+     * notepad.mjs enforces one-of at export); the CONTENT is never parsed
+     * here — the progression parses it through parseAtchart, whose
+     * assertions gate the read. Announced only when the body CHANGES. */
+    let lastChart;
+    const announceChart = (pad) => {
+      const lines = String(pad || "").split("\n");
+      let body = null;
+      const open = lines.findIndex((l) => /^```chart\s*$/.test(l));
+      if (open >= 0) {
+        const close = lines.findIndex((l, i) => i > open && /^```\s*$/.test(l));
+        if (close > open) body = lines.slice(open + 1, close).join("\n");
+      }
+      if (body !== lastChart) { lastChart = body; announce(d, CONFIG_CHANGED, { chart: body }); }
+    };
+
+    let surface = null;
+    surface = createNotepadSurface({
       adapter: {
         app: doorId, version: 1,
         nouns: { item: "entry", apply: "Restore étude" },
@@ -221,7 +240,8 @@ export const notepadCard = {
         handoff: byId("handoffNote") },
       file: { title: doorId + " journal",
         name: () => doorId + "-journal-" + new Date().toISOString().slice(0, 10) + ".atchart.md" },
-      onChange: () => ctx.changed(),
+      onChange: () => { ctx.changed(); announceChart(surface ? surface.getDoc().pad : ""); },
     });
+    announceChart(surface.getDoc().pad);
   },
 };

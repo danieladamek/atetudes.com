@@ -14,9 +14,10 @@
 import { field, OPEN_MIDI } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, compositeOver } from "../../engine/reference.mjs";
-import { CONFIG_CHANGED, listen } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
@@ -44,7 +45,9 @@ export const neckReadout = {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
-      bass: "none" };
+      bass: "none" ,
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+    let index = 0;
 
     const render = () => {
       const asserts = [], fails = [];
@@ -62,20 +65,26 @@ export const neckReadout = {
           startDegree: cfg.startDeg, nearFret: cfg.nearFret });
         regionOf(pos, run.strings);
         const pool = materialIn(pos, run.strings, fld);
-        let sel = [], msg = "";
+        /* THE CURRENT BAR through the one derivation (child 7). THREE
+         * ABSENCES, each named, never merged: a slot the CHORD cannot fill
+         * (a dyad's 7 on a triad), a tone the KEY cannot carry (B♭7's own
+         * 7th in B♭ major — the field IS the key), and a tone this FRAME
+         * cannot reach (the window's report, unchanged). */
+        const prog = progressionOf(cfg, cfg.key, cfg.scale);
+        if (index >= prog.chords.length) index = 0;
+        const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+        let sel = [], msg = "", absences = [];
+        if (prog.err) absences.push(prog.err);
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
         else {
-          /* the chord roots at the CURRENT TONIC (fld.ref; the key until a mode
-                   * re-roots it) — startDeg anchors only the WINDOW. Corrected 260831:
-                   * rooting at startDeg booted the door on Gm7 where v0.9 and the ruled
-                   * boot (register 11) hold the B♭maj7 block. The timeline's chords
-                   * arrive with child 7 and will own this value. */
-          const tones = diatonicTones(fld, fld.ref % 7,
-            objectOffsets(cfg.object, cfg.dyad));
           const r = cfg.take === "all"
-            ? everyOccurrence(tones, pool, { n: cfg.notesPer })
-            : oneOfEach(tones, pool, { n: cfg.notesPer, centre: pos.centre });
+            ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
+            : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
           sel = r.notes || [];
+          if (cur.absent.length)
+            absences.push(`${cur.symbol} has no ${cur.absent.join(" or ")} — the chord cannot fill that slot`);
+          if (cur.offKey.length)
+            absences.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
           if (r.missing && r.missing.length) msg = `no ${r.missing.join(" or ")} in this frame`;
           if (r.unplaceable) msg = r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
@@ -99,7 +108,9 @@ export const neckReadout = {
         bits.push(cfg.ref
           ? `<b>${fld.refNote.name} ${fld.modeName}</b> <span class="ro-dim">(the ${cfg.key} ${SCALE_WORD[cfg.scale]} collection)</span>`
           : `<b>${cfg.key} ${SCALE_WORD[cfg.scale] || cfg.scale}</b>`);
-        bits.push(`bar <b>1</b> of 1 <span class="ro-dim">(the progression arrives with child 7)</span>`);
+        bits.push(`bar <b>${index + 1}</b> of ${prog.chords.length}` +
+          (cfg.object === "scale" ? "" :
+            ` — <b>${cur.symbol}</b> <span class="ro-dim">(${cur.roman})</span>`));
         bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`);
         const ss = [...run.strings].sort((a, b) => b - a).map(String).join("–");
         bits.push(`strings <b>${ss}</b>${run.contiguous ? "" : ' <span class="ro-dim">(skipped)</span>'}, <b>${cfg.notesPer === 1 ? "grip" : "line"}</b>`);
@@ -114,15 +125,17 @@ export const neckReadout = {
          * the stack becomes over it — R19's sentence. The name arrives from
          * compositeOver's read-back through chord.mjs, or honestly not at
          * all; a refusal is spoken by name, never blanked. */
-        if (cfg.object !== "scale" && cfg.bass !== "none") {
-          const rp = placeReference(cfg.bass, fld.ref % 7, fld, run.strings, pos);
+        if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
+          bits.push(`<span style="color:#B82929">reference refused: the reference is relative to the ` +
+            `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
+        } else if (cfg.object !== "scale" && cfg.bass !== "none") {
+          const rp = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
           check("the reference is a real fretted note or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
               : typeof rp.reason === "string" && rp.reason.length > 0);
           if (rp.note) {
-            const tones = diatonicTones(fld, fld.ref % 7, objectOffsets(cfg.object, cfg.dyad));
-            const comp = compositeOver(fld, rp.note.keyDeg, tones.map((t) => t.pc));
+            const comp = compositeOver(fld, rp.note.keyDeg, cur.tones.map((t) => t.pc));
             bits.push(`over <b>${comp.bassName}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
               + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : "")
               + (comp.name ? `: the stack is <b>${comp.name}</b>` : ' <span class="ro-dim">(an unnamed stack — no honest symbol reads back)</span>'));
@@ -130,6 +143,7 @@ export const neckReadout = {
             bits.push(`<span style="color:#B82929">reference refused: ${rp.reason}</span>`);
           }
         }
+        for (const a of absences) bits.push(`<span style="color:#B82929">${a}</span>`);
         if (msg) bits.push(`<span style="color:#B82929">${msg}</span>`);
       } catch (e) {
         fails.push(String(e && e.message || e));
@@ -151,6 +165,10 @@ export const neckReadout = {
       for (const k of Object.keys(cfg))
         if (k in m) cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] };
       render();
+    });
+    listen(d, STEP_CHANGED, (m) => {
+      if (!m || m.request === true || typeof m.index !== "number") return;
+      if (m.index !== index) { index = m.index; render(); }
     });
     render();
   },

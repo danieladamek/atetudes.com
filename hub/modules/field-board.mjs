@@ -41,10 +41,11 @@ import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/p
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
 import { placeReference } from "../../engine/reference.mjs";
+import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
-import { CONFIG_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "../bus.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -132,8 +133,8 @@ export const fieldBoard = {
     <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
     <span class="fd-pulse" id="fdPulse"></span>
     <span class="fd-lab2">bar split</span>
-    <select id="fdSplit" data-control="fdSplit" disabled
-      title="the bar split walks the étude — arrives with child 7"></select>
+    <select id="fdSplit" data-control="fdSplit"
+      title="the bar split — a bar's chords take these slots in order"></select>
     <span class="fd-lab2">voice</span>
     <select id="fdVoice" data-control="fdVoice"></select>
   </div>
@@ -206,7 +207,9 @@ export const fieldBoard = {
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
-      address: "pattern", figure: "" };
+      address: "pattern", figure: "",
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+    let index = 0;                 // the étude's place — the chart line owns it
     let curB = null;            // { fld, run, pos, region, aNotes } of the last build
     let dragging = null;
 
@@ -266,35 +269,44 @@ export const fieldBoard = {
 
       /* THE SELECTION — what the controls narrowed the field to */
       const pool = materialIn(pos, run.strings, fld);
+      /* THE CURRENT BAR'S CHORD (child 7): the timeline owns the place, the
+       * progression owns the bars, chordAt is the ONE derivation — the
+       * night-6 successor to the night-5 tonic rule, which the timeline now
+       * owns as promised. THREE ABSENCES, each by name: the chord's own
+       * missing slot, the key's missing tone, and the frame's. */
+      const prog = progressionOf(cfg, cfg.key, cfg.scale);
+      if (index >= prog.chords.length) index = 0;
+      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
       let sel = [], selMsg = "";
+      if (prog.err) selMsg = prog.err;
       if (cfg.object === "scale") {
         sel = scaleTake(pool).notes;
       } else {
-        /* the chord roots at the CURRENT TONIC (fld.ref; the key until a mode
-                 * re-roots it) — startDeg anchors only the WINDOW. Corrected 260831:
-                 * rooting at startDeg booted the door on Gm7 where v0.9 and the ruled
-                 * boot (register 11) hold the B♭maj7 block. The timeline's chords
-                 * arrive with child 7 and will own this value. */
-        const keyDeg = fld.ref % 7;
-        const tones = diatonicTones(fld, keyDeg, objectOffsets(cfg.object, cfg.dyad));
         const r = cfg.take === "all"
-          ? everyOccurrence(tones, pool, { n: cfg.notesPer })
-          : oneOfEach(tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
+          : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || [];
-        if (r.missing && r.missing.length)
-          selMsg = `no ${r.missing.join(" or ")} in this frame`;
+        const parts = [];
+        if (cur.absent.length) parts.push(`${cur.symbol} has no ${cur.absent.join(" or ")}`);
+        if (cur.offKey.length)
+          parts.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
+        if (r.missing && r.missing.length) parts.push(`no ${r.missing.join(" or ")} in this frame`);
         if (r.unplaceable)
-          selMsg = r.collide
+          parts.push(r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
-            : "no placement fits";
+            : "no placement fits");
+        if (parts.length) selMsg = (selMsg ? selMsg + " " : "") + parts.join(". ");
       }
       /* THE REFERENCE (child 5): a real fretted note on string 5 or 6,
        * outside the isolation — v0.9's hollow dashed circle (line 919). A
        * stretch keeps full colour, unmarked (the ruling); the flag feeds the
        * hint's prose. A refusal is a reason, said in the hint BY NAME. */
       let refP = { note: null, stretch: false, reason: null };
-      if (cfg.object !== "scale" && cfg.bass !== "none") {
-        refP = placeReference(cfg.bass, fld.ref % 7, fld, run.strings, pos);
+      if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
+        refP = { note: null, stretch: false,
+          reason: `the reference is relative to the chord's degree, and ${cur.symbol}'s root is not in the key` };
+      } else if (cfg.object !== "scale" && cfg.bass !== "none") {
+        refP = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
         if (refP.note) {
           const rf = FAM[refP.note.deg];
           const g = el("g", { class: "fd-ref", "data-refstr": refP.note.string,
@@ -498,6 +510,11 @@ export const fieldBoard = {
     });
     d.addEventListener("pointerup", () => { dragging = null; });
 
+    listen(d, STEP_CHANGED, (m) => {
+      if (!m || m.request === true || typeof m.index !== "number") return;
+      if (m.index !== index) { index = m.index; build(); }
+    });
+
     byId("fieldSvg").addEventListener("click", (e) => {
       const sq = e.target.closest("[data-fdstr]");
       if (sq) {
@@ -562,10 +579,23 @@ export const fieldBoard = {
     });
     {
       const sp = byId("fdSplit");
-      for (const opt of (SPLITS[4] || []).map((x) => (Array.isArray(x) ? x.join("+") : String(x)))) {
-        const o = d.createElement("option"); o.value = opt; o.textContent = opt;
-        sp.appendChild(o);
-      }
+      const fillSplits = (meter) => {
+        const cur = sp.value;
+        sp.textContent = "";
+        for (const opt of (SPLITS[meter] || SPLITS[4] || []).map((x) => (Array.isArray(x) ? x.join("+") : String(x)))) {
+          const o = d.createElement("option"); o.value = opt; o.textContent = opt;
+          sp.appendChild(o);
+        }
+        if ([...sp.options].some((o) => o.value === cur)) sp.value = cur;
+      };
+      fillSplits(4);
+      /* LIVE (child 7): the split is how a bar's chords take their beats —
+       * announced as the parsed slots; the walk and the chart line adopt */
+      sp.addEventListener("change", (e) =>
+        announce(d, CONFIG_CHANGED, { split: e.target.value.split("+").map(Number) }));
+      listen(d, CLOCK_STATE, (m) => {
+        if (m && typeof m.meter === "number") fillSplits(m.meter);
+      });
     }
     {
       const v = byId("fdVoice");
@@ -598,7 +628,7 @@ export const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "bass"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "bass", "source", "cycle", "form", "custom", "start"])
         if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
       if ("dyad" in m && Array.isArray(m.dyad) && m.dyad.join() !== cfg.dyad.join()) {
         cfg = { ...cfg, dyad: [...m.dyad] }; changed = true;

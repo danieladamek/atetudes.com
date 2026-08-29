@@ -16,8 +16,10 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
-import { CONFIG_CHANGED, NOTE, listen, announce } from "../bus.mjs";
+import { oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { progressionOf, chordAt } from "../../engine/progression.mjs";
+import { placeReference } from "../../engine/reference.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -54,7 +56,9 @@ export const keysBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] };
+      startDeg: 5, nearFret: 5, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] , bass: "none",
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+    let index = 0;
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -95,20 +99,31 @@ export const keysBoard = {
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret });
       const pool = materialIn(pos, run.strings, fld);
+      /* THE CURRENT BAR'S CHORD through the one derivation (child 7): the
+       * progression owns which chord; chordAt owns what its tones are */
+      const prog = progressionOf(cfg, cfg.key, cfg.scale);
+      if (index >= prog.chords.length) index = 0;
+      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
       let sel = [];
       if (cfg.object === "scale") sel = scaleTake(pool).notes;
       else {
-        /* the chord roots at the CURRENT TONIC (fld.ref; the key until a mode
-                 * re-roots it) — startDeg anchors only the WINDOW. Corrected 260831:
-                 * rooting at startDeg booted the door on Gm7 where v0.9 and the ruled
-                 * boot (register 11) hold the B♭maj7 block. The timeline's chords
-                 * arrive with child 7 and will own this value. */
-        const tones = diatonicTones(fld, fld.ref % 7,
-          objectOffsets(cfg.object, cfg.dyad));
         const r = cfg.take === "all"
-          ? everyOccurrence(tones, pool, { n: cfg.notesPer })
-          : oneOfEach(tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
+          : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || [];
+      }
+      /* the reference mark, as v0.9's drawKeys carries it (the bass rides
+       * the marks list) — hollow ring, the board's own idiom for "under" */
+      if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree >= 0) {
+        const rp = placeReference(cfg.bass, cur.degree, fld, cfg.strings, pos);
+        if (rp.note && rp.note.midi >= LO && rp.note.midi <= HI) {
+          const black = BLACK.includes(mod(rp.note.midi, 12));
+          const cx = xOf(rp.note.midi) + (black ? ww * 0.3 : ww / 2);
+          const cy = black ? 14 + H * 0.48 : 14 + H - 24;
+          el("circle", { cx, cy, r: 9, fill: "none", stroke: FAM_COLOR[FAM[rp.note.deg]],
+            "stroke-width": 2, "stroke-dasharray": "3 2.5", "pointer-events": "none",
+            "data-kyref": rp.note.midi }, svg);
+        }
       }
       for (const nt of sel) {
         if (nt.midi < LO || nt.midi > HI) continue;
@@ -134,6 +149,10 @@ export const keysBoard = {
       for (const k of Object.keys(cfg))
         if (k in m) cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] };
       render();
+    });
+    listen(d, STEP_CHANGED, (m) => {
+      if (!m || m.request === true || typeof m.index !== "number") return;
+      if (m.index !== index) { index = m.index; render(); }
     });
     mountMini(ctx, byId("kyMini"));
     render();

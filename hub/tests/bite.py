@@ -501,6 +501,26 @@ def m20_reference_refusal_goes_silent():
         p.write_text(original)
 
 
+def m21_typed_romans_stop_resolving():
+    # child 7's typed path: the custom line tries resolveRoman before
+    # parseChord. Sever the roman path and "ii7 V7 Imaj7" refuses instead of
+    # resolving — no load assertion covers typed romans (the load block pins
+    # the FORM path), so only the door gate's identified pin can bite.
+    p, original, mutated = patch("engine/progression.mjs",
+        "        const r = resolveRoman(tok, key, scale);",
+        "        const r = null;")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "typed romans must resolve by the case rule" in r.stdout
+        record("typed romans stop resolving",
+               r.returncode != 0 and hit,
+               "suite exit %d; the case-rule surface pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def main():
     print("hub bite harness — every stage-2 assertion must be seen to fail\n")
     for fn in (m1_shell_styles_a_module, m2_module_styles_another_module,
@@ -512,7 +532,7 @@ def main():
                m14_take_collapses_into_placement, m15_scale_material_silently_halved,
                m16_card_moved_between_rows, m17_part_moved_between_seats,
                m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window,
-               m20_reference_refusal_goes_silent):
+               m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving):
         try:
             fn()
         except BuildBroken as e:

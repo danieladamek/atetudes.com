@@ -42,8 +42,11 @@ import { CYCLES } from "./tetrad-sequence.mjs";
 import { resolveStructure } from "./structures.mjs";
 import { parseChord, resolveRoman } from "./chord.mjs";
 import { parseAtchart, serializeAtchart } from "./atchart.mjs";
+import { diatonicTones, objectTones, fieldPartition, objectOffsets } from "./selection.mjs";
+import { compositeOver } from "./reference.mjs";
 
 const mod7 = (x) => ((x % 7) + 7) % 7;
+const mod12 = (x) => ((x % 12) + 12) % 12;
 
 /** the derived walk: home, every degree the step visits, home again.
  * The COUNT is an output — nothing here says "eight". */
@@ -174,6 +177,61 @@ export function chartBodyOf(chords, bars, fld) {
   const doc = "---\natchart: 1\n---\n```chart\n" + raw + "\n```\n";
   const out = serializeAtchart(parseAtchart(doc));
   return out.slice(out.indexOf("```chart\n") + 9, out.lastIndexOf("\n```"));
+}
+
+/**
+ * chordAt(prog, index, fld, object, dyad) → THE ONE DERIVATION every board
+ * shares (last night found the object→offsets fact spelled in five modules;
+ * this is the same lesson one level up — the per-bar chord read is derived
+ * once, here, and mirrored everywhere):
+ *   { kind, degree, rootPc, symbol, roman, tones, absent, offKey }
+ *   degree   the chord root's field degree, or -1 (an off-key root)
+ *   symbol   the chip's name: the chord's own for a typed one; for a
+ *            diatonic bar, compositeOver's read-back name (or the bare root
+ *            when no honest suffix reads back)
+ *   roman    the analysis line — v0.9's rule: lower case when the third is
+ *            minor, ° when diminished, "—" when the root is off the key
+ *   tones    the object's PLAYABLE tones ({role,pc}; off-key ones removed)
+ *   absent   slots the CHORD cannot fill, by role (the coreTetrad lesson)
+ *   offKey   tones the KEY cannot carry, by role — a different absence from
+ *            not-in-this-frame, which only the window can report
+ * A scale object carries no chord: tones null, the symbol is the bar root's
+ * name, and the boards keep their scale path.
+ */
+export function chordAt(prog, index, fld, object, dyad = [3, 7]) {
+  if (!prog || !Array.isArray(prog.chords) || !prog.chords.length)
+    throw new Error("chordAt: no progression");
+  const c = prog.chords[((index % prog.chords.length) + prog.chords.length) % prog.chords.length];
+  const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
+  const romanOf = (degree, pcs) => {
+    if (degree < 0) return "—";
+    const third = mod12(pcs[1] - pcs[0]), fifth = pcs.length > 2 ? mod12(pcs[2] - pcs[0]) : 7;
+    const base = ROMAN[degree];
+    return (third === 3 ? base.toLowerCase() : base) + (third === 3 && fifth === 6 ? "°" : "");
+  };
+  if (c.kind === "diatonic") {
+    const degree = c.degree, rootPc = fld.pcs[degree];
+    if (object === "scale")
+      return { kind: c.kind, degree, rootPc, symbol: fld.notes[degree].name,
+        roman: ROMAN[degree], tones: null, absent: [], offKey: [] };
+    const tones = diatonicTones(fld, degree, objectOffsets(object, dyad));
+    const named = compositeOver(fld, degree, tones.map((t) => t.pc));
+    // the analysis line reads the DEGREE's own triad — a dyad on ii is still ii
+    const tri = diatonicTones(fld, degree, objectOffsets("triad")).map((t) => t.pc);
+    return { kind: c.kind, degree, rootPc,
+      symbol: named.name || named.bassName,
+      roman: romanOf(degree, tri),
+      tones, absent: [], offKey: [] };
+  }
+  const rootPc = c.parsed.root.pc, degree = fld.pcs.indexOf(mod12(rootPc));
+  if (object === "scale")
+    return { kind: c.kind, degree, rootPc, symbol: c.parsed.root.name,
+      roman: degree < 0 ? "—" : ROMAN[degree], tones: null, absent: [], offKey: [] };
+  const ot = objectTones(c.parsed, object, dyad);
+  const part = fieldPartition(ot.tones, fld);
+  return { kind: c.kind, degree, rootPc, symbol: c.symbol,
+    roman: romanOf(degree, c.parsed.pcs),
+    tones: part.inKey, absent: ot.absent, offKey: part.offKey.map((t) => t.role) };
 }
 
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */
