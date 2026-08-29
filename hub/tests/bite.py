@@ -465,12 +465,15 @@ def m18_repeat_stops_being_the_ordinal():
 
 
 def m19_chord_reroots_at_the_window():
-    # tonight's found defect, reintroduced: rooting the chord at the window's
-    # anchor degree boots the door on Gm7 where the ruling (register 11) and
-    # v0.9 hold the B-flat tetrad block. The strengthened boot pin must bite.
+    # the 260831 defect, reintroduced IN ITS CHILD-7 FORM (the anchor rotted
+    # on 260901 when the progression took ownership of the chord, exactly as
+    # the night-5 comment predicted): the chord rooted at the WINDOW'S anchor
+    # degree instead of the progression's bar boots the door on Gm7 where the
+    # ruling (register 11) and v0.9 hold the B-flat tetrad block. The
+    # strengthened boot-block pin must still bite.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        "        const keyDeg = fld.ref % 7;",
-        "        const keyDeg = (pos.startDeg + fld.ref) % 7;")
+        "      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);",
+        "      const cur = chordAt({ chords: [{ kind: \"diatonic\", degree: pos.startDeg }], bars: [[0]] }, 0, fld, cfg.object, cfg.dyad);")
     try:
         p.write_text(mutated)
         build()
