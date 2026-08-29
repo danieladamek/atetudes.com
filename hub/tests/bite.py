@@ -555,6 +555,29 @@ def m22_the_figure_never_reaches_the_sound():
         p.write_text(original)
 
 
+def m23_the_walk_goes_deaf_to_the_window():
+    # 260903's class guard: the walk and the board derive the same selection
+    # from SHARED CONFIG (§4.2.3 — never from each other's state). Deafen the
+    # walk to the window — the brief's hypothesized mechanism, reintroduced
+    # for real — and the sound≡sight pin must name the diverging midis when
+    # the gate steps the window.
+    p, original, mutated = patch("hub/modules/etude-walk.mjs",
+        """      const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
+        startDegree: cfg.startDeg, nearFret: cfg.nearFret });""",
+        """      const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
+        startDegree: 5, nearFret: 5 });""")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "SOUND must equal SIGHT" in r.stdout
+        record("the walk goes deaf to the window",
+               r.returncode != 0 and hit,
+               "suite exit %d; the sound-equals-sight pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -605,7 +628,7 @@ def main():
                m16_card_moved_between_rows, m17_part_moved_between_seats,
                m18_repeat_stops_being_the_ordinal, m19_chord_reroots_at_the_window,
                m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving,
-               m22_the_figure_never_reaches_the_sound)
+               m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window)
     preflight(fns)
     for fn in fns:
         try:

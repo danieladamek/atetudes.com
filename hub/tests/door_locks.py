@@ -914,6 +914,84 @@ def run_door(pw, door_id):
               f"{tag} the reverse mismatch must be named too: {page.inner_text('#fdFigNote')!r}")
         page.click('#fdAddrSeg >> text=pattern'); page.wait_for_timeout(80)
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
+
+        # ---- 260903: SOUND ≡ SIGHT — the walk and the board pinned equal ----
+        # Two independent derivations of the same selection (§4.2.3 forbids
+        # sharing state, so they share CONFIG) — and two paths never asserted
+        # to agree will eventually disagree. Asserted at the two artifacts
+        # Daniel actually meets: the NOTE stream and the drawn dots. Per bar:
+        # the set of sounded midis EQUALS the drawn selection plus the drawn
+        # reference. A silent bar showing nothing (with its reason in the
+        # hint) passes; a sounded note with nothing drawn — or a drawn note
+        # never sounded — fails BY BAR AND BY MIDI.
+        page.evaluate("""() => { window.__cf = { bars: [], notes: [] };
+          document.addEventListener('atetudes:note', e =>
+            window.__cf.notes.push({ m: e.detail.midi, t: performance.now() }));
+          document.addEventListener('atetudes:step', e => {
+            if (e.detail && e.detail.request === true) return;
+            const t = performance.now(), i = e.detail.index;
+            requestAnimationFrame(() => {
+              const drawn = [...document.querySelectorAll('#fieldSvg .fd-sel')]
+                .map(g => +g.dataset.selmidi);
+              const rf = document.querySelector('#fieldSvg .fd-ref');
+              window.__cf.bars.push({ i, t, drawn,
+                ref: rf ? +rf.dataset.refmidi : null }); }); }); }""")
+        page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
+        compared = [0]
+
+        def sound_sight_pass(label):
+            page.evaluate("""() => {
+              const drawn = [...document.querySelectorAll('#fieldSvg .fd-sel')]
+                .map(g => +g.dataset.selmidi);
+              const rf = document.querySelector('#fieldSvg .fd-ref');
+              window.__cf.bars = [{ i: -1, t: performance.now(), drawn,
+                ref: rf ? +rf.dataset.refmidi : null }];
+              window.__cf.notes = []; }""")
+            page.click('#tlStripMini button[data-role="play"]')
+            page.wait_for_timeout(8600)                      # eight 1 s bars at 240
+            page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+            cf = page.evaluate("() => window.__cf")
+            bars, notes = cf["bars"], cf["notes"]
+            check(len(bars) >= 8, f"{tag} [{label}] the corpus must actually run: {len(bars)} bars")
+            # ONLY COMPLETE BARS COMPARE: the stop lands mid-bar and rightly
+            # cancels the pending steps, so the trailing snapshot has no end
+            # boundary and no complete sound — comparing it was this pin's own
+            # first red (its blind spot, not the walk's)
+            for k, bar in enumerate(bars[:-1]):
+                t0 = bar["t"] - 50
+                t1 = bars[k + 1]["t"] - 50
+                sounded = sorted({n["m"] for n in notes if t0 <= n["t"] < t1})
+                shown = sorted(set(bar["drawn"]) | ({bar["ref"]} if bar["ref"] is not None else set()))
+                span_ms = bars[k + 1]["t"] - bar["t"]
+                check(sounded == shown,
+                      f"{tag} [{label}] bar snapshot i={bar['i']}: SOUND must equal SIGHT — "
+                      f"sounded {sounded}, drawn {shown} (bar span {span_ms and round(span_ms)}ms; "
+                      f"notes near: {[(n['m'], round(n['t']-bar['t'])) for n in notes if bar['t']-300 <= n['t'] < bar['t']+1300]})")
+                compared[0] += 1
+            return bars
+
+        # config 1 — the boot cycle at Grip: bar 2 is DANIEL'S BAR, identified:
+        # empty selection, the reference alone both drawn and sounded
+        bars1 = sound_sight_pass("boot grip + ref")
+        daniel = [b for b in bars1 if b["i"] == 1]
+        check(daniel and daniel[0]["drawn"] == [] and daniel[0]["ref"] == 48,
+              f"{tag} bar 2 (E♭maj7) must show the empty selection with the fretted C ref: {daniel}")
+        check("Only the reference sounds in this bar" in page.inner_text("#fdHint")
+              if page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") == 0 else True,
+              f"{tag} an empty bar with a live reference must say the bass alone carries it")
+        # config 2 — the window STEPPED (the announce every mover must make)
+        # and the arpeggio take: the class the hypothesis feared, exercised
+        page.focus("#fieldSvg"); page.press("#fieldSvg", "ArrowRight"); page.wait_for_timeout(200)
+        page.select_option("#hcTake", "all"); page.wait_for_timeout(200)
+        sound_sight_pass("stepped window + arpeggio")
+        check(compared[0] >= 14,
+              f"{tag} the sound≡sight corpus floor: {compared[0]} complete bars compared (want ≥ 14)")
+        # restore
+        page.select_option("#hcTake", "one"); page.select_option("#hcRef", "none")
+        page.press("#fieldSvg", "ArrowLeft"); page.wait_for_timeout(150)
+        page.fill("#bpmRange", "72"); page.dispatch_event("#bpmRange", "input")
+        page.wait_for_timeout(100)
         # back to the boot state
         page.fill("#bpmRange", "72"); page.dispatch_event("#bpmRange", "input")
         page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")

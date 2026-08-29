@@ -310,7 +310,8 @@ export const fieldBoard = {
         if (refP.note) {
           const rf = FAM[refP.note.deg];
           const g = el("g", { class: "fd-ref", "data-refstr": refP.note.string,
-            "data-reffret": refP.note.fret, "data-refstretch": String(refP.stretch) }, svg);
+            "data-reffret": refP.note.fret, "data-refmidi": refP.note.midi,
+            "data-refstretch": String(refP.stretch) }, svg);
           el("circle", { cx: fx(refP.note.fret), cy: fy(refP.note.string), r: 12, fill: "none",
             stroke: FAM_COLOR[rf], "stroke-width": 2.4, "stroke-dasharray": "3 2.5" }, g);
           const t = el("text", { x: fx(refP.note.fret), y: fy(refP.note.string) + 3.4,
@@ -441,6 +442,7 @@ export const fieldBoard = {
           : (selMsg ? ` ${selMsg}.` : "")) +
         (refP.note
           ? ` Reference: string ${refP.note.string}, fret ${refP.note.fret}${refP.stretch ? " — a stretch past the box" : ""}.`
+            + (!isScale && !sel.length ? " Only the reference sounds in this bar." : "")
           : (refP.reason ? ` Reference refused: ${refP.reason}.` : "")) +
         ` Click the numbers to choose strings; ← → step the window.`;
       byId("fdLegend").innerHTML = FAM.map((f2) =>
