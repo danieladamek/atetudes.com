@@ -596,6 +596,67 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260909 item 2: THE FIRST NOTE OF A NEW BAR RINGS ----
+        # Measured: on an advance the walk's STEP listener runs before the
+        # board's, so the new chord's first NOTE arrives against the OLD
+        # bar's dots — no matching data-selmidi, no ring, and the rebuild
+        # lands ~10ms later (NOTE t=3556, REBUILD t=3567 in the trace). The
+        # board now holds the miss and flushes it onto the fresh dots.
+        # Asserted at the artifact: every NOTE of a played pass — the
+        # advance's first note included — shows a ring at its own dot.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'arpeggio',
+                      address: 'pattern', figure: '4,3,2,1', source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(250)
+        page.evaluate("""() => {
+          if (window.__pulseHooked) { window.__pulseLog = []; return; }
+          window.__pulseHooked = true; window.__pulseLog = [];
+          document.addEventListener('atetudes:step', (e) => {
+            const m = e.detail || {};
+            if (m.request !== true && typeof m.index === 'number')
+              window.__pulseLog.push({ ev: 'STEP', index: m.index });
+          }, true);
+          document.addEventListener('atetudes:note', (e) => {
+            const m = e.detail || {};
+            if (typeof m.midi !== 'number') return;
+            const row = { ev: 'NOTE', midi: m.midi, rang: false };
+            window.__pulseLog.push(row);
+            setTimeout(() => {
+              const svg = document.getElementById('fieldSvg');
+              const dot = svg && svg.querySelector(`.fd-sel[data-selmidi="${m.midi}"] circle`);
+              if (!dot) return;
+              row.rang = [...svg.querySelectorAll('.fd-pulse')].some((rg) =>
+                rg.getAttribute('cx') === dot.getAttribute('cx')
+                && rg.getAttribute('cy') === dot.getAttribute('cy'));
+            }, 120);
+          }, true);
+        }""")
+        page.evaluate("""() => { const b = [...document.querySelectorAll('button')]
+          .find((x) => x.textContent.trim() === '▶'); b.click(); }""")
+        page.wait_for_timeout(4500)
+        page.evaluate("""() => { const b = [...document.querySelectorAll('button')]
+          .find((x) => x.textContent.trim() === '■'); if (b) b.click(); }""")
+        page.wait_for_timeout(400)
+        plog = page.evaluate("() => window.__pulseLog")
+        step_i = next((i for i, r in enumerate(plog) if r["ev"] == "STEP"), None)
+        check(step_i is not None, f"{tag} the played pass reached an advance (log: {plog[:6]})")
+        notes = [r for r in plog if r["ev"] == "NOTE"]
+        first_after = next((r for r in plog[step_i:] if r["ev"] == "NOTE"), None) if step_i is not None else None
+        check(bool(notes) and all(r["rang"] for r in notes),
+              f"{tag} EVERY sounded note rings at its dot — silent-ringed: "
+              f"{[r['midi'] for r in notes if not r['rang']]}")
+        check(first_after is not None and first_after["rang"],
+              f"{tag} the NEW bar's first note rings (the one the rebuild used to eat): {first_after}")
+        # full boot restore — this block set arpeggio movement AND a typed figure
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260909 item 1: THE FOLD FOLDS EVERYTHING ----
         # Collapsing the rail left Grip/Line/block/arpeggio/pattern/tones
         # painting on, clipped mid-glyph in the 30px strip: the segs' id-scoped

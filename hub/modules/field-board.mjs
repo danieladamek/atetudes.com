@@ -248,6 +248,7 @@ export const fieldBoard = {
     let curB = null;            // { fld, run, pos, region, aNotes } of the last build
     let dragging = null;
     let pulseTimers = [];       // the sounding-note pulse (260905, item 5)
+    let pendingPulses = [];     // NOTEs that beat the rebuild (260909, item 2) — flushed by build()
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -530,6 +531,12 @@ export const fieldBoard = {
       byId("fdLegend").innerHTML = FAM.map((f2) =>
         `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
         + `<span style="margin-left:8px">colour = function against ${cfg.ref ? "the reference tone" : "the key"}</span>`;
+      /* the held first-note pulses land on the fresh dots (260909, item 2) —
+       * a NOTE that arrived mid-rebuild rings here or expires (150ms) */
+      const now = d.defaultView.performance.now();
+      const held = pendingPulses;
+      pendingPulses = [];
+      for (const pp of held) if (now - pp.t < 150) ringFor(pp.midi);
     };
 
     const push = () => {
@@ -601,14 +608,13 @@ export const fieldBoard = {
 
     /* what you see pulsing is what you hear (fretboard-stage's own words) —
      * the ring drawn AT THE DRAWN DOT's own coordinates, never recomputed */
-    listen(d, NOTE, (m) => {
-      if (!m || typeof m.midi !== "number") return;
+    const ringFor = (midi) => {
       const svg = byId("fieldSvg");
       const layer = svg && svg.querySelector(".fd-pulselayer");
-      if (!layer) return;
+      if (!layer) return 0;
       const hits = [
-        ...svg.querySelectorAll(`.fd-sel[data-selmidi="${m.midi}"] circle`),
-        ...[...svg.querySelectorAll(`.fd-ref[data-refmidi="${m.midi}"] circle`)],
+        ...svg.querySelectorAll(`.fd-sel[data-selmidi="${midi}"] circle`),
+        ...[...svg.querySelectorAll(`.fd-ref[data-refmidi="${midi}"] circle`)],
       ];
       for (const c of hits) {
         const ring = el("circle", { class: "fd-pulse", cx: c.getAttribute("cx"),
@@ -616,6 +622,19 @@ export const fieldBoard = {
           "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
         pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), 320));
       }
+      return hits.length;
+    };
+    /* THE FIRST NOTE'S RING (260909, item 2, measured): on an advance the
+     * walk's STEP listener runs before this board's — the new chord's first
+     * NOTE arrives while the OLD bar's dots are still drawn (no matching
+     * data-selmidi, no ring), and the rebuild lands ~10ms later. The walk's
+     * ordering is load-bearing (260902) and stays; the pulse is THIS board's,
+     * so a miss is held briefly and flushed against the fresh dots when
+     * build() finishes. A miss that never finds a dot simply expires. */
+    listen(d, NOTE, (m) => {
+      if (!m || typeof m.midi !== "number") return;
+      if (ringFor(m.midi) === 0)
+        pendingPulses.push({ midi: m.midi, t: d.defaultView.performance.now() });
     });
 
     byId("fieldSvg").addEventListener("click", (e) => {
