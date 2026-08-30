@@ -86,9 +86,11 @@ export const neckReadout = {
           if (cur.offKey.length)
             absences.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
           if (r.missing && r.missing.length) msg = `no ${r.missing.join(" or ")} in this frame`;
-          if (r.unplaceable) msg = r.collide
+          if (r.unplaceable) msg = (r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
-            : "no placement fits";
+            : "no placement fits")
+            + (r.resolvesAt != null && r.resolvesAt <= 3
+              ? " — Line takes them" : " — and no per-string ceiling resolves it");
         }
         // v0.9's own pre-draw checks, re-run here against an independent derivation
         check("the field is seven distinct degrees", () =>
@@ -111,7 +113,21 @@ export const neckReadout = {
         bits.push(`bar <b>${index + 1}</b> of ${prog.chords.length}` +
           (cfg.object === "scale" ? "" :
             ` — <b>${cur.symbol}</b> <span class="ro-dim">(${cur.roman})</span>`));
-        bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`);
+        /* THE FRAME'S CARRYING CAPACITY (260908, 2c): computed and thrown
+         * away until tonight — how many notes this frame holds and how many
+         * of the progression's bars place in it at the current cap. Real
+         * guitar knowledge, one line. */
+        let placeK = 0;
+        for (let bi = 0; bi < prog.chords.length; bi++) {
+          const bc = chordAt(prog, bi, fld, cfg.object, cfg.dyad);
+          if (cfg.object === "scale") { placeK++; continue; }
+          const br = cfg.take === "all"
+            ? { notes: true }
+            : oneOfEach(bc.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          if (br.notes) placeK++;
+        }
+        bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`
+          + ` <span class="ro-dim">(${pool.length} notes · ${placeK}/${prog.chords.length} bars place)</span>`);
         const ss = [...run.strings].sort((a, b) => b - a).map(String).join("–");
         bits.push(`strings <b>${ss}</b>${run.contiguous ? "" : ' <span class="ro-dim">(skipped)</span>'}, <b>${cfg.notesPer === 1 ? "grip" : "line"}</b>`);
         if (sel.length) {

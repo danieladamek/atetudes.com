@@ -250,8 +250,20 @@ export function oneOfEach(tones, pool, { n = 1, centre } = {}) {
       if (strings.length === 1) (byString[strings[0]] ||= []).push(t.role);
     });
     const clash = Object.entries(byString).find(([, roles]) => roles.length > n);
+    /* THE ESCAPE, DERIVED (260908 — the refusal names the way through):
+     * the smallest per-string cap that actually places these tones, found by
+     * asking, never assumed. The measured truth as of the amendment: every
+     * grip collide in the 8-key × 3-scale × 3-set × 7-window matrix resolves
+     * by n=3 (2,200/2,200) — but this value is COMPUTED per case, so a
+     * future field where nothing resolves says null and the face says that
+     * instead. Consumers translate the number into their own control's word
+     * (the engine names no UI). */
+    let resolvesAt = null;
+    for (let nn = n + 1; nn <= 3 && resolvesAt === null; nn++)
+      if (oneOfEach(tones, pool, { n: nn, centre }).notes) resolvesAt = nn;
     return { notes: null, missing: missing.map((t) => t.role), unplaceable: true,
-      collide: clash ? { string: +clash[0], roles: clash[1] } : null };
+      collide: clash ? { string: +clash[0], roles: clash[1] } : null,
+      resolvesAt };
   }
   const notes = [...best].sort((a, b) => a.midi - b.midi);
   if (notes.length !== present.length) throw new Error("oneOfEach: lost a tone in placement");

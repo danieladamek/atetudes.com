@@ -596,6 +596,109 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260908: THE PLAYTHROUGH MATRIX — the gate that walks what a
+        # player walks. Six consecutive nights of green gates ended with
+        # Daniel finding a dead bar in five minutes, because every gate
+        # tested what was built and none tested the player's path: pick a
+        # key, pick a set, pick a window, walk the bars. THE ONE ASSERTION
+        # those nights were missing: every bar is in exactly one of two
+        # states — it PLACES (dots drawn), or it REFUSES BY NAME, VISIBLY ON
+        # THE NECK, with the reason naming what would resolve it. A bar with
+        # neither is a failure. Derived, never enumerated: keys off the
+        # select's own options, windows off every start degree, bars off the
+        # progression's own chips. Asserted at the artifact.
+        mx_keys = page.evaluate("""() => { const o = [...document.querySelectorAll('#hcKey option')]
+          .map(x => x.value); return [o[0], o[o.length - 1]]; }""")
+        mx_cells = [0]
+        mx_dead = []
+        for mx_key in mx_keys + ["Bb"]:
+            for mx_len in (3, 4, 6):
+                mx_set = list(range(mx_len, 0, -1))
+                page.select_option("#hcKey", mx_key); page.wait_for_timeout(80)
+                for mx_sd in range(7):
+                    page.evaluate("""(d) => document.dispatchEvent(new CustomEvent('atetudes:config',
+                      { detail: d }))""", { "strings": mx_set, "startDeg": mx_sd, "nearFret": 5,
+                                            "object": "tetrad", "take": "one", "notesPer": 1,
+                                            "source": "cycle", "custom": "" })
+                    page.wait_for_timeout(90)
+                    n_bars = int(page.get_attribute("#tlScroll", "data-tlbars") or "8")
+                    for mx_bar in range(min(n_bars, 8)):
+                        page.click(f'#tlScroll button >> nth={mx_bar}')
+                        page.wait_for_timeout(70)
+                        st = page.evaluate("""() => {
+                          const sel = document.querySelectorAll('#fieldSvg .fd-sel').length;
+                          const ref = document.querySelector('#fieldSvg .fd-refusal');
+                          return { sel, refusal: ref ? ref.textContent : null }; }""")
+                        mx_cells[0] += 1
+                        ok = st["sel"] > 0 or (st["refusal"] and len(st["refusal"]) > 10)
+                        if not ok and len(mx_dead) < 8:
+                            chip = page.eval_on_selector_all("#tlScroll button.tl-cur",
+                                "es => es.map(e => e.getAttribute('data-tlchip'))")
+                            mx_dead.append(f"{mx_key} set{mx_len} sd{mx_sd} bar{mx_bar + 1} {chip}")
+                        if st["refusal"]:
+                            # the way through, always; the colliding string,
+                            # when one is derivable (a tetrad on three
+                            # strings collides everywhere — no single string
+                            # to name; the escape still is)
+                            check("Line" in st["refusal"] or "no per-string" in st["refusal"],
+                                  f"{tag} matrix {mx_key}/set{mx_len}/sd{mx_sd}/bar{mx_bar + 1}: a "
+                                  f"refusal must name the way through: {st['refusal']!r}")
+                            if "occur only" in st["refusal"]:
+                                check("string" in st["refusal"],
+                                      f"{tag} matrix: a derivable collide must name its string: "
+                                      f"{st['refusal']!r}")
+        check(not mx_dead,
+              f"{tag} THE PLAYTHROUGH MATRIX: {len(mx_dead)}+ bars are DEAD — neither dots "
+              f"nor a visible on-neck reason: {mx_dead}")
+        check(mx_cells[0] >= 500,
+              f"{tag} the matrix must actually walk ({mx_cells[0]} cells; floor 500)")
+        # the SOUND half, on Daniel's own configuration: refused bars silent,
+        # placed bars sounding — one played pass, the NOTE stream as witness
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(80)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { strings: [3, 2, 1], startDeg: 5, nearFret: 0, object: 'triad',
+                      take: 'one', notesPer: 1, source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
+        page.wait_for_timeout(150)
+        placed_bars = []
+        for mx_bar in range(8):
+            page.click(f'#tlScroll button >> nth={mx_bar}'); page.wait_for_timeout(70)
+            placed_bars.append(page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") > 0)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(120)
+        page.evaluate("""() => {
+          if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+            document.addEventListener('atetudes:note', e =>
+              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+          if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
+            document.addEventListener('atetudes:step', e => {
+              if (e.detail && e.detail.request !== true)
+                window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }
+          window.__nt = []; window.__adv = []; }""")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(8600)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        mx_nt = page.evaluate("() => window.__nt"); mx_adv = page.evaluate("() => window.__adv")
+        if len(mx_adv) < 2:
+            check(False, f"{tag} matrix sound half never advanced ({len(mx_adv)} echoes)")
+        bounds = [a["t"] for a in mx_adv]
+        for k in range(min(len(bounds) - 1, 7)):
+            barn = mx_adv[k]["i"]
+            sounded = any(bounds[k] - 50 <= n["t"] < bounds[k + 1] - 50 for n in mx_nt)
+            check(sounded == placed_bars[barn % 8],
+                  f"{tag} matrix sound half: bar {barn + 1} "
+                  f"{'placed but silent' if placed_bars[barn % 8] else 'refused but sounded'}")
+        # restore the boot
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.fill("#bpmRange", "72"); page.dispatch_event("#bpmRange", "input")
+        page.wait_for_timeout(150)
+
         # ---- 260906 item 2: THE REFERENCE RIDES THE BASS BUS ----
         # Daniel: "the bass volume does nothing". The only producer of a
         # bass-role event was the rogue tetrad pass killed on 260905; the
@@ -606,7 +709,7 @@ def run_door(pw, door_id):
         page.select_option("#hcRef", "third"); page.uncheck("#fdMetChk")
         page.wait_for_timeout(200)
         page.evaluate("""() => {
-          if (!window.__nt) { window.__nt = [];
+          if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
               window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
           if (!window.__rawHooked) { window.__rawHooked = true; window.__raw = [];
@@ -1048,14 +1151,15 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(120)
-        page.evaluate("""() => { window.__adv = [];
-          if (!window.__nt) { window.__nt = [];
+        page.evaluate("""() => {
+          if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
               window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
-          window.__nt = [];
-          document.addEventListener('atetudes:step', e => {
-            if (e.detail && e.detail.request !== true)
-              window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }""")
+          if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
+            document.addEventListener('atetudes:step', e => {
+              if (e.detail && e.detail.request !== true)
+                window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }
+          window.__nt = []; window.__adv = []; }""")
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
         page.select_option("#hcTake", "all"); page.click('#fdNSeg >> text=Line')
         page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")

@@ -729,6 +729,26 @@ def m30_the_window_forgets_the_octave():
         p.write_text(original)
 
 
+def m31_a_bar_dies_without_a_reason():
+    # 260908's whole point: a bar that shows neither dots nor a visible
+    # on-neck reason is the defect Daniel found six mornings running.
+    # Remove the neck's refusal element and the playthrough matrix must
+    # name the dead bars.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '      if (cfg.object !== "scale" && !sel.length && selMsg) {',
+        '      if (false) {')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "bars are DEAD" in r.stdout
+        record("a bar dies without a reason",
+               r.returncode != 0 and hit,
+               "suite exit %d; the playthrough matrix bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -811,7 +831,7 @@ def main():
                m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again,
                m26_the_second_sounding_path_returns, m27_the_cap_stops_covering,
                m28_the_board_goes_deaf_to_the_window, m29_the_reference_loses_its_role,
-               m30_the_window_forgets_the_octave)
+               m30_the_window_forgets_the_octave, m31_a_bar_dies_without_a_reason)
     preflight(fns)
     for fn in fns:
         try:

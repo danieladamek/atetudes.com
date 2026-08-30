@@ -322,12 +322,39 @@ export const fieldBoard = {
         if (cur.offKey.length)
           parts.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
         if (r.missing && r.missing.length) parts.push(`no ${r.missing.join(" or ")} in this frame`);
-        if (r.unplaceable)
-          parts.push(r.collide
+        if (r.unplaceable) {
+          /* THE ESCAPE (260908): derived by the engine (resolvesAt — the
+           * smallest cap that places), worded by this module's own control:
+           * the label on the raised-cap button IS the app's word for it. */
+          const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
+          const esc = r.resolvesAt != null && r.resolvesAt <= 3
+            ? ` — ${lineWord} takes ${r.collide ? "both" : "them"}`
+            : " — and no per-string ceiling resolves it";
+          parts.push((r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
-            : "no placement fits");
+            : "no placement fits") + esc);
+        }
         if (parts.length) selMsg = (selMsg ? selMsg + " " : "") + parts.join(". ");
       }
+      /* THE REFUSAL ON THE NECK (260908, 2b — Daniel's finding about his own
+       * finding: the reason printed in the readout and he still reported
+       * "no chords displayed", because he was looking at the NECK. An
+       * absence about the neck belongs on the neck, where the dots would
+       * have been.) Drawn inside the window's own box, split at the em-dash
+       * so the collide and the escape read as two lines. */
+      if (cfg.object !== "scale" && !sel.length && selMsg) {
+        const ry = (fy(Math.min(...run.strings)) + fy(Math.max(...run.strings))) / 2;
+        const rx = (fx(pos.fLo) + fx(pos.fHi)) / 2;
+        const linesTxt = selMsg.split(" — ");
+        const rt = el("text", { class: "fd-refusal", x: rx, y: ry - (linesTxt.length - 1) * 8,
+          "text-anchor": "middle", "font-size": "12.5", "font-weight": "bold",
+          fill: "#B82929" }, svg);
+        linesTxt.forEach((ln, li) => {
+          const ts = el("tspan", { x: rx, dy: li === 0 ? 0 : 16 }, rt);
+          ts.textContent = li === 0 ? ln : "— " + ln;
+        });
+      }
+
       /* THE REFERENCE (child 5): a real fretted note on string 5 or 6,
        * outside the isolation — v0.9's hollow dashed circle (line 919). A
        * stretch keeps full colour, unmarked (the ruling); the flag feeds the
