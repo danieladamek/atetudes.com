@@ -71,6 +71,19 @@ export const etudeWalk = {
     let spent = 0;          // beats this chord has consumed; its own downbeat counts as 1
     let advancing = false;  // true only inside the walk's own on-beat advance
     let timers = [];
+    /* THE AUDITION (260910, item 1): a chip click while the clock is stopped
+     * sounds the walk's OWN current selection — the exact notes the board
+     * draws, through soundCurrent()'s one path. NOT a restore: what used to
+     * sound on a stopped click was audio-card's tetrad pass, a foreign
+     * voicing killed on 260905 (the attack-borne echoes), and that kill
+     * stands. `heard` mirrors audio-card's own arm idiom: an audition
+     * answers a gesture — the boot echo, which is nobody's click, stays
+     * silent. `auditioning` widens the timer guard so a figured bar plays
+     * its sequence in time while stopped; a stop still clears pending. */
+    let heard = false;
+    let auditioning = false;
+    let wantAudition = false;   // a STEP request arrived while stopped — its echo auditions
+    d.addEventListener("pointerdown", () => { heard = true; }, true);
     const clearPending = () => { for (const t of timers) d.defaultView.clearTimeout(t); timers = []; };
 
     const derive = () => {
@@ -128,7 +141,7 @@ export const etudeWalk = {
         const msg = ev.role ? { midi: ev.midi, role: ev.role } : { midi: ev.midi };
         if (ev.at <= 0) { announce(d, NOTE, msg); continue; }
         timers.push(d.defaultView.setTimeout(() => {
-          if (armed) announce(d, NOTE, msg);
+          if (armed || auditioning) announce(d, NOTE, msg);
         }, ev.at * 1000));
       }
     };
@@ -160,13 +173,26 @@ export const etudeWalk = {
       }
     });
     listen(d, STEP_CHANGED, (m) => {
-      if (!m || m.request === true || typeof m.index !== "number") return;
+      if (!m) return;
+      /* an audition answers a REQUEST — a click somewhere asked for this
+       * bar. A config consequence (the strip's index-overflow reset) also
+       * echoes, and must NOT audition: nobody asked to hear it. */
+      if (m.request === true) { if (!armed) wantAudition = heard; return; }
+      if (typeof m.index !== "number") return;
       const moved = m.index !== index;
       index = m.index;
       if (armed && moved) {
         /* an on-beat advance: the beat that carried it is the NEW chord's
          * beat 1. A manual jump (a chip click) starts fresh at 0. */
         spent = advancing ? 1 : 0;
+        soundCurrent();
+      } else if (!armed && wantAudition && m.attack === true) {
+        /* the audition: the step owner's attack-borne answer to a request
+         * ("sound step N now" — the flag's own meaning), and while stopped
+         * the walk answers it itself. The clock stays stopped; a refused
+         * bar has no selection and soundCurrent sounds nothing. */
+        wantAudition = false;
+        auditioning = true;
         soundCurrent();
       }
     });

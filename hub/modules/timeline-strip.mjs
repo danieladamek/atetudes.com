@@ -112,7 +112,13 @@ export const timelineStrip = {
           }
           const rn = d.createElement("span"); rn.className = "tl-rn";
           rn.textContent = sub || c.roman; b.appendChild(rn);
-          b.addEventListener("click", () => { setIndex(ci); });
+          /* the owner's own chips ASK like every other surface (260910,
+           * item 1): a click is a request, answered by the same listener
+           * that answers the boards'. One grammar — and the walk's audition
+           * can tell a click's echo from a config consequence's. */
+          b.addEventListener("click", () => {
+            announce(d, STEP_CHANGED, { index: ci, request: true });
+          });
           el.appendChild(b);
         });
         host.appendChild(el);
@@ -145,7 +151,14 @@ export const timelineStrip = {
         }
       if (changed) {
         const n = lengthNow();
-        if (index >= n) { index = 0; announce(d, STEP_CHANGED, { index }); }
+        /* the one echo that skipped the flag (260910, measured): parked on a
+         * high bar, a shrinking progression reset the index and announced
+         * PLAIN — audio-card's tetrad pass sounded a foreign chord on it,
+         * the exact 260905 signature. The reset is a renumbering, not a
+         * click: attack-borne (no second sounding path), and no request
+         * precedes it (no audition). The comment on setIndex is the law;
+         * this line now obeys it. */
+        if (index >= n) { index = 0; announce(d, STEP_CHANGED, { index, attack: true }); }
         render();
       }
     });

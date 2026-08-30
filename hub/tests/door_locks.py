@@ -914,6 +914,19 @@ def run_door(pw, door_id):
             check(sounded == placed_bars[barn % 8],
                   f"{tag} matrix sound half: bar {barn + 1} "
                   f"{'placed but silent' if placed_bars[barn % 8] else 'refused but sounded'}")
+        # the AUDITION belongs in this half (260910, item 1): the clock just
+        # stopped — a placed bar's chip sounds its drawn notes, a refused
+        # bar's chip stays silent, on the SAME configuration the pass walked
+        mx_place = placed_bars.index(True); mx_refuse = placed_bars.index(False)
+        page.evaluate("() => { window.__nt = [] }")
+        page.click(f'#tlScroll button >> nth={mx_place}'); page.wait_for_timeout(350)
+        mx_aud_p = page.evaluate("() => window.__nt.length")
+        page.evaluate("() => { window.__nt = [] }")
+        page.click(f'#tlScroll button >> nth={mx_refuse}'); page.wait_for_timeout(350)
+        mx_aud_r = page.evaluate("() => window.__nt.length")
+        check(mx_aud_p > 0 and mx_aud_r == 0,
+              f"{tag} matrix sound half, stopped: a placed chip auditions "
+              f"({mx_aud_p} NOTEs), a refused chip stays silent ({mx_aud_r})")
         # restore the boot
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
@@ -1507,6 +1520,96 @@ console.log(JSON.stringify(out));
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(100)
 
+        # ---- 260910 item 1: THE AUDITION ----
+        # Daniel: "we have lost the sound when manually clicking through the
+        # changes." What he heard before was the rogue tetrad pass — a foreign
+        # voicing, killed rightly on 260905. This is the affordance built
+        # properly: a stopped chip click sounds the walk's OWN selection
+        # through soundCurrent()'s one path; a refused bar stays silent with
+        # its reason; the mixer holds; the clock stays stopped. Asserted at
+        # the AudioContext (260905's lesson).
+        page.evaluate("""() => {
+          if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+            document.addEventListener('atetudes:note', e =>
+              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+          if (!window.__rawHooked) { window.__rawHooked = true;
+            for (const C of [AudioBufferSourceNode, OscillatorNode]) {
+              const P = C.prototype.start;
+              C.prototype.start = function(...a) { (window.__raw ||= []).push(performance.now());
+                return P.apply(this, a); }; } }
+          if (!window.__clkHooked) { window.__clkHooked = true; window.__clk = [];
+            document.addEventListener('atetudes:clock', e => window.__clk.push(e.detail)); }
+          window.__nt = []; window.__raw = []; window.__clk = []; }""")
+        # Daniel's own refusing configuration: Bb triads on {3,2,1} at the low
+        # window — six bars place, Adim and Cm refuse by name (260908)
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(100)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { strings: [3, 2, 1], startDeg: 5, nearFret: 0, object: 'triad',
+                      take: 'one', notesPer: 1, source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(250)
+        aud_states = []
+        for aud_bar in range(8):
+            page.evaluate("() => { window.__nt = []; window.__raw = [] }")
+            page.click(f'#tlScroll button >> nth={aud_bar}'); page.wait_for_timeout(350)
+            aud_states.append(page.evaluate("""() => ({
+              drawn: document.querySelectorAll('#fieldSvg .fd-sel').length,
+              refused: !!document.querySelector('#fieldSvg .fd-refusal'),
+              nt: window.__nt.length, raw: window.__raw.length })"""))
+        for aud_bar, st in enumerate(aud_states):
+            if st["refused"]:
+                check(st["nt"] == 0 and st["raw"] == 0,
+                      f"{tag} audition bar {aud_bar + 1}: a REFUSED bar stays silent on "
+                      f"click — no back door (NOTEs {st['nt']}, raws {st['raw']})")
+            else:
+                check(st["drawn"] > 0 and st["nt"] == st["drawn"] and st["raw"] == st["nt"],
+                      f"{tag} audition bar {aud_bar + 1}: sounded == drawn == raw starts "
+                      f"(drawn {st['drawn']}, NOTEs {st['nt']}, raws {st['raw']})")
+        check(any(st["refused"] for st in aud_states) and any(not st["refused"] for st in aud_states),
+              f"{tag} the audition walk covered BOTH states (refused bars: "
+              f"{sum(1 for st in aud_states if st['refused'])}/8)")
+        check(page.evaluate("() => window.__clk.filter(c => c && c.run === true).length") == 0,
+              f"{tag} the audition leaves the clock STOPPED — no CLOCK run announced")
+        # the mixer holds: chord volume at zero, the audition announces but
+        # does not sound (the NOTE stream is the schedule; the slider is the mixer's)
+        page.evaluate("""() => { const s = document.getElementById('fdHarmVol');
+          s.value = 0; s.dispatchEvent(new Event('input', { bubbles: true })); }""")
+        page.wait_for_timeout(150)
+        page.evaluate("() => { window.__nt = []; window.__raw = [] }")
+        aud_ok = next(i for i, st in enumerate(aud_states) if not st["refused"])
+        page.click(f'#tlScroll button >> nth={aud_ok}'); page.wait_for_timeout(350)
+        mix = page.evaluate("() => [window.__nt.length, window.__raw.length]")
+        check(mix[0] > 0 and mix[1] == 0,
+              f"{tag} the mixer holds through an audition — chord volume 0 mutes the "
+              f"raw starts, the schedule still announces (NOTEs {mix[0]}, raws {mix[1]})")
+        page.evaluate("""() => { const s = document.getElementById('fdHarmVol');
+          s.value = 100; s.dispatchEvent(new Event('input', { bubbles: true })); }""")
+        page.wait_for_timeout(150)
+        # the ONE PLAIN ECHO (260910, found measuring item 1): the strip's
+        # index-overflow reset announced without the attack flag — park on
+        # bar 8, type a 4-bar custom, and audio-card's tetrad pass sounded a
+        # FOREIGN four-voice chord straight into WebAudio: 4 raw starts,
+        # 0 NOTEs, the exact 260905 signature through the one echo that
+        # skipped the flag. And a config consequence must not audition
+        # either — nobody asked to hear it.
+        page.click('#tlScroll button >> nth=7'); page.wait_for_timeout(400)
+        page.evaluate("() => { window.__nt = []; window.__raw = [] }")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { source: 'custom', custom: 'Cm7 F7 Bbmaj7 Ebmaj7' } }))""")
+        page.wait_for_timeout(450)
+        hole = page.evaluate("() => [window.__nt.length, window.__raw.length]")
+        check(hole == [0, 0],
+              f"{tag} a progression shrink under a parked high bar makes NO sound — "
+              f"neither foreign (raws {hole[1]}) nor audition (NOTEs {hole[0]})")
+
+        # full boot restore — this block moved key, set, window, object and source
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(250)
+
         # ---- 260905 item 3: THE SCHEDULE IS THE ONLY SOUNDING PATH ----
         # Daniel heard a full chord on beat one in arpeggio mode. Every
         # NOTE-stream trace was blind to it, because the second path never
@@ -1523,12 +1626,21 @@ console.log(JSON.stringify(out));
               C.prototype.start = function(...a) { (window.__raw ||= []).push(performance.now());
                 return P.apply(this, a); }; } }
           window.__raw = []; }""")
+        # REWRITTEN 260910 (item 1), reason stated: this pin asserted a chip
+        # click while stopped starts NO audio — evidence the rogue tetrad
+        # pass was dead (260905). Correct then, and still what it guards:
+        # nothing FOREIGN may sound. The walk now auditions its OWN drawn
+        # selection on a stopped click, so the pin takes its stronger form:
+        # sounded == drawn == raw starts — the drawn selection and NOTHING
+        # else. The zero-assertions live on in the audition block's refused
+        # and muted halves.
         page.evaluate("() => { window.__raw = []; window.__nt = [] }")
         page.click('#tlScroll button >> nth=2'); page.wait_for_timeout(400)
-        silent = page.evaluate("() => [window.__nt.length, window.__raw.length]")
-        check(silent == [0, 0],
-              f"{tag} a chip click while stopped must start NO audio — the echo is "
-              f"attack-borne in this door (NOTEs {silent[0]}, raw starts {silent[1]})")
+        aud2 = page.evaluate("() => [window.__nt.length, window.__raw.length]")
+        drawn2 = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
+        check(drawn2 > 0 and aud2[0] == drawn2 and aud2[1] == aud2[0],
+              f"{tag} a stopped chip click auditions the DRAWN selection and nothing "
+              f"else — drawn {drawn2}, NOTEs {aud2[0]}, raw starts {aud2[1]}")
         page.uncheck("#fdMetChk"); page.wait_for_timeout(150)
         page.evaluate("() => { window.__raw = []; window.__nt = [] }")
         page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1400)
