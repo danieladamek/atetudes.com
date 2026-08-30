@@ -766,6 +766,80 @@ def run_door(pw, door_id):
               f"nor a visible on-neck reason: {mx_dead}")
         check(mx_cells[0] >= 500,
               f"{tag} the matrix must actually walk ({mx_cells[0]} cells; floor 500)")
+        # ---- the CONTRADICTION leg (260909, item 3) — contradicting controls
+        # must SHOW the contradiction. "A typed figure sequences, whatever the
+        # Take" (260901) ruled the behaviour; Daniel caught the override
+        # arriving silently — block stayed raised and dark while the figure
+        # ruled it moot, the third coupling class. Now: a ruling figure
+        # disables block with the reason on its label AND on the Movement
+        # cap; the player's setting is never auto-switched (block keeps its
+        # .on while disabled, waiting); an erring figure rules nothing and
+        # block stays real; clearing the figure restores everything. Walked
+        # for both figure languages, derived where a figure can be (the
+        # pattern off the set's own strings).
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(80)
+        mx_contra = 0
+        mx_figs = page.evaluate("""() => {
+          const strs = [...document.querySelectorAll('#fieldSvg [data-fdstr]')]
+            .map(e => e.getAttribute('data-fdstr'));
+          return { pattern: ['4', '3', '2', '1'].join(','), tones: 'R,3,5,7',
+                   badPattern: '9,9', badTones: '4,3' }; }""")
+        for mx_addr, mx_fig, mx_bad in [("pattern", mx_figs["pattern"], mx_figs["badPattern"]),
+                                        ("tones", mx_figs["tones"], mx_figs["badTones"])]:
+            page.evaluate("""(d) => document.dispatchEvent(new CustomEvent('atetudes:config',
+              { detail: d }))""", { "key": "Bb", "strings": [4, 3, 2, 1], "startDeg": 4,
+                                    "nearFret": 3, "object": "tetrad", "take": "one",
+                                    "notesPer": 1, "movement": "block", "address": mx_addr,
+                                    "figure": mx_fig, "source": "cycle", "custom": "" })
+            page.wait_for_timeout(150)
+            st = page.evaluate("""() => {
+              const b = document.querySelector('#fdMoveSeg button[data-move="block"]');
+              const cap = document.getElementById('fdMoveSeg').previousElementSibling;
+              return { disabled: b.disabled, on: b.classList.contains('on'),
+                       title: b.title, cap: cap.textContent }; }""")
+            mx_contra += 1
+            check(st["disabled"] and "figure" in st["title"] and "clear" in st["title"].lower(),
+                  f"{tag} matrix contradiction ({mx_addr}): a ruling figure DISABLES block "
+                  f"with the reason on its label: {st!r}")
+            check(st["on"],
+                  f"{tag} matrix contradiction ({mx_addr}): the setting WAITS — block keeps "
+                  f".on while disabled, never auto-switched: {st!r}")
+            check("figure sequences" in st["cap"],
+                  f"{tag} matrix contradiction ({mx_addr}): the Movement cap says why: {st['cap']!r}")
+            # an erring figure rules nothing — block stays real
+            page.evaluate("""(v) => document.dispatchEvent(new CustomEvent('atetudes:config',
+              { detail: { figure: v } }))""", mx_bad)
+            page.wait_for_timeout(120)
+            st2 = page.evaluate("""() => {
+              const b = document.querySelector('#fdMoveSeg button[data-move="block"]');
+              const cap = document.getElementById('fdMoveSeg').previousElementSibling;
+              return { disabled: b.disabled, cap: cap.textContent }; }""")
+            mx_contra += 1
+            check(not st2["disabled"] and st2["cap"].strip() == "Movement",
+                  f"{tag} matrix contradiction ({mx_addr}): an ERRING figure rules nothing — "
+                  f"block stays real: {st2!r}")
+            # clearing restores
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+              { detail: { figure: '' } }))""")
+            page.wait_for_timeout(120)
+            st3 = page.evaluate("""() => {
+              const b = document.querySelector('#fdMoveSeg button[data-move="block"]');
+              const cap = document.getElementById('fdMoveSeg').previousElementSibling;
+              return { disabled: b.disabled, on: b.classList.contains('on'),
+                       title: b.title, cap: cap.textContent }; }""")
+            mx_contra += 1
+            check(not st3["disabled"] and st3["on"] and st3["cap"].strip() == "Movement"
+                  and "sound together" in st3["title"],
+                  f"{tag} matrix contradiction ({mx_addr}): clearing the figure restores "
+                  f"block, its own title back: {st3!r}")
+        check(mx_contra >= 6,
+              f"{tag} the contradiction leg must actually walk ({mx_contra} cells; floor 6)")
+        # full boot restore — the leg moved address, movement and figure
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(200)
         # the SOUND half, on Daniel's own configuration: refused bars silent,
         # placed bars sounding — one played pass, the NOTE stream as witness
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(80)

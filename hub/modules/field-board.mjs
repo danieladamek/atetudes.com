@@ -482,10 +482,27 @@ export const fieldBoard = {
         b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
         b.disabled = cfg.object === "scale";
       }
+      /* THE OVERRIDE IS LOUD (260909, item 3; register 20): "a typed figure
+       * sequences, whatever the Take" (260901) stands — but it must not stand
+       * SILENTLY over a raised `block`. While a figure rules, block is
+       * disabled with the reason on its label; clearing the figure restores
+       * it. Movement is never auto-switched — the player's setting waits.
+       * The scale-disables-Placement precedent, applied to the third
+       * coupling class Daniel caught. */
+      const figRules = cfg.object !== "scale" && !fig.err
+        && !!(fig.order && fig.order.length);
       for (const b of byId("fdMoveSeg").querySelectorAll("button")) {
         b.classList.toggle("on", b.dataset.move === cfg.movement);
-        b.disabled = cfg.object === "scale";
+        if (!b.dataset.title0) b.dataset.title0 = b.title;
+        const overridden = figRules && b.dataset.move === "block";
+        b.disabled = cfg.object === "scale" || overridden;
+        b.title = overridden
+          ? "the typed figure sequences — clear the Figure to sound the chord as one"
+          : b.dataset.title0;
       }
+      const moveCap = byId("fdMoveSeg").previousElementSibling;
+      if (moveCap) moveCap.textContent = figRules
+        ? "Movement — the figure sequences" : "Movement";
       for (const b of byId("fdAddrSeg").querySelectorAll("button"))
         b.classList.toggle("on", b.dataset.addr === cfg.address);
       byId("fdFigIn").placeholder = cfg.address === "pattern" ? "4,3,4,3,2,1" : "R-3-7-5";

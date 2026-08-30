@@ -749,6 +749,27 @@ def m31_a_bar_dies_without_a_reason():
         p.write_text(original)
 
 
+def m32_the_override_goes_silent_again():
+    # 260909 item 3: a typed figure rules the walk (260901, kept) — but the
+    # override must be LOUD. Mutate the figRules derivation to never fire
+    # and the matrix's contradiction leg must catch block standing raised
+    # and real under a ruling figure.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '      const figRules = cfg.object !== "scale" && !fig.err
+        && !!(fig.order && fig.order.length);',
+        '      const figRules = false;   // the override silent again')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "a ruling figure DISABLES block" in r.stdout
+        record("the override goes silent again",
+               r.returncode != 0 and hit,
+               "suite exit %d; the contradiction leg bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -831,7 +852,8 @@ def main():
                m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again,
                m26_the_second_sounding_path_returns, m27_the_cap_stops_covering,
                m28_the_board_goes_deaf_to_the_window, m29_the_reference_loses_its_role,
-               m30_the_window_forgets_the_octave, m31_a_bar_dies_without_a_reason)
+               m30_the_window_forgets_the_octave, m31_a_bar_dies_without_a_reason,
+               m32_the_override_goes_silent_again)
     preflight(fns)
     for fn in fns:
         try:
