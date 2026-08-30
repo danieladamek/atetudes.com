@@ -638,7 +638,13 @@ def m26_the_second_sounding_path_returns():
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "must start NO audio" in r.stdout or "only sounding path" in r.stdout
+        # re-aimed 260910: the silence pin it watched was REWRITTEN into the
+        # audition's stronger form — under this mutation the echo is plain,
+        # so the foreign pass sounds AND the audition goes deaf, and either
+        # face of that bites
+        hit = ("auditions the DRAWN selection" in r.stdout
+               or "only sounding path" in r.stdout
+               or "sounded == drawn == raw starts" in r.stdout)
         record("the second sounding path returns",
                r.returncode != 0 and hit,
                "suite exit %d; the AudioContext pin bit: %s" % (r.returncode, hit))
