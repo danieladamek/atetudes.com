@@ -172,6 +172,11 @@ export const fieldBoard = {
 .fd-rail.fd-shut{flex:0 0 30px;overflow:hidden}
 .fd-rail.fd-shut>*{display:none}
 .fd-rail.fd-shut>.fd-railtop{display:flex}
+/* the segs are scoped by id (the shell's .seg chrome is unreachable), and an id
+   out-ranks the class-only shut rule — the fold must out-rank the ids in turn,
+   or the buttons paint on, clipped mid-glyph in the 30px strip (260909, item 1) */
+#fdRail.fd-shut>.fd-cap,#fdRail.fd-shut>.seg,#fdRail.fd-shut>.hint,
+#fdRail.fd-shut>#fdFigIn{display:none}
 .fd-railtop{display:flex;justify-content:flex-end;margin-bottom:2px}
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}

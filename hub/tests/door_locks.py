@@ -596,6 +596,36 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260909 item 1: THE FOLD FOLDS EVERYTHING ----
+        # Collapsing the rail left Grip/Line/block/arpeggio/pattern/tones
+        # painting on, clipped mid-glyph in the 30px strip: the segs' id-scoped
+        # display rules out-rank the class-only shut rule. Asserted at the
+        # artifact: with the rail shut, no rail descendant outside the railtop
+        # is visible; open again, the buttons come back.
+        page.evaluate("() => document.getElementById('fdRailBtn').click()")
+        page.wait_for_timeout(120)
+        fold = page.evaluate("""() => {
+          const rail = document.getElementById('fdRail');
+          const leaks = [];
+          for (const el of rail.querySelectorAll(':scope > :not(.fd-railtop), :scope > :not(.fd-railtop) *')) {
+            const r = el.getBoundingClientRect();
+            const st = getComputedStyle(el);
+            if (r.width > 0 && r.height > 0 && st.display !== 'none' && st.visibility !== 'hidden')
+              leaks.push((el.id || el.tagName) + ':' + (el.textContent || '').trim().slice(0, 12));
+          }
+          return { shut: rail.classList.contains('fd-shut'), leaks: leaks.slice(0, 8), n: leaks.length };
+        }""")
+        check(fold["shut"], f"{tag} the rail reports shut after the fold click")
+        check(fold["n"] == 0,
+              f"{tag} a shut rail shows NOTHING beyond its top — {fold['n']} visible: {fold['leaks']}")
+        page.evaluate("() => document.getElementById('fdRailBtn').click()")
+        page.wait_for_timeout(120)
+        back = page.evaluate("""() => {
+          const b = [...document.querySelectorAll('#fdNSeg button, #fdMoveSeg button, #fdAddrSeg button')];
+          return b.length === 6 && b.every(x => x.getBoundingClientRect().width > 0);
+        }""")
+        check(back, f"{tag} reopening the rail brings all six buttons back")
+
         # ---- 260909 4b: THE CAPPED LOSS IS ON THE FACE ----
         # Ebmaj7 at every-occurrence/Grip in the 5-8 window: R and 7 share
         # string 3, one must lose, and the loss was silent — the bar drew
