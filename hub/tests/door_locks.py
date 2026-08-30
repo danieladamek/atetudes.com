@@ -581,6 +581,55 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260906 item 3: THE BOARD DRAWS THE ENGINE'S OWN SELECTION ----
+        # Daniel reported Fmaj7#5 (D harm, cycling 4ths, bar 4, frets 6-10,
+        # six strings) drawing NOTHING. The measurement found board ≡ engine
+        # at that exact state on both builds, every bar, every probe — the
+        # diff table's finding is that no field differs. The class is pinned
+        # anyway, at the two derivations' own artifacts: the drawn dots must
+        # equal a fresh engine computation of the same state, bar by bar,
+        # role@string/fret for role@string/fret.
+        expected = json.loads(subprocess.run(["node", "--input-type=module", "-e", """
+import { field } from './engine/field.mjs';
+import { positionOf, materialIn } from './engine/position.mjs';
+import { oneOfEach } from './engine/selection.mjs';
+import { progressionOf, chordAt } from './engine/progression.mjs';
+const fld = field({ key: 'D', scale: 'harm' });
+const pos = positionOf({ field: fld, anchorString: 6, startDegree: 5, nearFret: 6 });
+const pool = materialIn(pos, [6,5,4,3,2,1], fld);
+const prog = progressionOf({ source: 'cycle', cycle: 'fourths', start: 0 }, 'D', 'harm');
+const out = [];
+for (let i = 0; i < prog.chords.length; i++) {
+  const cur = chordAt(prog, i, fld, 'tetrad');
+  const r = oneOfEach(cur.tones, pool, { n: 1, centre: pos.centre });
+  out.push({ sym: cur.symbol, sel: (r.notes || []).map(n => n.role+'@'+n.string+'/'+n.fret).sort() });
+}
+console.log(JSON.stringify(out));
+"""], capture_output=True, text=True, cwd=REPO).stdout)
+        check(len(expected) == 8 and all(len(e["sel"]) == 4 for e in expected),
+              f"{tag} the engine itself must place all eight bars of Daniel's state: "
+              f"{[(e['sym'], len(e['sel'])) for e in expected]}")
+        page.select_option("#hcKey", "D"); page.select_option("#hcScale", "harm")
+        page.wait_for_timeout(150)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { strings: [6, 5, 4, 3, 2, 1], startDeg: 5, nearFret: 6 } }))""")
+        page.wait_for_timeout(200)
+        for ci, exp in enumerate(expected):
+            page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(150)
+            drawn = sorted(page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-sel')]
+              .map(g => g.querySelector('text').textContent.trim() + '@' + g.dataset.selstr + '/' + g.dataset.selfret)"""))
+            check(drawn == exp["sel"],
+                  f"{tag} bar {ci + 1} ({exp['sym']}): the board must draw the engine's own "
+                  f"selection — drawn {drawn}, engine {exp['sel']}")
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcScale", "major")
+        page.wait_for_timeout(150)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260906 item 1: THE COVERAGE RULE, on Daniel's exact case ----
         # C major, triad, every occurrence, Grip, strings {1,2,3}, the 2-5
         # window, chord F: the old cap voiced TWO A's and lost the C sitting

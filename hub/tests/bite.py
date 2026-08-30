@@ -664,6 +664,28 @@ def m27_the_cap_stops_covering():
         p.write_text(original)
 
 
+def m28_the_board_goes_deaf_to_the_window():
+    # 260906 item 3's class guard: the BOARD deaf to the window (m23's twin,
+    # the other side of the pair) — the board draws a different selection
+    # than the engine derives for the shared config; the board≡engine pin
+    # names the bar and both selections.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        """      const pos = positionOf({ field: fld, anchorString: anchor,
+        startDegree: cfg.startDeg, nearFret: cfg.nearFret });""",
+        """      const pos = positionOf({ field: fld, anchorString: anchor,
+        startDegree: 0, nearFret: 1 });""")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the board must draw the engine's own" in r.stdout
+        record("the board goes deaf to the window",
+               r.returncode != 0 and hit,
+               "suite exit %d; the board-equals-engine pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -744,7 +766,8 @@ def main():
                m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving,
                m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window,
                m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again,
-               m26_the_second_sounding_path_returns, m27_the_cap_stops_covering)
+               m26_the_second_sounding_path_returns, m27_the_cap_stops_covering,
+               m28_the_board_goes_deaf_to_the_window)
     preflight(fns)
     for fn in fns:
         try:
