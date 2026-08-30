@@ -563,13 +563,14 @@ def m23_the_walk_goes_deaf_to_the_window():
     # walk to the window — the brief's hypothesized mechanism, reintroduced
     # for real — and the sound≡sight pin must name the diverging midis when
     # the gate steps the window.
+    # (anchor re-aimed 260907: the octave amendment added `strings:` to the
+    # call — caught by the preflight in one second, its third live save.
+    # 260904's note stands: the deaf window is 8–12, clear of the corpus.)
     p, original, mutated = patch("hub/modules/etude-walk.mjs",
         """      const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
-        startDegree: cfg.startDeg, nearFret: cfg.nearFret });""",
+        startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });""",
         """      const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
-        startDegree: 0, nearFret: 1 });""")
-    # (260904: the deaf window moved to 8–12 — the boot became 3–7 and the
-    # corpus's stepped/old windows cover 5–8, so 5/5 would silently agree)
+        startDegree: 0, nearFret: 1, strings: run.strings });""")
     try:
         p.write_text(mutated)
         build()
@@ -669,11 +670,12 @@ def m28_the_board_goes_deaf_to_the_window():
     # the other side of the pair) — the board draws a different selection
     # than the engine derives for the shared config; the board≡engine pin
     # names the bar and both selections.
+    # (anchor re-aimed 260907 with the octave amendment's call-site change)
     p, original, mutated = patch("hub/modules/field-board.mjs",
         """      const pos = positionOf({ field: fld, anchorString: anchor,
-        startDegree: cfg.startDeg, nearFret: cfg.nearFret });""",
+        startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });""",
         """      const pos = positionOf({ field: fld, anchorString: anchor,
-        startDegree: 0, nearFret: 1 });""")
+        startDegree: 0, nearFret: 1, strings: run.strings });""")
     try:
         p.write_text(mutated)
         build()
