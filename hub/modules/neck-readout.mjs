@@ -86,6 +86,10 @@ export const neckReadout = {
           if (cur.offKey.length)
             absences.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
           if (r.missing && r.missing.length) msg = `no ${r.missing.join(" or ")} in this frame`;
+          if (r.capped && r.capped.length)
+            msg = (msg ? msg + " · " : "")
+              + `the ${r.capped.join(" and ")} is in the box but the grip cannot carry it`
+              + (r.resolvesAt != null && r.resolvesAt <= 3 ? " — Line shows it" : "");
           if (r.unplaceable) msg = (r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
             : "no placement fits")

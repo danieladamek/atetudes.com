@@ -596,6 +596,29 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260909 4b: THE CAPPED LOSS IS ON THE FACE ----
+        # Ebmaj7 at every-occurrence/Grip in the 5-8 window: R and 7 share
+        # string 3, one must lose, and the loss was silent — the bar drew
+        # 3,R,3,5 with the 7th ghosted in plain sight at 3/7. Now the face
+        # names it with its derived escape.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5,
+                      object: 'tetrad', take: 'all', notesPer: 1, source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(200)
+        page.click('#tlScroll button >> nth=1'); page.wait_for_timeout(150)
+        hint_cb = page.inner_text("#fdHint")
+        check("the 7 is in the box but the grip cannot carry it" in hint_cb
+              and "Line shows it" in hint_cb,
+              f"{tag} the capped loss must be NAMED with its escape: {hint_cb!r}")
+        check("the 7 is in the box" in page.inner_text("#roLine"),
+              f"{tag} the readout names the capped loss too: {page.inner_text('#roLine')!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260908: THE PLAYTHROUGH MATRIX — the gate that walks what a
         # player walks. Six consecutive nights of green gates ended with
         # Daniel finding a dead bar in five minutes, because every gate

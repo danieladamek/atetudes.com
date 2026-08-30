@@ -350,7 +350,20 @@ export function everyOccurrence(tones, pool, { n = 3 } = {}) {
     if (counts[x.role] > 1
         && uncoveredPcs.some((pc) => cands.get(x.string).some((m) => mod12(m.midi) === pc)))
       throw new Error("everyOccurrence: a duplicate held a slot an uncovered tone could take");
-  return { notes: assertAddressable(notes, "everyOccurrence"), missing };
+  /* THE CAPPED LOSS, LOUD (260909 — Daniel: "the chord's 7th does not
+   * show"): a tone IN THE POOL that the cap could not carry is the honest
+   * loss the coverage matching permits (two tones sharing one one-slot
+   * string), and it was SILENT — not `missing` (it is in the frame), not
+   * `unplaceable` (notes were placed). Named here by role, with its escape
+   * derived the resolvesAt way: the smallest cap at which every pool-
+   * present tone appears. */
+  const capped = uncoveredPcs.map((pc) => roleOf.get(pc));
+  let resolvesAt = null;
+  for (let nn = n + 1; nn <= 3 && capped.length && resolvesAt === null; nn++) {
+    const again = everyOccurrence(tones, pool, { n: nn });
+    if (again.capped.length === 0) resolvesAt = nn;
+  }
+  return { notes: assertAddressable(notes, "everyOccurrence"), missing, capped, resolvesAt };
 }
 
 /** scaleTake(pool, { reach }) → { notes } — the scale object: every note the

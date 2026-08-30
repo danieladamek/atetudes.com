@@ -319,6 +319,11 @@ export const fieldBoard = {
         sel = r.notes || [];
         const parts = [];
         if (cur.absent.length) parts.push(`${cur.symbol} has no ${cur.absent.join(" or ")}`);
+        if (r.capped && r.capped.length) {
+          const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
+          parts.push(`the ${r.capped.join(" and ")} is in the box but the grip cannot carry it`
+            + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} shows it` : ""));
+        }
         if (cur.offKey.length)
           parts.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
         if (r.missing && r.missing.length) parts.push(`no ${r.missing.join(" or ")} in this frame`);

@@ -254,3 +254,20 @@ test("the EVERY promise where the cap does not bind: no pool hit is dropped at n
   const hits = pool.filter((m) => tones.some((t) => t.pc === ((m.midi % 12) + 12) % 12));
   assert.equal(sel.length, hits.length, "uncapped, every occurrence really is every occurrence");
 });
+
+test("THE CAPPED LOSS IS LOUD (260909, 4b): a tone in the box that the cap cannot carry is NAMED, with its escape", () => {
+  // Daniel's case: Ebmaj7, window 5-8, every occurrence at Grip. R and 7
+  // both live only on string 3 — one MUST lose at n=1 (an honest loss) —
+  // but the loss was SILENT: missing:[] because the 7 IS in the pool.
+  const fld = field({ key: "Bb", scale: "major" });
+  const pos = positionOf({ field: fld, anchorString: 4, startDegree: 5, nearFret: 5, strings: [4, 3, 2, 1] });
+  const pool = materialIn(pos, [4, 3, 2, 1], fld);
+  const tones = diatonicTones(fld, 3, objectOffsets("tetrad"));
+  const r = everyOccurrence(tones, pool, { n: 1 });
+  assert.deepEqual(r.missing, [], "the 7 is IN the pool — missing stays the not-in-frame word");
+  assert.deepEqual(r.capped, ["7"],
+    "the tone the cap left behind is named — the third absence subtype");
+  assert.equal(r.resolvesAt, 2, "and the smallest cap that shows it is derived, not assumed");
+  const r3 = everyOccurrence(tones, pool, { n: 3 });
+  assert.deepEqual(r3.capped, [], "an uncapped take leaves nothing behind");
+});
