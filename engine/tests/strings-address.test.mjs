@@ -114,3 +114,29 @@ test("THE MODE MISMATCH is named, not half-read (260902): R-3-5-7 under pattern 
   // 3 and 5 live in both alphabets: ambiguous stays with the current mode
   assert.equal(orderBy("pattern", "3", sel).err, null);
 });
+
+test("THE FIGURE REFUSES JUNK BY NAME (260910, item 2) — and incomplete is not invalid", () => {
+  const { pos, pool, tones } = fixture();
+  const sel = oneOfEach(tones, pool, { n: 1, centre: pos.centre }).notes;
+  // the eleventh silence: "R,Q" kept the R and dropped the Q without a word.
+  // Now the unknown role is refused BY NAME — the changes field's manners
+  // (child 7: "refuse bad tokens by name"), applied to the figure.
+  const q = orderBy("tones", "R,Q", sel);
+  assert.equal(q.order, null);
+  assert.ok(/"Q"/.test(q.err) && /not a tone/.test(q.err), `named: ${q.err}`);
+  // the pattern alphabet was tolerant too — junk digits vanished silently
+  const nine = orderBy("pattern", "9,9", sel);
+  assert.equal(nine.order, null);
+  assert.ok(/"9"/.test(nine.err) && /not a string/.test(nine.err), `named: ${nine.err}`);
+  // INCOMPLETE is not INVALID: a trailing separator is on the way to a
+  // figure, not wrong — it must never raise (Daniel's ruling, 260910)
+  for (const [addr, txt] of [["tones", "R,"], ["tones", "R-"], ["pattern", "4,"],
+                             ["pattern", "4 3 "], ["tones", ""]]) {
+    const r = orderBy(addr, txt, sel);
+    assert.equal(r.err, null, `"${txt}" (${addr}) is unfinished, not wrong: ${r.err}`);
+  }
+  // and what was legal stays legal, separators of every habit
+  assert.equal(orderBy("pattern", "4-3-2-1", sel).err, null);
+  assert.equal(orderBy("tones", "R 3 5 7", sel).err, null);
+  assert.equal(orderBy("pattern", "4.3.2.1", sel).err, null);
+});

@@ -693,6 +693,35 @@ def run_door(pw, door_id):
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260910 item 2: THE FIGURE REFUSES JUNK BY NAME ----
+        # "R,Q" silently kept the R and dropped the Q — the eleventh silence,
+        # and Daniel's ruling: loud, lossy and stated. The figure now has the
+        # changes field's manners (child 7: refuse bad tokens by name), in
+        # BOTH alphabets — the pattern was tolerant too ("9,9" read as an
+        # errorless block). Incomplete is not invalid: a trailing separator
+        # never errs, so nothing flashes while a figure is on its way.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { address: 'tones', figure: 'R,Q' } }))""")
+        page.wait_for_timeout(200)
+        fj = page.inner_text("#fdFigNote")
+        check('"Q"' in fj and "not a tone" in fj,
+              f"{tag} an unknown role is refused BY NAME on the face: {fj!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { figure: 'R,' } }))""")
+        page.wait_for_timeout(200)
+        fj = page.inner_text("#fdFigNote")
+        check("not a tone" not in fj and "not a string" not in fj,
+              f"{tag} a trailing separator is UNFINISHED, not wrong — no error: {fj!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { address: 'pattern', figure: '9' } }))""")
+        page.wait_for_timeout(200)
+        fj = page.inner_text("#fdFigNote")
+        check('"9"' in fj and "not a string" in fj,
+              f"{tag} the pattern alphabet refuses junk by name too: {fj!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { address: 'pattern', figure: '' } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260909 item 1: THE FOLD FOLDS EVERYTHING ----
         # Collapsing the rail left Grip/Line/block/arpeggio/pattern/tones
         # painting on, clipped mid-glyph in the 30px strip: the segs' id-scoped

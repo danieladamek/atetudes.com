@@ -454,7 +454,23 @@ export function orderBy(address, text, notes) {
   if (address !== "pattern" && /[12468]/.test(raw))
     return { order: null, err: "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
       "the address is set to tones; switch it to pattern" };
-  const toks = address === "pattern" ? (raw.match(/[1-6]/g) || []) : (raw.match(/R|[357]/g) || []);
+  /* THE JUNK REFUSAL (260910, item 2 — Daniel's ruling on the eleventh
+   * silence): "R,Q" used to keep the R and drop the Q without a word — the
+   * regex harvest was tolerant in both alphabets ("9,9" even read as an
+   * errorless block). Now every character is either a separator, a legal
+   * token, or refused BY NAME — the changes field's manners (child 7),
+   * applied to the figure. INCOMPLETE is not INVALID: separators are
+   * skippable, so "R," on the way to "R,3" never errs — the distinction
+   * lives in the grammar, not in event timing. */
+  const legal = address === "pattern" ? "123456" : "R357";
+  const toks = [];
+  for (const ch of raw) {
+    if (/[,\-\s.·]/.test(ch)) continue;
+    if (legal.includes(ch)) { toks.push(ch); continue; }
+    return { order: null, err: address === "pattern"
+      ? `"${ch}" is not a string — strings are 1–6`
+      : `"${ch}" is not a tone — tones are R, 3, 5, 7` };
+  }
   if (!toks.length) return { order: null, err: null };
   const order = [];
   const used = {};
