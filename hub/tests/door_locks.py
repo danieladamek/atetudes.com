@@ -1040,16 +1040,22 @@ console.log(JSON.stringify(out));
         # the AUDITION belongs in this half (260910, item 1): the clock just
         # stopped — a placed bar's chip sounds its drawn notes, a refused
         # bar's chip stays silent, on the SAME configuration the pass walked
-        mx_place = placed_bars.index(True); mx_refuse = placed_bars.index(False)
-        page.evaluate("() => { window.__nt = [] }")
-        page.click(f'#tlScroll button >> nth={mx_place}'); page.wait_for_timeout(350)
-        mx_aud_p = page.evaluate("() => window.__nt.length")
-        page.evaluate("() => { window.__nt = [] }")
-        page.click(f'#tlScroll button >> nth={mx_refuse}'); page.wait_for_timeout(350)
-        mx_aud_r = page.evaluate("() => window.__nt.length")
-        check(mx_aud_p > 0 and mx_aud_r == 0,
-              f"{tag} matrix sound half, stopped: a placed chip auditions "
-              f"({mx_aud_p} NOTEs), a refused chip stays silent ({mx_aud_r})")
+        # crash-proof under a deaf-board mutation: this configuration is
+        # CHOSEN for having both states — losing one is a failure, not a crash
+        if True not in placed_bars or False not in placed_bars:
+            check(False, f"{tag} matrix sound half: the configuration must carry both "
+                  f"placed and refused bars for the audition leg (placed: {placed_bars})")
+        else:
+            mx_place = placed_bars.index(True); mx_refuse = placed_bars.index(False)
+            page.evaluate("() => { window.__nt = [] }")
+            page.click(f'#tlScroll button >> nth={mx_place}'); page.wait_for_timeout(350)
+            mx_aud_p = page.evaluate("() => window.__nt.length")
+            page.evaluate("() => { window.__nt = [] }")
+            page.click(f'#tlScroll button >> nth={mx_refuse}'); page.wait_for_timeout(350)
+            mx_aud_r = page.evaluate("() => window.__nt.length")
+            check(mx_aud_p > 0 and mx_aud_r == 0,
+                  f"{tag} matrix sound half, stopped: a placed chip auditions "
+                  f"({mx_aud_p} NOTEs), a refused chip stays silent ({mx_aud_r})")
         # restore the boot
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
@@ -1698,12 +1704,18 @@ console.log(JSON.stringify(out));
           s.value = 0; s.dispatchEvent(new Event('input', { bubbles: true })); }""")
         page.wait_for_timeout(150)
         page.evaluate("() => { window.__nt = []; window.__raw = [] }")
-        aud_ok = next(i for i, st in enumerate(aud_states) if not st["refused"])
-        page.click(f'#tlScroll button >> nth={aud_ok}'); page.wait_for_timeout(350)
-        mix = page.evaluate("() => [window.__nt.length, window.__raw.length]")
-        check(mix[0] > 0 and mix[1] == 0,
-              f"{tag} the mixer holds through an audition — chord volume 0 mutes the "
-              f"raw starts, the schedule still announces (NOTEs {mix[0]}, raws {mix[1]})")
+        # crash-proof under a deaf-board mutation (m28 pins the window away
+        # and every bar can refuse): a missing placed bar is a FAILURE here,
+        # never a crash that hides the board-equals-engine pin downstream
+        aud_ok = next((i for i, st in enumerate(aud_states) if not st["refused"]), None)
+        if aud_ok is None:
+            check(False, f"{tag} the audition's mixer leg found no placed bar to sound")
+        else:
+            page.click(f'#tlScroll button >> nth={aud_ok}'); page.wait_for_timeout(350)
+            mix = page.evaluate("() => [window.__nt.length, window.__raw.length]")
+            check(mix[0] > 0 and mix[1] == 0,
+                  f"{tag} the mixer holds through an audition — chord volume 0 mutes the "
+                  f"raw starts, the schedule still announces (NOTEs {mix[0]}, raws {mix[1]})")
         page.evaluate("""() => { const s = document.getElementById('fdHarmVol');
           s.value = 100; s.dispatchEvent(new Event('input', { bubbles: true })); }""")
         page.wait_for_timeout(150)
