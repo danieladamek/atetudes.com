@@ -202,7 +202,10 @@ export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi =
   const together = !(order && order.length) && !spread;
   const step = seq.length > 1 && !together ? span / seq.length : 0;
   const events = seq.map((nt, k) => ({ midi: nt.midi, at: together ? 0 : k * step }));
-  if (refMidi != null) events.unshift({ midi: refMidi, at: 0 });
+  /* the reference carries its ROLE (260906): it is the bass line's note, and
+   * whoever realises audio may route it to the bass bus — the additive-field
+   * precedent (STEP_CHANGED's attack) followed for NOTE */
+  if (refMidi != null) events.unshift({ midi: refMidi, at: 0, role: "bass" });
   for (let i = 1; i < events.length; i++)
     if (events[i].at < events[i - 1].at)
       throw new Error("walkSchedule: the schedule must ascend — time only runs forward");

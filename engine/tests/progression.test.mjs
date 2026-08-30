@@ -139,7 +139,10 @@ test("no figure: a voicing sounds together; an arpeggio (and a scale) runs low â
   assert.deepEqual(a.events.map((e) => e.midi), [55, 60, 64, 67], "low to high");
   assert.deepEqual(a.events.map((e) => e.at), [0, 0.5, 1, 1.5], "evenly across 2 s (4 beats at 120)");
   const r = walkSchedule(sel, null, 4, 120, { refMidi: 43 });
-  assert.deepEqual(r.events[0], { midi: 43, at: 0 }, "the reference sounds under the chord, at 0");
+  // updated 260906: the reference event now names its role, so audio can
+  // route it to the bass bus (Daniel: the bass slider controlled nothing)
+  assert.deepEqual(r.events[0], { midi: 43, at: 0, role: "bass" },
+    "the reference sounds under the chord, at 0, wearing the bass role");
 });
 
 test("THE SPLIT CYCLE: a one-chord bar takes the next slot â€” 1+1+1+1 makes a cycle change chords every beat", () => {

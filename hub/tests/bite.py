@@ -686,6 +686,27 @@ def m28_the_board_goes_deaf_to_the_window():
         p.write_text(original)
 
 
+def m29_the_reference_loses_its_role():
+    # 260906 item 2, regressed: the reference event drops its bass role and
+    # rides the chord bus again — the bass slider controls nothing. The
+    # AudioContext slider pins must bite (engine load assertions do not
+    # cover the role tag).
+    p, original, mutated = patch("engine/progression.mjs",
+        'if (refMidi != null) events.unshift({ midi: refMidi, at: 0, role: "bass" });',
+        'if (refMidi != null) events.unshift({ midi: refMidi, at: 0 });')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "must drop EXACTLY the reference" in r.stdout \
+            or "leave the reference ALONE sounding" in r.stdout
+        record("the reference loses its role",
+               r.returncode != 0 and hit,
+               "suite exit %d; a bass-slider pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -767,7 +788,7 @@ def main():
                m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window,
                m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again,
                m26_the_second_sounding_path_returns, m27_the_cap_stops_covering,
-               m28_the_board_goes_deaf_to_the_window)
+               m28_the_board_goes_deaf_to_the_window, m29_the_reference_loses_its_role)
     preflight(fns)
     for fn in fns:
         try:

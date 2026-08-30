@@ -581,6 +581,55 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260906 item 2: THE REFERENCE RIDES THE BASS BUS ----
+        # Daniel: "the bass volume does nothing". The only producer of a
+        # bass-role event was the rogue tetrad pass killed on 260905; the
+        # reference travelled as a plain NOTE and landed on the chord
+        # channel. Now it names its role and audio-card routes it. Asserted
+        # AT THE AUDIOCONTEXT (the 260905 lesson — not at the message), both
+        # sliders exercised.
+        page.select_option("#hcRef", "third"); page.uncheck("#fdMetChk")
+        page.wait_for_timeout(200)
+        page.evaluate("""() => {
+          if (!window.__nt) { window.__nt = [];
+            document.addEventListener('atetudes:note', e =>
+              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+          if (!window.__rawHooked) { window.__rawHooked = true; window.__raw = [];
+            for (const C of [AudioBufferSourceNode, OscillatorNode]) {
+              const P = C.prototype.start;
+              C.prototype.start = function(...a) { window.__raw.push(performance.now());
+                return P.apply(this, a); }; } } }""")
+
+        def play_bar_counts():
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+              { detail: { index: 0, request: true } }))""")
+            page.wait_for_timeout(150)
+            page.evaluate("() => { window.__raw = []; window.__nt = [] }")
+            page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(600)
+            page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+            return page.evaluate("() => [window.__nt.length, window.__raw.length]")
+
+        base = play_bar_counts()
+        check(base == [5, 5],
+              f"{tag} the baseline bar is four chord notes plus the fretted reference, "
+              f"at the AudioContext: NOTEs/raw {base}")
+        page.fill("#fdBassVol", "0"); page.dispatch_event("#fdBassVol", "input")
+        page.wait_for_timeout(100)
+        muted_bass = play_bar_counts()
+        check(muted_bass[1] == base[1] - 1,
+              f"{tag} the bass slider at zero must drop EXACTLY the reference — "
+              f"raw {base[1]} → {muted_bass[1]}")
+        page.fill("#fdBassVol", "100"); page.dispatch_event("#fdBassVol", "input")
+        page.fill("#fdHarmVol", "0"); page.dispatch_event("#fdHarmVol", "input")
+        page.wait_for_timeout(100)
+        muted_chord = play_bar_counts()
+        check(muted_chord[1] == 1,
+              f"{tag} the chord slider at zero must leave the reference ALONE sounding: "
+              f"raw {muted_chord[1]}")
+        page.fill("#fdHarmVol", "100"); page.dispatch_event("#fdHarmVol", "input")
+        page.select_option("#hcRef", "none"); page.check("#fdMetChk")
+        page.wait_for_timeout(150)
+
         # ---- 260906 item 3: THE BOARD DRAWS THE ENGINE'S OWN SELECTION ----
         # Daniel reported Fmaj7#5 (D harm, cycling 4ths, bar 4, frets 6-10,
         # six strings) drawing NOTHING. The measurement found board ≡ engine
@@ -948,9 +997,11 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(120)
-        page.evaluate("""() => { window.__nt = []; window.__adv = [];
-          document.addEventListener('atetudes:note', e =>
-            window.__nt.push({ m: e.detail.midi, t: performance.now() }));
+        page.evaluate("""() => { window.__adv = [];
+          if (!window.__nt) { window.__nt = [];
+            document.addEventListener('atetudes:note', e =>
+              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+          window.__nt = [];
           document.addEventListener('atetudes:step', e => {
             if (e.detail && e.detail.request !== true)
               window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }""")
@@ -1086,11 +1137,13 @@ console.log(JSON.stringify(out));
         # closes that blindness at the AudioContext itself: with the click
         # muted, raw source starts must EQUAL the NOTE count, and a chip
         # click while stopped must start nothing.
-        page.evaluate("""() => { window.__raw = [];
-          for (const C of [AudioBufferSourceNode, OscillatorNode]) {
-            const P = C.prototype.start;
-            C.prototype.start = function(...a) { window.__raw.push(performance.now());
-              return P.apply(this, a); }; } }""")
+        page.evaluate("""() => {
+          if (!window.__rawHooked) { window.__rawHooked = true;
+            for (const C of [AudioBufferSourceNode, OscillatorNode]) {
+              const P = C.prototype.start;
+              C.prototype.start = function(...a) { (window.__raw ||= []).push(performance.now());
+                return P.apply(this, a); }; } }
+          window.__raw = []; }""")
         page.evaluate("() => { window.__raw = []; window.__nt = [] }")
         page.click('#tlScroll button >> nth=2'); page.wait_for_timeout(400)
         silent = page.evaluate("() => [window.__nt.length, window.__raw.length]")

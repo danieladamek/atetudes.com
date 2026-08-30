@@ -125,9 +125,10 @@ export const etudeWalk = {
         chordBeats(prog), bpm, { spread, refMidi });
       clearPending();
       for (const ev of events) {
-        if (ev.at <= 0) { announce(d, NOTE, { midi: ev.midi }); continue; }
+        const msg = ev.role ? { midi: ev.midi, role: ev.role } : { midi: ev.midi };
+        if (ev.at <= 0) { announce(d, NOTE, msg); continue; }
         timers.push(d.defaultView.setTimeout(() => {
-          if (armed) announce(d, NOTE, { midi: ev.midi });
+          if (armed) announce(d, NOTE, msg);
         }, ev.at * 1000));
       }
     };

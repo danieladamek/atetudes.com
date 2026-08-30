@@ -240,10 +240,19 @@ export const audioCard = {
      * before the first Play, exactly as the triad keyboard does. */
     listen(d, NOTE, (m) => {
       if (!m || typeof m.midi !== "number") return;
-      if (chordVol === 0) return;              // a muted chord voice presses silently
+      /* ADDITIVE (260906): a NOTE may name its role — "bass" routes to the
+       * bass bus and its slider, exactly as the walked pass's bass events
+       * always did (the soundStep gate above); a NOTE without a role is a
+       * chord note, byte-for-byte the old behaviour. The optional-field
+       * precedent is STEP_CHANGED's attack. Until this, the only producer
+       * of a bass-role event was the tetrad pass, and a door without it had
+       * a bass slider controlling nothing. */
+      const role = m.role === "bass" ? "bass" : "chord";
+      if ((role === "bass" ? bassVol : chordVol) === 0) return;
       const a = audio();
       if (!a) return;
-      sound(voiceFor("chord", voice), m.midi, a.currentTime + 0.02, 0.7, 0.24);
+      sound(voiceFor(role, voice), m.midi, a.currentTime + 0.02, 0.7,
+        role === "bass" ? 0.3 : 0.24);
     });
     listen(d, ATTACK, (m) => {
       if (!m || typeof m.index !== "number") return;
