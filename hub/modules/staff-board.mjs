@@ -24,7 +24,8 @@ import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
 import { placeReference } from "../../engine/reference.mjs";
-import { progressionOf, chordAt } from "../../engine/progression.mjs";
+import { progressionOf, chordAt, beatsOf, walkSchedule } from "../../engine/progression.mjs";
+import { writtenValue } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 
@@ -67,7 +68,7 @@ export const staffBoard = {
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
       movement: "block",
       address: "pattern", figure: "",
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4;
     let index = 0;
     let barsX = [];                 // per-chord x ranges, for click-to-jump
@@ -147,7 +148,12 @@ export const staffBoard = {
       for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi));
       if (fig.order) for (const nt of fig.order) allSteps.push(stepOf(nt.midi));
       const topStep = allSteps.length ? Math.max(...allSteps) : (4 * 7 + 2) + 8;
-      const labY = Math.min(TY - 30, yTreble(topStep) - 20);
+      /* a sequenced bar's stems rise 24 above the top head and the tuplet
+       * numeral 4 more (260910, item 3) — the label band clears the BEAM,
+       * not just the heads, whenever any bar writes a run */
+      const anyRun = (fig.order && fig.order.length) || cfg.object === "scale"
+        || cfg.movement === "arpeggio";
+      const labY = Math.min(TY - 30, yTreble(topStep) - 20 - (anyRun ? 34 : 0));
 
       barsX = [];
       chords.forEach((c, ci) => {
@@ -169,28 +175,98 @@ export const staffBoard = {
         /* 260905: A CHORD STACKS; A RUN DOES NOT — and which one this bar is
          * became the MOVEMENT control's fact, not Take's (Take is material) */
         const stacked = !figHere && cfg.object !== "scale" && cfg.movement !== "arpeggio";
+
+        /* THE STAFF WRITES WHAT THE SCHEDULE SCHEDULES (260910, item 3 —
+         * register 6 resolved): the note VALUES derive from walkSchedule's
+         * own events, never a second rhythm derivation. bpm=60 makes `at`
+         * read directly in beats; the bar's beats come from beatsOf exactly
+         * as the walk's own chordBeats reads them. The notation is
+         * score-board's, reproduced: stems to a common beam line, one thick
+         * beam under a beat, a second at sixteenths, the italic numeral for
+         * a non-dyadic group, hollow heads from the half note up. */
+        const perBeats = beatsOf(prog.bars, meter, cfg.split);
+        const flatBeats = [];
+        prog.bars.forEach((bar, bi) => bar.forEach((_, k2) => flatBeats.push(perBeats[bi][k2])));
+        const beats = flatBeats[ci] ?? meter;
+        const spread2 = cfg.object === "scale" || cfg.movement === "arpeggio";
+        let events = [];
+        if (seq.length) {
+          const sched = walkSchedule(sels[ci], figHere, beats, 60, { spread: spread2 });
+          events = sched.events;
+          if (events.length !== seq.length)
+            throw new Error("staff-board: the schedule and the drawn sequence disagree — the staff may only write what sounds");
+        }
+        const together = events.length > 0 && events.every((ev) => ev.at === 0);
+        const dv = together ? beats
+          : events.length > 1 ? events[1].at - events[0].at : beats;
+        const dyadic = [4, 2, 1, 0.5, 0.25].includes(dv);
+        const wv = dyadic ? dv : writtenValue(dv);
+        const open = together ? beats >= 2 : wv >= 2;
+        const xsL = [], ysL = [];
         seq.forEach((nt, k) => {
           const st = stepOf(nt.midi), y = yTreble(st);
+          /* the x IS the onset: at/beats through the bar, centred in its own
+           * written slot — identical to the family's (k+0.5)·(w/L) when the
+           * schedule is uniform, but sourced from the event itself */
           const x = stacked ? x0 + BW * 0.34
-            : x0 + BW * 0.2 + (BW * 0.62) * (k / Math.max(1, seq.length - 1));
+            : x0 + ((events[k].at + dv / 2) / beats) * BW;
           for (let q = (4 * 7 + 2) - 2; st <= q; q -= 2)
             el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
           for (let q = (4 * 7 + 2) + 10; st >= q; q += 2)
             el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
           const fam = FAM[nt.deg];
-          const head = { cx: x, cy: y, rx: 6.4, ry: 5, fill: FAM_COLOR[fam],
-            transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi };
+          const head = open
+            ? { cx: x, cy: y, rx: 6.4, ry: 5, fill: "#fff", stroke: FAM_COLOR[fam],
+                "stroke-width": 1.6, transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi }
+            : { cx: x, cy: y, rx: 6.4, ry: 5, fill: FAM_COLOR[fam],
+                transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi };
           if (figHere) head["data-stfig"] = k;    // the figure's own steps, addressable
           el("ellipse", head, svg);
           const t = el("text", { x, y: y + 3, "text-anchor": "middle", "font-size": "7.5",
-            fill: FAM_TEXT[fam], "font-weight": "bold", class: "st-lab" }, svg);
+            fill: open ? FAM_COLOR[fam] : FAM_TEXT[fam], "font-weight": "bold", class: "st-lab" }, svg);
           t.textContent = nt.role || fam;
+          if (!stacked) { xsL.push(x); ysL.push(y); }
           if (ci === index) {
             const fr = el("text", { x, y: TY + GAP * 8 + 15 + (stacked ? k * 10 : 0),
               "text-anchor": "middle", "font-size": "8.5", fill: "#B9B9BF" }, svg);
             fr.textContent = nt.string + "/" + nt.fret;
           }
         });
+        /* the notation — score-board's, on this board's heads */
+        if (stacked && seq.length && beats < 4) {
+          let yTop = 1e9, yLow = -1e9;
+          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi));
+            yTop = Math.min(yTop, y2); yLow = Math.max(yLow, y2); }
+          el("line", { x1: x0 + BW * 0.34 + 6, y1: yLow, x2: x0 + BW * 0.34 + 6,
+            y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "block" }, svg);
+        } else if (!stacked && xsL.length && wv < 4) {
+          const L = xsL.length;
+          const yBeam = Math.min(...ysL) - 24;
+          xsL.forEach((xk, k) => el("line", { x1: xk + 5.6, y1: ysL[k] - 1.5, x2: xk + 5.6,
+            y2: yBeam, stroke: "#212126", "stroke-width": 1.1, "data-ststem": k }, svg));
+          if (wv < 1) {
+            el("line", { x1: xsL[0] + 5.6, y1: yBeam, x2: xsL[L - 1] + 5.6, y2: yBeam,
+              stroke: "#212126", "stroke-width": 2.6, "data-stbeam": "1" }, svg);
+            if (wv <= 0.25)
+              el("line", { x1: xsL[0] + 5.6, y1: yBeam + 4.4, x2: xsL[L - 1] + 5.6, y2: yBeam + 4.4,
+                stroke: "#212126", "stroke-width": 2.2, "data-stbeam": "2" }, svg);
+            if (!dyadic) {
+              const t2 = el("text", { x: (xsL[0] + xsL[L - 1]) / 2 + 5.6, y: yBeam - 4,
+                "text-anchor": "middle", "font-size": "9", "font-style": "italic",
+                fill: "#212126", "data-sttuplet": "" }, svg);
+              t2.textContent = String(L);
+            }
+          } else if (!dyadic) {
+            const yB = yBeam - 1, xa = xsL[0] + 5.6, xb = xsL[L - 1] + 5.6, xm = (xa + xb) / 2;
+            for (const [xx1, xx2] of [[xa, xm - 7], [xm + 7, xb]])
+              el("line", { x1: xx1, y1: yB, x2: xx2, y2: yB, stroke: "#212126", "stroke-width": 1.1 }, svg);
+            for (const xx of [xa, xb])
+              el("line", { x1: xx, y1: yB, x2: xx, y2: yB + 5, stroke: "#212126", "stroke-width": 1.1 }, svg);
+            const t2 = el("text", { x: xm, y: yB + 3.4, "text-anchor": "middle", "font-size": "9.5",
+              "font-style": "italic", fill: "#212126", "data-sttuplet": "" }, svg);
+            t2.textContent = String(L);
+          }
+        }
 
         /* THE REFERENCE on the bass clef, PER BAR (child 5 meets child 7):
          * sounding pitch, outlined as v0.9 draws it — the fill was this

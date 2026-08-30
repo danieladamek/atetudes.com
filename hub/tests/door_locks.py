@@ -722,6 +722,100 @@ def run_door(pw, door_id):
           { detail: { address: 'pattern', figure: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260910 item 3: THE STAFF WRITES WHAT THE SCHEDULE SCHEDULES ----
+        # Daniel: "currently it's only showing quarter notes." Register entry
+        # 6 come due: staff-board had NO duration logic — every note a
+        # quarter because nothing ever decided otherwise. Now the note values
+        # derive from walkSchedule's own events (bpm=60, `at` in beats), and
+        # this pin reads the DRAWN values against a fresh computation of the
+        # SCHEDULE ITSELF — never a table of expected shapes.
+        st_exp = json.loads(subprocess.run(["node", "--input-type=module", "-e", """
+import { field } from './engine/field.mjs';
+import { positionOf, materialIn } from './engine/position.mjs';
+import { diatonicTones, oneOfEach, orderBy } from './engine/selection.mjs';
+import { progressionOf, chordAt, walkSchedule } from './engine/progression.mjs';
+import { writtenValue } from './engine/drill.mjs';
+const fld = field({ key: 'Bb', scale: 'major' });
+const pos = positionOf({ field: fld, anchorString: 4, startDegree: 4, nearFret: 3, strings: [4,3,2,1] });
+const pool = materialIn(pos, [4,3,2,1], fld);
+const prog = progressionOf({ source: 'cycle', cycle: 'fourths', start: 0 }, 'Bb', 'major');
+const cur = chordAt(prog, 0, fld, 'tetrad');
+const sel = oneOfEach(cur.tones, pool, { n: 1, centre: pos.centre }).notes;
+const fig = orderBy('pattern', '4,3,4,3,2,1', sel);
+const out = {};
+for (const [name, order, spread] of [['figured', fig.order, false], ['block', null, false], ['arp', null, true]]) {
+  const { events } = walkSchedule(sel, order, 4, 60, { spread });
+  const together = events.every(e => e.at === 0);
+  const dv = together ? 4 : events.length > 1 ? events[1].at - events[0].at : 4;
+  const dyadic = [4,2,1,0.5,0.25].includes(dv);
+  const wv = dyadic ? dv : writtenValue(dv);
+  out[name] = { L: events.length, together, dv, dyadic, wv,
+    stems: together ? 0 : (wv < 4 ? events.length : 0),
+    beam1: !together && wv < 1, beam2: !together && wv <= 0.25,
+    tuplet: (!together && !dyadic) ? String(events.length) : null };
+}
+console.log(JSON.stringify(out));
+"""], capture_output=True, text=True, cwd=REPO).stdout)
+        check(st_exp["figured"]["L"] == 6 and not st_exp["figured"]["dyadic"],
+              f"{tag} the schedule itself must yield the six-step non-dyadic case: {st_exp['figured']}")
+        st_read = ("""() => { const svg = document.getElementById('stSvg');"""
+                   """ const cur = svg.querySelector('[data-stcur]');"""
+                   """ return { stems: svg.querySelectorAll('[data-ststem]:not([data-ststem=block])').length,"""
+                   """ blockstem: svg.querySelectorAll('[data-ststem=block]').length,"""
+                   """ beam1: svg.querySelectorAll('[data-stbeam="1"]').length,"""
+                   """ beam2: svg.querySelectorAll('[data-stbeam="2"]').length,"""
+                   """ tuplets: [...svg.querySelectorAll('[data-sttuplet]')].map(t => t.textContent),"""
+                   """ figheads: svg.querySelectorAll('[data-stfig]').length }; }""")
+        for st_name, st_cfg in [
+            ("figured", { "movement": "block", "address": "pattern", "figure": "4,3,4,3,2,1" }),
+            ("block",   { "movement": "block", "address": "pattern", "figure": "" }),
+            ("arp",     { "movement": "arpeggio", "address": "pattern", "figure": "" })]:
+            page.evaluate("""(d) => document.dispatchEvent(new CustomEvent('atetudes:config',
+              { detail: d }))""", { "key": "Bb", "strings": [4, 3, 2, 1], "startDeg": 4,
+                                    "nearFret": 3, "object": "tetrad", "take": "one",
+                                    "notesPer": 1, "source": "cycle", "custom": "", **st_cfg })
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+              { detail: { index: 0, request: true } }))""")
+            page.wait_for_timeout(250)
+            got = page.evaluate(st_read)
+            exp = st_exp[st_name]
+            # the current bar's stems: the figured/arp cases draw the current
+            # bar sequenced; other bars carry their own writing, so compare
+            # the CURRENT bar's contribution — the figure heads pin it for
+            # the figured case, the arp case has 8 sequenced bars
+            if st_name == "figured":
+                check(got["figheads"] == exp["L"],
+                      f"{tag} staff {st_name}: the figure's own heads == the schedule's "
+                      f"events ({got['figheads']} vs {exp['L']})")
+                check(got["tuplets"].count(str(exp["L"])) >= 1 if exp["tuplet"] else not got["tuplets"],
+                      f"{tag} staff {st_name}: the non-dyadic group wears the schedule's "
+                      f"own numeral {exp['tuplet']}: {got['tuplets']}")
+                check(got["beam1"] >= 1 if exp["beam1"] else got["beam1"] == 0,
+                      f"{tag} staff {st_name}: beamed exactly when the schedule's value "
+                      f"is under a beat (wv {exp['wv']}): beams {got['beam1']}")
+                check(got["stems"] >= exp["stems"],
+                      f"{tag} staff {st_name}: every scheduled event carries its stem "
+                      f"({got['stems']} vs {exp['stems']})")
+            if st_name == "block":
+                check(got["stems"] == 0 and got["beam1"] == 0 and not got["tuplets"],
+                      f"{tag} staff {st_name}: a together-schedule stacks — no run stems, "
+                      f"no beams, no numeral: {got}")
+                check(got["blockstem"] == (1 if st_exp["block"]["wv"] < 4 and not st_exp["block"]["together"] else 0)
+                      or st_exp["block"]["together"],
+                      f"{tag} staff {st_name}: the block's own stem follows the schedule: {got}")
+            if st_name == "arp":
+                check(got["stems"] >= exp["stems"] and got["beam1"] == 0 and not got["tuplets"],
+                      f"{tag} staff {st_name}: quarters carry stems, no beam, no numeral "
+                      f"(dv {exp['dv']}): stems {got['stems']}, beams {got['beam1']}")
+        # full boot restore
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(250)
+
         # ---- 260909 item 1: THE FOLD FOLDS EVERYTHING ----
         # Collapsing the rail left Grip/Line/block/arpeggio/pattern/tones
         # painting on, clipped mid-glyph in the 30px strip: the segs' id-scoped
