@@ -770,6 +770,50 @@ def m32_the_override_goes_silent_again():
         p.write_text(original)
 
 
+def m33_the_audition_goes_silent():
+    # 260910 item 1: a stopped chip click must sound the walk's own drawn
+    # selection. Mutate the audition branch to never fire and the audition
+    # pins (sounded == drawn == raw starts, at the AudioContext) must name
+    # the silence — the defect Daniel reported, restored.
+    p, original, mutated = patch("hub/modules/etude-walk.mjs",
+        "      } else if (!armed && wantAudition && m.attack === true) {",
+        "      } else if (false) {   // the audition silent again")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "auditions the DRAWN selection" in r.stdout or "sounded == drawn == raw starts" in r.stdout
+        record("the audition goes silent",
+               r.returncode != 0 and hit,
+               "suite exit %d; an audition pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m34_the_figure_tolerates_junk_again():
+    # 260910 item 2: the junk refusal removed — the character scan skips
+    # unknown characters instead of naming them, restoring the eleventh
+    # silence ("R,Q" keeps the R, drops the Q). The named-refusal pins must
+    # bite on both alphabets.
+    p, original, mutated = patch("engine/selection.mjs",
+        '    if (legal.includes(ch)) { toks.push(ch); continue; }\n'
+        '    return { order: null, err: address === "pattern"\n'
+        '      ? `"${ch}" is not a string — strings are 1–6`\n'
+        '      : `"${ch}" is not a tone — tones are R, 3, 5, 7` };',
+        '    if (legal.includes(ch)) { toks.push(ch); }\n'
+        '    continue;   // tolerant again: junk vanishes without a word')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "refused BY NAME on the face" in r.stdout or "refuses junk by name" in r.stdout
+        record("the figure tolerates junk again",
+               r.returncode != 0 and hit,
+               "suite exit %d; the named-refusal pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -853,7 +897,8 @@ def main():
                m26_the_second_sounding_path_returns, m27_the_cap_stops_covering,
                m28_the_board_goes_deaf_to_the_window, m29_the_reference_loses_its_role,
                m30_the_window_forgets_the_octave, m31_a_bar_dies_without_a_reason,
-               m32_the_override_goes_silent_again)
+               m32_the_override_goes_silent_again, m33_the_audition_goes_silent,
+               m34_the_figure_tolerates_junk_again)
     preflight(fns)
     for fn in fns:
         try:
