@@ -645,6 +645,25 @@ def m26_the_second_sounding_path_returns():
         p.write_text(original)
 
 
+def m27_the_cap_stops_covering():
+    # 260906 item 1: the coverage matching disabled — the cap reverts to
+    # fret order and Daniel's F voices as two 3rds again. The F-case pin
+    # names the duplicate from the artifact.
+    p, original, mutated = patch("engine/selection.mjs",
+        "  for (const pc of pcs) tryPlace(pc, new Set());",
+        "  /* matching disabled */")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "never two 3rds" in r.stdout or "duplicate held a slot" in r.stdout
+        record("the cap stops covering",
+               r.returncode != 0 and hit,
+               "suite exit %d; the coverage pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -725,7 +744,7 @@ def main():
                m20_reference_refusal_goes_silent, m21_typed_romans_stop_resolving,
                m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window,
                m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again,
-               m26_the_second_sounding_path_returns)
+               m26_the_second_sounding_path_returns, m27_the_cap_stops_covering)
     preflight(fns)
     for fn in fns:
         try:

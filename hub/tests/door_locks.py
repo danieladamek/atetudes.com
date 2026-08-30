@@ -581,6 +581,32 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260906 item 1: THE COVERAGE RULE, on Daniel's exact case ----
+        # C major, triad, every occurrence, Grip, strings {1,2,3}, the 2-5
+        # window, chord F: the old cap voiced TWO A's and lost the C sitting
+        # in the box. Now: the 3rd and the 5th, one each, and the absent F
+        # said by role — with the cap's meaning on the face.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'C', strings: [3, 2, 1], startDeg: 5, nearFret: 2,
+                      object: 'triad', take: 'all', notesPer: 1,
+                      source: 'custom', custom: 'F' } }))""")
+        page.wait_for_timeout(250)
+        fsel = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-sel')]
+          .map(g => g.querySelector('text').textContent.trim() + '@' + g.dataset.selstr + '/' + g.dataset.selfret)
+          .sort()""")
+        check(fsel == ["3@1/5", "5@3/5"],
+              f"{tag} Daniel's F must voice 3rd AND 5th, never two 3rds: {fsel}")
+        hint_f = page.inner_text("#fdHint")
+        check("no R in this frame" in hint_f,
+              f"{tag} the absent F must be said by role: {hint_f!r}")
+        check("every occurrence the grip allows" in hint_f,
+              f"{tag} the cap's meaning must be on the face: {hint_f!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1,
+                      source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260905 item 1: THE SELECTED SEGMENT IS VISIBLE ----
         # Daniel could not tell Grip from Line: the .on class was applied all
         # along, but the shell's `.seg` styles live in its STRIPS chrome

@@ -468,7 +468,9 @@ export const fieldBoard = {
       const shape = run.strings.map((s) => per[s] || 0).join("+");
       const isScale = cfg.object === "scale";
       const takeWord = isScale ? "the scale take"
-        : `the ${cfg.object}, ${cfg.take === "all" ? "every occurrence" : "one of each"}` +
+        : `the ${cfg.object}, ${cfg.take === "all"
+            ? (cfg.notesPer === 1 ? "every occurrence the grip allows" : "every occurrence")
+            : "one of each"}` +
           ` (${cfg.notesPer === 1 ? "grip" : "line"})`;
       const reading = cfg.ref
         ? `${fld.refNote.name} ${fld.modeName} (the ${cfg.key} ${SCALE_WORD[cfg.scale]} collection)`

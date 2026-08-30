@@ -30,7 +30,7 @@ import assert from "node:assert/strict";
 import { field } from "../field.mjs";
 import { positionOf, materialIn } from "../position.mjs";
 import { makeRun } from "../string-run.mjs";
-import { diatonicTones, oneOfEach, everyOccurrence, scaleTake } from "../selection.mjs";
+import { diatonicTones, oneOfEach, everyOccurrence, scaleTake, objectOffsets } from "../selection.mjs";
 import { lineVoicing, chooseVoicings, makeZone } from "../isolation.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
@@ -194,4 +194,63 @@ test("the scale takes everything the box offers — placement off, reach the onl
   assert.ok(take.notes.length >= 12 && take.notes.length <= 18,
     `R15's twelve-to-eighteen notes (${take.notes.length})`);
   assert.ok(take.notes.every((n) => n.role === null), "a scale note wears no chord role");
+});
+
+test("THE COVERAGE RULE (260906): a tone not yet represented beats a duplicate — Daniel's F, exactly", () => {
+  // C major, chord F (IV), strings {1,2,3}, the 2-5 window: F is nowhere,
+  // A sits on strings 1 AND 3, C only on string 3. The old cap voiced the
+  // chord as two A's and lost the C that was sitting in the box.
+  const fld = field({ key: "C", scale: "major" });
+  const pos = positionOf({ field: fld, anchorString: 3, startDegree: 5, nearFret: 2 });
+  assert.deepEqual([pos.fLo, pos.fHi], [2, 5], "the case's own window must construct");
+  const pool = materialIn(pos, [1, 2, 3], fld);
+  const tones = diatonicTones(fld, 3, objectOffsets("triad"));
+  const r = everyOccurrence(tones, pool, { n: 1 });
+  const got = r.notes.map((x) => `${x.role}@${x.string}/${x.fret}`).sort();
+  assert.deepEqual(got, ["3@1/5", "5@3/5"],
+    "the 5th on string 3 beats the duplicate 3rd there");
+  assert.deepEqual(r.missing, ["R"], "the absent F is said BY ROLE");
+});
+
+test("THE COVERAGE SWEEP: no configuration duplicates a tone while an available one goes unplaced", () => {
+  const KEYS = ["C", "D", "E", "F", "G", "A", "B", "Bb"];
+  const SETS = [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6]];
+  let cases = 0, offenders = [];
+  for (const key of KEYS) for (const set of SETS) for (let w = 0; w < 7; w++) {
+    const fld = field({ key, scale: "major" });
+    let pos;
+    try { pos = positionOf({ field: fld, anchorString: Math.max(...set), startDegree: w, nearFret: 5 }); }
+    catch { continue; }
+    const pool = materialIn(pos, set, fld);
+    for (let deg = 0; deg < 7; deg++) {
+      const tones = diatonicTones(fld, deg, objectOffsets("triad"));
+      const sel = everyOccurrence(tones, pool, { n: 1 }).notes || [];
+      cases++;
+      const counts = {};
+      for (const x of sel) counts[x.role] = (counts[x.role] || 0) + 1;
+      const present = new Set(sel.map((x) => x.role));
+      // the precise offence: a DUPLICATED note on a string that also
+      // carries an occurrence of an unrepresented tone (the Am case — two
+      // tones fighting one one-slot string — is an honest loss, not this)
+      const uncovered = tones.filter((t) => !present.has(t.role)).map((t) => t.pc);
+      const offends = sel.some((x) => counts[x.role] > 1
+        && uncovered.some((pc) => pool.some((m) => m.string === x.string
+          && ((m.midi % 12) + 12) % 12 === pc)));
+      if (offends)
+        offenders.push(`${key} deg${deg} set${set.join("")} w${w}: ${sel.map((x) => x.role + "@" + x.string + "/" + x.fret).join(" ")}`);
+    }
+  }
+  assert.ok(cases >= 1500, `the corpus must actually run (${cases})`);
+  assert.deepEqual(offenders.slice(0, 5), [],
+    `${offenders.length}/${cases} configurations voice a duplicate while an available tone goes unplaced`);
+});
+
+test("the EVERY promise where the cap does not bind: no pool hit is dropped at n=3", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const pos = positionOf({ field: fld, anchorString: 4, startDegree: 4, nearFret: 3 });
+  const pool = materialIn(pos, [4, 3, 2, 1], fld);
+  const tones = diatonicTones(fld, 0, objectOffsets("tetrad"));
+  const sel = everyOccurrence(tones, pool, { n: 3 }).notes;
+  const hits = pool.filter((m) => tones.some((t) => t.pc === ((m.midi % 12) + 12) % 12));
+  assert.equal(sel.length, hits.length, "uncapped, every occurrence really is every occurrence");
 });

@@ -261,23 +261,83 @@ export function oneOfEach(tones, pool, { n = 1, centre } = {}) {
 }
 
 /** everyOccurrence(tones, pool, { n }) → { notes, missing } — the ARPEGGIO:
- * every instance of the chord's tones the pool offers, at most n per string
- * (the lowest n on each, by fret — the hand under the frame), sorted by
- * pitch, each note wearing its role. */
+ * every instance of the chord's tones the pool offers, at most n per string.
+ *
+ * THE COVERAGE RULE (260906 — Daniel's F voiced as two A's while its C sat
+ * unplayed in the box; the sweep put the defect in ~half of all capped
+ * configurations): between candidates on the same string, A TONE NOT YET
+ * REPRESENTED BEATS A DUPLICATE. Derived, not special-cased: coverage is a
+ * maximum matching of the chord's distinct tones onto the strings' capped
+ * slots (augmenting paths — at most four tones, six strings), so a
+ * duplicate can never hold a slot an uncovered available tone could take.
+ * The leftover capacity then takes the leftover occurrences, lowest fret
+ * first — the hand under the frame, which yields to coverage and to
+ * nothing else. Where the cap does not bind, every occurrence is still
+ * every occurrence. */
 export function everyOccurrence(tones, pool, { n = 3 } = {}) {
   if (!Number.isInteger(n) || n < 1 || n > 3)
     throw new Error(`everyOccurrence: the ceiling is 1..3, not ${n}`);
   const roleOf = new Map(tones.map((t) => [mod12(t.pc), t.role]));
   const missing = tones.filter((t) => !pool.some((m) => mod12(m.midi) === mod12(t.pc)))
     .map((t) => t.role);
-  const out = [];
-  for (const s of [...new Set(pool.map((m) => m.string))]) {
-    const hits = pool.filter((m) => m.string === s && roleOf.has(mod12(m.midi)));
-    out.push(...hits.slice(0, n).map((m) => ({ ...m, role: roleOf.get(mod12(m.midi)) })));
+  const strings = [...new Set(pool.map((m) => m.string))].sort((a, b) => a - b);
+  const cands = new Map(strings.map((s) => [s,
+    pool.filter((m) => m.string === s && roleOf.has(mod12(m.midi)))
+      .sort((a, b) => a.fret - b.fret)]));
+
+  // slots: each string contributes n; matching pcs onto slots by augmenting
+  const slots = [];
+  for (const s of strings) for (let k = 0; k < n; k++) slots.push(s);
+  const pcs = [...new Set(tones.map((t) => mod12(t.pc)))]
+    .filter((pc) => pool.some((m) => mod12(m.midi) === pc));
+  const slotPc = new Array(slots.length).fill(null);   // slot index → matched pc
+  const tryPlace = (pc, seen) => {
+    for (let i = 0; i < slots.length; i++) {
+      if (seen.has(i)) continue;
+      if (!cands.get(slots[i]).some((m) => mod12(m.midi) === pc)) continue;
+      seen.add(i);
+      if (slotPc[i] === null || tryPlace(slotPc[i], seen)) { slotPc[i] = pc; return true; }
+    }
+    return false;
+  };
+  for (const pc of pcs) tryPlace(pc, new Set());
+
+  // realise the matching: per matched slot, the lowest-fret occurrence of
+  // its pc on that string not already chosen
+  const chosen = [];
+  const used = new Set();
+  for (let i = 0; i < slots.length; i++) {
+    if (slotPc[i] === null) continue;
+    const m = cands.get(slots[i]).find((x) => mod12(x.midi) === slotPc[i] && !used.has(x));
+    if (!m) throw new Error("everyOccurrence: the matching named an occurrence that is not there");
+    used.add(m); chosen.push(m);
   }
-  const notes = out.sort((a, b) => a.midi - b.midi);
+  // leftovers: remaining capacity takes remaining occurrences, fret order
+  const per = {};
+  for (const m of chosen) per[m.string] = (per[m.string] || 0) + 1;
+  for (const s of strings)
+    for (const m of cands.get(s)) {
+      if (used.has(m) || (per[s] || 0) >= n) continue;
+      used.add(m); chosen.push(m); per[s] = (per[s] || 0) + 1;
+    }
+  const notes = chosen.map((m) => ({ ...m, role: roleOf.get(mod12(m.midi)) }))
+    .sort((a, b) => a.midi - b.midi);
   if (Object.values(perString(notes)).some((c) => c > n))
     throw new Error("everyOccurrence: the ceiling broke on the combination");
+  // derived, then asserted: the rule's own promise, stated precisely — no
+  // DUPLICATE holds a slot that an uncovered tone COULD take, i.e. no
+  // duplicated note sits on a string that also carries an occurrence of a
+  // tone the selection left unrepresented. (An uncovered tone whose only
+  // strings are full of DISTINCT tones is an honest loss, not a violation —
+  // two tones sharing one one-slot string is the Am case.)
+  const present = new Set(notes.map((x) => x.role));
+  const counts = {};
+  for (const x of notes) counts[x.role] = (counts[x.role] || 0) + 1;
+  const uncoveredPcs = pcs.filter((pc) => !present.has(roleOf.get(pc)));
+  for (const x of notes)
+    if (counts[x.role] > 1
+        && uncoveredPcs.some((pc) => cands.get(x.string).some((m) => mod12(m.midi) === pc)))
+      throw new Error("everyOccurrence: a duplicate held a slot an uncovered tone could take");
   return { notes: assertAddressable(notes, "everyOccurrence"), missing };
 }
 
