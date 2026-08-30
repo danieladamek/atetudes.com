@@ -160,3 +160,49 @@ test("materialIn is UNCAPPED: the pool holds every field note the window offers"
         `string ${s} offers ${m.filter((n) => n.string === s).length} — a capped pool`);
   }
 });
+
+test("THE OCTAVE AMENDMENT (2026-09-07): with its set, every window covers the field's classes — minimally", () => {
+  const KEYS = ["C", "D", "E", "F", "G", "A", "B", "Bb"];
+  const SETS = [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [4, 3, 2, 1], [6, 5, 4, 3, 2, 1]];
+  let cases = 0, widened = 0;
+  for (const key of KEYS) for (const set of SETS) for (let sd = 0; sd < 7; sd++) {
+    const fld = field({ key, scale: "major" });
+    let pos;
+    try { pos = positionOf({ field: fld, anchorString: Math.max(...set), startDegree: sd, nearFret: 5, strings: set }); }
+    catch { continue; }
+    cases++;
+    const pcsAt = (hi) => {
+      const got = new Set();
+      for (const m of materialIn({ ...pos, fHi: hi }, set, fld)) got.add(((m.midi % 12) + 12) % 12);
+      return got.size;
+    };
+    assert.equal(pos.covered, true, `${key} sd${sd} set{${set}}: the set must cover the octave`);
+    assert.equal(pcsAt(pos.fHi), 7, `${key} sd${sd} set{${set}}: coverage read back off the material`);
+    if (pos.fHi > pos.frets[2]) {
+      widened++;
+      assert.ok(pcsAt(pos.fHi - 1) < 7,
+        `${key} sd${sd} set{${set}}: the widening must be MINIMAL — one fret narrower must lose a class`);
+      assert.deepEqual([pos.fLo, pos.frets.join(",")],
+        [pos.frets[0], pos.frets.join(",")],
+        "the anchor triple stays the identity; only fHi moved");
+    }
+  }
+  assert.ok(cases >= 300, `the corpus must actually run (${cases})`);
+  assert.ok(widened >= 10, `the corpus must contain windows the amendment actually widened (${widened})`);
+});
+
+test("the no-fit case is NAMED, never out-widened: a single string near the neck's end", () => {
+  const fld = field({ key: "C", scale: "major" });
+  const pos = positionOf({ field: fld, anchorString: 3, startDegree: 2, nearFret: 12, strings: [3] });
+  assert.ok(pos.fLo >= 9, `the case must sit high on the neck (fLo ${pos.fLo})`);
+  assert.equal(pos.covered, false, "the neck ends before one string can give seven classes");
+  assert.ok(pos.uncovered.length >= 1, "what is missing is named by pitch class");
+  assert.equal(pos.fHi, 15, "the widening stopped at the neck's end, not past it");
+});
+
+test("the boot window is untouched by the amendment — register 11 holds", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const withSet = positionOf({ field: fld, anchorString: 4, startDegree: 4, nearFret: 3, strings: [4, 3, 2, 1] });
+  assert.deepEqual([withSet.fLo, withSet.fHi, withSet.centre], [3, 7, 5],
+    "the four-string boot already covered its octave; the amendment moves nothing there");
+});

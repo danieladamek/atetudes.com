@@ -90,7 +90,7 @@ export const etudeWalk = {
       const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
       const run = makeRun(cfg.strings);
       const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
-        startDegree: cfg.startDeg, nearFret: cfg.nearFret });
+        startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const pool = materialIn(pos, run.strings, fld);
       let sel = [];
       if (cfg.object === "scale") sel = scaleTake(pool).notes;

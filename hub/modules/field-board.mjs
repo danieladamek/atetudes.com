@@ -257,7 +257,7 @@ export const fieldBoard = {
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
-        startDegree: cfg.startDeg, nearFret: cfg.nearFret });
+        startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const region = regionOf(pos, run.strings);
       const aNotes = notesOn(anchor, fld);
       curB = { fld, run, pos, region, aNotes };
@@ -612,7 +612,7 @@ export const fieldBoard = {
 
     byId("fieldSvg").addEventListener("keydown", (e) => {
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        const next = step(curB.pos, e.key === "ArrowRight" ? 1 : -1, curB.fld);
+        const next = step(curB.pos, e.key === "ArrowRight" ? 1 : -1, curB.fld, cfg.strings);
         cfg = { ...cfg, startDeg: next.startDeg, nearFret: next.fLo };
         push();
         e.preventDefault();

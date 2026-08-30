@@ -1,14 +1,26 @@
 /* position.mjs — THE POSITION: the ratified window, generalised from one
  * anchor string to a set of them (Multetudes child 1; multetudes-prd.md §2.2).
  *
- * THE LAW THIS ENCODES (C5, ratified 2026-08-21 — "the window is a position"):
- * the isolation window is a rectangle — the span of THREE CONSECUTIVE SCALE
- * NOTES on the anchor string wide, by the strings of the set tall. It is
- * RIGID: never stretches, never reports, never explains itself. A setting,
- * not a consequence. Notes outside it are stretches, shown unremarked — that
- * is the teaching. The ruling's own generalisation clause is this module's
- * reason to exist: "three strings of triads · four of tetrads · six for a
- * full scale box — the same rectangle, the same meaning, a different height."
+ * THE LAW THIS ENCODES (C5, ratified 2026-08-21; AMENDED 2026-09-07 by
+ * Daniel's own correction): the isolation window is a rectangle — anchored
+ * at the start degree's note on the anchor string, wide enough that THE SET
+ * COVERS THE FIELD'S OCTAVE, by the strings of the set tall. The 08-21
+ * wording ("three consecutive scale notes on the anchor string wide") was a
+ * PROXY stated on the wrong quantity: it derived the width from the anchor
+ * string alone, and on three-string sets a whole pitch class vanished
+ * (Daniel: "a box should never form over a 3 string set where at least an
+ * entire octave is covered ... That's the whole purpose of the 4 or 5 fret
+ * width constraint"). The anchor triple REMAINS the window's identity and
+ * its floor — where it already covers the octave (four strings and up, and
+ * most three-string windows) nothing changes, byte for byte; where it does
+ * not, fHi extends UPWARD by the minimum frets that complete the coverage,
+ * derived from the set and the field, never tabled, never past the neck's
+ * end (which is reported by name, not silently out-widened). The window
+ * stays RIGID: a setting, not a consequence — it depends on the FIELD, the
+ * SET and the anchor, never on the object, the take, or the current chord.
+ * The ruling's generalisation clause generalised upward; nobody had checked
+ * downward — the tenth assertion in this project found describing a hope,
+ * and the first that was a whole ratified law.
  *
  * A POSITION HAS NO NUMBER (Daniel, 2026-08-23). Its identity is WHERE IT
  * STARTS — anchor string plus start degree — and the start degree is read
@@ -37,13 +49,20 @@ import { field, notesOn } from "./field.mjs";
 const span3 = (frets) => frets[2] - frets[0];
 
 /**
- * positionOf({ field, anchorString, startDegree, nearFret }) → the window:
- *   { anchorString, startDeg, frets: [f0,f1,f2], fLo, fHi, centre }
+ * positionOf({ field, anchorString, startDegree, nearFret, strings }) → the
+ * window: { anchorString, startDeg, frets: [f0,f1,f2], fLo, fHi, centre,
+ *           covered, uncovered }
  * startDegree is AGAINST THE REFERENCE (the position's identity); the window
  * starts on the occurrence of that degree nearest nearFret and takes the next
  * two scale notes up the same string — pivotWindow's own rule, unrepeated.
+ * With `strings` (the set — a SETTING, like everything here), fHi extends by
+ * the minimum needed for the set to cover every pitch class of the field
+ * (the 2026-09-07 amendment); without it, the anchor-triple floor stands
+ * (the pre-amendment callers, and the identity the triple still is).
+ * `centre` stays the anchor triple's own mean — the hand's home; the
+ * widened tail is reach, not centre.
  */
-export function positionOf({ field: fld, anchorString, startDegree, nearFret = 5 } = {}) {
+export function positionOf({ field: fld, anchorString, startDegree, nearFret = 5, strings = null } = {}) {
   if (!fld || !Array.isArray(fld.pcs)) throw new Error("positionOf: no field");
   if (!Number.isInteger(startDegree) || startDegree < 0 || startDegree > 6)
     throw new Error(`positionOf: startDegree is a degree 0..6, not ${startDegree}`);
@@ -56,17 +75,38 @@ export function positionOf({ field: fld, anchorString, startDegree, nearFret = 5
   if (span3(frets) !== 3 && span3(frets) !== 4)
     throw new Error(`positionOf: window ${frets.join(",")} spans ${span3(frets)} frets — ` +
       "a scale triple spans 3 or 4; adjacent frets are the flattening the ruling retired");
+  let fHi = frets[2];
+  let covered = true, uncovered = [];
+  if (strings) {
+    /* THE OCTAVE EXTENSION (2026-09-07): widen upward, minimally, until the
+     * SET holds every pitch class of the field — derived from notesOn, no
+     * table anywhere. The neck's end (fret 15, notesOn's own bound) is the
+     * honest stop: what is still missing there is NAMED, never out-widened. */
+    const set = [...new Set(strings)];
+    const covers = (hi) => {
+      const got = new Set();
+      for (const st of set)
+        for (const n of notesOn(st, fld))
+          if (n.fret >= frets[0] && n.fret <= hi) got.add(((n.midi % 12) + 12) % 12);
+      return got;
+    };
+    let got = covers(fHi);
+    while (got.size < fld.pcs.length && fHi < 15) { fHi++; got = covers(fHi); }
+    covered = got.size === fld.pcs.length;
+    uncovered = covered ? [] : fld.pcs.filter((pc) => !got.has(pc));
+  }
   return {
     anchorString, startDeg: startDegree, frets,
-    fLo: frets[0], fHi: frets[2],
+    fLo: frets[0], fHi,
     centre: (frets[0] + frets[1] + frets[2]) / 3,
+    covered, uncovered,
   };
 }
 
 /** step(position, ±1, field) → the next window: the anchor moving one scale
  * note along the anchor string. This is BOX SHIFT, the only travel the model
  * has (the stretch pivot is parked). At the string's ends it stays put. */
-export function step(pos, dir, fld) {
+export function step(pos, dir, fld, strings = null) {
   if (dir !== 1 && dir !== -1) throw new Error("step: dir is +1 or -1");
   const aNotes = notesOn(pos.anchorString, fld);
   const i = aNotes.findIndex((n) => n.fret === pos.fLo);
@@ -74,7 +114,7 @@ export function step(pos, dir, fld) {
     throw new Error("step: the position's start is not a scale note on its anchor string — wrong field?");
   const ni = Math.max(0, Math.min(aNotes.length - 3, i + dir));
   const next = positionOf({ field: fld, anchorString: pos.anchorString,
-    startDegree: aNotes[ni].deg, nearFret: aNotes[ni].fret });
+    startDegree: aNotes[ni].deg, nearFret: aNotes[ni].fret, strings });
   if (next.fLo !== aNotes[ni].fret)
     throw new Error("step: the stepped window did not start on the next scale note");
   return next;
@@ -129,7 +169,7 @@ export function materialIn(pos, strings, fld) {
 export function reanchor(pos, strings, fld) {
   const anchorString = Math.max(...strings);       // lowest pitch in the set
   const next = positionOf({ field: fld, anchorString,
-    startDegree: pos.startDeg, nearFret: Math.round(pos.centre) });
+    startDegree: pos.startDeg, nearFret: Math.round(pos.centre), strings });
   if (next.startDeg !== pos.startDeg)
     throw new Error("reanchor: the design's start degree did not survive the set change");
   return next;

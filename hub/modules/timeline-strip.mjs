@@ -99,7 +99,7 @@ export const timelineStrip = {
           let sub = null;
           if (cfg.bass !== "none" && cfg.object !== "scale" && c.degree >= 0 && c.tones) {
             const pos = positionOf({ field: fld, anchorString: Math.max(...cfg.strings),
-              startDegree: cfg.startDeg, nearFret: cfg.nearFret });
+              startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: cfg.strings });
             const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos);
             if (rp.note) {
               const comp = compositeOver(fld, rp.note.keyDeg, c.tones.map((t) => t.pc));

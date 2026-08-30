@@ -62,7 +62,7 @@ export const neckReadout = {
         const run = makeRun(cfg.strings);
         const anchor = Math.max(...run.strings);
         const pos = positionOf({ field: fld, anchorString: anchor,
-          startDegree: cfg.startDeg, nearFret: cfg.nearFret });
+          startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
         regionOf(pos, run.strings);
         const pool = materialIn(pos, run.strings, fld);
         /* THE CURRENT BAR through the one derivation (child 7). THREE

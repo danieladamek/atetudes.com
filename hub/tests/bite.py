@@ -707,6 +707,26 @@ def m29_the_reference_loses_its_role():
         p.write_text(original)
 
 
+def m30_the_window_forgets_the_octave():
+    # the 2026-09-07 amendment regressed: the anchor-only proxy restored
+    # (the widening loop removed) — three-string boxes lose a pitch class
+    # again and Daniel's F loses its root. The octave pin reads the classes
+    # off the drawn dots and must name the count.
+    p, original, mutated = patch("engine/position.mjs",
+        "    let got = covers(fHi);\n    while (got.size < fld.pcs.length && fHi < 15) { fHi++; got = covers(fHi); }",
+        "    let got = covers(fHi);   // proxy restored: no widening")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the SET covers the octave" in r.stdout or "the octave window holds the R" in r.stdout
+        record("the window forgets the octave",
+               r.returncode != 0 and hit,
+               "suite exit %d; the octave pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -788,7 +808,8 @@ def main():
                m22_the_figure_never_reaches_the_sound, m23_the_walk_goes_deaf_to_the_window,
                m24_the_boot_refuses_its_second_bar, m25_take_does_movement_duty_again,
                m26_the_second_sounding_path_returns, m27_the_cap_stops_covering,
-               m28_the_board_goes_deaf_to_the_window, m29_the_reference_loses_its_role)
+               m28_the_board_goes_deaf_to_the_window, m29_the_reference_loses_its_role,
+               m30_the_window_forgets_the_octave)
     preflight(fns)
     for fn in fns:
         try:

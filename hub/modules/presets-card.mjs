@@ -87,7 +87,7 @@ export const presetsCard = {
   const fld = field({ key: "C", scale: "major" });
   for (const [label, p] of PRESETS) {
     const anchor = Math.max(...p.strings);
-    const pos = positionOf({ field: fld, anchorString: anchor, startDegree: 0, nearFret: 5 });
+    const pos = positionOf({ field: fld, anchorString: anchor, startDegree: 0, nearFret: 5, strings: p.strings });
     const pool = materialIn(pos, p.strings, fld);
     let take;
     if (p.object === "scale") take = scaleTake(pool);

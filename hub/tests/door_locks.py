@@ -343,38 +343,53 @@ def run_door(pw, door_id):
         ord_of = lambda: re.search(r"from the (\S+) on string (\d)", hint()).groups()
         frets_of = lambda: re.search(r"frets (\d+)–(\d+)", hint()).groups()
 
-        # THE WINDOW IS A POSITION: the width is DERIVED from three consecutive
-        # scale notes on the anchor string — never set, never stored. Four frets
-        # when the two steps are whole-whole, five when one is bigger; and it
-        # must equal the anchor triple's own span, not merely stay put. The
-        # triple is read off the ARTIFACT — the anchor string's dots inside the
-        # frame — never by re-running the engine's arithmetic, or this proves
-        # only that pivotWindow agrees with itself. (Ratified 2026-08-28, the
-        # stronger pin; "width unchanged across a drag" asserted an accident.)
+        # THE WINDOW COVERS THE SET'S OCTAVE (the 2026-09-07 amendment to the
+        # 2026-08-21 ruling — Daniel's own correction: "a box should never
+        # form over a 3 string set where at least an entire octave is
+        # covered"). REWRITTEN, NOT RELAXED: the old pin asserted the PROXY
+        # ("width in {4,5} and equal to the anchor triple's span") — the very
+        # rule being corrected, which delivered octave coverage only on wide
+        # sets. What the old pin caught that is still true, kept: the width
+        # is DERIVED and read OFF THE ARTIFACT, the anchor triple is the
+        # window's floor and identity (at least 3 anchor-string scale notes,
+        # the first three spanning 4-5 frets), and a width that outlives its
+        # derivation is a stored width. What the law says NOW, asserted: the
+        # dots inside the frame, across the SET's strings, carry every pitch
+        # class of the field — and not one fret more than that needs.
         width_of = lambda: int(frets_of()[1]) - int(frets_of()[0]) + 1
 
-        def span_of_anchor_triple():
+        def check_window(where):
             lo, hi = (int(x) for x in frets_of())
             anchor = int(ord_of()[1])
-            frets = page.evaluate("""([a, lo, hi]) =>
+            a_frets = page.evaluate("""([a, lo, hi]) =>
               [...document.querySelectorAll('#fieldSvg [data-str="' + a + '"]')]
                 .map(g => +g.dataset.fret).filter(f => f >= lo && f <= hi)""",
                 [anchor, lo, hi])
-            check(len(frets) == 3,
-                  f"{tag} the frame holds {len(frets)} anchor-string scale notes "
-                  f"({frets}) — the window IS three consecutive scale notes, no more, no fewer")
-            return (max(frets) - min(frets) + 1) if frets else -1
-
-        def check_window(where):
-            w = width_of()
-            check(w in (4, 5),
-                  f"{tag} the window is {w} frets at {where} — the ruling derives it "
-                  f"from three consecutive scale notes, so it is 4 or 5, never else")
-            span = span_of_anchor_triple()
-            check(w == span,
-                  f"{tag} the window is {w} frets at {where} but its anchor triple "
-                  f"spans {span} — the width is DERIVED, and a width that outlives "
-                  f"the notes it came from is a stored width")
+            check(len(a_frets) >= 3,
+                  f"{tag} the frame holds {len(a_frets)} anchor-string scale notes at "
+                  f"{where} — the anchor triple is the window's floor")
+            tri = sorted(a_frets)[:3]
+            check(4 <= tri[2] - tri[0] + 1 <= 5,
+                  f"{tag} the anchor TRIPLE spans {tri[2] - tri[0] + 1} at {where} — "
+                  f"three consecutive scale notes span 4 or 5 frets, always")
+            strs = page.evaluate("""() =>
+              [...document.querySelectorAll('#fieldSvg [data-fdstr]')]
+                .filter(g => g.querySelector('rect[fill="#212126"]'))
+                .map(g => +g.dataset.fdstr)""")
+            pcs_at = lambda h: page.evaluate("""([ss, lo, h]) => {
+              const got = new Set();
+              for (const g of document.querySelectorAll('#fieldSvg [data-midi]')) {
+                const st = +g.dataset.str, f = +g.dataset.fret;
+                if (ss.includes(st) && f >= lo && f <= h) got.add(((+g.dataset.midi % 12) + 12) % 12);
+              } return got.size; }""", [strs, lo, h])
+            n_classes = pcs_at(hi)
+            check(n_classes == 7,
+                  f"{tag} the window at {where} gives the set {n_classes}/7 pitch "
+                  f"classes — the amendment's law: the SET covers the octave")
+            if hi > tri[2]:
+                check(pcs_at(hi - 1) < 7,
+                      f"{tag} the widened window at {where} is wider than the octave "
+                      f"needs — one fret narrower must lose a class")
 
         check_window("rest")
         check("Strings E–B–G–D" in hint(),
@@ -644,7 +659,7 @@ import { positionOf, materialIn } from './engine/position.mjs';
 import { oneOfEach } from './engine/selection.mjs';
 import { progressionOf, chordAt } from './engine/progression.mjs';
 const fld = field({ key: 'D', scale: 'harm' });
-const pos = positionOf({ field: fld, anchorString: 6, startDegree: 5, nearFret: 6 });
+const pos = positionOf({ field: fld, anchorString: 6, startDegree: 5, nearFret: 6, strings: [6,5,4,3,2,1] });
 const pool = materialIn(pos, [6,5,4,3,2,1], fld);
 const prog = progressionOf({ source: 'cycle', cycle: 'fourths', start: 0 }, 'D', 'harm');
 const out = [];
@@ -679,11 +694,13 @@ console.log(JSON.stringify(out));
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
 
-        # ---- 260906 item 1: THE COVERAGE RULE, on Daniel's exact case ----
-        # C major, triad, every occurrence, Grip, strings {1,2,3}, the 2-5
-        # window, chord F: the old cap voiced TWO A's and lost the C sitting
-        # in the box. Now: the 3rd and the 5th, one each, and the absent F
-        # said by role — with the cap's meaning on the face.
+        # ---- 260906 item 1 + 260907 amendment: THE COVERAGE RULE in the
+        # OCTAVE WINDOW, on Daniel's exact case. UPDATED 260907, reason: the
+        # old pin asserted "3@1/5, 5@3/5 and no R in this frame" — but the
+        # missing R was the WINDOW's defect, not the selection's, and the
+        # octave amendment completes the box (2-5 grew to 2-6, where F
+        # lives). The coverage rule's own work is still visible and pinned:
+        # string 3 must give its slot to the C, never to the duplicate A.
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'C', strings: [3, 2, 1], startDeg: 5, nearFret: 2,
                       object: 'triad', take: 'all', notesPer: 1,
@@ -692,13 +709,45 @@ console.log(JSON.stringify(out));
         fsel = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-sel')]
           .map(g => g.querySelector('text').textContent.trim() + '@' + g.dataset.selstr + '/' + g.dataset.selfret)
           .sort()""")
-        check(fsel == ["3@1/5", "5@3/5"],
-              f"{tag} Daniel's F must voice 3rd AND 5th, never two 3rds: {fsel}")
+        check(fsel == ["3@1/5", "5@3/5", "R@2/6"],
+              f"{tag} Daniel's F must voice R, 3rd AND 5th — never two 3rds, and the "
+              f"octave window holds the R the old box lost: {fsel}")
         hint_f = page.inner_text("#fdHint")
-        check("no R in this frame" in hint_f,
-              f"{tag} the absent F must be said by role: {hint_f!r}")
         check("every occurrence the grip allows" in hint_f,
               f"{tag} the cap's meaning must be on the face: {hint_f!r}")
+        # AND THE RULED CASE ITSELF: IV, ii and vii° — the three chords Daniel
+        # watched come back incomplete at this window — each complete now
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { take: 'one', source: 'custom', custom: 'F Dm Bdim' } }))""")
+        page.wait_for_timeout(250)
+        # THE RULED CASE'S TRUE SHAPE under the amendment (stated in the 260907
+        # report): all three chords were missing the CLASS F, and the octave
+        # window restores it — IV completes. ii and vii° then meet a
+        # DIFFERENT, already-ruled behaviour: in the minimal octave box, D
+        # and F both live only on string 2, so the grip refuses BY NAME (the
+        # collide case, child 5's law) instead of silently half-placing.
+        # Complete where completable; loud where not. Daniel's question 1.
+        expects = [("F", 3, None), ("Dm", 0, "occur only on string 2"),
+                   ("Bdim", 0, "occur only on string 2")]
+        for ci, (sym, want_n, want_msg) in enumerate(expects):
+            page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(150)
+            n = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
+            hint_c = page.inner_text("#fdHint")
+            if want_msg is None:
+                check(n == want_n and "no placement fits" not in hint_c,
+                      f"{tag} {sym} must place COMPLETE at the amended window ({n} notes)")
+            else:
+                check(n == 0 and want_msg in hint_c,
+                      f"{tag} {sym} must refuse BY NAME (the collide, not a silent "
+                      f"half-chord): {n} notes, {hint_c[:140]!r}")
+        # full boot restore — this block moved the key, the source AND the step
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1,
+                      source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
                       object: 'tetrad', take: 'one', notesPer: 1,
@@ -819,11 +868,14 @@ console.log(JSON.stringify(out));
               f"{tag} the staff must speak the dyad in every bar — 2 heads × the derived 8 (got {st_n})")
         page.select_option("#hcDyad", "3,7"); page.wait_for_timeout(80)
         # the recipes the item names, each one exercised, none merely listed
-        # R4's expectation is THE ORACLE'S: v0.9 itself places only the 3rd
-        # on strings 3-2 (the 7th lies outside every root-anchored window
-        # there) — so the pin asserts the partial take AND the loud absence,
-        # not a wish. Verified against v0.9 live, 260831.
-        for label, want in [("R4 · dyads across two strings", ["3"]),
+        # R4 UPDATED 260907 (the octave amendment): the two-string window now
+        # widens until the set covers the octave (5–11 here), so the guide-
+        # tone dyad COMPLETES — ['3','7'] — where v0.9 half-places (v0.9's
+        # anchor-triple window cannot hold the 7th; oracle-verified 260831).
+        # A deliberate divergence, recorded with the amendment's register
+        # entry: the door out-places the oracle because the oracle's window
+        # law was the thing corrected.
+        for label, want in [("R4 · dyads across two strings", ["3", "7"]),
                             ("R9 · block triads", ["3", "5", "R"]),
                             ("R11 · triad lines", ["3", "5", "R"]),
                             ("R17 · a shell", ["3", "7", "R"]),
@@ -831,9 +883,8 @@ console.log(JSON.stringify(out));
             page.select_option("#psSel", label=label); page.wait_for_timeout(150)
             check(roles() == want,
                   f"{tag} recipe {label!r} must build wearing {want}: {roles()}")
-            if label.startswith("R4"):
-                check("no 7 in this frame" in page.inner_text("#fdHint"),
-                      f"{tag} R4's starved 7th must be loud on the face: {page.inner_text('#fdHint')!r}")
+            # (the starved-7th face pin retired 260907 with the amendment —
+            # the 7th is IN the widened frame now, drawn and placed above)
         # back to the boot state (the recipes reseeded the run — restore it
         # over the bus, the same channel the harness already speaks)
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(60)

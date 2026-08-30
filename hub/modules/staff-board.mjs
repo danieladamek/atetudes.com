@@ -88,7 +88,7 @@ export const staffBoard = {
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
-        startDegree: cfg.startDeg, nearFret: cfg.nearFret });
+        startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const pool = materialIn(pos, run.strings, fld);
 
       /* THE PROGRESSION (child 7): every bar derived through the ONE
