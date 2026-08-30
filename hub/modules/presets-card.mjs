@@ -49,13 +49,16 @@ export const presetsCard = {
   <h2>Presets</h2>
   <label>Start from</label>
   <select id="psSel" data-control="psSel"></select>
+  <div class="hint ps-trace" id="psTrace"></div>
   <div class="hint ps-note info">A preset seeds every control and leaves them all live. The journal
   page's exercises are here as the engine grows into them; the key, the scale and the reference stay
   whatever you set them to.</div>`,
 
   styles: `
 .ps-note{margin-top:8px}
-#psSel{width:100%}`,
+#psSel{width:100%}
+.ps-trace{margin-top:6px;color:var(--gray)}
+.ps-trace b{font-weight:600;color:var(--ink)}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -69,15 +72,39 @@ export const presetsCard = {
       o.value = String(i); o.textContent = label;
       sel.appendChild(o);
     });
+    /* THE CHOSEN PRESET LEAVES A TRACE (260909, item 5): the seed-then-
+     * release rule stands (the select empties — v0.9's own behaviour), but
+     * the card now says WHICH recipe seeded the state, and derives
+     * "modified" by comparing the live config against the preset's own
+     * seeded values — no hand-tracked dirty flag. Only the keys a preset
+     * actually seeds are compared: the key, the scale and the reference
+     * stay the player's, and moving them is not drift. */
+    let chosen = null;      // { label, seed } of the last preset applied
+    let live = {};          // the merged config as the bus replays it
+    const trace = byId("psTrace");
+    const sameVal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const paintTrace = () => {
+      if (!chosen) { trace.textContent = ""; return; }
+      const drifted = Object.keys(chosen.seed)
+        .some((k) => k in live && !sameVal(live[k], chosen.seed[k]));
+      trace.innerHTML = `Start from: <b></b>${drifted ? " · modified" : ""}`;
+      trace.querySelector("b").textContent = chosen.label;
+    };
     sel.addEventListener("change", (e) => {
       const p = PRESETS[+e.target.value];
       if (!p) return;
-      announce(d, CONFIG_CHANGED, { take: "one", notesPer: 1, ...p[1],
-        strings: [...p[1].strings] });
+      const seed = { take: "one", notesPer: 1, ...p[1], strings: [...p[1].strings] };
+      chosen = { label: p[0], seed };
+      announce(d, CONFIG_CHANGED, seed);
       sel.value = "";                      // v0.9's own behaviour: seed, then release
+      paintTrace();
     });
-    /* any config change means the controls have moved on — nothing to hold */
-    listen(d, CONFIG_CHANGED, () => {});
+    /* the trace re-derives on every config move — drift is a comparison,
+     * never a flag */
+    listen(d, CONFIG_CHANGED, (m) => {
+      if (m && typeof m === "object") live = { ...live, ...m };
+      paintTrace();
+    });
   },
 };
 

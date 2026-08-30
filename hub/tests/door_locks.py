@@ -596,6 +596,42 @@ def run_door(pw, door_id):
               and "the tetrad, one of each (grip): 4 notes" in hint(),
               f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
 
+        # ---- 260909 item 5: A CHOSEN PRESET LEAVES A TRACE ----
+        # Seed-then-release stands (the select empties), but the card now
+        # names the recipe that seeded the state — and derives "modified"
+        # by COMPARING the live config to the preset's own seeded values.
+        # No dirty flag: drift is a comparison. Moving a control the preset
+        # never seeded (the key) is NOT drift — those stay the player's.
+        ps_trace = ("() => { const t = document.getElementById('psTrace');"
+                    " return t ? t.textContent : '(no #psTrace on this build)'; }")
+        page.select_option("#psSel", "12"); page.wait_for_timeout(250)   # R26 · a guide-tone dyad
+        tr = page.evaluate(ps_trace)
+        check("R26" in tr and "guide-tone" in tr and "modified" not in tr,
+              f"{tag} the trace names the freshly seeded preset, unmodified: {tr!r}")
+        check(page.eval_on_selector("#psSel", "e => e.value") == "",
+              f"{tag} seed-then-release still stands — the select empties")
+        page.select_option("#hcKey", "D"); page.wait_for_timeout(200)
+        tr = page.evaluate(ps_trace)
+        check("modified" not in tr,
+              f"{tag} the KEY is not seeded — moving it is not drift: {tr!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { notesPer: 3 } }))""")
+        page.wait_for_timeout(200)
+        tr = page.evaluate(ps_trace)
+        check("R26" in tr and "· modified" in tr,
+              f"{tag} drifting a SEEDED value derives 'modified': {tr!r}")
+        page.select_option("#psSel", "12"); page.wait_for_timeout(250)
+        tr = page.evaluate(ps_trace)
+        check("modified" not in tr,
+              f"{tag} re-seeding the preset clears the derived drift: {tr!r}")
+        # full boot restore — this block moved key, object, dyad and the cap
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(120)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260909 item 2: THE FIRST NOTE OF A NEW BAR RINGS ----
         # Measured: on an advance the walk's STEP listener runs before the
         # board's, so the new chord's first NOTE arrives against the OLD

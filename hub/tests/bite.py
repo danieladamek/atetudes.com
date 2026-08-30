@@ -755,8 +755,8 @@ def m32_the_override_goes_silent_again():
     # and the matrix's contradiction leg must catch block standing raised
     # and real under a ruling figure.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        '      const figRules = cfg.object !== "scale" && !fig.err
-        && !!(fig.order && fig.order.length);',
+        '      const figRules = cfg.object !== "scale" && !fig.err\n'
+        '        && !!(fig.order && fig.order.length);',
         '      const figRules = false;   // the override silent again')
     try:
         p.write_text(mutated)
