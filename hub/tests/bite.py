@@ -11,6 +11,9 @@ proved the script half.
 
 usage:  python3 hub/tests/bite.py
 """
+import argparse
+import datetime
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +21,72 @@ from pathlib import Path
 HUB = Path(__file__).resolve().parent.parent
 REPO = HUB.parent
 results = []
+
+# ---- THE HARNESS SURVIVES A CLOSED LID (260913, item 0) ----
+# A killed run must leave (a) a line-buffered log holding everything up to
+# the kill and (b) CLEAN SOURCES. try/finally covers exceptions and Ctrl-C;
+# it does not cover a closing terminal — SIGHUP/SIGTERM land here instead.
+LOG = {"fh": None, "path": None}
+LIVE = {"path": None, "original": None, "mutation": None}   # the one patched file
+
+
+def log_line(text):
+    print(text)
+    if LOG["fh"]:
+        LOG["fh"].write(text + "\n")
+        LOG["fh"].flush()
+
+
+def open_log(path):
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    LOG["fh"] = open(p, "a", buffering=1)
+    LOG["path"] = p
+    return p
+
+
+class PatchedPath:
+    """pathlib.Path proxy: write_text also tracks the LIVE mutation, so a
+    signal handler can restore the file a dying process would abandon. The
+    36 mutation bodies stay byte-identical — they call p.write_text as
+    they always did."""
+    def __init__(self, p, original):
+        self._p = p
+        self._original = original
+
+    def write_text(self, text):
+        r = self._p.write_text(text)
+        if text == self._original:
+            LIVE["path"] = None; LIVE["original"] = None
+        else:
+            LIVE["path"] = self._p; LIVE["original"] = self._original
+        return r
+
+    def __getattr__(self, name):
+        return getattr(self._p, name)
+
+    def __truediv__(self, other):
+        return self._p / other
+
+    def __str__(self):
+        return str(self._p)
+
+
+def _die_clean(signum, frame):
+    name = {signal.SIGTERM: "SIGTERM", signal.SIGHUP: "SIGHUP",
+            signal.SIGINT: "SIGINT"}.get(signum, str(signum))
+    if LIVE["path"] is not None:
+        LIVE["path"].write_text(LIVE["original"])
+        log_line(f"KILLED ({name}) during {LIVE['mutation'] or '?'} — "
+                 f"RESTORED {LIVE['path']}")
+    else:
+        log_line(f"KILLED ({name}) between mutations — sources were clean")
+    log_line(f"log: {LOG['path']}")
+    sys.exit(128 + (signum if isinstance(signum, int) else 15))
+
+
+for _sig in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+    signal.signal(_sig, _die_clean)
 
 
 def sh(*args):
@@ -44,7 +113,7 @@ def suite():
 
 def record(name, ok, detail):
     results.append((ok, name, detail))
-    print(("  BITES    " if ok else "  NO BITE  ") + name + " — " + detail)
+    log_line(("  BITES    " if ok else "  NO BITE  ") + name + " — " + detail)
 
 
 PREFLIGHT = {"on": False, "rotted": [], "checked": 0}
@@ -62,7 +131,8 @@ def patch(path, find, replace):
             PREFLIGHT["rotted"].append(f"{path}: {find.strip()[:70]!r}")
         return p, original, original
     assert find in original, f"mutation anchor not found in {path}"
-    return p, original, original.replace(find, replace, 1)
+    log_line(f"  patch    {path} :: {find.strip().splitlines()[0][:60]!r}")
+    return PatchedPath(p, original), original, original.replace(find, replace, 1)
 
 
 # ---------------------------------------------------------------- mutation 1
@@ -185,6 +255,10 @@ def m5_dynamic_import_and_lookup_by_string():
 # THE POSITIVE ONE, now with markup and styles: a new module appears and lands
 # in exactly the doors whose lock reaches it, with no door file edited.
 def m6_new_module_no_door_edited():
+    if PREFLIGHT["on"]:
+        return   # no patch() anchors to check, and the preflight must not
+                 # write real files (0d — a sandbox without delete rights
+                 # turned the leftover into a FALSE ROT)
     new = REPO / "hub/modules/tuner-card.mjs"
     doors_before = {d: (REPO / f"hub/doors/{d}.door.mjs").read_text() for d in ("plain", "scribe")}
     try:
@@ -889,6 +963,14 @@ def preflight(fns):
     g["build"] = lambda *a, **k: None
     g["suite"] = lambda *a, **k: fake
     g["record"] = lambda *a, **k: None
+    # 0d: a leftover tuner-card from a kill or a no-delete sandbox is
+    # cleaned idempotently; a FAILED delete is an ENVIRONMENT note, never
+    # rot — false rot is the noise this preflight exists to remove
+    try:
+        (REPO / "hub/modules/tuner-card.mjs").unlink(missing_ok=True)
+    except OSError as e:
+        log_line(f"  ENVIRONMENT  cannot delete leftover tuner-card.mjs ({e}) — "
+                 "m6 may misreport until it is removed by hand")
     PREFLIGHT["on"] = True
     try:
         for fn in fns:
@@ -938,7 +1020,14 @@ def preflight(fns):
 
 
 def main():
-    print("hub bite harness — every stage-2 assertion must be seen to fail\n")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--log", default=None,
+        help="line-buffered log path (default hub/tests/out/bite-<stamp>.log)")
+    args = ap.parse_args()
+    stamp = datetime.datetime.now().strftime("%m%d-%H%M")
+    logp = open_log(args.log or (HUB / "tests" / "out" / f"bite-{stamp}.log"))
+    log_line(f"log: {logp}")
+    log_line("hub bite harness — every stage-2 assertion must be seen to fail\n")
     fns = (m1_shell_styles_a_module, m2_module_styles_another_module,
                m3_styles_shipped_regardless_of_reach, m4_markup_shipped_regardless_of_reach,
                m5_dynamic_import_and_lookup_by_string, m6_new_module_no_door_edited,
@@ -959,6 +1048,7 @@ def main():
                m36_repeat_stops_repeating)
     preflight(fns)
     for fn in fns:
+        LIVE["mutation"] = fn.__name__
         try:
             fn()
         except BuildBroken as e:
@@ -967,12 +1057,14 @@ def main():
         except AssertionError as e:
             record(fn.__name__, False, "the mutation anchor rotted — the harness "
                    "must be updated with the code it mutates: " + str(e))
+    LIVE["mutation"] = None
     build()
     r = suite()
     green = r.returncode == 0
-    print("\nreverted and rebuilt: suite %s" % ("GREEN" if green else "RED — SOURCES MAY BE DIRTY"))
+    log_line("\nreverted and rebuilt: suite %s" % ("GREEN" if green else "RED — SOURCES MAY BE DIRTY"))
     bad = [n for ok, n, _ in results if not ok]
-    print("%d/%d mutations behaved as required" % (len(results) - len(bad), len(results)))
+    log_line("%d/%d mutations behaved as required" % (len(results) - len(bad), len(results)))
+    log_line(f"log: {LOG['path']}")
     for n in bad:
         print("  DID NOT BITE: " + n)
     return 0 if green and not bad else 1
