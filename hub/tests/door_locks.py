@@ -2758,6 +2758,39 @@ console.log(JSON.stringify(out));
         page.check("#bindChk"); page.wait_for_timeout(250)
 
     if "arpIn" in r["controlsPresent"]:
+        # ---- 260911 item 3: THE BOARD CARRIES THE ENGINE'S REFUSAL ----
+        # score-board's bare catch swallowed a NAMED engine refusal and drew
+        # something else — §4.4 silent divergence (register 22). MEASURED
+        # first: a 108-cell in-page sweep (3 families × 3 keys × 3 sets × 4
+        # bottoms, approach figure, arpeggiated) never made figureEvents
+        # throw through this door's own controls — the zone machinery keeps
+        # every swept approach playable, so the catch is defensive depth.
+        # The standing pin therefore asserts the HEALTHY artifact (no
+        # refusal drawn where nothing refused), and m35 in the bite harness
+        # injects a throw to prove the reason actually travels to the bar —
+        # this pin's failure message carries the drawn text for m35 to grep.
+        page.evaluate("""() => { [...document.querySelectorAll('#figAddrSeg button')]
+          .find(b => b.dataset.mm === 'tones').click(); }""")
+        page.fill("#arpIn", "(-1,+2)R"); page.dispatch_event("#arpIn", "input")
+        page.wait_for_timeout(150)
+        page.evaluate("""() => { [...document.querySelectorAll('#playbackSeg button')]
+          .find(b => b.dataset.pb === 'arpeggiated').click(); }""")
+        page.wait_for_timeout(350)
+        sc_errs = page.evaluate("""() => [...document.querySelectorAll('[data-scfigerr]')]
+          .map(e => [...e.querySelectorAll('tspan')].map(t => t.textContent).join(' '))""")
+        check(sc_errs == [],
+              f"{tag} a figure the engine can sound draws NO refusal — but when the "
+              f"engine refuses, the bar says so in the engine's words: {sc_errs!r}")
+        # restore exactly what this block moved: figure, address, playback
+        page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input")
+        page.wait_for_timeout(100)
+        page.evaluate("""() => { [...document.querySelectorAll('#figAddrSeg button')]
+          .find(b => b.dataset.mm === 'slots').click(); }""")
+        page.evaluate("""() => { [...document.querySelectorAll('#playbackSeg button')]
+          .find(b => b.dataset.pb === 'block').click(); }""")
+        page.wait_for_timeout(200)
+
+    if "arpIn" in r["controlsPresent"]:
         # ---- THE FIGURE CHAIN (extensions §1, audit A3/B4). Every stage is a
         # tested engine seam; the gate proves the WIRING end to end in the page.
         # 1. the figure chain is live (not the old all-disabled placeholder): the

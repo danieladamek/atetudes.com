@@ -820,6 +820,35 @@ def m34_the_figure_tolerates_junk_again():
         p.write_text(original)
 
 
+def m35_the_engine_refusal_swallowed_again():
+    # 260911 item 3: score-board's bare catch used to discard the engine's
+    # named refusal and draw something else. No config in a 108-cell sweep
+    # makes figureEvents throw through the door's own controls (the zone
+    # machinery keeps approaches playable), so the plumbing is proven by
+    # INJECTION: make figureEvents refuse by name, and the healthy-artifact
+    # pin must fail SHOWING the refusal text drawn in the bar — the reason
+    # travelled from the throw to the pixels.
+    p, original, mutated = patch("engine/figure.mjs",
+        '  const order = playback === "block" ? null : orderFigure(parsed, step, address, ctx);',
+        '  if (playback !== "block" && parsed)\n'
+        '    throw new Error("motion: no playable position for midi 0 (m35 injection)");\n'
+        '  const order = playback === "block" ? null : orderFigure(parsed, step, address, ctx);')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        # grep targets are corpus-checked by the preflight, so both live in
+        # real sources: the board's own prefix, and the engine's refusal
+        # family that the injection borrows its wording from
+        hit = ("the figure cannot sound here" in r.stdout
+               and "no playable position for midi" in r.stdout)
+        record("the engine refusal swallowed again (injected)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the refusal REACHED the bar's pixels: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -904,7 +933,7 @@ def main():
                m28_the_board_goes_deaf_to_the_window, m29_the_reference_loses_its_role,
                m30_the_window_forgets_the_octave, m31_a_bar_dies_without_a_reason,
                m32_the_override_goes_silent_again, m33_the_audition_goes_silent,
-               m34_the_figure_tolerates_junk_again)
+               m34_the_figure_tolerates_junk_again, m35_the_engine_refusal_swallowed_again)
     preflight(fns)
     for fn in fns:
         try:

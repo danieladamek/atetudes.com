@@ -162,12 +162,33 @@ export const scoreBoard = {
          * cue-size, hollow, degree-coloured when diatonic and violet when not. */
         const parsedFig = parseFigure(cfg.figure, cfg.address || "slots");
         let events;
+        /* THE REASON IS CARRIED (260911, item 3; register 22): the engine
+         * fails loudly and BY NAME ("naming it at source protects every
+         * caller"), and this catch used to discard the name and draw
+         * something else — a §4.4 silent divergence in a shipped module.
+         * The catch still keeps the board alive; the bar now says it could
+         * not honour the figure, and why, where the player is looking. */
+        let figErr = null;
         try {
           events = figureEvents(s, { parsed: parsedFig.err ? null : parsedFig.pattern,
             address: cfg.address || "slots", playback: cfg.playback || "block", durBeats: beats, bpm: 72,
             ctx: { scalePcs: scaleNotes(cfg.key, cfg.scale).map((n) => n.pc), tonicPc: scaleNotes(cfg.key, cfg.scale)[0].pc,
               open: OPEN_MIDI, nfrets: 15, set: pass.set.strings } });
-        } catch { events = null; }
+        } catch (e) { events = null; figErr = e && e.message ? e.message : String(e); }
+        if (figErr && parsedFig.pattern && (cfg.playback || "block") !== "block") {
+          const fe = el("text", { x: x + 3, y: 40, "font-size": "8", fill: "#B82929",
+            "data-scfigerr": "" }, svg);
+          const feWords = ("the figure cannot sound here — " + figErr).split(" ");
+          let feLine = "", feFirst = true;
+          for (const wd of feWords) {
+            if ((feLine + " " + wd).length > Math.max(18, w / 5) && feLine) {
+              const ts = el("tspan", { x: x + 3, dy: feFirst ? 0 : 9 }, fe);
+              ts.textContent = feLine; feFirst = false; feLine = wd;
+            } else feLine = feLine ? feLine + " " + wd : wd;
+          }
+          const ts = el("tspan", { x: x + 3, dy: feFirst ? 0 : 9 }, fe);
+          ts.textContent = feLine;
+        }
         const seqEvents = events && (cfg.playback || "block") !== "block" && parsedFig.pattern
           ? events.filter((ev) => ev.role !== "bass" && !ev.strum) : null;
         const labOf = (midi) => degreeLabel(s.chord, midi);
