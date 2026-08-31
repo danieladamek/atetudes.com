@@ -746,6 +746,18 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260914 item 2: THE CARD NAMES ITS PRINCIPLE ----
+        # Harmony -> CENTRICITY (ruled): the card defines the material and
+        # what organises it; harmony is Progression's, beside it. The card
+        # names the principle, the control inside names the value — and
+        # "the field" survives untouched in the module and the prose.
+        c2h = page.evaluate("""() => { const h = [...document.querySelectorAll('.card h2')]
+          .map(x => x.textContent.trim()); return h; }""")
+        check("Centricity" in c2h and "Harmony" not in c2h,
+              f"{tag} the card reads CENTRICITY, and no card reads Harmony: {c2h}")
+        check("the whole field" in page.inner_text("#fdHint"),
+              f"{tag} 'the field' survives in the prose — the set keeps its own word")
+
         # ---- 260914 item 1: THE CENTRE HAS A SOURCE, PINNED AT THE SOUND ----
         # A fixed centre and a moving progression were contradictory by
         # construction; reference.mjs's own 260831 sentence deferred the

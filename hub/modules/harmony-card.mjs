@@ -52,7 +52,17 @@ export const harmonyCard = {
    * it lives on the neck's rail now, beside Placement, as the "all tones"
    * checkbox. field-board owns and announces it; the value is unchanged. */
   markup: `
-  <h2>Harmony</h2>
+  <!-- CENTRICITY (260914, ruled): the card holds Key, Scale, Object and
+       the centre — it defines the MATERIAL and what organises it; the card
+       that defines harmony is Progression, beside it. "Centricity" is the
+       one name that stays true through key, mode and the non-diatonic
+       collections to come, so this rename happens once. Rejected with
+       reasons in register 27: Centre (would collide with the control
+       inside), Field (names the SET without its organiser — and keeps its
+       own word everywhere it already lives), Key (false under a mode),
+       Pitch-Class Set (centreless by definition), Key/Centricity (a slash
+       label on the card that just had one split). -->
+  <h2>Centricity</h2>
   <div class="hc-grid3">
     <div><label>Key</label><select id="hcKey" data-control="hcKey"></select></div>
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
