@@ -1,3 +1,8 @@
+## 2026-08-31 — DEPLOYED: Multetudes v0.2.1 live
+
+- Pages run 33448510918 green; the live study.html shasum-identical to the committed copy
+  (d00fc8988e39), serving v0.2.1.
+
 ## 2026-08-31 — Multetudes v0.2.1: the centre works; the notepad has its title back
 
 - **Source edition v0.2.1** (night 18; Update Log 260913b.1, the full report in the night's
