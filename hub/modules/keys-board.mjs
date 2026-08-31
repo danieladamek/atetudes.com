@@ -59,6 +59,17 @@ export const keysBoard = {
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] , bass: "none",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
     let index = 0;
+    let pulseTimers = [];       // the sounding-note pulse (260911, item 4 — field-board's idiom)
+    /* livePulses EXTENDS the idiom under a measured defect of this board
+     * (260911, the diagnostic is in the night's report): consecutive bars
+     * SHARE pitches on the keys, so a ring born against the old bar's dot
+     * died at the rebuild ~10ms later — the exact complement of the
+     * pending case field-board solved. Every sounded note keeps { midi,
+     * until }; render() re-rings every survivor for its REMAINING life, so
+     * a rebuild can neither eat a young ring nor stretch one. A pulse with
+     * no dot yet is just a survivor that finds its dot at the next render
+     * — the pending case, subsumed. */
+    let livePulses = [];        // { midi, until }
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -132,12 +143,50 @@ export const keysBoard = {
         const cy = black ? 14 + H * 0.48 : 14 + H - 24;
         const fam = FAM[nt.deg];
         el("circle", { cx, cy, r: 10, fill: FAM_COLOR[fam], stroke: "#fff",
-          "stroke-width": 1.6, "pointer-events": "none" }, svg);
+          "stroke-width": 1.6, "pointer-events": "none", "data-kysel": nt.midi }, svg);
         const t = el("text", { x: cx, y: cy + 3.4, "text-anchor": "middle", "font-size": "9",
           fill: FAM_TEXT[fam], class: "ky-lab" }, svg);
         t.textContent = nt.role || fam;
       }
+      /* the pulse layer rides ABOVE the dots — field-board's own order */
+      el("g", { class: "ky-pulselayer" }, svg);
+      /* every living pulse re-rings on the fresh dots, for what is left of
+       * its 320ms — survivors of the wipe and first-notes alike */
+      const now = d.defaultView.performance.now();
+      livePulses = livePulses.filter((p) => p.until > now);
+      for (const p of livePulses) ringFor(p.midi, p.until - now);
     };
+
+    /* what you see pulsing is what you hear (fretboard-stage's words;
+     * field-board's idiom, copied — never a third invention): the ring drawn
+     * AT THE DRAWN KEY DOT's own coordinates, never recomputed (260911,
+     * item 4). sounded ⊆ drawn holds by derivation (the same selection
+     * calls off the same merged config) plus the range gate — C2–C6 spans
+     * every fretted note this door can sound — and the gate asserts it at
+     * the artifact: every sounded note rings at its key. */
+    const ringFor = (midi, ttl = 320) => {
+      const svg = byId("kySvg");
+      const layer = svg && svg.querySelector(".ky-pulselayer");
+      if (!layer) return 0;
+      const hits = [
+        ...svg.querySelectorAll(`circle[data-kysel="${midi}"]`),
+        ...svg.querySelectorAll(`circle[data-kyref="${midi}"]`),
+      ];
+      for (const c of hits) {
+        const ring = el("circle", { class: "ky-pulse", cx: c.getAttribute("cx"),
+          cy: c.getAttribute("cy"), r: 16, fill: "none", stroke: "#212126",
+          "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
+        pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), ttl));
+      }
+      return hits.length;
+    };
+    listen(d, NOTE, (m) => {
+      if (!m || typeof m.midi !== "number") return;
+      const now = d.defaultView.performance.now();
+      livePulses = livePulses.filter((p) => p.until > now);
+      livePulses.push({ midi: m.midi, until: now + 320 });
+      ringFor(m.midi);
+    });
 
     byId("kySvg").addEventListener("click", (e) => {
       const hit = e.target.closest("[data-kymidi]");

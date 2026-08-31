@@ -693,6 +693,65 @@ def run_door(pw, door_id):
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260911 item 4: THE KEYS PULSE WHAT SOUNDS ----
+        # The one board in the door without the idiom: keys-board announced
+        # NOTE on a click and never listened. field-board's idiom copied
+        # (never a third invention): a pulse layer, rings at the drawn dot's
+        # own coordinates, the pending-pulse flush for notes that beat the
+        # rebuild. sounded ⊆ drawn asserted AT THE ARTIFACT: every sounded
+        # note of a played pass — the reference's bass note included — must
+        # find its drawn key and ring there; a note with no key to ring on
+        # is named, which is the containment failing loudly.
+        page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        page.evaluate("""() => {
+          if (!window.__kyRendersHooked) { window.__kyRendersHooked = true; window.__kyRenders = 0;
+            new MutationObserver((mu) => { if (mu.some(x => x.removedNodes.length > 5)) window.__kyRenders++; })
+              .observe(document.getElementById('kySvg'), { childList: true }); }
+          if (window.__kyHooked) { window.__kyLog = []; }
+          else {
+            window.__kyHooked = true; window.__kyLog = [];
+            document.addEventListener('atetudes:note', (e) => {
+              const m = e.detail || {};
+              if (typeof m.midi !== 'number') return;
+              const svg0 = document.getElementById('kySvg');
+              const row = { midi: m.midi, t: Math.round(performance.now()),
+                preDot: !!(svg0 && (svg0.querySelector('circle[data-kysel="' + m.midi + '"]')
+                  || svg0.querySelector('circle[data-kyref="' + m.midi + '"]'))),
+                preRings: svg0 ? svg0.querySelectorAll('.ky-pulse').length : -1,
+                renders0: window.__kyRenders || 0,
+                drawn: false, rang: false, nrings: -1, renders1: -1 };
+              window.__kyLog.push(row);
+              setTimeout(() => {
+                const svg = document.getElementById('kySvg');
+                const dot = svg && (svg.querySelector('circle[data-kysel="' + m.midi + '"]')
+                  || svg.querySelector('circle[data-kyref="' + m.midi + '"]'));
+                row.nrings = svg ? svg.querySelectorAll('.ky-pulse').length : -1;
+                row.renders1 = window.__kyRenders || 0;
+                if (!dot) return;
+                row.drawn = true;
+                row.rang = [...svg.querySelectorAll('.ky-pulse')].some((rg) =>
+                  rg.getAttribute('cx') === dot.getAttribute('cx')
+                  && rg.getAttribute('cy') === dot.getAttribute('cy'));
+              }, 120);
+            }, true);
+          }
+        }""")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(4500)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(400)
+        ky_rows = page.evaluate("() => window.__kyLog")
+        check(len(ky_rows) >= 5,
+              f"{tag} the keys-pulse pass sounded enough notes to judge ({len(ky_rows)})")
+        check(all(r["drawn"] for r in ky_rows),
+              f"{tag} sounded ⊆ drawn ON THE KEYS — sounded but keyless: "
+              f"{[r['midi'] for r in ky_rows if not r['drawn']]}")
+        check(all(r["rang"] for r in ky_rows),
+              f"{tag} every sounded note RINGS at its key — silent: "
+              f"{[r for r in ky_rows if not r['rang']]} (all: {ky_rows})")
+        page.select_option("#hcRef", "none"); page.wait_for_timeout(150)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260911 item 5: EVERY BAR WEARS THE FIGURE ----
         # Measured before fixing (the lead did not hold): at the PO's exact
         # config the figure RESOLVES on every bar (orderBy: 7 steps, no err,
