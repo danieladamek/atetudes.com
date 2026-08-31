@@ -693,6 +693,84 @@ def run_door(pw, door_id):
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260911 item 5: EVERY BAR WEARS THE FIGURE ----
+        # Measured before fixing (the lead did not hold): at the PO's exact
+        # config the figure RESOLVES on every bar (orderBy: 7 steps, no err,
+        # all eight) and nothing throws — score-board is not even mounted in
+        # this door. The cause was staff-board's own v0.9 display law
+        # (figure rides the current bar only, kept 260910 as an open
+        # question). Daniel's ruling supersedes it: every bar shows the
+        # figure; a bar that cannot prints its refusal IN THE BAR.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 6, nearFret: 7,
+                      object: 'tetrad', take: 'all', notesPer: 3, movement: 'arpeggio',
+                      address: 'tones', figure: 'R-3-5-7-R-7-3',
+                      source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(350)
+        st_exp5 = json.loads(subprocess.run(["node", "--input-type=module", "-e", """
+import { field } from './engine/field.mjs';
+import { positionOf, materialIn } from './engine/position.mjs';
+import { everyOccurrence, orderBy } from './engine/selection.mjs';
+import { progressionOf, chordAt } from './engine/progression.mjs';
+const fld = field({ key: 'Bb', scale: 'major' });
+const pos = positionOf({ field: fld, anchorString: 4, startDegree: 6, nearFret: 7, strings: [4,3,2,1] });
+const pool = materialIn(pos, [4,3,2,1], fld);
+const prog = progressionOf({ source: 'cycle', cycle: 'fourths', start: 0 }, 'Bb', 'major');
+const out = [];
+for (let ci = 0; ci < prog.chords.length; ci++) {
+  const cur = chordAt(prog, ci, fld, 'tetrad');
+  const sel = everyOccurrence(cur.tones, pool, { n: 3 }).notes;
+  const fig = orderBy('tones', 'R-3-5-7-R-7-3', sel);
+  out.push({ sym: cur.symbol, order: fig.order ? fig.order.length : 0, err: fig.err });
+}
+console.log(JSON.stringify(out));
+"""], capture_output=True, text=True, cwd=REPO).stdout)
+        check(len(st_exp5) == 8 and all(e["order"] == 7 and not e["err"] for e in st_exp5),
+              f"{tag} the engine resolves the PO's 7-step figure on ALL eight bars: "
+              f"{[(e['sym'], e['order']) for e in st_exp5]}")
+        st_got5 = page.evaluate("""() => {
+          const svg = document.getElementById('stSvg');
+          const per = {};
+          for (const e of svg.querySelectorAll('ellipse[data-stfig]')) {
+            const b = e.getAttribute('data-stbar');
+            per[b] = (per[b] || 0) + 1;
+          }
+          return { per, tuplets: [...svg.querySelectorAll('[data-sttuplet]')]
+            .map(t => t.textContent) }; }""")
+        check(all(st_got5["per"].get(str(ci), 0) == st_exp5[ci]["order"] for ci in range(8)),
+              f"{tag} EVERY bar draws the figure the engine resolved for it — "
+              f"drawn {st_got5['per']}, engine {[e['order'] for e in st_exp5]}")
+        check(st_got5["tuplets"].count("7") == 8,
+              f"{tag} every bar's non-dyadic 7-in-4 wears its numeral: {st_got5['tuplets']}")
+        # the refusal, in the bar: Daniel's refusing configuration — the two
+        # neck-refused bars must say so ON THE STAFF, by name
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [3, 2, 1], startDeg: 5, nearFret: 0,
+                      object: 'triad', take: 'one', notesPer: 1, movement: 'block',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(350)
+        st_ref5 = page.evaluate("""() => {
+          const svg = document.getElementById('stSvg');
+          const bars = new Set([...svg.querySelectorAll('ellipse[data-stmidi]')]
+            .map(e => e.getAttribute('data-stbar')));
+          return { withHeads: bars.size,
+            refusals: [...svg.querySelectorAll('[data-strefuse]')]
+              .map(e => [...e.querySelectorAll('tspan')].map(t => t.textContent).join(' ')) }; }""")
+        check(len(st_ref5["refusals"]) == 2
+              and all("no placement fits" in t and "occur only on string" in t
+                      and "Line" in t for t in st_ref5["refusals"]),
+              f"{tag} the staff's refused bars refuse BY NAME, in the bar: {st_ref5['refusals']!r}")
+        check(st_ref5["withHeads"] == 6,
+              f"{tag} the six placeable bars still draw ({st_ref5['withHeads']})")
+        # full boot restore
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(250)
+
         # ---- 260911 item 1: SIX CONTROLS, ONE ROW, v0.9's ORDER ----
         # The host never took the placement, so Copy and Palette auto-appended
         # AFTER the message span and wrapped to a second line the moment a
@@ -862,14 +940,13 @@ console.log(JSON.stringify(out));
             page.wait_for_timeout(250)
             got = page.evaluate(st_read)
             exp = st_exp[st_name]
-            # the current bar's stems: the figured/arp cases draw the current
-            # bar sequenced; other bars carry their own writing, so compare
-            # the CURRENT bar's contribution — the figure heads pin it for
-            # the figured case, the arp case has 8 sequenced bars
+            # REWRITTEN 260911 (item 5): every bar wears the figure now, so
+            # the figured case carries the schedule's events on ALL EIGHT
+            # bars — the count is derived (8 × L), never a table
             if st_name == "figured":
-                check(got["figheads"] == exp["L"],
-                      f"{tag} staff {st_name}: the figure's own heads == the schedule's "
-                      f"events ({got['figheads']} vs {exp['L']})")
+                check(got["figheads"] == 8 * exp["L"],
+                      f"{tag} staff {st_name}: every bar wears the figure — heads == "
+                      f"8 bars × the schedule's {exp['L']} events ({got['figheads']})")
                 check(got["tuplets"].count(str(exp["L"])) >= 1 if exp["tuplet"] else not got["tuplets"],
                       f"{tag} staff {st_name}: the non-dyadic group wears the schedule's "
                       f"own numeral {exp['tuplet']}: {got['tuplets']}")
@@ -981,12 +1058,21 @@ console.log(JSON.stringify(out));
                     for mx_bar in range(min(n_bars, 8)):
                         page.click(f'#tlScroll button >> nth={mx_bar}')
                         page.wait_for_timeout(70)
-                        st = page.evaluate("""() => {
+                        st = page.evaluate("""(bar) => {
                           const sel = document.querySelectorAll('#fieldSvg .fd-sel').length;
                           const ref = document.querySelector('#fieldSvg .fd-refusal');
-                          return { sel, refusal: ref ? ref.textContent : null }; }""")
+                          const stv = document.getElementById('stSvg');
+                          return { sel, refusal: ref ? ref.textContent : null,
+                            stHeads: stv ? stv.querySelectorAll('ellipse[data-stmidi][data-stbar="' + bar + '"]').length : -1,
+                            stRefuse: stv ? stv.querySelectorAll('[data-strefuse="' + bar + '"]').length : -1 }; }""",
+                          str(mx_bar))
                         mx_cells[0] += 1
                         ok = st["sel"] > 0 or (st["refusal"] and len(st["refusal"]) > 10)
+                        # 260911 item 5: the STAFF holds the same doctrine —
+                        # the cell's bar draws its heads or refuses in the bar
+                        st_ok = st["stHeads"] > 0 or st["stRefuse"] > 0
+                        if not st_ok and len(mx_dead) < 8:
+                            mx_dead.append(f"{mx_key} set{mx_len} sd{mx_sd} bar{mx_bar + 1} STAFF-SILENT")
                         if not ok and len(mx_dead) < 8:
                             chip = page.eval_on_selector_all("#tlScroll button.tl-cur",
                                 "es => es.map(e => e.getAttribute('data-tlchip'))")
@@ -1360,13 +1446,22 @@ console.log(JSON.stringify(out));
               f"{tag} the bracket must read {{6}} {{5}} {{2,4}} {{1,3}} on strings 1-4: {b1}")
         check(all(v["fill"] == "#212126" for v in b1.values()),
               f"{tag} a TYPED pattern's bracket is full ink: {b1}")
-        # the staff draws the figure as a run — six marked steps in the
-        # CURRENT bar, spread, not a stack (the other bars carry their own
-        # selections now — child 7 — so the figure's heads are addressed)
-        st_xs = page.evaluate("""() =>
-          [...document.querySelectorAll('#stSvg ellipse[data-stfig]')].map(e => +e.getAttribute('cx'))""")
-        check(len(st_xs) == 6 and len(set(st_xs)) == 6,
-              f"{tag} the staff must draw the 6-step figure as a run: {len(st_xs)} figure heads, {len(set(st_xs))} x-positions")
+        # PIN REWRITTEN 260911 (item 5, the reason): v0.9's current-bar-only
+        # figure display is superseded by Daniel's ruling — EVERY bar wears
+        # the figure, resolved against its own selection. Kept: the run is a
+        # run (distinct x per step). Now asserted: all eight bars carry the
+        # six addressed steps, 48 heads, six distinct x-positions per bar.
+        st_by_bar = page.evaluate("""() => {
+          const out = {};
+          for (const e of document.querySelectorAll('#stSvg ellipse[data-stfig]')) {
+            const b = e.getAttribute('data-stbar');
+            (out[b] = out[b] || []).push(+e.getAttribute('cx'));
+          }
+          return out; }""")
+        check(len(st_by_bar) == 8
+              and all(len(v) == 6 and len(set(v)) == 6 for v in st_by_bar.values()),
+              f"{tag} EVERY bar draws the 6-step figure as a run (260911 ruling): "
+              f"{ {k: len(v) for k, v in st_by_bar.items()} }")
         # tones: derived bracket, greyed — with a TONES figure (260902: the
         # old pattern-shaped figure is now refused by the mode-mismatch
         # notice instead of being half-read, so the block types the tones

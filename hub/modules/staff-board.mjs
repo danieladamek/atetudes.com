@@ -100,12 +100,16 @@ export const staffBoard = {
       if (index >= prog.chords.length) index = 0;
       const N = prog.chords.length;
       const scaleSel = cfg.object === "scale" ? scaleTake(pool).notes : null;
+      /* the whole result rides (260911, item 5): a refused bar's collide and
+       * its derived escape are the engine's own fields, and the staff prints
+       * them IN THE BAR — the playthrough matrix's doctrine ("places or
+       * refuses by name, visibly") applied to this board. */
       const selOf = (c) => {
-        if (cfg.object === "scale") return scaleSel;
+        if (cfg.object === "scale") return { notes: scaleSel };
         const r = cfg.take === "all"
           ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
           : oneOfEach(c.tones, pool, { n: cfg.notesPer, centre: pos.centre });
-        return r.notes || [];
+        return r;
       };
 
       /* the staves — v0.9's geometry: five lines each, the 8 under the treble */
@@ -142,11 +146,18 @@ export const staffBoard = {
       /* the label band above the HIGHEST note in the whole étude (v0.9's
        * register fix), so no bar's run collides with the names */
       const chords = prog.chords.map((_, ci) => chordAt(prog, ci, fld, cfg.object, cfg.dyad));
-      const sels = chords.map((c) => selOf(c));
-      const fig = orderBy(cfg.address, cfg.figure, sels[index] || []);
+      const rs = chords.map((c) => selOf(c));
+      const sels = rs.map((r) => r.notes || []);
+      /* EVERY BAR WEARS THE FIGURE (260911, item 5 — Daniel's ruling,
+       * superseding v0.9's current-bar-only display kept on 260910): the
+       * figure resolves against EACH bar's own selection, exactly as the
+       * walk will sound it when the bar arrives. A bar whose selection
+       * cannot honour it prints the refusal in the bar. */
+      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl));
+      const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
       for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi));
-      if (fig.order) for (const nt of fig.order) allSteps.push(stepOf(nt.midi));
+      for (const fg of figs) if (fg.order) for (const nt of fg.order) allSteps.push(stepOf(nt.midi));
       const topStep = allSteps.length ? Math.max(...allSteps) : (4 * 7 + 2) + 8;
       /* a sequenced bar's stems rise 24 above the top head and the tuplet
        * numeral 4 more (260910, item 3) — the label band clears the BEAM,
@@ -170,8 +181,35 @@ export const staffBoard = {
         const rl = el("text", { x: x0 + 7, y: labY + 11, "font-size": "9.5", fill: "#B9B9BF" }, svg);
         rl.textContent = ci === index ? `${c.roman} \u00b7 bar ${ci + 1} of ${N}` : c.roman;
 
-        const figHere = ci === index && fig.order && fig.order.length ? fig.order : null;
+        const figHere = figs[ci] && figs[ci].order && figs[ci].order.length ? figs[ci].order : null;
         const seq = figHere || sels[ci];
+        /* the bar's refusals, by name, in the bar — the neck's vocabulary */
+        const refuseLines = [];
+        if (cfg.object !== "scale" && !sels[ci].length && c.tones) {
+          let rWhy = "no placement fits";
+          if (rs[ci].collide && rs[ci].collide.roles)
+            rWhy += " — the " + rs[ci].collide.roles.join(" and ")
+              + " occur only on string " + rs[ci].collide.string;
+          rWhy += rs[ci].resolvesAt != null && rs[ci].resolvesAt <= 3
+            ? " — Line takes them" : " — and no per-string ceiling resolves it";
+          refuseLines.push(rWhy);
+        } else if (figs[ci] && figs[ci].err && String(cfg.figure || "").trim()) {
+          refuseLines.push("the figure cannot sound here — " + figs[ci].err);
+        }
+        for (const rTxt of refuseLines) {
+          const fe = el("text", { x: x0 + 5, y: labY + 22, "font-size": "8",
+            fill: "#B82929", "data-strefuse": ci }, svg);
+          const wds = rTxt.split(" ");
+          let ln = "", first = true;
+          for (const wd of wds) {
+            if ((ln + " " + wd).length > Math.max(16, BW / 5.2) && ln) {
+              const ts = el("tspan", { x: x0 + 5, dy: first ? 0 : 9 }, fe);
+              ts.textContent = ln; first = false; ln = wd;
+            } else ln = ln ? ln + " " + wd : wd;
+          }
+          const ts = el("tspan", { x: x0 + 5, dy: first ? 0 : 9 }, fe);
+          ts.textContent = ln;
+        }
         /* 260905: A CHORD STACKS; A RUN DOES NOT — and which one this bar is
          * became the MOVEMENT control's fact, not Take's (Take is material) */
         const stacked = !figHere && cfg.object !== "scale" && cfg.movement !== "arpeggio";
@@ -217,9 +255,10 @@ export const staffBoard = {
           const fam = FAM[nt.deg];
           const head = open
             ? { cx: x, cy: y, rx: 6.4, ry: 5, fill: "#fff", stroke: FAM_COLOR[fam],
-                "stroke-width": 1.6, transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi }
+                "stroke-width": 1.6, transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi,
+                "data-stbar": ci }
             : { cx: x, cy: y, rx: 6.4, ry: 5, fill: FAM_COLOR[fam],
-                transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi };
+                transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi, "data-stbar": ci };
           if (figHere) head["data-stfig"] = k;    // the figure's own steps, addressable
           el("ellipse", head, svg);
           const t = el("text", { x, y: y + 3, "text-anchor": "middle", "font-size": "7.5",
