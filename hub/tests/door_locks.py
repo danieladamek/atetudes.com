@@ -746,6 +746,85 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260914 item 1: THE CENTRE HAS A SOURCE, PINNED AT THE SOUND ----
+        # A fixed centre and a moving progression were contradictory by
+        # construction; reference.mjs's own 260831 sentence deferred the
+        # fixed half "until the chords change" — child 7 landed 260901 and
+        # this completes it. Under FIXED, N bars sound the SAME bass pitch
+        # while the chords change; under FOLLOWS the bass tracks each bar's
+        # root. Asserted at the NOTE stream with raw-start parity — a
+        # message trace is not a sound. The window must not jump per bar
+        # under either source (the ratified window law).
+        if not page.evaluate("() => !!document.getElementById('hcCentreSrc')"):
+            check(False, f"{tag} the centre-source control is absent from this build")
+        else:
+            page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+            page.select_option("#fdBass2", "root"); page.wait_for_timeout(250)
+            page.evaluate("""() => {
+              if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+                document.addEventListener('atetudes:note', e =>
+                  window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
+              if (!window.__rawHooked) { window.__rawHooked = true;
+                for (const C of [AudioBufferSourceNode, OscillatorNode]) {
+                  const P = C.prototype.start;
+                  C.prototype.start = function(...a) { (window.__raw ||= []).push(1);
+                    return P.apply(this, a); }; } }
+              window.__nt = []; window.__raw = []; }""")
+            page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
+            def cs_basses():
+                out = []
+                for cs_bar in range(4):
+                    page.evaluate("() => { window.__nt = []; window.__raw = [] }")
+                    page.click(f'#tlScroll button >> nth={cs_bar}')
+                    page.wait_for_timeout(450)
+                    got = page.evaluate("""() => ({
+                      bass: (window.__nt.find(n => n.r === 'bass') || {}).m,
+                      nt: window.__nt.length, raw: window.__raw.length,
+                      win: (document.getElementById('roLine').textContent
+                        .match(/frets (\\d+[–-]\\d+)/) || [])[1] })""")
+                    out.append(got)
+                return out
+            cs_f = cs_basses()
+            check(all(g["bass"] is not None for g in cs_f)
+                  and len(set(g["bass"] for g in cs_f)) == 1,
+                  f"{tag} FIXED: four bars, one bass pitch — the pedal "
+                  f"({[g['bass'] for g in cs_f]})")
+            check(all(g["raw"] == g["nt"] for g in cs_f),
+                  f"{tag} FIXED: raw starts == NOTEs, every audited bar "
+                  f"({[(g['nt'], g['raw']) for g in cs_f]})")
+            page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
+              .find(b => b.dataset.src === 'follows').click(); }""")
+            page.wait_for_timeout(300)
+            cs_v = cs_basses()
+            check(all(g["bass"] is not None for g in cs_v)
+                  and len(set(g["bass"] for g in cs_v)) >= 3,
+                  f"{tag} FOLLOWS: the bass tracks each bar's root "
+                  f"({[g['bass'] for g in cs_v]})")
+            check(all(g["raw"] == g["nt"] for g in cs_v),
+                  f"{tag} FOLLOWS: raw parity holds "
+                  f"({[(g['nt'], g['raw']) for g in cs_v]})")
+            check(len(set(g["win"] for g in cs_f + cs_v)) == 1,
+                  f"{tag} the WINDOW never jumps under either source "
+                  f"({sorted(set(g['win'] for g in cs_f + cs_v))})")
+            ro = page.inner_text("#roLine")
+            check("follows the changes" in ro,
+                  f"{tag} the readout says which source is in force: {ro[:100]!r}")
+            page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
+              .find(b => b.dataset.src === 'fixed').click(); }""")
+            page.wait_for_timeout(200)
+            ro = page.inner_text("#roLine")
+            check("a pedal under the moving chords" in ro,
+                  f"{tag} …and the pedal names itself too: {ro[:100]!r}")
+            page.check("#fdMetChk")
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+              { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                          object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
+                          address: 'pattern', figure: '', ref: 0, bass: 'none',
+                          centreSrc: 'fixed', source: 'cycle', custom: '' } }))""")
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+              { detail: { index: 0, request: true } }))""")
+            page.wait_for_timeout(250)
+
         # ---- 260913b item 4: THE CENTRE WORKS ----
         # Scale mode had a centre and nothing consumed it. Ruled: the bass
         # places against the CENTRE (same placeReference, different origin);
@@ -783,13 +862,28 @@ def run_door(pw, door_id):
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
-          window.__nt = []; }""")
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
+          if (!window.__stepAllHooked) { window.__stepAllHooked = true; window.__stepAll = [];
+            document.addEventListener('atetudes:step', e => {
+              const m = e.detail || {};
+              window.__stepAll.push({ i: m.index, req: m.request === true,
+                atk: m.attack === true }); }, true); }
+          window.__nt = []; window.__stepAll = []; }""")
+        # ENTRY NORMALISATION (260914, measured twice and owned): in the
+        # full run the walk can arrive ARMED from an earlier leg (the metro
+        # face read 'Stop' and two clean request→echo pairs produced zero
+        # notes — the armed branch swallows a same-index echo). One stop
+        # disarms whatever was left; the arming leg itself was hunted twice
+        # tonight and not found — flagged in the night's report.
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.evaluate("() => { window.__nt = [] }")
         page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(600)
         c4nt = page.evaluate("() => window.__nt.map(n => n.m)")
+        c4st = page.evaluate("() => window.__stepAll")
+        c4clk = page.evaluate("() => document.getElementById('metroBtn').textContent")
         check(c4a["refMidi"] is not None and int(c4a["refMidi"]) in c4nt,
               f"{tag} 4a: the audition SOUNDS the centre's bass (ref {c4a['refMidi']}, "
-              f"NOTEs {c4nt[:14]})")
+              f"NOTEs {c4nt[:14]}, steps {c4st}, metro {c4clk!r})")
         # 4b: figures address the centre — R-3-5-7 resolves on every bar,
         # the compounds reach the extensions, and 2 still mode-mismatches
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
@@ -995,7 +1089,7 @@ def run_door(pw, door_id):
             page.evaluate("""() => {
               if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
                 document.addEventListener('atetudes:note', e =>
-                  window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+                  window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
               if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
                 document.addEventListener('atetudes:step', e => {
                   if (e.detail && e.detail.request !== true)
@@ -1155,7 +1249,7 @@ def run_door(pw, door_id):
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           window.__nt = []; }""")
         page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(3600)   # a 4-beat bar at 72bpm
         lg_t = page.evaluate("() => window.__nt.map(n => n.t)")
@@ -1733,7 +1827,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
             document.addEventListener('atetudes:step', e => {
               if (e.detail && e.detail.request !== true)
@@ -1791,7 +1885,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           if (!window.__rawHooked) { window.__rawHooked = true; window.__raw = [];
             for (const C of [AudioBufferSourceNode, OscillatorNode]) {
               const P = C.prototype.start;
@@ -2243,7 +2337,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
             document.addEventListener('atetudes:step', e => {
               if (e.detail && e.detail.request !== true)
@@ -2383,7 +2477,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           if (!window.__rawHooked) { window.__rawHooked = true;
             for (const C of [AudioBufferSourceNode, OscillatorNode]) {
               const P = C.prototype.start;

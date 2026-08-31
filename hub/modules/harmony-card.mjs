@@ -19,7 +19,7 @@
  * Visibly inert, not absent: the menu is the model's, the grey is tonight's.
  */
 import { field } from "../../engine/field.mjs";
-import { REFERENCE_CHOICES } from "../../engine/reference.mjs";
+import { REFERENCE_CHOICES, CENTRE_SOURCES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
 
@@ -39,7 +39,7 @@ export const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcDyad"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcDyad", "hcCentreSrc"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -62,10 +62,19 @@ export const harmonyCard = {
   <select id="hcDyad" data-control="hcDyad" hidden></select>
   <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
+  <!-- THE CENTRE'S SOURCE (260914, completing 260831): visible in scale
+       mode only — fixed (a pedal) or following the changes; the value is
+       derived per bar by every consumer, never stored resolved -->
+  <div class="seg hc-srcseg" id="hcCentreSrc" data-control="hcCentreSrc" hidden></div>
   <div class="hint" id="hcNote"></div>`,
 
   styles: `
 .hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px}
+.hc-srcseg{display:flex;gap:6px;margin-top:6px}
+.hc-srcseg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
+  border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
+.hc-srcseg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hc-srcseg[hidden]{display:none}
 #hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
 #hcRef,#hcDyad{width:100%}
@@ -78,7 +87,8 @@ export const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
-    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "none", dyad: [3, 7] };
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "none", dyad: [3, 7],
+      centreSrc: "fixed" };   // the source, not a resolved value (260914)
 
     const fill = (sel, items, current) => {
       sel.textContent = "";
@@ -114,32 +124,58 @@ export const harmonyCard = {
        * is (LIVE — child 1's field.ref). Under a chord it is what sits
        * underneath — the root, a 3rd or a 5th below, fretted and drawn —
        * which is CHILD 5, so the list renders disabled with the reason. */
+      /* the source seg paints in scale mode only — a mode of reading, so a
+       * SEG (the UI standard's own split) */
+      {
+        const seg = byId("hcCentreSrc");
+        seg.hidden = !isScale;
+        if (isScale && !seg.childElementCount) {
+          for (const [v, l] of CENTRE_SOURCES) {
+            const b = d.createElement("button");
+            b.dataset.src = v; b.textContent = l;
+            b.title = v === "fixed"
+              ? "one chosen centre — the chords pass over it (modal study)"
+              : "each bar re-centres on its own chord's root";
+            b.addEventListener("click", () => { cfg = { ...cfg, centreSrc: v }; push(); });
+            seg.appendChild(b);
+          }
+        }
+        for (const b of seg.querySelectorAll("button"))
+          b.classList.toggle("on", b.dataset.src === (cfg.centreSrc || "fixed"));
+      }
       if (isScale) {
         const f = field({ key: cfg.key, scale: cfg.scale });
+        const follows = cfg.centreSrc === "follows";
         fill(byId("hcRef"), f.notes.map((n, i) => ({
           value: "mode:" + i, label: `${n.name} — ${MODES[cfg.scale][i]}` })), "mode:" + cfg.ref);
-        byId("hcRef").disabled = false;
-        byId("hcRefLab").textContent = "Reference tone — the centre the field is read against";
-        byId("hcNote").textContent = cfg.ref
-          ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the reference, not the key.`
-          : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.";
+        /* under FOLLOWS the fixed pick is moot — disabled with the reason
+         * on its own label, the house rule */
+        byId("hcRef").disabled = follows;
+        byId("hcRefLab").textContent = follows
+          ? "Centre — following the changes, each bar re-centres on its own chord"
+          : "Centre — the note the field is read against";   // the ruled word (260914)
+        byId("hcNote").textContent = follows
+          ? "Each bar is read against its own chord's root — the colours and the bass move with the changes."
+          : (cfg.ref
+            ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the centre, not the key.`
+            : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.");
       } else {
         /* THE THREE RELATIVE OPTIONS (child 5, ruled 260831): root, a 3rd
-         * below, a 5th below — relative to the chord, so they will follow the
-         * changes when child 7 brings them. A FIXED reference is deliberately
-         * unbuilt: with one bar, fixed and relative are indistinguishable. */
+         * below, a 5th below — relative to the chord. The FIXED half of that
+         * ruling — deferred "until the chords change" — was completed
+         * 260914 as the scale centre's source (centreDegreeOf). */
         fill(byId("hcRef"), REFERENCE_CHOICES.map(([v, l]) => ({ value: v, label: l })),
           cfg.bass);
-        byId("hcRefLab").textContent = "Bass / reference tone";   // the resting label
+        byId("hcRefLab").textContent = "Bass tone";   // the ruled word (260914)
         byId("hcNote").textContent = cfg.bass === "none"
-          ? "The reference the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
+          ? "The bass the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
           : "A real fretted note on string 5 or 6, chosen against the window — the neck shows it hollow, the readout names what the stack becomes over it.";
       }
     };
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
-    const MINE = ["key", "scale", "object", "ref", "bass", "dyad"];
+    const MINE = ["key", "scale", "object", "ref", "bass", "dyad", "centreSrc"];
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;

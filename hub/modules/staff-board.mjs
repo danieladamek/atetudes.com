@@ -23,7 +23,7 @@ import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
-import { placeReference } from "../../engine/reference.mjs";
+import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
@@ -68,7 +68,8 @@ export const staffBoard = {
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
       movement: "strum",
       address: "pattern", figure: "",
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null,
+      centreSrc: "fixed" };
     let meter = 4;
     let index = 0;
     let barsX = [];                 // per-chord x ranges, for click-to-jump
@@ -85,7 +86,10 @@ export const staffBoard = {
       svgRoot.textContent = "";
       const svg = el("g", {}, svgRoot);
 
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      /* the centre's SOURCE (260914): material on centreMaterialRef — the
+       * window never jumps per bar; the reading shifts per bar */
+      const fld = field({ key: cfg.key, scale: cfg.scale,
+        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
@@ -105,7 +109,11 @@ export const staffBoard = {
        * them IN THE BAR — the playthrough matrix's doctrine ("places or
        * refuses by name, visibly") applied to this board. */
       const selOf = (c) => {
-        if (cfg.object === "scale") return { notes: scaleSel };
+        if (cfg.object === "scale") {
+          const cDeg = centreDegreeOf(cfg.centreSrc, cfg.ref, c.degree);
+          return { notes: cfg.centreSrc === "follows" && cDeg != null
+            ? reRead(scaleSel, cDeg) : scaleSel };
+        }
         const r = cfg.take === "all"
           ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
           : oneOfEach(c.tones, pool, { n: cfg.notesPer, centre: pos.centre });
@@ -313,8 +321,11 @@ export const staffBoard = {
          * bass line is a line. An off-key root has no degree to hang a
          * relative reference on; the readout says so, the staff skips. */
         /* 4a: the centre's reference rides the bass clef under a scale too */
-        const stRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : c.degree;
-        if (cfg.bass !== "none" && (cfg.object === "scale" || c.degree >= 0)) {
+        const stRefDeg = cfg.object === "scale"
+          ? centreDegreeOf(cfg.centreSrc, cfg.ref, c.degree)
+          : c.degree;
+        if (cfg.bass !== "none" && stRefDeg != null
+            && (cfg.object === "scale" || c.degree >= 0)) {
           const rp = placeReference(cfg.bass, stRefDeg, fld, cfg.strings, pos);
           if (rp.note) {
             const m0 = rp.note.midi, pc2 = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;

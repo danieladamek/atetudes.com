@@ -49,6 +49,37 @@ export const REF_OFFSET = { root: 0, third: -2, fifth: -4 };
 /** the ruled trio + none (child 5, 260831) — stated ONCE; both faces that
  * offer the reference (Harmony's select and the under-neck view, 260913)
  * fill from this list rather than keeping their own copies. */
+/** THE CENTRE'S SOURCE (260914 — completing the 260831 ruling, whose own
+ * words deferred this: "A FIXED reference is deliberately unbuilt: with
+ * one bar, fixed and relative are indistinguishable — the distinction
+ * only exists once the chords change, which is child 7's progression."
+ * Child 7 landed 260901; this is the unbuilt half, twelve days due).
+ * A single global centre under a moving progression is contradictory by
+ * construction, so the centre is a CHOICE OF SOURCE, derived per bar:
+ *   "fixed"   — a pedal: one chosen degree, the chords pass over it;
+ *   "follows" — each bar re-centres on its own chord's root degree.
+ * Returns the key-space degree, or null when a bar cannot supply one (an
+ * off-key root under "follows") — callers refuse by name, never guess. */
+export const centreDegreeOf = (source, fixedRef, barDegree) =>
+  source === "follows"
+    ? (Number.isInteger(barDegree) && barDegree >= 0 ? barDegree : null)
+    : (fixedRef ?? 0);
+
+/** the WINDOW IS A POSITION and must not jump per bar (the ratified
+ * window law) — so under "follows" the MATERIAL (window, pool, selection)
+ * anchors in key space and only the READING re-derives per bar: degree
+ * labels, colours and figure addressing shift by the bar's centre. Both
+ * derivations, stated once. */
+export const centreMaterialRef = (source, fixedRef) =>
+  source === "follows" ? 0 : (fixedRef ?? 0);
+export const reRead = (notes, shift) =>
+  shift ? notes.map((n) => ({ ...n, deg: (((n.deg - shift) % 7) + 7) % 7 })) : notes;
+
+export const CENTRE_SOURCES = [
+  ["fixed", "a pedal"],
+  ["follows", "follows the changes"],
+];
+
 export const REFERENCE_CHOICES = [
   ["none", "none"],
   ["root", "the root"],

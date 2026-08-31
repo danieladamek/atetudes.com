@@ -182,6 +182,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-str{cursor:pointer}
 
 .hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px}
+.hc-srcseg{display:flex;gap:6px;margin-top:6px}
+.hc-srcseg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
+  border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
+.hc-srcseg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hc-srcseg[hidden]{display:none}
 #hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
 #hcRef,#hcDyad{width:100%}
@@ -420,6 +425,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <select id="hcDyad" data-control="hcDyad" hidden></select>
   <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
+  <!-- THE CENTRE'S SOURCE (260914, completing 260831): visible in scale
+       mode only — fixed (a pedal) or following the changes; the value is
+       derived per bar by every consumer, never stored resolved -->
+  <div class="seg hc-srcseg" id="hcCentreSrc" data-control="hcCentreSrc" hidden></div>
   <div class="hint" id="hcNote"></div></div>
 <div class="card">
   <h2>Progression</h2>
@@ -5624,6 +5633,37 @@ const REF_OFFSET = { root: 0, third: -2, fifth: -4 };
 /** the ruled trio + none (child 5, 260831) — stated ONCE; both faces that
  * offer the reference (Harmony's select and the under-neck view, 260913)
  * fill from this list rather than keeping their own copies. */
+/** THE CENTRE'S SOURCE (260914 — completing the 260831 ruling, whose own
+ * words deferred this: "A FIXED reference is deliberately unbuilt: with
+ * one bar, fixed and relative are indistinguishable — the distinction
+ * only exists once the chords change, which is child 7's progression."
+ * Child 7 landed 260901; this is the unbuilt half, twelve days due).
+ * A single global centre under a moving progression is contradictory by
+ * construction, so the centre is a CHOICE OF SOURCE, derived per bar:
+ *   "fixed"   — a pedal: one chosen degree, the chords pass over it;
+ *   "follows" — each bar re-centres on its own chord's root degree.
+ * Returns the key-space degree, or null when a bar cannot supply one (an
+ * off-key root under "follows") — callers refuse by name, never guess. */
+const centreDegreeOf = (source, fixedRef, barDegree) =>
+  source === "follows"
+    ? (Number.isInteger(barDegree) && barDegree >= 0 ? barDegree : null)
+    : (fixedRef ?? 0);
+
+/** the WINDOW IS A POSITION and must not jump per bar (the ratified
+ * window law) — so under "follows" the MATERIAL (window, pool, selection)
+ * anchors in key space and only the READING re-derives per bar: degree
+ * labels, colours and figure addressing shift by the bar's centre. Both
+ * derivations, stated once. */
+const centreMaterialRef = (source, fixedRef) =>
+  source === "follows" ? 0 : (fixedRef ?? 0);
+const reRead = (notes, shift) =>
+  shift ? notes.map((n) => ({ ...n, deg: (((n.deg - shift) % 7) + 7) % 7 })) : notes;
+
+const CENTRE_SOURCES = [
+  ["fixed", "a pedal"],
+  ["follows", "follows the changes"],
+];
+
 const REFERENCE_CHOICES = [
   ["none", "none"],
   ["root", "the root"],
@@ -5758,7 +5798,7 @@ function compositeOver(fld, refKeyDeg, tonePcs) {
   if (!far.note || far.stretch !== true || far.note.fret >= 0 && far.note.fret <= 3)
     throw new Error("reference: a reach past the box must carry the stretch flag");
 }
-return { REF_OFFSET, REFERENCE_CHOICES, placeReference, compositeOver };
+return { REF_OFFSET, centreDegreeOf, centreMaterialRef, reRead, CENTRE_SOURCES, REFERENCE_CHOICES, placeReference, compositeOver };
 })();
 
 /* ===== engine/progression.mjs ===== */
@@ -6099,7 +6139,7 @@ const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake, orderBy } = __m_engine_selection_mjs;
 const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
-const { placeReference } = __m_engine_reference_mjs;
+const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, listen, announce } = __m_hub_bus_mjs;
 /* etude-walk.mjs — THE WALK (child 7; the TIME DIMENSION 260902): Play
  * walks the bars, and THE FIGURE WALKS THE SELECTION ACROSS THE CHORD'S
@@ -6164,7 +6204,7 @@ const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum", repeat: false,
+      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -6188,7 +6228,11 @@ const etudeWalk = {
     const clearPending = () => { for (const t of timers) d.defaultView.clearTimeout(t); timers = []; };
 
     const derive = () => {
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      /* the centre's SOURCE (260914): the material anchors on
+       * centreMaterialRef so the window never jumps per bar; the READING
+       * (degrees, colours, figure addressing, the bass) shifts per bar */
+      const fld = field({ key: cfg.key, scale: cfg.scale,
+        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
       return { fld, prog };
@@ -6207,7 +6251,15 @@ const etudeWalk = {
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const pool = materialIn(pos, run.strings, fld);
       let sel = [];
-      if (cfg.object === "scale") sel = scaleTake(pool).notes;
+      const refDeg = cfg.object === "scale"
+        ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+        : cur.degree;
+      if (cfg.object === "scale") {
+        sel = scaleTake(pool).notes;
+        /* the reading shifts to the bar's centre under "follows" */
+        if (cfg.centreSrc === "follows" && refDeg != null)
+          sel = reRead(sel, refDeg);
+      }
       else {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
@@ -6227,8 +6279,7 @@ const etudeWalk = {
        * places against the MODAL CENTRE — same placeReference, same degree
        * arithmetic, the origin is cfg.ref instead of the chord's degree.
        * A mode is only audible against its centre; now it sounds. */
-      const refDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
-      if (cfg.bass !== "none" && refDeg >= 0 && sel.length
+      if (cfg.bass !== "none" && refDeg != null && refDeg >= 0 && sel.length
           && (cfg.object === "scale" || cur.degree >= 0)) {
         const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos);
         if (rp.note) refMidi = rp.note.midi;
@@ -6410,7 +6461,7 @@ const { field, notesOn } = __m_engine_field_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } = __m_engine_selection_mjs;
-const { placeReference, REFERENCE_CHOICES } = __m_engine_reference_mjs;
+const { placeReference, REFERENCE_CHOICES, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { progressionOf, chordAt, movementWord } = __m_engine_progression_mjs;
 const { STRING_SETS } = __m_engine_tetrad_sequence_mjs;
 const { NOTE_VOICE_NAMES } = __m_engine_voices_mjs;
@@ -6715,7 +6766,7 @@ const fieldBoard = {
        * sequence — lives HERE with Placement and The Figure, where the
        * motion lives: block · arpeggio, his two words. A typed figure still
        * sequences regardless (the night-7 ruling, now in its proper home). */
-      movement: "strum", repeat: false,
+      movement: "strum", repeat: false, centreSrc: "fixed",
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -6742,7 +6793,10 @@ const fieldBoard = {
     };
 
     const build = () => {
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      /* the centre's SOURCE (260914): material on centreMaterialRef — the
+       * window never jumps per bar; the reading shifts per bar */
+      const fld = field({ key: cfg.key, scale: cfg.scale,
+        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const dots = deriveField(fld);
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
@@ -6800,8 +6854,15 @@ const fieldBoard = {
       const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
       let sel = [], selMsg = "";
       if (prog.err) selMsg = prog.err;
+      const fdRefDeg = cfg.object === "scale"
+        ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+        : cur.degree;
       if (cfg.object === "scale") {
         sel = scaleTake(pool).notes;
+        if (cfg.centreSrc === "follows") {
+          if (fdRefDeg != null) sel = reRead(sel, fdRefDeg);
+          else selMsg = `the centre cannot follow ${cur.symbol} — its root is not in the key`;
+        }
       } else {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
@@ -6856,11 +6917,10 @@ const fieldBoard = {
        * hint's prose. A refusal is a reason, said in the hint BY NAME. */
       let refP = { note: null, stretch: false, reason: null };
       /* the centre's reference draws exactly as the chord's does (4a) */
-      const fdRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
       if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
         refP = { note: null, stretch: false,
           reason: `the reference is relative to the chord's degree, and ${cur.symbol}'s root is not in the key` };
-      } else if (cfg.bass !== "none") {
+      } else if (cfg.bass !== "none" && fdRefDeg != null) {
         refP = placeReference(cfg.bass, fdRefDeg, fld, run.strings, pos);
         if (refP.note) {
           const rf = FAM[refP.note.deg];
@@ -7365,7 +7425,7 @@ const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start", "repeat"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start", "repeat", "centreSrc"])
         if (k in m && m[k] !== cfg[k]) {
           /* a restored v0.1.0 étude says movement "block"/"arpeggio" — the
            * alias map is the one place the old words are known (260913) */
@@ -7421,7 +7481,7 @@ return { deriveField, fieldBoard };
 /* ===== hub/modules/harmony-card.mjs ===== */
 const __m_hub_modules_harmony_card_mjs = (() => {
 const { field } = __m_engine_field_mjs;
-const { REFERENCE_CHOICES } = __m_engine_reference_mjs;
+const { REFERENCE_CHOICES, CENTRE_SOURCES } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
 /* harmony-card.mjs — v0.9's HARMONY card: the field, what sits on it, and the
@@ -7464,7 +7524,7 @@ const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcDyad"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcDyad", "hcCentreSrc"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -7487,10 +7547,19 @@ const harmonyCard = {
   <select id="hcDyad" data-control="hcDyad" hidden></select>
   <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
+  <!-- THE CENTRE'S SOURCE (260914, completing 260831): visible in scale
+       mode only — fixed (a pedal) or following the changes; the value is
+       derived per bar by every consumer, never stored resolved -->
+  <div class="seg hc-srcseg" id="hcCentreSrc" data-control="hcCentreSrc" hidden></div>
   <div class="hint" id="hcNote"></div>`,
 
   styles: `
 .hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px}
+.hc-srcseg{display:flex;gap:6px;margin-top:6px}
+.hc-srcseg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
+  border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
+.hc-srcseg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hc-srcseg[hidden]{display:none}
 #hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
 #hcRef,#hcDyad{width:100%}
@@ -7503,7 +7572,8 @@ const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
-    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "none", dyad: [3, 7] };
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "none", dyad: [3, 7],
+      centreSrc: "fixed" };   // the source, not a resolved value (260914)
 
     const fill = (sel, items, current) => {
       sel.textContent = "";
@@ -7539,32 +7609,58 @@ const harmonyCard = {
        * is (LIVE — child 1's field.ref). Under a chord it is what sits
        * underneath — the root, a 3rd or a 5th below, fretted and drawn —
        * which is CHILD 5, so the list renders disabled with the reason. */
+      /* the source seg paints in scale mode only — a mode of reading, so a
+       * SEG (the UI standard's own split) */
+      {
+        const seg = byId("hcCentreSrc");
+        seg.hidden = !isScale;
+        if (isScale && !seg.childElementCount) {
+          for (const [v, l] of CENTRE_SOURCES) {
+            const b = d.createElement("button");
+            b.dataset.src = v; b.textContent = l;
+            b.title = v === "fixed"
+              ? "one chosen centre — the chords pass over it (modal study)"
+              : "each bar re-centres on its own chord's root";
+            b.addEventListener("click", () => { cfg = { ...cfg, centreSrc: v }; push(); });
+            seg.appendChild(b);
+          }
+        }
+        for (const b of seg.querySelectorAll("button"))
+          b.classList.toggle("on", b.dataset.src === (cfg.centreSrc || "fixed"));
+      }
       if (isScale) {
         const f = field({ key: cfg.key, scale: cfg.scale });
+        const follows = cfg.centreSrc === "follows";
         fill(byId("hcRef"), f.notes.map((n, i) => ({
           value: "mode:" + i, label: `${n.name} — ${MODES[cfg.scale][i]}` })), "mode:" + cfg.ref);
-        byId("hcRef").disabled = false;
-        byId("hcRefLab").textContent = "Reference tone — the centre the field is read against";
-        byId("hcNote").textContent = cfg.ref
-          ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the reference, not the key.`
-          : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.";
+        /* under FOLLOWS the fixed pick is moot — disabled with the reason
+         * on its own label, the house rule */
+        byId("hcRef").disabled = follows;
+        byId("hcRefLab").textContent = follows
+          ? "Centre — following the changes, each bar re-centres on its own chord"
+          : "Centre — the note the field is read against";   // the ruled word (260914)
+        byId("hcNote").textContent = follows
+          ? "Each bar is read against its own chord's root — the colours and the bass move with the changes."
+          : (cfg.ref
+            ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the centre, not the key.`
+            : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.");
       } else {
         /* THE THREE RELATIVE OPTIONS (child 5, ruled 260831): root, a 3rd
-         * below, a 5th below — relative to the chord, so they will follow the
-         * changes when child 7 brings them. A FIXED reference is deliberately
-         * unbuilt: with one bar, fixed and relative are indistinguishable. */
+         * below, a 5th below — relative to the chord. The FIXED half of that
+         * ruling — deferred "until the chords change" — was completed
+         * 260914 as the scale centre's source (centreDegreeOf). */
         fill(byId("hcRef"), REFERENCE_CHOICES.map(([v, l]) => ({ value: v, label: l })),
           cfg.bass);
-        byId("hcRefLab").textContent = "Bass / reference tone";   // the resting label
+        byId("hcRefLab").textContent = "Bass tone";   // the ruled word (260914)
         byId("hcNote").textContent = cfg.bass === "none"
-          ? "The reference the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
+          ? "The bass the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
           : "A real fretted note on string 5 or 6, chosen against the window — the neck shows it hollow, the readout names what the stack becomes over it.";
       }
     };
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
-    const MINE = ["key", "scale", "object", "ref", "bass", "dyad"];
+    const MINE = ["key", "scale", "object", "ref", "bass", "dyad", "centreSrc"];
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
@@ -7597,7 +7693,7 @@ const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake } = __m_engine_selection_mjs;
 const { progressionOf, chordAt } = __m_engine_progression_mjs;
-const { placeReference } = __m_engine_reference_mjs;
+const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 /* keys-board.mjs — v0.9's ON THE KEYS for Multetudes (surface, 2026-08-29).
@@ -7658,7 +7754,7 @@ const keysBoard = {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] , bass: "none",
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, centreSrc: "fixed" };
     let index = 0;
     let pulseTimers = [];       // the sounding-note pulse (260911, item 4 — field-board's idiom)
     /* livePulses EXTENDS the idiom under a measured defect of this board
@@ -7705,7 +7801,10 @@ const keysBoard = {
           el("rect", { x: xOf(m), y: 14, width: ww * 0.6, height: H * 0.62, fill: "#212126",
             rx: 2, "data-kymidi": m }, svg);
 
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      /* the centre's SOURCE (260914): material on centreMaterialRef — the
+       * window never jumps per bar; the reading shifts per bar */
+      const fld = field({ key: cfg.key, scale: cfg.scale,
+        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
@@ -7717,7 +7816,13 @@ const keysBoard = {
       if (index >= prog.chords.length) index = 0;
       const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
       let sel = [];
-      if (cfg.object === "scale") sel = scaleTake(pool).notes;
+      const kyRefDeg = cfg.object === "scale"
+        ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+        : cur.degree;
+      if (cfg.object === "scale") {
+        sel = scaleTake(pool).notes;
+        if (cfg.centreSrc === "follows" && kyRefDeg != null) sel = reRead(sel, kyRefDeg);
+      }
       else {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
@@ -7727,8 +7832,8 @@ const keysBoard = {
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
        * the marks list) — hollow ring, the board's own idiom for "under" */
       /* 4a (260913b): the centre's reference rings here too */
-      const kyRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
-      if (cfg.bass !== "none" && (cfg.object === "scale" || cur.degree >= 0)) {
+      if (cfg.bass !== "none" && kyRefDeg != null
+          && (cfg.object === "scale" || cur.degree >= 0)) {
         const rp = placeReference(cfg.bass, kyRefDeg, fld, cfg.strings, pos);
         if (rp.note && rp.note.midi >= LO && rp.note.midi <= HI) {
           const black = BLACK.includes(mod(rp.note.midi, 12));
@@ -8195,7 +8300,7 @@ const { positionOf, materialIn, regionOf } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake } = __m_engine_selection_mjs;
 const { progressionOf, chordAt } = __m_engine_progression_mjs;
-const { placeReference, compositeOver } = __m_engine_reference_mjs;
+const { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, listen } = __m_hub_bus_mjs;
 /* neck-readout.mjs — v0.9's READOUT and ASSERT lines (Multetudes surface,
  * 2026-08-29).
@@ -8244,7 +8349,8 @@ const neckReadout = {
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
       bass: "none" ,
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
+      centreSrc: "fixed" };
     let index = 0;
 
     const render = () => {
@@ -8256,7 +8362,9 @@ const neckReadout = {
       };
       let bits = [];
       try {
-        const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+        /* the centre's SOURCE (260914): material stable, reading per bar */
+        const fld = field({ key: cfg.key, scale: cfg.scale,
+          ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
         const run = makeRun(cfg.strings);
         const anchor = Math.max(...run.strings);
         const pos = positionOf({ field: fld, anchorString: anchor,
@@ -8315,6 +8423,21 @@ const neckReadout = {
         bits.push(`bar <b>${index + 1}</b> of ${prog.chords.length}` +
           (cfg.object === "scale" ? "" :
             ` — <b>${cur.symbol}</b> <span class="ro-dim">(${cur.roman})</span>`));
+        const roRefDeg = cfg.object === "scale"
+          ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+          : cur.degree;   // 4a + 260914: the centre, from its source
+        /* WHICH SOURCE IS IN FORCE (260914): the sentence that resolves the
+         * strip/bass mismatch — a pedal under the moving chords, or a
+         * centre that follows. Being explicit here IS the fix; no separate
+         * mismatch sentence exists. */
+        if (cfg.object === "scale") {
+          if (cfg.centreSrc === "follows")
+            bits.push(roRefDeg != null
+              ? `the centre <b>follows the changes</b> — this bar reads against <b>${fld.notes[roRefDeg].name}</b>`
+              : `<span style="color:#B82929">the centre cannot follow ${cur.symbol} — its root is not in the key</span>`);
+          else
+            bits.push(`centre <b>${fld.notes[(cfg.ref ?? 0)].name}</b> — a pedal under the moving chords`);
+        }
         /* THE FRAME'S CARRYING CAPACITY (260908, 2c): computed and thrown
          * away until tonight — how many notes this frame holds and how many
          * of the progression's bars place in it at the current cap. Real
@@ -8343,17 +8466,23 @@ const neckReadout = {
          * the stack becomes over it — R19's sentence. The name arrives from
          * compositeOver's read-back through chord.mjs, or honestly not at
          * all; a refusal is spoken by name, never blanked. */
-        const roRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;   // 4a: the centre
         if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
           bits.push(`<span style="color:#B82929">reference refused: the reference is relative to the ` +
             `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
-        } else if (cfg.bass !== "none") {
+        } else if (cfg.bass !== "none" && roRefDeg != null) {
           const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos);
           check("the reference is a real fretted note or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
               : typeof rp.reason === "string" && rp.reason.length > 0);
-          if (rp.note) {
+          if (rp.note && cfg.object === "scale") {
+            /* a scale has no stack to read back over the bass — the note is
+             * named plainly (the .map-on-null this line replaces was the
+             * night-18 4a change letting this branch run under a scale) */
+            const bn = fld.notes.find((n) => n.pc === (((rp.note.midi % 12) + 12) % 12));
+            bits.push(`the bass under the centre: <b>${bn ? bn.name : "?"}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
+              + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : ""));
+          } else if (rp.note) {
             const comp = compositeOver(fld, rp.note.keyDeg, cur.tones.map((t) => t.pc));
             bits.push(`over <b>${comp.bassName}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
               + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : "")
@@ -10383,7 +10512,7 @@ const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy } = __m_engine_selection_mjs;
-const { placeReference } = __m_engine_reference_mjs;
+const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { writtenValue } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
@@ -10457,7 +10586,8 @@ const staffBoard = {
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
       movement: "strum",
       address: "pattern", figure: "",
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null,
+      centreSrc: "fixed" };
     let meter = 4;
     let index = 0;
     let barsX = [];                 // per-chord x ranges, for click-to-jump
@@ -10474,7 +10604,10 @@ const staffBoard = {
       svgRoot.textContent = "";
       const svg = el("g", {}, svgRoot);
 
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      /* the centre's SOURCE (260914): material on centreMaterialRef — the
+       * window never jumps per bar; the reading shifts per bar */
+      const fld = field({ key: cfg.key, scale: cfg.scale,
+        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
@@ -10494,7 +10627,11 @@ const staffBoard = {
        * them IN THE BAR — the playthrough matrix's doctrine ("places or
        * refuses by name, visibly") applied to this board. */
       const selOf = (c) => {
-        if (cfg.object === "scale") return { notes: scaleSel };
+        if (cfg.object === "scale") {
+          const cDeg = centreDegreeOf(cfg.centreSrc, cfg.ref, c.degree);
+          return { notes: cfg.centreSrc === "follows" && cDeg != null
+            ? reRead(scaleSel, cDeg) : scaleSel };
+        }
         const r = cfg.take === "all"
           ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
           : oneOfEach(c.tones, pool, { n: cfg.notesPer, centre: pos.centre });
@@ -10702,8 +10839,11 @@ const staffBoard = {
          * bass line is a line. An off-key root has no degree to hang a
          * relative reference on; the readout says so, the staff skips. */
         /* 4a: the centre's reference rides the bass clef under a scale too */
-        const stRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : c.degree;
-        if (cfg.bass !== "none" && (cfg.object === "scale" || c.degree >= 0)) {
+        const stRefDeg = cfg.object === "scale"
+          ? centreDegreeOf(cfg.centreSrc, cfg.ref, c.degree)
+          : c.degree;
+        if (cfg.bass !== "none" && stRefDeg != null
+            && (cfg.object === "scale" || c.degree >= 0)) {
           const rp = placeReference(cfg.bass, stRefDeg, fld, cfg.strings, pos);
           if (rp.note) {
             const m0 = rp.note.midi, pc2 = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;

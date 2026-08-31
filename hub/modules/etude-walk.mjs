@@ -45,7 +45,7 @@ import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
-import { placeReference } from "../../engine/reference.mjs";
+import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE,
   listen, announce } from "../bus.mjs";
 
@@ -63,7 +63,7 @@ export const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum", repeat: false,
+      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -87,7 +87,11 @@ export const etudeWalk = {
     const clearPending = () => { for (const t of timers) d.defaultView.clearTimeout(t); timers = []; };
 
     const derive = () => {
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      /* the centre's SOURCE (260914): the material anchors on
+       * centreMaterialRef so the window never jumps per bar; the READING
+       * (degrees, colours, figure addressing, the bass) shifts per bar */
+      const fld = field({ key: cfg.key, scale: cfg.scale,
+        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
       return { fld, prog };
@@ -106,7 +110,15 @@ export const etudeWalk = {
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const pool = materialIn(pos, run.strings, fld);
       let sel = [];
-      if (cfg.object === "scale") sel = scaleTake(pool).notes;
+      const refDeg = cfg.object === "scale"
+        ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+        : cur.degree;
+      if (cfg.object === "scale") {
+        sel = scaleTake(pool).notes;
+        /* the reading shifts to the bar's centre under "follows" */
+        if (cfg.centreSrc === "follows" && refDeg != null)
+          sel = reRead(sel, refDeg);
+      }
       else {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
@@ -126,8 +138,7 @@ export const etudeWalk = {
        * places against the MODAL CENTRE — same placeReference, same degree
        * arithmetic, the origin is cfg.ref instead of the chord's degree.
        * A mode is only audible against its centre; now it sounds. */
-      const refDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
-      if (cfg.bass !== "none" && refDeg >= 0 && sel.length
+      if (cfg.bass !== "none" && refDeg != null && refDeg >= 0 && sel.length
           && (cfg.object === "scale" || cur.degree >= 0)) {
         const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos);
         if (rp.note) refMidi = rp.note.midi;

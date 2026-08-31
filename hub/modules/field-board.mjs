@@ -40,7 +40,7 @@ import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
-import { placeReference, REFERENCE_CHOICES } from "../../engine/reference.mjs";
+import { placeReference, REFERENCE_CHOICES, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { progressionOf, chordAt, movementWord } from "../../engine/progression.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
@@ -297,7 +297,7 @@ export const fieldBoard = {
        * sequence — lives HERE with Placement and The Figure, where the
        * motion lives: block · arpeggio, his two words. A typed figure still
        * sequences regardless (the night-7 ruling, now in its proper home). */
-      movement: "strum", repeat: false,
+      movement: "strum", repeat: false, centreSrc: "fixed",
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -324,7 +324,10 @@ export const fieldBoard = {
     };
 
     const build = () => {
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      /* the centre's SOURCE (260914): material on centreMaterialRef — the
+       * window never jumps per bar; the reading shifts per bar */
+      const fld = field({ key: cfg.key, scale: cfg.scale,
+        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const dots = deriveField(fld);
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
@@ -382,8 +385,15 @@ export const fieldBoard = {
       const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
       let sel = [], selMsg = "";
       if (prog.err) selMsg = prog.err;
+      const fdRefDeg = cfg.object === "scale"
+        ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+        : cur.degree;
       if (cfg.object === "scale") {
         sel = scaleTake(pool).notes;
+        if (cfg.centreSrc === "follows") {
+          if (fdRefDeg != null) sel = reRead(sel, fdRefDeg);
+          else selMsg = `the centre cannot follow ${cur.symbol} — its root is not in the key`;
+        }
       } else {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
@@ -438,11 +448,10 @@ export const fieldBoard = {
        * hint's prose. A refusal is a reason, said in the hint BY NAME. */
       let refP = { note: null, stretch: false, reason: null };
       /* the centre's reference draws exactly as the chord's does (4a) */
-      const fdRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
       if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
         refP = { note: null, stretch: false,
           reason: `the reference is relative to the chord's degree, and ${cur.symbol}'s root is not in the key` };
-      } else if (cfg.bass !== "none") {
+      } else if (cfg.bass !== "none" && fdRefDeg != null) {
         refP = placeReference(cfg.bass, fdRefDeg, fld, run.strings, pos);
         if (refP.note) {
           const rf = FAM[refP.note.deg];
@@ -947,7 +956,7 @@ export const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start", "repeat"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start", "repeat", "centreSrc"])
         if (k in m && m[k] !== cfg[k]) {
           /* a restored v0.1.0 étude says movement "block"/"arpeggio" — the
            * alias map is the one place the old words are known (260913) */
