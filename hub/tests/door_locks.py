@@ -746,6 +746,82 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260913 item 4: REPEAT LOOPS THE CURRENT BAR ----
+        # Ruled scope: the current bar, nothing else. Consulted only at the
+        # advance boundary (a mid-bar toggle never restarts a bar in
+        # flight); the schedule REBUILDS through soundCurrent()'s one
+        # derivation each pass (§4.2.3 — no cache, no board state); the
+        # position never moves, so no STEP echo. Asserted at the effect: N
+        # repetitions produce N bars of the SAME chord's notes at the
+        # AudioContext with ZERO advances, and switching off resumes the
+        # progression at the RIGHT bar.
+        if not page.evaluate("() => !!document.getElementById('fdRepeat')"):
+            check(False, f"{tag} the repeat toggle is absent from this build")
+        else:
+            # boot restore at ENTRY — the leg inherits whatever bar the
+            # previous block parked on, and 'resumes at bar 2' is only
+            # meaningful from bar 1 (the [2]-echo lesson, this same night)
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+              { detail: { index: 0, request: true } }))""")
+            page.wait_for_timeout(200)
+            page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
+            page.fill("#fdBpm", "240"); page.dispatch_event("#fdBpm", "change")
+            page.wait_for_timeout(150)
+            page.click("#fdRepeat"); page.wait_for_timeout(150)
+            check(page.get_attribute("#fdRepeat", "aria-pressed") == "true",
+                  f"{tag} the toggle reads pressed")
+            page.evaluate("""() => {
+              if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+                document.addEventListener('atetudes:note', e =>
+                  window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
+                document.addEventListener('atetudes:step', e => {
+                  if (e.detail && e.detail.request !== true)
+                    window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }
+              if (!window.__rawHooked) { window.__rawHooked = true;
+                for (const C of [AudioBufferSourceNode, OscillatorNode]) {
+                  const P = C.prototype.start;
+                  C.prototype.start = function(...a) { (window.__raw ||= []).push(1);
+                    return P.apply(this, a); }; } }
+              window.__nt = []; window.__adv = []; window.__raw = []; }""")
+            page.click('#tlStripMini button[data-role="play"]')
+            page.wait_for_timeout(3300)   # >3 bar-lengths at 240
+            rp = page.evaluate("""() => ({ nt: window.__nt.map(n => n.m),
+              adv: window.__adv.length, raw: (window.__raw || []).length })""")
+            check(rp["adv"] == 0,
+                  f"{tag} repeating: ZERO advance echoes over three boundaries ({rp['adv']})")
+            check(len(rp["nt"]) >= 8 and len(set(rp["nt"])) <= 5
+                  and len(rp["nt"]) >= 2 * len(set(rp["nt"])),
+                  f"{tag} repeating: the SAME chord's notes came round again — "
+                  f"{len(rp['nt'])} NOTEs over {len(set(rp['nt']))} distinct midis")
+            check(rp["raw"] == len(rp["nt"]),
+                  f"{tag} at the AudioContext: every repetition's raw start IS an "
+                  f"announced NOTE (raws {rp['raw']}, NOTEs {len(rp['nt'])})")
+            # switching off resumes at the RIGHT bar — the next boundary
+            # advances to bar 2, exactly where the repeated bar left off
+            # THE RESUME PROPERTY, derived from the artifact (never a magic
+            # index — the [2]-echo lesson: an inherited context can be
+            # repeating any bar, and resuming at repeated+1 is exactly the
+            # ruling): read WHICH bar is repeating off the strip's own
+            # current chip, switch off, and the first advance must land on
+            # the next one.
+            rp_at = page.evaluate("""() => { const c = document.querySelector('#tlScroll button.tl-cur');
+              const all = [...document.querySelectorAll('#tlScroll button')];
+              return all.indexOf(c); }""")
+            page.evaluate("() => { window.__adv = [] }")
+            page.click("#fdRepeat")
+            page.wait_for_timeout(1400)
+            rp2 = page.evaluate("() => window.__adv.map(a => a.i)")
+            page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+            check(rp_at >= 0 and len(rp2) >= 1 and rp2[0] == rp_at + 1,
+                  f"{tag} repeat OFF resumes the progression at the bar AFTER the one "
+                  f"repeating (was on chip {rp_at}, echoes {rp2})")
+            page.check("#fdMetChk")
+            page.fill("#fdBpm", "72"); page.dispatch_event("#fdBpm", "change")
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+              { detail: { index: 0, request: true } }))""")
+            page.wait_for_timeout(250)
+
         # ---- 260913 item 3: THE UNDER-NECK BLOCK — TWO NEW VIEWS OF OLD STATE ----
         # bpm under the neck is the clock's second view (the metronome
         # checkbox's own idiom, copied); the bass select is Harmony's second

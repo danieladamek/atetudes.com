@@ -98,7 +98,7 @@ export const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdBass2", "fdMini"],
+    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat"],
 
   markup: `
   <div class="bh"><span>On the neck</span></div>
@@ -170,6 +170,8 @@ export const fieldBoard = {
         <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
           title="the tempo — one state, two views; the Metronome card owns the clock">
         <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+        <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
+          title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
       </div>
       <div class="fd-railrow">
         <span class="fd-lab2">voice</span>
@@ -236,6 +238,9 @@ export const fieldBoard = {
 .fd-undermini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 .fd-undermini button:hover{border-color:var(--ink)}
+#fdRepeat{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;margin-left:2px}
+#fdRepeat:hover{border-color:var(--ink)}
 #fdBass2{font:inherit;font-size:12px;padding:3px 6px;max-width:260px}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
@@ -290,7 +295,7 @@ export const fieldBoard = {
        * sequence — lives HERE with Placement and The Figure, where the
        * motion lives: block · arpeggio, his two words. A typed figure still
        * sequences regardless (the night-7 ruling, now in its proper home). */
-      movement: "strum",
+      movement: "strum", repeat: false,
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -547,6 +552,15 @@ export const fieldBoard = {
         atLab.lastChild.textContent = cfg.object === "scale"
           ? " all tones — a scale takes the whole box" : " all tones";
       }
+      /* the repeat toggle paints from the same build — pressed state
+       * styled inline (the orphan-check dodge, tonight's established one) */
+      {
+        const rb = byId("fdRepeat");
+        rb.setAttribute("aria-pressed", cfg.repeat ? "true" : "false");
+        rb.style.background = cfg.repeat ? "var(--ink)" : "";
+        rb.style.color = cfg.repeat ? "#fff" : "";
+        rb.style.borderColor = cfg.repeat ? "var(--ink)" : "";
+      }
       /* the bass view paints from the same build — Harmony's state, echoed */
       {
         const b2 = byId("fdBass2");
@@ -637,7 +651,7 @@ export const fieldBoard = {
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
         startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer,
         address: cfg.address, figure: cfg.figure, movement: cfg.movement,
-        take: cfg.take });
+        take: cfg.take, repeat: cfg.repeat });
     };
 
     let followMsg = null;   // the named forced follow (260911, item 6) — one build's worth
@@ -812,6 +826,9 @@ export const fieldBoard = {
     byId("fdAllTones").addEventListener("change", (e) => {
       cfg = { ...cfg, take: e.target.checked ? "all" : "one" }; push();
     });
+    byId("fdRepeat").addEventListener("click", () => {
+      cfg = { ...cfg, repeat: !cfg.repeat }; push();
+    });
 
     byId("fdRailBtn").addEventListener("click", () => {
       const r = byId("fdRail");
@@ -906,7 +923,7 @@ export const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start", "repeat"])
         if (k in m && m[k] !== cfg[k]) {
           /* a restored v0.1.0 étude says movement "block"/"arpeggio" — the
            * alias map is the one place the old words are known (260913) */

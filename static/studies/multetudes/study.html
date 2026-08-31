@@ -143,6 +143,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-undermini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 .fd-undermini button:hover{border-color:var(--ink)}
+#fdRepeat{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;margin-left:2px}
+#fdRepeat:hover{border-color:var(--ink)}
 #fdBass2{font:inherit;font-size:12px;padding:3px 6px;max-width:260px}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
@@ -516,6 +519,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
         <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
           title="the tempo — one state, two views; the Metronome card owns the clock">
         <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+        <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
+          title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
       </div>
       <div class="fd-railrow">
         <span class="fd-lab2">voice</span>
@@ -6115,7 +6120,7 @@ const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum",
+      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum", repeat: false,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -6219,6 +6224,19 @@ const etudeWalk = {
        * still losing its last beat to its own downbeat) */
       spent += 1;
       if (spent > chordBeats(derive().prog)) {
+        if (cfg.repeat) {
+          /* REPEAT (260913, item 4 — ruled: the CURRENT bar): the boundary
+           * that would advance repeats instead. Consulted only HERE, so a
+           * mid-bar toggle never restarts a bar in flight; the downbeat is
+           * the repeated bar's beat 1 (the 260902 accounting, unchanged);
+           * the schedule is REBUILT through soundCurrent()'s one derivation
+           * every pass — §4.2.3, no cache, no board state — and the position
+           * never moves, so no STEP echo and every board simply keeps
+           * showing the bar that is sounding. */
+          spent = 1;
+          soundCurrent();
+          return;
+        }
         advancing = true;
         announce(d, STEP_CHANGED, { index: index + 1, request: true });
         advancing = false;
@@ -6448,7 +6466,7 @@ const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdBass2", "fdMini"],
+    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat"],
 
   markup: `
   <div class="bh"><span>On the neck</span></div>
@@ -6520,6 +6538,8 @@ const fieldBoard = {
         <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
           title="the tempo — one state, two views; the Metronome card owns the clock">
         <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+        <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
+          title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
       </div>
       <div class="fd-railrow">
         <span class="fd-lab2">voice</span>
@@ -6586,6 +6606,9 @@ const fieldBoard = {
 .fd-undermini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 .fd-undermini button:hover{border-color:var(--ink)}
+#fdRepeat{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;margin-left:2px}
+#fdRepeat:hover{border-color:var(--ink)}
 #fdBass2{font:inherit;font-size:12px;padding:3px 6px;max-width:260px}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
@@ -6640,7 +6663,7 @@ const fieldBoard = {
        * sequence — lives HERE with Placement and The Figure, where the
        * motion lives: block · arpeggio, his two words. A typed figure still
        * sequences regardless (the night-7 ruling, now in its proper home). */
-      movement: "strum",
+      movement: "strum", repeat: false,
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -6897,6 +6920,15 @@ const fieldBoard = {
         atLab.lastChild.textContent = cfg.object === "scale"
           ? " all tones — a scale takes the whole box" : " all tones";
       }
+      /* the repeat toggle paints from the same build — pressed state
+       * styled inline (the orphan-check dodge, tonight's established one) */
+      {
+        const rb = byId("fdRepeat");
+        rb.setAttribute("aria-pressed", cfg.repeat ? "true" : "false");
+        rb.style.background = cfg.repeat ? "var(--ink)" : "";
+        rb.style.color = cfg.repeat ? "#fff" : "";
+        rb.style.borderColor = cfg.repeat ? "var(--ink)" : "";
+      }
       /* the bass view paints from the same build — Harmony's state, echoed */
       {
         const b2 = byId("fdBass2");
@@ -6987,7 +7019,7 @@ const fieldBoard = {
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
         startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer,
         address: cfg.address, figure: cfg.figure, movement: cfg.movement,
-        take: cfg.take });
+        take: cfg.take, repeat: cfg.repeat });
     };
 
     let followMsg = null;   // the named forced follow (260911, item 6) — one build's worth
@@ -7162,6 +7194,9 @@ const fieldBoard = {
     byId("fdAllTones").addEventListener("change", (e) => {
       cfg = { ...cfg, take: e.target.checked ? "all" : "one" }; push();
     });
+    byId("fdRepeat").addEventListener("click", () => {
+      cfg = { ...cfg, repeat: !cfg.repeat }; push();
+    });
 
     byId("fdRailBtn").addEventListener("click", () => {
       const r = byId("fdRail");
@@ -7256,7 +7291,7 @@ const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start", "repeat"])
         if (k in m && m[k] !== cfg[k]) {
           /* a restored v0.1.0 étude says movement "block"/"arpeggio" — the
            * alias map is the one place the old words are known (260913) */

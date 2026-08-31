@@ -63,7 +63,7 @@ export const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum",
+      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum", repeat: false,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -167,6 +167,19 @@ export const etudeWalk = {
        * still losing its last beat to its own downbeat) */
       spent += 1;
       if (spent > chordBeats(derive().prog)) {
+        if (cfg.repeat) {
+          /* REPEAT (260913, item 4 — ruled: the CURRENT bar): the boundary
+           * that would advance repeats instead. Consulted only HERE, so a
+           * mid-bar toggle never restarts a bar in flight; the downbeat is
+           * the repeated bar's beat 1 (the 260902 accounting, unchanged);
+           * the schedule is REBUILT through soundCurrent()'s one derivation
+           * every pass — §4.2.3, no cache, no board state — and the position
+           * never moves, so no STEP echo and every board simply keeps
+           * showing the bar that is sounding. */
+          spent = 1;
+          soundCurrent();
+          return;
+        }
         advancing = true;
         announce(d, STEP_CHANGED, { index: index + 1, request: true });
         advancing = false;
