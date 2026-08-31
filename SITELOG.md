@@ -1,3 +1,36 @@
+## 2026-08-31 — Multetudes v0.1.0 published: atetudes.com/studies/multetudes/
+
+- **The first public edition of the Multetudes door** — source edition v0.1.0
+  (hub/doors/multetudes.door.mjs, built by hub/tools/build.mjs; Update Log 260911.1 and the
+  sixteen build-night reports behind it). The built page is copied **byte-identical** to
+  `static/studies/multetudes/study.html` (asserted by `cmp` at ingest); the wrapper page
+  `content/studies/multetudes.md` (`layout: study`) serves the permanent URL with the site
+  navbar over the full-viewport iframe and the "Open standalone" link. The door's footer
+  line "Not a published study" retired with the publish — true until this build, false the
+  moment the file landed.
+- **The census took the study as a first-class carrier**: engine/tests/_family.mjs and
+  host-conformance.test.mjs gained multetudes as an app (engine suite 552 → 558, the derived
+  no-drift pin green against the byte-identical copy); tools/family_floor.py now walks 20
+  surfaces, 13 passing. The host-conformance nouns entry corrected to `item: "note"` — the
+  door's shipped word (D12), not the pre-260911 "entry".
+- **The landing card** joined `/` between Tetradetudes and Modes, its thumbnail captured by
+  `tools/capture_cards.py` — the tool extended with `cap_multetudes` at the RATIFIED BOOT
+  (the note-for-note gate-pinned block: Bb, frets 3–7, bar 1 of 8), asserted by the door's
+  own readout before capture; frame choice is the session's, pending Daniel's pick. All five
+  cards recaptured through the tool (the four existing frames still reachable); 95 kB for
+  the new card, 237 kB total, within budget.
+- **One defect caught at the gate's own doctrine**: the wrapper's unquoted YAML summary
+  broke the whole hugo build — and the first "green" was false (the exit code read off a
+  pipeline's `head`, not hugo; `public/` was ten days stale and check_site had blessed the
+  old site). Summary quoted, exit read properly, 21 pages checked, all links resolve.
+- Also riding: Daniel's `.gitignore` tidy (.bevel/.vscode/scratch pad) and his welcome-post
+  edit ("The Metro Journal"). Note: the welcome post still says "the three below" — with
+  Multetudes published that sentence is due an edit, left for Daniel (his authored prose).
+- Verified per the ritual: hugo exit 0 · tools/check_site.py 21 pages, all internal links
+  resolve · wrapper, landing, blog and standalone rendered at 1380px and 390px with zero
+  console errors · the standalone boots its pinned block offline-style over file:// and
+  http alike. Live spot-check after deploy recorded below the push.
+
 ## 2026-08-21 — DEPLOYED: the four card thumbnails live
 
 - `579a99e` deployed alone (the dispatch's four piggyback commits had already shipped earlier

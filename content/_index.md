@@ -59,6 +59,12 @@ other.</p>
     subtitle="Design a four-voice tetrad étude: pick a key, a cycle, a string set and a voicing family — close, drop-2 and drop-3 chords walk through progressions with minimal voice movement, on the neck, the staff and the keyboard."
   >}}
   {{< card
+    link="/studies/multetudes/"
+    image="/assets/cards/multetudes.png"
+    title="Multetudes — the Étude Designer"
+    subtitle="Build an étude from the ground up: frame a position on the neck, pick what sits on it — scale, dyad, triad, tetrad or shell — write the figure in slots or chord tones, run it through a progression, and hear it on the neck, the staff and the keys."
+  >}}
+  {{< card
     link="/studies/modes-from-pentatonic-boxes/"
     image="/assets/cards/modes-from-pentatonic-boxes.png"
     title="Modes from Pentatonic Boxes"

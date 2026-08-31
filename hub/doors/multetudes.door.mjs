@@ -70,13 +70,19 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
-    /* v0.0.5 (260901, child 7): the progression — cycle · form · custom,
+    /* v0.1.0 (260911, the publish): the first public edition — served at
+     * atetudes.com/studies/multetudes/. The footer's "Not a published study"
+     * went with it: it was true until this build and false the moment the
+     * file landed in static/studies/, which is §4.4's silent divergence
+     * pointed at the reader. Version scheme follows tetradetudes, whose
+     * v0.1.x line likewise began at its publish.
+     * v0.0.5 (260901, child 7): the progression — cycle · form · custom,
      * the bar count derived, the chart line and the étude staff live end to
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.0.5",
-    footer: "A hub door built from hub/doors/multetudes.door.mjs. Not a published study. " +
+    blurb: "one tool that holds many études · v0.1.0",
+    footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
   },

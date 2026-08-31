@@ -251,11 +251,34 @@ def cap_modes(browser):
     return shoot(page, cover_16x10(page, *subject, pad=10), "modes-from-pentatonic-boxes")
 
 
+def cap_multetudes(browser):
+    """The RATIFIED BOOT (the note-for-note pinned block, 260904): Bb major,
+    the window from the 5th on string 4 at frets 3-7, the tetrad one-of-each,
+    bar 1 of 8 placing. The boot is the one state the gate pins note-for-note,
+    so the frame cannot drift without the door gate going red first. Chosen by
+    the session at the v0.1.0 publish, PENDING Daniel's own frame pick — swap
+    the state here when he names one. Crop: the chip strip and the neck, the
+    door's signature."""
+    page = fresh(browser, "multetudes")
+    ro = norm(page.inner_text("#roLine"))
+    want = ("Bb major · bar 1 of 8 — Bbmaj7 (I) · frame from the 5th on string 4, "
+            "frets 3–7 (12 notes · 8/8 bars place) · strings 4–3–2–1, grip · "
+            "1+1+1+1 across the set (a block)")
+    if ro != want:
+        die("multetudes", want, ro)
+    if page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") != 4:
+        die("multetudes", "four selection dots at boot", "a different count")
+    subject = union(bbox(page, "#tlScroll"), bbox(page, "#fieldSvg"))
+    return shoot(page, cover_16x10(page, *subject, pad=10), "multetudes")
+
+
 def main():
     total = 0.0
+    caps = (cap_metronome, cap_triadetudes, cap_tetradetudes, cap_modes,
+            cap_multetudes)
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        for fn in (cap_metronome, cap_triadetudes, cap_tetradetudes, cap_modes):
+        for fn in caps:
             kb = fn(browser)
             if kb > 120:
                 sys.exit(f"BUDGET: {fn.__name__} produced {kb:.0f} kB (> 120 kB limit)")
@@ -263,7 +286,7 @@ def main():
         browser.close()
     if total > 400:
         sys.exit(f"BUDGET: {total:.0f} kB total (> 400 kB limit)")
-    print(f"four cards, {total:.0f} kB total")
+    print(f"{len(caps)} cards, {total:.0f} kB total")
 
 
 if __name__ == "__main__":

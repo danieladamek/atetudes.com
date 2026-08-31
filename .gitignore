@@ -17,6 +17,9 @@ resources/
 # Tooling / OS
 .claude/
 .DS_Store
+.bevel/
+.vscode/
+scratch pad/
 
 # Python
 __pycache__/

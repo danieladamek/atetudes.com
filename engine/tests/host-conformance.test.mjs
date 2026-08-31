@@ -60,6 +60,21 @@ const NOTEPAD_HOSTS = [
       msg: "saveMsg", importMsg: "importMsg", list: "histList",
       count: "histCount", storeNote: "storeNote", controls: "journalControls",
       handoff: "handoffNote" } },
+  { name: "multetudes",
+    /* item 1 (260911): this host TOOK the placement — copyBtn and paletteRoot
+     * are DECLARED mounts here, not auto-appends. The auto-append path stays
+     * exercised by triadetudes above; it is the family's net for a host that
+     * has not decided, and one host deciding is not a reason to remove it.
+     * nouns: "note" is v0.9's word, adopted by the same item (D12) — the
+     * entry describes the host as SHIPPED. */
+    nouns: { item: "note", apply: "Restore étude" },
+    mounts: { pad: "journalIn", saveBtn: "saveEntry", clearBtn: "clearPad",
+      confirmRoot: "clearConfirm", confirmSave: "clearSave",
+      confirmDiscard: "clearDiscard", confirmCancel: "clearCancel",
+      exportBtn: "exportLog", copyBtn: "copyBtn", importBtn: "importBtn",
+      importFile: "importFile", msg: "saveMsg", importMsg: "importMsg",
+      list: "histList", count: "histCount", storeNote: "storeNote",
+      controls: "journalControls", handoff: "handoffNote" } },
 ];
 
 /* The MEMBERSHIP of these host lists is the census's fact: every study the
@@ -188,6 +203,9 @@ const METRONOME_HOSTS = [
   { name: "tetradetudes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
       "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
+  { name: "multetudes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
+      "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
+      "clickVolVal", "beatLamp"] },
 ];
 const METRONOME_GUARANTEE = "every At-Etudes app carries this metronome, first block, this look";
 
@@ -221,7 +239,7 @@ test("§4.3 metronome: the control inventory and the family guarantee render in 
 // and lives in hub/tests/door_locks.py where one runs.
 
 const ROW_COUNTS = { Metronome: 4, Transport: 5 };
-const GRAMMAR_HOSTS = ["metronome", "triadetudes", "tetradetudes"];
+const GRAMMAR_HOSTS = ["metronome", "triadetudes", "tetradetudes", "multetudes"];
 
 test("§4.3 grammar: metronome cards are four row groups, transport cards five, in every host", () => {
   for (const name of GRAMMAR_HOSTS) {

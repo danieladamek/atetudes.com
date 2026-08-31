@@ -16,7 +16,7 @@ they have to, shows them on the neck, the staff and the keyboard, plays them, an
 log of what you practised. The three below share one engine, and they go in this order for
 a reason — each one is the last one with more voices.
 
-- [Metronome](/studies/metronome/) — the click every étude carries, standing on its own:
+- [The Metro Journal ](/studies/metronome/) — the click every étude carries, standing on its own:
   three voices, tap tempo, accents, subdivisions, and a notepad that saves an idea next to
   the tempo it arrived at. Start here and it will feel familiar inside the other two.
 - [Triadetudes — the Triad Étude Designer](/studies/triadetudes/) — **three voices.** Three

@@ -76,6 +76,24 @@ export const FAMILY = new Map([
       staff:     { root: "#score" },
     },
   }],
+  ["multetudes", {
+    kind: "app",
+    surfaces: {
+      metronome: { start: "#metroBtn" },
+      /* the transport is the ÉTUDE's own mini (hub/mini.mjs), not a transport
+       * card — this door does not mount one. The handle names the ROLE the
+       * mini stamps on its buttons rather than a position in the row, so a
+       * reordered mini cannot silently retarget the pin. */
+      transport: { play: '#stMini button[data-role="play"]' },
+      /* the note handle targets a SELECTION dot, which carries its own midi —
+       * the same lesson the triad and tetrad entries above record twice: the
+       * board's bare field circles are inert markers, and a handle aimed at
+       * them passes while nothing sounds. data-selmidi became addressable
+       * with the keys' pulse work (260911, item 4). */
+      neck:      { root: "#fieldSvg", note: "#fieldSvg [data-selmidi]" },
+      staff:     { root: "#stSvg" },
+    },
+  }],
   ["metronome", {
     kind: "appliance",   // R2, ratified 2026-08-20 — exempt from F2/F3/F4 by kind
     surfaces: {
