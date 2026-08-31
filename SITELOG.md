@@ -1,3 +1,13 @@
+## 2026-08-31 — CORRECTION: the Multetudes landing card comes down (the URL stays live)
+
+- The 260911 ruling was **live URL, unlisted, until the interface pass lands** — the publish
+  added the card anyway: a ruling overwritten by the work rather than by a decision. The card
+  is removed from `/`; the wrapper page and `static/studies/multetudes/study.html` are
+  untouched (the URL is permanent and stays live), and the thumbnail stays on disk
+  (`assets/cards/multetudes.png` — deleting published assets needs approval, and it will be
+  wanted again). **The card goes back up when the interface pass ships — possibly the same
+  night.** A correction, not a deletion.
+
 ## 2026-08-31 — DEPLOYED: Multetudes v0.1.0 live
 
 - `9d5a468` deployed (Pages run 33387299249 green: build 5m10s with the full door-lock suite
