@@ -837,8 +837,8 @@ def m32_the_override_goes_silent_again():
     # and the matrix's contradiction leg must catch block standing raised
     # and real under a ruling figure.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        '      const figRules = cfg.object !== "scale" && !fig.err\n'
-        '        && !!(fig.order && fig.order.length);',
+        # anchor re-aimed 260913b (item 4b widened the rule to scales)
+        '      const figRules = !fig.err && !!(fig.order && fig.order.length);',
         '      const figRules = false;   // the override silent again')
     try:
         p.write_text(mutated)
@@ -878,12 +878,10 @@ def m34_the_figure_tolerates_junk_again():
     # silence ("R,Q" keeps the R, drops the Q). The named-refusal pins must
     # bite on both alphabets.
     p, original, mutated = patch("engine/selection.mjs",
-        '    if (legal.includes(ch)) { toks.push(ch); continue; }\n'
-        '    return { order: null, err: address === "pattern"\n'
-        '      ? `"${ch}" is not a string — strings are 1–6`\n'
-        '      : `"${ch}" is not a tone — tones are R, 3, 5, 7` };',
-        '    if (legal.includes(ch)) { toks.push(ch); }\n'
-        '    continue;   // tolerant again: junk vanishes without a word')
+        # anchor re-aimed 260913b (item 4b restructured the tokenizer;
+        # the tones junk refusal is one line in the greedy scan)
+        '      return { order: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13` };',
+        '      { i += 1; continue; }   // tolerant again: junk vanishes without a word')
     try:
         p.write_text(mutated)
         build()
