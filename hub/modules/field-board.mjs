@@ -307,7 +307,14 @@ export const fieldBoard = {
     let curB = null;            // { fld, run, pos, region, aNotes } of the last build
     let dragging = null;
     let pulseTimers = [];       // the sounding-note pulse (260905, item 5)
-    let pendingPulses = [];     // NOTEs that beat the rebuild (260909, item 2) — flushed by build()
+    /* livePulses — the keys' 260911 idiom, copied here 260913b (the ruled
+     * latent twin): a ring's LIFETIME BELONGS TO THE NOTE, not to the DOM
+     * that displays it. Every sounded note keeps { midi, until }; build()
+     * re-rings survivors on the fresh dots for their REMAINING life. This
+     * subsumes the 260909 pending case (a pulse with no dot yet is a
+     * survivor that finds one at the next build) and closes the wipe race
+     * (a ring born just before a shared-pitch rebuild died young). */
+    let livePulses = [];        // { midi, until }
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -640,12 +647,11 @@ export const fieldBoard = {
       byId("fdLegend").innerHTML = FAM.map((f2) =>
         `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
         + `<span style="margin-left:8px">colour = function against ${cfg.ref ? "the reference tone" : "the key"}</span>`;
-      /* the held first-note pulses land on the fresh dots (260909, item 2) —
-       * a NOTE that arrived mid-rebuild rings here or expires (150ms) */
+      /* every living pulse re-rings on the fresh dots, for what is left
+       * of its 320ms — survivors of the wipe and first-notes alike */
       const now = d.defaultView.performance.now();
-      const held = pendingPulses;
-      pendingPulses = [];
-      for (const pp of held) if (now - pp.t < 150) ringFor(pp.midi);
+      livePulses = livePulses.filter((p2) => p2.until > now);
+      for (const p2 of livePulses) ringFor(p2.midi, p2.until - now);
     };
 
     const push = () => {
@@ -747,7 +753,7 @@ export const fieldBoard = {
 
     /* what you see pulsing is what you hear (fretboard-stage's own words) —
      * the ring drawn AT THE DRAWN DOT's own coordinates, never recomputed */
-    const ringFor = (midi) => {
+    const ringFor = (midi, ttl = 320) => {
       const svg = byId("fieldSvg");
       const layer = svg && svg.querySelector(".fd-pulselayer");
       if (!layer) return 0;
@@ -759,7 +765,7 @@ export const fieldBoard = {
         const ring = el("circle", { class: "fd-pulse", cx: c.getAttribute("cx"),
           cy: c.getAttribute("cy"), r: 19, fill: "none", stroke: "#212126",
           "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
-        pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), 320));
+        pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), ttl));
       }
       return hits.length;
     };
@@ -772,8 +778,10 @@ export const fieldBoard = {
      * build() finishes. A miss that never finds a dot simply expires. */
     listen(d, NOTE, (m) => {
       if (!m || typeof m.midi !== "number") return;
-      if (ringFor(m.midi) === 0)
-        pendingPulses.push({ midi: m.midi, t: d.defaultView.performance.now() });
+      const now = d.defaultView.performance.now();
+      livePulses = livePulses.filter((p2) => p2.until > now);
+      livePulses.push({ midi: m.midi, until: now + 320 });
+      ringFor(m.midi);
     });
 
     byId("fieldSvg").addEventListener("click", (e) => {

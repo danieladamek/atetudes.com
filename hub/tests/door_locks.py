@@ -746,6 +746,53 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260913b item 3: THE NECK'S RING SURVIVES A SHARED-PITCH REBUILD ----
+        # The latent twin of the keys' 260911 wipe race, ruled 260912 and
+        # deferred once: under STRUM movement every advance announces all
+        # four notes at once, and any midi shared between consecutive bars
+        # rings against the OLD bar's dot — which the rebuild wipes ~10ms
+        # later. sounded ⊆ drawn asserted at the artifact first, as the
+        # keys did: every sounded note of a strum pass rings at its own
+        # drawn dot, advance notes included.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+        page.uncheck("#fdMetChk")
+        page.fill("#fdBpm", "240"); page.dispatch_event("#fdBpm", "change")
+        page.wait_for_timeout(150)
+        page.evaluate("""() => {
+          if (!window.__fdRingHooked) { window.__fdRingHooked = true; window.__fdRing = [];
+            document.addEventListener('atetudes:note', (e) => {
+              const m = e.detail || {};
+              if (typeof m.midi !== 'number') return;
+              const row = { midi: m.midi, drawn: false, rang: false };
+              window.__fdRing.push(row);
+              setTimeout(() => {
+                const svg = document.getElementById('fieldSvg');
+                const dot = svg && svg.querySelector('.fd-sel[data-selmidi="' + m.midi + '"] circle');
+                if (!dot) return;
+                row.drawn = true;
+                row.rang = [...svg.querySelectorAll('.fd-pulse')].some((rg) =>
+                  rg.getAttribute('cx') === dot.getAttribute('cx')
+                  && rg.getAttribute('cy') === dot.getAttribute('cy'));
+              }, 120);
+            }, true); }
+          window.__fdRing = []; }""")
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(3400)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(400)
+        fd_rows = page.evaluate("() => window.__fdRing")
+        check(len(fd_rows) >= 8 and all(r["drawn"] for r in fd_rows),
+              f"{tag} the strum pass sounded and every note has a drawn dot "
+              f"({len(fd_rows)} notes)")
+        check(all(r["rang"] for r in fd_rows),
+              f"{tag} every sounded note RINGS through the rebuild — silent: "
+              f"{[r['midi'] for r in fd_rows if not r['rang']]}")
+        page.check("#fdMetChk")
+        page.fill("#fdBpm", "72"); page.dispatch_event("#fdBpm", "change")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(250)
+
         # ---- 260913b item 1: EACH SLIDER BESIDE THE THING IT GOVERNS ----
         # The dispatch drew a floating right column; the PO meant an
         # association (harmony↔voice, bass↔reference). Asserted at the
