@@ -1,3 +1,12 @@
+## 2026-08-31 — DEPLOYED: Multetudes v0.2.0 live, card restored
+
+- `4b7d1ab` deployed (Pages run 33426572489 green, build 5m31s with the full gate in CI).
+  Live spot-checks: `/`, the wrapper and the standalone all answer 200; the live study.html
+  is **shasum-identical** to the committed copy (a6dd99fce99e) and serves v0.2.0; the
+  landing card is back on `/`. Bite 37/37 from its log before the merge; the byte deltas in
+  the night-17 report were measured from the post-harness builds (the mid-harness read was
+  m3's artifact and went in the bin).
+
 ## 2026-08-31 — Multetudes v0.2.0: the interface pass (the wireframe lands), card restored
 
 - **Source edition v0.2.0** (hub door, Update Log 260913.1; the night-17 report has the full
