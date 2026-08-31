@@ -2898,6 +2898,12 @@ console.log(JSON.stringify(out));
         # the gate asserts it again.
         want = [t for t in sections(proto) if t not in ("what this configuration hits",)]
         got = [t for t in sections(page) if t != "note"]
+        # RENAME ALIASES (rule 7 — rewritten with the reason): a ruled rename
+        # keeps the section's identity while its name moves; the census
+        # compares identity, not spelling. 260914: v0.9's "harmony" is the
+        # door's "centricity" (register 27).
+        RENAMED = { "harmony": "centricity" }
+        got = got + [k for k, v in RENAMED.items() if v in got]
         for t in want:
             check(t in got, f"{tag} v0.9 section {t!r} is missing from the door "
                             f"(door sections: {got})")
