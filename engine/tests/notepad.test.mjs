@@ -11,7 +11,7 @@ import { emptyDoc, makeEntry, addEntry, editEntry, deleteEntry, reorderEntry,
   fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart } from "../notepad.mjs";
 import { parseAtchart, serializeAtchart, readApp } from "../atchart.mjs";
 import { readFileSync } from "node:fs";
-import { CENSUS } from "./_carriers.mjs";
+import { CENSUS, OWED_DRIFT } from "./_carriers.mjs";
 
 const strip = (doc) => ({ pad: doc.pad,
   entries: doc.entries.map(({ id, savedAt, heading, text, payload }) =>
@@ -120,13 +120,18 @@ test("corpus, the nastiest: an entry whose text contains fenced blocks of its ow
     "the real envelope (end-anchored) still found");
 });
 
-test("a ```chart fence in a NOTE is refused by name — the format holds one chart per file", () => {
+test("a ```chart fence in a NOTE is refused by name — and the refusal names the ROUTE", () => {
   // emitting it would produce a file the format itself refuses ("multiple
   // chart blocks are reserved for v2") — the write refuses instead, content
-  // stays in the model, and the message steers to the chart block
+  // stays in the model. PIN REWRITTEN 260911 (item 2a, with the reason): the
+  // old assertion matched the spec citation ("one chart per file"), which is
+  // exactly the wording the PO could not act on. The message now names the
+  // route — move the chart into the pad, whose one fence lifts into the
+  // file's chart block — and the pin asserts THAT, the stronger form.
   const doc = addEntry(emptyDoc(), { id: "c1", savedAt: "2026-08-11T11:30:00.000Z",
     text: "a chart in prose\n```chart\n| Dm7 |\n```", payload: null });
-  assert.throws(() => toAtchart(doc), /one chart per file/);
+  assert.throws(() => toAtchart(doc), /move the chart into the pad/);
+  assert.throws(() => toAtchart(doc), /becomes the file's chart block/);
 });
 
 // ---- the chart LIFT (child 3, tier 3): the pad's single fence IS the chart ----
@@ -249,12 +254,25 @@ test("metronome and triadetudes carry atchart, markdown and notepad verbatim (no
     .filter(([, v]) => v.source === "detected")
     .map(([slug, v]) => [slug, FAMILY.filter((f) => v.modules.has(f.slice(0, -4)))])
     .filter(([, files]) => files.length));
+  /* PIN REWRITTEN 260911 (item 2, rule 7): the OWED_DRIFT ledger's modules
+   * are recorded debt (re-inline at the beta republish) — skipped here with
+   * a self-expiring guard, verbatim for everything else. */
+  let owedSeen = 0;
   for (const [slug, files] of Object.entries(CARRIERS)) {
     const src = readFileSync(here2 + "../../static/studies/" + slug + "/study.html", "utf8");
-    for (const file of files)
+    for (const file of files) {
+      if (OWED_DRIFT.has(file.slice(0, -4))) {
+        if (!src.includes(inlineForm(file))) owedSeen++;
+        continue;
+      }
       assert.ok(src.includes(inlineForm(file)),
         slug + "/study.html has drifted from engine/" + file + " — re-inline it");
+    }
   }
+  if (OWED_DRIFT.size)
+    assert.ok(owedSeen > 0,
+      "every owed module is carried verbatim again — the drift is reconciled; " +
+      "empty OWED_DRIFT");
 });
 
 // ---- the Triadetudes migration: real entries, the second proving host ----

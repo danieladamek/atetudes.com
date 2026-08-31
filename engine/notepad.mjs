@@ -163,8 +163,14 @@ export function toAtchart(doc, meta) {
   // already carries a chart all refuse by name; nothing is lost or mangled.
   const offends = (t) => String(t ?? "").split("\n").some((l) => CHART_OPENER.test(l));
   if (doc.entries.some((e) => offends(e.text)))
-    throw new Error("a ```chart fence belongs in the file's chart block — " +
-      "the format holds one chart per file (v1); use a plain ``` fence in notes");
+    /* REWORDED 260911 (item 2a, PO finding): the old message cited the spec
+     * ("the format holds one chart per file (v1)") — a citation, not an
+     * instruction. The player needs the route, and the route is the pad's
+     * own lift: its one chart fence becomes the file's chart block. Host-
+     * neutral by necessity — this string is carried into every door. */
+    throw new Error("a saved note holds a ```chart fence — move the chart into " +
+      "the pad, where its one ```chart fence becomes the file's chart block; " +
+      "a fence that is just prose can be a plain ``` fence");
   const at = doc._at
     ? JSON.parse(JSON.stringify(doc._at))
     : { meta: { atchart: 1, ...(meta || {}) },

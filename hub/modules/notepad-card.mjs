@@ -78,7 +78,12 @@ export const notepadCard = {
         <button id="paletteBtn" data-control="paletteBtn"></button>
         <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json">
       </div>
-      <div class="padmsgs"><span id="saveMsg" class="hint nomargin"></span></div>
+      <!-- the message prints where the press happened (260911, item 2b):
+           one slot per talking capability, all on the line under the row —
+           an empty slot collapses, so the row itself can never wrap -->
+      <div class="padmsgs"><span id="saveMsg" class="hint nomargin"></span><span
+        id="exportMsg" class="hint nomargin"></span><span
+        id="copyMsg" class="hint nomargin"></span></div>
       <div id="paletteRoot" data-control="paletteRoot"></div>
       <div class="transport journalconfirm" id="clearConfirm" data-control="clearConfirm">
         <span class="hint nomargin">that note is filed nowhere —</span>
@@ -249,6 +254,7 @@ export const notepadCard = {
         paletteRoot: byId("paletteRoot"),
         importBtn: byId("importBtn"), importFile: byId("importFile"),
         msg: byId("saveMsg"), importMsg: byId("importMsg"),
+        exportMsg: byId("exportMsg"), copyMsg: byId("copyMsg"),
         list: byId("histList"), count: byId("histCount"),
         storeNote: byId("storeNote"), controls: byId("journalControls"),
         handoff: byId("handoffNote") },

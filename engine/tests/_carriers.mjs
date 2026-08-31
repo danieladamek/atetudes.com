@@ -52,6 +52,22 @@ export const STUDY_SLUGS = readdirSync(STUDIES)
 
 export const studyPath = (slug) => join(STUDIES, slug, "study.html");
 
+/* OWED DRIFT (260911, item 2 — the pin rewritten WITH THE REASON, rule 7):
+ * the PO's export/copy findings are fixed at their source — notepad.mjs's
+ * refusal reworded to name the route, notepad-surface.mjs's per-capability
+ * message slots and Export's success message — and those two modules are
+ * byte-pinned into three HAND-AUTHORED published studies that tonight's
+ * dispatch forbids touching. The debt is recorded here, dated, and LOUD
+ * BOTH WAYS: any module not in this ledger still pins verbatim, and once
+ * the studies are re-inlined (the beta reconciliation republish, bundled
+ * with the 517-byte marker drift) the exemption itself goes red until this
+ * ledger is emptied. An exemption is never counted as a pass — the
+ * family_floor idiom. */
+export const OWED_DRIFT = new Map([
+  ["notepad", "260911 item 2a — the chart-fence refusal reworded to name the route; re-inline at the beta republish"],
+  ["notepad-surface", "260911 items 2b/2c — per-capability message slots; Export's success names its file; re-inline at the beta republish"],
+]);
+
 /** each exported definition of a module, split at import lines and trimmed —
  * the pieces that survive every inline convention verbatim */
 export function defSegmentsOf(mod) {

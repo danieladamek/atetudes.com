@@ -721,6 +721,61 @@ def run_door(pw, door_id):
         check(np_row is not None and not np_row["wraps"],
               f"{tag} the six buttons hold ONE row at desktop width")
 
+        # ---- 260911 item 2: EVERY CAPABILITY SPEAKS, BOTH OUTCOMES ----
+        # The PO reported Export and Copy "not doing anything". Both worked;
+        # both REFUSED (his pad held a chart fence in a saved note) — in spec
+        # jargon, printed beside Save instead of the pressed button, and a
+        # SUCCESSFUL export said nothing at all (the one silent success in
+        # the surface). Now: the refusal names the route, each capability
+        # speaks in ITS OWN slot, and Export's success names the file it
+        # wrote. Content asserted, never presence — a pin that counts is not
+        # a pin that identifies.
+        np_msg = ("(cap) => { const m = document.getElementById(cap);"
+                  " return m ? m.textContent : '(no #' + cap + ' on this build)'; }")
+        # export success, clean pad
+        page.fill("#journalIn", "a clean note for the export pin")
+        page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
+        page.click("#exportLog"); page.wait_for_timeout(250)
+        np_t = page.evaluate(np_msg, "exportMsg")
+        check("exported multetudes-journal-" in np_t and ".atchart.md" in np_t,
+              f"{tag} export SUCCESS names the file it wrote, in export's own slot: {np_t!r}")
+        # a chart fence in a SAVED NOTE: the refusal, in the row's own slots,
+        # naming the route (the pad's lift), not the spec
+        page.fill("#journalIn", "take notes\n```chart\n| Dm7 G7 |\n```")
+        page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
+        page.click("#saveEntry"); page.wait_for_timeout(250)
+        page.click("#exportLog"); page.wait_for_timeout(250)
+        np_t = page.evaluate(np_msg, "exportMsg")
+        check("a saved note holds a" in np_t and "move the chart into the pad" in np_t
+              and "becomes the file's chart block" in np_t,
+              f"{tag} export REFUSAL names the route in plain words: {np_t!r}")
+        page.click("#copyBtn"); page.wait_for_timeout(250)
+        np_t = page.evaluate(np_msg, "copyMsg")
+        check("move the chart into the pad" in np_t,
+              f"{tag} copy's refusal prints in COPY's slot, same named route: {np_t!r}")
+        # clean up the fence entry so later blocks see a clean log
+        page.evaluate("""() => { const del = [...document.querySelectorAll('.hist .acts button')]
+          .find(b => b.textContent === 'Delete'); if (del) del.click(); }""")
+        page.wait_for_timeout(250)
+        # copy on a clean pad: never silent — one of its two NAMED outcomes,
+        # in its own slot (headless file:// usually has no clipboard grant)
+        page.fill("#journalIn", "clean again"); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(400)
+        page.click("#copyBtn"); page.wait_for_timeout(300)
+        np_t = page.evaluate(np_msg, "copyMsg")
+        check(np_t.startswith("copied — one .atchart.md")
+              or np_t.startswith("clipboard unavailable — use Export"),
+              f"{tag} copy is NEVER silent — one of its two named outcomes: {np_t!r}")
+        # save's outcomes still speak in save's slot (the empty-note confirm)
+        page.click("#saveEntry"); page.wait_for_timeout(150)   # files 'clean again'
+        page.click("#saveEntry"); page.wait_for_timeout(150)   # empty pad: must confirm
+        np_t = page.evaluate(np_msg, "saveMsg")
+        check("captured without a note" in np_t,
+              f"{tag} save's empty-pad confirmation, in save's slot: {np_t!r}")
+        page.evaluate("""() => { for (const b of [...document.querySelectorAll('.hist .acts button')]
+          .filter(x => x.textContent === 'Delete')) b.click(); }""")
+        page.wait_for_timeout(250)
+
         # ---- 260910 item 2: THE FIGURE REFUSES JUNK BY NAME ----
         # "R,Q" silently kept the R and dropped the Q — the eleventh silence,
         # and Daniel's ruling: loud, lossy and stated. The figure now has the

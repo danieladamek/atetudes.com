@@ -102,11 +102,18 @@ export function createNotepadSurface(opts) {
   }
   function persist() { return trySave(doc); }
 
-  function msgSet(t, sticky) {
-    if (!els.msg) return;
-    els.msg.textContent = t;
+  /* THE MESSAGE PRINTS WHERE THE PRESS HAPPENED (260911, item 2b): each
+   * capability may have its own slot — els.<cap>Msg — and a host that
+   * declares only the shared els.msg keeps exactly the old behaviour (the
+   * same fallback shape as import's own slot, generalised). The slot is
+   * addressed per call site, so a refusal lands beside the button that
+   * refused, not six inches away beside Save. */
+  function msgSet(cap, t, sticky) {
+    const slot = els[cap + "Msg"] || els.msg;
+    if (!slot) return;
+    slot.textContent = t;
     if (t && !sticky) setTimeout(() => {
-      if (els.msg.textContent === t) els.msg.textContent = "";
+      if (slot.textContent === t) slot.textContent = "";
     }, 2200);
   }
 
@@ -119,8 +126,8 @@ export function createNotepadSurface(opts) {
     doc = { ...doc, pad: "" };
     els.pad.value = "";
     const ok = persist();
-    if (!ok) msgSet("saved in this tab only — use Export to keep it", true);
-    else if (!text) msgSet("captured without a note"); // something must confirm
+    if (!ok) msgSet("save", "saved in this tab only — use Export to keep it", true);
+    else if (!text) msgSet("save", "captured without a note"); // something must confirm
     renderRows(); onChange();
   }
 
@@ -179,22 +186,28 @@ export function createNotepadSurface(opts) {
     } catch (e) { importMsg("import failed: " + e.message); }
   }
   function download() {
-    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    let text; try { text = exportText(); } catch (e) { msgSet("export", e.message, true); return; }
     const docm = els.pad.ownerDocument, win = docm.defaultView;
     const blob = new win.Blob([text], { type: "text/markdown" });
     const a = docm.createElement("a");
     a.href = win.URL.createObjectURL(blob);
-    a.download = file.name();
+    const name = file.name();
+    a.download = name;
     a.click();
     setTimeout(() => win.URL.revokeObjectURL(a.href), 2000);
+    /* SUCCESS SAYS SO (260911, item 2c): this was the surface's one silent
+     * success — the browser's download chrome is not this page's answer, and
+     * a successful Export looked exactly like a dead button. The message
+     * names the file it wrote. */
+    msgSet("export", "exported " + name + " — check your downloads");
   }
   async function copy() {
-    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    let text; try { text = exportText(); } catch (e) { msgSet("copy", e.message, true); return; }
     try {
       const win = els.pad.ownerDocument.defaultView;
       await win.navigator.clipboard.writeText(text);
-      msgSet("copied — one .atchart.md, ready to paste");
-    } catch (e) { msgSet("clipboard unavailable — use Export", true); }
+      msgSet("copy", "copied — one .atchart.md, ready to paste");
+    } catch (e) { msgSet("copy", "clipboard unavailable — use Export", true); }
   }
 
   // ---- the rows: read-surface rendering, derived labels, inert foreigners ----

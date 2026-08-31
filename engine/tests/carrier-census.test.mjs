@@ -28,8 +28,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { CENSUS, STUDY_SLUGS, ENGINE_MODULES, carriersOf, defSegmentsOf, studyPath }
-  from "./_carriers.mjs";
+import { CENSUS, STUDY_SLUGS, ENGINE_MODULES, carriersOf, defSegmentsOf, studyPath,
+  OWED_DRIFT } from "./_carriers.mjs";
 
 test("the census is COMPLETE: every directory under static/studies/ is in it, with a real study file", () => {
   // the eleventh-instance stopper: a new study nobody wired in must fail the
@@ -68,16 +68,32 @@ for (const mod of ENGINE_MODULES) {
   test(`no drift: engine/${mod}.mjs is carried verbatim by ${carriers.join(", ")}`, () => {
     const segs = defSegmentsOf(mod);
     assert.ok(segs.length > 0, `${mod}.mjs exports nothing to pin against`);
+    /* PIN REWRITTEN 260911 (item 2, rule 7 — the reason is in OWED_DRIFT):
+     * an OWED module's drift is recorded, dated and bounded, never silent —
+     * and the exemption SELF-EXPIRES: once the studies are re-inlined and
+     * nothing is missing any more, this test goes red until the ledger
+     * entry is removed. Every module outside the ledger pins verbatim,
+     * exactly as before. */
+    const owed = OWED_DRIFT.get(mod);
+    let missing = 0;
     for (const slug of carriers) {
       const html = readFileSync(studyPath(slug), "utf8");
       for (const def of segs)
-        for (const seg of def)
-          assert.ok(html.includes(seg),
-            `${slug}/study.html has DRIFTED from engine/${mod}.mjs — ` +
-            (CENSUS.get(slug).source === "derived"
-              ? "rebuild the door and re-publish. "
-              : "re-inline the module into the hand-authored study. ") +
-            `Missing:\n${seg.slice(0, 90)}…`);
+        for (const seg of def) {
+          if (html.includes(seg)) continue;
+          missing++;
+          if (!owed)
+            assert.fail(
+              `${slug}/study.html has DRIFTED from engine/${mod}.mjs — ` +
+              (CENSUS.get(slug).source === "derived"
+                ? "rebuild the door and re-publish. "
+                : "re-inline the module into the hand-authored study. ") +
+              `Missing:\n${seg.slice(0, 90)}…`);
+        }
     }
+    if (owed)
+      assert.ok(missing > 0,
+        `engine/${mod}.mjs is carried verbatim again — the owed drift is ` +
+        `reconciled; REMOVE its OWED_DRIFT entry (${owed})`);
   });
 }
