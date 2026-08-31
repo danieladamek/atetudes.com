@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes — At-Etudes hub door</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/field.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/mini.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/field.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -134,6 +134,16 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
+.fd-underneck{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.fd-undercol{flex:1 1 420px;min-width:0}
+.fd-undermix{flex:0 1 380px;padding-top:6px}
+#fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
+.fd-undermini{display:inline-flex;gap:4px;margin-left:6px}
+.fd-undermini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+.fd-undermini button:hover{border-color:var(--ink)}
+#fdBass2{font:inherit;font-size:12px;padding:3px 6px;max-width:260px}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
@@ -488,26 +498,49 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       how you ask for a spread.</div>
     </div>
   </div>
-  <div class="fd-railrow">
-    <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-    <span class="fd-pulse" id="fdPulse"></span>
-    <span class="fd-lab2">bar split</span>
-    <select id="fdSplit" data-control="fdSplit"
-      title="the bar split — a bar's chords take these slots in order"></select>
-    <span class="fd-lab2">voice</span>
-    <select id="fdVoice" data-control="fdVoice"></select>
-  </div>
-  <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
-    <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
-    <span class="fd-lab2 fd-mixlab">harmony</span>
-    <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
-    <span class="fd-val" id="fdHarmVal">100</span>
-  </div>
-  <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
-    <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
-    <span class="fd-lab2 fd-mixlab">bass</span>
-    <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
-    <span class="fd-val" id="fdBassVal">100</span>
+  <!-- THE CONTROLS UNDER THE NECK (260913, item 3 — the wireframe's block):
+       rows left, mixer right. bpm is the clock's SECOND VIEW (the metronome
+       checkbox's own idiom — the Metronome card stays the owner); the bass /
+       reference select is Harmony's second view, seated by the mixer it
+       drives. The ⏮ ▶ ⏹ ⏭ cluster is the family mini — a view that asks,
+       never a timer. -->
+  <div class="fd-underneck">
+    <div class="fd-undercol">
+      <div class="fd-railrow">
+        <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
+        <span class="fd-pulse" id="fdPulse"></span>
+        <span class="fd-lab2">bar split</span>
+        <select id="fdSplit" data-control="fdSplit"
+          title="the bar split — a bar's chords take these slots in order"></select>
+        <span class="fd-lab2">bpm</span>
+        <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
+          title="the tempo — one state, two views; the Metronome card owns the clock">
+        <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+      </div>
+      <div class="fd-railrow">
+        <span class="fd-lab2">voice</span>
+        <select id="fdVoice" data-control="fdVoice"></select>
+      </div>
+      <div class="fd-railrow">
+        <span class="fd-lab2">Bass / reference tone</span>
+        <select id="fdBass2" data-control="fdBass2"
+          title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
+      </div>
+    </div>
+    <div class="fd-undermix">
+      <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
+        <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">harmony</span>
+        <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
+        <span class="fd-val" id="fdHarmVal">100</span>
+      </div>
+      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
+        <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">bass</span>
+        <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
+        <span class="fd-val" id="fdBassVal">100</span>
+      </div>
+    </div>
   </div>
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
@@ -5539,6 +5572,16 @@ const REF_OFFSET = { root: 0, third: -2, fifth: -4 };
  * kind "none" → note null, reason null (a block, not an error).
  * Both reference strings taken → note null, reason NAMES the refusal.
  */
+/** the ruled trio + none (child 5, 260831) — stated ONCE; both faces that
+ * offer the reference (Harmony's select and the under-neck view, 260913)
+ * fill from this list rather than keeping their own copies. */
+const REFERENCE_CHOICES = [
+  ["none", "none"],
+  ["root", "the root"],
+  ["third", "a 3rd below"],
+  ["fifth", "a 5th below"],
+];
+
 function placeReference(kind, chordDeg, fld, strings, pos) {
   if (kind === "none" || kind == null) return { note: null, stretch: false, reason: null };
   if (!(kind in REF_OFFSET))
@@ -5666,7 +5709,7 @@ function compositeOver(fld, refKeyDeg, tonePcs) {
   if (!far.note || far.stretch !== true || far.note.fret >= 0 && far.note.fret <= 3)
     throw new Error("reference: a reach past the box must carry the stretch flag");
 }
-return { REF_OFFSET, placeReference, compositeOver };
+return { REF_OFFSET, REFERENCE_CHOICES, placeReference, compositeOver };
 })();
 
 /* ===== engine/progression.mjs ===== */
@@ -6225,18 +6268,87 @@ const etudeWalk = {
 return { etudeWalk };
 })();
 
+/* ===== hub/mini.mjs ===== */
+const __m_hub_mini_mjs = (() => {
+const { STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, listen, announce } = __m_hub_bus_mjs;
+/* mini.mjs — the strip mini-transport: the reference's ⏮ ▶ ⏹ ⏭ cluster, built
+ * once for the three strips that carry it (timeline, étude, keyboard).
+ *
+ * A STRIP SUMMONS THE TRANSPORT; IT NEVER OWNS A TIMER (§4.2.3, and the Shell 4
+ * item's own words). Every button is a bus request and nothing more:
+ *
+ *   ⏮ / ⏭  a STEP_CHANGED request — the position owner (the stage) moves and
+ *          re-announces; the mini learns where the pass is from that same
+ *          canonical STEP_CHANGED, so it asks without reaching for anyone.
+ *   ▶      a PLAY request the transport card answers by arming its walk, then
+ *          the transport starts the grid through CLOCK — the mini touches
+ *          neither the clock nor the walk.
+ *   ⏹      a CLOCK stop; the metronome halts and the transport disarms on the
+ *          CLOCK_STATE it hears back — one stop, cascaded, no module reaching
+ *          another.
+ *
+ * This file owns no markup or styles of its own — the `.mini` grammar is the
+ * shell's (three modules render it, so it is page furniture, not one module's
+ * property) — so, like bus.mjs, it is reached through the imports of the
+ * modules that use it rather than mounted as a contribution.
+ */
+
+/* glyph · title · role — the reference's, byte for byte */
+const BUTTONS = [
+  ["⏮", "previous chord", "prev"],
+  ["▶", "play the étude", "play"],
+  ["⏹", "stop", "stop"],
+  ["⏭", "next chord", "next"],
+];
+
+/** Fill `host` (a declared `.mini` span) with the cluster and wire it to the
+ * bus. Returns nothing — the mini holds only its own copy of the position,
+ * derived from STEP_CHANGED, never another module's state. */
+function mountMini(ctx, host) {
+  const d = ctx.doc;
+  let cur = 0, running = false;
+  const playBtn = { el: null };
+
+  host.textContent = "";
+  for (const [glyph, title, role] of BUTTONS) {
+    const b = d.createElement("button");
+    b.textContent = glyph; b.title = title; b.dataset.role = role;
+    b.addEventListener("click", () => {
+      if (role === "prev") announce(d, STEP_CHANGED, { index: cur - 1, request: true });
+      else if (role === "next") announce(d, STEP_CHANGED, { index: cur + 1, request: true });
+      else if (role === "play") announce(d, PLAY, { run: true });
+      else if (role === "stop") announce(d, CLOCK, { run: false });
+    });
+    if (role === "play") playBtn.el = b;
+    host.appendChild(b);
+  }
+
+  // gray Play while the pass is running, as the reference does — the one visible
+  // sign the mini reads back from the clock it does not own
+  const sync = () => { if (playBtn.el) playBtn.el.style.color = running ? "var(--gray)" : ""; };
+  listen(d, STEP_CHANGED, (m) => {
+    if (!m || m.request === true) return;
+    if (typeof m.index === "number") cur = m.index;
+  });
+  listen(d, CLOCK_STATE, (m) => { if (m) { running = !!m.running; sync(); } });
+  sync();
+}
+return { mountMini };
+})();
+
 /* ===== hub/modules/field-board.mjs ===== */
 const __m_hub_modules_field_board_mjs = (() => {
 const { field, notesOn } = __m_engine_field_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } = __m_engine_selection_mjs;
-const { placeReference } = __m_engine_reference_mjs;
+const { placeReference, REFERENCE_CHOICES } = __m_engine_reference_mjs;
 const { progressionOf, chordAt, movementWord } = __m_engine_progression_mjs;
 const { STRING_SETS } = __m_engine_tetrad_sequence_mjs;
 const { NOTE_VOICE_NAMES } = __m_engine_voices_mjs;
 const { SPLITS } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } = __m_hub_bus_mjs;
+const { mountMini } = __m_hub_mini_mjs;
 /* field-board.mjs — ON THE NECK: Multetudes' neck, v0.9's card (children 0,
  * 2, 3a; the surface rework of 2026-08-29 under the identical-to-v0.9
  * ruling).
@@ -6275,6 +6387,7 @@ const { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, lis
  * and the design-translating set change are unchanged from children 2–3a and
  * keep their mutation proofs (bite 10–15).
  */
+
 
 
 
@@ -6335,7 +6448,7 @@ const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
-    "fdAllTones"],
+    "fdAllTones", "fdBpm", "fdBass2", "fdMini"],
 
   markup: `
   <div class="bh"><span>On the neck</span></div>
@@ -6389,26 +6502,49 @@ const fieldBoard = {
       how you ask for a spread.</div>
     </div>
   </div>
-  <div class="fd-railrow">
-    <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-    <span class="fd-pulse" id="fdPulse"></span>
-    <span class="fd-lab2">bar split</span>
-    <select id="fdSplit" data-control="fdSplit"
-      title="the bar split — a bar's chords take these slots in order"></select>
-    <span class="fd-lab2">voice</span>
-    <select id="fdVoice" data-control="fdVoice"></select>
-  </div>
-  <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
-    <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
-    <span class="fd-lab2 fd-mixlab">harmony</span>
-    <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
-    <span class="fd-val" id="fdHarmVal">100</span>
-  </div>
-  <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
-    <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
-    <span class="fd-lab2 fd-mixlab">bass</span>
-    <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
-    <span class="fd-val" id="fdBassVal">100</span>
+  <!-- THE CONTROLS UNDER THE NECK (260913, item 3 — the wireframe's block):
+       rows left, mixer right. bpm is the clock's SECOND VIEW (the metronome
+       checkbox's own idiom — the Metronome card stays the owner); the bass /
+       reference select is Harmony's second view, seated by the mixer it
+       drives. The ⏮ ▶ ⏹ ⏭ cluster is the family mini — a view that asks,
+       never a timer. -->
+  <div class="fd-underneck">
+    <div class="fd-undercol">
+      <div class="fd-railrow">
+        <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
+        <span class="fd-pulse" id="fdPulse"></span>
+        <span class="fd-lab2">bar split</span>
+        <select id="fdSplit" data-control="fdSplit"
+          title="the bar split — a bar's chords take these slots in order"></select>
+        <span class="fd-lab2">bpm</span>
+        <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
+          title="the tempo — one state, two views; the Metronome card owns the clock">
+        <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+      </div>
+      <div class="fd-railrow">
+        <span class="fd-lab2">voice</span>
+        <select id="fdVoice" data-control="fdVoice"></select>
+      </div>
+      <div class="fd-railrow">
+        <span class="fd-lab2">Bass / reference tone</span>
+        <select id="fdBass2" data-control="fdBass2"
+          title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
+      </div>
+    </div>
+    <div class="fd-undermix">
+      <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
+        <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">harmony</span>
+        <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
+        <span class="fd-val" id="fdHarmVal">100</span>
+      </div>
+      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
+        <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">bass</span>
+        <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
+        <span class="fd-val" id="fdBassVal">100</span>
+      </div>
+    </div>
   </div>
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
@@ -6441,6 +6577,16 @@ const fieldBoard = {
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
+.fd-underneck{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.fd-undercol{flex:1 1 420px;min-width:0}
+.fd-undermix{flex:0 1 380px;padding-top:6px}
+#fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
+.fd-undermini{display:inline-flex;gap:4px;margin-left:6px}
+.fd-undermini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+.fd-undermini button:hover{border-color:var(--ink)}
+#fdBass2{font:inherit;font-size:12px;padding:3px 6px;max-width:260px}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
@@ -6751,6 +6897,15 @@ const fieldBoard = {
         atLab.lastChild.textContent = cfg.object === "scale"
           ? " all tones — a scale takes the whole box" : " all tones";
       }
+      /* the bass view paints from the same build — Harmony's state, echoed */
+      {
+        const b2 = byId("fdBass2");
+        if (b2.value !== cfg.bass) b2.value = cfg.bass;
+        b2.disabled = cfg.object === "scale";
+        b2.title = cfg.object === "scale"
+          ? "under a scale the reference is the CENTRE — choose it in Harmony"
+          : "the reference under the harmony — one state, two views; Harmony's select is the other";
+      }
       /* THE OVERRIDE IS LOUD (260909, item 3; register 20): "a typed figure
        * sequences, whatever the Take" (260901) stands — but it must not stand
        * SILENTLY over a raised `block`. While a figure rules, block is
@@ -7017,9 +7172,32 @@ const fieldBoard = {
     /* ---- the transport rail and the mixer: bus views, never owners ---- */
     byId("fdMetChk").addEventListener("change", (e) =>
       announce(d, CLOCK, { click: e.target.checked }));
+    /* bpm — the metronome checkbox's OWN idiom, copied exactly (260913,
+     * item 3a): the view ASKS through CLOCK and paints only what the owner
+     * echoes back through CLOCK_STATE, so it can never hold a value the
+     * clock does not — a typed 999 comes back as the owner's clamp. */
+    byId("fdBpm").addEventListener("change", (e) => {
+      const v = +e.target.value;
+      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+    });
     listen(d, CLOCK_STATE, (m) => {
       if (m && typeof m.click === "boolean") byId("fdMetChk").checked = m.click;
+      if (m && typeof m.bpm === "number") byId("fdBpm").value = m.bpm;
     });
+    /* the bass / reference — Harmony's second view (260913, item 3b), the
+     * same shape: announce the change, paint from the announced state. The
+     * choices fill from the engine's own list, stated once. */
+    {
+      const b2 = byId("fdBass2");
+      for (const [v, l] of REFERENCE_CHOICES) {
+        const o = d.createElement("option"); o.value = v; o.textContent = l;
+        b2.appendChild(o);
+      }
+      b2.value = cfg.bass;
+      b2.addEventListener("change", (e) =>
+        announce(d, CONFIG_CHANGED, { bass: e.target.value }));
+    }
+    mountMini(ctx, byId("fdMini"));
     let pulseT = null;
     listen(d, BEAT, () => {
       const p = byId("fdPulse");
@@ -7134,6 +7312,7 @@ return { deriveField, fieldBoard };
 /* ===== hub/modules/harmony-card.mjs ===== */
 const __m_hub_modules_harmony_card_mjs = (() => {
 const { field } = __m_engine_field_mjs;
+const { REFERENCE_CHOICES } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
 /* harmony-card.mjs — v0.9's HARMONY card: the field, what sits on it, and the
@@ -7156,6 +7335,7 @@ const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
  * Dyad and Shell appear in the Object list DISABLED — child 4's engine.
  * Visibly inert, not absent: the menu is the model's, the grey is tonight's.
  */
+
 
 
 
@@ -7264,12 +7444,8 @@ const harmonyCard = {
          * below, a 5th below — relative to the chord, so they will follow the
          * changes when child 7 brings them. A FIXED reference is deliberately
          * unbuilt: with one bar, fixed and relative are indistinguishable. */
-        fill(byId("hcRef"), [
-          { value: "none", label: "none" },
-          { value: "root", label: "the root" },
-          { value: "third", label: "a 3rd below" },
-          { value: "fifth", label: "a 5th below" },
-        ], cfg.bass);
+        fill(byId("hcRef"), REFERENCE_CHOICES.map(([v, l]) => ({ value: v, label: l })),
+          cfg.bass);
         byId("hcRefLab").textContent = "Bass / reference tone";   // the resting label
         byId("hcNote").textContent = cfg.bass === "none"
           ? "The reference the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
@@ -7303,74 +7479,6 @@ const harmonyCard = {
   },
 };
 return { harmonyCard };
-})();
-
-/* ===== hub/mini.mjs ===== */
-const __m_hub_mini_mjs = (() => {
-const { STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, listen, announce } = __m_hub_bus_mjs;
-/* mini.mjs — the strip mini-transport: the reference's ⏮ ▶ ⏹ ⏭ cluster, built
- * once for the three strips that carry it (timeline, étude, keyboard).
- *
- * A STRIP SUMMONS THE TRANSPORT; IT NEVER OWNS A TIMER (§4.2.3, and the Shell 4
- * item's own words). Every button is a bus request and nothing more:
- *
- *   ⏮ / ⏭  a STEP_CHANGED request — the position owner (the stage) moves and
- *          re-announces; the mini learns where the pass is from that same
- *          canonical STEP_CHANGED, so it asks without reaching for anyone.
- *   ▶      a PLAY request the transport card answers by arming its walk, then
- *          the transport starts the grid through CLOCK — the mini touches
- *          neither the clock nor the walk.
- *   ⏹      a CLOCK stop; the metronome halts and the transport disarms on the
- *          CLOCK_STATE it hears back — one stop, cascaded, no module reaching
- *          another.
- *
- * This file owns no markup or styles of its own — the `.mini` grammar is the
- * shell's (three modules render it, so it is page furniture, not one module's
- * property) — so, like bus.mjs, it is reached through the imports of the
- * modules that use it rather than mounted as a contribution.
- */
-
-/* glyph · title · role — the reference's, byte for byte */
-const BUTTONS = [
-  ["⏮", "previous chord", "prev"],
-  ["▶", "play the étude", "play"],
-  ["⏹", "stop", "stop"],
-  ["⏭", "next chord", "next"],
-];
-
-/** Fill `host` (a declared `.mini` span) with the cluster and wire it to the
- * bus. Returns nothing — the mini holds only its own copy of the position,
- * derived from STEP_CHANGED, never another module's state. */
-function mountMini(ctx, host) {
-  const d = ctx.doc;
-  let cur = 0, running = false;
-  const playBtn = { el: null };
-
-  host.textContent = "";
-  for (const [glyph, title, role] of BUTTONS) {
-    const b = d.createElement("button");
-    b.textContent = glyph; b.title = title; b.dataset.role = role;
-    b.addEventListener("click", () => {
-      if (role === "prev") announce(d, STEP_CHANGED, { index: cur - 1, request: true });
-      else if (role === "next") announce(d, STEP_CHANGED, { index: cur + 1, request: true });
-      else if (role === "play") announce(d, PLAY, { run: true });
-      else if (role === "stop") announce(d, CLOCK, { run: false });
-    });
-    if (role === "play") playBtn.el = b;
-    host.appendChild(b);
-  }
-
-  // gray Play while the pass is running, as the reference does — the one visible
-  // sign the mini reads back from the clock it does not own
-  const sync = () => { if (playBtn.el) playBtn.el.style.color = running ? "var(--gray)" : ""; };
-  listen(d, STEP_CHANGED, (m) => {
-    if (!m || m.request === true) return;
-    if (typeof m.index === "number") cur = m.index;
-  });
-  listen(d, CLOCK_STATE, (m) => { if (m) { running = !!m.running; sync(); } });
-  sync();
-}
-return { mountMini };
 })();
 
 /* ===== hub/modules/keys-board.mjs ===== */
@@ -7891,11 +7999,20 @@ const metronomeCard = {
 
     /* a REQUEST from elsewhere — the transport asking for the grid it walks on.
      * It is applied here, by the owner, and answered with the resulting state. */
+    /* THE OWNER CLAMPS EVERY DOOR IN (260913 — found by the under-neck
+     * view's clamp pin): the 15–300 rule lived only in the slider's own
+     * attributes, so a bus REQUEST (and a fast tap) walked straight past
+     * it into the core — a requested 999 ran the clock at 999 with the
+     * readout agreeing. The bounds derive from the slider's declared
+     * min/max — the rule stays stated once. */
+    const clampBpm = (v) =>
+      Math.max(+byId("bpmRange").min, Math.min(+byId("bpmRange").max, v));
     listen(d, CLOCK, (m) => {
       if (!m) return;
       if (typeof m.bpm === "number") {
-        core.setBpm(m.bpm);
-        byId("bpmRange").value = m.bpm; byId("bpmVal").textContent = m.bpm;
+        const v = clampBpm(m.bpm);
+        core.setBpm(v);
+        byId("bpmRange").value = v; byId("bpmVal").textContent = v;
       }
       if (typeof m.meter === "number") {
         core.setMeter(m.meter);
@@ -7924,7 +8041,8 @@ const metronomeCard = {
     });
     byId("tapBtn").addEventListener("click", () => {
       const bpm = tap(now());
-      if (bpm) { core.setBpm(bpm); byId("bpmRange").value = bpm; byId("bpmVal").textContent = bpm; publish(); }
+      if (bpm) { const v = clampBpm(bpm); core.setBpm(v);
+        byId("bpmRange").value = v; byId("bpmVal").textContent = v; publish(); }
     });
     byId("bpmRange").addEventListener("input", (e) => {
       core.setBpm(+e.target.value); byId("bpmVal").textContent = e.target.value; publish();

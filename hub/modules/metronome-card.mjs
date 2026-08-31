@@ -208,11 +208,20 @@ export const metronomeCard = {
 
     /* a REQUEST from elsewhere — the transport asking for the grid it walks on.
      * It is applied here, by the owner, and answered with the resulting state. */
+    /* THE OWNER CLAMPS EVERY DOOR IN (260913 — found by the under-neck
+     * view's clamp pin): the 15–300 rule lived only in the slider's own
+     * attributes, so a bus REQUEST (and a fast tap) walked straight past
+     * it into the core — a requested 999 ran the clock at 999 with the
+     * readout agreeing. The bounds derive from the slider's declared
+     * min/max — the rule stays stated once. */
+    const clampBpm = (v) =>
+      Math.max(+byId("bpmRange").min, Math.min(+byId("bpmRange").max, v));
     listen(d, CLOCK, (m) => {
       if (!m) return;
       if (typeof m.bpm === "number") {
-        core.setBpm(m.bpm);
-        byId("bpmRange").value = m.bpm; byId("bpmVal").textContent = m.bpm;
+        const v = clampBpm(m.bpm);
+        core.setBpm(v);
+        byId("bpmRange").value = v; byId("bpmVal").textContent = v;
       }
       if (typeof m.meter === "number") {
         core.setMeter(m.meter);
@@ -241,7 +250,8 @@ export const metronomeCard = {
     });
     byId("tapBtn").addEventListener("click", () => {
       const bpm = tap(now());
-      if (bpm) { core.setBpm(bpm); byId("bpmRange").value = bpm; byId("bpmVal").textContent = bpm; publish(); }
+      if (bpm) { const v = clampBpm(bpm); core.setBpm(v);
+        byId("bpmRange").value = v; byId("bpmVal").textContent = v; publish(); }
     });
     byId("bpmRange").addEventListener("input", (e) => {
       core.setBpm(+e.target.value); byId("bpmVal").textContent = e.target.value; publish();

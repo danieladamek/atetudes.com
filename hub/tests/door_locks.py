@@ -746,6 +746,65 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260913 item 3: THE UNDER-NECK BLOCK — TWO NEW VIEWS OF OLD STATE ----
+        # bpm under the neck is the clock's second view (the metronome
+        # checkbox's own idiom, copied); the bass select is Harmony's second
+        # view, seated by the mixer it drives. Pinned at the VIEWS, both
+        # directions — a mirror's sabotage is masked by bus replay, so the
+        # pins read the pixels of each face, never the message. Neither view
+        # can hold a value the owner does not.
+        u3 = ("() => ({ bpm: (document.getElementById('fdBpm') || {}).value,"
+              " bpmCard: (document.getElementById('bpmRange') || {}).value,"
+              " bpmVal: (document.getElementById('bpmVal') || {}).textContent,"
+              " bass2: (document.getElementById('fdBass2') || {}).value,"
+              " hcRef: (document.getElementById('hcRef') || {}).value })")
+        # crash-proof (the m28 lesson): a build without the view yields a
+        # NAMED failure, never a 30s fill timeout that masks later pins
+        if not page.evaluate("() => !!document.getElementById('fdBpm')"):
+            check(False, f"{tag} the under-neck bpm view is absent from this build")
+        # direction 1: the under-neck bpm moves the metronome card
+        page.fill("#fdBpm", "144"); page.dispatch_event("#fdBpm", "change")
+        page.wait_for_timeout(150)
+        st3 = page.evaluate(u3)
+        check(st3["bpmCard"] == "144" and st3["bpmVal"] == "144" and st3["bpm"] == "144",
+              f"{tag} under-neck bpm 144 moves the metronome card's slider AND readout: {st3}")
+        # direction 2: the metronome card moves the under-neck view
+        page.fill("#bpmRange", "96"); page.dispatch_event("#bpmRange", "input")
+        page.wait_for_timeout(150)
+        st3 = page.evaluate(u3)
+        check(st3["bpm"] == "96" and st3["bpmVal"] == "96",
+              f"{tag} the card's 96 lands on the under-neck view: {st3}")
+        # the clamp: a view cannot hold what the owner refuses — 999 comes
+        # back as the ruled ceiling (15–300, 260821.2)
+        page.fill("#fdBpm", "999"); page.dispatch_event("#fdBpm", "change")
+        page.wait_for_timeout(150)
+        st3 = page.evaluate(u3)
+        check(st3["bpm"] == "300" and st3["bpmCard"] == "300",
+              f"{tag} 999 lands as the OWNER's clamp on BOTH views (300): {st3}")
+        page.fill("#fdBpm", "72"); page.dispatch_event("#fdBpm", "change")
+        page.wait_for_timeout(120)
+        # the bass view, both directions — read at the two selects' pixels
+        page.select_option("#fdBass2", "third"); page.wait_for_timeout(150)
+        st3 = page.evaluate(u3)
+        check(st3["hcRef"] == "third" and st3["bass2"] == "third",
+              f"{tag} the under-neck bass 'third' lands on Harmony's select: {st3}")
+        ref_dot = page.eval_on_selector_all("#fieldSvg .fd-ref", "e => e.length")
+        check(ref_dot == 1,
+              f"{tag} and the reference actually DRAWS — the view drives the state "
+              f"({ref_dot} ref dots)")
+        page.select_option("#hcRef", "none"); page.wait_for_timeout(150)
+        st3 = page.evaluate(u3)
+        check(st3["bass2"] == "none",
+              f"{tag} Harmony's 'none' lands back on the under-neck view: {st3}")
+        # the transport mini under the neck asks, the owner answers
+        page.click('#fdMini button[data-role="next"]'); page.wait_for_timeout(200)
+        check(page.eval_on_selector_all("#tlScroll button.tl-cur",
+              "es => es.map(e => e.getAttribute('data-tlchip'))") != ["0"],
+              f"{tag} the under-neck ⏭ moved the strip's own chip")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260913 item 1: TAKE LIVES ON THE RAIL, THE VALUE UNCHANGED ----
         # D8 granted: "every occurrence in the box" is unstatable without
         # the neck, so Take sits beside Placement as the all-tones checkbox.
@@ -802,7 +861,13 @@ def run_door(pw, door_id):
           window.__nt = []; }""")
         page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(3600)   # a 4-beat bar at 72bpm
         lg_t = page.evaluate("() => window.__nt.map(n => n.t)")
-        check(len(lg_t) >= 3 and (max(lg_t) - min(lg_t)) > 200,
+        # calibrated 260913 after a full-run flake: under four-door machine
+        # load the capture can open late and catch 2 of the 4 notes — and
+        # two notes 800ms apart already CANNOT be a strum (a strum lands
+        # within ~30ms). The pin's discrimination — spread, not together —
+        # is unchanged; only the count floor moved to what the window
+        # honestly guarantees.
+        check(len(lg_t) >= 2 and (max(lg_t) - min(lg_t)) > 300,
               f"{tag} the legacy word MEANT arpeggiate and still sounds spread "
               f"({len(lg_t)} notes over {0 if not lg_t else round(max(lg_t)-min(lg_t))}ms)")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
@@ -3148,11 +3213,13 @@ console.log(JSON.stringify(out));
             page.evaluate("() => { window.__st = 0 }")
             page.click("#tlBars >> button >> nth=0"); page.wait_for_timeout(350)    # sound step 0 once
             return page.evaluate("() => window.__st")
-        block_n = sources_for("Block")
+        # button word updated 260913 (item 2's ruling): Block is Strum now;
+        # the measurements and their meanings are unchanged
+        block_n = sources_for("Strum")
         arp_n = sources_for("Arpeggiated")
         both_n = sources_for("Both")
-        check(block_n >= 4 and arp_n >= 4, f"{tag} figure playback started no audio (block {block_n}, arp {arp_n})")
-        check(both_n > block_n, f"{tag} Both must sound MORE sources than Block (both {both_n}, block {block_n})")
+        check(block_n >= 4 and arp_n >= 4, f"{tag} figure playback started no audio (strum {block_n}, arp {arp_n})")
+        check(both_n > block_n, f"{tag} Both must sound MORE sources than Strum (both {both_n}, strum {block_n})")
         check(both_n >= arp_n, f"{tag} Both carries the line, so it is at least Arpeggiated (both {both_n}, arp {arp_n})")
         # 6. the pulse rings appear from the SAME event list, at their onsets
         page.click("#playbackSeg >> text=Arpeggiated"); page.select_option("#figSel", "3-7-3-7")

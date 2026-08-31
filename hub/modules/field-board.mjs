@@ -40,12 +40,13 @@ import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
-import { placeReference } from "../../engine/reference.mjs";
+import { placeReference, REFERENCE_CHOICES } from "../../engine/reference.mjs";
 import { progressionOf, chordAt, movementWord } from "../../engine/progression.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "../bus.mjs";
+import { mountMini } from "../mini.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -97,7 +98,7 @@ export const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
-    "fdAllTones"],
+    "fdAllTones", "fdBpm", "fdBass2", "fdMini"],
 
   markup: `
   <div class="bh"><span>On the neck</span></div>
@@ -151,26 +152,49 @@ export const fieldBoard = {
       how you ask for a spread.</div>
     </div>
   </div>
-  <div class="fd-railrow">
-    <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-    <span class="fd-pulse" id="fdPulse"></span>
-    <span class="fd-lab2">bar split</span>
-    <select id="fdSplit" data-control="fdSplit"
-      title="the bar split — a bar's chords take these slots in order"></select>
-    <span class="fd-lab2">voice</span>
-    <select id="fdVoice" data-control="fdVoice"></select>
-  </div>
-  <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
-    <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
-    <span class="fd-lab2 fd-mixlab">harmony</span>
-    <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
-    <span class="fd-val" id="fdHarmVal">100</span>
-  </div>
-  <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
-    <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
-    <span class="fd-lab2 fd-mixlab">bass</span>
-    <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
-    <span class="fd-val" id="fdBassVal">100</span>
+  <!-- THE CONTROLS UNDER THE NECK (260913, item 3 — the wireframe's block):
+       rows left, mixer right. bpm is the clock's SECOND VIEW (the metronome
+       checkbox's own idiom — the Metronome card stays the owner); the bass /
+       reference select is Harmony's second view, seated by the mixer it
+       drives. The ⏮ ▶ ⏹ ⏭ cluster is the family mini — a view that asks,
+       never a timer. -->
+  <div class="fd-underneck">
+    <div class="fd-undercol">
+      <div class="fd-railrow">
+        <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
+        <span class="fd-pulse" id="fdPulse"></span>
+        <span class="fd-lab2">bar split</span>
+        <select id="fdSplit" data-control="fdSplit"
+          title="the bar split — a bar's chords take these slots in order"></select>
+        <span class="fd-lab2">bpm</span>
+        <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
+          title="the tempo — one state, two views; the Metronome card owns the clock">
+        <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+      </div>
+      <div class="fd-railrow">
+        <span class="fd-lab2">voice</span>
+        <select id="fdVoice" data-control="fdVoice"></select>
+      </div>
+      <div class="fd-railrow">
+        <span class="fd-lab2">Bass / reference tone</span>
+        <select id="fdBass2" data-control="fdBass2"
+          title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
+      </div>
+    </div>
+    <div class="fd-undermix">
+      <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
+        <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">harmony</span>
+        <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
+        <span class="fd-val" id="fdHarmVal">100</span>
+      </div>
+      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
+        <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">bass</span>
+        <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
+        <span class="fd-val" id="fdBassVal">100</span>
+      </div>
+    </div>
   </div>
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
@@ -203,6 +227,16 @@ export const fieldBoard = {
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
+.fd-underneck{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.fd-undercol{flex:1 1 420px;min-width:0}
+.fd-undermix{flex:0 1 380px;padding-top:6px}
+#fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
+.fd-undermini{display:inline-flex;gap:4px;margin-left:6px}
+.fd-undermini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+.fd-undermini button:hover{border-color:var(--ink)}
+#fdBass2{font:inherit;font-size:12px;padding:3px 6px;max-width:260px}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
@@ -513,6 +547,15 @@ export const fieldBoard = {
         atLab.lastChild.textContent = cfg.object === "scale"
           ? " all tones — a scale takes the whole box" : " all tones";
       }
+      /* the bass view paints from the same build — Harmony's state, echoed */
+      {
+        const b2 = byId("fdBass2");
+        if (b2.value !== cfg.bass) b2.value = cfg.bass;
+        b2.disabled = cfg.object === "scale";
+        b2.title = cfg.object === "scale"
+          ? "under a scale the reference is the CENTRE — choose it in Harmony"
+          : "the reference under the harmony — one state, two views; Harmony's select is the other";
+      }
       /* THE OVERRIDE IS LOUD (260909, item 3; register 20): "a typed figure
        * sequences, whatever the Take" (260901) stands — but it must not stand
        * SILENTLY over a raised `block`. While a figure rules, block is
@@ -779,9 +822,32 @@ export const fieldBoard = {
     /* ---- the transport rail and the mixer: bus views, never owners ---- */
     byId("fdMetChk").addEventListener("change", (e) =>
       announce(d, CLOCK, { click: e.target.checked }));
+    /* bpm — the metronome checkbox's OWN idiom, copied exactly (260913,
+     * item 3a): the view ASKS through CLOCK and paints only what the owner
+     * echoes back through CLOCK_STATE, so it can never hold a value the
+     * clock does not — a typed 999 comes back as the owner's clamp. */
+    byId("fdBpm").addEventListener("change", (e) => {
+      const v = +e.target.value;
+      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+    });
     listen(d, CLOCK_STATE, (m) => {
       if (m && typeof m.click === "boolean") byId("fdMetChk").checked = m.click;
+      if (m && typeof m.bpm === "number") byId("fdBpm").value = m.bpm;
     });
+    /* the bass / reference — Harmony's second view (260913, item 3b), the
+     * same shape: announce the change, paint from the announced state. The
+     * choices fill from the engine's own list, stated once. */
+    {
+      const b2 = byId("fdBass2");
+      for (const [v, l] of REFERENCE_CHOICES) {
+        const o = d.createElement("option"); o.value = v; o.textContent = l;
+        b2.appendChild(o);
+      }
+      b2.value = cfg.bass;
+      b2.addEventListener("change", (e) =>
+        announce(d, CONFIG_CHANGED, { bass: e.target.value }));
+    }
+    mountMini(ctx, byId("fdMini"));
     let pulseT = null;
     listen(d, BEAT, () => {
       const p = byId("fdPulse");

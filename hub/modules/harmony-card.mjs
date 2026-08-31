@@ -19,6 +19,7 @@
  * Visibly inert, not absent: the menu is the model's, the grey is tonight's.
  */
 import { field } from "../../engine/field.mjs";
+import { REFERENCE_CHOICES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
 
@@ -127,12 +128,8 @@ export const harmonyCard = {
          * below, a 5th below — relative to the chord, so they will follow the
          * changes when child 7 brings them. A FIXED reference is deliberately
          * unbuilt: with one bar, fixed and relative are indistinguishable. */
-        fill(byId("hcRef"), [
-          { value: "none", label: "none" },
-          { value: "root", label: "the root" },
-          { value: "third", label: "a 3rd below" },
-          { value: "fifth", label: "a 5th below" },
-        ], cfg.bass);
+        fill(byId("hcRef"), REFERENCE_CHOICES.map(([v, l]) => ({ value: v, label: l })),
+          cfg.bass);
         byId("hcRefLab").textContent = "Bass / reference tone";   // the resting label
         byId("hcNote").textContent = cfg.bass === "none"
           ? "The reference the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."

@@ -46,6 +46,16 @@ export const REF_OFFSET = { root: 0, third: -2, fifth: -4 };
  * kind "none" → note null, reason null (a block, not an error).
  * Both reference strings taken → note null, reason NAMES the refusal.
  */
+/** the ruled trio + none (child 5, 260831) — stated ONCE; both faces that
+ * offer the reference (Harmony's select and the under-neck view, 260913)
+ * fill from this list rather than keeping their own copies. */
+export const REFERENCE_CHOICES = [
+  ["none", "none"],
+  ["root", "the root"],
+  ["third", "a 3rd below"],
+  ["fifth", "a 5th below"],
+];
+
 export function placeReference(kind, chordDeg, fld, strings, pos) {
   if (kind === "none" || kind == null) return { note: null, stretch: false, reason: null };
   if (!(kind in REF_OFFSET))
