@@ -1,3 +1,17 @@
+## 2026-08-31 — DEPLOYED: Multetudes v0.1.0 live
+
+- `9d5a468` deployed (Pages run 33387299249 green: build 5m10s with the full door-lock suite
+  now running in CI, deploy 8s). Live spot-checks: `/studies/multetudes/`, the standalone
+  `study.html`, the card PNG and `/` all answer 200; the live study.html is
+  **shasum-identical** to the committed file (75677294230a); the landing page references the
+  new card; the wrapper renders the door at v0.1.0 over the live URL, inspected in a real
+  browser.
+- The first deploy attempt (`d1e54dd`) FAILED in CI and the failure was a find: the door
+  gate's v0.9 oracle lived in the gitignored vault, so the runner that decides deploys could
+  not run the comparison — doctrine rule 2's silent skip, caught by the deploy gate itself.
+  A byte-identical copy now ships at `hub/tests/oracles/multetudes-v0.9.html` and the gate
+  points there; the vault file remains the working home.
+
 ## 2026-08-31 — Multetudes v0.1.0 published: atetudes.com/studies/multetudes/
 
 - **The first public edition of the Multetudes door** — source edition v0.1.0
