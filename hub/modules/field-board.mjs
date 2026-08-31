@@ -158,38 +158,40 @@ export const fieldBoard = {
        reference select is Harmony's second view, seated by the mixer it
        drives. The ⏮ ▶ ⏹ ⏭ cluster is the family mini — a view that asks,
        never a timer. -->
+  <!-- EACH SLIDER BESIDE THE THING IT GOVERNS (260913 finding — the
+       dispatch had drawn a floating right column; the PO's words were an
+       ASSOCIATION: harmony tracks voice/tone, bass tracks the reference.
+       Row 2 pairs voice with the harmony slider; row 3 pairs the
+       reference with the bass slider. Layout only — the tracking
+       semantics are the 260906 pins', untouched. -->
   <div class="fd-underneck">
-    <div class="fd-undercol">
-      <div class="fd-railrow">
-        <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-        <span class="fd-pulse" id="fdPulse"></span>
-        <span class="fd-lab2">bar split</span>
-        <select id="fdSplit" data-control="fdSplit"
-          title="the bar split — a bar's chords take these slots in order"></select>
-        <span class="fd-lab2">bpm</span>
-        <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
-          title="the tempo — one state, two views; the Metronome card owns the clock">
-        <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
-        <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
-          title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
-      </div>
-      <div class="fd-railrow">
-        <span class="fd-lab2">voice</span>
-        <select id="fdVoice" data-control="fdVoice"></select>
-      </div>
-      <div class="fd-railrow">
-        <span class="fd-lab2">Bass / reference tone</span>
-        <select id="fdBass2" data-control="fdBass2"
-          title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
-      </div>
+    <div class="fd-railrow">
+      <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
+      <span class="fd-pulse" id="fdPulse"></span>
+      <span class="fd-lab2">bar split</span>
+      <select id="fdSplit" data-control="fdSplit"
+        title="the bar split — a bar's chords take these slots in order"></select>
+      <span class="fd-lab2">bpm</span>
+      <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
+        title="the tempo — one state, two views; the Metronome card owns the clock">
+      <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
+        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
     </div>
-    <div class="fd-undermix">
+    <div class="fd-railrow fd-pairrow">
+      <span class="fd-lab2">voice</span>
+      <select id="fdVoice" data-control="fdVoice"></select>
       <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
         <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">harmony</span>
         <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
         <span class="fd-val" id="fdHarmVal">100</span>
       </div>
+    </div>
+    <div class="fd-railrow fd-pairrow">
+      <span class="fd-lab2">Bass / reference tone</span>
+      <select id="fdBass2" data-control="fdBass2"
+        title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
       <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
         <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">bass</span>
@@ -229,9 +231,9 @@ export const fieldBoard = {
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
-.fd-underneck{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
-.fd-undercol{flex:1 1 420px;min-width:0}
-.fd-undermix{flex:0 1 380px;padding-top:6px}
+.fd-underneck{display:block}
+.fd-pairrow{justify-content:flex-start}
+.fd-pairrow .fd-mixrow{margin-left:auto;flex:0 1 380px}
 #fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
 .fd-undermini{display:inline-flex;gap:4px;margin-left:6px}

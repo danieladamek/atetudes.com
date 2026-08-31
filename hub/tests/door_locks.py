@@ -746,6 +746,24 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260913b item 1: EACH SLIDER BESIDE THE THING IT GOVERNS ----
+        # The dispatch drew a floating right column; the PO meant an
+        # association (harmony↔voice, bass↔reference). Asserted at the
+        # PIXELS: the harmony slider's row top is level with voice's, the
+        # bass slider's with the reference select's — and NOT with each
+        # other's old stacked column.
+        pair = page.evaluate("""() => {
+          const top = (id) => { const e = document.getElementById(id);
+            return e ? Math.round(e.getBoundingClientRect().top) : null; };
+          return { voice: top('fdVoice'), harm: top('fdHarmVol'),
+                   ref: top('fdBass2'), bass: top('fdBassVol') }; }""")
+        check(all(v is not None for v in pair.values())
+              and abs(pair["harm"] - pair["voice"]) <= 8
+              and abs(pair["bass"] - pair["ref"]) <= 8
+              and abs(pair["harm"] - pair["bass"]) > 8,
+              f"{tag} the harmony slider sits WITH voice and the bass slider WITH the "
+              f"reference — association, not a column: {pair}")
+
         # ---- 260913 item 5: THE CHIPS SHOW FUNCTION AND THE SLASH ----
         # The wireframe drew the slash REPLACING the roman; the ruling says
         # BOTH — the roman is the only thing on the chip naming function
