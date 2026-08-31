@@ -110,19 +110,23 @@ test("a bare tone figure never touches motion; an enclosure never touches drill 
 
 /* ================= events: the figure IS the rhythm ================= */
 
-test("figureEvents composes noteEvents: block ignores the figure, arpeggiated is the line, both is line over strum", () => {
+/* PIN REWRITTEN 260913 (item 2, the vocabulary ruling): playback "block"
+ * is "strum" now, and the both-mode harmony context is the BED (ev.bed —
+ * the strum word went to the movement). Same assertions, same numbers;
+ * only the ruled words moved. */
+test("figureEvents composes noteEvents: strum ignores the figure, arpeggiated is the line, both is line over the bed", () => {
   const p = parseFigure("1-2-3-4", "slots").pattern;
-  const block = figureEvents(step0, { parsed: p, address: "slots", playback: "block", durBeats: 2, bpm: 72 });
-  assert.deepEqual(block, noteEvents(step0.voicing, null, null, 2, 72), "block must be the plain strum");
+  const block = figureEvents(step0, { parsed: p, address: "slots", playback: "strum", durBeats: 2, bpm: 72 });
+  assert.deepEqual(block, noteEvents(step0.voicing, null, null, 2, 72), "strum must be the plain whole-harmony attack");
   const arp = figureEvents(step0, { parsed: p, address: "slots", playback: "arpeggiated", durBeats: 2, bpm: 72 });
   assert.equal(arp.length, 4);
   const onsets = arp.map((e) => e.onset);
   assert.ok(onsets.every((o, i) => i === 0 || o > onsets[i - 1]), "a line's onsets ascend");
   assert.ok(Math.abs(onsets[1] - onsets[0] - (2 * 60 / 72) / 4) < 1e-9, "four steps divide two beats evenly");
   const both = figureEvents(step0, { parsed: p, address: "slots", playback: "both", durBeats: 2, bpm: 72 });
-  assert.equal(both.filter((e) => e.strum).length, 4, "both carries the strummed harmony…");
-  assert.equal(both.filter((e) => !e.strum).length, 4, "…and the line");
-  assert.ok(both.filter((e) => e.strum).every((e) => e.dur <= 0.5), "strummed context is short");
+  assert.equal(both.filter((e) => e.bed).length, 4, "both carries the harmony bed…");
+  assert.equal(both.filter((e) => !e.bed).length, 4, "…and the line");
+  assert.ok(both.filter((e) => e.bed).every((e) => e.dur <= 0.5), "the bed is short");
 });
 
 test("no figure = block, whatever playback says — an empty field is a legitimate state, not an error", () => {

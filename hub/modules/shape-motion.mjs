@@ -49,6 +49,7 @@ import { FAMILIES } from "../../engine/tetrad-voicings.mjs";
 import { PLACEMENTS } from "../../engine/isolation.mjs";
 import { parseFigure, describeFigure, SLOT_ORDER, TONE_ORDER } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, announce, listen } from "../bus.mjs";
+import { playbackWord } from "../../engine/figure.mjs";
 
 const FAMILY_LABEL = { close: "Close", drop2: "Drop-2", drop3: "Drop-3" };
 const PLACE_LABEL = { grip: "Grip", line: "Line", free: "Free" };
@@ -90,9 +91,9 @@ export const shapeMotion = {
           <div class="seg" id="placeSeg" data-control="placeSeg"></div></div>
         <div class="smTight"><label>Playback</label>
           <div class="seg" id="playbackSeg" data-control="playbackSeg">
-            <button data-pb="block" class="on" title="the harmony, strummed">Block</button>
+            <button data-pb="strum" class="on" title="the harmony, strummed — the word was Block until the 260913 ruling">Strum</button>
             <button data-pb="arpeggiated" title="the figure as a line — the figure IS the rhythm">Arpeggiated</button>
-            <button data-pb="both" title="the line over a short strummed harmony">Both</button>
+            <button data-pb="both" title="the line over a short harmony bed">Both</button>
           </div></div>
       </div>
       <label class="chk"><input type="checkbox" id="rootsChk" data-control="rootsChk"> Show root notes on lower strings</label>
@@ -136,7 +137,7 @@ export const shapeMotion = {
        * engine/figure.mjs, never pre-digested here, so the pass stays the only
        * derived thing and the text stays the stored fact. `playback` is the
        * reference's segment. `guide` is the guide-tone reduction view. */
-      address: "slots", figure: "", playback: "block", guide: false,
+      address: "slots", figure: "", playback: "strum", guide: false,
       /* THE ZONE (audit 260818 §A2) is a SHAPE fact — where on the neck — so it
        * is owned here. `null` means "the pass's own default"; the stage's Box
        * mode announces a value the moment the user moves it, and this owner
@@ -183,7 +184,7 @@ export const shapeMotion = {
       // hostile; the door keeps both, the picker writing into the field
       const letters = cfg.address === "tones" ? TONE_ORDER : SLOT_ORDER;
       const presets = [
-        ["", "— block —"],
+        ["", "— strum —"],   // was "— block —" until the 260913 word ruling
         [letters.join("-"), "up " + letters.join("-")],
         [[...letters].reverse().join("-"), "down " + [...letters].reverse().join("-")],
         [letters[0] + "-" + letters[2] + "-" + letters[1] + "-" + letters[3], "broken " + letters[0] + "-" + letters[2] + "-" + letters[1] + "-" + letters[3]],
@@ -212,7 +213,7 @@ export const shapeMotion = {
         // identical silent chord. Disable them until a figure parses; enabling is
         // LIVE (render runs on every change). Playback stays three real buttons —
         // not collapsed, not renamed; this only gates when the axis is inert.
-        b.disabled = b.dataset.pb !== "block" && !hasFig;
+        b.disabled = b.dataset.pb !== "strum" && !hasFig;
       }
 
       /* THE PANEL NARRATES ITSELF (this item: state the rules in the hints, so
@@ -234,16 +235,16 @@ export const shapeMotion = {
       if (cfg.placement === "free")
         parts.push("Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it");
       // the sounding rule, and the two ways to reach the silent block chord
-      if (cfg.playback === "block")
+      if (cfg.playback === "strum")
         parts.push(hasFig
-          ? "Playback is Block, so the figure is typed but not sounding — choose Arpeggiated or Both to hear it"
-          : "Block chords");
+          ? "Playback is Strum, so the figure is typed but not sounding — choose Arpeggiated or Both to hear it"
+          : "Strum chords");
       else
         parts.push(hasFig
           ? `${cfg.playback}: ${figWords}`
-          : `${cfg.playback} has no figure to sound — Block chords until one parses`);
+          : `${cfg.playback} has no figure to sound — Strum chords until one parses`);
       // the address toggle only bites while a figure is actually sounding
-      if (hasFig && cfg.playback !== "block")
+      if (hasFig && cfg.playback !== "strum")
         parts.push(cfg.address === "tones" ? "spelled by tone role" : "spelled by slot");
       if (cfg.guide) parts.push("guide tones lit — a neck view that dims R and 5");
       byId("smHint").textContent = parts.join(" · ");
@@ -265,7 +266,11 @@ export const shapeMotion = {
       if (!m || typeof m !== "object") return;
       let changed = false;
       for (const k of MINE) if (k in m && JSON.stringify(m[k]) !== JSON.stringify(cfg[k])) {
-        cfg[k] = Array.isArray(m[k]) ? [...m[k]] : m[k]; changed = true;
+        /* a restored pre-260913 étude says playback "block" — the alias map
+         * is the one place the old word is known */
+        const v = k === "playback" ? playbackWord(m[k]) : m[k];
+        if (JSON.stringify(v) === JSON.stringify(cfg[k])) continue;
+        cfg[k] = Array.isArray(v) ? [...v] : v; changed = true;
       }
       if (changed) render();
     });

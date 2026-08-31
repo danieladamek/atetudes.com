@@ -219,6 +219,13 @@ export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi =
   return { events, span };
 }
 
+/** LEGACY WORDS (260913 rename, the PO's ruling — a block IS a strum):
+ * Multetudes v0.1.0 saved études carry movement "block"/"arpeggio"; this
+ * map is the one place the old words are known, applied where a config
+ * merges in. */
+export const movementWord = (w) =>
+  ({ block: "strum", arpeggio: "arpeggiate" })[w] || w;
+
 /** the canonical chart body for a progression's bars — THROUGH the format
  * engine, so reading a palette-written chart and re-serialising it is a
  * byte fixed point (asserted in the tests, demanded by §8). */

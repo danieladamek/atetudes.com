@@ -628,7 +628,7 @@ def run_door(pw, door_id):
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(120)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
@@ -642,7 +642,7 @@ def run_door(pw, door_id):
         # advance's first note included — shows a ring at its own dot.
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'arpeggio',
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'arpeggiate',
                       address: 'pattern', figure: '4,3,2,1', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(250)
         page.evaluate("""() => {
@@ -687,7 +687,7 @@ def run_door(pw, door_id):
         # full boot restore — this block set arpeggio movement AND a typed figure
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
@@ -732,9 +732,47 @@ def run_door(pw, door_id):
         # restore the boot window
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
+
+        # ---- 260913 item 2: THE RENAME HOLDS, AND THE OLD WORDS STILL LAND ----
+        # The PO ruled the vocabulary (a block IS a strum): movement
+        # strum/arpeggiate, playback strum, the harmony bed's flag renamed.
+        # A restored v0.1.0 étude still says "block"/"arpeggio" — the alias
+        # maps at the merges are the one place the old words are known.
+        # Asserted at the artifact: a legacy config lands on the ruled
+        # buttons and SOUNDS like what it meant.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'arpeggio',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(250)
+        lg = page.evaluate("""() => ({
+          on: [...document.querySelectorAll('#fdMoveSeg button')]
+            .filter(b => b.classList.contains('on')).map(b => b.dataset.move),
+          labels: [...document.querySelectorAll('#fdMoveSeg button')].map(b => b.textContent.trim()) })""")
+        check(lg["on"] == ["arpeggiate"] and lg["labels"] == ["strum", "arpeggiate"],
+              f"{tag} a legacy 'arpeggio' config lands on the ruled arpeggiate button: {lg}")
+        # and the legacy word reaches the WALK normalized — the audition
+        # sequences (arpeggiate = one at a time), never a stack
+        page.evaluate("""() => {
+          if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+            document.addEventListener('atetudes:note', e =>
+              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+          window.__nt = []; }""")
+        page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(3600)   # a 4-beat bar at 72bpm
+        lg_t = page.evaluate("() => window.__nt.map(n => n.t)")
+        check(len(lg_t) >= 3 and (max(lg_t) - min(lg_t)) > 200,
+              f"{tag} the legacy word MEANT arpeggiate and still sounds spread "
+              f"({len(lg_t)} notes over {0 if not lg_t else round(max(lg_t)-min(lg_t))}ms)")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(250)
 
         # ---- 260911 item 4: THE KEYS PULSE WHAT SOUNDS ----
         # The one board in the door without the idiom: keys-board announced
@@ -805,7 +843,7 @@ def run_door(pw, door_id):
         # figure; a bar that cannot prints its refusal IN THE BAR.
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 6, nearFret: 7,
-                      object: 'tetrad', take: 'all', notesPer: 3, movement: 'arpeggio',
+                      object: 'tetrad', take: 'all', notesPer: 3, movement: 'arpeggiate',
                       address: 'tones', figure: 'R-3-5-7-R-7-3',
                       source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(350)
@@ -848,7 +886,7 @@ console.log(JSON.stringify(out));
         # neck-refused bars must say so ON THE STAFF, by name
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [3, 2, 1], startDeg: 5, nearFret: 0,
-                      object: 'triad', take: 'one', notesPer: 1, movement: 'block',
+                      object: 'triad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(350)
         st_ref5 = page.evaluate("""() => {
@@ -867,7 +905,7 @@ console.log(JSON.stringify(out));
         # full boot restore
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
@@ -1006,7 +1044,7 @@ const cur = chordAt(prog, 0, fld, 'tetrad');
 const sel = oneOfEach(cur.tones, pool, { n: 1, centre: pos.centre }).notes;
 const fig = orderBy('pattern', '4,3,4,3,2,1', sel);
 const out = {};
-for (const [name, order, spread] of [['figured', fig.order, false], ['block', null, false], ['arp', null, true]]) {
+for (const [name, order, spread] of [['figured', fig.order, false], ['strum', null, false], ['arp', null, true]]) {
   const { events } = walkSchedule(sel, order, 4, 60, { spread });
   const together = events.every(e => e.at === 0);
   const dv = together ? 4 : events.length > 1 ? events[1].at - events[0].at : 4;
@@ -1023,16 +1061,16 @@ console.log(JSON.stringify(out));
               f"{tag} the schedule itself must yield the six-step non-dyadic case: {st_exp['figured']}")
         st_read = ("""() => { const svg = document.getElementById('stSvg');"""
                    """ const cur = svg.querySelector('[data-stcur]');"""
-                   """ return { stems: svg.querySelectorAll('[data-ststem]:not([data-ststem=block])').length,"""
-                   """ blockstem: svg.querySelectorAll('[data-ststem=block]').length,"""
+                   """ return { stems: svg.querySelectorAll('[data-ststem]:not([data-ststem=stack])').length,"""
+                   """ blockstem: svg.querySelectorAll('[data-ststem=stack]').length,"""
                    """ beam1: svg.querySelectorAll('[data-stbeam="1"]').length,"""
                    """ beam2: svg.querySelectorAll('[data-stbeam="2"]').length,"""
                    """ tuplets: [...svg.querySelectorAll('[data-sttuplet]')].map(t => t.textContent),"""
                    """ figheads: svg.querySelectorAll('[data-stfig]').length }; }""")
         for st_name, st_cfg in [
-            ("figured", { "movement": "block", "address": "pattern", "figure": "4,3,4,3,2,1" }),
-            ("block",   { "movement": "block", "address": "pattern", "figure": "" }),
-            ("arp",     { "movement": "arpeggio", "address": "pattern", "figure": "" })]:
+            ("figured", { "movement": "strum", "address": "pattern", "figure": "4,3,4,3,2,1" }),
+            ("strum",   { "movement": "strum", "address": "pattern", "figure": "" }),
+            ("arp",     { "movement": "arpeggiate", "address": "pattern", "figure": "" })]:
             page.evaluate("""(d) => document.dispatchEvent(new CustomEvent('atetudes:config',
               { detail: d }))""", { "key": "Bb", "strings": [4, 3, 2, 1], "startDeg": 4,
                                     "nearFret": 3, "object": "tetrad", "take": "one",
@@ -1058,12 +1096,12 @@ console.log(JSON.stringify(out));
                 check(got["stems"] >= exp["stems"],
                       f"{tag} staff {st_name}: every scheduled event carries its stem "
                       f"({got['stems']} vs {exp['stems']})")
-            if st_name == "block":
+            if st_name == "strum":
                 check(got["stems"] == 0 and got["beam1"] == 0 and not got["tuplets"],
                       f"{tag} staff {st_name}: a together-schedule stacks — no run stems, "
                       f"no beams, no numeral: {got}")
-                check(got["blockstem"] == (1 if st_exp["block"]["wv"] < 4 and not st_exp["block"]["together"] else 0)
-                      or st_exp["block"]["together"],
+                check(got["blockstem"] == (1 if st_exp["strum"]["wv"] < 4 and not st_exp["strum"]["together"] else 0)
+                      or st_exp["strum"]["together"],
                       f"{tag} staff {st_name}: the block's own stem follows the schedule: {got}")
             if st_name == "arp":
                 check(got["stems"] >= exp["stems"] and got["beam1"] == 0 and not got["tuplets"],
@@ -1072,7 +1110,7 @@ console.log(JSON.stringify(out));
         # full boot restore
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
@@ -1219,11 +1257,11 @@ console.log(JSON.stringify(out));
             page.evaluate("""(d) => document.dispatchEvent(new CustomEvent('atetudes:config',
               { detail: d }))""", { "key": "Bb", "strings": [4, 3, 2, 1], "startDeg": 4,
                                     "nearFret": 3, "object": "tetrad", "take": "one",
-                                    "notesPer": 1, "movement": "block", "address": mx_addr,
+                                    "notesPer": 1, "movement": "strum", "address": mx_addr,
                                     "figure": mx_fig, "source": "cycle", "custom": "" })
             page.wait_for_timeout(150)
             st = page.evaluate("""() => {
-              const b = document.querySelector('#fdMoveSeg button[data-move="block"]');
+              const b = document.querySelector('#fdMoveSeg button[data-move="strum"]');
               const cap = document.getElementById('fdMoveSeg').previousElementSibling;
               return { disabled: b.disabled, on: b.classList.contains('on'),
                        title: b.title, cap: cap.textContent }; }""")
@@ -1241,7 +1279,7 @@ console.log(JSON.stringify(out));
               { detail: { figure: v } }))""", mx_bad)
             page.wait_for_timeout(120)
             st2 = page.evaluate("""() => {
-              const b = document.querySelector('#fdMoveSeg button[data-move="block"]');
+              const b = document.querySelector('#fdMoveSeg button[data-move="strum"]');
               const cap = document.getElementById('fdMoveSeg').previousElementSibling;
               return { disabled: b.disabled, cap: cap.textContent }; }""")
             mx_contra += 1
@@ -1253,7 +1291,7 @@ console.log(JSON.stringify(out));
               { detail: { figure: '' } }))""")
             page.wait_for_timeout(120)
             st3 = page.evaluate("""() => {
-              const b = document.querySelector('#fdMoveSeg button[data-move="block"]');
+              const b = document.querySelector('#fdMoveSeg button[data-move="strum"]');
               const cap = document.getElementById('fdMoveSeg').previousElementSibling;
               return { disabled: b.disabled, on: b.classList.contains('on'),
                        title: b.title, cap: cap.textContent }; }""")
@@ -1267,7 +1305,7 @@ console.log(JSON.stringify(out));
         # full boot restore — the leg moved address, movement and figure
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
         # the SOUND half, on Daniel's own configuration: refused bars silent,
@@ -1854,7 +1892,7 @@ console.log(JSON.stringify(out));
               f"{[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:5]]}")
         # THE DECOUPLING, both directions:
         # (a) one-of-each + arpeggio — the combination Take used to FORBID
-        page.click('#fdMoveSeg >> text=arpeggio')
+        page.click('#fdMoveSeg >> text=arpeggiate')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
@@ -1872,7 +1910,7 @@ console.log(JSON.stringify(out));
         # (b) every-occurrence + block — the combination Take used to FORCE
         # apart. At Line, so the box offers its true seven-note cluster
         # (Grip's one-per-string cap would leave only four).
-        page.click('#fdMoveSeg >> text=block'); page.select_option("#hcTake", "all")
+        page.click('#fdMoveSeg >> text=strum'); page.select_option("#hcTake", "all")
         page.click('#fdNSeg >> text=Line')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
@@ -1916,7 +1954,7 @@ console.log(JSON.stringify(out));
               f"{tag} the pulse must fade — a ring that stays is a marker, not a pulse")
         page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(200)
         # and in ARPEGGIO movement the rings arrive one at a time
-        page.click('#fdMoveSeg >> text=arpeggio')
+        page.click('#fdMoveSeg >> text=arpeggiate')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
@@ -1925,7 +1963,7 @@ console.log(JSON.stringify(out));
         page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
         check(1 <= midbar <= 2,
               f"{tag} an ARPEGGIO pulses one dot at a time, not the chord at once: {midbar} rings mid-bar")
-        page.click('#fdMoveSeg >> text=block')
+        page.click('#fdMoveSeg >> text=strum')
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(100)
 
@@ -2019,7 +2057,7 @@ console.log(JSON.stringify(out));
         # full boot restore — this block moved key, set, window, object and source
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
@@ -2110,8 +2148,11 @@ console.log(JSON.stringify(out));
               and any("every occurrence" in t for t in take_opts),
               f"{tag} Take must speak MATERIAL, not movement: {take_opts}")
         move_btns = page.eval_on_selector_all("#fdMoveSeg button", "es => es.map(e => e.textContent.trim())")
-        check(move_btns == ["block", "arpeggio"],
-              f"{tag} the rail's movement control carries Daniel's two words: {move_btns}")
+        # words updated 260913: the PO ruled strum/arpeggiate (a block IS a
+        # strum); the pin's job — the rail speaks the ruled movement words,
+        # Take speaks material — is unchanged
+        check(move_btns == ["strum", "arpeggiate"],
+              f"{tag} the rail's movement control carries the ruled words: {move_btns}")
 
         # ---- 260903: SOUND ⊆ SIGHT — corrected 260904 ----
         # The invariant is ONE-DIRECTIONAL, as ruled: the app must never
@@ -2989,7 +3030,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => { [...document.querySelectorAll('#figAddrSeg button')]
           .find(b => b.dataset.mm === 'slots').click(); }""")
         page.evaluate("""() => { [...document.querySelectorAll('#playbackSeg button')]
-          .find(b => b.dataset.pb === 'block').click(); }""")
+          .find(b => b.dataset.pb === 'strum').click(); }""")
         page.wait_for_timeout(200)
 
     if "arpIn" in r["controlsPresent"]:
@@ -3008,7 +3049,7 @@ console.log(JSON.stringify(out));
         gated = sorted(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.map(x => x.dataset.pb)"))
         check(gated == ["arpeggiated", "both"],
               f"{tag} with no figure, Arpeggiated and Both must be disabled (got {gated})")
-        check(page.eval_on_selector_all("#playbackSeg button[data-pb=block]:disabled", "e => e.length") == 0,
+        check(page.eval_on_selector_all("#playbackSeg button[data-pb=strum]:disabled", "e => e.length") == 0,
               f"{tag} Block must stay enabled — it is the only thing that sounds without a figure")
         check("figure" in page.inner_text("#smWhy").lower(),
               f"{tag} the panel does not state why Arpeggiated/Both are disabled")
@@ -3079,7 +3120,7 @@ console.log(JSON.stringify(out));
         check(seen >= 1, f"{tag} the sounding-note pulse never rang for the figure")
         # 7. the score draws the figure at its onsets: an arpeggiated 4-note line
         #    over a 4-beat bar writes quarters — four heads per bar, not one stack
-        page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(120)
+        page.click("#playbackSeg >> text=Strum"); page.wait_for_timeout(120)
         stems_block = page.eval_on_selector_all("#score line[stroke-width='1.2']", "e => e.length")
         page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(120)
         stems_arp = page.eval_on_selector_all("#score line[stroke-width='1.1']", "e => e.length")
@@ -3106,7 +3147,7 @@ console.log(JSON.stringify(out));
         check(all(float(v.split()[2]) < 1160 for v in vbs),
               f"{tag} follow-the-line widened to the whole neck — it must stay a crop while tracking")
         page.click("#winSeg >> text=Full"); page.click("#placeSeg >> text=Grip")
-        page.select_option("#figSel", ""); page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(80)
+        page.select_option("#figSel", ""); page.click("#playbackSeg >> text=Strum"); page.wait_for_timeout(80)
 
         # 10. THE PANEL NARRATES ITS OWN RULES (this item: state the rules in the
         #     hints). The figure sounds ONLY when Playback != Block AND a figure
@@ -3114,15 +3155,15 @@ console.log(JSON.stringify(out));
         #     and Free must warn that the Box is inert.
         hint = lambda: page.inner_text("#smHint").lower()
         # (a) Arpeggiated SELECTED, then the figure cleared — P1 greys the option
-        #     but the selection stays; the hint says it sounds as Block until a
+        #     but the selection stays; the hint says it sounds as Strum until a
         #     figure parses. (Arpeggiated can no longer be CLICKED with no figure,
         #     so reach the state by selecting it with a figure, then clearing.)
         page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(60)
         page.select_option("#figSel", ""); page.wait_for_timeout(80)
-        check("no figure" in hint() and "block" in hint(),
-              f"{tag} Arpeggiated with no figure does not say it sounds as Block: {page.inner_text('#smHint')!r}")
-        # (b) a figure typed but Playback = Block — the figure is ignored, silently
-        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(80)
+        check("no figure" in hint() and "strum" in hint(),
+              f"{tag} Arpeggiated with no figure does not say it sounds as Strum: {page.inner_text('#smHint')!r}")
+        # (b) a figure typed but Playback = Strum — the figure is ignored, silently
+        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg >> text=Strum"); page.wait_for_timeout(80)
         check("not sounding" in hint(),
               f"{tag} Block with a figure does not say the figure is ignored: {page.inner_text('#smHint')!r}")
         # (c) Placement = Free makes the Box inert — stated from this panel too
@@ -3134,7 +3175,7 @@ console.log(JSON.stringify(out));
               f"{tag} the disabled Line placement has no stated reason in the panel")
         # reset to a clean default for the blocks below
         page.click("#placeSeg >> text=Grip"); page.select_option("#figSel", "")
-        page.click("#playbackSeg >> text=Block"); page.wait_for_timeout(80)
+        page.click("#playbackSeg >> text=Strum"); page.wait_for_timeout(80)
 
     if "keySel" in r["controlsPresent"]:
         # ---- the Harmony panel, in the reference's form: labelled selects,

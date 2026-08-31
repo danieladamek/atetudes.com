@@ -57,18 +57,19 @@ export const SUSTAIN_HOLD = "chord";
 /** Only DUR is voice-dependent — voices CONSUME the event list, they never
  * re-derive it (the v0.6.5 seam). tone keeps every event's own dur, which is
  * the anti-drift baseline; pluck rings to the chord change, capped, because a
- * struck string decays on its own; sustain holds. Strummed harmony-context
- * events keep their short dur in every voice, and the bass pedal holds with
- * the sustain voice. */
+ * struck string decays on its own; sustain holds. Harmony-BED events (the
+ * short strummed context under a line — `bed` since 260913, when the strum
+ * word went to the movement) keep their short dur in every voice, and the
+ * bass pedal holds with the sustain voice. */
 export function voiceSchedule(evs, voice, durBeats, bpm) {
   const span = (durBeats || 2) * (60 / bpm);
   return evs.map((ev, i) => {
     let dur = ev.dur;
-    if (!ev.strum) {
+    if (!ev.bed) {
       if (voice === "pluck") dur = Math.min(1.1, Math.max(ev.dur, span - ev.onset));
       if (voice === "sustain") {
         if (SUSTAIN_HOLD === "slot" && ev.role !== "bass") {
-          const next = evs.slice(i + 1).find((e) => !e.strum && e.role !== "bass" && e.onset > ev.onset);
+          const next = evs.slice(i + 1).find((e) => !e.bed && e.role !== "bass" && e.onset > ev.onset);
           dur = (next ? next.onset : span) - ev.onset;
         } else dur = span - ev.onset;
       }

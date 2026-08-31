@@ -44,7 +44,7 @@ import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
-import { progressionOf, chordAt, beatsOf, walkSchedule } from "../../engine/progression.mjs";
+import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { placeReference } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE,
   listen, announce } from "../bus.mjs";
@@ -63,7 +63,7 @@ export const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "block",
+      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -133,7 +133,7 @@ export const etudeWalk = {
        * Movement control chooses together-or-sequence (a scale stays a run —
        * the box has no chord to sound as one). A typed figure sequences
        * regardless, as ruled. */
-      const spread = cfg.object === "scale" || cfg.movement === "arpeggio";
+      const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
       const { events } = walkSchedule(sel, fig.err ? null : fig.order,
         chordBeats(prog), bpm, { spread, refMidi });
       clearPending();
@@ -205,7 +205,11 @@ export const etudeWalk = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))
-        if (k in m) cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] };
+        if (k in m) {
+          /* legacy v0.1.0 movement words normalise at the merge (260913) */
+          const v = k === "movement" ? movementWord(m[k]) : m[k];
+          cfg = { ...cfg, [k]: Array.isArray(v) ? [...v] : v };
+        }
     });
   },
 };

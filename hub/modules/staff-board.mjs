@@ -24,7 +24,7 @@ import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
 import { placeReference } from "../../engine/reference.mjs";
-import { progressionOf, chordAt, beatsOf, walkSchedule } from "../../engine/progression.mjs";
+import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
@@ -66,7 +66,7 @@ export const staffBoard = {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
-      movement: "block",
+      movement: "strum",
       address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4;
@@ -163,7 +163,7 @@ export const staffBoard = {
        * numeral 4 more (260910, item 3) — the label band clears the BEAM,
        * not just the heads, whenever any bar writes a run */
       const anyRun = (fig.order && fig.order.length) || cfg.object === "scale"
-        || cfg.movement === "arpeggio";
+        || cfg.movement === "arpeggiate";
       const labY = Math.min(TY - 30, yTreble(topStep) - 20 - (anyRun ? 34 : 0));
 
       barsX = [];
@@ -212,7 +212,7 @@ export const staffBoard = {
         }
         /* 260905: A CHORD STACKS; A RUN DOES NOT — and which one this bar is
          * became the MOVEMENT control's fact, not Take's (Take is material) */
-        const stacked = !figHere && cfg.object !== "scale" && cfg.movement !== "arpeggio";
+        const stacked = !figHere && cfg.object !== "scale" && cfg.movement !== "arpeggiate";
 
         /* THE STAFF WRITES WHAT THE SCHEDULE SCHEDULES (260910, item 3 —
          * register 6 resolved): the note VALUES derive from walkSchedule's
@@ -226,7 +226,7 @@ export const staffBoard = {
         const flatBeats = [];
         prog.bars.forEach((bar, bi) => bar.forEach((_, k2) => flatBeats.push(perBeats[bi][k2])));
         const beats = flatBeats[ci] ?? meter;
-        const spread2 = cfg.object === "scale" || cfg.movement === "arpeggio";
+        const spread2 = cfg.object === "scale" || cfg.movement === "arpeggiate";
         let events = [];
         if (seq.length) {
           const sched = walkSchedule(sels[ci], figHere, beats, 60, { spread: spread2 });
@@ -277,7 +277,7 @@ export const staffBoard = {
           for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi));
             yTop = Math.min(yTop, y2); yLow = Math.max(yLow, y2); }
           el("line", { x1: x0 + BW * 0.34 + 6, y1: yLow, x2: x0 + BW * 0.34 + 6,
-            y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "block" }, svg);
+            y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "stack" }, svg);
         } else if (!stacked && xsL.length && wv < 4) {
           const L = xsL.length;
           const yBeam = Math.min(...ysL) - 24;
@@ -357,7 +357,11 @@ export const staffBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))
-        if (k in m) cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] };
+        if (k in m) {
+          /* legacy v0.1.0 movement words normalise at the merge (260913) */
+          const v = k === "movement" ? movementWord(m[k]) : m[k];
+          cfg = { ...cfg, [k]: Array.isArray(v) ? [...v] : v };
+        }
       render();
     });
     listen(d, CLOCK_STATE, (m) => {

@@ -154,18 +154,26 @@ export function orderFigure(parsed, step, address = "slots", ctx = null) {
 }
 
 /** THE ONE CALL: events for a step, figure applied. `playback` is the door's
- * segment — block (harmony only), arpeggiated (the line), both (line over a
- * short strummed harmony, the reference's onsetsFor). */
-export function figureEvents(step, { parsed = null, address = "slots", playback = "block",
+ * segment — strum (the whole harmony at once; the value was "block" until
+ * 260913, when the PO ruled the truer word: a block IS a strum, and
+ * note-events has always staggered it), arpeggiated (the line), both (the
+ * line over a short harmony BED, the reference's onsetsFor — the bed was
+ * called `strum` before the movement took that word; renamed with the
+ * ruling so one word means one thing). */
+export function figureEvents(step, { parsed = null, address = "slots", playback = "strum",
   bassMidi = null, durBeats = 2, bpm = 72, ctx = null } = {}) {
-  const order = playback === "block" ? null : orderFigure(parsed, step, address, ctx);
+  const order = playback === "strum" ? null : orderFigure(parsed, step, address, ctx);
   if (!order) return noteEvents(step.voicing, null, bassMidi, durBeats, bpm);
   const line = noteEvents(step.voicing, order, bassMidi, durBeats, bpm);
   if (playback !== "both") return line;
-  const strum = noteEvents(step.voicing, null, null, durBeats, bpm)
-    .map((ev) => ({ ...ev, dur: Math.min(ev.dur, 0.5), strum: true }));   // harmony context, not steps
-  return [...strum, ...line];
+  const bed = noteEvents(step.voicing, null, null, durBeats, bpm)
+    .map((ev) => ({ ...ev, dur: Math.min(ev.dur, 0.5), bed: true }));   // harmony context, not steps
+  return [...bed, ...line];
 }
+
+/** LEGACY WORD (260913 rename): saved études from before the ruling carry
+ * playback "block"; the map is the one place the old word is known. */
+export const playbackWord = (w) => (w === "block" ? "strum" : w);
 
 /** the figure back in its own words — drill's for slots/tones, motion's for enclosures */
 export function describeFigure(parsed, address = "slots") {

@@ -139,7 +139,7 @@ export const neckReadout = {
           for (const x of sel) per[x.string] = (per[x.string] || 0) + 1;
           const shape = run.strings.map((s) => per[s] || 0).join("+");
           const isLine = Object.values(per).some((c) => c > 1);
-          bits.push(`${shape} across the set <span class="ro-dim">(${isLine ? "a line" : "a block"})</span>`);
+          bits.push(`${shape} across the set <span class="ro-dim">(${isLine ? "a line" : "a stack"})</span>`);
         }
         /* THE REFERENCE, fretted and NAMED (child 5): the readout says what
          * the stack becomes over it — R19's sentence. The name arrives from

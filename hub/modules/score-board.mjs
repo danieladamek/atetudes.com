@@ -22,7 +22,7 @@ import { tetradPass, degreeLabel, OPEN_MIDI } from "../../engine/tetrad-sequence
 import { scaleNotes, LETTER_PC } from "../../engine/chord.mjs";
 import { patternOf } from "../../engine/transport.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
-import { parseFigure, figureEvents } from "../../engine/figure.mjs";
+import { parseFigure, figureEvents, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 
@@ -171,11 +171,11 @@ export const scoreBoard = {
         let figErr = null;
         try {
           events = figureEvents(s, { parsed: parsedFig.err ? null : parsedFig.pattern,
-            address: cfg.address || "slots", playback: cfg.playback || "block", durBeats: beats, bpm: 72,
+            address: cfg.address || "slots", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: 72,
             ctx: { scalePcs: scaleNotes(cfg.key, cfg.scale).map((n) => n.pc), tonicPc: scaleNotes(cfg.key, cfg.scale)[0].pc,
               open: OPEN_MIDI, nfrets: 15, set: pass.set.strings } });
         } catch (e) { events = null; figErr = e && e.message ? e.message : String(e); }
-        if (figErr && parsedFig.pattern && (cfg.playback || "block") !== "block") {
+        if (figErr && parsedFig.pattern && (playbackWord(cfg.playback) || "strum") !== "strum") {
           const fe = el("text", { x: x + 3, y: 40, "font-size": "8", fill: "#B82929",
             "data-scfigerr": "" }, svg);
           const feWords = ("the figure cannot sound here — " + figErr).split(" ");
@@ -189,8 +189,8 @@ export const scoreBoard = {
           const ts = el("tspan", { x: x + 3, dy: feFirst ? 0 : 9 }, fe);
           ts.textContent = feLine;
         }
-        const seqEvents = events && (cfg.playback || "block") !== "block" && parsedFig.pattern
-          ? events.filter((ev) => ev.role !== "bass" && !ev.strum) : null;
+        const seqEvents = events && (playbackWord(cfg.playback) || "strum") !== "strum" && parsedFig.pattern
+          ? events.filter((ev) => ev.role !== "bass" && !ev.bed) : null;
         const labOf = (midi) => degreeLabel(s.chord, midi);
         if (!seqEvents) {
           const open = beats >= 2, xh = x + 16;

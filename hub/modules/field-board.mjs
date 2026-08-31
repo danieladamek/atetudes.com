@@ -41,7 +41,7 @@ import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/p
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
 import { placeReference } from "../../engine/reference.mjs";
-import { progressionOf, chordAt } from "../../engine/progression.mjs";
+import { progressionOf, chordAt, movementWord } from "../../engine/progression.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
@@ -113,10 +113,14 @@ export const fieldBoard = {
       </div>
       <div class="fd-cap">Movement</div>
       <div class="seg" id="fdMoveSeg" data-control="fdMoveSeg">
-        <button data-move="block" class="on"
-          title="the notes sound together — a chord">block</button>
-        <button data-move="arpeggio"
-          title="the notes sound in sequence, low to high across the bar">arpeggio</button>
+        <!-- strum / arpeggiate (260913, the PO's ruling): a block IS a
+             strum (note-events has always staggered it), so the movement
+             wears the truer word; the old engine strum flag (the harmony
+             bed) was renamed bed in the same pass -->
+        <button data-move="strum" class="on"
+          title="the notes sound together — a chord">strum</button>
+        <button data-move="arpeggiate"
+          title="the notes sound in sequence, low to high across the bar">arpeggiate</button>
       </div>
       <div class="fd-cap">The figure is</div>
       <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
@@ -238,7 +242,7 @@ export const fieldBoard = {
        * sequence — lives HERE with Placement and The Figure, where the
        * motion lives: block · arpeggio, his two words. A typed figure still
        * sequences regardless (the night-7 ruling, now in its proper home). */
-      movement: "block",
+      movement: "strum",
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -494,7 +498,7 @@ export const fieldBoard = {
       for (const b of byId("fdMoveSeg").querySelectorAll("button")) {
         b.classList.toggle("on", b.dataset.move === cfg.movement);
         if (!b.dataset.title0) b.dataset.title0 = b.title;
-        const overridden = figRules && b.dataset.move === "block";
+        const overridden = figRules && b.dataset.move === "strum";
         b.disabled = cfg.object === "scale" || overridden;
         b.title = overridden
           ? "the typed figure sequences — clear the Figure to sound the chord as one"
@@ -806,7 +810,12 @@ export const fieldBoard = {
       if (!m || typeof m !== "object") return;
       let changed = false;
       for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start"])
-        if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+        if (k in m && m[k] !== cfg[k]) {
+          /* a restored v0.1.0 étude says movement "block"/"arpeggio" — the
+           * alias map is the one place the old words are known (260913) */
+          const v = k === "movement" ? movementWord(m[k]) : m[k];
+          if (v !== cfg[k]) { cfg = { ...cfg, [k]: v }; changed = true; }
+        }
       if ("dyad" in m && Array.isArray(m.dyad) && m.dyad.join() !== cfg.dyad.join()) {
         cfg = { ...cfg, dyad: [...m.dyad] }; changed = true;
       }

@@ -613,7 +613,8 @@ def m25_take_does_movement_duty_again():
     # (partial) duty here which it shouldn't be"). The decoupling pins must
     # name the forbidden coupling from the sound itself.
     p, original, mutated = patch("hub/modules/etude-walk.mjs",
-        'const spread = cfg.object === "scale" || cfg.movement === "arpeggio";',
+        # anchor re-aimed 260913 (item 2's word ruling: arpeggio -> arpeggiate)
+        'const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";',
         'const spread = cfg.object === "scale" || cfg.take === "all";')
     try:
         p.write_text(mutated)
@@ -830,10 +831,10 @@ def m35_the_engine_refusal_swallowed_again():
     # pin must fail SHOWING the refusal text drawn in the bar — the reason
     # travelled from the throw to the pixels.
     p, original, mutated = patch("engine/figure.mjs",
-        '  const order = playback === "block" ? null : orderFigure(parsed, step, address, ctx);',
+        '  const order = playback === "strum" ? null : orderFigure(parsed, step, address, ctx);',
         '  if (playback !== "block" && parsed)\n'
         '    throw new Error("motion: no playable position for midi 0 (m35 injection)");\n'
-        '  const order = playback === "block" ? null : orderFigure(parsed, step, address, ctx);')
+        '  const order = playback === "strum" ? null : orderFigure(parsed, step, address, ctx);')
     try:
         p.write_text(mutated)
         build()

@@ -23,7 +23,7 @@
 import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
-import { parseFigure, figureEvents, toneIndexOf } from "../../engine/figure.mjs";
+import { parseFigure, figureEvents, toneIndexOf, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } from "../bus.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -408,12 +408,12 @@ export const fretboardStage = {
       try {
         events = figureEvents(cur, {
           parsed: parsed.err ? null : parsed.pattern, address: cfg.address || "slots",
-          playback: cfg.playback || "block", durBeats, bpm,
+          playback: playbackWord(cfg.playback) || "strum", durBeats, bpm,
           ctx: { scalePcs: scale.map((n) => n.pc), tonicPc: scale[0].pc, open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
         });
       } catch { return; }
-      const line = events.filter((e) => e.role !== "bass" && !e.strum);
-      const isLine = (cfg.playback || "block") !== "block" && !!parsed.pattern;
+      const line = events.filter((e) => e.role !== "bass" && !e.bed);
+      const isLine = (playbackWord(cfg.playback) || "strum") !== "strum" && !!parsed.pattern;
       line.forEach((ev) => {
         const t = d.defaultView.setTimeout(() => {
           if (ev.string == null || ev.fret == null) return;

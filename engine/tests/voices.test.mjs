@@ -76,12 +76,15 @@ test("voiceSchedule reproduces the shipped one over a derived corpus", () => {
   assert.ok(cases >= 600, `corpus too small to mean anything (${cases})`);
 });
 
-test("voiceSchedule keeps a strummed event's short dur in every voice", () => {
-  const evs = [{ midi: 60, role: "chord", onset: 0, dur: 0.4, strum: true },
+/* PIN REWRITTEN 260913 (item 2): the harmony-context flag is `bed` now —
+ * the strum word went to the movement, per the PO's one-word-one-meaning
+ * ruling. Same assertion, same numbers. */
+test("voiceSchedule keeps a BED event's short dur in every voice", () => {
+  const evs = [{ midi: 60, role: "chord", onset: 0, dur: 0.4, bed: true },
     { midi: 64, role: "chord", onset: 0.1, dur: 0.4 }];
   for (const voice of NOTE_VOICE_NAMES) {
     const out = voiceSchedule(evs, voice, 2, 72);
-    assert.equal(out[0].dur, 0.4, `${voice} stretched a strummed event`);
+    assert.equal(out[0].dur, 0.4, `${voice} stretched a bed event`);
   }
 });
 

@@ -66,6 +66,8 @@ export const studyPath = (slug) => join(STUDIES, slug, "study.html");
 export const OWED_DRIFT = new Map([
   ["notepad", "260911 item 2a — the chart-fence refusal reworded to name the route; re-inline at the beta republish"],
   ["notepad-surface", "260911 items 2b/2c — per-capability message slots; Export's success names its file; re-inline at the beta republish"],
+  ["figure", "260913 item 2 — the strum flag renamed bed, playback 'block' renamed 'strum' (the PO's vocabulary ruling); re-inline at the beta republish"],
+  ["voices", "260913 item 2 — voiceSchedule branches on ev.bed (was ev.strum); re-inline at the beta republish"],
 ]);
 
 /** each exported definition of a module, split at import lines and trimmed —

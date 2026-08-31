@@ -458,10 +458,14 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       </div>
       <div class="fd-cap">Movement</div>
       <div class="seg" id="fdMoveSeg" data-control="fdMoveSeg">
-        <button data-move="block" class="on"
-          title="the notes sound together — a chord">block</button>
-        <button data-move="arpeggio"
-          title="the notes sound in sequence, low to high across the bar">arpeggio</button>
+        <!-- strum / arpeggiate (260913, the PO's ruling): a block IS a
+             strum (note-events has always staggered it), so the movement
+             wears the truer word; the old engine strum flag (the harmony
+             bed) was renamed bed in the same pass -->
+        <button data-move="strum" class="on"
+          title="the notes sound together — a chord">strum</button>
+        <button data-move="arpeggiate"
+          title="the notes sound in sequence, low to high across the bar">arpeggiate</button>
       </div>
       <div class="fd-cap">The figure is</div>
       <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
@@ -671,18 +675,19 @@ const SUSTAIN_HOLD = "chord";
 /** Only DUR is voice-dependent — voices CONSUME the event list, they never
  * re-derive it (the v0.6.5 seam). tone keeps every event's own dur, which is
  * the anti-drift baseline; pluck rings to the chord change, capped, because a
- * struck string decays on its own; sustain holds. Strummed harmony-context
- * events keep their short dur in every voice, and the bass pedal holds with
- * the sustain voice. */
+ * struck string decays on its own; sustain holds. Harmony-BED events (the
+ * short strummed context under a line — `bed` since 260913, when the strum
+ * word went to the movement) keep their short dur in every voice, and the
+ * bass pedal holds with the sustain voice. */
 function voiceSchedule(evs, voice, durBeats, bpm) {
   const span = (durBeats || 2) * (60 / bpm);
   return evs.map((ev, i) => {
     let dur = ev.dur;
-    if (!ev.strum) {
+    if (!ev.bed) {
       if (voice === "pluck") dur = Math.min(1.1, Math.max(ev.dur, span - ev.onset));
       if (voice === "sustain") {
         if (SUSTAIN_HOLD === "slot" && ev.role !== "bass") {
-          const next = evs.slice(i + 1).find((e) => !e.strum && e.role !== "bass" && e.onset > ev.onset);
+          const next = evs.slice(i + 1).find((e) => !e.bed && e.role !== "bass" && e.onset > ev.onset);
           dur = (next ? next.onset : span) - ev.onset;
         } else dur = span - ev.onset;
       }
@@ -3186,18 +3191,26 @@ function orderFigure(parsed, step, address = "slots", ctx = null) {
 }
 
 /** THE ONE CALL: events for a step, figure applied. `playback` is the door's
- * segment — block (harmony only), arpeggiated (the line), both (line over a
- * short strummed harmony, the reference's onsetsFor). */
-function figureEvents(step, { parsed = null, address = "slots", playback = "block",
+ * segment — strum (the whole harmony at once; the value was "block" until
+ * 260913, when the PO ruled the truer word: a block IS a strum, and
+ * note-events has always staggered it), arpeggiated (the line), both (the
+ * line over a short harmony BED, the reference's onsetsFor — the bed was
+ * called `strum` before the movement took that word; renamed with the
+ * ruling so one word means one thing). */
+function figureEvents(step, { parsed = null, address = "slots", playback = "strum",
   bassMidi = null, durBeats = 2, bpm = 72, ctx = null } = {}) {
-  const order = playback === "block" ? null : orderFigure(parsed, step, address, ctx);
+  const order = playback === "strum" ? null : orderFigure(parsed, step, address, ctx);
   if (!order) return noteEvents(step.voicing, null, bassMidi, durBeats, bpm);
   const line = noteEvents(step.voicing, order, bassMidi, durBeats, bpm);
   if (playback !== "both") return line;
-  const strum = noteEvents(step.voicing, null, null, durBeats, bpm)
-    .map((ev) => ({ ...ev, dur: Math.min(ev.dur, 0.5), strum: true }));   // harmony context, not steps
-  return [...strum, ...line];
+  const bed = noteEvents(step.voicing, null, null, durBeats, bpm)
+    .map((ev) => ({ ...ev, dur: Math.min(ev.dur, 0.5), bed: true }));   // harmony context, not steps
+  return [...bed, ...line];
 }
+
+/** LEGACY WORD (260913 rename): saved études from before the ruling carry
+ * playback "block"; the map is the one place the old word is known. */
+const playbackWord = (w) => (w === "block" ? "strum" : w);
 
 /** the figure back in its own words — drill's for slots/tones, motion's for enclosures */
 function describeFigure(parsed, address = "slots") {
@@ -3215,7 +3228,7 @@ function describeFigure(parsed, address = "slots") {
   const bad = parseFigure("1-2-9", "slots"); if (!bad.err) throw new Error("figure: a bad slot must fail loudly");
   const enc = parseFigure("(-1,+2)3 7", "tones"); if (enc.err || enc.source !== "motion") throw new Error("figure: enclosure routing broke: " + enc.err);
 }
-return { SLOT_MATERIAL, TONE_MATERIAL, TONE_ORDER, SLOT_ORDER, ADDRESS, toneIndexOf, parseFigure, orderFigure, figureEvents, describeFigure };
+return { SLOT_MATERIAL, TONE_MATERIAL, TONE_ORDER, SLOT_ORDER, ADDRESS, toneIndexOf, parseFigure, orderFigure, figureEvents, playbackWord, describeFigure };
 })();
 
 /* ===== hub/bus.mjs ===== */
@@ -3375,7 +3388,7 @@ const __m_hub_modules_audio_card_mjs = (() => {
 const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES } = __m_engine_voices_mjs;
 const { tetradPass, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
-const { parseFigure, figureEvents } = __m_engine_figure_mjs;
+const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } = __m_hub_bus_mjs;
 /* audio-card.mjs — the hub's ears: an AudioContext, a mixer, and nothing else.
  *
@@ -3520,12 +3533,12 @@ const audioCard = {
       // only — the four voicing notes are on the chord bus and keep sounding
       const bass = cfg && cfg.bass === "none" ? null : bassSeat(low, step.chord.root.pc);
       /* THE FIGURE CHAIN: one event list per chord from engine/figure.mjs —
-       * block strum, the figure as a line, or both — then voice-scheduled. The
+       * whole-harmony strum, the figure as a line, or both — then voice-scheduled. The
        * same list the stage pulses and the score draws; nothing re-derived. */
       const parsed = parseFigure(cfg && cfg.figure, (cfg && cfg.address) || "slots");
       const events = figureEvents(step, {
         parsed: parsed.err ? null : parsed.pattern, address: (cfg && cfg.address) || "slots",
-        playback: (cfg && cfg.playback) || "block", bassMidi: bass, durBeats, bpm,
+        playback: playbackWord(cfg && cfg.playback) || "strum", bassMidi: bass, durBeats, bpm,
         ctx: { scalePcs: scaleNotes(cfg.key || "C", cfg.scale || "major").map((n) => n.pc),
           tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,
           open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
@@ -3537,7 +3550,7 @@ const audioCard = {
         // started inaudible sources would pass over a broken mute forever
         if ((ev.role === "bass" ? bassVol : chordVol) === 0) continue;
         sound(voiceFor(ev.role, voice), ev.midi, t0 + ev.onset, ev.dur,
-          ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.strum ? 0.14 : 0.2);
+          ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.bed ? 0.14 : 0.2);
       }
     };
 
@@ -5881,6 +5894,13 @@ function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null }
   return { events, span };
 }
 
+/** LEGACY WORDS (260913 rename, the PO's ruling — a block IS a strum):
+ * Multetudes v0.1.0 saved études carry movement "block"/"arpeggio"; this
+ * map is the one place the old words are known, applied where a config
+ * merges in. */
+const movementWord = (w) =>
+  ({ block: "strum", arpeggio: "arpeggiate" })[w] || w;
+
 /** the canonical chart body for a progression's bars — THROUGH the format
  * engine, so reading a palette-written chart and re-serialising it is a
  * byte fixed point (asserted in the tests, demanded by §8). */
@@ -5974,7 +5994,7 @@ function chordAt(prog, index, fld, object, dyad = [3, 7]) {
   if (!bad.err || !bad.err.includes('"Qx7"') || bad.chords.length !== 1)
     throw new Error("progression: a bad token must refuse by name and fall back to the tonic bar");
 }
-return { cycleDegreesWalk, progressionOf, beatsOf, walkSchedule, chartBodyOf, chordAt };
+return { cycleDegreesWalk, progressionOf, beatsOf, walkSchedule, movementWord, chartBodyOf, chordAt };
 })();
 
 /* ===== hub/modules/etude-walk.mjs ===== */
@@ -5983,7 +6003,7 @@ const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake, orderBy } = __m_engine_selection_mjs;
-const { progressionOf, chordAt, beatsOf, walkSchedule } = __m_engine_progression_mjs;
+const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { placeReference } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, listen, announce } = __m_hub_bus_mjs;
 /* etude-walk.mjs — THE WALK (child 7; the TIME DIMENSION 260902): Play
@@ -6049,7 +6069,7 @@ const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "block",
+      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -6119,7 +6139,7 @@ const etudeWalk = {
        * Movement control chooses together-or-sequence (a scale stays a run —
        * the box has no chord to sound as one). A typed figure sequences
        * regardless, as ruled. */
-      const spread = cfg.object === "scale" || cfg.movement === "arpeggio";
+      const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
       const { events } = walkSchedule(sel, fig.err ? null : fig.order,
         chordBeats(prog), bpm, { spread, refMidi });
       clearPending();
@@ -6191,7 +6211,11 @@ const etudeWalk = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))
-        if (k in m) cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] };
+        if (k in m) {
+          /* legacy v0.1.0 movement words normalise at the merge (260913) */
+          const v = k === "movement" ? movementWord(m[k]) : m[k];
+          cfg = { ...cfg, [k]: Array.isArray(v) ? [...v] : v };
+        }
     });
   },
 };
@@ -6205,7 +6229,7 @@ const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } = __m_engine_selection_mjs;
 const { placeReference } = __m_engine_reference_mjs;
-const { progressionOf, chordAt } = __m_engine_progression_mjs;
+const { progressionOf, chordAt, movementWord } = __m_engine_progression_mjs;
 const { STRING_SETS } = __m_engine_tetrad_sequence_mjs;
 const { NOTE_VOICE_NAMES } = __m_engine_voices_mjs;
 const { SPLITS } = __m_engine_drill_mjs;
@@ -6324,10 +6348,14 @@ const fieldBoard = {
       </div>
       <div class="fd-cap">Movement</div>
       <div class="seg" id="fdMoveSeg" data-control="fdMoveSeg">
-        <button data-move="block" class="on"
-          title="the notes sound together — a chord">block</button>
-        <button data-move="arpeggio"
-          title="the notes sound in sequence, low to high across the bar">arpeggio</button>
+        <!-- strum / arpeggiate (260913, the PO's ruling): a block IS a
+             strum (note-events has always staggered it), so the movement
+             wears the truer word; the old engine strum flag (the harmony
+             bed) was renamed bed in the same pass -->
+        <button data-move="strum" class="on"
+          title="the notes sound together — a chord">strum</button>
+        <button data-move="arpeggiate"
+          title="the notes sound in sequence, low to high across the bar">arpeggiate</button>
       </div>
       <div class="fd-cap">The figure is</div>
       <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
@@ -6449,7 +6477,7 @@ const fieldBoard = {
        * sequence — lives HERE with Placement and The Figure, where the
        * motion lives: block · arpeggio, his two words. A typed figure still
        * sequences regardless (the night-7 ruling, now in its proper home). */
-      movement: "block",
+      movement: "strum",
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -6705,7 +6733,7 @@ const fieldBoard = {
       for (const b of byId("fdMoveSeg").querySelectorAll("button")) {
         b.classList.toggle("on", b.dataset.move === cfg.movement);
         if (!b.dataset.title0) b.dataset.title0 = b.title;
-        const overridden = figRules && b.dataset.move === "block";
+        const overridden = figRules && b.dataset.move === "strum";
         b.disabled = cfg.object === "scale" || overridden;
         b.title = overridden
           ? "the typed figure sequences — clear the Figure to sound the chord as one"
@@ -7017,7 +7045,12 @@ const fieldBoard = {
       if (!m || typeof m !== "object") return;
       let changed = false;
       for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start"])
-        if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+        if (k in m && m[k] !== cfg[k]) {
+          /* a restored v0.1.0 étude says movement "block"/"arpeggio" — the
+           * alias map is the one place the old words are known (260913) */
+          const v = k === "movement" ? movementWord(m[k]) : m[k];
+          if (v !== cfg[k]) { cfg = { ...cfg, [k]: v }; changed = true; }
+        }
       if ("dyad" in m && Array.isArray(m.dyad) && m.dyad.join() !== cfg.dyad.join()) {
         cfg = { ...cfg, dyad: [...m.dyad] }; changed = true;
       }
@@ -8049,7 +8082,7 @@ const neckReadout = {
           for (const x of sel) per[x.string] = (per[x.string] || 0) + 1;
           const shape = run.strings.map((s) => per[s] || 0).join("+");
           const isLine = Object.values(per).some((c) => c > 1);
-          bits.push(`${shape} across the set <span class="ro-dim">(${isLine ? "a line" : "a block"})</span>`);
+          bits.push(`${shape} across the set <span class="ro-dim">(${isLine ? "a line" : "a stack"})</span>`);
         }
         /* THE REFERENCE, fretted and NAMED (child 5): the readout says what
          * the stack becomes over it — R19's sentence. The name arrives from
@@ -10075,7 +10108,7 @@ const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy } = __m_engine_selection_mjs;
 const { placeReference } = __m_engine_reference_mjs;
-const { progressionOf, chordAt, beatsOf, walkSchedule } = __m_engine_progression_mjs;
+const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { writtenValue } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
@@ -10146,7 +10179,7 @@ const staffBoard = {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
-      movement: "block",
+      movement: "strum",
       address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4;
@@ -10243,7 +10276,7 @@ const staffBoard = {
        * numeral 4 more (260910, item 3) — the label band clears the BEAM,
        * not just the heads, whenever any bar writes a run */
       const anyRun = (fig.order && fig.order.length) || cfg.object === "scale"
-        || cfg.movement === "arpeggio";
+        || cfg.movement === "arpeggiate";
       const labY = Math.min(TY - 30, yTreble(topStep) - 20 - (anyRun ? 34 : 0));
 
       barsX = [];
@@ -10292,7 +10325,7 @@ const staffBoard = {
         }
         /* 260905: A CHORD STACKS; A RUN DOES NOT — and which one this bar is
          * became the MOVEMENT control's fact, not Take's (Take is material) */
-        const stacked = !figHere && cfg.object !== "scale" && cfg.movement !== "arpeggio";
+        const stacked = !figHere && cfg.object !== "scale" && cfg.movement !== "arpeggiate";
 
         /* THE STAFF WRITES WHAT THE SCHEDULE SCHEDULES (260910, item 3 —
          * register 6 resolved): the note VALUES derive from walkSchedule's
@@ -10306,7 +10339,7 @@ const staffBoard = {
         const flatBeats = [];
         prog.bars.forEach((bar, bi) => bar.forEach((_, k2) => flatBeats.push(perBeats[bi][k2])));
         const beats = flatBeats[ci] ?? meter;
-        const spread2 = cfg.object === "scale" || cfg.movement === "arpeggio";
+        const spread2 = cfg.object === "scale" || cfg.movement === "arpeggiate";
         let events = [];
         if (seq.length) {
           const sched = walkSchedule(sels[ci], figHere, beats, 60, { spread: spread2 });
@@ -10357,7 +10390,7 @@ const staffBoard = {
           for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi));
             yTop = Math.min(yTop, y2); yLow = Math.max(yLow, y2); }
           el("line", { x1: x0 + BW * 0.34 + 6, y1: yLow, x2: x0 + BW * 0.34 + 6,
-            y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "block" }, svg);
+            y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "stack" }, svg);
         } else if (!stacked && xsL.length && wv < 4) {
           const L = xsL.length;
           const yBeam = Math.min(...ysL) - 24;
@@ -10437,7 +10470,11 @@ const staffBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))
-        if (k in m) cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] };
+        if (k in m) {
+          /* legacy v0.1.0 movement words normalise at the merge (260913) */
+          const v = k === "movement" ? movementWord(m[k]) : m[k];
+          cfg = { ...cfg, [k]: Array.isArray(v) ? [...v] : v };
+        }
       render();
     });
     listen(d, CLOCK_STATE, (m) => {

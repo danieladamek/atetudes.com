@@ -34,7 +34,7 @@ import {
 } from "../../engine/voices.mjs";
 import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
-import { parseFigure, figureEvents } from "../../engine/figure.mjs";
+import { parseFigure, figureEvents, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } from "../bus.mjs";
 
 export const audioCard = {
@@ -145,12 +145,12 @@ export const audioCard = {
       // only — the four voicing notes are on the chord bus and keep sounding
       const bass = cfg && cfg.bass === "none" ? null : bassSeat(low, step.chord.root.pc);
       /* THE FIGURE CHAIN: one event list per chord from engine/figure.mjs —
-       * block strum, the figure as a line, or both — then voice-scheduled. The
+       * whole-harmony strum, the figure as a line, or both — then voice-scheduled. The
        * same list the stage pulses and the score draws; nothing re-derived. */
       const parsed = parseFigure(cfg && cfg.figure, (cfg && cfg.address) || "slots");
       const events = figureEvents(step, {
         parsed: parsed.err ? null : parsed.pattern, address: (cfg && cfg.address) || "slots",
-        playback: (cfg && cfg.playback) || "block", bassMidi: bass, durBeats, bpm,
+        playback: playbackWord(cfg && cfg.playback) || "strum", bassMidi: bass, durBeats, bpm,
         ctx: { scalePcs: scaleNotes(cfg.key || "C", cfg.scale || "major").map((n) => n.pc),
           tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,
           open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
@@ -162,7 +162,7 @@ export const audioCard = {
         // started inaudible sources would pass over a broken mute forever
         if ((ev.role === "bass" ? bassVol : chordVol) === 0) continue;
         sound(voiceFor(ev.role, voice), ev.midi, t0 + ev.onset, ev.dur,
-          ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.strum ? 0.14 : 0.2);
+          ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.bed ? 0.14 : 0.2);
       }
     };
 
