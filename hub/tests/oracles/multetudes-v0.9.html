@@ -1,0 +1,1665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multetudes v0.9 — feasibility prototype</title>
+<style>
+  :root{
+    --ink:#212126; --gray:#73737A; --light:#D8D8DC; --line:#B9B9BF;
+    --paper:#FFFFFF; --card:#FAFAFB; --edge:#E6E6EA; --warn:#B8820B; --bad:#B82929;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  header{padding:14px 20px 8px;border-bottom:1px solid var(--edge)}
+  h1{font-size:17px;margin:0 0 2px}
+  .sub{color:var(--gray);font-size:12.5px;max-width:100ch}
+  .wrap{padding:12px 20px 44px;max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+
+  .card{background:var(--card);border:1px solid var(--edge);border-radius:10px}
+  .card > h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
+    margin:0;font-weight:600;padding:10px 12px;display:flex;
+    justify-content:space-between;align-items:center;user-select:none}
+  .chev{cursor:pointer;padding:2px 7px;border-radius:5px;font-size:10px;color:var(--line)}
+  .chev:hover{background:var(--edge);color:var(--ink)}
+  .card.shut .chev{transform:rotate(-90deg);display:inline-block}
+  .hgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .card > .body{padding:0 12px 12px}
+  .card.shut > .body{display:none}
+  .cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--line);
+    font-weight:700;margin:10px 0 5px}
+  label.f{display:block;font-size:11.5px;color:var(--gray);margin:8px 0 3px}
+  label.f[hidden]{display:none}
+  select,input[type=text],textarea{width:100%;padding:5px 7px;font:inherit;font-size:13px;
+    border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  textarea{resize:vertical;min-height:104px;line-height:1.5}
+  .seg{display:flex;flex-wrap:wrap;gap:4px}
+  .seg button{font:inherit;font-size:12.5px;padding:4px 9px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);border-radius:6px;cursor:pointer}
+  .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .seg button:disabled{opacity:.4;cursor:not-allowed}
+  .note{font-size:11px;color:var(--gray);font-style:italic;margin-top:7px;line-height:1.45}
+  .btn{font:inherit;font-size:13px;padding:5px 13px;border:1px solid var(--line);background:#fff;
+    border-radius:7px;cursor:pointer;color:var(--ink)}
+  .btn.primary{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:600}
+  .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btnrow{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+
+  /* row 1 */
+  .row1{display:grid;grid-template-columns:1fr 3fr;gap:12px;align-items:start}
+  .metro{background:#17171b;color:#fff;border-radius:10px;padding:11px 12px;font-size:12px}
+  .metro h2{margin:0 0 9px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9a9aa4}
+  .metro .r{display:flex;gap:8px;align-items:center;margin-bottom:7px}
+  .metro button{font:inherit;font-size:12.5px;padding:3px 12px;border-radius:6px;border:1px solid #3a3a44;
+    background:#25252c;color:#fff;cursor:pointer}
+  .metro button.on{background:#fff;color:#17171b}
+  .metro select{padding:2px 5px;font-size:12px;background:#25252c;color:#fff;border-color:#3a3a44}
+  .metro input[type=range]{flex:1;min-width:60px}
+  .metro .beads{display:flex;gap:5px}
+  .metro .bead{width:8px;height:8px;border-radius:50%;background:#3a3a44}
+  .metro .bead.hot{background:#fff}
+  .metro .v{font-variant-numeric:tabular-nums;min-width:26px;text-align:right;color:#c9c9d1}
+  .hdrRight{display:flex;gap:8px;align-items:center}
+  .hdrRight input{width:230px;padding:3px 7px;font-size:12.5px;text-transform:none;
+    letter-spacing:0;font-weight:400;color:var(--ink)}
+  .seg.tiny button{font-size:11px;padding:2px 7px}
+  .card > .body{padding:8px 12px 12px}
+  #npBody{min-height:104px}
+
+  /* row 2 */
+  .row2{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;align-items:start}
+
+  /* timeline */
+  /* THE SHIPPED CHORD LINE, from hub/modules/chord-timeline.mjs: a scrollable row of BARS,
+   * each a group of chips whose width grows with the chord's beats — so the bar split is
+   * visible rather than prose. The current chip wears the red ring; its bar is shaded. */
+  .tl{display:flex;align-items:center;gap:12px;border:1px solid var(--edge);border-radius:10px;
+    background:var(--card);padding:8px 12px}
+  .tlscroll{display:flex;flex:1 1 auto;overflow-x:auto;align-items:stretch;
+    scrollbar-width:thin;padding:2px 0}
+  .tlbar{display:flex;flex:1 0 auto;align-items:stretch;gap:4px;border-left:2px solid #B9B9BF;
+    padding:3px 8px;min-width:88px;border-radius:2px}
+  .tlbar:last-child{border-right:2px solid #B9B9BF}
+  .tlbar.curbar{background:#E9E9EC}
+  .tlbar button{font:inherit;font-size:12.5px;padding:2px 6px;border:1.4px solid transparent;
+    border-radius:999px;background:transparent;cursor:pointer;color:var(--ink);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex;
+    flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
+  .tlbar button:hover{border-color:var(--line);background:#fff}
+  .tlbar button.cur{border-color:var(--bad);color:var(--bad);font-weight:bold;background:#fff}
+  .tlbar button .tlrn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
+  .tlbar button.cur .tlrn{color:var(--bad)}
+  .tlbar button .tlus{font-size:10.5px;font-weight:600;color:var(--ink)}
+  .tlbar button.cur .tlus{color:var(--bad)}
+  .tl .tp{flex:0 0 auto}
+
+  /* neck */
+  .neckwrap{display:flex;gap:12px;align-items:flex-start}
+  .neckwrap svg.neck{flex:1;min-width:0}
+  .rrail{flex:0 0 150px;padding-top:0}
+  .rrail.shut{flex:0 0 30px;overflow:hidden}
+  .rrail.shut > *:not(.railTop){display:none}
+  .rrail .cap{margin-top:9px}
+  .railTop{display:flex;justify-content:flex-end;margin-bottom:2px}
+  .railToggle{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
+    background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
+  .rrail .note{font-size:10.5px}
+  svg{width:100%;height:auto;display:block;touch-action:none}
+  .frame{fill:none;stroke:var(--gray);stroke-width:1.7;stroke-dasharray:6 4}
+  .grip{fill:var(--ink);cursor:move}
+  .grip-v{fill:#fff;stroke:var(--ink);stroke-width:1.6;cursor:ns-resize}
+  .hit{fill:transparent}
+  .strbtn{cursor:pointer}
+  .rail{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;border-top:1px solid var(--edge);
+    margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
+  .rail select{width:auto;padding:3px 6px;font-size:12px}
+  .rail input[type=range]{width:96px}
+  .vols{display:inline-flex;flex-direction:column;gap:2px}
+  .vrow{display:flex;gap:6px;align-items:center;font-size:11.5px}
+  .vrow > span{flex:0 0 52px;text-align:right;color:var(--gray)}
+  .pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
+  .pulse.hot{background:var(--bad)}
+
+  /* THE STRIP MINI-TRANSPORT — the reference's ⏮ ▶ ⏹ ⏭ cluster, the grammar three strips
+   * carry (timeline, étude, keyboard). A strip summons the transport; it never owns a timer. */
+  .mini{position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5}
+  .mini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+  .mini button:hover{border-color:var(--ink)}
+  .tl{position:relative}
+  /* THE PRACTICE LOG's row grammar, from the reference's study.html */
+  #logLine{font-size:12px;color:var(--ink);line-height:1.55;background:var(--edge);
+    border-radius:6px;padding:7px 10px;margin-bottom:8px}
+  .hist{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;
+    font-size:12.5px}
+  .hist .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .hist .when{color:var(--gray);font-size:11.5px;white-space:nowrap}
+  .hist .sum{color:var(--gray);margin:3px 0;font-size:11.5px;line-height:1.45}
+  .hist .note{color:var(--ink);margin:2px 0;white-space:pre-wrap;font-style:normal}
+  .hist .acts{display:flex;gap:6px;margin-top:6px}
+  .hist .acts button{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
+  .hist .acts button.danger{color:var(--bad)}
+  /* THE SHIPPED TRANSPORT GRAMMAR, copied from hub/shell.mjs so this cannot drift:
+   * Play IS the red primary — Daniel reversed the retire-the-red call on 2026-08-19
+   * ("more obvious that it is a play button"), and the playing state reads from the
+   * button's text, the triad app's own idiom. */
+  .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+  .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
+  .transport button.primary{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:bold}
+  .bpmrow{display:flex;align-items:center;gap:8px;margin-top:8px;max-width:376px}
+  .bpmrow input[type=range]{flex:1;accent-color:var(--ink)}
+  .trLab{font-size:12px;color:var(--gray)}
+  .trMixLab{width:52px}
+  .trVal{font-size:13px;width:30px;text-align:right}
+  /* ONE MUTE ICON PER SLIDER — page grammar in the shipped shell; the icon is a VIEW
+   * of its slider's level, so zero reads muted however it got there. */
+  .muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
+    background:transparent;cursor:pointer}
+  .muteBtn[aria-pressed="true"]{opacity:.55}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:0;cursor:pointer}
+  .chk input{width:auto}
+  /* THE INFO BUTTON + POPOUT, also the shell's: a panel marks its STATIC prose .info and
+   * it is moved off the face into a popout behind a neutral circle-i. LIVE readouts are
+   * .hint and never .info, so they stay on the face — that is the whole point. */
+  .infoBtn{font:inherit;font-size:11px;padding:1px 7px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;cursor:pointer;color:var(--gray)}
+  .infoBtn:hover{border-color:var(--ink);color:var(--ink)}
+  .infoPop{position:absolute;top:34px;left:10px;right:10px;z-index:20;background:var(--card);
+    border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+    box-shadow:0 6px 24px rgba(0,0,0,.14);max-height:60vh;overflow:auto}
+  .infoPop[hidden]{display:none}
+  .infoPop .info{font-size:12px;color:var(--ink);line-height:1.55;margin:0 0 8px;font-style:normal}
+  .infoPop .info:last-child{margin-bottom:0}
+  .card{position:relative}
+
+  .readout{padding:10px 12px;border:1px solid var(--edge);border-radius:10px;background:var(--card);
+    font-size:13px;line-height:1.6}
+  .readout .dim{color:var(--gray)}
+  .legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
+  .legend span{display:inline-block;margin-right:11px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;margin-right:3px}
+  .assert{font-size:11px;color:var(--gray)}
+  .assert.fail{color:var(--bad);font-weight:600}
+
+  .gap{display:flex;gap:9px;padding:5px 0;border-top:1px solid var(--edge);font-size:12.5px;line-height:1.5}
+  .gap:first-of-type{border-top:0}
+  .gap code{font-size:11.5px;background:#fff;border:1px solid var(--edge);border-radius:4px;padding:0 4px}
+  .tag{flex:0 0 34px;font-weight:700;font-size:11.5px;color:var(--bad);font-variant-numeric:tabular-nums}
+  .tag.soft{color:var(--warn)}
+  .ok{color:var(--gray);font-size:12.5px}
+
+  .palette{border:1px solid var(--edge);border-radius:8px;background:#fff;padding:8px;margin-top:9px}
+  .prow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--card);
+    border:1px solid var(--edge);border-radius:7px;padding:6px 8px;margin-bottom:6px}
+  .prow .plab{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--line);
+    font-weight:700;flex:0 0 74px}
+  .prow select{width:auto;padding:3px 6px;font-size:12.5px}
+  .pbtn{font:inherit;font-size:12.5px;padding:3px 10px;border:1px solid var(--line);background:#fff;
+    border-radius:6px;cursor:pointer;color:var(--ink)}
+  .prow .pbtn.glyph{font-size:14px;padding:2px 9px;min-width:30px}
+  .logline{background:var(--edge);border-radius:7px;padding:9px 11px;font-size:13px;line-height:1.5}
+  .entry{border-top:1px solid var(--edge);padding:9px 0;font-size:13px}
+  .entry .when{font-size:11px;color:var(--line)}
+  details summary{cursor:pointer;font-size:12.5px;color:var(--gray)}
+  pre{font-size:11px;background:#fff;border:1px solid var(--edge);border-radius:7px;padding:9px;
+    overflow:auto;max-height:230px}
+  footer{font-size:11.5px;color:var(--gray);line-height:1.6;border-top:1px solid var(--edge);padding-top:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1><b>Multetudes</b> v0.9 — feasibility prototype</h1>
+  <div class="sub">Named. The strips now carry the reference's own <b>⏮ ▶ ⏹ ⏭</b> mini-transport rather
+    than a card-sized Play; the mixer sliders stop where the controls above them stop; and the practice
+    log has its <b>Restore étude</b> and <b>Delete</b> rows in the shipped <code>.hist</code> grammar.
+    Silent throughout — every note still derived from pitch-class math and asserted before drawing.</div>
+</header>
+
+<div class="wrap">
+
+  <!-- ROW 1 — metronome + notepad -->
+  <div class="row1">
+    <div class="metro">
+      <h2>Metronome</h2>
+      <div class="r"><button id="metStart">Start</button><button id="metTap">Tap</button>
+        <span class="beads" id="beads"></span></div>
+      <div class="r"><span>BPM</span><input type="range" id="bpmR" min="40" max="208" value="72">
+        <span class="v" id="bpmV">72</span></div>
+      <div class="r"><span>Time</span>
+        <select id="meterSel"><option>4/4</option><option>3/4</option><option>5/4</option>
+          <option>6/4</option><option>7/4</option></select>
+        <span>Sub</span><select id="subSel"><option>beats</option><option>8ths</option>
+          <option>triplets</option><option>16ths</option></select>
+        <span>Voice</span><select id="voiceSel"><option>beep</option><option>click</option>
+          <option>woodblock</option></select></div>
+      <div class="r"><label style="display:flex;gap:5px;align-items:center;font-size:12px">
+        <input type="checkbox" id="accents" checked> accents</label>
+        <span>Vol</span><input type="range" id="volR" min="0" max="100" value="80">
+        <span class="v">80</span></div>
+    </div>
+
+    <div class="card" data-card="np">
+      <h2><span>Notepad</span>
+        <span class="hdrRight">
+          <input type="text" id="npTitle" placeholder="title — 2026-08-26">
+          <span class="chev">▾</span>
+        </span></h2>
+      <div class="body">
+        <textarea id="npBody" placeholder="A lick, a groove, a thing to practice. Plain prose is fine — it is markdown underneath."></textarea>
+        <div class="btnrow">
+          <button class="btn primary" id="npSave">Save note</button>
+          <button class="btn" id="npClear">Clear</button>
+          <button class="btn" id="npExport">Export (.atchart.md)</button>
+          <button class="btn" id="npCopy">Copy</button>
+          <button class="btn" id="npImport">Import</button>
+          <button class="btn" id="npPalette">Palette</button>
+        </div>
+        <div class="palette" id="paletteBox" hidden>
+          <div class="prow"><span class="plab">Symbols</span><span id="glyphRow"></span></div>
+          <div class="prow"><span class="plab">Chord</span>
+            <select id="pcRoot" aria-label="chord root"></select>
+            <select id="pcQual" aria-label="chord quality"></select>
+            <button class="pbtn" id="pcIns">Insert chord</button></div>
+          <div class="prow"><span class="plab">Structure</span>
+            <select id="psStruct" aria-label="structure"></select>
+            <select id="psKey" aria-label="key"></select>
+            <button class="pbtn" id="psChart">Chart block</button>
+            <button class="pbtn" id="psChanges">Changes line</button></div>
+          <div class="prow"><span class="plab">Figure</span>
+            <select id="pfFig" aria-label="figure"></select>
+            <button class="pbtn" id="pfIns">Insert figure</button>
+            <select id="pfPat" aria-label="pattern"></select>
+            <button class="pbtn" id="pfPatIns">Insert pattern</button></div>
+          <div class="prow"><span class="plab">Chart</span>
+            <button class="pbtn" id="pbUse">Read the note's chart block as the progression</button></div>
+          <div class="note info">A chart block in the note is the same thing the strip plays — the note and
+            the étude are one document, which is what <code>.atchart.md</code> is for. Written here in
+            the note, read back there by the progression.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2 — harmony · progression · presets -->
+  <div class="row2">
+    <div class="card" data-card="harm">
+      <h2>Harmony <span class="chev">▾</span></h2>
+      <div class="body">
+        <div class="cap">the field</div>
+        <div class="hgrid">
+          <div><label class="f">Key</label><select id="keySel"></select></div>
+          <div><label class="f">Scale</label>
+            <select id="scaleSel">
+              <option value="major">Major</option><option value="harm">Harmonic minor</option>
+              <option value="mel">Melodic minor</option>
+            </select></div>
+        </div>
+        <div class="cap">what sits on it</div>
+        <div class="hgrid">
+          <div><label class="f">Object</label><select id="objSel"></select></div>
+          <div><label class="f" id="takeLab">Take</label><select id="takeSel">
+            <option value="one">a voicing — one of each tone</option>
+            <option value="all">an arpeggio — every one in the box</option>
+          </select></div>
+        </div>
+        <label class="f" id="dyadLab" hidden>Which two tones</label>
+        <select id="dyadSel" hidden>
+          <option value="3,7">3rd + 7th — guide tones</option>
+          <option value="1,3">Root + 3rd</option><option value="1,5">Root + 5th</option>
+          <option value="1,7">Root + 7th</option><option value="3,5">3rd + 5th</option>
+          <option value="5,7">5th + 7th</option>
+        </select>
+        <div class="cap">the reference underneath</div>
+        <label class="f" id="bassLab">Bass / reference tone</label>
+        <select id="bassSel"></select>
+        <div class="note" id="bassNote"></div>
+      </div>
+    </div>
+
+    <div class="card" data-card="prog">
+      <h2>Progression <span class="chev">▾</span></h2>
+      <div class="body">
+        <label class="f">Source</label><div class="seg" id="srcSeg"></div>
+        <label class="f" id="cycLab">Cycle</label>
+        <select id="cycSel"></select>
+        <label class="f" id="strLab" hidden>Form</label>
+        <select id="strSel" hidden></select>
+        <label class="f" id="cusLab" hidden>Custom — romans or chord symbols</label>
+        <input type="text" id="cusIn" hidden>
+        <label class="f" id="startLab">Start on</label><select id="startSel"></select>
+        <div class="note" id="progRule"></div>
+      </div>
+    </div>
+
+    <div class="card" data-card="pre">
+      <h2>Presets <span class="chev">▾</span></h2>
+      <div class="body">
+        <label class="f">Start from</label>
+        <select id="presetSel"></select>
+        <div class="note info">A preset seeds every control and leaves them all live. The journal page's
+          exercises are here; the progression stays whatever you set it to.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- the chart strip -->
+  <div class="tl">
+    <div class="tlscroll" id="tlBars" style="padding-right:130px"></div>
+    <span class="mini" id="tlMini"></span>
+  </div>
+
+  <!-- the neck -->
+  <div class="card" data-card="neck">
+    <h2>On the neck <span class="chev">▾</span></h2>
+    <div class="body">
+      <div class="neckwrap">
+        <svg class="neck" id="neck" viewBox="0 0 1080 262" aria-label="fretboard"></svg>
+        <div class="rrail" id="rrail">
+          <div class="railTop">
+            <button class="railToggle" id="railToggle" title="collapse this rail">›</button>
+          </div>
+          <div class="cap">Placement</div>
+          <div class="seg" id="nSeg"></div>
+          <div class="cap">The figure is</div>
+          <div class="seg" id="addrSeg"></div>
+          <div class="cap">Figure</div>
+          <input type="text" id="figIn" placeholder="4,3,4,3,2,1" autocomplete="off">
+          <div class="note" id="figNote"></div>
+          <div class="note info"><b>Moving the box.</b> Drag the ■ grip to move it, the ● handles on its top and bottom edges to
+            resize it. With the neck focused, <b>←</b> <b>→</b> step the frame one scale note and
+            <b>↑</b> <b>↓</b> slide it across the strings. Clicking any note on the anchor string
+            jumps the frame there.</div>
+        </div>
+      </div>
+      <div class="rail">
+        <label class="chk" title="metronome click on/off"><input type="checkbox" id="metBtn"> metronome</label>
+        <span class="pulse" id="metDot"></span>
+        <span class="trLab">bar split</span><select id="splitSel"></select>
+        <span class="trLab">voice</span>
+        <select id="tvSel"><option>tone</option><option>pluck</option><option>sustain</option></select>
+      </div>
+      <div class="bpmrow" title="the mixer: the harmony level — muted is this slider at zero">
+        <button class="muteBtn" id="harmMute" aria-pressed="false">&#128266;</button>
+        <span class="trLab trMixLab">harmony</span>
+        <input type="range" id="chartVol" min="0" max="100" value="100">
+        <span class="trVal" id="harmVal">100</span>
+      </div>
+      <div class="bpmrow" title="the mixer: the bass level — muted is this slider at zero">
+        <button class="muteBtn" id="bassMute" aria-pressed="false">&#128266;</button>
+        <span class="trLab trMixLab">bass</span>
+        <input type="range" id="bassVol" min="0" max="100" value="100">
+        <span class="trVal" id="bassVal">100</span>
+      </div>
+      <div class="hint info">Nothing sounds here — the beat and the walk are shown, not played. These
+      are the family's own transport and metronome, and their implementation stays identical wherever
+      they appear; this prototype only shows where they sit. The mixer labels say <b>harmony</b> rather
+      than the shipped card's <b>chord</b>, deliberately: a line, an arpeggio and a block chord are all
+      harmonic relationships, and "chord" is too narrow for what this app puts on the neck.</div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+
+  <div class="readout" id="readout"></div>
+  <div class="assert" id="assert"></div>
+
+  <!-- the étude -->
+  <div class="card" data-card="staff">
+    <h2>The étude — end to end (click a bar to jump there)
+      <span class="hdrRight"><span class="mini" id="stMini" style="position:static"></span>
+      <span class="chev">▾</span></span></h2>
+    <div class="body"><svg id="staff" viewBox="0 0 1290 240" aria-label="the étude"></svg></div>
+  </div>
+
+  <!-- the keys -->
+  <div class="card" data-card="keys">
+    <h2>On the keys
+      <span class="hdrRight"><span class="mini" id="kbMini" style="position:static"></span>
+      <span class="chev">▾</span></span></h2>
+    <div class="body"><svg id="keys" viewBox="0 0 1290 150" aria-label="keyboard"></svg></div>
+  </div>
+
+  <!-- gaps -->
+  <div class="card" data-card="gaps">
+    <h2>What this configuration hits <span class="chev">▾</span></h2>
+    <div class="body"><div id="gapList"></div></div>
+  </div>
+
+  <!-- practice log -->
+  <div class="card" data-card="log">
+    <h2><span id="logCount">Practice log — 0 saved</span> <span class="chev">▾</span></h2>
+    <div class="body">
+      <div class="logline" id="logLine"></div>
+      <div id="logEntries" style="margin-top:9px"></div>
+      <details style="margin-top:10px"><summary>Full configuration (JSON)</summary>
+        <pre id="logJson"></pre></details>
+    </div>
+  </div>
+
+  <footer>
+    Colour is function against the key. The bracket right of the string numbers is an <b>order</b>:
+    <code>{1,3}</code> beside string 4 means step 1 and step 3 land there. The bass is hollow on
+    string 5 or 6 — the reference tone, not material. Gap numbers refer to
+    <i>The étude workbench — a user guide written ahead of the build 260823</i>.
+  </footer>
+</div>
+
+<script>
+/* ============================================================================
+ * FAMILY CONSTANTS — verbatim from the shipped engine.
+ * ==========================================================================*/
+const OPEN_MIDI = { 6:40, 5:45, 4:50, 3:55, 2:59, 1:64 };
+const NFRETS = 15, FX0 = 40, FW = 60, SY0 = 40, SGAP = 36;
+const fx = f => (f === 0 ? FX0 - 20 : FX0 + (f - 0.5) * FW);
+const fy = s => SY0 + (s - 1) * SGAP;
+const NECK_R = FX0 + NFRETS * FW;
+const STR_X = NECK_R + 32, BRK_X = NECK_R + 62;
+const NECK_VB = "0 0 1080 262";      // exactly the content — no dead space on the right
+
+const SCALE_STEPS = { major:[2,2,1,2,2,2,1], harm:[2,1,2,2,1,3,1], mel:[2,1,2,2,2,2,1] };
+const SCALE_NAME = { major:"major", harm:"harmonic minor", mel:"melodic minor" };
+/* THE MODES, named per scale. A mode is not a new collection — it is the same seven notes
+ * read against a different centre, which is exactly what choosing a reference tone does.
+ * Naming them is the price of offering them, and the names are the standard ones. */
+const MODES = {
+  major: ["Ionian","Dorian","Phrygian","Lydian","Mixolydian","Aeolian","Locrian"],
+  harm:  ["Harmonic minor","Locrian ♮6","Ionian ♯5","Dorian ♯4","Phrygian dominant",
+          "Lydian ♯2","Altered ♭♭7"],
+  mel:   ["Melodic minor","Dorian ♭2","Lydian augmented","Lydian dominant","Mixolydian ♭6",
+          "Locrian ♮2","Altered"],
+};
+const KEYS = ["C","Db","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+const KEY_PC = { C:0,Db:1,D:2,Eb:3,E:4,F:5,"F#":6,G:7,Ab:8,A:9,Bb:10,B:11 };
+
+const FAM = ["R","2","3","4","5","6","7"];
+const FAM_COLOR = { R:"#B82929","2":"#3C8B2F","3":"#2959A6","4":"#A9ABB4",
+                    "5":"#212126","6":"#1CB8D1","7":"#D99A08" };
+const FAM_TEXT = { R:"#fff","2":"#fff","3":"#fff","4":"#212126","5":"#fff","6":"#212126","7":"#212126" };
+const ROLE_COLOR = { R:"#B82929","3":"#2959A6","5":"#212126","7":"#D99A08" };
+
+const ORD = ["root","2nd","3rd","4th","5th","6th","7th"];
+const ROMAN_UP = ["I","II","III","IV","V","VI","VII"];
+const ROMAN_LO = ["i","ii","iii","iv","v","vi","vii"];
+const LETTERS = ["C","D","E","F","G","A","B"];
+const LETTER_PC = { C:0,D:2,E:4,F:5,G:7,A:9,B:11 };
+const mod = (n,m) => ((n % m) + m) % m;
+
+/* the family's five cycles — ONE number each: how many scale degrees the root moves per step */
+const CYCLES = {
+  fourths:{ step:3, name:"Cycling 4ths", rule:"R and 3 hold (becoming the new 5 and 7); the 5 falls to the new root, the 7 to the new 3rd" },
+  sixths:{ step:5, name:"Cycling 6ths", rule:"roots move in 6ths — the 7th falls to the new root" },
+  thirds:{ step:2, name:"Cycling 3rds", rule:"roots move in 3rds — the root rises to the new 7th" },
+  fifths:{ step:4, name:"Cycling 5ths", rule:"the mirror of the 4ths: 5 and 7 hold, becoming the new root and 3rd" },
+  scale:{ step:1, name:"Scaler", rule:"every voice climbs one scale step — the whole shape walks the scale" },
+};
+/* THE SHIPPED CATALOG, copied from engine/structures.mjs — a structure is a DEGREE
+ * PATTERN with qualities, never a table of typed absolute chords. */
+const STRUCTURES = [
+  { id:"ii-V-I", name:"ii–V–I", bars:[["ii7","V7"],["Imaj7"]] },
+  { id:"ii-V-i", name:"ii–V–i (minor)", bars:[["iiø7","V7"],["i7"]] },
+  { id:"turnaround", name:"turnaround (I–vi–ii–V)", bars:[["Imaj7","vi7"],["ii7","V7"]] },
+  { id:"blues-12", name:"twelve-bar blues",
+    bars:[["I7"],["IV7"],["I7"],["I7"],["IV7"],["IV7"],["I7"],["I7"],["V7"],["IV7"],["I7"],["V7"]] },
+  { id:"rhythm-a", name:"rhythm changes — A section",
+    bars:[["Imaj7","vi7"],["ii7","V7"],["Imaj7","vi7"],["ii7","V7"],["I7"],["IV7"],["Imaj7","V7"],["Imaj7"]] },
+  { id:"cycle-4ths", name:"cycle of fourths",
+    bars:[["I"],["IV"],["bVII"],["bIII"],["bVI"],["bII"],["bV"],["VII"],["III"],["VI"],["II"],["V"]] },
+];
+const CHORD_ROOTS = ["C","Db","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+const CHORD_QUALITIES = ["","m","7","maj7","m7","m7b5","dim7","6","m6","9","maj9","m9",
+  "sus4","aug","7#5","7b9","mMaj7"];
+const GLYPHS = ["♭","♯","♮","°","ø","△","•","|","|:",":|","->"];
+const PAL_FIGURES = [
+  { name:"enclosure of the root", text:"(-1,+2)[1]" },
+  { name:"enclosure of the 3rd", text:"(+2,-1)[3]" },
+  { name:"chromatic below the 3rd", text:"(-1)[3]" },
+  { name:"arpeggio line 1–3–5", text:"[1] - [3] - [5]" },
+];
+const PAL_PATTERNS = ["4,3,2,1","1,2,3,4","4,3,4,3,2,1","1,3,2,4","4,2,3,1"];
+
+/* a chord's intervals, by quality — the one place a quality is spelled */
+const QUAL_IV = { "":[0,4,7], m:[0,3,7], "7":[0,4,7,10], maj7:[0,4,7,11], m7:[0,3,7,10],
+  m7b5:[0,3,6,10], dim7:[0,3,6,9], "6":[0,4,7,9], m6:[0,3,7,9], "9":[0,4,7,10,14],
+  maj9:[0,4,7,11,14], m9:[0,3,7,10,14], sus4:[0,5,7], aug:[0,4,8], "7#5":[0,4,8,10],
+  "7b9":[0,4,7,10,13], mMaj7:[0,3,7,11] };
+const ROLE_BY_INDEX = ["R","3","5","7","9"];
+/* the reverse of QUAL_IV: an interval set, read back as a name. This is the naming half of
+ * what engine/upper-structure.mjs does — a triad over a bass IS a bigger chord, and the
+ * player should be told which one rather than left to work it out. */
+const REV_QUAL = (() => {
+  const m = {};
+  for (const [q, iv] of Object.entries(QUAL_IV)) {
+    const key = [...new Set(iv.map(x => mod(x,12)))].sort((a,b)=>a-b).join(",");
+    if (!(key in m)) m[key] = q;
+  }
+  m["0,2,4,7"] = "add9"; m["0,3,5,7"] = "m(add11)"; m["0,4,7,9,14"] = "6/9";
+  return m;
+})();
+function nameChordOver(bassPc, pcs) {
+  const set = [...new Set([bassPc, ...pcs])].map(x => mod(x - bassPc, 12)).sort((a,b)=>a-b);
+  const q = REV_QUAL[set.join(",")];
+  return q == null ? null : q.replace("b5","♭5").replace("b9","♭9").replace("#5","♯5");
+}
+function normQual(q) {
+  q = String(q||"").trim();
+  if (q.startsWith("ø")) return "m7b5";
+  if (q.startsWith("°")) return "dim7";
+  q = q.replace("△","maj7").replace("Δ","maj7").replace("♭","b").replace("♯","#");
+  if (q === "-") return "m";
+  if (q === "M7") return "maj7";
+  return QUAL_IV[q] ? q : (QUAL_IV[q.toLowerCase()] ? q.toLowerCase() : "");
+}
+function parseRoman(tok, pcs) {
+  const m = /^([b#]?)([ivxIVX]+)(.*)$/.exec(String(tok).trim());
+  if (!m) return null;
+  const i = ROMAN_UP.indexOf(m[2].toUpperCase());
+  if (i < 0) return null;
+  const shift = m[1] === "b" ? -1 : m[1] === "#" ? 1 : 0;
+  let qual = m[3];
+  /* THE CASE RULE the shipped catalog relies on: a lower-case numeral is minor, so
+   * `ii7` is a minor seventh and not a dominant. Without this, ii–V–I comes out as
+   * C7–F7–B♭maj7 — plausible, wrong, and exactly the kind of derived label this
+   * project keeps getting bitten by. */
+  if (m[2] === m[2].toLowerCase() && !/^[mø°]/.test(qual)) {
+    if (qual === "") qual = "m";
+    else if (qual === "maj7") qual = "mMaj7";
+    else qual = "m" + qual;
+  }
+  return { rootPc: mod(pcs[i] + shift, 12), qual: normQual(qual), src: tok };
+}
+function parseSymbol(tok) {
+  const m = /^([A-G])([b#♭♯]*)(.*)$/.exec(String(tok).trim());
+  if (!m) return null;
+  let pc = LETTER_PC[m[1]];
+  for (const c of m[2]) pc += (c === "b" || c === "♭") ? -1 : 1;
+  return { rootPc: mod(pc, 12), qual: normQual(m[3]), src: tok };
+}
+const SPLITS = { 4:["4","2+2","1+1+1+1","2+1+1","1+1+2","1+2+1"], 3:["3","1+2","2+1","1+1+1"],
+  5:["5","2+3","3+2","1+4","4+1"], 6:["6","3+3","2+2+2","4+2","2+4"], 7:["7","4+3","3+4","2+2+3","3+2+2","2+3+2"] };
+
+/* ============================================================================
+ * STATE
+ * ==========================================================================*/
+const st = {
+  key:"Bb", scale:"major",
+  strings:[4,3,2,1], n:1, frameIdx:null,
+  object:"tetrad", take:"one", dyad:[3,7], bass:"none", ref:0,
+  prog:{ source:"cycle", cycle:"fourths", structure:"ii-V-I", custom:"ii V I", start:0, bars:8 },
+  bar:0,
+  address:"pattern", figure:"",
+  meter:4, splitIdx:1, bpm:72,
+  shut:new Set(), notes:[],
+};
+
+/* ============================================================================
+ * DERIVATION
+ * ==========================================================================*/
+function scalePcs(key, scale) {
+  const root = KEY_PC[key]; const out = [root]; let acc = root;
+  for (const s of SCALE_STEPS[scale].slice(0,6)) { acc += s; out.push(mod(acc,12)); }
+  if (out.length !== 7 || new Set(out).size !== 7) throw new Error("field: not seven distinct degrees");
+  return out;
+}
+/* spelled note names: the letter climbs one per degree, the accidental is derived */
+function spelling(key, scale) {
+  const pcs = scalePcs(key, scale);
+  const rootLetter = key[0], li0 = LETTERS.indexOf(rootLetter);
+  return pcs.map((pc, i) => {
+    const letter = LETTERS[mod(li0 + i, 7)];
+    let d = mod(pc - LETTER_PC[letter], 12); if (d > 6) d -= 12;
+    const acc = d === 0 ? "" : d > 0 ? "♯".repeat(d) : "♭".repeat(-d);
+    return { pc, letter, acc, name:letter + acc };
+  });
+}
+/* `deg` is the note's degree AGAINST THE REFERENCE, not against the key: re-rooting the
+ * field is the whole of what choosing a mode does. The collection never changes. */
+function notesOnString(s, pcs) {
+  const out = [];
+  for (let f = 0; f <= NFRETS; f++) {
+    const midi = OPEN_MIDI[s] + f, i = pcs.indexOf(mod(midi,12));
+    if (i >= 0) out.push({ string:s, fret:f, midi, deg: mod(i - st.ref, 7), keyDeg: i });
+  }
+  return out;
+}
+const anchorOf = ss => Math.max(...ss);
+function frameFor(a, idx) {
+  const i = Math.max(0, Math.min(a.length - 3, idx));
+  const w = [a[i], a[i+1], a[i+2]];
+  if (!(w[0].fret < w[1].fret && w[1].fret < w[2].fret)) throw new Error("frame: not ascending");
+  return { i, notes:w, fLo:w[0].fret, fHi:w[2].fret,
+           centre:(w[0].fret + w[1].fret + w[2].fret)/3, startDeg:w[0].deg };
+}
+function materialFor(ss, pcs, frame) {
+  const out = [];
+  for (const s of [...ss].sort((a,b)=>b-a))
+    out.push(...notesOnString(s, pcs).filter(x => x.fret >= frame.fLo && x.fret <= frame.fHi));
+  return out;
+}
+/* A SCALE IS NOT A CHORD. Grip means "one note per string", which is a statement about
+ * what a hand can sound together — meaningless for a scale run. So the scale object takes
+ * EVERY note the box offers (Daniel, 2026-08-26: "I would expect that it would show all of
+ * the notes inside of that box"), capped only by the hand's reach of three per string, and
+ * Placement is switched off for it rather than quietly halving the material. */
+function scaleSelection(material, ss) {
+  const out = [];
+  for (const s of [...ss].sort((a,b)=>b-a)) out.push(...material.filter(m => m.string === s).slice(0, 3));
+  return out;
+}
+const OBJECT_TONES = { scale:null, dyad:null, triad:[0,2,4], tetrad:[0,2,4,6], shell:[0,2,6] };
+const TONE_ROLE = { 0:"R", 2:"3", 4:"5", 6:"7" };
+function tonesFor(object, degree, pcs, dyad) {
+  let offs = OBJECT_TONES[object];
+  if (object === "dyad") offs = dyad.map(d => ({1:0,3:2,5:4,7:6})[d]);
+  if (!offs) return null;
+  return offs.map(o => ({ off:o, role:TONE_ROLE[o], deg:mod(degree+o,7), pc:pcs[mod(degree+o,7)] }));
+}
+const TRIAD_NAME={"0,4,7":"","0,3,7":"m","0,3,6":"°","0,4,8":"+","0,5,7":"sus4","0,2,7":"sus2"};
+const TETRAD_NAME={"0,4,7,11":"maj7","0,4,7,10":"7","0,3,7,10":"m7","0,3,6,10":"m7♭5","0,3,6,9":"°7",
+  "0,3,7,11":"mMaj7","0,4,8,11":"maj7♯5","0,4,8,10":"7♯5","0,5,7,10":"7sus4"};
+const SHELL_NAME={"0,4,11":"maj7","0,4,10":"7","0,3,10":"m7","0,3,11":"mMaj7","0,4,9":"6","0,3,9":"m6"};
+function qualityOf(tones, object) {
+  if (!tones || tones.length < 3) return "";
+  const ivs = tones.map(t => mod(t.pc - tones[0].pc, 12)).sort((a,b)=>a-b).join(",");
+  if (object === "shell") return (SHELL_NAME[ivs] ?? "?") + " shell";
+  return (tones.length === 3 ? TRIAD_NAME[ivs] : TETRAD_NAME[ivs]) ?? "?";
+}
+const roleName = r => r==="R"?"root":r==="3"?"3rd":r==="5"?"5th":"7th";
+const isMinorish = q => /^m(?!aj)|°|ø/.test(q);
+
+function placeTones(tonesIn, material, n, frame) {
+  const missing = tonesIn.filter(t => !material.some(m => mod(m.midi,12) === t.pc));
+  const tones = tonesIn.filter(t => !missing.includes(t));
+  if (!tones.length) return { notes:null, missing, collide:null };
+  const cands = tones.map(t => material.filter(m => mod(m.midi,12) === t.pc).map(m => ({...m, role:t.role})));
+  if (cands.reduce((a,c)=>a*Math.max(1,c.length),1) > 40000) return { notes:null, missing, tooBig:true };
+  let best=null, bk=null;
+  const walk = (i, combo) => {
+    if (i === cands.length) {
+      const per={}; for (const x of combo) per[x.string]=(per[x.string]||0)+1;
+      if (Object.values(per).some(c=>c>n)) return;
+      const fr = combo.map(x=>x.fret);
+      const key=[Math.max(...fr)-Math.min(...fr),
+                 combo.reduce((a,x)=>a+Math.abs(x.fret-frame.centre),0),
+                 -combo.reduce((a,x)=>a+x.string,0)];
+      if (!bk || key[0]<bk[0] || (key[0]===bk[0] && (key[1]<bk[1] || (key[1]===bk[1] && key[2]<bk[2]))))
+        { bk=key; best=combo; }
+      return;
+    }
+    for (const c of cands[i]) walk(i+1, [...combo, c]);
+  };
+  walk(0, []);
+  if (!best) {
+    const byS={};
+    tones.forEach((t,i)=>{ const ss=[...new Set(cands[i].map(c=>c.string))];
+      if (ss.length<=1) (byS[ss[0]] ||= []).push(roleName(t.role)); });
+    const clash = Object.entries(byS).find(([,r])=>r.length>n);
+    return { notes:null, missing, unplaceable:true,
+      collide: clash ? { string:+clash[0], roles:clash[1] } : null };
+  }
+  return { notes:[...best].sort((a,b)=>a.midi-b.midi), missing };
+}
+function allOccurrences(tones, material, ss, n) {
+  const pcs = new Set(tones.map(t=>t.pc));
+  const roleOf = pc => tones.find(t=>t.pc===pc).role;
+  const out=[];
+  for (const s of [...ss].sort((a,b)=>b-a))
+    out.push(...material.filter(m=>m.string===s && pcs.has(mod(m.midi,12)))
+                        .slice(0,n).map(m=>({...m, role:roleOf(mod(m.midi,12))})));
+  return out.sort((a,b)=>a.midi-b.midi);
+}
+const BASS_OFFSET = { root:0, third:-2, fifth:-4 };
+function placeBass(kind, degree, pcs, ss, frame) {
+  if (kind === "none") return { note:null, reason:null };
+  const free = [6,5].filter(s => !ss.includes(s));
+  if (!free.length) return { note:null, reason:"strings 5 and 6 are both in the set — no room" };
+  const bs = free[0], deg = mod(degree + BASS_OFFSET[kind], 7);
+  const c = notesOnString(bs, pcs).filter(x => x.keyDeg === deg);
+  if (!c.length) return { note:null, reason:"that reference tone is not on string " + bs };
+  c.sort((a,b)=>Math.abs(a.fret-frame.centre)-Math.abs(b.fret-frame.centre));
+  const note = {...c[0]};        // carries both deg (against the reference) and keyDeg
+  return { note, stretch: note.fret < frame.fLo || note.fret > frame.fHi, reason:null };
+}
+
+/* ---- THE PROGRESSION ---- */
+/* THE PROGRESSION — a list of chord specs. A cycle stays diatonic (the degree IS the
+ * chord); a structure or a custom line resolves romans, or absolute symbols, to a root
+ * pitch class and a quality. Nothing here is a table of typed chords. */
+function progressionSpecs(pcs) {
+  const p = st.prog;
+  if (p.source === "cycle") {
+    /* THE LENGTH IS DERIVED, not chosen: a cycle closes when the root returns. With seven
+     * degrees and a step of 1–5 that is seven moves, plus the bar that lands home again.
+     * Setting a bar count by hand only ever padded the tail with duplicates. */
+    const step = CYCLES[p.cycle].step;
+    const gcd = (a,b) => b ? gcd(b, a % b) : a;
+    const len = 7 / gcd(step, 7);
+    const out = [];
+    for (let i = 0; i <= len; i++) out.push({ kind:"diatonic", degree: mod(p.start + i*step, 7) });
+    return out;
+  }
+  const toks = p.source === "structure"
+    ? (STRUCTURES.find(x => x.id === p.structure) || STRUCTURES[0]).bars.flat()
+    : String(p.custom || "").trim().split(/[\s,|]+/).filter(Boolean);
+  const out = [];
+  for (const t of toks) {
+    const r = parseRoman(t, pcs) || parseSymbol(t);
+    if (r) out.push({ kind:"abs", ...r });
+  }
+  return out.length ? out : [{ kind:"diatonic", degree:p.start }];
+}
+
+/* ---- THE FIGURE ----
+ * A PATTERN is a sequence of STRING numbers — "4,3,4,3,2,1" means string 4 first,
+ * string 3 second, string 4 again third, and so on. Repeats are legal and, under
+ * Line, they walk that string's notes low → high. TONES names roles instead. */
+function parseFigure(text, address, sel) {
+  const raw = String(text || "").toUpperCase();
+  const toks = address === "pattern" ? (raw.match(/[1-6]/g) || []) : (raw.match(/R|[357]/g) || []);
+  if (!toks.length) return { order:null, err:null };
+  const order = [], used = {};
+  for (const tok of toks) {
+    if (address === "pattern") {
+      const s = +tok;
+      const onStr = sel.filter(x => x.string === s).sort((a,b)=>a.midi-b.midi);
+      if (!onStr.length) return { order:null, err:`string ${s} carries nothing in this selection` };
+      const k = (used[s] || 0) % onStr.length; used[s] = (used[s] || 0) + 1;
+      order.push(onStr[k]);
+    } else {
+      const hit = sel.find(x => x.role === tok);
+      if (!hit) return { order:null, err:`this selection carries no ${tok === "R" ? "root" : tok}` };
+      order.push(hit);
+    }
+  }
+  return { order, err:null };
+}
+
+/* ============================================================================
+ * RENDER
+ * ==========================================================================*/
+const el = (t,a,p) => { const n=document.createElementNS("http://www.w3.org/2000/svg",t);
+  for (const k in a) n.setAttribute(k,a[k]); if (p) p.appendChild(n); return n; };
+const byId = id => document.getElementById(id);
+let L = null;
+
+function tonesFromQuality(rootPc, qual, object, dyad) {
+  const iv = QUAL_IV[qual] || QUAL_IV[""];
+  let idx;
+  if (object === "triad") idx = [0,1,2];
+  else if (object === "tetrad") idx = iv.length >= 4 ? [0,1,2,3] : [0,1,2];
+  else if (object === "shell") idx = iv.length >= 4 ? [0,1,3] : [0,1,2];
+  else if (object === "dyad") idx = dyad.map(d => ({1:0,3:1,5:2,7:3})[d])
+    .filter(i => i < iv.length);
+  else return null;
+  return idx.map(i => ({ role:ROLE_BY_INDEX[i], pc:mod(rootPc + iv[i], 12) }));
+}
+function nameOfPc(pc, spell) {
+  const hit = spell.find(x => x.pc === pc);
+  if (hit) return hit.name;
+  return ["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"][pc];
+}
+function buildChord(spec, pcs, spell, material, frame) {
+  const degree = spec.kind === "diatonic" ? spec.degree : pcs.indexOf(spec.rootPc);
+  const tones = spec.kind === "diatonic"
+    ? tonesFor(st.object, spec.degree, pcs, st.dyad)
+    : tonesFromQuality(spec.rootPc, spec.qual, st.object, st.dyad);
+  let sel, place = null;
+  if (st.object === "scale") {
+    sel = scaleSelection(material, st.strings).map(m => ({...m, role:null}));
+  } else if (st.take === "all") {
+    const have = tones.filter(t => material.some(m => mod(m.midi,12) === t.pc));
+    place = { missing: tones.filter(t => !have.includes(t)) };
+    sel = allOccurrences(have, material, st.strings, st.n);
+    place.notes = sel;
+  } else {
+    place = placeTones(tones, material, st.n, frame);
+    sel = place.notes || [];
+  }
+  const q = spec.kind === "diatonic" ? qualityOf(tones, st.object) : spec.qual;
+  const rootPc = spec.kind === "diatonic" ? pcs[spec.degree] : spec.rootPc;
+  const roman = spec.kind === "diatonic"
+    ? (isMinorish(q) ? ROMAN_LO : ROMAN_UP)[spec.degree] +
+      (q.includes("°") ? "°" : q.includes("♭5") ? "ø" : "")
+    : (degree >= 0 ? (isMinorish(q) ? ROMAN_LO : ROMAN_UP)[degree] : "—");
+  /* a tone the KEY does not contain can never be in the field, and the field is the
+   * material — so say which kind of absence this is */
+  const offKey = (tones || []).filter(t => !pcs.includes(t.pc));
+  return { degree, rootPc, tones, sel, place, quality:q, offKey,
+           symbol: nameOfPc(rootPc, spell) + (st.object === "scale" ? "" : q), roman };
+}
+
+function render() {
+  const asserts=[], fails=[];
+  const check=(n,f)=>{ asserts.push(n); try{ if(f()===false) throw new Error("returned false"); }
+    catch(e){ fails.push(n+" — "+e.message); } };
+
+  const pcs = scalePcs(st.key, st.scale), spell = spelling(st.key, st.scale);
+  if (!st.strings.length) st.strings = [1];
+  const anchor = anchorOf(st.strings), aNotes = notesOnString(anchor, pcs);
+  if (st.frameIdx === null) st.frameIdx = Math.max(0, aNotes.findIndex(x => x.fret >= 5));
+  const frame = frameFor(aNotes, st.frameIdx); st.frameIdx = frame.i;
+  const material = materialFor(st.strings, pcs, frame);
+
+  const specs = progressionSpecs(pcs);
+  if (st.bar >= specs.length) st.bar = 0;
+  const chords = specs.map(sp => buildChord(sp, pcs, spell, material, frame));
+  const cur = chords[st.bar];
+  const bass = placeBass(st.bass, cur.degree >= 0 ? cur.degree : 0, pcs, st.strings, frame);
+
+  check("the field is seven distinct degrees", () => pcs.length===7 && new Set(pcs).size===7);
+  check("the frame is three ascending scale notes", () => frame.notes.length===3 && frame.fLo<frame.fHi);
+  check("no string carries more than the placement allows", () => {
+    const per={}; for (const x of cur.sel) per[x.string]=(per[x.string]||0)+1;
+    const cap = st.object === "scale" ? 3 : st.n;
+    return Object.values(per).every(c=>c<=cap); });
+  check("every selected note is a real scale note in the frame", () =>
+    cur.sel.every(x => pcs.includes(mod(x.midi,12)) && x.fret>=frame.fLo && x.fret<=frame.fHi));
+  check("the progression is at least one bar", () => chords.length >= 1);
+
+  const fig = parseFigure(st.figure, st.address, cur.sel);
+  L = { pcs, spell, frame, material, chords, cur, bass, fig, anchor, aNotes, specs };
+
+  drawNeck(); drawStaff(); drawKeys(); drawTimeline();
+  paintReadout(fails, asserts); paintGaps(); paintControls(); paintLog();
+}
+
+/* ---- the neck ---- */
+function drawNeck() {
+  const { pcs, frame, cur, bass, fig, anchor, aNotes } = L;
+  const sel = cur.sel;
+  const svg = byId("neck"); svg.textContent = "";
+
+  for (let f = 0; f <= NFRETS; f++) {
+    const x = f === 0 ? FX0 : FX0 + f * FW;
+    el("line",{x1:x,y1:fy(1)-13,x2:x,y2:fy(6)+13,stroke:f===0?"#212126":"#D8D8DC",
+      "stroke-width":f===0?4:1.2},svg);
+  }
+  for (const mf of [3,5,7,9,12]) {
+    el("circle",{cx:fx(mf),cy:fy(6)+24,r:3.2,fill:"#D8D8DC"},svg);
+    if (mf===12) el("circle",{cx:fx(mf)+9,cy:fy(6)+24,r:3.2,fill:"#D8D8DC"},svg);
+  }
+  for (let f=1; f<=NFRETS; f++){ const t=el("text",{x:fx(f),y:fy(1)-20,"text-anchor":"middle",
+    "font-size":"9.5",fill:"#B9B9BF"},svg); t.textContent=f; }
+  for (let s=1; s<=6; s++)
+    el("line",{x1:FX0-36,y1:fy(s),x2:NECK_R,y2:fy(s),stroke:"#B9B9BF","stroke-width":s>=4?1.7:1.05},svg);
+
+  const drawFrame=(fLo,fHi,cls)=>{
+    const ys=st.strings.map(fy), yLo=Math.min(...ys)-16, yHi=Math.max(...ys)+16;
+    const xLo=fLo===0?FX0-30:FX0+(fLo-1)*FW+FW*0.28;
+    const xHi=Math.min(FX0+fHi*FW-FW*0.22, NECK_R+8);
+    el("rect",{class:cls,x:xLo,y:yLo,width:xHi-xLo,height:yHi-yLo,rx:11},svg);
+    return {xLo,xHi,yLo,yHi};
+  };
+  const box = drawFrame(frame.fLo, frame.fHi, "frame");
+
+  const selKey = new Set(sel.map(x => x.string+":"+x.fret));
+  for (let s=1; s<=6; s++)
+    for (const nt of notesOnString(s,pcs)) {
+      if (selKey.has(s+":"+nt.fret)) continue;
+      const fam=FAM[nt.deg];
+      const g=el("g",{opacity:0.26,cursor:s===anchor?"pointer":"default"},svg);
+      el("circle",{cx:fx(nt.fret),cy:fy(s),r:10,fill:FAM_COLOR[fam]},g);
+      const t=el("text",{x:fx(nt.fret),y:fy(s)+3.3,"text-anchor":"middle","font-size":"9",
+        fill:FAM_TEXT[fam]},g); t.textContent=fam;
+      if (s===anchor) g.addEventListener("click",()=>{ const i=aNotes.findIndex(x=>x.fret===nt.fret);
+        if (i>=0){ st.frameIdx=i; render(); } });
+    }
+
+  if (fig.order && fig.order.length > 1)
+    el("polyline",{points:fig.order.map(x=>fx(x.fret)+","+fy(x.string)).join(" "),fill:"none",
+      stroke:"#212126","stroke-width":1.3,"stroke-dasharray":"4 3",opacity:0.45},svg);
+
+  for (const x of sel) {
+    const fam=FAM[x.deg];
+    el("circle",{cx:fx(x.fret),cy:fy(x.string),r:13,fill:FAM_COLOR[fam],stroke:"#fff","stroke-width":2},svg);
+    const t=el("text",{x:fx(x.fret),y:fy(x.string)+3.6,"text-anchor":"middle","font-size":"10",
+      "font-weight":"bold",fill:FAM_TEXT[fam]},svg); t.textContent=x.role||fam;
+  }
+  if (bass.note) {
+    el("circle",{cx:fx(bass.note.fret),cy:fy(bass.note.string),r:12,fill:"none",
+      stroke:FAM_COLOR[FAM[bass.note.deg]],"stroke-width":2.4,"stroke-dasharray":"3 2.5"},svg);
+    const t=el("text",{x:fx(bass.note.fret),y:fy(bass.note.string)+3.4,"text-anchor":"middle",
+      "font-size":"9",fill:"#73737A"},svg); t.textContent=FAM[bass.note.deg];
+  }
+
+  /* the right gutter: the set, then the ORDER bracket */
+  const cap=el("text",{x:STR_X,y:fy(1)-20,"text-anchor":"middle","font-size":"8.5",fill:"#B9B9BF"},svg);
+  cap.textContent="set";
+  const cap2=el("text",{x:BRK_X+10,y:fy(1)-20,"text-anchor":"middle","font-size":"8.5",fill:"#B9B9BF"},svg);
+  cap2.textContent="pattern";
+
+  for (let s=1; s<=6; s++) {
+    const inSet=st.strings.includes(s);
+    const g=el("g",{class:"strbtn"},svg);
+    el("rect",{x:STR_X-12,y:fy(s)-11,width:24,height:22,rx:6,fill:inSet?"#212126":"#fff",
+      stroke:inSet?"#212126":"#B9B9BF","stroke-width":1.3},g);
+    const t=el("text",{x:STR_X,y:fy(s)+4,"text-anchor":"middle","font-size":"11.5",
+      "font-weight":inSet?"bold":"normal",fill:inSet?"#fff":"#73737A"},g); t.textContent=s;
+    g.addEventListener("click",()=>{ const i=st.strings.indexOf(s);
+      if (i>=0){ if (st.strings.length>1) st.strings.splice(i,1); } else st.strings.push(s);
+      st.frameIdx=null; render(); });
+
+    /* THE BRACKET IS AN ORDER, always — {1,3} beside string 4 means steps 1 and 3 land there.
+     * Under `tones` the order is DERIVED rather than typed, so it greys out.
+     * { } deliberately: [ ] is a target and ( ) an approach in the ratified motion grammar. */
+    if (inSet && fig.order) {
+      const steps=[];
+      fig.order.forEach((x,i)=>{ if (x.string===s) steps.push(i+1); });
+      if (steps.length) {
+        const t2=el("text",{x:BRK_X,y:fy(s)+4,"font-size":"11.5",
+          fill: st.address==="pattern" ? "#212126" : "#B9B9BF",
+          "font-weight": st.address==="pattern" ? "600" : "400",
+          "font-family":"ui-monospace,SFMono-Regular,Menlo,monospace"},svg);
+        t2.textContent = "{" + steps.join(",") + "}";
+      }
+    }
+  }
+
+  const gripMove=el("rect",{class:"grip",x:box.xLo-7,y:box.yHi-7,width:14,height:14,rx:3},svg);
+  const gm=el("title",{},gripMove); gm.textContent="drag: move the box, across frets and strings";
+  const hitMove=el("rect",{class:"hit",x:box.xLo-20,y:box.yHi-20,width:40,height:40},svg);
+  const edge=(y,which)=>{
+    const cx=(box.xLo+box.xHi)/2;
+    const h=el("circle",{class:"grip-v",cx,cy:y,r:5.5},svg);
+    const tt=el("title",{},h); tt.textContent="drag: how many strings tall, from this edge";
+    const hit=el("circle",{class:"hit",cx,cy:y,r:16},svg);
+    bindDrag(hit,which); bindDrag(h,which);
+  };
+  edge(box.yLo,"size-top"); edge(box.yHi,"size-bottom");
+  bindDrag(hitMove,"move"); bindDrag(gripMove,"move");
+}
+
+function slideStrings(dir) {
+  const next = st.strings.map(s=>s+dir);
+  if (next.some(s=>s<1||s>6)) return;
+  st.strings=next; st.frameIdx=null; render();
+}
+function bindDrag(node, kind) {
+  node.style.pointerEvents="all";
+  node.addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    const svg=byId("neck"); node.setPointerCapture(ev.pointerId);
+    const pt=e=>{ const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+      return { x:vb.x+(e.clientX-r.left)/r.width*vb.width, y:vb.y+(e.clientY-r.top)/r.height*vb.height }; };
+    const start=pt(ev), s0=[...st.strings], i0=st.frameIdx;
+    const stringAt=y=>Math.max(1,Math.min(6,Math.round((y-SY0)/SGAP)+1));
+    const move=e=>{
+      const p=pt(e);
+      if (kind==="move") {
+        st.frameIdx=Math.max(0,i0+Math.round((p.x-start.x)/FW));
+        const d=stringAt(p.y)-stringAt(start.y), cand=s0.map(s=>s+d);
+        if (d && !cand.some(s=>s<1||s>6)) st.strings=cand;
+      } else {
+        const at=stringAt(p.y), lo=Math.min(...s0), hi=Math.max(...s0);
+        let a=lo,b=hi;
+        if (kind==="size-top") a=Math.min(at,hi); else b=Math.max(at,lo);
+        const run=[]; for (let s2=a; s2<=b; s2++) run.push(s2);
+        st.strings=run;
+      }
+      render();
+    };
+    const up=()=>{ window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); };
+    window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+  });
+}
+
+/* ---- the chart strip ---- */
+function upperStructureOf(c) {
+  if (st.bass === "none" || st.object === "scale" || !c.tones) return null;
+  const b = placeBass(st.bass, c.degree >= 0 ? c.degree : 0, L.pcs, st.strings, L.frame);
+  if (!b.note) return null;
+  const bassPc = L.pcs[b.note.keyDeg];
+  const name = nameChordOver(bassPc, c.tones.map(t => t.pc));
+  const bassName = nameOfPc(bassPc, L.spell);
+  return { bassName, slash: c.symbol + "/" + bassName,
+           composite: name ? bassName + name : null };
+}
+function drawTimeline() {
+  const host=byId("tlBars"); host.textContent="";
+  /* chords group into BARS by the split, and each chip's width grows with its beats — so
+   * 5/4 split 2+3 shows a narrow chord then a wide one instead of saying so in prose */
+  const pat=((SPLITS[st.meter]||["4"])[st.splitIdx]||"4").split("+").map(Number);
+  const Lb=pat.length;
+  for (let i0=0;i0<L.chords.length;i0+=Lb) {
+    const bar=document.createElement("div");
+    bar.className="tlbar"+(st.bar>=i0 && st.bar<i0+Lb ? " curbar":"");
+    for (let k=0;k<Lb && i0+k<L.chords.length;k++) {
+      const i=i0+k, c=L.chords[i], us=upperStructureOf(c);
+      const b=document.createElement("button");
+      b.className=(i===st.bar?"cur":"");
+      b.style.flex=`${pat[k]} 1 0`;
+      b.title=`bar ${Math.floor(i0/Lb)+1}, ${pat[k]} beat${pat[k]>1?"s":""}`;
+      b.innerHTML = `<span>${c.symbol}</span>` +
+        (us ? (us.composite ? `<span class="tlus">${us.composite}</span>` +
+                              `<span class="tlrn">${c.symbol}/${us.bassName}</span>`
+                            : `<span class="tlrn">${c.symbol}/${us.bassName}</span>`)
+            : `<span class="tlrn">${c.roman}</span>`);
+      b.addEventListener("click",()=>{ st.bar=i; render(); });
+      bar.appendChild(b);
+    }
+    host.appendChild(bar);
+  }
+}
+
+/* ---- the étude staff: treble = the material, bass clef = the reference tone ---- */
+function drawStaff() {
+  const svgRoot=byId("staff"); svgRoot.textContent="";
+  const svg=el("g",{},svgRoot);          // everything is drawn in here so it can be fitted
+  const chords=L.chords, N=chords.length;
+  const X0=58, W=1290-X0-14, BW=W/N;
+  const TY=58, BY=168, GAP=8;                       // staff line spacing / 2
+  const line=(y,x1,x2,w)=>el("line",{x1,y1:y,x2,y2:y,stroke:"#B9B9BF","stroke-width":w||1},svg);
+  for (let k=0;k<5;k++){ line(TY+k*GAP*2, X0, X0+W); line(BY+k*GAP*2, X0, X0+W); }
+  const tc=el("text",{x:X0-42,y:TY+GAP*6.4,"font-size":"42",fill:"#212126"},svg); tc.textContent="𝄞";
+  const t8=el("text",{x:X0-31,y:TY+GAP*10.4,"text-anchor":"middle","font-size":"11",fill:"#73737A"},svg);
+  t8.textContent="8";
+  const bc=el("text",{x:X0-40,y:BY+GAP*4.4,"font-size":"32",fill:"#212126"},svg); bc.textContent="𝄢";
+  const ts=(y,t)=>{ const a=el("text",{x:X0-14,y:y+GAP*2+2,"text-anchor":"middle","font-size":"15",
+      "font-weight":"bold",fill:"#212126"},svg); a.textContent=t; };
+  ts(TY, st.meter); ts(TY+GAP*4, "4"); ts(BY, st.meter); ts(BY+GAP*4, "4");
+
+  /* Guitar is notated an octave ABOVE where it sounds — the 8 under the treble clef.
+   * Everything below reads the written pitch, so the material sits on the staff
+   * instead of hanging off the bottom on ledger lines. */
+  const WRITTEN = 12;
+  const stepOf=m0=>{ const m=m0+WRITTEN, pc=mod(m,12), oct=Math.floor(m/12)-1;
+    const sp=L.spell.find(s=>s.pc===pc);
+    const li=sp?LETTERS.indexOf(sp.letter):LETTERS.indexOf(["C","C","D","E","E","F","F","G","A","A","B","B"][pc]);
+    return oct*7+li; };
+  const yTreble=s=>TY+GAP*8-(s-(4*7+2))*GAP;
+  const yBass=s=>BY+GAP*8-(s-(2*7+4))*GAP;
+
+  /* THE REGISTER PROBLEM: written guitar reaches G6 at the 15th fret of the first string,
+   * which is five ledger lines above the staff. A fixed drawing area cannot hold that, so
+   * the label band is placed above the HIGHEST note in the whole étude, and the viewBox is
+   * fitted to the finished drawing at the end. Nothing can leave the frame. */
+  const allSteps = [];
+  for (const c of chords) for (const nt of c.sel) allSteps.push(stepOf(nt.midi));
+  if (L.fig.order) for (const nt of L.fig.order) allSteps.push(stepOf(nt.midi));
+  const topStep = allSteps.length ? Math.max(...allSteps) : (4*7+2)+8;
+  const labY = Math.min(TY - 30, yTreble(topStep) - 20);
+
+  chords.forEach((c,i)=>{
+    const x0=X0+i*BW;
+    if (i) el("line",{x1:x0,y1:TY,x2:x0,y2:TY+GAP*8,stroke:"#D8D8DC","stroke-width":1},svg);
+    if (i) el("line",{x1:x0,y1:BY,x2:x0,y2:BY+GAP*8,stroke:"#D8D8DC","stroke-width":1},svg);
+    if (i===st.bar)
+      el("rect",{x:x0,y:labY-14,width:BW,height:(BY+GAP*8)-(labY-14),fill:"#B82929",opacity:0.055},svg);
+    const lab=el("text",{x:x0+7,y:labY,"font-size":"12.5","font-weight":"bold",fill:"#212126"},svg);
+    lab.textContent=c.symbol;
+    const rl=el("text",{x:x0+7,y:labY+11,"font-size":"9.5",fill:"#B9B9BF"},svg); rl.textContent=c.roman;
+
+    const figHere = i===st.bar ? L.fig.order : null;
+    const seq = figHere && figHere.length ? figHere : c.sel;
+    /* A CHORD STACKS; A RUN DOES NOT. Notes a scale-step apart cannot share an x without
+     * their noteheads colliding, and a scale or an arpeggio is read left to right anyway. */
+    const stacked = !(figHere && figHere.length) && st.object !== "scale" && st.take !== "all";
+    seq.forEach((nt,k)=>{
+      const s=stepOf(nt.midi), y=yTreble(s);
+      const x=stacked ? x0+BW*0.34 : x0+BW*0.2+ (BW*0.62)*(k/Math.max(1,seq.length-1));
+      /* ledger lines, both directions — the staff's bottom line is E4, its top line F5 */
+      for (let q=(4*7+2)-2; s<=q; q-=2)
+        el("line",{x1:x-9,y1:yTreble(q),x2:x+9,y2:yTreble(q),stroke:"#B9B9BF","stroke-width":1},svg);
+      for (let q=(4*7+2)+10; s>=q; q+=2)
+        el("line",{x1:x-9,y1:yTreble(q),x2:x+9,y2:yTreble(q),stroke:"#B9B9BF","stroke-width":1},svg);
+      el("ellipse",{cx:x,cy:y,rx:6.4,ry:5,fill:FAM_COLOR[FAM[nt.deg]],
+        transform:`rotate(-18 ${x} ${y})`},svg);
+      const t=el("text",{x:x,y:y+3,"text-anchor":"middle","font-size":"7.5",
+        fill:FAM_TEXT[FAM[nt.deg]],"font-weight":"bold"},svg); t.textContent=nt.role||FAM[nt.deg];
+      if (i===st.bar) {                       // fret labels only where you are, or they collide
+        const fr=el("text",{x:x,y:TY+GAP*8+15+(stacked?k*10:0),"text-anchor":"middle",
+          "font-size":"8.5",fill:"#B9B9BF"},svg);
+        fr.textContent=nt.string+"/"+nt.fret;
+      }
+    });
+    if (st.bass !== "none") {
+      const b = placeBass(st.bass, c.degree >= 0 ? c.degree : 0, L.pcs, st.strings, L.frame);
+      if (b.note) {
+        const s=stepOf(b.note.midi), y=yBass(s), x=x0+BW*0.34;
+        el("ellipse",{cx:x,cy:y,rx:5.4,ry:4.2,fill:"none",stroke:FAM_COLOR[FAM[b.note.deg]],
+          "stroke-width":1.8,transform:`rotate(-18 ${x} ${y})`},svg);
+      }
+    }
+  });
+  el("line",{x1:X0+W,y1:TY,x2:X0+W,y2:TY+GAP*8,stroke:"#212126","stroke-width":2.6},svg);
+  el("line",{x1:X0+W,y1:BY,x2:X0+W,y2:BY+GAP*8,stroke:"#212126","stroke-width":2.6},svg);
+  /* fit to content — the same fix the neck needed, for the opposite reason: there the
+   * viewBox was too big, here it was too small and the top of the register fell out of it */
+  try {
+    const bb = svg.getBBox();
+    if (bb.width > 0 && bb.height > 0)
+      svgRoot.setAttribute("viewBox",
+        `${bb.x - 10} ${bb.y - 10} ${bb.width + 20} ${bb.height + 20}`);
+  } catch (e) { /* an unrendered card has no box; the default viewBox stands */ }
+
+  svgRoot.addEventListener("click",e=>{
+    const r=svgRoot.getBoundingClientRect(), vb=svgRoot.viewBox.baseVal;
+    const vx=vb.x+(e.clientX-r.left)/r.width*vb.width;
+    const i=Math.floor((vx-X0)/BW); if (i>=0 && i<N){ st.bar=i; render(); }
+  });
+}
+
+/* ---- on the keys ---- */
+function drawKeys() {
+  const svg=byId("keys"); svg.textContent="";
+  const LO=36, HI=84, W=1290-40, X0=20;
+  const whites=[]; for (let m=LO;m<=HI;m++) if (![1,3,6,8,10].includes(mod(m,12))) whites.push(m);
+  const ww=W/whites.length, H=112;
+  const xOf=m=>{ const i=whites.indexOf(m); if (i>=0) return X0+i*ww;
+    const below=whites.filter(w=>w<m).length; return X0+below*ww-ww*0.3; };
+  for (const m of whites) {
+    el("rect",{x:xOf(m),y:14,width:ww-1.5,height:H,fill:"#fff",stroke:"#B9B9BF","stroke-width":1,rx:2},svg);
+    if (mod(m,12)===0){ const t=el("text",{x:xOf(m)+ww/2,y:14+H-6,"text-anchor":"middle",
+      "font-size":"9",fill:"#B9B9BF"},svg); t.textContent="C"+(Math.floor(m/12)-1); }
+  }
+  for (let m=LO;m<=HI;m++) if ([1,3,6,8,10].includes(mod(m,12)))
+    el("rect",{x:xOf(m),y:14,width:ww*0.6,height:H*0.62,fill:"#212126",rx:2},svg);
+  const marks=[...L.cur.sel];
+  if (st.bass !== "none" && L.bass.note) marks.push({...L.bass.note, role:"bass"});
+  for (const nt of marks) {
+    if (nt.midi<LO||nt.midi>HI) continue;
+    const black=[1,3,6,8,10].includes(mod(nt.midi,12));
+    const cx=xOf(nt.midi)+(black?ww*0.3:ww/2), cy=black?14+H*0.48:14+H-24;
+    el("circle",{cx,cy,r:10,fill:FAM_COLOR[FAM[nt.deg]],stroke:"#fff","stroke-width":1.6},svg);
+    const t=el("text",{x:cx,y:cy+3.4,"text-anchor":"middle","font-size":"9","font-weight":"bold",
+      fill:FAM_TEXT[FAM[nt.deg]]},svg); t.textContent=nt.role==="bass"?FAM[nt.deg]:(nt.role||FAM[nt.deg]);
+  }
+}
+
+/* ---- prose ---- */
+function summaryLine() {
+  const f=L.frame, ss=[...st.strings].sort((a,b)=>b-a).join("-");
+  const src = st.prog.source==="cycle" ? CYCLES[st.prog.cycle].name
+            : st.prog.source==="structure"
+              ? (STRUCTURES.find(x=>x.id===st.prog.structure)||STRUCTURES[0]).name : "custom";
+  return `${st.key} ${SCALE_NAME[st.scale]} · strings ${ss} · frame from the ${ORD[f.startDeg]} on ` +
+    `string ${L.anchor} (frets ${f.fLo}–${f.fHi}) · ${st.n===1?"grip":"line"} · ${st.object}` +
+    `${st.take==="all"?", every occurrence":""} · ${src} · ${st.figure?("figure "+st.figure):"block"} · ` +
+    `${st.meter}/4 split ${(SPLITS[st.meter]||["4"])[st.splitIdx]||"4"} · ${st.bpm} bpm — ` +
+    L.chords.map(c=>c.symbol).join(" ");
+}
+function paintReadout(fails, asserts) {
+  const { frame, cur, bass, fig, anchor } = L;
+  const bits=[];
+  bits.push(st.object === "scale" && st.ref
+    ? `<b>${L.spell[st.ref].name} ${MODES[st.scale][st.ref]}</b> ` +
+      `<span class='dim'>(the ${st.key} ${SCALE_NAME[st.scale]} collection)</span>`
+    : `<b>${st.key} ${SCALE_NAME[st.scale]}</b>`);
+  bits.push(`bar <b>${st.bar+1}</b> of ${L.chords.length} — <b>${cur.symbol}</b> <span class="dim">(${cur.roman})</span>`);
+  bits.push(`frame from the <b>${ORD[frame.startDeg]}</b> on string ${anchor}, frets <b>${frame.fLo}–${frame.fHi}</b>`);
+  const ss=[...st.strings].sort((a,b)=>b-a).join("–");
+  bits.push(`strings <b>${ss}</b>${isContig(st.strings)?"":" <span class='dim'>(skipped)</span>"}, <b>${st.n===1?"grip":"line"}</b>`);
+  if (cur.place && cur.place.unplaceable)
+    bits.push(cur.place.collide
+      ? `<b style="color:#B82929">no placement fits</b> — the ${cur.place.collide.roles.join(" and ")} both occur only on string ${cur.place.collide.string} here`
+      : `<b style="color:#B82929">no placement fits</b>`);
+  else if (cur.sel.length) {
+    const per={}; for (const x of cur.sel) per[x.string]=(per[x.string]||0)+1;
+    const shape=[...st.strings].sort((a,b)=>b-a).map(s=>per[s]||0).join("+");
+    const isLine=Object.values(per).some(c=>c>1);
+    bits.push(`${shape} across the set <span class='dim'>(${isLine?"a line":"a block"})</span>`);
+  }
+  if (cur.offKey && cur.offKey.length)
+    bits.push(`<span style="color:#B82929">the ${cur.offKey.map(t=>roleName(t.role)).join(" and ")} ` +
+      `of this chord is <b>not in the key</b> — the field cannot show it</span>`);
+  else if (cur.place && cur.place.missing && cur.place.missing.length)
+    bits.push(`<span style="color:#B8820B">no ${cur.place.missing.map(t=>roleName(t.role)).join(" or ")} in this frame</span>`);
+  if (st.bass!=="none")
+    bits.push(bass.note ? `reference: the <b>${st.bass==="root"?"root":st.bass+" below"}</b> on string ${bass.note.string}, fret ${bass.note.fret}`
+      + (bass.stretch?` <span class='dim'>(a stretch)</span>`:"")
+      : `<span style="color:#B8820B">no reference tone — ${bass.reason}</span>`);
+  { const us = upperStructureOf(cur);
+    if (us && us.composite)
+      bits.push(`over the reference that is <b>${us.composite}</b> ` +
+        `<span class='dim'>(${us.slash})</span>`); }
+  if (fig.err) bits.push(`<span style="color:#B82929">figure: ${fig.err}</span>`);
+  else if (fig.order) bits.push(`figure: <b>${fig.order.length}</b> steps as ${st.address==="pattern"?"a pattern":"tones"}`);
+  byId("readout").innerHTML=bits.join(" · ");
+
+  const a=byId("assert");
+  if (fails.length){ a.className="assert fail"; a.textContent="assertion failed — "+fails.join(" ; "); }
+  else { a.className="assert"; a.textContent=`${asserts.length} assertions passed before drawing.`; }
+
+  byId("legend").innerHTML=FAM.map(f=>`<span><i style="background:${FAM_COLOR[f]}"></i>${f}</span>`).join("")
+    +`<span style="margin-left:8px">colour = function against ` +
+      `${st.object==="scale" && st.ref ? "the reference tone" : "the key"}</span>`;
+  byId("figNote").innerHTML = st.address==="pattern"
+    ? "A <b>pattern</b> is a sequence of string numbers: <code>4,3,4,3,2,1</code>. Repeats walk that string's notes low → high. The bracket beside the neck shows where each step lands."
+    : "<b>Tones</b> name roles — R, 3, 5, 7. The bracket still shows the order, greyed, because it is derived rather than typed.";
+  byId("progRule").textContent = st.prog.source==="cycle" ? CYCLES[st.prog.cycle].rule
+    : st.prog.source==="structure" ? "A degree pattern, applied to the key — never a table of typed chords."
+    : "Roman numerals, read against the key.";
+}
+const isContig = ss => { const s=[...ss].sort((a,b)=>a-b); return s.every((v,i)=>i===0||v===s[i-1]+1); };
+
+function paintGaps() {
+  const per={}; for (const x of L.cur.sel) per[x.string]=(per[x.string]||0)+1;
+  const multi=Object.values(per).some(c=>c>1);
+  const g=[]; const add=(id,soft,t)=>g.push({id,soft,text:t});
+  if (multi){
+    add("G1",false,"Two or three notes on one string. <code>placeOnSet</code> throws — “arity must match, one note per string.”");
+    add("G3",false,"<code>slot</code> is a one-to-one address, so those notes collide: <code>keysOf</code> throws, <code>drill.orderFor</code> keeps the last.");
+    add("G2",false,"<code>lineVoicing</code> implements this rule correctly and is imported by nothing.");
+  }
+  if (st.object==="dyad") add("G4",false,"No dyad exists anywhere in the engine — the floor is three notes for analysis, four for voicing.");
+  if (st.object==="triad") add("G5",false,"No triad generator lives in <code>engine/</code>.");
+  if (st.object==="shell") add("G13",false,"<code>shellCandidates</code> has zero consumers, and a shell may not share a candidate stream with a tetrad.");
+  if (!isContig(st.strings)||st.strings.length!==4)
+    add("G6",false,`<code>STRING_SETS</code> offers three sets only, all four contiguous strings — this one is ${st.strings.length}${isContig(st.strings)?"":", skipped"}.`);
+  if (st.prog.source!=="cycle")
+    add("G28",false,"Typed changes are the disabled “Break down” half of the Harmony panel — <code>modeSeg</code> has no handler at all. Structures, romans and symbol entry are new work.");
+  if (L.cur.offKey && L.cur.offKey.length)
+    add("G24",false,"This chord has a tone outside the key, and the field <i>is</i> the key — so the material cannot contain it. Chord-scales are deferred by name in <code>motion.mjs</code> as a v0.8+ question; this is what that defers.");
+  if (L.cur.sel.length>16) add("G7",true,`${L.cur.sel.length} notes against the 16-event ceiling. Deferred.`);
+  if (st.strings.length>1) add("G9",true,"The window is single-string in code (<code>makeZone</code> takes a scalar). The height, and the handles that change it, are drawn — not enforced.");
+  if (st.bass!=="none" && L.bass.note) add("G11",true,"The bass is <code>string: null, fret: null</code> today and is exempt from the “real string” assertion. Putting it on the bass clef needs it fretted.");
+  add("G24",true,"Three scales only — no modes as selectable objects, no chord-scales.");
+  add("G25",true,"The field is drawn unconditionally at opacity 0.26 — no control to restrict or hide it.");
+  const seen=new Set(); const gg=g.filter(x=>!seen.has(x.id)&&seen.add(x.id));
+  g.length=0; g.push(...gg);
+  byId("gapList").innerHTML = g.length
+    ? g.map(x=>`<div class="gap"><span class="tag${x.soft?" soft":""}">${x.id}</span><span>${x.text}</span></div>`).join("")
+    : `<div class="ok">Nothing — this configuration ships today.</div>`;
+}
+
+/* THE ENTRY'S ROW, in the reference's .hist grammar: the settings summary in bold with the
+ * time right-aligned, the note beneath, then Restore étude and Delete. Restoring applies the
+ * settings AND returns the note to the pad as uncommitted scratch — the canonical behaviour
+ * of engine/notepad-surface.mjs, not a look-alike. */
+const CFG_KEYS = ["key","scale","strings","n","frameIdx","object","take","dyad","bass","ref",
+                  "bar","address","figure","meter","splitIdx","bpm"];
+function snapshot() {
+  const o={}; for (const k of CFG_KEYS) o[k] = Array.isArray(st[k]) ? [...st[k]] : st[k];
+  o.prog = { ...st.prog }; return o;
+}
+function restore(cfg) {
+  for (const k of CFG_KEYS) if (k in cfg) st[k] = Array.isArray(cfg[k]) ? [...cfg[k]] : cfg[k];
+  if (cfg.prog) st.prog = { ...cfg.prog };
+  byId("keySel").value=st.key; byId("scaleSel").value=st.scale;
+  byId("objSel").value=st.object; byId("takeSel").value=st.take;
+  byId("figIn").value=st.figure||""; byId("cusIn").value=st.prog.custom||"";
+  byId("cycSel").value=st.prog.cycle; byId("strSel").value=st.prog.structure;
+  byId("startSel").value=st.prog.start; byId("bpmR").value=st.bpm; byId("bpmV").textContent=st.bpm;
+  render();
+}
+function paintLog() {
+  byId("logLine").textContent = summaryLine();
+  byId("logCount").textContent = `Practice log — ${st.notes.length} saved`;
+  const host=byId("logEntries"); host.textContent="";
+  if (!st.notes.length) {
+    const p=document.createElement("div"); p.className="ok";
+    p.textContent="No entries yet. Jot the note, then save — it files with the settings.";
+    host.appendChild(p);
+  }
+  st.notes.forEach((nt,idx)=>{
+    const div=document.createElement("div"); div.className="hist";
+    const hd=document.createElement("div"); hd.className="hd";
+    const b=document.createElement("b"); b.textContent = nt.title || nt.summary;
+    const w=document.createElement("span"); w.className="when"; w.textContent=nt.when;
+    hd.appendChild(b); hd.appendChild(w); div.appendChild(hd);
+    if (nt.title) { const sm=document.createElement("div"); sm.className="sum";
+      sm.textContent=nt.summary; div.appendChild(sm); }
+    if (nt.body) { const tx=document.createElement("div"); tx.className="note";
+      tx.textContent="\u2192 "+nt.body; div.appendChild(tx); }
+    const mn=document.createElement("div"); mn.className="sum";
+    mn.textContent="~"+nt.mins+" min"; div.appendChild(mn);
+    const acts=document.createElement("div"); acts.className="acts";
+    const rb=document.createElement("button"); rb.textContent="Restore étude";
+    rb.addEventListener("click",()=>{ restore(nt.cfg); byId("npBody").value=nt.body||"";
+      byId("npTitle").value=nt.title||""; });
+    const db=document.createElement("button"); db.textContent="Delete"; db.className="danger";
+    db.addEventListener("click",()=>{ st.notes.splice(idx,1); render(); });
+    acts.appendChild(rb); acts.appendChild(db); div.appendChild(acts);
+    host.appendChild(div);
+  });
+  byId("logJson").textContent = JSON.stringify({
+    key:st.key, scale:st.scale, strings:[...st.strings].sort((a,b)=>b-a),
+    frame:{ anchor:L.anchor, startDegree:L.frame.startDeg, frets:[L.frame.fLo,L.frame.fHi] },
+    placement: st.n===1?"grip":"line", object:st.object, take:st.take, bass:st.bass,
+    progression: st.prog, bar:st.bar, figure:{ address:st.address, text:st.figure },
+    transport:{ meter:st.meter, split:(SPLITS[st.meter]||["4"])[st.splitIdx]||"4", bpm:st.bpm },
+    chords: L.chords.map(c=>({ roman:c.roman, symbol:c.symbol,
+      notes:c.sel.map(n=>({ string:n.string, fret:n.fret, role:n.role })) })),
+  }, null, 2);
+}
+
+/* ============================================================================
+ * CONTROLS
+ * ==========================================================================*/
+function seg(host, items, cur, pick) {
+  host.textContent="";
+  for (const it of items) {
+    const b=document.createElement("button");
+    b.textContent=it.label; if (it.title) b.title=it.title;
+    b.className = it.value===cur ? "on" : "";
+    if (it.disabled) b.disabled=true;
+    b.addEventListener("click",()=>pick(it.value));
+    host.appendChild(b);
+  }
+}
+/* THE REFERENCE TONE.
+ * Under a chord it is what sits underneath: the root, or a diatonic 3rd or 5th below.
+ * Under a scale it is the CENTRE — pick any note of the collection and the field is
+ * re-read against it, which is what a mode is. The list names them. */
+function paintReference() {
+  const sel = byId("bassSel"), isScale = st.object === "scale";
+  sel.textContent = "";
+  const add = (v,t) => { const o=document.createElement("option"); o.value=v; o.textContent=t;
+    sel.appendChild(o); };
+  if (isScale) {
+    const spell = spelling(st.key, st.scale), names = MODES[st.scale];
+    for (let i=0;i<7;i++) add("mode:"+i, `${spell[i].name} — ${names[i]}`);
+    sel.value = "mode:" + st.ref;
+    byId("bassLab").textContent = "Reference tone — the centre the field is read against";
+    byId("bassNote").innerHTML = `The same seven notes, re-rooted: ` +
+      `<b>${spell[st.ref].name} ${names[st.ref]}</b> ` +
+      `<span class="dim">— degree colours and labels follow the reference, not the key.</span>`;
+  } else {
+    add("none","none"); add("root","the root");
+    add("third","a 3rd below"); add("fifth","a 5th below");
+    sel.value = st.bass;
+    byId("bassLab").textContent = "Bass / reference tone";
+    byId("bassNote").textContent = st.bass === "none"
+      ? "The reference the harmony sits on — string 5 or 6, outside the isolation."
+      : "Drawn hollow on the neck; on the bass clef in the étude. The chart names the chord it makes.";
+  }
+}
+function paintControls() {
+  byId("objSel").value = st.object;
+  byId("takeSel").value = st.take;
+  paintReference();
+  const isScale = st.object === "scale";
+  byId("takeSel").disabled = isScale;
+  byId("takeLab").textContent = isScale ? "Take — a scale takes the whole box" : "Take";
+  seg(byId("nSeg"),[
+    {value:1,label:"Grip",title:"one note per string — only what can sound together",disabled:isScale},
+    {value:3,label:"Line",title:"up to three on a string — thirds on one string, lines through the chord",disabled:isScale}],
+    st.n, v=>{ st.n=v; render(); });
+  seg(byId("addrSeg"),[{value:"pattern",label:"pattern"},{value:"tones",label:"tones"}],
+    st.address, v=>{ st.address=v; render(); });
+  seg(byId("srcSeg"),[{value:"cycle",label:"cycle"},{value:"structure",label:"form"},
+    {value:"custom",label:"custom"}], st.prog.source, v=>{ st.prog.source=v; st.bar=0; render(); });
+  byId("dyadLab").hidden = st.object!=="dyad";
+  byId("dyadSel").hidden = st.object!=="dyad";
+  byId("cycLab").hidden = st.prog.source!=="cycle"; byId("cycSel").hidden = st.prog.source!=="cycle";
+  byId("strLab").hidden = st.prog.source!=="structure"; byId("strSel").hidden = st.prog.source!=="structure";
+  byId("cusLab").hidden = st.prog.source!=="custom"; byId("cusIn").hidden = st.prog.source!=="custom";
+  byId("startLab").hidden = st.prog.source!=="cycle";
+  byId("startSel").hidden = st.prog.source!=="cycle";
+}
+
+const PRESETS=[
+  ["— start from a preset —",null],
+  ["R1 · a mode along one string",{strings:[2],n:3,object:"scale"}],
+  ["R4 · dyads across two strings",{strings:[3,2],n:1,object:"dyad",bass:"root"}],
+  ["R5 · the scale, three per string, on two",{strings:[4,3],n:3,object:"scale"}],
+  ["R7 · a triad folded onto two strings",{strings:[3,2],n:3,object:"triad",bass:"root"}],
+  ["R9 · block triads",{strings:[4,3,2],n:1,object:"triad"}],
+  ["R11 · triad lines",{strings:[4,3,2],n:3,object:"triad",take:"all"}],
+  ["R12 · block tetrads",{strings:[4,3,2,1],n:1,object:"tetrad"}],
+  ["R14 · tetrad lines",{strings:[4,3,2,1],n:3,object:"tetrad",take:"all",figure:"4,3,4,3,2,1"}],
+  ["R15 · the six-string scale box",{strings:[6,5,4,3,2,1],n:3,object:"scale"}],
+  ["R16 · an open voicing on a skipped set",{strings:[6,4,3,1],n:1,object:"tetrad"}],
+  ["R17 · a shell",{strings:[6,4,3],n:1,object:"shell"}],
+  ["R19 · a tetrad over a third below",{strings:[4,3,2,1],n:1,object:"tetrad",bass:"third"}],
+  ["R26 · a guide-tone dyad",{strings:[4,3],n:1,object:"dyad",bass:"root"}],
+];
+
+/* ============================================================================
+ * BOOT
+ * ==========================================================================*/
+(function boot(){
+  const k=byId("keySel");
+  for (const key of KEYS){ const o=document.createElement("option"); o.value=key; o.textContent=key;
+    if (key===st.key) o.selected=true; k.appendChild(o); }
+  byId("scaleSel").value=st.scale;
+  const cs=byId("cycSel");
+  for (const [id,c] of Object.entries(CYCLES)){ const o=document.createElement("option");
+    o.value=id; o.textContent=c.name; if (id===st.prog.cycle) o.selected=true; cs.appendChild(o); }
+  const ss=byId("strSel");
+  for (const s of STRUCTURES){ const o=document.createElement("option");
+    o.value=s.id; o.textContent=s.name; ss.appendChild(o); }
+  const startS=byId("startSel");
+  for (let i=0;i<7;i++){ const o=document.createElement("option"); o.value=i;
+    o.textContent=`${ORD[i]} — ${ROMAN_UP[i]}`; startS.appendChild(o); }
+  byId("cusIn").value=st.prog.custom;
+  const sp=byId("splitSel");
+  const fillSplits=()=>{ sp.textContent="";
+    (SPLITS[st.meter]||["4"]).forEach((s,i)=>{ const o=document.createElement("option");
+      o.value=i; o.textContent=s; if (i===st.splitIdx) o.selected=true; sp.appendChild(o); }); };
+  fillSplits();
+  const ps=byId("presetSel");
+  PRESETS.forEach(([label],i)=>{ const o=document.createElement("option"); o.value=i;
+    o.textContent=label; ps.appendChild(o); });
+
+  k.addEventListener("change",e=>{ st.key=e.target.value; render(); });
+  byId("scaleSel").addEventListener("change",e=>{ st.scale=e.target.value; st.frameIdx=null; render(); });
+  cs.addEventListener("change",e=>{ st.prog.cycle=e.target.value; st.bar=0; render(); });
+  ss.addEventListener("change",e=>{ st.prog.structure=e.target.value; st.bar=0; render(); });
+  startS.addEventListener("change",e=>{ st.prog.start=+e.target.value; st.bar=0; render(); });
+  byId("cusIn").addEventListener("input",e=>{ st.prog.custom=e.target.value; st.bar=0; render(); });
+  byId("dyadSel").addEventListener("change",e=>{ st.dyad=e.target.value.split(",").map(Number); render(); });
+  const objS=byId("objSel");
+  for (const [v,n] of [["scale","Scale or mode"],["dyad","Dyad"],["triad","Triad"],
+                       ["tetrad","Tetrad"],["shell","Shell"]]) {
+    const o=document.createElement("option"); o.value=v; o.textContent=n; objS.appendChild(o); }
+  objS.value=st.object;
+  objS.addEventListener("change",e=>{
+    st.object=e.target.value;
+    if (st.object !== "scale") st.ref = 0;   // a chord is read against the key, not a mode
+    render();
+  });
+  byId("takeSel").addEventListener("change",e=>{ st.take=e.target.value; render(); });
+  byId("bassSel").addEventListener("change",e=>{
+    const v=e.target.value;
+    if (v.startsWith("mode:")) st.ref = +v.slice(5); else st.bass = v;
+    render();
+  });
+  byId("figIn").addEventListener("input",e=>{ st.figure=e.target.value; render(); });
+  sp.addEventListener("change",e=>{ st.splitIdx=+e.target.value; render(); });
+  byId("meterSel").addEventListener("change",e=>{ st.meter=+e.target.value[0]; st.splitIdx=0;
+    fillSplits(); render(); });
+  ps.addEventListener("change",e=>{
+    const cfg=PRESETS[+e.target.value][1]; if (!cfg) return;
+    Object.assign(st,{bass:"none",figure:"",address:"pattern",take:"one"},cfg);
+    st.frameIdx=null; byId("figIn").value=st.figure||""; render();
+  });
+
+  /* the pad keeps its native corner stretch; the S/M/L buttons are retired */
+
+  /* THE MINI-TRANSPORT, the reference's cluster byte for byte: ⏮ ▶ ⏹ ⏭, on each of the three
+   * strips that carry it. Play greys while the pass runs — the one visible sign it reads back. */
+  const MINI = [["⏮","previous chord","prev"],["▶","play the étude","play"],
+                ["⏹","stop","stop"],["⏭","next chord","next"]];
+  const playBtns=[];
+  const mountMini = (host) => {
+    host.textContent="";
+    for (const [glyph,title,role] of MINI) {
+      const b=document.createElement("button");
+      b.textContent=glyph; b.title=title; b.dataset.role=role;
+      b.addEventListener("click",(e)=>{ e.stopPropagation();
+        if (role==="prev") { stopWalk(); st.bar=Math.max(0,st.bar-1); render(); }
+        else if (role==="next") { stopWalk(); st.bar=Math.min(L.chords.length-1,st.bar+1); render(); }
+        else if (role==="play") startWalk();
+        else stopWalk();
+      });
+      if (role==="play") playBtns.push(b);
+      host.appendChild(b);
+    }
+  };
+  const syncMini = () => { for (const b of playBtns) b.style.color = walk ? "var(--gray)" : ""; };
+  for (const id of ["tlMini","stMini","kbMini"]) mountMini(byId(id));
+  /* PLAY walks the chart at tempo — silently. Nothing sounds; the bar advances, and the
+   * neck, the staff, the keys and the readout follow it. That is the whole point of a
+   * chart with a timeline, and it costs no audio to show. */
+  let walk=null;
+  const stopWalk=()=>{ if (walk){ clearInterval(walk); walk=null; } syncMini(); };
+  const startWalk=()=>{ if (walk) return;
+    walk=setInterval(()=>{ st.bar=(st.bar+1)%L.chords.length; render(); },
+      60000/st.bpm*st.meter);
+    syncMini(); };
+
+  document.addEventListener("keydown",e=>{
+    if (["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
+    if (e.key==="ArrowLeft"){ st.frameIdx=Math.max(0,st.frameIdx-1); render(); }
+    if (e.key==="ArrowRight"){ st.frameIdx=st.frameIdx+1; render(); }
+    if (e.key==="ArrowUp") slideStrings(-1);
+    if (e.key==="ArrowDown") slideStrings(1);
+  });
+
+  /* the metronome + transport: SILENT. The beat is shown, never sounded. */
+  let met=null, beat=0;
+  const beads=byId("beads");
+  const drawBeads=()=>{ beads.textContent="";
+    for (let i=0;i<st.meter;i++){ const d=document.createElement("span");
+      d.className="bead"+(i===beat?" hot":""); beads.appendChild(d); } };
+  drawBeads();
+  const tick=()=>{ beat=(beat+1)%st.meter; drawBeads();
+    const dot=byId("metDot"); dot.classList.add("hot"); setTimeout(()=>dot.classList.remove("hot"),70); };
+  const retime=()=>{ if (met){ clearInterval(met); met=null; }
+    if (byId("metStart").classList.contains("on")||byId("metBtn").checked)
+      met=setInterval(tick,60000/st.bpm); };
+  byId("bpmR").addEventListener("input",e=>{ st.bpm=+e.target.value; byId("bpmV").textContent=st.bpm;
+    retime(); render(); });
+  byId("metStart").addEventListener("click",e=>{ e.target.classList.toggle("on");
+    e.target.textContent=e.target.classList.contains("on")?"Stop":"Start"; retime(); });
+  byId("metBtn").addEventListener("change",retime);
+  /* the mute icon is a VIEW of its slider: zero reads muted however it got there */
+  for (const [b,r,v] of [["harmMute","chartVol","harmVal"],["bassMute","bassVol","bassVal"]]) {
+    const paint=()=>{ const lvl=+byId(r).value; byId(v).textContent=lvl;
+      byId(b).setAttribute("aria-pressed", lvl===0 ? "true" : "false");
+      byId(b).textContent = lvl===0 ? "\u{1F507}" : "\u{1F50A}"; };
+    let last=100;
+    byId(r).addEventListener("input",paint);
+    byId(b).addEventListener("click",()=>{ const cur=+byId(r).value;
+      if (cur>0){ last=cur; byId(r).value=0; } else byId(r).value=last||100; paint(); });
+    paint();
+  }
+
+  /* ---- the notepad and the palette, rebuilt to the accepted four tiers ---- */
+  byId("npPalette").addEventListener("click",()=>{ const b=byId("paletteBox"); b.hidden=!b.hidden; });
+  const pad=byId("npBody");
+  const padInsert=(text,block)=>{                    // the accepted insert seam, in miniature:
+    const src=pad.value, a=pad.selectionStart|0, b=pad.selectionEnd|0;   // caret and scroll survive
+    let t=text;
+    if (block){ if (a>0 && src[a-1]!=="\n") t="\n"+t; if (b<src.length && src[b]!=="\n") t=t+"\n"; }
+    const scroll=pad.scrollTop;
+    pad.value=src.slice(0,a)+t+src.slice(b);
+    pad.selectionStart=pad.selectionEnd=a+t.length;
+    pad.scrollTop=scroll; pad.focus();
+  };
+  const fill=(sel,items)=>{ for (const it of items){ const o=document.createElement("option");
+    o.value=it.value; o.textContent=it.name; sel.appendChild(o); } };
+
+  const gr=byId("glyphRow");
+  for (const g of GLYPHS){ const b=document.createElement("button");
+    b.className="pbtn glyph"; b.textContent=g;
+    b.addEventListener("click",()=>padInsert(g,false)); gr.appendChild(b); }
+
+  fill(byId("pcRoot"), CHORD_ROOTS.map(x=>({name:x,value:x})));
+  fill(byId("pcQual"), CHORD_QUALITIES.map(q=>({name:q===""?"major (bare)":q,value:q})));
+  byId("pcIns").addEventListener("click",()=>
+    padInsert(byId("pcRoot").value+byId("pcQual").value,false));
+
+  fill(byId("psStruct"), STRUCTURES.map(x=>({name:x.name,value:x.id})));
+  fill(byId("psKey"), CHORD_ROOTS.map(k=>({name:"in "+k,value:k})));
+  byId("psKey").value = KEYS.includes(st.key) ? st.key : "C";
+  /* the structure resolved into a key — derived through the same roman path the
+   * progression uses, so the note and the chart can never disagree */
+  const resolveStructure=(id,key)=>{
+    const pcs=scalePcs(key,"major"), spell=spelling(key,"major");
+    const stx=STRUCTURES.find(x=>x.id===id)||STRUCTURES[0];
+    return stx.bars.map(bar=>bar.map(r=>{
+      const c=parseRoman(r,pcs); return c ? nameOfPc(c.rootPc,spell)+c.qual : r; }));
+  };
+  byId("psChart").addEventListener("click",()=>{
+    const bars=resolveStructure(byId("psStruct").value, byId("psKey").value);
+    padInsert("```chart\n| "+bars.map(b=>b.join(" ")).join(" | ")+" |\n```",true);
+  });
+  byId("psChanges").addEventListener("click",()=>{
+    const bars=resolveStructure(byId("psStruct").value, byId("psKey").value);
+    padInsert(bars.flat().join(" "),false);
+  });
+
+  fill(byId("pfFig"), PAL_FIGURES.map(f=>({name:f.name,value:f.text})));
+  byId("pfIns").addEventListener("click",()=>padInsert(byId("pfFig").value,false));
+  fill(byId("pfPat"), PAL_PATTERNS.map(x=>({name:x,value:x})));
+  byId("pfPatIns").addEventListener("click",()=>padInsert(byId("pfPat").value,false));
+
+  /* THE ROUND TRIP — read the note's chart block back as the progression. */
+  byId("pbUse").addEventListener("click",()=>{
+    const m=/```chart\s*\n([\s\S]*?)```/.exec(pad.value);
+    if (!m){ byId("pbUse").textContent="no chart block in the note"; 
+      setTimeout(()=>byId("pbUse").textContent="Read the note's chart block as the progression",1600);
+      return; }
+    const toks=m[1].split(/[|\n]+/).join(" ").trim().split(/\s+/).filter(Boolean);
+    st.prog.source="custom"; st.prog.custom=toks.join(" "); st.bar=0;
+    byId("cusIn").value=st.prog.custom; render();
+  });
+  let lastSave = Date.now();
+  byId("npSave").addEventListener("click",()=>{
+    const body=byId("npBody").value.trim(), now=Date.now();
+    st.notes.unshift({ title:byId("npTitle").value.trim(), body,
+      when:new Date().toLocaleString(undefined,{month:"short",day:"numeric",
+        hour:"2-digit",minute:"2-digit"}),
+      mins:Math.max(1,Math.round((now-lastSave)/60000)),
+      summary:summaryLine(), cfg:snapshot() });
+    lastSave = now;
+    byId("npBody").value=""; byId("npTitle").value=""; render();
+  });
+  byId("npClear").addEventListener("click",()=>{ byId("npBody").value=""; byId("npTitle").value=""; });
+  byId("npCopy").addEventListener("click",()=>{ try{ navigator.clipboard.writeText(byId("npBody").value); }catch(e){} });
+  byId("npExport").addEventListener("click",()=>{ const b=byId("paletteBox"); b.hidden=false; });
+  byId("npImport").addEventListener("click",()=>{ const b=byId("paletteBox"); b.hidden=false; });
+
+  byId("railToggle").addEventListener("click",()=>{
+    const r=byId("rrail"); r.classList.toggle("shut");
+    byId("railToggle").textContent = r.classList.contains("shut") ? "‹" : "›";
+  });
+
+  /* THE INFO BUTTON, copied from hub/shell.mjs's initInfo: a panel's STATIC prose is
+   * moved off its face into a popout behind a neutral circle-i, immediately left of the
+   * collapse chevron. A panel with no .info prose gets no button. Live readouts are never
+   * .info, so they stay where you can watch them change. */
+  (function initInfo(){
+    let openBtn=null, openPop=null;
+    const close=()=>{ if (openPop){ openPop.hidden=true; openBtn.setAttribute("aria-expanded","false"); }
+      openBtn=openPop=null; };
+    let n=0;
+    for (const panel of document.querySelectorAll(".card")) {
+      const prose=[...panel.querySelectorAll(".info")];
+      if (!prose.length) continue;
+      const pop=document.createElement("div");
+      pop.className="infoPop"; pop.hidden=true; pop.id="infoPop-"+(++n);
+      for (const el of prose) pop.appendChild(el);      // MOVE the prose in, verbatim
+      panel.appendChild(pop);
+      const btn=document.createElement("button");
+      btn.className="infoBtn"; btn.textContent="\u24D8";
+      btn.setAttribute("aria-label","About this panel");
+      btn.setAttribute("aria-controls",pop.id);
+      btn.setAttribute("aria-expanded","false");
+      btn.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const willOpen=pop.hidden; close();
+        if (willOpen){ pop.hidden=false; btn.setAttribute("aria-expanded","true");
+          openBtn=btn; openPop=pop; }
+      });
+      const chev=panel.querySelector("h2 .chev");
+      if (chev) chev.parentElement.insertBefore(btn, chev); else panel.appendChild(btn);
+    }
+    document.addEventListener("click",(e)=>{ if (openPop && !openPop.contains(e.target)) close(); });
+    document.addEventListener("keydown",(e)=>{ if (e.key==="Escape") close(); });
+  })();
+
+  /* only the chevron collapses a card, and it turns — clicking the title or the fields in
+   * the header row must not fold the thing you are typing into */
+  for (const c of document.querySelectorAll(".card > h2 .chev"))
+    c.addEventListener("click",(e)=>{ e.stopPropagation();
+      c.closest(".card").classList.toggle("shut"); });
+
+  render();
+})();
+</script>
+</body>
+</html>

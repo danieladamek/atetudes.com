@@ -2274,7 +2274,12 @@ console.log(JSON.stringify(out));
         #     (the CSS ownership wall), the gaps card (prototype self-audit,
         #     dropped), the collapse chevron (family idiom, kept).
         proto = ctx.new_page()
-        proto.goto((REPO / "notes/prototypes/multetudes-v0.9.html").as_uri())
+        # the ORACLE ships with the gate (260911, the publish): notes/ is the
+        # gitignored vault, so CI had no v0.9 and the comparison aborted the
+        # door — a gate that cannot run where the deploy is decided is rule
+        # 2's silent skip. The repo copy is byte-identical to the vault's
+        # (cmp-checked at the move); the vault file remains the working home.
+        proto.goto((REPO / "hub/tests/oracles/multetudes-v0.9.html").as_uri())
         proto.wait_for_selector(".wrap", state="attached")
         proto.wait_for_timeout(200)
 
