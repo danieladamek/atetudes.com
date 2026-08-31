@@ -746,6 +746,33 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260913 item 5: THE CHIPS SHOW FUNCTION AND THE SLASH ----
+        # The wireframe drew the slash REPLACING the roman; the ruling says
+        # BOTH — the roman is the only thing on the chip naming function
+        # against the key, which is what the colour system encodes. The
+        # slash appears only when a reference is set AND changes the
+        # spelling: a root reference under its own chord adds nothing.
+        chip_read = ("() => [...document.querySelectorAll('#tlScroll button')].slice(0, 8)"
+                     ".map(b => ({ rn: (b.querySelector('.tl-rn') || {}).textContent || null,"
+                     " slash: (b.querySelector('.tl-slash') || {}).textContent || null,"
+                     " sym: b.getAttribute('data-tlchip') }))")
+        page.select_option("#hcRef", "none"); page.wait_for_timeout(250)
+        chips0 = page.evaluate(chip_read)
+        check(all(c["rn"] and c["slash"] is None for c in chips0),
+              f"{tag} with no reference the chip is exactly what it was — roman, no "
+              f"slash: {chips0[:3]}")
+        page.select_option("#hcRef", "third"); page.wait_for_timeout(300)
+        chips3 = page.evaluate(chip_read)
+        check(all(c["rn"] for c in chips3),
+              f"{tag} the roman SURVIVES the reference — function stays named: {chips3[:3]}")
+        check(all(c["slash"] and c["slash"].startswith(c["sym"] + "/") for c in chips3),
+              f"{tag} a 3rd-below reference slashes EVERY chip, derived: {chips3[:3]}")
+        page.select_option("#hcRef", "root"); page.wait_for_timeout(300)
+        chipsR = page.evaluate(chip_read)
+        check(all(c["rn"] and c["slash"] is None for c in chipsR),
+              f"{tag} a ROOT reference adds nothing to the spelling — no slash: {chipsR[:3]}")
+        page.select_option("#hcRef", "none"); page.wait_for_timeout(200)
+
         # ---- 260913 item 4: REPEAT LOOPS THE CURRENT BAR ----
         # Ruled scope: the current bar, nothing else. Consulted only at the
         # advance boundary (a mid-bar toggle never restarts a bar in

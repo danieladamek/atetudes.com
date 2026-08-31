@@ -53,6 +53,7 @@ export const timelineStrip = {
 .tl-bar button:hover{border-color:var(--line);background:#fff}
 .tl-bar button.tl-cur{border-color:#B82929;color:#B82929;font-weight:bold;background:#fff}
 .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
+.tl-bar button .tl-slash{display:block;font-size:10px;color:var(--gray);line-height:1.2}
 .tl-bar button.tl-cur .tl-rn{color:#B82929}
 .tl-bar button .tl-us{font-size:10.5px;font-weight:600;color:var(--ink)}
 .tl-bar button.tl-cur .tl-us{color:#B82929}
@@ -94,9 +95,17 @@ export const timelineStrip = {
           b.title = `bar ${bi + 1}, ${beats[bi][k]} beat${beats[bi][k] > 1 ? "s" : ""}`;
           b.setAttribute("data-tlchip", c.symbol);
           const top = d.createElement("span"); top.textContent = c.symbol; b.appendChild(top);
-          /* the sub-line: the stack over the reference when one is chosen
-           * and this bar's degree can carry it; else the analysis roman */
-          let sub = null;
+          /* BOTH LINES (260913, item 5 — the ruling): the roman ALWAYS —
+           * it is the only thing on the chip naming function against the
+           * key, which is what the whole colour system encodes — and the
+           * slash spelling ONLY when a reference is set AND it changes the
+           * spelling (a root reference under its own chord adds nothing).
+           * Everything derived: the root's name from the field at the
+           * chord's own degree, the bass from the same placeReference /
+           * compositeOver derivation child 5 landed — never parsed from
+           * the symbol, never tabled. */
+          const rn = d.createElement("span"); rn.className = "tl-rn";
+          rn.textContent = c.roman; b.appendChild(rn);
           if (cfg.bass !== "none" && cfg.object !== "scale" && c.degree >= 0 && c.tones) {
             const pos = positionOf({ field: fld, anchorString: Math.max(...cfg.strings),
               startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: cfg.strings });
@@ -106,12 +115,14 @@ export const timelineStrip = {
               if (comp.name) {
                 const us = d.createElement("span"); us.className = "tl-us";
                 us.textContent = comp.name; b.appendChild(us);
-                sub = `${c.symbol}/${comp.bassName}`;
-              } else sub = `${c.symbol}/${comp.bassName}`;
+              }
+              const rootName = fld.notes[c.degree].name;
+              if (comp.bassName !== rootName) {
+                const sl = d.createElement("span"); sl.className = "tl-slash";
+                sl.textContent = `${c.symbol}/${comp.bassName}`; b.appendChild(sl);
+              }
             }
           }
-          const rn = d.createElement("span"); rn.className = "tl-rn";
-          rn.textContent = sub || c.roman; b.appendChild(rn);
           /* the owner's own chips ASK like every other surface (260910,
            * item 1): a click is a request, answered by the same listener
            * that answers the boards'. One grammar — and the walk's audition
