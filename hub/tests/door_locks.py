@@ -746,6 +746,45 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260913b item 2: THE DOCUMENT'S TITLE, IN THE HEADER BAND ----
+        # D11 unblocked and ruled: the field is the DOCUMENT's title (fills
+        # file.title, drives file.name(); empty falls back — an untouched
+        # field changes nothing), it never relabels entries (260811.3), and
+        # it sits in the card's top bar left of the chevron — via the
+        # shell's new header slot, the ⓘ's own precedent and the first
+        # shell change in seventeen nights.
+        np_t = page.evaluate("""() => { const t = document.getElementById('npTitle');
+          if (!t) return { there: false };
+          const p = t.closest('.card, .board');
+          const h = p && (p.querySelector('h2') || p.querySelector('.bh'));
+          const tb = t.getBoundingClientRect(), hb = h.getBoundingClientRect();
+          const chev = p.querySelector('.clpsBtn').getBoundingClientRect();
+          return { there: true, slot: t.parentElement === p && t.style.position === 'absolute',
+            topAligned: Math.abs(tb.top - hb.top) < 14,
+            leftOfChevron: tb.right <= chev.left,
+            placeholder: t.placeholder }; }""")
+        check(np_t.get("there") and np_t["slot"] and np_t["topAligned"] and np_t["leftOfChevron"],
+              f"{tag} the title sits in the header band, top-aligned, left of the "
+              f"chevron: {np_t}")
+        check(np_t.get("there") and np_t["placeholder"].startswith("title — 2"),
+              f"{tag} the placeholder carries today's derived date: {np_t.get('placeholder')!r}")
+        # the typed title reaches the EXPORTED ARTIFACT: the success message
+        # names the file it wrote (the 260911 channel), and the file's name
+        # derives from the field
+        page.fill("#npTitle", "Dorian week 3"); page.wait_for_timeout(100)
+        page.fill("#journalIn", "a clean note for the title pin")
+        page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
+        page.click("#exportLog"); page.wait_for_timeout(300)
+        np_msg = page.evaluate("() => document.getElementById('exportMsg').textContent")
+        check("Dorian-week-3.atchart.md" in np_msg,
+              f"{tag} the typed title names the exported file: {np_msg!r}")
+        # empty falls back to the standing default — nothing that ships changes
+        page.fill("#npTitle", ""); page.wait_for_timeout(100)
+        page.click("#exportLog"); page.wait_for_timeout(300)
+        np_msg = page.evaluate("() => document.getElementById('exportMsg').textContent")
+        check("multetudes-journal-" in np_msg and ".atchart.md" in np_msg,
+              f"{tag} an empty field falls back to the standing default name: {np_msg!r}")
+
         # ---- 260913b item 3: THE NECK'S RING SURVIVES A SHARED-PITCH REBUILD ----
         # The latent twin of the keys' 260911 wipe race, ruled 260912 and
         # deferred once: under STRUM movement every advance announces all

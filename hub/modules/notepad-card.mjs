@@ -41,7 +41,7 @@ export const notepadCard = {
    * that also carries material boards (build.mjs `order`, default 0) */
   order: 90,
   controls: ["journalIn", "saveEntry", "clearPad", "exportLog", "copyBtn",
-    "importBtn", "paletteBtn", "paletteRoot",
+    "importBtn", "paletteBtn", "paletteRoot", "npTitle",
     "histList", "histCount", "clearConfirm", "clearSave", "clearDiscard",
     "clearCancel", "storeNote", "handoffNote"],
 
@@ -62,6 +62,12 @@ export const notepadCard = {
     </div>
     <div id="dragBar" title="drag to resize"></div>
     <!--part:pad--><div class="jcol" id="noteCol">
+      <!-- THE DOCUMENT'S TITLE (260913b, item 2 — D11 unblocked): fills
+           file.title and drives file.name(); empty falls back to today's
+           default, so an untouched field changes nothing that ships. It
+           does NOT relabel entries — those keep deriving (260811.3). The
+           shell seats it in the header band via data-header-slot. -->
+      <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
       <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
         placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
@@ -110,6 +116,8 @@ export const notepadCard = {
   color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
+#npTitle{font:inherit;font-size:11.5px;padding:2px 7px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink);width:170px}
 .journalcontrols{margin-top:10px}
 .journalconfirm{display:none;margin-top:6px}
 .padmsgs{margin-top:6px;min-height:0}
@@ -258,10 +266,22 @@ export const notepadCard = {
         list: byId("histList"), count: byId("histCount"),
         storeNote: byId("storeNote"), controls: byId("journalControls"),
         handoff: byId("handoffNote") },
-      file: { title: doorId + " journal",
-        name: () => doorId + "-journal-" + new Date().toISOString().slice(0, 10) + ".atchart.md" },
+      /* the typed title wins; empty falls back to the standing default —
+       * read per call (a getter), so the export always sees the field NOW */
+      file: {
+        get title() {
+          return (byId("npTitle").value || "").trim() || doorId + " journal";
+        },
+        name: () => {
+          const t = (byId("npTitle").value || "").trim();
+          return (t ? t.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-")
+                    : doorId + "-journal-" + new Date().toISOString().slice(0, 10))
+            + ".atchart.md";
+        },
+      },
       onChange: () => { ctx.changed(); announceChart(surface ? surface.getDoc().pad : ""); },
     });
     announceChart(surface.getDoc().pad);
+    byId("npTitle").placeholder = "title — " + new Date().toISOString().slice(0, 10);
   },
 };

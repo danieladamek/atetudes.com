@@ -211,6 +211,19 @@ function initCollapse(doc) {
     const sum = doc.createElement("div");
     sum.className = "clpsSum";
     if (header) header.after(sum); else p.prepend(sum);
+    /* THE HEADER SLOT (260913b, item 2 — the first shell change in
+     * seventeen nights, reported not absorbed): a panel's module may mark
+     * ONE element `data-header-slot`; the shell seats it in the header
+     * band, left of the ⓘ and the chevron — the ⓘ's own precedent. The
+     * shell owns placement; the element, its id and its behaviour stay
+     * the module's. Hidden while collapsed, as the ⓘ is. */
+    const slot = p.querySelector("[data-header-slot]");
+    if (slot) {
+      // placement styled inline: a stylesheet rule would orphan the CSS
+      // check in every door whose modules declare no slot
+      slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
+      p.appendChild(slot);
+    }
     const btn = doc.createElement("button");
     btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse";
     btn.addEventListener("click", () => {
