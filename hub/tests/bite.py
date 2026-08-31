@@ -327,8 +327,9 @@ def m11_field_walk_loses_a_string():
 # it. The page loads clean and looks right; only the gate's stepped-then-
 # toggled sequence (the design's start degree read off the hint) can see it.
 def m12_set_change_resets_the_design():
+    # anchor re-aimed 260911 (item 6 split the reanchor line and named the
+    # forced follow between it and the cfg write)
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        "      const moved = reanchor(curB.pos, next, fld);\n"
         "      cfg = { ...cfg, strings: next, startDeg: moved.startDeg, nearFret: moved.fLo };",
         "      cfg = { ...cfg, strings: next, startDeg: 0, nearFret: 5 };")
     try:

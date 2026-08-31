@@ -538,6 +538,8 @@ export const fieldBoard = {
         (fig.err ? "" : (fig.order ? ` Figure: ${fig.order.length} steps as ${cfg.address === "pattern" ? "a pattern" : "tones"}.` : "")) +
         (isScale ? " Placement is off — a scale is not a chord; the box offers every note, three per string at most (the hand's reach)."
           : (selMsg ? ` ${selMsg}.` : "")) +
+        (followMsg && followMsg.sd === cfg.startDeg && followMsg.nf === cfg.nearFret
+          ? ` ${followMsg.text}.` : "") +
         (refP.note
           ? ` Reference: string ${refP.note.string}, fret ${refP.note.fret}${refP.stretch ? " — a stretch past the box" : ""}.`
             + (!isScale && !sel.length
@@ -563,9 +565,23 @@ export const fieldBoard = {
         address: cfg.address, figure: cfg.figure, movement: cfg.movement });
     };
 
+    let followMsg = null;   // the named forced follow (260911, item 6) — one build's worth
     const setStrings = (next) => {
       const fld = curB.fld;
-      const moved = reanchor(curB.pos, next, fld);
+      const before = curB.pos;
+      const moved = reanchor(before, next, fld);
+      /* A FORCED RE-DERIVATION IS NAMED (260911, item 6): the translation
+       * law keeps the DEGREE (ratified 260828 #4) — and when that degree's
+       * nearest home on the new anchor is far from where the box sat, the
+       * window follows it. Lawful, but it reads as a wormhole unless the
+       * face says what happened. Named when the window moves further than
+       * its own span. */
+      /* keyed to the state it produced — the sentence stands exactly as
+       * long as the followed window does, and clears itself with it */
+      followMsg = Math.abs(moved.fLo - before.fLo) > (before.fHi - before.fLo)
+        ? { text: `the window followed the ${ORD[moved.startDeg]} to fret ${moved.frets[1]} on string ${Math.max(...next)}`,
+            sd: moved.startDeg, nf: moved.fLo }
+        : null;
       cfg = { ...cfg, strings: next, startDeg: moved.startDeg, nearFret: moved.fLo };
       push();
     };
@@ -591,7 +607,9 @@ export const fieldBoard = {
         const di = Math.round((p.x - dragging.p0.x) / FW);
         const ds = stringAt(p.y) - stringAt(dragging.p0.y);
         const aN = curB.aNotes;
-        const ni = Math.max(0, Math.min(aN.length - 3, dragging.i0 + di));
+        /* the clamp keeps the anchor triple on the string — ITS OWN length,
+         * never a hand-held 3 (260911, item 6; the twelfth-plus instance) */
+        const ni = Math.max(0, Math.min(aN.length - curB.pos.frets.length, dragging.i0 + di));
         let next = { ...cfg };
         if (aN[ni].fret !== curB.pos.fLo)
           next = { ...next, startDeg: aN[ni].deg, nearFret: aN[ni].fret };
@@ -600,7 +618,20 @@ export const fieldBoard = {
         if (next.startDeg !== cfg.startDeg || next.nearFret !== cfg.nearFret || okStrings) {
           dragging.moved = true;
           cfg = next;
-          if (okStrings) { setStrings(cand); return; }
+          if (okStrings) {
+            setStrings(cand);
+            /* RE-BASE THE WHOLE DRAG (260911, item 6 — measured: the stale
+             * index landed a repeated gesture in a THIRD place): a commit
+             * rebuilt the box, so i0, p0 AND strings0 all restart against
+             * the rebuilt state — the old asymmetry (strings0 frozen, i0
+             * live against a moved basis) is resolved the deliberate way:
+             * everything re-bases together, and each later move is measured
+             * from the last committed box. */
+            dragging.i0 = curB.aNotes.findIndex((n) => n.fret === curB.pos.fLo);
+            dragging.p0 = p;
+            dragging.strings0 = [...cfg.strings];
+            return;
+          }
           push();
         }
       } else {

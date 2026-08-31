@@ -693,6 +693,49 @@ def run_door(pw, door_id):
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260911 item 6: THE VERTICAL DRAG, OUT OF THE WORMHOLE ----
+        # Measured across three slow drags: the one-crossing jump is the
+        # ratified translation law following the DEGREE to its nearest home
+        # on the new anchor (lawful — now NAMED on the face); the round trip
+        # not returning and a repeated gesture landing in a THIRD place were
+        # the stale drag basis — i0 captured against a list that setStrings
+        # rebuilt mid-drag (the lead held). The drag now re-bases i0, p0 and
+        # strings0 together on every commit. Pinned as a PROPERTY, never a
+        # magic fret: the same gesture from the same state lands the same
+        # window; the round trip returns; a forced follow says so.
+        wh_state = ("() => { const t = document.getElementById('roLine').textContent;"
+                    " const m = t.match(/frets (\\d+)[–-](\\d+)/); const s2 = t.match(/strings ([\\d–-]+)/);"
+                    " return (m ? m[1] + '-' + m[2] : '?') + ' on ' + (s2 ? s2[1] : '?'); }")
+        page.evaluate("() => document.getElementById('fieldSvg').scrollIntoView({block:'center'})")
+        page.wait_for_timeout(200)
+        def wh_drag(dy):
+            g = page.evaluate("""() => { const g = document.querySelector('#fieldSvg .fd-grip');
+              const r = g.getBoundingClientRect(); return { x: r.x + r.width/2, y: r.y + r.height/2 }; }""")
+            page.mouse.move(g["x"], g["y"]); page.mouse.down()
+            for wh_k in range(1, 11):
+                page.mouse.move(g["x"], g["y"] + dy * wh_k / 10); page.wait_for_timeout(40)
+            page.mouse.up(); page.wait_for_timeout(250)
+        wh0 = page.evaluate(wh_state)
+        wh_drag(+30); wh1 = page.evaluate(wh_state)
+        wh_hint = page.inner_text("#fdHint")
+        wh_drag(-30); wh_back = page.evaluate(wh_state)
+        wh_drag(+30); wh2 = page.evaluate(wh_state)
+        check(wh1 != wh0 and "the window followed the" in wh_hint and "on string" in wh_hint,
+              f"{tag} a forced follow is NAMED on the face (crossed to {wh1}): "
+              f"{[l for l in [wh_hint[:180]]]}")
+        check(wh_back == wh0,
+              f"{tag} the round trip RETURNS — down then up lands the boot window "
+              f"({wh_back} vs {wh0})")
+        check(wh2 == wh1,
+              f"{tag} the same gesture from the same state lands the SAME window — "
+              f"no third place ({wh2} vs first crossing {wh1})")
+        # restore the boot window
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'block',
+                      address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(200)
+
         # ---- 260911 item 4: THE KEYS PULSE WHAT SOUNDS ----
         # The one board in the door without the idiom: keys-board announced
         # NOTE on a click and never listened. field-board's idiom copied
