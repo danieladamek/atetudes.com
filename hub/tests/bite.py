@@ -851,6 +851,26 @@ def m35_the_engine_refusal_swallowed_again():
         p.write_text(original)
 
 
+def m36_repeat_stops_repeating():
+    # 260913 item 4: the repeat boundary blanked — the walk advances as if
+    # the toggle did not exist, and the zero-advance / same-chord pins must
+    # name it at the AudioContext and the echo stream.
+    p, original, mutated = patch("hub/modules/etude-walk.mjs",
+        "        if (cfg.repeat) {",
+        "        if (false) {   // repeat dead")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = ("ZERO advance echoes" in r.stdout
+               or "the SAME chord's notes came round again" in r.stdout)
+        record("repeat stops repeating",
+               r.returncode != 0 and hit,
+               "suite exit %d; a repeat pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -935,7 +955,8 @@ def main():
                m28_the_board_goes_deaf_to_the_window, m29_the_reference_loses_its_role,
                m30_the_window_forgets_the_octave, m31_a_bar_dies_without_a_reason,
                m32_the_override_goes_silent_again, m33_the_audition_goes_silent,
-               m34_the_figure_tolerates_junk_again, m35_the_engine_refusal_swallowed_again)
+               m34_the_figure_tolerates_junk_again, m35_the_engine_refusal_swallowed_again,
+               m36_repeat_stops_repeating)
     preflight(fns)
     for fn in fns:
         try:

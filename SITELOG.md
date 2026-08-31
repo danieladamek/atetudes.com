@@ -1,3 +1,21 @@
+## 2026-08-31 — Multetudes v0.2.0: the interface pass (the wireframe lands), card restored
+
+- **Source edition v0.2.0** (hub door, Update Log 260913.1; the night-17 report has the full
+  story). The published study refreshed by plain copy, `cmp`-identical to the build. What
+  changed on the page: Take is the neck rail's **all tones** checkbox beside Placement (D8 —
+  the take value unchanged, pinned); Harmony reads Key | Scale | Object in one row; the
+  movement buttons speak the ruled words **strum / arpeggiate** (and the engine renamed with
+  them — one word, one meaning, register 24); the under-neck block carries bpm and the
+  Bass/reference as second views beside the transport mini and the new **🔁 repeat** (loops
+  the current bar); the chips show the roman AND the derived slash spelling when a reference
+  changes it.
+- **The landing card returns** — the 260911 ruling was live-unlisted *until the interface
+  pass lands*; it landed tonight, so the card is back at `/`, same thumbnail asset.
+- Verified per the ritual: hugo exit read properly (the lesson stands) · check_site 21
+  pages · both widths rendered with zero console errors · the changed controls EXERCISED on
+  the served page (repeat presses, bpm drives the metronome card, the checkbox switches the
+  take) · live URL spot-checked after deploy, recorded below.
+
 ## 2026-08-31 — CORRECTION: the Multetudes landing card comes down (the URL stays live)
 
 - The 260911 ruling was **live URL, unlisted, until the interface pass lands** — the publish

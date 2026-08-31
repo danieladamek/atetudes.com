@@ -70,7 +70,13 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
-    /* v0.1.0 (260911, the publish): the first public edition — served at
+    /* v0.2.0 (260913, the interface pass): the wireframe lands — Take on
+     * the rail as the all-tones checkbox (D8), Harmony one row, the
+     * under-neck block (bpm and the bass as second views, the transport
+     * mini, the repeat toggle), the chips carrying roman AND slash, and
+     * the ruled vocabulary all the way down: strum / arpeggiate on the
+     * movement, the engine's old strum flag renamed bed (register 24).
+     * v0.1.0 (260911, the publish): the first public edition — served at
      * atetudes.com/studies/multetudes/. The footer's "Not a published study"
      * went with it: it was true until this build and false the moment the
      * file landed in static/studies/, which is §4.4's silent divergence
@@ -81,7 +87,7 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.1.0",
+    blurb: "one tool that holds many études · v0.2.0",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
