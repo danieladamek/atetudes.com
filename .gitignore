@@ -14,6 +14,9 @@ public/
 resources/
 .hugo_build.lock
 
+# harness logs (bite --log artifacts)
+hub/tests/out/
+
 # Tooling / OS
 .claude/
 .DS_Store
