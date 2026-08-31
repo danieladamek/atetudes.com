@@ -126,6 +126,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-railtop{display:flex;justify-content:flex-end;margin-bottom:2px}
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
+.fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.fd-alltones{font-size:12.5px;color:var(--ink);white-space:nowrap;cursor:pointer}
+.fd-alltones input{vertical-align:-1px}
 .fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
   font-weight:bold;margin:9px 0 5px}
 .fd-fignote{margin-top:6px}
@@ -165,9 +168,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-hit{fill:transparent}
 .fd-str{cursor:pointer}
 
-.hc-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
-.hc-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
-  font-weight:bold;margin:10px 0 5px}
+.hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px}
+#hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
 #hcRef,#hcDyad{width:100%}
 #hcDyadLab[hidden],#hcDyad[hidden]{display:none}
@@ -387,23 +389,14 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 </div>
 <div class="cardrow" style="grid-template-columns:2fr 1fr 1fr"><div class="card">
   <h2>Harmony</h2>
-  <div class="hc-cap">the field</div>
-  <div class="hc-grid">
+  <div class="hc-grid3">
     <div><label>Key</label><select id="hcKey" data-control="hcKey"></select></div>
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
-  </div>
-  <div class="hc-cap">what sits on it</div>
-  <div class="hc-grid">
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
-    <div><label id="hcTakeLab">Take</label><select id="hcTake" data-control="hcTake">
-      <option value="one">one of each tone</option>
-      <option value="all">every occurrence in the box</option>
-    </select></div>
   </div>
   <label id="hcDyadLab" hidden>Which two tones</label>
   <select id="hcDyad" data-control="hcDyad" hidden></select>
-  <div class="hc-cap">the reference underneath</div>
-  <label id="hcRefLab">Reference tone</label>
+  <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
   <div class="hint" id="hcNote"></div></div>
 <div class="card">
@@ -452,9 +445,19 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       <div class="fd-railtop"><button id="fdRailBtn" data-control="fdRailBtn"
         title="collapse this rail">›</button></div>
       <div class="fd-cap">Placement</div>
-      <div class="seg" id="fdNSeg" data-control="fdNSeg">
-        <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-        <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+      <!-- TAKE LIVES HERE NOW (260913, item 1 — D8): "every occurrence in
+           the box" is unstatable without the neck, so the control sits
+           beside the box's other two deciders. Unchecked = take "one",
+           checked = take "all"; the VALUE is unchanged, only the seat and
+           the label moved. -->
+      <div class="fd-placerow">
+        <div class="seg" id="fdNSeg" data-control="fdNSeg">
+          <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
+          <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+        </div>
+        <label class="chk fd-alltones" id="fdAllTonesLab"
+          title="every occurrence in the box — off, one of each tone"><input
+          type="checkbox" id="fdAllTones" data-control="fdAllTones"> all tones</label>
       </div>
       <div class="fd-cap">Movement</div>
       <div class="seg" id="fdMoveSeg" data-control="fdMoveSeg">
@@ -6331,7 +6334,8 @@ const fieldBoard = {
   mount_point: "boards",
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
-    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn"],
+    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
+    "fdAllTones"],
 
   markup: `
   <div class="bh"><span>On the neck</span></div>
@@ -6342,9 +6346,19 @@ const fieldBoard = {
       <div class="fd-railtop"><button id="fdRailBtn" data-control="fdRailBtn"
         title="collapse this rail">›</button></div>
       <div class="fd-cap">Placement</div>
-      <div class="seg" id="fdNSeg" data-control="fdNSeg">
-        <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-        <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+      <!-- TAKE LIVES HERE NOW (260913, item 1 — D8): "every occurrence in
+           the box" is unstatable without the neck, so the control sits
+           beside the box's other two deciders. Unchecked = take "one",
+           checked = take "all"; the VALUE is unchanged, only the seat and
+           the label moved. -->
+      <div class="fd-placerow">
+        <div class="seg" id="fdNSeg" data-control="fdNSeg">
+          <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
+          <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+        </div>
+        <label class="chk fd-alltones" id="fdAllTonesLab"
+          title="every occurrence in the box — off, one of each tone"><input
+          type="checkbox" id="fdAllTones" data-control="fdAllTones"> all tones</label>
       </div>
       <div class="fd-cap">Movement</div>
       <div class="seg" id="fdMoveSeg" data-control="fdMoveSeg">
@@ -6419,6 +6433,9 @@ const fieldBoard = {
 .fd-railtop{display:flex;justify-content:flex-end;margin-bottom:2px}
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
+.fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.fd-alltones{font-size:12.5px;color:var(--ink);white-space:nowrap;cursor:pointer}
+.fd-alltones input{vertical-align:-1px}
 .fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
   font-weight:bold;margin:9px 0 5px}
 .fd-fignote{margin-top:6px}
@@ -6721,6 +6738,19 @@ const fieldBoard = {
         b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
         b.disabled = cfg.object === "scale";
       }
+      /* the all-tones checkbox: the same scale coupling as Placement, the
+       * same precedent — disabled with the reason ON ITS OWN LABEL */
+      {
+        const at = byId("fdAllTones"), atLab = byId("fdAllTonesLab");
+        at.checked = cfg.take === "all";
+        at.disabled = cfg.object === "scale";
+        /* state styling inline (the fignote idiom) — a state class here
+         * would orphan the lock's CSS check in the states it never visits */
+        atLab.style.opacity = cfg.object === "scale" ? "0.45" : "";
+        atLab.style.cursor = cfg.object === "scale" ? "not-allowed" : "";
+        atLab.lastChild.textContent = cfg.object === "scale"
+          ? " all tones — a scale takes the whole box" : " all tones";
+      }
       /* THE OVERRIDE IS LOUD (260909, item 3; register 20): "a typed figure
        * sequences, whatever the Take" (260901) stands — but it must not stand
        * SILENTLY over a raised `block`. While a figure rules, block is
@@ -6801,7 +6831,8 @@ const fieldBoard = {
       build();
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
         startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer,
-        address: cfg.address, figure: cfg.figure, movement: cfg.movement });
+        address: cfg.address, figure: cfg.figure, movement: cfg.movement,
+        take: cfg.take });
     };
 
     let followMsg = null;   // the named forced follow (260911, item 6) — one build's worth
@@ -6973,6 +7004,9 @@ const fieldBoard = {
     for (const b of byId("fdAddrSeg").querySelectorAll("button"))
       b.addEventListener("click", () => { cfg = { ...cfg, address: b.dataset.addr }; push(); });
     byId("fdFigIn").addEventListener("input", (e) => { cfg = { ...cfg, figure: e.target.value }; push(); });
+    byId("fdAllTones").addEventListener("change", (e) => {
+      cfg = { ...cfg, take: e.target.checked ? "all" : "one" }; push();
+    });
 
     byId("fdRailBtn").addEventListener("click", () => {
       const r = byId("fdRail");
@@ -7141,38 +7175,34 @@ const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcTake", "hcRef", "hcDyad"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcDyad"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
    * AND a mode name. The grid is the card's own (`hgrid` in v0.9) — a
    * module's internal layout is the module's. */
+  /* ONE HORIZONTAL PANEL (260913, item 1 — D8 granted): Key | Scale |
+   * Object across one row, the reference full-width below. Take LEFT this
+   * card — it was the only Harmony control whose meaning is defined by the
+   * BOX ("every occurrence in the box" is unstatable without the neck), so
+   * it lives on the neck's rail now, beside Placement, as the "all tones"
+   * checkbox. field-board owns and announces it; the value is unchanged. */
   markup: `
   <h2>Harmony</h2>
-  <div class="hc-cap">the field</div>
-  <div class="hc-grid">
+  <div class="hc-grid3">
     <div><label>Key</label><select id="hcKey" data-control="hcKey"></select></div>
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
-  </div>
-  <div class="hc-cap">what sits on it</div>
-  <div class="hc-grid">
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
-    <div><label id="hcTakeLab">Take</label><select id="hcTake" data-control="hcTake">
-      <option value="one">one of each tone</option>
-      <option value="all">every occurrence in the box</option>
-    </select></div>
   </div>
   <label id="hcDyadLab" hidden>Which two tones</label>
   <select id="hcDyad" data-control="hcDyad" hidden></select>
-  <div class="hc-cap">the reference underneath</div>
-  <label id="hcRefLab">Reference tone</label>
+  <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
   <div class="hint" id="hcNote"></div>`,
 
   styles: `
-.hc-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
-.hc-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
-  font-weight:bold;margin:10px 0 5px}
+.hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px}
+#hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
 #hcRef,#hcDyad{width:100%}
 #hcDyadLab[hidden],#hcDyad[hidden]{display:none}`,
@@ -7184,7 +7214,7 @@ const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
-    let cfg = { key: "Bb", scale: "major", object: "tetrad", take: "one", ref: 0, bass: "none", dyad: [3, 7] };
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "none", dyad: [3, 7] };
 
     const fill = (sel, items, current) => {
       sel.textContent = "";
@@ -7215,9 +7245,6 @@ const harmonyCard = {
       byId("hcDyadLab").hidden = cfg.object !== "dyad";
       byId("hcDyad").hidden = cfg.object !== "dyad";
       const isScale = cfg.object === "scale";
-      byId("hcTake").value = cfg.take;
-      byId("hcTake").disabled = isScale;
-      byId("hcTakeLab").textContent = isScale ? "Take — a scale takes the whole box" : "Take";
       /* THE REFERENCE. Under a scale it is the CENTRE — pick any note of the
        * collection and the field is re-read against it, which is what a mode
        * is (LIVE — child 1's field.ref). Under a chord it is what sits
@@ -7243,7 +7270,7 @@ const harmonyCard = {
           { value: "third", label: "a 3rd below" },
           { value: "fifth", label: "a 5th below" },
         ], cfg.bass);
-        byId("hcRefLab").textContent = "Bass / reference tone";
+        byId("hcRefLab").textContent = "Bass / reference tone";   // the resting label
         byId("hcNote").textContent = cfg.bass === "none"
           ? "The reference the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
           : "A real fretted note on string 5 or 6, chosen against the window — the neck shows it hollow, the readout names what the stack becomes over it.";
@@ -7252,7 +7279,7 @@ const harmonyCard = {
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
-    const MINE = ["key", "scale", "object", "take", "ref", "bass", "dyad"];
+    const MINE = ["key", "scale", "object", "ref", "bass", "dyad"];
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
@@ -7265,7 +7292,6 @@ const harmonyCard = {
     byId("hcScale").addEventListener("change", (e) => { cfg = { ...cfg, scale: e.target.value }; push(); });
     byId("hcObj").addEventListener("change", (e) => { cfg = { ...cfg, object: e.target.value }; push(); });
     byId("hcDyad").addEventListener("change", (e) => { cfg = { ...cfg, dyad: e.target.value.split(",").map(Number) }; push(); });
-    byId("hcTake").addEventListener("change", (e) => { cfg = { ...cfg, take: e.target.value }; push(); });
     byId("hcRef").addEventListener("change", (e) => {
       const v = e.target.value;
       if (v.startsWith("mode:")) cfg = { ...cfg, ref: +v.slice(5) };

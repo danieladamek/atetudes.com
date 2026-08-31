@@ -512,11 +512,21 @@ def run_door(pw, door_id):
               f"{tag} R15: the six-string scale box offers 12–18 notes, not {len(r15)}")
         check(all(c <= 3 for c in per_string(r15).values()),
               f"{tag} R15: a string carries more than the hand's reach: {per_string(r15)}")
-        check(page.get_attribute("#hcTake", "disabled") is not None
+        # PIN REWRITTEN 260913 (item 1): Take moved to the rail as the
+        # all-tones checkbox — the same scale coupling, the same precedent,
+        # now on the checkbox's own label beside Placement's
+        at_scale = page.evaluate("""() => { const c = document.getElementById('fdAllTones');
+          const lab = document.getElementById('fdAllTonesLab');
+          return { there: !!c, disabled: c ? c.disabled : None,
+                   lab: lab ? lab.textContent : '(no label on this build)' }; }"""
+          .replace('None', 'null'))
+        check(at_scale["there"] and at_scale["disabled"] is True
               and page.eval_on_selector_all("#fdNSeg button:disabled", "e => e.length") == 2,
-              f"{tag} a scale is not a chord — Take and Placement must switch OFF under it")
-        check("a scale is not a chord" in hint() and "Take — a scale takes the whole box" in page.inner_text("#hcTakeLab"),
-              f"{tag} the off-switch must carry its reason on the label: {hint()!r}")
+              f"{tag} a scale is not a chord — all tones and Placement must switch OFF "
+              f"under it: {at_scale}")
+        check("a scale is not a chord" in hint()
+              and "a scale takes the whole box" in at_scale["lab"],
+              f"{tag} the off-switch must carry its reason on the label: {at_scale['lab']!r}")
         # the tetrad, one of each, Grip: a voicing — one per string, four roles
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(100)
         grip = sel_dots()
@@ -531,7 +541,7 @@ def run_door(pw, door_id):
               f"({addrs(grip)} -> {addrs(sel_dots())})")
         # every occurrence: the arpeggio doubles a string, and the two notes on
         # one string are distinct dots at distinct frets — on the neck
-        page.select_option("#hcTake", "all"); page.wait_for_timeout(100)
+        page.check("#fdAllTones"); page.wait_for_timeout(100)
         arp = sel_dots()
         check(len(arp) > 4, f"{tag} every-occurrence must offer more than the voicing ({len(arp)})")
         doubled = {s: c for s, c in per_string(arp).items() if c >= 2}
@@ -555,7 +565,7 @@ def run_door(pw, door_id):
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 0, nearFret: 5 } }))""")
         page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(60)
-        page.select_option("#hcTake", "one"); page.wait_for_timeout(100)
+        page.uncheck("#fdAllTones"); page.wait_for_timeout(100)
         check("no placement fits" in hint(),
               f"{tag} a tetrad on two strings at one-per-string must refuse LOUDLY: {hint()!r}")
         page.select_option("#hcObj", "triad"); page.wait_for_timeout(60)
@@ -572,7 +582,7 @@ def run_door(pw, door_id):
         # R11 — triad lines over {4,3,2}
         set_strings([4, 3, 2])
         page.select_option("#hcObj", "triad"); page.wait_for_timeout(60)
-        page.select_option("#hcTake", "all"); page.wait_for_timeout(100)
+        page.check("#fdAllTones"); page.wait_for_timeout(100)
         r11 = sel_dots()
         check(len(r11) >= 4 and all(c <= 3 for c in per_string(r11).values())
               and set(d0["label"] for d0 in r11) <= {"R", "3", "5"},
@@ -585,7 +595,7 @@ def run_door(pw, door_id):
               and set(d0["label"] for d0 in r14) <= {"R", "3", "5", "7"},
               f"{tag} R14: tetrad lines must double somewhere and stay tetrad tones: {r14}")
         # leave the field as the door boots: R15
-        page.select_option("#hcTake", "one"); page.wait_for_timeout(30)
+        page.uncheck("#fdAllTones"); page.wait_for_timeout(30)
         page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(30)
         set_strings([4, 3, 2, 1])
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(60)
@@ -734,6 +744,35 @@ def run_door(pw, door_id):
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
                       object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(200)
+
+        # ---- 260913 item 1: TAKE LIVES ON THE RAIL, THE VALUE UNCHANGED ----
+        # D8 granted: "every occurrence in the box" is unstatable without
+        # the neck, so Take sits beside Placement as the all-tones checkbox.
+        # Placement and label moved; the take VALUE did not — proven at the
+        # artifact: the same two selections the old select produced, keyed
+        # to the same words on the face.
+        at_state = page.evaluate("""() => { const c = document.getElementById('fdAllTones');
+          return c ? { there: true, checked: c.checked } : { there: false }; }""")
+        check(at_state["there"] and at_state["checked"] is False,
+              f"{tag} the all-tones checkbox sits on the rail, unchecked at boot "
+              f"(take 'one'): {at_state}")
+        one_word = page.inner_text("#fdHint")
+        # the value proof discriminates at LINE (n=3): under Grip every
+        # occurrence caps to one per string and equals one-of-each by count —
+        # the capped case, not a defect (register 18)
+        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(150)
+        page.uncheck("#fdAllTones"); page.wait_for_timeout(150)
+        one_dots = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
+        page.check("#fdAllTones"); page.wait_for_timeout(250)
+        all_dots = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
+        all_word = page.inner_text("#fdHint")
+        check(one_dots == 4 and all_dots > one_dots,
+              f"{tag} checked = every occurrence, unchecked = one of each — the same "
+              f"values the select produced (one@Line: {one_dots}, all@Line: {all_dots})")
+        check("one of each" in one_word and "every occurrence" in all_word,
+              f"{tag} the face still speaks the take words")
+        page.uncheck("#fdAllTones"); page.click('#fdNSeg >> text=Grip')
         page.wait_for_timeout(200)
 
         # ---- 260913 item 2: THE RENAME HOLDS, AND THE OLD WORDS STILL LAND ----
@@ -1572,7 +1611,7 @@ console.log(JSON.stringify(out));
               f"{tag} the order bracket must be always-on and faint before a figure: {b0}")
         # the item's case: every occurrence at Line doubles string 4, and
         # 4,3,4,3,2,1 walks its two notes low → high — THE REPEAT IS THE ORDINAL
-        page.select_option("#hcTake", "all"); page.wait_for_timeout(80)
+        page.check("#fdAllTones"); page.wait_for_timeout(80)
         page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
         page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
         page.wait_for_timeout(150)
@@ -1622,7 +1661,7 @@ console.log(JSON.stringify(out));
               f"{tag} an absent string must refuse by name: {page.inner_text('#fdFigNote')!r}")
         # back to the boot state
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
-        page.select_option("#hcTake", "one"); page.wait_for_timeout(60)
+        page.uncheck("#fdAllTones"); page.wait_for_timeout(60)
         page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(80)
 
         # ---- child 4: dyads, the shell, and the one derivation ----
@@ -1676,7 +1715,7 @@ console.log(JSON.stringify(out));
         # over the bus, the same channel the harness already speaks)
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(60)
         page.evaluate("""() => { const s = document.querySelector('#psSel'); s.selectedIndex = 0; }""")
-        page.select_option("#hcTake", "one"); page.wait_for_timeout(60)
+        page.uncheck("#fdAllTones"); page.wait_for_timeout(60)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, notesPer: 1 } }))""")
         page.wait_for_timeout(120)
@@ -1845,7 +1884,7 @@ console.log(JSON.stringify(out));
                 window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }
           window.__nt = []; window.__adv = []; }""")
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
-        page.select_option("#hcTake", "all"); page.click('#fdNSeg >> text=Line')
+        page.check("#fdAllTones"); page.click('#fdNSeg >> text=Line')
         page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
         page.wait_for_timeout(200)
         # the expected sequence, DERIVED FROM THE ARTIFACT: the neck's own
@@ -1879,7 +1918,7 @@ console.log(JSON.stringify(out));
         # asserted the coupling Daniel corrected: take=all forced the spread).
         # Back on BAR 0 first, as before.
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
-        page.select_option("#hcTake", "one"); page.click('#fdNSeg >> text=Grip')
+        page.uncheck("#fdAllTones"); page.click('#fdNSeg >> text=Grip')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
@@ -1910,7 +1949,7 @@ console.log(JSON.stringify(out));
         # (b) every-occurrence + block — the combination Take used to FORCE
         # apart. At Line, so the box offers its true seven-note cluster
         # (Grip's one-per-string cap would leave only four).
-        page.click('#fdMoveSeg >> text=strum'); page.select_option("#hcTake", "all")
+        page.click('#fdMoveSeg >> text=strum'); page.check("#fdAllTones")
         page.click('#fdNSeg >> text=Line')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
@@ -1922,7 +1961,7 @@ console.log(JSON.stringify(out));
         check(len(heard) >= 5 and (heard[len(heard) - 1]["t"] - heard[0]["t"]) < 40,
               f"{tag} every-occurrence + BLOCK must sound together — the material must "
               f"not decide the movement: {[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:8]]}")
-        page.select_option("#hcTake", "one"); page.click('#fdNSeg >> text=Grip')
+        page.uncheck("#fdAllTones"); page.click('#fdNSeg >> text=Grip')
         page.wait_for_timeout(150)
 
         # ---- 260905 item 5: THE PULSE — what you see pulsing is what you hear
@@ -2142,11 +2181,16 @@ console.log(JSON.stringify(out));
         # here which it shouldn't be." The vocabulary is pinned so it cannot
         # drift back: Harmony's Take options speak material only; the rail's
         # control speaks his two movement words.
-        take_opts = page.eval_on_selector_all("#hcTake option", "es => es.map(e => e.textContent)")
-        check(all("arpeggio" not in t and "voicing" not in t for t in take_opts)
-              and any("one of each" in t for t in take_opts)
-              and any("every occurrence" in t for t in take_opts),
-              f"{tag} Take must speak MATERIAL, not movement: {take_opts}")
+        # PIN REWRITTEN 260913 (item 1): Take is the rail's all-tones
+        # checkbox now; its material vocabulary lives on the label and its
+        # title (every occurrence in the box / one of each tone)
+        take_talk = page.evaluate("""() => {
+          const lab = document.getElementById('fdAllTonesLab');
+          return (lab.textContent + ' ' + (lab.title || '')).trim(); }""")
+        check("all tones" in take_talk and "every occurrence in the box" in take_talk
+              and "one of each" in take_talk
+              and "arpeggi" not in take_talk and "voicing" not in take_talk,
+              f"{tag} the take control speaks MATERIAL, not movement: {take_talk!r}")
         move_btns = page.eval_on_selector_all("#fdMoveSeg button", "es => es.map(e => e.textContent.trim())")
         # words updated 260913: the PO ruled strum/arpeggiate (a block IS a
         # strum); the pin's job — the rail speaks the ruled movement words,
@@ -2247,12 +2291,12 @@ console.log(JSON.stringify(out));
         # config 2 — the window STEPPED (the announce every mover must make)
         # and the arpeggio take: the class the hypothesis feared, exercised
         page.focus("#fieldSvg"); page.press("#fieldSvg", "ArrowRight"); page.wait_for_timeout(200)
-        page.select_option("#hcTake", "all"); page.wait_for_timeout(200)
+        page.check("#fdAllTones"); page.wait_for_timeout(200)
         sound_sight_pass("stepped window + arpeggio")
         check(compared[0] >= 14,
               f"{tag} the sound≡sight corpus floor: {compared[0]} complete bars compared (want ≥ 14)")
         # restore
-        page.select_option("#hcTake", "one"); page.select_option("#hcRef", "none")
+        page.uncheck("#fdAllTones"); page.select_option("#hcRef", "none")
         page.press("#fieldSvg", "ArrowLeft"); page.wait_for_timeout(150)
         page.fill("#bpmRange", "72"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(100)

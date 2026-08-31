@@ -38,38 +38,34 @@ export const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcTake", "hcRef", "hcDyad"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcDyad"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
    * AND a mode name. The grid is the card's own (`hgrid` in v0.9) — a
    * module's internal layout is the module's. */
+  /* ONE HORIZONTAL PANEL (260913, item 1 — D8 granted): Key | Scale |
+   * Object across one row, the reference full-width below. Take LEFT this
+   * card — it was the only Harmony control whose meaning is defined by the
+   * BOX ("every occurrence in the box" is unstatable without the neck), so
+   * it lives on the neck's rail now, beside Placement, as the "all tones"
+   * checkbox. field-board owns and announces it; the value is unchanged. */
   markup: `
   <h2>Harmony</h2>
-  <div class="hc-cap">the field</div>
-  <div class="hc-grid">
+  <div class="hc-grid3">
     <div><label>Key</label><select id="hcKey" data-control="hcKey"></select></div>
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
-  </div>
-  <div class="hc-cap">what sits on it</div>
-  <div class="hc-grid">
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
-    <div><label id="hcTakeLab">Take</label><select id="hcTake" data-control="hcTake">
-      <option value="one">one of each tone</option>
-      <option value="all">every occurrence in the box</option>
-    </select></div>
   </div>
   <label id="hcDyadLab" hidden>Which two tones</label>
   <select id="hcDyad" data-control="hcDyad" hidden></select>
-  <div class="hc-cap">the reference underneath</div>
-  <label id="hcRefLab">Reference tone</label>
+  <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
   <div class="hint" id="hcNote"></div>`,
 
   styles: `
-.hc-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
-.hc-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
-  font-weight:bold;margin:10px 0 5px}
+.hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px}
+#hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
 #hcRef,#hcDyad{width:100%}
 #hcDyadLab[hidden],#hcDyad[hidden]{display:none}`,
@@ -81,7 +77,7 @@ export const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
-    let cfg = { key: "Bb", scale: "major", object: "tetrad", take: "one", ref: 0, bass: "none", dyad: [3, 7] };
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "none", dyad: [3, 7] };
 
     const fill = (sel, items, current) => {
       sel.textContent = "";
@@ -112,9 +108,6 @@ export const harmonyCard = {
       byId("hcDyadLab").hidden = cfg.object !== "dyad";
       byId("hcDyad").hidden = cfg.object !== "dyad";
       const isScale = cfg.object === "scale";
-      byId("hcTake").value = cfg.take;
-      byId("hcTake").disabled = isScale;
-      byId("hcTakeLab").textContent = isScale ? "Take — a scale takes the whole box" : "Take";
       /* THE REFERENCE. Under a scale it is the CENTRE — pick any note of the
        * collection and the field is re-read against it, which is what a mode
        * is (LIVE — child 1's field.ref). Under a chord it is what sits
@@ -140,7 +133,7 @@ export const harmonyCard = {
           { value: "third", label: "a 3rd below" },
           { value: "fifth", label: "a 5th below" },
         ], cfg.bass);
-        byId("hcRefLab").textContent = "Bass / reference tone";
+        byId("hcRefLab").textContent = "Bass / reference tone";   // the resting label
         byId("hcNote").textContent = cfg.bass === "none"
           ? "The reference the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
           : "A real fretted note on string 5 or 6, chosen against the window — the neck shows it hollow, the readout names what the stack becomes over it.";
@@ -149,7 +142,7 @@ export const harmonyCard = {
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
-    const MINE = ["key", "scale", "object", "take", "ref", "bass", "dyad"];
+    const MINE = ["key", "scale", "object", "ref", "bass", "dyad"];
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
@@ -162,7 +155,6 @@ export const harmonyCard = {
     byId("hcScale").addEventListener("change", (e) => { cfg = { ...cfg, scale: e.target.value }; push(); });
     byId("hcObj").addEventListener("change", (e) => { cfg = { ...cfg, object: e.target.value }; push(); });
     byId("hcDyad").addEventListener("change", (e) => { cfg = { ...cfg, dyad: e.target.value.split(",").map(Number) }; push(); });
-    byId("hcTake").addEventListener("change", (e) => { cfg = { ...cfg, take: e.target.value }; push(); });
     byId("hcRef").addEventListener("change", (e) => {
       const v = e.target.value;
       if (v.startsWith("mode:")) cfg = { ...cfg, ref: +v.slice(5) };

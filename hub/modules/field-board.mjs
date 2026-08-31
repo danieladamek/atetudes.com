@@ -96,7 +96,8 @@ export const fieldBoard = {
   mount_point: "boards",
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
-    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn"],
+    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
+    "fdAllTones"],
 
   markup: `
   <div class="bh"><span>On the neck</span></div>
@@ -107,9 +108,19 @@ export const fieldBoard = {
       <div class="fd-railtop"><button id="fdRailBtn" data-control="fdRailBtn"
         title="collapse this rail">›</button></div>
       <div class="fd-cap">Placement</div>
-      <div class="seg" id="fdNSeg" data-control="fdNSeg">
-        <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-        <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+      <!-- TAKE LIVES HERE NOW (260913, item 1 — D8): "every occurrence in
+           the box" is unstatable without the neck, so the control sits
+           beside the box's other two deciders. Unchecked = take "one",
+           checked = take "all"; the VALUE is unchanged, only the seat and
+           the label moved. -->
+      <div class="fd-placerow">
+        <div class="seg" id="fdNSeg" data-control="fdNSeg">
+          <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
+          <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+        </div>
+        <label class="chk fd-alltones" id="fdAllTonesLab"
+          title="every occurrence in the box — off, one of each tone"><input
+          type="checkbox" id="fdAllTones" data-control="fdAllTones"> all tones</label>
       </div>
       <div class="fd-cap">Movement</div>
       <div class="seg" id="fdMoveSeg" data-control="fdMoveSeg">
@@ -184,6 +195,9 @@ export const fieldBoard = {
 .fd-railtop{display:flex;justify-content:flex-end;margin-bottom:2px}
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
+.fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.fd-alltones{font-size:12.5px;color:var(--ink);white-space:nowrap;cursor:pointer}
+.fd-alltones input{vertical-align:-1px}
 .fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
   font-weight:bold;margin:9px 0 5px}
 .fd-fignote{margin-top:6px}
@@ -486,6 +500,19 @@ export const fieldBoard = {
         b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
         b.disabled = cfg.object === "scale";
       }
+      /* the all-tones checkbox: the same scale coupling as Placement, the
+       * same precedent — disabled with the reason ON ITS OWN LABEL */
+      {
+        const at = byId("fdAllTones"), atLab = byId("fdAllTonesLab");
+        at.checked = cfg.take === "all";
+        at.disabled = cfg.object === "scale";
+        /* state styling inline (the fignote idiom) — a state class here
+         * would orphan the lock's CSS check in the states it never visits */
+        atLab.style.opacity = cfg.object === "scale" ? "0.45" : "";
+        atLab.style.cursor = cfg.object === "scale" ? "not-allowed" : "";
+        atLab.lastChild.textContent = cfg.object === "scale"
+          ? " all tones — a scale takes the whole box" : " all tones";
+      }
       /* THE OVERRIDE IS LOUD (260909, item 3; register 20): "a typed figure
        * sequences, whatever the Take" (260901) stands — but it must not stand
        * SILENTLY over a raised `block`. While a figure rules, block is
@@ -566,7 +593,8 @@ export const fieldBoard = {
       build();
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
         startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer,
-        address: cfg.address, figure: cfg.figure, movement: cfg.movement });
+        address: cfg.address, figure: cfg.figure, movement: cfg.movement,
+        take: cfg.take });
     };
 
     let followMsg = null;   // the named forced follow (260911, item 6) — one build's worth
@@ -738,6 +766,9 @@ export const fieldBoard = {
     for (const b of byId("fdAddrSeg").querySelectorAll("button"))
       b.addEventListener("click", () => { cfg = { ...cfg, address: b.dataset.addr }; push(); });
     byId("fdFigIn").addEventListener("input", (e) => { cfg = { ...cfg, figure: e.target.value }; push(); });
+    byId("fdAllTones").addEventListener("change", (e) => {
+      cfg = { ...cfg, take: e.target.checked ? "all" : "one" }; push();
+    });
 
     byId("fdRailBtn").addEventListener("click", () => {
       const r = byId("fdRail");
