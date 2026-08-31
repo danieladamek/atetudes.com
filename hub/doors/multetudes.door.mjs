@@ -70,7 +70,13 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
-    /* v0.2.0 (260913, the interface pass): the wireframe lands — Take on
+    /* v0.2.1 (260913b, the centre): scale mode's centre made to work —
+     * the bass against it, figures addressing degrees from it (the 9/11/13
+     * compounds), movement back once a figure resolves, Placement's
+     * boundary kept loud (register 25); the notepad's title in the header
+     * band via the shell's first slot; the sliders paired; the neck ring
+     * riding livePulses.
+     * v0.2.0 (260913, the interface pass): the wireframe lands — Take on
      * the rail as the all-tones checkbox (D8), Harmony one row, the
      * under-neck block (bpm and the bass as second views, the transport
      * mini, the repeat toggle), the chips carrying roman AND slash, and
@@ -87,7 +93,7 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.2.0",
+    blurb: "one tool that holds many études · v0.2.1",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

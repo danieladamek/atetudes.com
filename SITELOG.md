@@ -1,3 +1,20 @@
+## 2026-08-31 — Multetudes v0.2.1: the centre works; the notepad has its title back
+
+- **Source edition v0.2.1** (night 18; Update Log 260913b.1, the full report in the night's
+  note). On the page: scale mode's CENTRE now works — the bass places against it (neck,
+  keys, staff, and the sound), figures address degrees from it (R-3-5-7 up to the 9/11/13
+  compounds), movement returns once a figure resolves, and Placement alone stays off with
+  its reason on its own cap. The mixer sliders sit level with what they govern. The
+  notepad's title field is back in the card's top bar — type a title and the export is
+  named by it — via the shell's first header slot in seventeen nights
+  (**hub/shell.mjs 15,279 → 16,037**, reported, not absorbed). The neck's pulse ring now
+  survives shared-pitch rebuilds (the keys' livePulses idiom, ported).
+- Bite **37/37** from `hub/tests/out/bite-0831-1516.log` — the first night whose bite line
+  has a durable log behind it (item 0: line-buffered --log, SIGTERM-proven clean restore).
+- Verified per the ritual: hugo exit read properly · check_site 21 pages · both widths with
+  the night's changes exercised, zero console errors · the study refreshed by plain copy,
+  cmp-identical post-harness · live spot-check after deploy recorded below.
+
 ## 2026-08-31 — DEPLOYED: Multetudes v0.2.0 live, card restored
 
 - `4b7d1ab` deployed (Pages run 33426572489 green, build 5m31s with the full gate in CI).
