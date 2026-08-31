@@ -437,11 +437,13 @@ export const fieldBoard = {
        * stretch keeps full colour, unmarked (the ruling); the flag feeds the
        * hint's prose. A refusal is a reason, said in the hint BY NAME. */
       let refP = { note: null, stretch: false, reason: null };
+      /* the centre's reference draws exactly as the chord's does (4a) */
+      const fdRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
       if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
         refP = { note: null, stretch: false,
           reason: `the reference is relative to the chord's degree, and ${cur.symbol}'s root is not in the key` };
-      } else if (cfg.object !== "scale" && cfg.bass !== "none") {
-        refP = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
+      } else if (cfg.bass !== "none") {
+        refP = placeReference(cfg.bass, fdRefDeg, fld, run.strings, pos);
         if (refP.note) {
           const rf = FAM[refP.note.deg];
           const g = el("g", { class: "fd-ref", "data-refstr": refP.note.string,
@@ -574,9 +576,9 @@ export const fieldBoard = {
       {
         const b2 = byId("fdBass2");
         if (b2.value !== cfg.bass) b2.value = cfg.bass;
-        b2.disabled = cfg.object === "scale";
+        b2.disabled = false;   // 4a: live in scale mode too — the centre works
         b2.title = cfg.object === "scale"
-          ? "under a scale the reference is the CENTRE — choose it in Harmony"
+          ? "the reference under the mode — placed against the CENTRE chosen in Harmony"
           : "the reference under the harmony — one state, two views; Harmony's select is the other";
       }
       /* THE OVERRIDE IS LOUD (260909, item 3; register 20): "a typed figure
@@ -586,20 +588,32 @@ export const fieldBoard = {
        * it. Movement is never auto-switched — the player's setting waits.
        * The scale-disables-Placement precedent, applied to the third
        * coupling class Daniel caught. */
-      const figRules = cfg.object !== "scale" && !fig.err
-        && !!(fig.order && fig.order.length);
+      /* 4b (260913b): a figure rules under a SCALE too — the tones now
+       * address degrees from the centre, so the override law applies
+       * unchanged wherever an order resolves */
+      const figRules = !fig.err && !!(fig.order && fig.order.length);
       for (const b of byId("fdMoveSeg").querySelectorAll("button")) {
         b.classList.toggle("on", b.dataset.move === cfg.movement);
         if (!b.dataset.title0) b.dataset.title0 = b.title;
         const overridden = figRules && b.dataset.move === "strum";
-        b.disabled = cfg.object === "scale" || overridden;
+        /* 4c: movement comes back once a figure resolves — a scale with no
+         * figure is a run (nothing to move); with one, the override law
+         * governs exactly as under a chord */
+        b.disabled = (cfg.object === "scale" && !figRules) || overridden;
         b.title = overridden
           ? "the typed figure sequences — clear the Figure to sound the chord as one"
           : b.dataset.title0;
       }
       const moveCap = byId("fdMoveSeg").previousElementSibling;
       if (moveCap) moveCap.textContent = figRules
-        ? "Movement — the figure sequences" : "Movement";
+        ? "Movement — the figure sequences"
+        : (cfg.object === "scale" ? "Movement — a scale is a run until a figure says otherwise"
+                                  : "Movement");
+      /* 4e: Placement's reason moves ON TO ITS OWN CAP — the all-tones
+       * precedent; it was only in the hint's prose before */
+      const placeCap = byId("fdNSeg").parentElement.previousElementSibling;
+      if (placeCap) placeCap.textContent = cfg.object === "scale"
+        ? "Placement — a scale is not a chord" : "Placement";
       for (const b of byId("fdAddrSeg").querySelectorAll("button"))
         b.classList.toggle("on", b.dataset.addr === cfg.address);
       byId("fdFigIn").placeholder = cfg.address === "pattern" ? "4,3,4,3,2,1" : "R-3-7-5";
@@ -612,7 +626,7 @@ export const fieldBoard = {
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
         noteEl.textContent = cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
-          : "Tones name roles — R, 3, 5, 7. The bracket still shows the order, greyed, because it is derived rather than typed.";
+          : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
       }
 
       const per = {};

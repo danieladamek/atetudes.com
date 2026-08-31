@@ -746,6 +746,97 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260913b item 4: THE CENTRE WORKS ----
+        # Scale mode had a centre and nothing consumed it. Ruled: the bass
+        # places against the CENTRE (same placeReference, different origin);
+        # figures address degrees from the centre (R 3 5 7 9 11 13, the
+        # ordinal law ported from the pattern alphabet); movement returns
+        # once a figure resolves; Placement STAYS off (genuinely chord
+        # voicing — the boundary the finding rests on); every disabled
+        # control says why on its own label.
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+        page.select_option("#hcRef", "mode:2"); page.wait_for_timeout(200)
+        c4 = page.evaluate("""() => ({
+          bass2: (document.getElementById('fdBass2') || {}).disabled,
+          placeCap: (document.getElementById('fdNSeg') || {parentElement:{}}).parentElement
+            .previousElementSibling.textContent,
+          moveCap: document.getElementById('fdMoveSeg').previousElementSibling.textContent,
+          moves: [...document.querySelectorAll('#fdMoveSeg button')].map(b => b.disabled) })""")
+        check(c4["bass2"] is False,
+              f"{tag} 4a: the bass view is LIVE in scale mode: {c4}")
+        check("a scale is not a chord" in c4["placeCap"],
+              f"{tag} 4d+4e: Placement stays OFF with the reason on its own cap: "
+              f"{c4['placeCap']!r}")
+        check("a scale is a run" in c4["moveCap"] and c4["moves"] == [True, True],
+              f"{tag} 4e: figure-less scale movement is off, reason on the cap: {c4}")
+        # 4a at the artifact: centre D, bass root — the reference draws on
+        # the neck, the keys and the staff, and the audition SOUNDS it
+        page.select_option("#fdBass2", "root"); page.wait_for_timeout(300)
+        c4a = page.evaluate("""() => ({
+          neck: document.querySelectorAll('#fieldSvg .fd-ref').length,
+          keys: document.querySelectorAll('#kySvg circle[data-kyref]').length,
+          staff: document.querySelectorAll('#stSvg [data-strefmidi]').length,
+          refMidi: (document.querySelector('#fieldSvg .fd-ref') || { getAttribute: () => null })
+            .getAttribute('data-refmidi') })""")
+        check(c4a["neck"] == 1 and c4a["keys"] == 1 and c4a["staff"] >= 1,
+              f"{tag} 4a: the CENTRE's reference draws on neck, keys and staff: {c4a}")
+        page.evaluate("""() => {
+          if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+            document.addEventListener('atetudes:note', e =>
+              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+          window.__nt = []; }""")
+        page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(600)
+        c4nt = page.evaluate("() => window.__nt.map(n => n.m)")
+        check(c4a["refMidi"] is not None and int(c4a["refMidi"]) in c4nt,
+              f"{tag} 4a: the audition SOUNDS the centre's bass (ref {c4a['refMidi']}, "
+              f"NOTEs {c4nt[:14]})")
+        # 4b: figures address the centre — R-3-5-7 resolves on every bar,
+        # the compounds reach the extensions, and 2 still mode-mismatches
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { address: 'tones', figure: 'R-3-5-7' } }))""")
+        page.wait_for_timeout(300)
+        fj4 = page.inner_text("#fdFigNote")
+        check("carries no" not in fj4 and "not a tone" not in fj4,
+              f"{tag} 4b: R-3-5-7 RESOLVES in scale mode — no refusal: {fj4[:80]!r}")
+        check(page.eval_on_selector_all("#stSvg [data-stfig]", "e => e.length") == 32,
+              f"{tag} 4b: the staff wears the 4-step figure on all 8 bars")
+        c4m = page.evaluate("""() => [...document.querySelectorAll('#fdMoveSeg button')]
+          .map(b => [b.dataset.move, b.disabled])""")
+        check(dict(c4m)["arpeggiate"] is False and dict(c4m)["strum"] is True,
+              f"{tag} 4c: movement returns with the figure — arpeggiate live, strum "
+              f"under the figure override: {c4m}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { figure: 'R-9-11-13' } }))""")
+        page.wait_for_timeout(300)
+        fj4 = page.inner_text("#fdFigNote")
+        check("carries no" not in fj4 and "not a tone" not in fj4
+              and page.eval_on_selector_all("#stSvg [data-stfig]", "e => e.length") == 32,
+              f"{tag} 4b: the compounds 9/11/13 reach the extensions: {fj4[:80]!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { figure: '2' } }))""")
+        page.wait_for_timeout(250)
+        fj4 = page.inner_text("#fdFigNote")
+        check("PATTERN" in fj4 and "switch it to pattern" in fj4,
+              f"{tag} 4b: bare 2 keeps the mode-mismatch notice: {fj4[:90]!r}")
+        # the ordinal law, ported: R-R walks the centre's occurrences low→high
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { figure: 'R-R' } }))""")
+        page.wait_for_timeout(300)
+        c4o = page.evaluate("""() => [...document.querySelectorAll('#stSvg [data-stfig]')]
+          .slice(0, 2).map(e => +e.getAttribute('data-stmidi'))""")
+        check(len(c4o) == 2 and c4o[1] > c4o[0],
+              f"{tag} 4b: a repeat is the ordinal over the centre's occurrences, "
+              f"low → high: {c4o}")
+        # full boot restore
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                      object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
+                      address: 'pattern', figure: '', ref: 0, bass: 'none',
+                      source: 'cycle', custom: '' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(250)
+
         # ---- 260913b item 2: THE DOCUMENT'S TITLE, IN THE HEADER BAND ----
         # D11 unblocked and ruled: the field is the DOCUMENT's title (fills
         # file.title, drives file.name(); empty falls back — an untouched
@@ -1324,11 +1415,14 @@ console.log(JSON.stringify(out));
         fj = page.inner_text("#fdFigNote")
         check("not a tone" not in fj and "not a string" not in fj,
               f"{tag} a trailing separator is UNFINISHED, not wrong — no error: {fj!r}")
+        # REWRITTEN 260913b (item 4b): 9 joined the tones alphabet, so under
+        # pattern it draws the mode-mismatch switch notice; 8 keeps the junk
+        # refusal — both loud, both named
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
-          { detail: { address: 'pattern', figure: '9' } }))""")
+          { detail: { address: 'pattern', figure: '8' } }))""")
         page.wait_for_timeout(200)
         fj = page.inner_text("#fdFigNote")
-        check('"9"' in fj and "not a string" in fj,
+        check('"8"' in fj and "not a string" in fj,
               f"{tag} the pattern alphabet refuses junk by name too: {fj!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { address: 'pattern', figure: '' } }))""")

@@ -134,9 +134,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
-.fd-underneck{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
-.fd-undercol{flex:1 1 420px;min-width:0}
-.fd-undermix{flex:0 1 380px;padding-top:6px}
+.fd-underneck{display:block}
+.fd-pairrow{justify-content:flex-start}
+.fd-pairrow .fd-mixrow{margin-left:auto;flex:0 1 380px}
 #fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
 .fd-undermini{display:inline-flex;gap:4px;margin-left:6px}
@@ -237,6 +237,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
+#npTitle{font:inherit;font-size:11.5px;padding:2px 7px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink);width:170px}
 .journalcontrols{margin-top:10px}
 .journalconfirm{display:none;margin-top:6px}
 .padmsgs{margin-top:6px;min-height:0}
@@ -369,6 +371,12 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   metronome, first block, this look.)</div></div>
 <div class="board">
   <div class="bh"><span>Notepad</span></div><div class="jcol" id="noteCol">
+      <!-- THE DOCUMENT'S TITLE (260913b, item 2 — D11 unblocked): fills
+           file.title and drives file.name(); empty falls back to today's
+           default, so an untouched field changes nothing that ships. It
+           does NOT relabel entries — those keep deriving (260811.3). The
+           shell seats it in the header band via data-header-slot. -->
+      <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
       <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
         placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
@@ -508,38 +516,40 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        reference select is Harmony's second view, seated by the mixer it
        drives. The ⏮ ▶ ⏹ ⏭ cluster is the family mini — a view that asks,
        never a timer. -->
+  <!-- EACH SLIDER BESIDE THE THING IT GOVERNS (260913 finding — the
+       dispatch had drawn a floating right column; the PO's words were an
+       ASSOCIATION: harmony tracks voice/tone, bass tracks the reference.
+       Row 2 pairs voice with the harmony slider; row 3 pairs the
+       reference with the bass slider. Layout only — the tracking
+       semantics are the 260906 pins', untouched. -->
   <div class="fd-underneck">
-    <div class="fd-undercol">
-      <div class="fd-railrow">
-        <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-        <span class="fd-pulse" id="fdPulse"></span>
-        <span class="fd-lab2">bar split</span>
-        <select id="fdSplit" data-control="fdSplit"
-          title="the bar split — a bar's chords take these slots in order"></select>
-        <span class="fd-lab2">bpm</span>
-        <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
-          title="the tempo — one state, two views; the Metronome card owns the clock">
-        <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
-        <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
-          title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
-      </div>
-      <div class="fd-railrow">
-        <span class="fd-lab2">voice</span>
-        <select id="fdVoice" data-control="fdVoice"></select>
-      </div>
-      <div class="fd-railrow">
-        <span class="fd-lab2">Bass / reference tone</span>
-        <select id="fdBass2" data-control="fdBass2"
-          title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
-      </div>
+    <div class="fd-railrow">
+      <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
+      <span class="fd-pulse" id="fdPulse"></span>
+      <span class="fd-lab2">bar split</span>
+      <select id="fdSplit" data-control="fdSplit"
+        title="the bar split — a bar's chords take these slots in order"></select>
+      <span class="fd-lab2">bpm</span>
+      <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
+        title="the tempo — one state, two views; the Metronome card owns the clock">
+      <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
+        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
     </div>
-    <div class="fd-undermix">
+    <div class="fd-railrow fd-pairrow">
+      <span class="fd-lab2">voice</span>
+      <select id="fdVoice" data-control="fdVoice"></select>
       <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
         <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">harmony</span>
         <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
         <span class="fd-val" id="fdHarmVal">100</span>
       </div>
+    </div>
+    <div class="fd-railrow fd-pairrow">
+      <span class="fd-lab2">Bass / reference tone</span>
+      <select id="fdBass2" data-control="fdBass2"
+        title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
       <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
         <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">bass</span>
@@ -4799,12 +4809,9 @@ function orderBy(address, text, notes) {
    * carrying the OTHER mode's letters is named as such, with the switch
    * offered, instead of half-reading it in the wrong alphabet. Tokens legal
    * in both alphabets (3, 5) stay ambiguous and read as the current mode. */
-  if (address === "pattern" && /R|7/.test(raw))
-    return { order: null, err: "this reads as a TONES figure (R and 7 are roles, not strings) — " +
+  if (address === "pattern" && /R|7|9/.test(raw))
+    return { order: null, err: "this reads as a TONES figure (R, 7 and the extensions are roles, not strings) — " +
       "the address is set to pattern; switch it to tones" };
-  if (address !== "pattern" && /[12468]/.test(raw))
-    return { order: null, err: "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
-      "the address is set to tones; switch it to pattern" };
   /* THE JUNK REFUSAL (260910, item 2 — Daniel's ruling on the eleventh
    * silence): "R,Q" used to keep the R and drop the Q without a word — the
    * regex harvest was tolerant in both alphabets ("9,9" even read as an
@@ -4812,17 +4819,43 @@ function orderBy(address, text, notes) {
    * token, or refused BY NAME — the changes field's manners (child 7),
    * applied to the figure. INCOMPLETE is not INVALID: separators are
    * skippable, so "R," on the way to "R,3" never errs — the distinction
-   * lives in the grammar, not in event timing. */
-  const legal = address === "pattern" ? "123456" : "R357";
+   * lives in the grammar, not in event timing.
+   *
+   * THE TONES ALPHABET GREW COMPOUNDS (260913b, item 4b — the centre's
+   * ruling): R 3 5 7 9 11 13, longest first so 11 and 13 never half-read
+   * as strings. 1/2/4/6/8 alone stay the pattern alphabet's and keep the
+   * mode-mismatch notice. */
   const toks = [];
-  for (const ch of raw) {
-    if (/[,\-\s.·]/.test(ch)) continue;
-    if (legal.includes(ch)) { toks.push(ch); continue; }
-    return { order: null, err: address === "pattern"
-      ? `"${ch}" is not a string — strings are 1–6`
-      : `"${ch}" is not a tone — tones are R, 3, 5, 7` };
+  if (address === "pattern") {
+    for (const ch of raw) {
+      if (/[,\-\s.·]/.test(ch)) continue;
+      if ("123456".includes(ch)) { toks.push(ch); continue; }
+      return { order: null, err: `"${ch}" is not a string — strings are 1–6` };
+    }
+  } else {
+    const TONE_TOKENS = ["13", "11", "9", "7", "5", "3", "R"];
+    let i = 0;
+    while (i < raw.length) {
+      const ch = raw[i];
+      if (/[,\-\s.·]/.test(ch)) { i += 1; continue; }
+      const hit = TONE_TOKENS.find((t) => raw.startsWith(t, i));
+      if (hit) { toks.push(hit); i += hit.length; continue; }
+      if ("12468".includes(ch))
+        return { order: null, err: "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
+          "the address is set to tones; switch it to pattern" };
+      return { order: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13` };
+    }
   }
   if (!toks.length) return { order: null, err: null };
+  /* a selection whose notes carry no ROLES is the scale box (scaleTake) —
+   * tones then address DEGREES FROM THE CENTRE (deg, already re-rooted by
+   * the field), and a repeat is the ordinal over that degree's occurrences
+   * low → high, wrapping — the pattern alphabet's own repeat law, ported.
+   * Derived from the selection's own shape, never from a mode flag. */
+  const degreeAddressed = notes.length > 0 && notes.every((n) => n.role == null);
+  const degOfTok = (t) => (t === "R" ? 0 : (Number(t) - 1) % 7);
+  const wordOf = (t) => t === "R" ? "root"
+    : t + ({ "3": "rd" }[t] || "th");
   const order = [];
   const used = {};
   for (const tok of toks) {
@@ -4834,10 +4867,20 @@ function orderBy(address, text, notes) {
       const k = (used[s] || 0) % onStr.length;      // A REPEAT IS THE ORDINAL, wrapping
       used[s] = (used[s] || 0) + 1;
       order.push(onStr[k]);
+    } else if (degreeAddressed) {
+      const d = degOfTok(tok);
+      const occ = notes.filter((n) => n.deg === d).sort((a, b) => a.midi - b.midi);
+      if (!occ.length)
+        return { order: null, err: `this box carries no ${wordOf(tok)} of the centre — step or widen the window` };
+      const k = (used[tok] || 0) % occ.length;      // the same ordinal law
+      used[tok] = (used[tok] || 0) + 1;
+      order.push(occ[k]);
     } else {
+      if (!"R357".includes(tok) || tok.length > 1)
+        return { order: null, err: `${wordOf(tok)}s live in the SCALE box — a chord selection carries R, 3, 5, 7` };
       const hit = notes.find((n) => n.role === tok);
       if (!hit)
-        return { order: null, err: `this selection carries no ${tok === "R" ? "root" : tok + (tok === "3" ? "rd" : "th")}` };
+        return { order: null, err: `this selection carries no ${wordOf(tok)}` };
       order.push(hit);
     }
   }
@@ -6180,8 +6223,14 @@ const etudeWalk = {
        * sound⊆sight pin permits drawn-but-silent). A scale take keeps no
        * reference path at all, as before. */
       let refMidi = null;
-      if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree >= 0 && sel.length) {
-        const rp = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
+      /* THE CENTRE WORKS (260913b, item 4a): in scale mode the reference
+       * places against the MODAL CENTRE — same placeReference, same degree
+       * arithmetic, the origin is cfg.ref instead of the chord's degree.
+       * A mode is only audible against its centre; now it sounds. */
+      const refDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
+      if (cfg.bass !== "none" && refDeg >= 0 && sel.length
+          && (cfg.object === "scale" || cur.degree >= 0)) {
+        const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos);
         if (rp.note) refMidi = rp.note.midi;
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
@@ -6527,38 +6576,40 @@ const fieldBoard = {
        reference select is Harmony's second view, seated by the mixer it
        drives. The ⏮ ▶ ⏹ ⏭ cluster is the family mini — a view that asks,
        never a timer. -->
+  <!-- EACH SLIDER BESIDE THE THING IT GOVERNS (260913 finding — the
+       dispatch had drawn a floating right column; the PO's words were an
+       ASSOCIATION: harmony tracks voice/tone, bass tracks the reference.
+       Row 2 pairs voice with the harmony slider; row 3 pairs the
+       reference with the bass slider. Layout only — the tracking
+       semantics are the 260906 pins', untouched. -->
   <div class="fd-underneck">
-    <div class="fd-undercol">
-      <div class="fd-railrow">
-        <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-        <span class="fd-pulse" id="fdPulse"></span>
-        <span class="fd-lab2">bar split</span>
-        <select id="fdSplit" data-control="fdSplit"
-          title="the bar split — a bar's chords take these slots in order"></select>
-        <span class="fd-lab2">bpm</span>
-        <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
-          title="the tempo — one state, two views; the Metronome card owns the clock">
-        <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
-        <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
-          title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
-      </div>
-      <div class="fd-railrow">
-        <span class="fd-lab2">voice</span>
-        <select id="fdVoice" data-control="fdVoice"></select>
-      </div>
-      <div class="fd-railrow">
-        <span class="fd-lab2">Bass / reference tone</span>
-        <select id="fdBass2" data-control="fdBass2"
-          title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
-      </div>
+    <div class="fd-railrow">
+      <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
+      <span class="fd-pulse" id="fdPulse"></span>
+      <span class="fd-lab2">bar split</span>
+      <select id="fdSplit" data-control="fdSplit"
+        title="the bar split — a bar's chords take these slots in order"></select>
+      <span class="fd-lab2">bpm</span>
+      <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
+        title="the tempo — one state, two views; the Metronome card owns the clock">
+      <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
+        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
     </div>
-    <div class="fd-undermix">
+    <div class="fd-railrow fd-pairrow">
+      <span class="fd-lab2">voice</span>
+      <select id="fdVoice" data-control="fdVoice"></select>
       <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
         <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">harmony</span>
         <input type="range" id="fdHarmVol" data-control="fdHarmVol" min="0" max="100" value="100">
         <span class="fd-val" id="fdHarmVal">100</span>
       </div>
+    </div>
+    <div class="fd-railrow fd-pairrow">
+      <span class="fd-lab2">Bass / reference tone</span>
+      <select id="fdBass2" data-control="fdBass2"
+        title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
       <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
         <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">bass</span>
@@ -6598,9 +6649,9 @@ const fieldBoard = {
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
-.fd-underneck{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
-.fd-undercol{flex:1 1 420px;min-width:0}
-.fd-undermix{flex:0 1 380px;padding-top:6px}
+.fd-underneck{display:block}
+.fd-pairrow{justify-content:flex-start}
+.fd-pairrow .fd-mixrow{margin-left:auto;flex:0 1 380px}
 #fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
 .fd-undermini{display:inline-flex;gap:4px;margin-left:6px}
@@ -6674,7 +6725,14 @@ const fieldBoard = {
     let curB = null;            // { fld, run, pos, region, aNotes } of the last build
     let dragging = null;
     let pulseTimers = [];       // the sounding-note pulse (260905, item 5)
-    let pendingPulses = [];     // NOTEs that beat the rebuild (260909, item 2) — flushed by build()
+    /* livePulses — the keys' 260911 idiom, copied here 260913b (the ruled
+     * latent twin): a ring's LIFETIME BELONGS TO THE NOTE, not to the DOM
+     * that displays it. Every sounded note keeps { midi, until }; build()
+     * re-rings survivors on the fresh dots for their REMAINING life. This
+     * subsumes the 260909 pending case (a pulse with no dot yet is a
+     * survivor that finds one at the next build) and closes the wipe race
+     * (a ring born just before a shared-pitch rebuild died young). */
+    let livePulses = [];        // { midi, until }
 
     const el = (t, a, p) => {
       const e = d.createElementNS(SVGNS, t);
@@ -6797,11 +6855,13 @@ const fieldBoard = {
        * stretch keeps full colour, unmarked (the ruling); the flag feeds the
        * hint's prose. A refusal is a reason, said in the hint BY NAME. */
       let refP = { note: null, stretch: false, reason: null };
+      /* the centre's reference draws exactly as the chord's does (4a) */
+      const fdRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
       if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
         refP = { note: null, stretch: false,
           reason: `the reference is relative to the chord's degree, and ${cur.symbol}'s root is not in the key` };
-      } else if (cfg.object !== "scale" && cfg.bass !== "none") {
-        refP = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
+      } else if (cfg.bass !== "none") {
+        refP = placeReference(cfg.bass, fdRefDeg, fld, run.strings, pos);
         if (refP.note) {
           const rf = FAM[refP.note.deg];
           const g = el("g", { class: "fd-ref", "data-refstr": refP.note.string,
@@ -6934,9 +6994,9 @@ const fieldBoard = {
       {
         const b2 = byId("fdBass2");
         if (b2.value !== cfg.bass) b2.value = cfg.bass;
-        b2.disabled = cfg.object === "scale";
+        b2.disabled = false;   // 4a: live in scale mode too — the centre works
         b2.title = cfg.object === "scale"
-          ? "under a scale the reference is the CENTRE — choose it in Harmony"
+          ? "the reference under the mode — placed against the CENTRE chosen in Harmony"
           : "the reference under the harmony — one state, two views; Harmony's select is the other";
       }
       /* THE OVERRIDE IS LOUD (260909, item 3; register 20): "a typed figure
@@ -6946,20 +7006,32 @@ const fieldBoard = {
        * it. Movement is never auto-switched — the player's setting waits.
        * The scale-disables-Placement precedent, applied to the third
        * coupling class Daniel caught. */
-      const figRules = cfg.object !== "scale" && !fig.err
-        && !!(fig.order && fig.order.length);
+      /* 4b (260913b): a figure rules under a SCALE too — the tones now
+       * address degrees from the centre, so the override law applies
+       * unchanged wherever an order resolves */
+      const figRules = !fig.err && !!(fig.order && fig.order.length);
       for (const b of byId("fdMoveSeg").querySelectorAll("button")) {
         b.classList.toggle("on", b.dataset.move === cfg.movement);
         if (!b.dataset.title0) b.dataset.title0 = b.title;
         const overridden = figRules && b.dataset.move === "strum";
-        b.disabled = cfg.object === "scale" || overridden;
+        /* 4c: movement comes back once a figure resolves — a scale with no
+         * figure is a run (nothing to move); with one, the override law
+         * governs exactly as under a chord */
+        b.disabled = (cfg.object === "scale" && !figRules) || overridden;
         b.title = overridden
           ? "the typed figure sequences — clear the Figure to sound the chord as one"
           : b.dataset.title0;
       }
       const moveCap = byId("fdMoveSeg").previousElementSibling;
       if (moveCap) moveCap.textContent = figRules
-        ? "Movement — the figure sequences" : "Movement";
+        ? "Movement — the figure sequences"
+        : (cfg.object === "scale" ? "Movement — a scale is a run until a figure says otherwise"
+                                  : "Movement");
+      /* 4e: Placement's reason moves ON TO ITS OWN CAP — the all-tones
+       * precedent; it was only in the hint's prose before */
+      const placeCap = byId("fdNSeg").parentElement.previousElementSibling;
+      if (placeCap) placeCap.textContent = cfg.object === "scale"
+        ? "Placement — a scale is not a chord" : "Placement";
       for (const b of byId("fdAddrSeg").querySelectorAll("button"))
         b.classList.toggle("on", b.dataset.addr === cfg.address);
       byId("fdFigIn").placeholder = cfg.address === "pattern" ? "4,3,4,3,2,1" : "R-3-7-5";
@@ -6972,7 +7044,7 @@ const fieldBoard = {
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
         noteEl.textContent = cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
-          : "Tones name roles — R, 3, 5, 7. The bracket still shows the order, greyed, because it is derived rather than typed.";
+          : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
       }
 
       const per = {};
@@ -7007,12 +7079,11 @@ const fieldBoard = {
       byId("fdLegend").innerHTML = FAM.map((f2) =>
         `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
         + `<span style="margin-left:8px">colour = function against ${cfg.ref ? "the reference tone" : "the key"}</span>`;
-      /* the held first-note pulses land on the fresh dots (260909, item 2) —
-       * a NOTE that arrived mid-rebuild rings here or expires (150ms) */
+      /* every living pulse re-rings on the fresh dots, for what is left
+       * of its 320ms — survivors of the wipe and first-notes alike */
       const now = d.defaultView.performance.now();
-      const held = pendingPulses;
-      pendingPulses = [];
-      for (const pp of held) if (now - pp.t < 150) ringFor(pp.midi);
+      livePulses = livePulses.filter((p2) => p2.until > now);
+      for (const p2 of livePulses) ringFor(p2.midi, p2.until - now);
     };
 
     const push = () => {
@@ -7114,7 +7185,7 @@ const fieldBoard = {
 
     /* what you see pulsing is what you hear (fretboard-stage's own words) —
      * the ring drawn AT THE DRAWN DOT's own coordinates, never recomputed */
-    const ringFor = (midi) => {
+    const ringFor = (midi, ttl = 320) => {
       const svg = byId("fieldSvg");
       const layer = svg && svg.querySelector(".fd-pulselayer");
       if (!layer) return 0;
@@ -7126,7 +7197,7 @@ const fieldBoard = {
         const ring = el("circle", { class: "fd-pulse", cx: c.getAttribute("cx"),
           cy: c.getAttribute("cy"), r: 19, fill: "none", stroke: "#212126",
           "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
-        pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), 320));
+        pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), ttl));
       }
       return hits.length;
     };
@@ -7139,8 +7210,10 @@ const fieldBoard = {
      * build() finishes. A miss that never finds a dot simply expires. */
     listen(d, NOTE, (m) => {
       if (!m || typeof m.midi !== "number") return;
-      if (ringFor(m.midi) === 0)
-        pendingPulses.push({ midi: m.midi, t: d.defaultView.performance.now() });
+      const now = d.defaultView.performance.now();
+      livePulses = livePulses.filter((p2) => p2.until > now);
+      livePulses.push({ midi: m.midi, until: now + 320 });
+      ringFor(m.midi);
     });
 
     byId("fieldSvg").addEventListener("click", (e) => {
@@ -7653,8 +7726,10 @@ const keysBoard = {
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
        * the marks list) — hollow ring, the board's own idiom for "under" */
-      if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree >= 0) {
-        const rp = placeReference(cfg.bass, cur.degree, fld, cfg.strings, pos);
+      /* 4a (260913b): the centre's reference rings here too */
+      const kyRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
+      if (cfg.bass !== "none" && (cfg.object === "scale" || cur.degree >= 0)) {
+        const rp = placeReference(cfg.bass, kyRefDeg, fld, cfg.strings, pos);
         if (rp.note && rp.note.midi >= LO && rp.note.midi <= HI) {
           const black = BLACK.includes(mod(rp.note.midi, 12));
           const cx = xOf(rp.note.midi) + (black ? ww * 0.3 : ww / 2);
@@ -8268,11 +8343,12 @@ const neckReadout = {
          * the stack becomes over it — R19's sentence. The name arrives from
          * compositeOver's read-back through chord.mjs, or honestly not at
          * all; a refusal is spoken by name, never blanked. */
+        const roRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;   // 4a: the centre
         if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
           bits.push(`<span style="color:#B82929">reference refused: the reference is relative to the ` +
             `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
-        } else if (cfg.object !== "scale" && cfg.bass !== "none") {
-          const rp = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
+        } else if (cfg.bass !== "none") {
+          const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos);
           check("the reference is a real fretted note or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
@@ -9747,7 +9823,7 @@ const notepadCard = {
    * that also carries material boards (build.mjs `order`, default 0) */
   order: 90,
   controls: ["journalIn", "saveEntry", "clearPad", "exportLog", "copyBtn",
-    "importBtn", "paletteBtn", "paletteRoot",
+    "importBtn", "paletteBtn", "paletteRoot", "npTitle",
     "histList", "histCount", "clearConfirm", "clearSave", "clearDiscard",
     "clearCancel", "storeNote", "handoffNote"],
 
@@ -9768,6 +9844,12 @@ const notepadCard = {
     </div>
     <div id="dragBar" title="drag to resize"></div>
     <!--part:pad--><div class="jcol" id="noteCol">
+      <!-- THE DOCUMENT'S TITLE (260913b, item 2 — D11 unblocked): fills
+           file.title and drives file.name(); empty falls back to today's
+           default, so an untouched field changes nothing that ships. It
+           does NOT relabel entries — those keep deriving (260811.3). The
+           shell seats it in the header band via data-header-slot. -->
+      <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
       <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
         placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
@@ -9816,6 +9898,8 @@ const notepadCard = {
   color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
+#npTitle{font:inherit;font-size:11.5px;padding:2px 7px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink);width:170px}
 .journalcontrols{margin-top:10px}
 .journalconfirm{display:none;margin-top:6px}
 .padmsgs{margin-top:6px;min-height:0}
@@ -9964,11 +10048,23 @@ const notepadCard = {
         list: byId("histList"), count: byId("histCount"),
         storeNote: byId("storeNote"), controls: byId("journalControls"),
         handoff: byId("handoffNote") },
-      file: { title: doorId + " journal",
-        name: () => doorId + "-journal-" + new Date().toISOString().slice(0, 10) + ".atchart.md" },
+      /* the typed title wins; empty falls back to the standing default —
+       * read per call (a getter), so the export always sees the field NOW */
+      file: {
+        get title() {
+          return (byId("npTitle").value || "").trim() || doorId + " journal";
+        },
+        name: () => {
+          const t = (byId("npTitle").value || "").trim();
+          return (t ? t.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-")
+                    : doorId + "-journal-" + new Date().toISOString().slice(0, 10))
+            + ".atchart.md";
+        },
+      },
       onChange: () => { ctx.changed(); announceChart(surface ? surface.getDoc().pad : ""); },
     });
     announceChart(surface.getDoc().pad);
+    byId("npTitle").placeholder = "title — " + new Date().toISOString().slice(0, 10);
   },
 };
 return { notepadCard };
@@ -10605,8 +10701,10 @@ const staffBoard = {
          * door's own night-5 divergence, corrected to the prototype now the
          * bass line is a line. An off-key root has no degree to hang a
          * relative reference on; the readout says so, the staff skips. */
-        if (cfg.object !== "scale" && cfg.bass !== "none" && c.degree >= 0) {
-          const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos);
+        /* 4a: the centre's reference rides the bass clef under a scale too */
+        const stRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : c.degree;
+        if (cfg.bass !== "none" && (cfg.object === "scale" || c.degree >= 0)) {
+          const rp = placeReference(cfg.bass, stRefDeg, fld, cfg.strings, pos);
           if (rp.note) {
             const m0 = rp.note.midi, pc2 = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;
             const sp = fld.notes.find((n) => n.pc === pc2);
@@ -11085,6 +11183,19 @@ function initCollapse(doc) {
     const sum = doc.createElement("div");
     sum.className = "clpsSum";
     if (header) header.after(sum); else p.prepend(sum);
+    /* THE HEADER SLOT (260913b, item 2 — the first shell change in
+     * seventeen nights, reported not absorbed): a panel's module may mark
+     * ONE element `data-header-slot`; the shell seats it in the header
+     * band, left of the ⓘ and the chevron — the ⓘ's own precedent. The
+     * shell owns placement; the element, its id and its behaviour stay
+     * the module's. Hidden while collapsed, as the ⓘ is. */
+    const slot = p.querySelector("[data-header-slot]");
+    if (slot) {
+      // placement styled inline: a stylesheet rule would orphan the CSS
+      // check in every door whose modules declare no slot
+      slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
+      p.appendChild(slot);
+    }
     const btn = doc.createElement("button");
     btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse";
     btn.addEventListener("click", () => {

@@ -145,11 +145,12 @@ export const neckReadout = {
          * the stack becomes over it — R19's sentence. The name arrives from
          * compositeOver's read-back through chord.mjs, or honestly not at
          * all; a refusal is spoken by name, never blanked. */
+        const roRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;   // 4a: the centre
         if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
           bits.push(`<span style="color:#B82929">reference refused: the reference is relative to the ` +
             `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
-        } else if (cfg.object !== "scale" && cfg.bass !== "none") {
-          const rp = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
+        } else if (cfg.bass !== "none") {
+          const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos);
           check("the reference is a real fretted note or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret

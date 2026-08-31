@@ -124,10 +124,17 @@ test("THE FIGURE REFUSES JUNK BY NAME (260910, item 2) — and incomplete is not
   const q = orderBy("tones", "R,Q", sel);
   assert.equal(q.order, null);
   assert.ok(/"Q"/.test(q.err) && /not a tone/.test(q.err), `named: ${q.err}`);
-  // the pattern alphabet was tolerant too — junk digits vanished silently
+  // the pattern alphabet was tolerant too — junk digits vanished silently.
+  // REWRITTEN 260913b (item 4b, with the reason): 9 joined the TONES
+  // alphabet (R 3 5 7 9 11 13, the centre's compounds), so under pattern
+  // it now draws the mode-mismatch notice — the switch offered, the same
+  // law that already governs R and 7. Still loud, still named.
   const nine = orderBy("pattern", "9,9", sel);
   assert.equal(nine.order, null);
-  assert.ok(/"9"/.test(nine.err) && /not a string/.test(nine.err), `named: ${nine.err}`);
+  assert.ok(/TONES figure/.test(nine.err) && /switch it to tones/.test(nine.err), `named: ${nine.err}`);
+  // an 8 has no home in either alphabet and keeps the junk refusal
+  const eight = orderBy("pattern", "8", sel);
+  assert.ok(/"8"/.test(eight.err) && /not a string/.test(eight.err), `named: ${eight.err}`);
   // INCOMPLETE is not INVALID: a trailing separator is on the way to a
   // figure, not wrong — it must never raise (Daniel's ruling, 260910)
   for (const [addr, txt] of [["tones", "R,"], ["tones", "R-"], ["pattern", "4,"],

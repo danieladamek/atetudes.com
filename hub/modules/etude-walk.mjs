@@ -122,8 +122,14 @@ export const etudeWalk = {
        * sound⊆sight pin permits drawn-but-silent). A scale take keeps no
        * reference path at all, as before. */
       let refMidi = null;
-      if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree >= 0 && sel.length) {
-        const rp = placeReference(cfg.bass, cur.degree, fld, run.strings, pos);
+      /* THE CENTRE WORKS (260913b, item 4a): in scale mode the reference
+       * places against the MODAL CENTRE — same placeReference, same degree
+       * arithmetic, the origin is cfg.ref instead of the chord's degree.
+       * A mode is only audible against its centre; now it sounds. */
+      const refDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
+      if (cfg.bass !== "none" && refDeg >= 0 && sel.length
+          && (cfg.object === "scale" || cur.degree >= 0)) {
+        const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos);
         if (rp.note) refMidi = rp.note.midi;
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value

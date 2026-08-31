@@ -312,8 +312,10 @@ export const staffBoard = {
          * door's own night-5 divergence, corrected to the prototype now the
          * bass line is a line. An off-key root has no degree to hang a
          * relative reference on; the readout says so, the staff skips. */
-        if (cfg.object !== "scale" && cfg.bass !== "none" && c.degree >= 0) {
-          const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos);
+        /* 4a: the centre's reference rides the bass clef under a scale too */
+        const stRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : c.degree;
+        if (cfg.bass !== "none" && (cfg.object === "scale" || c.degree >= 0)) {
+          const rp = placeReference(cfg.bass, stRefDeg, fld, cfg.strings, pos);
           if (rp.note) {
             const m0 = rp.note.midi, pc2 = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;
             const sp = fld.notes.find((n) => n.pc === pc2);

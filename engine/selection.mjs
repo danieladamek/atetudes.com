@@ -448,12 +448,9 @@ export function orderBy(address, text, notes) {
    * carrying the OTHER mode's letters is named as such, with the switch
    * offered, instead of half-reading it in the wrong alphabet. Tokens legal
    * in both alphabets (3, 5) stay ambiguous and read as the current mode. */
-  if (address === "pattern" && /R|7/.test(raw))
-    return { order: null, err: "this reads as a TONES figure (R and 7 are roles, not strings) — " +
+  if (address === "pattern" && /R|7|9/.test(raw))
+    return { order: null, err: "this reads as a TONES figure (R, 7 and the extensions are roles, not strings) — " +
       "the address is set to pattern; switch it to tones" };
-  if (address !== "pattern" && /[12468]/.test(raw))
-    return { order: null, err: "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
-      "the address is set to tones; switch it to pattern" };
   /* THE JUNK REFUSAL (260910, item 2 — Daniel's ruling on the eleventh
    * silence): "R,Q" used to keep the R and drop the Q without a word — the
    * regex harvest was tolerant in both alphabets ("9,9" even read as an
@@ -461,17 +458,43 @@ export function orderBy(address, text, notes) {
    * token, or refused BY NAME — the changes field's manners (child 7),
    * applied to the figure. INCOMPLETE is not INVALID: separators are
    * skippable, so "R," on the way to "R,3" never errs — the distinction
-   * lives in the grammar, not in event timing. */
-  const legal = address === "pattern" ? "123456" : "R357";
+   * lives in the grammar, not in event timing.
+   *
+   * THE TONES ALPHABET GREW COMPOUNDS (260913b, item 4b — the centre's
+   * ruling): R 3 5 7 9 11 13, longest first so 11 and 13 never half-read
+   * as strings. 1/2/4/6/8 alone stay the pattern alphabet's and keep the
+   * mode-mismatch notice. */
   const toks = [];
-  for (const ch of raw) {
-    if (/[,\-\s.·]/.test(ch)) continue;
-    if (legal.includes(ch)) { toks.push(ch); continue; }
-    return { order: null, err: address === "pattern"
-      ? `"${ch}" is not a string — strings are 1–6`
-      : `"${ch}" is not a tone — tones are R, 3, 5, 7` };
+  if (address === "pattern") {
+    for (const ch of raw) {
+      if (/[,\-\s.·]/.test(ch)) continue;
+      if ("123456".includes(ch)) { toks.push(ch); continue; }
+      return { order: null, err: `"${ch}" is not a string — strings are 1–6` };
+    }
+  } else {
+    const TONE_TOKENS = ["13", "11", "9", "7", "5", "3", "R"];
+    let i = 0;
+    while (i < raw.length) {
+      const ch = raw[i];
+      if (/[,\-\s.·]/.test(ch)) { i += 1; continue; }
+      const hit = TONE_TOKENS.find((t) => raw.startsWith(t, i));
+      if (hit) { toks.push(hit); i += hit.length; continue; }
+      if ("12468".includes(ch))
+        return { order: null, err: "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
+          "the address is set to tones; switch it to pattern" };
+      return { order: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13` };
+    }
   }
   if (!toks.length) return { order: null, err: null };
+  /* a selection whose notes carry no ROLES is the scale box (scaleTake) —
+   * tones then address DEGREES FROM THE CENTRE (deg, already re-rooted by
+   * the field), and a repeat is the ordinal over that degree's occurrences
+   * low → high, wrapping — the pattern alphabet's own repeat law, ported.
+   * Derived from the selection's own shape, never from a mode flag. */
+  const degreeAddressed = notes.length > 0 && notes.every((n) => n.role == null);
+  const degOfTok = (t) => (t === "R" ? 0 : (Number(t) - 1) % 7);
+  const wordOf = (t) => t === "R" ? "root"
+    : t + ({ "3": "rd" }[t] || "th");
   const order = [];
   const used = {};
   for (const tok of toks) {
@@ -483,10 +506,20 @@ export function orderBy(address, text, notes) {
       const k = (used[s] || 0) % onStr.length;      // A REPEAT IS THE ORDINAL, wrapping
       used[s] = (used[s] || 0) + 1;
       order.push(onStr[k]);
+    } else if (degreeAddressed) {
+      const d = degOfTok(tok);
+      const occ = notes.filter((n) => n.deg === d).sort((a, b) => a.midi - b.midi);
+      if (!occ.length)
+        return { order: null, err: `this box carries no ${wordOf(tok)} of the centre — step or widen the window` };
+      const k = (used[tok] || 0) % occ.length;      // the same ordinal law
+      used[tok] = (used[tok] || 0) + 1;
+      order.push(occ[k]);
     } else {
+      if (!"R357".includes(tok) || tok.length > 1)
+        return { order: null, err: `${wordOf(tok)}s live in the SCALE box — a chord selection carries R, 3, 5, 7` };
       const hit = notes.find((n) => n.role === tok);
       if (!hit)
-        return { order: null, err: `this selection carries no ${tok === "R" ? "root" : tok + (tok === "3" ? "rd" : "th")}` };
+        return { order: null, err: `this selection carries no ${wordOf(tok)}` };
       order.push(hit);
     }
   }

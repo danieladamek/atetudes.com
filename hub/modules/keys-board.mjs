@@ -125,8 +125,10 @@ export const keysBoard = {
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
        * the marks list) — hollow ring, the board's own idiom for "under" */
-      if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree >= 0) {
-        const rp = placeReference(cfg.bass, cur.degree, fld, cfg.strings, pos);
+      /* 4a (260913b): the centre's reference rings here too */
+      const kyRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
+      if (cfg.bass !== "none" && (cfg.object === "scale" || cur.degree >= 0)) {
+        const rp = placeReference(cfg.bass, kyRefDeg, fld, cfg.strings, pos);
         if (rp.note && rp.note.midi >= LO && rp.note.midi <= HI) {
           const black = BLACK.includes(mod(rp.note.midi, 12));
           const cx = xOf(rp.note.midi) + (black ? ww * 0.3 : ww / 2);
