@@ -40,7 +40,8 @@ export const notepadCard = {
   /* the notebook is where a take is written DOWN, so it reads last on any door
    * that also carries material boards (build.mjs `order`, default 0) */
   order: 90,
-  controls: ["journalIn", "saveEntry", "clearPad", "exportLog", "importBtn",
+  controls: ["journalIn", "saveEntry", "clearPad", "exportLog", "copyBtn",
+    "importBtn", "paletteBtn", "paletteRoot",
     "histList", "histCount", "clearConfirm", "clearSave", "clearDiscard",
     "clearCancel", "storeNote", "handoffNote"],
 
@@ -64,14 +65,21 @@ export const notepadCard = {
       <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
         placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
+      <!-- v0.9's ratified row (260911, item 1): six buttons, one row, THAT
+           order — Copy between Export and Import. The host takes the
+           placement the auto-append was covering for; the message line sits
+           UNDER the row so it can never wrap the buttons. -->
       <div class="transport journalcontrols" id="journalControls">
         <button id="saveEntry" data-control="saveEntry" class="primary"></button>
         <button id="clearPad" data-control="clearPad"></button>
         <button id="exportLog" data-control="exportLog"></button>
+        <button id="copyBtn" data-control="copyBtn"></button>
         <button id="importBtn" data-control="importBtn"></button>
+        <button id="paletteBtn" data-control="paletteBtn"></button>
         <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json">
-        <span id="saveMsg" class="hint nomargin"></span>
       </div>
+      <div class="padmsgs"><span id="saveMsg" class="hint nomargin"></span></div>
+      <div id="paletteRoot" data-control="paletteRoot"></div>
       <div class="transport journalconfirm" id="clearConfirm" data-control="clearConfirm">
         <span class="hint nomargin">that note is filed nowhere —</span>
         <button id="clearSave" data-control="clearSave" class="primary">Save and clear</button>
@@ -99,6 +107,8 @@ export const notepadCard = {
 #importFile{display:none}
 .journalcontrols{margin-top:10px}
 .journalconfirm{display:none;margin-top:6px}
+.padmsgs{margin-top:6px;min-height:0}
+.padmsgs .hint:empty{display:none}
 .nomargin{margin:0}
 .storenote{text-transform:none;letter-spacing:0;font-weight:normal}
 .hist{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
@@ -203,7 +213,9 @@ export const notepadCard = {
     surface = createNotepadSurface({
       adapter: {
         app: doorId, version: 1,
-        nouns: { item: "entry", apply: "Restore étude" },
+        /* v0.9's wording, adopted 260911 (item 1 / D12): "Save note", not
+         * "Save entry" — the label derives from this noun, never hand-set */
+        nouns: { item: "note", apply: "Restore étude" },
         snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}) }),
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
@@ -233,6 +245,8 @@ export const notepadCard = {
         clearBtn: byId("clearPad"), confirmRoot: byId("clearConfirm"),
         confirmSave: byId("clearSave"), confirmDiscard: byId("clearDiscard"),
         confirmCancel: byId("clearCancel"), exportBtn: byId("exportLog"),
+        copyBtn: byId("copyBtn"), paletteBtn: byId("paletteBtn"),
+        paletteRoot: byId("paletteRoot"),
         importBtn: byId("importBtn"), importFile: byId("importFile"),
         msg: byId("saveMsg"), importMsg: byId("importMsg"),
         list: byId("histList"), count: byId("histCount"),

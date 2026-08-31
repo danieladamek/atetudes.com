@@ -693,6 +693,34 @@ def run_door(pw, door_id):
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260911 item 1: SIX CONTROLS, ONE ROW, v0.9's ORDER ----
+        # The host never took the placement, so Copy and Palette auto-appended
+        # AFTER the message span and wrapped to a second line the moment a
+        # message showed. Now the card declares all six in v0.9's ratified
+        # order (Copy between Export and Import), the message OUT of the row.
+        # The ORDER is asserted, not presence — presence was never the defect.
+        np_row = page.evaluate("""() => {
+          const row = document.getElementById('journalControls');
+          if (!row) return null;
+          const btns = [...row.children].filter(c => c.tagName === 'BUTTON');
+          return { ids: btns.map(b => b.id),
+                   labels: btns.map(b => b.textContent.trim()),
+                   msgInRow: !!row.querySelector('#saveMsg'),
+                   wraps: (() => { const ys = btns.map(b => b.getBoundingClientRect().top);
+                     return Math.max(...ys) - Math.min(...ys) > 4; })() }; }""")
+        check(np_row is not None and np_row["ids"] ==
+              ["saveEntry", "clearPad", "exportLog", "copyBtn", "importBtn", "paletteBtn"],
+              f"{tag} the six controls sit in v0.9's ORDER — Copy between Export and "
+              f"Import: {np_row and np_row['ids']}")
+        check(np_row is not None and np_row["labels"] ==
+              ["Save note", "Clear", "Export (.atchart.md)", "Copy", "Import", "Palette"],
+              f"{tag} the labels are v0.9's — 'Save note', derived from the adapter's "
+              f"noun: {np_row and np_row['labels']}")
+        check(np_row is not None and not np_row["msgInRow"],
+              f"{tag} #saveMsg is OUT of the button row — the wrap was the defect")
+        check(np_row is not None and not np_row["wraps"],
+              f"{tag} the six buttons hold ONE row at desktop width")
+
         # ---- 260910 item 2: THE FIGURE REFUSES JUNK BY NAME ----
         # "R,Q" silently kept the R and dropped the Q — the eleventh silence,
         # and Daniel's ruling: loud, lossy and stated. The figure now has the
@@ -2124,7 +2152,12 @@ console.log(JSON.stringify(out));
               f"{tag} the entry was not filed")
         check(page.inner_text("#histCount") == "1", f"{tag} the count did not follow")
         pal = page.query_selector("#journalControls >> text=Palette")
-        check(pal is not None, f"{tag} the surface did not auto-append Palette")
+        # message updated 260911 (item 1): the card now DECLARES the palette
+        # button (v0.9's row), so "auto-append" no longer describes the doors
+        # that carry it — the assertion itself is unchanged: Palette exists
+        # in the controls row, however it got there. The auto-append fallback
+        # stays exercised by the engine's own stub-host tests.
+        check(pal is not None, f"{tag} Palette must sit in the controls row")
         if pal:
             pal.click()
             check(page.eval_on_selector_all(".palette", "e => e.length") == 1,
