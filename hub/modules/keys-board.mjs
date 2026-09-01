@@ -16,7 +16,7 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
@@ -129,7 +129,8 @@ export const keysBoard = {
       else {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          : oneOfEach(gripFit(cur.tones, run.strings.length * cfg.notesPer).tones,
+              pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || [];
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides

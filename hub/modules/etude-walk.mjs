@@ -43,7 +43,7 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } from "../../engine/selection.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE,
@@ -120,9 +120,14 @@ export const etudeWalk = {
           sel = reRead(sel, refDeg);
       }
       else {
+        /* THE NAMED DROP (260914, item 3): an extended stack deeper than
+         * the placement's capacity reduces by gripFit's rule, and the
+         * dropped roles are SAID (the boards speak them; the walk sounds the kept stack) */
+        const fit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
+          : gripFit(cur.tones, run.strings.length * cfg.notesPer);
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || [];
       }
       /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's

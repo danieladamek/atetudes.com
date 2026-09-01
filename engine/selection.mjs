@@ -79,8 +79,27 @@ import { positionOf, materialIn } from "./position.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
 
-/** the roles a diatonic stack wears, by scale-step offset */
-const OFFSET_ROLE = { 0: "R", 2: "3", 4: "5", 6: "7" };
+/** the role a scale-step offset wears — DERIVED, not tabled: offset 0 is
+ * the root, and every other even offset o names degree o+1 (2→"3" … 12→"13",
+ * the compounds being octave-displaced sevens). 260914 item 3: the old
+ * four-entry table WAS this formula, written out — extending it to 9/11/13
+ * meant deleting it, not growing it. */
+const roleOfOffset = (o) => (o === 0 ? "R" : String(o + 1));
+const OFFSET_ROLE = new Proxy({}, {
+  get: (_, k) => {
+    const o = Number(k);
+    return Number.isInteger(o) && o >= 0 && o % 2 === 0 && o <= 12
+      ? roleOfOffset(o) : undefined;
+  },
+});
+
+/** STACK_DEPTH — depth is DATA (260914 item 3): every stacked object is
+ * "thirds all the way up", differing only in how many. A new depth is a new
+ * row here, and objectOffsets/objectTones/the hub menus all derive from it. */
+export const STACK_DEPTH = { triad: 3, tetrad: 4, ninth: 5, eleventh: 6, thirteenth: 7 };
+
+/* the degrees a dyad may name — the tetrad's own degrees, derived */
+const DYAD_DEGREES = Array.from({ length: STACK_DEPTH.tetrad }, (_, i) => 2 * i + 1);
 
 /** objectOffsets(object, dyad) → the scale-step offsets an object selects,
  * or null for a scale (the whole box — scaleTake's territory). CHILD 4's
@@ -94,13 +113,13 @@ const OFFSET_ROLE = { 0: "R", 2: "3", 4: "5", 6: "7" };
  * Unknown objects and malformed dyads refuse by name (the loud-refusal law). */
 export function objectOffsets(object, dyad = [3, 7]) {
   if (object === "scale") return null;
-  if (object === "triad" || object === "tetrad")
-    return Array.from({ length: object === "triad" ? 3 : 4 }, (_, i) => 2 * i);
+  if (object in STACK_DEPTH)
+    return Array.from({ length: STACK_DEPTH[object] }, (_, i) => 2 * i);
   if (object === "shell") return [1, 3, 7].map((d) => d - 1);
   if (object === "dyad") {
     if (!Array.isArray(dyad) || dyad.length !== 2 || dyad[0] === dyad[1] ||
-        dyad.some((d) => ![1, 3, 5, 7].includes(d)))
-      throw new Error(`objectOffsets: a dyad is two distinct chord-tone degrees from 1/3/5/7, not ${JSON.stringify(dyad)}`);
+        dyad.some((d) => !DYAD_DEGREES.includes(d)))
+      throw new Error(`objectOffsets: a dyad is two distinct chord-tone degrees from ${DYAD_DEGREES.join("/")}, not ${JSON.stringify(dyad)}`);
     return dyad.map((d) => d - 1);
   }
   throw new Error(`objectOffsets: "${object}" is not an object this engine knows`);
@@ -123,7 +142,7 @@ export function objectTones(parsed, object, dyad = [3, 7]) {
   const offsets = objectOffsets(object, dyad);
   if (offsets === null)
     throw new Error("objectTones: a scale is not a chord object — the scale path is scaleTake's");
-  const SLOT_ROLE = ["R", "3", "5", "7"];
+  const SLOT_ROLE = Array.from({ length: 7 }, (_, i) => roleOfOffset(2 * i));
   const tones = [], absent = [];
   for (const off of offsets) {
     const i = off / 2;
@@ -132,6 +151,32 @@ export function objectTones(parsed, object, dyad = [3, 7]) {
     else absent.push(SLOT_ROLE[i]);
   }
   return { tones, absent };
+}
+
+/** gripFit(tones, slots) → { tones, dropped, refuse? } — a stack deeper
+ * than the strings can carry drops tones by a NAMED rule (260914 item 3,
+ * PROPOSED like `bed`, not yet ratified): the 5th goes first, then the
+ * non-naming extensions 11-before-9; the root, the 3rd, the 7th and the
+ * NAMING extension (the last role — what the chord is called after) are
+ * never dropped. Whatever is dropped is returned by name so every face can
+ * SAY it. Past the rule's reach it refuses by name rather than inventing a
+ * further omission. A stack that fits passes through verbatim. */
+export function gripFit(tones, slots) {
+  if (tones.length <= slots) return { tones, dropped: [] };
+  const roles = tones.map((t) => t.role);
+  const naming = roles[roles.length - 1];
+  const droppable = ["5", ...["11", "9"].filter((r) => roles.includes(r) && r !== naming)];
+  const dropped = [];
+  let keep = [...tones];
+  for (const r of droppable) {
+    if (keep.length <= slots) break;
+    const i = keep.findIndex((t) => t.role === r);
+    if (i >= 0) { dropped.push(r); keep.splice(i, 1); }
+  }
+  if (keep.length > slots)
+    return { tones: keep, dropped,
+      refuse: `${keep.length} tones after the drops and only ${slots} strings — no named rule reduces further` };
+  return { tones: keep, dropped };
 }
 
 /** fieldPartition(tones, fld) → { inKey, offKey } — which of a chord's tones

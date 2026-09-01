@@ -22,7 +22,7 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } from "../../engine/selection.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
@@ -116,7 +116,8 @@ export const staffBoard = {
         }
         const r = cfg.take === "all"
           ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(c.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          : oneOfEach(gripFit(c.tones, run.strings.length * cfg.notesPer).tones,
+              pool, { n: cfg.notesPer, centre: pos.centre });
         return r;
       };
 

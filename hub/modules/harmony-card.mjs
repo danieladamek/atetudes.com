@@ -30,6 +30,9 @@ const OBJECTS = [
   ["dyad", "Dyad", true],           // child 4: two chord tones, by role
   ["triad", "Triad", true],
   ["tetrad", "Tetrad", true],
+  ["ninth", "9th chord", true],     // 260914 item 3: depth is data —
+  ["eleventh", "11th chord", true], // offsets 2i to the named extension,
+  ["thirteenth", "13th chord", true], // mod7; Grip drops by a NAMED rule
   ["shell", "Shell", true],         // child 4: R + the guide tones
 ];
 

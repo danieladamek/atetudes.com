@@ -14,7 +14,7 @@
 import { field, OPEN_MIDI } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
@@ -80,10 +80,17 @@ export const neckReadout = {
         if (prog.err) absences.push(prog.err);
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
         else {
+          const roFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
+            : gripFit(cur.tones, run.strings.length * cfg.notesPer);
           const r = cfg.take === "all"
             ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-            : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+            : oneOfEach(roFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
           sel = r.notes || [];
+          if (roFit.dropped.length)
+            absences.push(`the ${roFit.dropped.join(", ")} dropped by the grip rule — `
+              + `${run.strings.length * cfg.notesPer} slots carry `
+              + roFit.tones.map((t) => t.role).join(" "));
+          if (roFit.refuse) absences.push(roFit.refuse);
           if (cur.absent.length)
             absences.push(`${cur.symbol} has no ${cur.absent.join(" or ")} — the chord cannot fill that slot`);
           if (cur.offKey.length)

@@ -837,6 +837,101 @@ def run_door(pw, door_id):
               { detail: { index: 0, request: true } }))""")
             page.wait_for_timeout(250)
 
+        # ---- 260914 item 3: THE STACKS GO PAST FOUR, AND THE DROP HAS A NAME ----
+        # Depth is DATA (STACK_DEPTH), not a ternary; the grip drops by a
+        # NAMED rule (5th first, then non-naming extensions 11-before-9;
+        # R/3/7/the naming extension never — PROPOSED, like `bed`) and
+        # whatever is dropped is SAID on the face, every time. SOUND = SIGHT:
+        # the walk's fit is the boards' fit — the NOTE stream carries exactly
+        # the kept roles. The scale/Grip boundary is untouched.
+        c3menu = page.evaluate("""() => [...document.querySelectorAll('#hcObj option')]
+          .map(o => o.value)""")
+        check(all(o in c3menu for o in ["ninth", "eleventh", "thirteenth"]),
+              f"{tag} 3: the menu offers the extended stacks: {c3menu}")
+        page.select_option("#hcObj", "thirteenth"); page.wait_for_timeout(300)
+        c3g = page.evaluate("""() => ({
+          roles: [...document.querySelectorAll('#fieldSvg .fd-sel text')]
+            .map(t => t.textContent).sort(),
+          hint: document.getElementById('fdHint').textContent,
+          ro: document.getElementById('roLine').textContent })""")
+        check(c3g["roles"] == ["13", "3", "7", "R"],
+              f"{tag} 3: a 13th on a 4-string Grip draws exactly R 3 7 13 — "
+              f"the naming extension survives ({c3g['roles']})")
+        check("the 5, 11, 9 dropped by the grip rule" in c3g["hint"]
+              and "carry R 3 7 13" in c3g["hint"],
+              f"{tag} 3: the neck SAYS the drop, in the omission order: "
+              f"{c3g['hint'][:130]!r}")
+        check("dropped by the grip rule" in c3g["ro"],
+              f"{tag} 3: the readout says it too — two faces, one sentence: "
+              f"{c3g['ro'][:120]!r}")
+        # SOUND = SIGHT: the audited bar's NOTE roles are the KEPT roles
+        page.evaluate("""() => {
+          if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+            document.addEventListener('atetudes:note', e =>
+              window.__nt.push({ m: e.detail.midi, t: performance.now(),
+                                 r: e.detail.role || null })); }
+          window.__nt = []; }""")
+        page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
+        # the same entry normalisation item 1 needed: disarm a leftover walk
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.evaluate("() => { window.__nt = [] }")
+        page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(500)
+        # the walk's chord NOTEs are role-less (only the bass names itself) —
+        # so the pin is at the MIDIS: what sounded IS what is drawn, no more
+        c3nt = page.evaluate("""() => ({
+          heard: window.__nt.filter(n => n.r !== 'bass').map(n => n.m).sort(),
+          drawn: [...document.querySelectorAll('#fieldSvg .fd-sel')]
+            .map(g => +g.getAttribute('data-selmidi')).sort() })""")
+        check(len(c3nt["heard"]) == 4 and c3nt["heard"] == c3nt["drawn"],
+              f"{tag} 3: SOUND = SIGHT — the walk sounds exactly the kept "
+              f"four the neck draws ({c3nt})")
+        page.check("#fdMetChk"); page.wait_for_timeout(120)
+        # the 11th keeps its 11 — the naming extension is untouchable
+        page.select_option("#hcObj", "eleventh"); page.wait_for_timeout(300)
+        c3e = page.evaluate("""() => ({
+          roles: [...document.querySelectorAll('#fieldSvg .fd-sel text')]
+            .map(t => t.textContent).sort(),
+          hint: document.getElementById('fdHint').textContent })""")
+        check(c3e["roles"] == ["11", "3", "7", "R"]
+              and "the 5, 9 dropped by the grip rule" in c3e["hint"],
+              f"{tag} 3: a 4-string 11th keeps its 11, dropping the 5 and 9: {c3e}")
+        # Line has slots for all seven — nothing drops, nothing is said
+        page.select_option("#hcObj", "thirteenth"); page.wait_for_timeout(250)
+        page.evaluate("""() => { [...document.querySelectorAll('#fdNSeg button')]
+          .find(x => x.dataset.nps === '3').click(); }""")
+        page.wait_for_timeout(300)
+        c3l = page.evaluate("""() => ({
+          roles: [...new Set([...document.querySelectorAll('#fieldSvg .fd-sel text')]
+            .map(t => t.textContent))].sort(),
+          hint: document.getElementById('fdHint').textContent })""")
+        check(c3l["roles"] == ["11", "13", "3", "5", "7", "9", "R"],
+              f"{tag} 3: Line carries the whole 13th — all seven roles placed "
+              f"({c3l['roles']})")
+        check("dropped by the grip rule" not in c3l["hint"],
+              f"{tag} 3: …and the drop sentence is ABSENT when nothing drops")
+        # past the rule's reach: 2 slots for the kept four — refused BY NAME
+        page.evaluate("""() => { [...document.querySelectorAll('#fdNSeg button')]
+          .find(x => x.dataset.nps === '1').click(); }""")
+        page.wait_for_timeout(200)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { strings: [2, 1] } }))""")
+        page.wait_for_timeout(300)
+        c3r = page.inner_text("#fdHint")
+        check("no named rule reduces further" in c3r,
+              f"{tag} 3: two strings for the kept four REFUSES by name: {c3r[:140]!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { strings: [4, 3, 2, 1] } }))""")
+        page.wait_for_timeout(250)
+        # the scale/Grip boundary untouched: the box is still the whole box
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        c3s = page.evaluate("""() => ({
+          n: document.querySelectorAll('#fieldSvg .fd-sel').length,
+          hint: document.getElementById('fdHint').textContent })""")
+        check(c3s["n"] >= 10 and "dropped by the grip rule" not in c3s["hint"],
+              f"{tag} 3: the scale box is untouched by the grip rule "
+              f"({c3s['n']} selected, no drop sentence)")
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(250)
+
         # ---- 260913b item 4: THE CENTRE WORKS ----
         # Scale mode had a centre and nothing consumed it. Ruled: the bass
         # places against the CENTRE (same placeReference, different origin);

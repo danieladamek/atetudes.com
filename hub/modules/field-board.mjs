@@ -39,7 +39,7 @@
 import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit } from "../../engine/selection.mjs";
 import { placeReference, REFERENCE_CHOICES, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { progressionOf, chordAt, movementWord } from "../../engine/progression.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
@@ -395,11 +395,20 @@ export const fieldBoard = {
           else selMsg = `the centre cannot follow ${cur.symbol} — its root is not in the key`;
         }
       } else {
+        /* the named drop (260914, item 3): the kept stack sounds and draws;
+         * the dropped roles are SAID two lines below */
+        const fdFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
+          : gripFit(cur.tones, run.strings.length * cfg.notesPer);
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          : oneOfEach(fdFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || [];
         const parts = [];
+        if (fdFit.dropped.length)
+          parts.push(`the ${fdFit.dropped.join(", ")} dropped by the grip rule — `
+            + `${run.strings.length * cfg.notesPer} slots carry `
+            + fdFit.tones.map((t) => t.role).join(" "));
+        if (fdFit.refuse) parts.push(fdFit.refuse);
         if (cur.absent.length) parts.push(`${cur.symbol} has no ${cur.absent.join(" or ")}`);
         if (r.capped && r.capped.length) {
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
