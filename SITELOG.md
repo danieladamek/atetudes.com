@@ -1,3 +1,8 @@
+## 2026-08-31 — DEPLOYED: Multetudes v0.3.0 live
+
+- Actions run 33465344361 green (full gates in CI); the live study's shasum matches the
+  repo byte-for-byte (57324cd6a079), serving v0.3.0; the wrapper answers 200.
+
 ## 2026-08-31 — Multetudes v0.3.0: centricity — the centre's source, and the stacks past four
 
 - **Source edition v0.3.0** (night 19; Update Log 260914.1, the full report in the night's
