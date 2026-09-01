@@ -33,33 +33,38 @@ import { OWED_DRIFT } from "./_carriers.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (p) => readFileSync(join(ROOT, p), "utf8");
 
+/* RECONCILED 260915 (the stable pass): three entries left the register the
+ * night the beta reconciliation landed —
+ *   register-3-page-skin    EXPIRED (built: the shell wears v0.9's skin)
+ *   sharp-census-pin        EXPIRED (built: the sharp form landed in
+ *                           carrier-census.test.mjs)
+ *   non-diatonic-collections FIRED DUE exactly as designed (its precondition,
+ *                           the reconciliation, was met by the same night;
+ *                           no later observable precondition exists, so per
+ *                           its own `then` it moved to the backlog as a
+ *                           version of its own — the ruling's caution:
+ *                           "someday" does not get an entry)
+ * The firing is the mechanism proven on real entries, end to end. */
 export const DEFERRALS = [
   {
-    name: "register-3-page-skin",
-    deferred: "the house page skin becomes v0.9's (white ground, system font "
-      + "stack, the smaller title) — Daniel's direction 2026-08-28, register "
-      + "entry 3: one family ruling, one shell.mjs edit, one republish of "
-      + "every door",
-    until: "the beta reconciliation — whose own tracked trace is the "
-      + "OWED_DRIFT ledger emptying (the bundle re-inlines the owed modules)",
-    due: () => OWED_DRIFT.size === 0,
-    built: () => !read("hub/shell.mjs").includes("#ECECEE"),
-    then: "raise the family skin ruling with the RTE; the diff gate's "
-      + "allow-listed chrome class retires with it",
-  },
-  {
-    name: "sharp-census-pin",
-    deferred: "the sharper carrier-census form (owed drift excused only for "
-      + "hand-authored carriers; DERIVED door builds pin verbatim always) — "
-      + "drafted 260913 and REVERTED the same night: the published "
-      + "tetradetudes study is itself a derived build still carrying the "
-      + "known marker debt, so the sharp pin cannot land before the republish",
-    until: "the beta republish — the same tracked trace: OWED_DRIFT empties",
-    due: () => OWED_DRIFT.size === 0,
-    built: () => !read("engine/tests/carrier-census.test.mjs")
-      .includes("and REVERTED"),
-    then: "re-apply the draft from the night-17 report and delete its "
-      + "revert comment — the built() probe here reads that comment",
+    name: "extended-symbol-naming",
+    deferred: "read-back naming past the 9th — assembleSuffix's vocabulary "
+      + "stops before 11/13, so chordAt's diatonic 11ths/13ths fall back to "
+      + "the bare root with the honest-unnamed sentence (interim, ruled "
+      + "260915). Half-done naming produces confidently WRONG names, so the "
+      + "pass lands whole: alterations, omissions, slash forms, the round "
+      + "trip through chord.mjs",
+    until: "the naming pass — MEASURED 260915: assembleSuffix already "
+      + "speaks 13/m13 (dominant and minor); what is missing is the MAJOR "
+      + "branch (no maj11/maj13) and round-trips the law refuses. The "
+      + "pass's first observable trace is maj13 entering the vocabulary",
+    due: () => /maj13/.test(read("engine/reference.mjs")),
+    built: () => /thirteenth[\s\S]{0,200}(names|named)/.test(
+      read("engine/tests/reference.test.mjs")),
+    then: "finish the pass WITH its pins (a diatonic 13th names, asserted), "
+      + "retire the interim unnamed sentence where read-back now answers, "
+      + "and remove this entry — a taught vocabulary without its pins is "
+      + "the loud middle state this entry exists to catch",
   },
 ];
 

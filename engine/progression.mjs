@@ -251,6 +251,10 @@ export function chartBodyOf(chords, bars, fld) {
  *   symbol   the chip's name: the chord's own for a typed one; for a
  *            diatonic bar, compositeOver's read-back name (or the bare root
  *            when no honest suffix reads back)
+ *   unnamed  null when the symbol is a real name; otherwise the sentence
+ *            the face must say (ruled 260915: a silent bare root tells a
+ *            player their 13th is a plain triad — the refusal is named,
+ *            reference.mjs's own honestly-unnamed idiom)
  *   roman    the analysis line — v0.9's rule: lower case when the third is
  *            minor, ° when diminished, "—" when the root is off the key
  *   tones    the object's PLAYABLE tones ({role,pc}; off-key ones removed)
@@ -282,6 +286,10 @@ export function chordAt(prog, index, fld, object, dyad = [3, 7]) {
     const tri = diatonicTones(fld, degree, objectOffsets("triad")).map((t) => t.pc);
     return { kind: c.kind, degree, rootPc,
       symbol: named.name || named.bassName,
+      unnamed: named.name ? null
+        : `${named.bassName} is the root, not the name — this ${object}'s `
+          + "stack reads back no taught symbol (honestly unnamed; the "
+          + "naming pass owes the words)",
       roman: romanOf(degree, tri),
       tones, absent: [], offKey: [] };
   }

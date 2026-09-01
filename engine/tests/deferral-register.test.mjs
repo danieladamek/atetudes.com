@@ -27,9 +27,14 @@ test("the register's verdicts: met+unbuilt is DUE, built is EXPIRED, unmet is qu
 // ---- the live ledger -------------------------------------------------------
 
 test("the ledger is real and every probe RUNS — no vacuous quiet", () => {
-  assert.ok(DEFERRALS.length >= 2,
-    "the register opens with its two known deferrals (register-3's skin, "
-    + "the sharp census pin)");
+  /* PIN REWRITTEN 260915 (rule 7): the >=2 floor was the register's birth
+   * assertion (its two founding entries). The reconciliation settled both
+   * and non-diatonic fired through; extended-symbol-naming remains. The
+   * durable form: the walk must have something real to walk — an empty
+   * register is a rewrite-this-pin event, stating why, not a silent pass. */
+  assert.ok(DEFERRALS.length >= 1,
+    "the register must hold at least one live deferral — if it has "
+    + "genuinely emptied, rewrite this pin with that reason");
   for (const e of DEFERRALS) {
     assert.ok(e.name && e.deferred && e.until && e.then,
       `${e.name || "?"}: an entry states what, until-when and then-what`);
