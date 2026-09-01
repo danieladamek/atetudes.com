@@ -678,11 +678,17 @@ def run_door(pw, door_id):
             }, 120);
           }, true);
         }""")
-        page.evaluate("""() => { const b = [...document.querySelectorAll('button')]
-          .find((x) => x.textContent.trim() === '▶'); b.click(); }""")
+        # FOUND 260915 (item 1, measured at the change site): this leg was
+        # THE ARMER behind the two-night armed-walk hunt. It hunted play and
+        # stop by GLYPH ('▶'/'■'); night 17's transport-mini rebuild renamed
+        # the stop glyph to '⏹', the `if (b)` swallowed the miss (rule 2's
+        # exact shape), and the leg played WITHOUT EVER STOPPING — the walk
+        # arrived armed at every later leg, clock running, for 14 seconds of
+        # gate time. Role-addressed and UNCONDITIONAL now: a missing button
+        # fails loudly here, at the owner, instead of arming the night.
+        page.click('#tlStripMini button[data-role="play"]')
         page.wait_for_timeout(4500)
-        page.evaluate("""() => { const b = [...document.querySelectorAll('button')]
-          .find((x) => x.textContent.trim() === '■'); if (b) b.click(); }""")
+        page.click('#tlStripMini button[data-role="stop"]')
         page.wait_for_timeout(400)
         plog = page.evaluate("() => window.__pulseLog")
         step_i = next((i for i, r in enumerate(plog) if r["ev"] == "STEP"), None)
@@ -837,6 +843,36 @@ def run_door(pw, door_id):
               { detail: { index: 0, request: true } }))""")
             page.wait_for_timeout(250)
 
+
+        # ---- 260915 item 4: THE CC-1 AUDIT'S ONE FINDING, PINNED ----
+        # The ratification audit walked every disabled control against CC-1
+        # (the contradicting-controls doctrine, notes/specs). One violation:
+        # the chord-mode paint never CLEARED the scale paint's disable, so
+        # scale -> follows -> chord left "Bass tone" dead with no reason on
+        # any face (rule 10: the PAINT site is one of the three). The pin
+        # walks that exact path.
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+        page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
+          .find(x => x.dataset.src === 'follows').click(); }""")
+        page.wait_for_timeout(200)
+        cc1 = page.evaluate("""() => ({
+          dis: document.getElementById('hcRef').disabled,
+          lab: document.getElementById('hcRefLab').textContent })""")
+        check(cc1["dis"] is True and "following the changes" in cc1["lab"],
+              f"{tag} CC-1(a): under follows the fixed pick is off WITH its reason "
+              f"on its own label: {cc1}")
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(250)
+        cc1 = page.evaluate("""() => ({
+          dis: document.getElementById('hcRef').disabled,
+          lab: document.getElementById('hcRefLab').textContent })""")
+        check(cc1["dis"] is False and cc1["lab"] == "Bass tone",
+              f"{tag} CC-1 audit fix: the chord-mode paint CLEARS the scale "
+              f"disable — the bass is chord-relative, nothing contradicts it: {cc1}")
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
+        page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
+          .find(x => x.dataset.src === 'fixed').click(); }""")
+        page.wait_for_timeout(150)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
         # ---- 260914 item 3: THE STACKS GO PAST FOUR, AND THE DROP HAS A NAME ----
         # Depth is DATA (STACK_DEPTH), not a ternary; the grip drops by a
         # NAMED rule (5th first, then non-naming extensions 11-before-9;
@@ -872,8 +908,8 @@ def run_door(pw, door_id):
                                  r: e.detail.role || null })); }
           window.__nt = []; }""")
         page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
-        # the same entry normalisation item 1 needed: disarm a leftover walk
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        # (260915, item 1: the twin normalisation here removed with its
+        # sibling — the armer is fixed at the owner, the 260909 ring leg.)
         page.evaluate("() => { window.__nt = [] }")
         page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(500)
         # the walk's chord NOTEs are role-less (only the bass names itself) —
@@ -976,13 +1012,11 @@ def run_door(pw, door_id):
               window.__stepAll.push({ i: m.index, req: m.request === true,
                 atk: m.attack === true }); }, true); }
           window.__nt = []; window.__stepAll = []; }""")
-        # ENTRY NORMALISATION (260914, measured twice and owned): in the
-        # full run the walk can arrive ARMED from an earlier leg (the metro
-        # face read 'Stop' and two clean request→echo pairs produced zero
-        # notes — the armed branch swallows a same-index echo). One stop
-        # disarms whatever was left; the arming leg itself was hunted twice
-        # tonight and not found — flagged in the night's report.
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        # (260915, item 1: the entry normalisation that stood here was a
+        # symptom fix — the armer was the 260909 ring leg's silent glyph
+        # miss, found by logging armed's transitions, and is fixed at the
+        # owner. §4.4: a suppression with no live defect behind it is
+        # itself a divergence, so it is REMOVED, not kept.)
         page.evaluate("() => { window.__nt = [] }")
         page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(600)
         c4nt = page.evaluate("() => window.__nt.map(n => n.m)")
@@ -4355,14 +4389,19 @@ console.log(JSON.stringify(out));
         check("Chords take the bar's slots" in allinfo and "at the next bar" in allinfo,
               f"{tag} the Transport prose did not move into a popout verbatim (with the beat-fix clause)")
     if "journalIn" in r["controlsPresent"]:
-        # THE HANDOFF GUARANTEE STAYS ON THE FACE (the P1P3 correction): it is a
+        # THE PRIVACY GUARANTEE STAYS ON THE FACE (the P1P3 correction): it is a
         # privacy assurance, not instructional prose — prominence is part of what
         # it does, so it is NOT in a popout, and the notepad has no info button.
-        check("nothing leaves this machine" not in allinfo,
-              f"{tag} the Notepad handoff guarantee was hidden in a popout — a promise behind a click is weaker")
+        # PINS REWRITTEN 260915 (5d, the plain-English pass — rule 7): the
+        # guarantee is identical, the words are a player's ("Your notes stay
+        # on this computer — nothing is uploaded"); the old engineer's
+        # sentence ("the file is the handoff channel: nothing leaves this
+        # machine") is what Daniel could not act on.
+        check("nothing is uploaded" not in allinfo,
+              f"{tag} the Notepad privacy guarantee was hidden in a popout — a promise behind a click is weaker")
         face = page.query_selector("#handoffNote")
-        check(face is not None and "nothing leaves this machine" in face.inner_text() and face.is_visible(),
-              f"{tag} the handoff guarantee is not visible on the notepad face")
+        check(face is not None and "nothing is uploaded" in face.inner_text() and face.is_visible(),
+              f"{tag} the privacy guarantee is not visible on the notepad face")
     # OPEN a popout, and prove it dismisses without a modal — Escape and click-out
     ib = page.query_selector(".infoBtn")
     ib.click(); page.wait_for_timeout(60)

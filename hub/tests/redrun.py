@@ -12,6 +12,8 @@ A manual red-run never reaches for git at all.
   python3 hub/tests/redrun.py snap <file> [...]   snapshot before mutating
   python3 hub/tests/redrun.py restore [<file>...] restore from snapshot(s)
                                                   (no args: restore ALL pending)
+  python3 hub/tests/redrun.py drop <file> [...]   abandon a snapshot when the
+                                                  mutation became the keeper
   python3 hub/tests/redrun.py status              list pending snapshots
   python3 hub/tests/redrun.py selftest            the pin: prove uncommitted
                                                   work survives a mutate+restore
@@ -93,6 +95,25 @@ def restore(paths):
         print(f"restored {p}  ({len(data)} bytes, verified)")
 
 
+def drop(paths):
+    """Abandon pending snapshot(s) WITHOUT restoring — for when the
+    mutation became the keeper (wanted edits landed while the snapshot was
+    pending, so restore would now destroy them). Found on the tool's first
+    night: the second-snap refusal protects the original, but nothing
+    warned that restore had become the destructive verb. Loud by design."""
+    m = _load()
+    for p in paths:
+        key = str(Path(p).resolve())
+        if key not in m:
+            raise SystemExit(f"refused: no pending snapshot for {p}")
+        snap_path = Path(m[key])
+        del m[key]
+        _save(m)
+        snap_path.unlink()
+        print(f"dropped  {p} — the snapshot is gone; the CURRENT bytes are "
+              f"now the only version")
+
+
 def status():
     m = _load()
     if not m:
@@ -161,6 +182,10 @@ def main():
         snap(args)
     elif cmd == "restore":
         restore(args)
+    elif cmd == "drop":
+        if not args:
+            raise SystemExit("drop needs the file(s) whose snapshot to abandon")
+        drop(args)
     elif cmd == "status":
         status()
     elif cmd == "selftest":
