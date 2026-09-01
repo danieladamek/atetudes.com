@@ -1,3 +1,10 @@
+## 2026-09-01 — DEPLOYED: v0.4.0 live, all four moved studies spot-checked
+
+- Actions run 33552618431 green (full gates in CI). Every moved study's live shasum
+  matches the repo byte-for-byte: multetudes 2170d2a034ce · tetradetudes f175cb409a31 ·
+  metronome 2b2288fb69d7 · triadetudes d9664d89350d; all four wrappers answer 200; the
+  multetudes page serves v0.4.0. The reviewed baseline is live.
+
 ## 2026-09-01 — v0.4.0, THE STABLE PASS: the beta reconciliation — four studies move
 
 - **Source edition v0.4.0** (night 20; Update Log 260915.1; the full report in the night's
