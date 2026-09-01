@@ -70,7 +70,13 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
-    /* v0.2.1 (260913b, the centre): scale mode's centre made to work —
+    /* v0.3.0 (260914, centricity): the centre gets a SOURCE — fixed (a
+     * pedal under the moving chords) or follows (each bar re-centres),
+     * completing the 260831 deferral (register 26); the Harmony card
+     * renamed CENTRICITY (register 27); 9th/11th/13th chords with depth
+     * as data and the grip's NAMED drop said on the face (register 28);
+     * the notepad title persists with the pad (ruled, overruling v0.9).
+     * v0.2.1 (260913b, the centre): scale mode's centre made to work —
      * the bass against it, figures addressing degrees from it (the 9/11/13
      * compounds), movement back once a figure resolves, Placement's
      * boundary kept loud (register 25); the notepad's title in the header
@@ -93,7 +99,7 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.2.1",
+    blurb: "one tool that holds many études · v0.3.0",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

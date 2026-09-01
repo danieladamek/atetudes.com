@@ -254,7 +254,7 @@ export const notepadCard = {
           return fromTriadetudesV1(log).entries;
         } catch { return null; }
       },
-      els: { pad: byId("journalIn"), saveBtn: byId("saveEntry"),
+      els: { pad: byId("journalIn"), title: byId("npTitle"), saveBtn: byId("saveEntry"),
         clearBtn: byId("clearPad"), confirmRoot: byId("clearConfirm"),
         confirmSave: byId("clearSave"), confirmDiscard: byId("clearDiscard"),
         confirmCancel: byId("clearCancel"), exportBtn: byId("exportLog"),

@@ -30,7 +30,8 @@ import assert from "node:assert/strict";
 import { field } from "../field.mjs";
 import { positionOf, materialIn } from "../position.mjs";
 import { makeRun } from "../string-run.mjs";
-import { diatonicTones, oneOfEach, everyOccurrence, scaleTake, objectOffsets } from "../selection.mjs";
+import { diatonicTones, oneOfEach, everyOccurrence, scaleTake, objectOffsets, objectTones, gripFit, STACK_DEPTH } from "../selection.mjs";
+import { parseChord } from "../chord.mjs";
 import { lineVoicing, chooseVoicings, makeZone } from "../isolation.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
@@ -270,4 +271,74 @@ test("THE CAPPED LOSS IS LOUD (260909, 4b): a tone in the box that the cap canno
   assert.equal(r.resolvesAt, 2, "and the smallest cap that shows it is derived, not assumed");
   const r3 = everyOccurrence(tones, pool, { n: 3 });
   assert.deepEqual(r3.capped, [], "an uncapped take leaves nothing behind");
+});
+
+// ---------------------------------------------------------------------------
+// 260914 item 3 — DEPTH IS DATA, AND THE DROP HAS A NAME
+// ---------------------------------------------------------------------------
+
+test("260914-3: depth is DATA — every object's slot count derives from STACK_DEPTH, no ternary knows a number", () => {
+  assert.deepEqual(STACK_DEPTH,
+    { triad: 3, tetrad: 4, ninth: 5, eleventh: 6, thirteenth: 7 },
+    "the five stacked objects, each a depth");
+  for (const [obj, depth] of Object.entries(STACK_DEPTH)) {
+    const offs = objectOffsets(obj);
+    assert.equal(offs.length, depth, `${obj} offers ${depth} slots`);
+    assert.deepEqual(offs, Array.from({ length: depth }, (_, i) => 2 * i),
+      `${obj}'s offsets are thirds all the way up (2*i stays)`);
+  }
+});
+
+test("260914-3: the extended stacks carry the compound roles — a 13th chord's tones read R 3 5 7 9 11 13", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  for (const [obj, want] of [
+    ["ninth", ["R", "3", "5", "7", "9"]],
+    ["eleventh", ["R", "3", "5", "7", "9", "11"]],
+    ["thirteenth", ["R", "3", "5", "7", "9", "11", "13"]],
+  ]) {
+    const tones = diatonicTones(fld, 0, objectOffsets(obj));
+    assert.deepEqual(tones.map((t) => t.role), want, `${obj} roles`);
+    // an octave-displaced seven: the 9 is the 2's pitch class, and so on up
+    assert.equal(tones[4].pc, fld.pcs[1],
+      `${obj}: the 9 IS the 2's pitch class, an octave displaced`);
+  }
+});
+
+test("260914-3: gripFit — the NAMED drop: 5th first, then non-naming extensions 11-before-9; R, 3, 7 and the naming extension never", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const stack = (obj) => diatonicTones(fld, 0, objectOffsets(obj));
+  // a 13th on four slots: three drops, in the rule's order
+  const t4 = gripFit(stack("thirteenth"), 4);
+  assert.deepEqual(t4.tones.map((t) => t.role), ["R", "3", "7", "13"],
+    "a 4-slot 13th carries R 3 7 13 — the naming extension survives");
+  assert.deepEqual(t4.dropped, ["5", "11", "9"],
+    "and says so, in the omission order: the 5th first, then 11 before 9");
+  // an 11th on four slots: 11 is the NAMING extension and is untouchable
+  const e4 = gripFit(stack("eleventh"), 4);
+  assert.deepEqual(e4.tones.map((t) => t.role), ["R", "3", "7", "11"],
+    "a 4-slot 11th keeps its 11");
+  assert.deepEqual(e4.dropped, ["5", "9"], "dropping the 5th and the 9");
+  // a 13th on six slots: exactly one drop, and it is the 5th
+  const t6 = gripFit(stack("thirteenth"), 6);
+  assert.deepEqual(t6.dropped, ["5"], "six slots cost only the 5th");
+  // a stack that FITS is returned untouched — the rule never fires early
+  const n5 = gripFit(stack("ninth"), 5);
+  assert.deepEqual(n5.dropped, [], "a 5-slot ninth drops nothing");
+  assert.deepEqual(n5.tones, stack("ninth"), "and the tones pass through verbatim");
+  // past the rule's reach it REFUSES by name rather than inventing a drop
+  const t3 = gripFit(stack("thirteenth"), 3);
+  assert.ok(t3.refuse && t3.refuse.includes("no named rule"),
+    `3 slots for the kept four: the refusal is named (${t3.refuse})`);
+  assert.deepEqual(t3.tones.map((t) => t.role), ["R", "3", "7", "13"],
+    "the kept stack still comes back — the face can show what it CAN show");
+});
+
+test("260914-3: the dyad guard derives from the tetrad's own depth — no literal [1,3,5,7] hides in a check", () => {
+  // the guard's membership is exactly the tetrad's degree numbers
+  const tetradDegrees = Array.from({ length: STACK_DEPTH.tetrad }, (_, i) => 2 * i + 1);
+  assert.deepEqual(tetradDegrees, [1, 3, 5, 7]);
+  assert.deepEqual(objectTones(parseChord("C7"), "dyad", [3, 7]).tones.map((t) => t.role),
+    ["3", "7"], "a lawful dyad passes");
+  assert.throws(() => objectTones(parseChord("C"), "dyad", [9, 3]),
+    /dyad/, "a degree outside the tetrad's reach refuses");
 });

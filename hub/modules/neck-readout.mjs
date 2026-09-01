@@ -14,9 +14,9 @@
 import { field, OPEN_MIDI } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
-import { placeReference, compositeOver } from "../../engine/reference.mjs";
+import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
@@ -46,7 +46,8 @@ export const neckReadout = {
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
       bass: "none" ,
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
+      centreSrc: "fixed" };
     let index = 0;
 
     const render = () => {
@@ -58,7 +59,9 @@ export const neckReadout = {
       };
       let bits = [];
       try {
-        const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+        /* the centre's SOURCE (260914): material stable, reading per bar */
+        const fld = field({ key: cfg.key, scale: cfg.scale,
+          ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
         const run = makeRun(cfg.strings);
         const anchor = Math.max(...run.strings);
         const pos = positionOf({ field: fld, anchorString: anchor,
@@ -77,10 +80,17 @@ export const neckReadout = {
         if (prog.err) absences.push(prog.err);
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
         else {
+          const roFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
+            : gripFit(cur.tones, run.strings.length * cfg.notesPer);
           const r = cfg.take === "all"
             ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-            : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+            : oneOfEach(roFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
           sel = r.notes || [];
+          if (roFit.dropped.length)
+            absences.push(`the ${roFit.dropped.join(", ")} dropped by the grip rule — `
+              + `${run.strings.length * cfg.notesPer} slots carry `
+              + roFit.tones.map((t) => t.role).join(" "));
+          if (roFit.refuse) absences.push(roFit.refuse);
           if (cur.absent.length)
             absences.push(`${cur.symbol} has no ${cur.absent.join(" or ")} — the chord cannot fill that slot`);
           if (cur.offKey.length)
@@ -117,6 +127,21 @@ export const neckReadout = {
         bits.push(`bar <b>${index + 1}</b> of ${prog.chords.length}` +
           (cfg.object === "scale" ? "" :
             ` — <b>${cur.symbol}</b> <span class="ro-dim">(${cur.roman})</span>`));
+        const roRefDeg = cfg.object === "scale"
+          ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+          : cur.degree;   // 4a + 260914: the centre, from its source
+        /* WHICH SOURCE IS IN FORCE (260914): the sentence that resolves the
+         * strip/bass mismatch — a pedal under the moving chords, or a
+         * centre that follows. Being explicit here IS the fix; no separate
+         * mismatch sentence exists. */
+        if (cfg.object === "scale") {
+          if (cfg.centreSrc === "follows")
+            bits.push(roRefDeg != null
+              ? `the centre <b>follows the changes</b> — this bar reads against <b>${fld.notes[roRefDeg].name}</b>`
+              : `<span style="color:#B82929">the centre cannot follow ${cur.symbol} — its root is not in the key</span>`);
+          else
+            bits.push(`centre <b>${fld.notes[(cfg.ref ?? 0)].name}</b> — a pedal under the moving chords`);
+        }
         /* THE FRAME'S CARRYING CAPACITY (260908, 2c): computed and thrown
          * away until tonight — how many notes this frame holds and how many
          * of the progression's bars place in it at the current cap. Real
@@ -145,17 +170,23 @@ export const neckReadout = {
          * the stack becomes over it — R19's sentence. The name arrives from
          * compositeOver's read-back through chord.mjs, or honestly not at
          * all; a refusal is spoken by name, never blanked. */
-        const roRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;   // 4a: the centre
         if (cfg.object !== "scale" && cfg.bass !== "none" && cur.degree < 0) {
           bits.push(`<span style="color:#B82929">reference refused: the reference is relative to the ` +
             `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
-        } else if (cfg.bass !== "none") {
+        } else if (cfg.bass !== "none" && roRefDeg != null) {
           const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos);
           check("the reference is a real fretted note or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
               : typeof rp.reason === "string" && rp.reason.length > 0);
-          if (rp.note) {
+          if (rp.note && cfg.object === "scale") {
+            /* a scale has no stack to read back over the bass — the note is
+             * named plainly (the .map-on-null this line replaces was the
+             * night-18 4a change letting this branch run under a scale) */
+            const bn = fld.notes.find((n) => n.pc === (((rp.note.midi % 12) + 12) % 12));
+            bits.push(`the bass under the centre: <b>${bn ? bn.name : "?"}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
+              + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : ""));
+          } else if (rp.note) {
             const comp = compositeOver(fld, rp.note.keyDeg, cur.tones.map((t) => t.pc));
             bits.push(`over <b>${comp.bassName}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
               + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : "")

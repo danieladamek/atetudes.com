@@ -746,6 +746,192 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.wait_for_timeout(200)
 
+        # ---- 260914 item 2: THE CARD NAMES ITS PRINCIPLE ----
+        # Harmony -> CENTRICITY (ruled): the card defines the material and
+        # what organises it; harmony is Progression's, beside it. The card
+        # names the principle, the control inside names the value — and
+        # "the field" survives untouched in the module and the prose.
+        c2h = page.evaluate("""() => { const h = [...document.querySelectorAll('.card h2')]
+          .map(x => x.textContent.trim()); return h; }""")
+        check("Centricity" in c2h and "Harmony" not in c2h,
+              f"{tag} the card reads CENTRICITY, and no card reads Harmony: {c2h}")
+        check("the whole field" in page.inner_text("#fdHint"),
+              f"{tag} 'the field' survives in the prose — the set keeps its own word")
+
+        # ---- 260914 item 1: THE CENTRE HAS A SOURCE, PINNED AT THE SOUND ----
+        # A fixed centre and a moving progression were contradictory by
+        # construction; reference.mjs's own 260831 sentence deferred the
+        # fixed half "until the chords change" — child 7 landed 260901 and
+        # this completes it. Under FIXED, N bars sound the SAME bass pitch
+        # while the chords change; under FOLLOWS the bass tracks each bar's
+        # root. Asserted at the NOTE stream with raw-start parity — a
+        # message trace is not a sound. The window must not jump per bar
+        # under either source (the ratified window law).
+        if not page.evaluate("() => !!document.getElementById('hcCentreSrc')"):
+            check(False, f"{tag} the centre-source control is absent from this build")
+        else:
+            page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+            page.select_option("#fdBass2", "root"); page.wait_for_timeout(250)
+            page.evaluate("""() => {
+              if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+                document.addEventListener('atetudes:note', e =>
+                  window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
+              if (!window.__rawHooked) { window.__rawHooked = true;
+                for (const C of [AudioBufferSourceNode, OscillatorNode]) {
+                  const P = C.prototype.start;
+                  C.prototype.start = function(...a) { (window.__raw ||= []).push(1);
+                    return P.apply(this, a); }; } }
+              window.__nt = []; window.__raw = []; }""")
+            page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
+            def cs_basses():
+                out = []
+                for cs_bar in range(4):
+                    page.evaluate("() => { window.__nt = []; window.__raw = [] }")
+                    page.click(f'#tlScroll button >> nth={cs_bar}')
+                    page.wait_for_timeout(450)
+                    got = page.evaluate("""() => ({
+                      bass: (window.__nt.find(n => n.r === 'bass') || {}).m,
+                      nt: window.__nt.length, raw: window.__raw.length,
+                      win: (document.getElementById('roLine').textContent
+                        .match(/frets (\\d+[–-]\\d+)/) || [])[1] })""")
+                    out.append(got)
+                return out
+            cs_f = cs_basses()
+            check(all(g["bass"] is not None for g in cs_f)
+                  and len(set(g["bass"] for g in cs_f)) == 1,
+                  f"{tag} FIXED: four bars, one bass pitch — the pedal "
+                  f"({[g['bass'] for g in cs_f]})")
+            check(all(g["raw"] == g["nt"] for g in cs_f),
+                  f"{tag} FIXED: raw starts == NOTEs, every audited bar "
+                  f"({[(g['nt'], g['raw']) for g in cs_f]})")
+            page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
+              .find(b => b.dataset.src === 'follows').click(); }""")
+            page.wait_for_timeout(300)
+            cs_v = cs_basses()
+            check(all(g["bass"] is not None for g in cs_v)
+                  and len(set(g["bass"] for g in cs_v)) >= 3,
+                  f"{tag} FOLLOWS: the bass tracks each bar's root "
+                  f"({[g['bass'] for g in cs_v]})")
+            check(all(g["raw"] == g["nt"] for g in cs_v),
+                  f"{tag} FOLLOWS: raw parity holds "
+                  f"({[(g['nt'], g['raw']) for g in cs_v]})")
+            check(len(set(g["win"] for g in cs_f + cs_v)) == 1,
+                  f"{tag} the WINDOW never jumps under either source "
+                  f"({sorted(set(g['win'] for g in cs_f + cs_v))})")
+            ro = page.inner_text("#roLine")
+            check("follows the changes" in ro,
+                  f"{tag} the readout says which source is in force: {ro[:100]!r}")
+            page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
+              .find(b => b.dataset.src === 'fixed').click(); }""")
+            page.wait_for_timeout(200)
+            ro = page.inner_text("#roLine")
+            check("a pedal under the moving chords" in ro,
+                  f"{tag} …and the pedal names itself too: {ro[:100]!r}")
+            page.check("#fdMetChk")
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+              { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+                          object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
+                          address: 'pattern', figure: '', ref: 0, bass: 'none',
+                          centreSrc: 'fixed', source: 'cycle', custom: '' } }))""")
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+              { detail: { index: 0, request: true } }))""")
+            page.wait_for_timeout(250)
+
+        # ---- 260914 item 3: THE STACKS GO PAST FOUR, AND THE DROP HAS A NAME ----
+        # Depth is DATA (STACK_DEPTH), not a ternary; the grip drops by a
+        # NAMED rule (5th first, then non-naming extensions 11-before-9;
+        # R/3/7/the naming extension never — PROPOSED, like `bed`) and
+        # whatever is dropped is SAID on the face, every time. SOUND = SIGHT:
+        # the walk's fit is the boards' fit — the NOTE stream carries exactly
+        # the kept roles. The scale/Grip boundary is untouched.
+        c3menu = page.evaluate("""() => [...document.querySelectorAll('#hcObj option')]
+          .map(o => o.value)""")
+        check(all(o in c3menu for o in ["ninth", "eleventh", "thirteenth"]),
+              f"{tag} 3: the menu offers the extended stacks: {c3menu}")
+        page.select_option("#hcObj", "thirteenth"); page.wait_for_timeout(300)
+        c3g = page.evaluate("""() => ({
+          roles: [...document.querySelectorAll('#fieldSvg .fd-sel text')]
+            .map(t => t.textContent).sort(),
+          hint: document.getElementById('fdHint').textContent,
+          ro: document.getElementById('roLine').textContent })""")
+        check(c3g["roles"] == ["13", "3", "7", "R"],
+              f"{tag} 3: a 13th on a 4-string Grip draws exactly R 3 7 13 — "
+              f"the naming extension survives ({c3g['roles']})")
+        check("the 5, 11, 9 dropped by the grip rule" in c3g["hint"]
+              and "carry R 3 7 13" in c3g["hint"],
+              f"{tag} 3: the neck SAYS the drop, in the omission order: "
+              f"{c3g['hint'][:130]!r}")
+        check("dropped by the grip rule" in c3g["ro"],
+              f"{tag} 3: the readout says it too — two faces, one sentence: "
+              f"{c3g['ro'][:120]!r}")
+        # SOUND = SIGHT: the audited bar's NOTE roles are the KEPT roles
+        page.evaluate("""() => {
+          if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
+            document.addEventListener('atetudes:note', e =>
+              window.__nt.push({ m: e.detail.midi, t: performance.now(),
+                                 r: e.detail.role || null })); }
+          window.__nt = []; }""")
+        page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
+        # the same entry normalisation item 1 needed: disarm a leftover walk
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.evaluate("() => { window.__nt = [] }")
+        page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(500)
+        # the walk's chord NOTEs are role-less (only the bass names itself) —
+        # so the pin is at the MIDIS: what sounded IS what is drawn, no more
+        c3nt = page.evaluate("""() => ({
+          heard: window.__nt.filter(n => n.r !== 'bass').map(n => n.m).sort(),
+          drawn: [...document.querySelectorAll('#fieldSvg .fd-sel')]
+            .map(g => +g.getAttribute('data-selmidi')).sort() })""")
+        check(len(c3nt["heard"]) == 4 and c3nt["heard"] == c3nt["drawn"],
+              f"{tag} 3: SOUND = SIGHT — the walk sounds exactly the kept "
+              f"four the neck draws ({c3nt})")
+        page.check("#fdMetChk"); page.wait_for_timeout(120)
+        # the 11th keeps its 11 — the naming extension is untouchable
+        page.select_option("#hcObj", "eleventh"); page.wait_for_timeout(300)
+        c3e = page.evaluate("""() => ({
+          roles: [...document.querySelectorAll('#fieldSvg .fd-sel text')]
+            .map(t => t.textContent).sort(),
+          hint: document.getElementById('fdHint').textContent })""")
+        check(c3e["roles"] == ["11", "3", "7", "R"]
+              and "the 5, 9 dropped by the grip rule" in c3e["hint"],
+              f"{tag} 3: a 4-string 11th keeps its 11, dropping the 5 and 9: {c3e}")
+        # Line has slots for all seven — nothing drops, nothing is said
+        page.select_option("#hcObj", "thirteenth"); page.wait_for_timeout(250)
+        page.evaluate("""() => { [...document.querySelectorAll('#fdNSeg button')]
+          .find(x => x.dataset.nps === '3').click(); }""")
+        page.wait_for_timeout(300)
+        c3l = page.evaluate("""() => ({
+          roles: [...new Set([...document.querySelectorAll('#fieldSvg .fd-sel text')]
+            .map(t => t.textContent))].sort(),
+          hint: document.getElementById('fdHint').textContent })""")
+        check(c3l["roles"] == ["11", "13", "3", "5", "7", "9", "R"],
+              f"{tag} 3: Line carries the whole 13th — all seven roles placed "
+              f"({c3l['roles']})")
+        check("dropped by the grip rule" not in c3l["hint"],
+              f"{tag} 3: …and the drop sentence is ABSENT when nothing drops")
+        # past the rule's reach: 2 slots for the kept four — refused BY NAME
+        page.evaluate("""() => { [...document.querySelectorAll('#fdNSeg button')]
+          .find(x => x.dataset.nps === '1').click(); }""")
+        page.wait_for_timeout(200)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { strings: [2, 1] } }))""")
+        page.wait_for_timeout(300)
+        c3r = page.inner_text("#fdHint")
+        check("no named rule reduces further" in c3r,
+              f"{tag} 3: two strings for the kept four REFUSES by name: {c3r[:140]!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
+          { detail: { strings: [4, 3, 2, 1] } }))""")
+        page.wait_for_timeout(250)
+        # the scale/Grip boundary untouched: the box is still the whole box
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        c3s = page.evaluate("""() => ({
+          n: document.querySelectorAll('#fieldSvg .fd-sel').length,
+          hint: document.getElementById('fdHint').textContent })""")
+        check(c3s["n"] >= 10 and "dropped by the grip rule" not in c3s["hint"],
+              f"{tag} 3: the scale box is untouched by the grip rule "
+              f"({c3s['n']} selected, no drop sentence)")
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(250)
+
         # ---- 260913b item 4: THE CENTRE WORKS ----
         # Scale mode had a centre and nothing consumed it. Ruled: the bass
         # places against the CENTRE (same placeReference, different origin);
@@ -783,13 +969,28 @@ def run_door(pw, door_id):
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
-          window.__nt = []; }""")
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
+          if (!window.__stepAllHooked) { window.__stepAllHooked = true; window.__stepAll = [];
+            document.addEventListener('atetudes:step', e => {
+              const m = e.detail || {};
+              window.__stepAll.push({ i: m.index, req: m.request === true,
+                atk: m.attack === true }); }, true); }
+          window.__nt = []; window.__stepAll = []; }""")
+        # ENTRY NORMALISATION (260914, measured twice and owned): in the
+        # full run the walk can arrive ARMED from an earlier leg (the metro
+        # face read 'Stop' and two clean request→echo pairs produced zero
+        # notes — the armed branch swallows a same-index echo). One stop
+        # disarms whatever was left; the arming leg itself was hunted twice
+        # tonight and not found — flagged in the night's report.
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.evaluate("() => { window.__nt = [] }")
         page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(600)
         c4nt = page.evaluate("() => window.__nt.map(n => n.m)")
+        c4st = page.evaluate("() => window.__stepAll")
+        c4clk = page.evaluate("() => document.getElementById('metroBtn').textContent")
         check(c4a["refMidi"] is not None and int(c4a["refMidi"]) in c4nt,
               f"{tag} 4a: the audition SOUNDS the centre's bass (ref {c4a['refMidi']}, "
-              f"NOTEs {c4nt[:14]})")
+              f"NOTEs {c4nt[:14]}, steps {c4st}, metro {c4clk!r})")
         # 4b: figures address the centre — R-3-5-7 resolves on every bar,
         # the compounds reach the extensions, and 2 still mode-mismatches
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
@@ -875,6 +1076,31 @@ def run_door(pw, door_id):
         np_msg = page.evaluate("() => document.getElementById('exportMsg').textContent")
         check("multetudes-journal-" in np_msg and ".atchart.md" in np_msg,
               f"{tag} an empty field falls back to the standing default name: {np_msg!r}")
+
+        # ---- 260914 item 5: THE TITLE PERSISTS WITH THE PAD (ruled, overruling v0.9) ----
+        # The pad already survives a reload; a note that comes back without
+        # its name teaches distrust. {pad, title, entries} share one store.
+        # Round-tripped AT THE ARTIFACT: type, reload the page, the title is
+        # back, and it still drives file.name() through export's own channel.
+        page.fill("#npTitle", "Dorian week 3"); page.wait_for_timeout(100)
+        page.dispatch_event("#npTitle", "input")
+        page.fill("#journalIn", "the note that keeps its name")
+        page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(450)
+        page.reload(); page.wait_for_timeout(700)
+        np5 = page.evaluate("""() => ({
+          title: document.getElementById('npTitle').value,
+          pad: document.getElementById('journalIn').value })""")
+        check(np5["title"] == "Dorian week 3"
+              and np5["pad"] == "the note that keeps its name",
+              f"{tag} 5: reload brings back the note AND its name: {np5}")
+        page.click("#exportLog"); page.wait_for_timeout(300)
+        np5m = page.evaluate("() => document.getElementById('exportMsg').textContent")
+        check("Dorian-week-3.atchart.md" in np5m,
+              f"{tag} 5: the persisted title still names the exported file: {np5m!r}")
+        # leave the store as the leg found it (an empty title, an empty pad)
+        page.fill("#npTitle", ""); page.dispatch_event("#npTitle", "input")
+        page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(450)
 
         # ---- 260913b item 3: THE NECK'S RING SURVIVES A SHARED-PITCH REBUILD ----
         # The latent twin of the keys' 260911 wipe race, ruled 260912 and
@@ -995,7 +1221,7 @@ def run_door(pw, door_id):
             page.evaluate("""() => {
               if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
                 document.addEventListener('atetudes:note', e =>
-                  window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+                  window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
               if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
                 document.addEventListener('atetudes:step', e => {
                   if (e.detail && e.detail.request !== true)
@@ -1155,7 +1381,7 @@ def run_door(pw, door_id):
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           window.__nt = []; }""")
         page.click('#tlScroll button >> nth=0'); page.wait_for_timeout(3600)   # a 4-beat bar at 72bpm
         lg_t = page.evaluate("() => window.__nt.map(n => n.t)")
@@ -1733,7 +1959,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
             document.addEventListener('atetudes:step', e => {
               if (e.detail && e.detail.request !== true)
@@ -1791,7 +2017,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           if (!window.__rawHooked) { window.__rawHooked = true; window.__raw = [];
             for (const C of [AudioBufferSourceNode, OscillatorNode]) {
               const P = C.prototype.start;
@@ -2243,7 +2469,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           if (!window.__advHooked) { window.__advHooked = true; window.__adv = [];
             document.addEventListener('atetudes:step', e => {
               if (e.detail && e.detail.request !== true)
@@ -2383,7 +2609,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
-              window.__nt.push({ m: e.detail.midi, t: performance.now() })); }
+              window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
           if (!window.__rawHooked) { window.__rawHooked = true;
             for (const C of [AudioBufferSourceNode, OscillatorNode]) {
               const P = C.prototype.start;
@@ -2792,6 +3018,12 @@ console.log(JSON.stringify(out));
         # the gate asserts it again.
         want = [t for t in sections(proto) if t not in ("what this configuration hits",)]
         got = [t for t in sections(page) if t != "note"]
+        # RENAME ALIASES (rule 7 — rewritten with the reason): a ruled rename
+        # keeps the section's identity while its name moves; the census
+        # compares identity, not spelling. 260914: v0.9's "harmony" is the
+        # door's "centricity" (register 27).
+        RENAMED = { "harmony": "centricity" }
+        got = got + [k for k, v in RENAMED.items() if v in got]
         for t in want:
             check(t in got, f"{tag} v0.9 section {t!r} is missing from the door "
                             f"(door sections: {got})")
@@ -4224,6 +4456,11 @@ console.log(JSON.stringify(out));
         page.click('#pgSrcSeg >> text=custom'); page.wait_for_timeout(80)
         page.fill("#pgCustom", "Qx7"); page.dispatch_event("#pgCustom", "input")
         page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        # the centre-source seg builds its buttons on the scale-mode paint;
+        # item 5's reload boots the door in chord mode, so enter the state
+        # once (the .clpsd lesson, third instance) — the buttons persist
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
         err_state_for_check = True
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped

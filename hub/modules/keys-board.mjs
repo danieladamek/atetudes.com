@@ -16,9 +16,9 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
-import { placeReference } from "../../engine/reference.mjs";
+import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 
@@ -57,7 +57,7 @@ export const keysBoard = {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] , bass: "none",
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, centreSrc: "fixed" };
     let index = 0;
     let pulseTimers = [];       // the sounding-note pulse (260911, item 4 — field-board's idiom)
     /* livePulses EXTENDS the idiom under a measured defect of this board
@@ -104,7 +104,10 @@ export const keysBoard = {
           el("rect", { x: xOf(m), y: 14, width: ww * 0.6, height: H * 0.62, fill: "#212126",
             rx: 2, "data-kymidi": m }, svg);
 
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      /* the centre's SOURCE (260914): material on centreMaterialRef — the
+       * window never jumps per bar; the reading shifts per bar */
+      const fld = field({ key: cfg.key, scale: cfg.scale,
+        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const run = makeRun(cfg.strings);
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
@@ -116,18 +119,25 @@ export const keysBoard = {
       if (index >= prog.chords.length) index = 0;
       const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
       let sel = [];
-      if (cfg.object === "scale") sel = scaleTake(pool).notes;
+      const kyRefDeg = cfg.object === "scale"
+        ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+        : cur.degree;
+      if (cfg.object === "scale") {
+        sel = scaleTake(pool).notes;
+        if (cfg.centreSrc === "follows" && kyRefDeg != null) sel = reRead(sel, kyRefDeg);
+      }
       else {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          : oneOfEach(gripFit(cur.tones, run.strings.length * cfg.notesPer).tones,
+              pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || [];
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
        * the marks list) — hollow ring, the board's own idiom for "under" */
       /* 4a (260913b): the centre's reference rings here too */
-      const kyRefDeg = cfg.object === "scale" ? (cfg.ref ?? 0) : cur.degree;
-      if (cfg.bass !== "none" && (cfg.object === "scale" || cur.degree >= 0)) {
+      if (cfg.bass !== "none" && kyRefDeg != null
+          && (cfg.object === "scale" || cur.degree >= 0)) {
         const rp = placeReference(cfg.bass, kyRefDeg, fld, cfg.strings, pos);
         if (rp.note && rp.note.midi >= LO && rp.note.midi <= HI) {
           const black = BLACK.includes(mod(rp.note.midi, 12));

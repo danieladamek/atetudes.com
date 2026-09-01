@@ -16,7 +16,8 @@ function makeEls() {
   const mk = () => d.createElement("div");
   // controls = the host's button row: capabilities without an explicit mount
   // auto-append here (the copy control in these fixtures arrives that way)
-  return { pad: d.createElement("textarea"), saveBtn: mk(), clearBtn: mk(),
+  return { pad: d.createElement("textarea"), title: d.createElement("input"),
+    saveBtn: mk(), clearBtn: mk(),
     confirmRoot: mk(), confirmSave: mk(), confirmDiscard: mk(), confirmCancel: mk(),
     msg: mk(), importMsg: mk(), list: mk(), count: mk(), storeNote: mk(),
     controls: mk() };
@@ -109,6 +110,36 @@ for (const host of HOSTS) {
     els2.saveBtn.click();
     assert.equal(els2.pad.value, "", "…and clears on save");
     assert.equal(s2.getDoc().entries.at(-1).text, "typed then refreshed");
+  });
+
+  test(`260914 item 5 [${host.name}]: the TITLE rides the pad's own store — a note that survives keeps its name`, async () => {
+    const st = memStorage(false);
+    const els1 = makeEls();
+    createNotepadSurface({ adapter: host.adapter, storage: st,
+      els: els1, file: host.file });
+    els1.pad.value = "dorian ideas"; els1.pad.dispatch("input");
+    els1.title.value = "Dorian week 3"; els1.title.dispatch("input");
+    await new Promise((r) => setTimeout(r, 350));
+    const stored = JSON.parse(st.peek());
+    assert.equal(stored.title, "Dorian week 3",
+      "the title is IN the store, beside the pad");
+    // "reload": a fresh surface over the same storage
+    const els2 = makeEls();
+    const s2 = createNotepadSurface({ adapter: host.adapter, storage: st,
+      els: els2, file: host.file });
+    assert.equal(els2.title.value, "Dorian week 3", "the name came back with the note");
+    assert.equal(s2.getDoc().title, "Dorian week 3", "and the model agrees");
+    // save clears the PAD, never the title — the document keeps its name
+    els2.saveBtn.click();
+    assert.equal(els2.title.value, "Dorian week 3", "save clears the pad, not the name");
+    // a legacy store without the key loads as the empty title, not undefined
+    const stOld = memStorage(false);
+    stOld.save(JSON.stringify({ pad: "old", entries: [] }));
+    const els3 = makeEls();
+    const s3 = createNotepadSurface({ adapter: host.adapter, storage: stOld,
+      els: els3, file: host.file });
+    assert.equal(s3.getDoc().title, "", "a v1 store loads with the empty name");
+    assert.equal(els3.title.value, "");
   });
 
   test(`storage-denied [${host.name}]: still works, SAYS SO, still exports`, () => {
