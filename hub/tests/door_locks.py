@@ -4527,8 +4527,23 @@ console.log(JSON.stringify(out));
           f"{len(selectors)} selectors, all matched · {len(html) // 1024} kB")
 
 
+def redrun_pin():
+    """260915 item 2 — THE PIN IS THE DEMONSTRATION: redrun's selftest
+    proves, on every run, that a file carrying uncommitted work survives a
+    snap/mutate/restore intact while `git restore` destroys the same work.
+    The tool exists because the obvious undo is the wrong one (the night-19
+    confession); a tool whose proof stops running is a discipline again."""
+    r = subprocess.run([sys.executable, str(HUB / "tests" / "redrun.py"),
+                        "selftest"], capture_output=True, text=True, cwd=REPO)
+    check(r.returncode == 0 and "uncommitted work INTACT" in r.stdout
+          and "git restore DESTROYED" in r.stdout,
+          f"[redrun] the manual red-run tool's proof must run and show both "
+          f"halves (exit {r.returncode}): {r.stdout[-200:]!r} {r.stderr[-120:]!r}")
+
+
 def main():
     from playwright.sync_api import sync_playwright
+    redrun_pin()
     doors = node("--doors")
     print(f"hub door lock suite — {len(doors)} door(s): {', '.join(doors)}")
     with sync_playwright() as p:
