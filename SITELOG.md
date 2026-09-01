@@ -1,3 +1,22 @@
+## 2026-08-31 — Multetudes v0.3.0: centricity — the centre's source, and the stacks past four
+
+- **Source edition v0.3.0** (night 19; Update Log 260914.1, the full report in the night's
+  working note). `static/studies/multetudes/study.html` refreshed byte-identical to the door
+  build (cmp-asserted, 576,214 bytes; v0.2.1 was 561,552 — +14,662).
+- **A live page's visible vocabulary changed, twice.** The **Harmony card is now CENTRICITY**
+  (register 27, ruled — the card defines the material and its organising centre; harmony is
+  Progression's). And the centre control now names its **source**: *fixed* (a pedal under the
+  moving chords) or *follows the changes* (each bar re-centres) — register 26, resolving the
+  fixed-centre/moving-progression contradiction raised on the v0.2.0+centre build.
+- The harmony menu gains **9th, 11th and 13th chords**; where the strings cannot carry the
+  stack, the grip drops tones by a named rule and the face SAYS which ("the 5, 11, 9 dropped
+  by the grip rule — 4 slots carry R 3 7 13"); register 28, omission order proposed.
+- The notepad **title now persists** with the pad across reloads (ruled, overruling v0.9).
+- Verified: engine 570/570 · four-door gate 17,722/0 · bite 37/37
+  (hub/tests/out/bite-0831-1926.log) · hugo exit 0 · check_site 21 pages · the ritual at
+  1380px and 390px with the night's changes exercised, zero console errors (wrapper verified
+  over http).
+
 ## 2026-08-31 — DEPLOYED: Multetudes v0.2.1 live
 
 - Pages run 33448510918 green; the live study.html shasum-identical to the committed copy
