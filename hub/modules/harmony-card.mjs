@@ -179,6 +179,12 @@ export const harmonyCard = {
          * 260914 as the scale centre's source (centreDegreeOf). */
         fill(byId("hcRef"), REFERENCE_CHOICES.map(([v, l]) => ({ value: v, label: l })),
           cfg.bass);
+        /* the chord-mode paint must CLEAR the scale paint's disable (CC-1
+         * audit, 260915): the bass is chord-relative by construction, so
+         * centreSrc cannot contradict it — a scale→follows→chord walk was
+         * leaving this select dead with no reason on the face (rule 10:
+         * the PAINT site is one of the three) */
+        byId("hcRef").disabled = false;
         byId("hcRefLab").textContent = "Bass tone";   // the ruled word (260914)
         byId("hcNote").textContent = cfg.bass === "none"
           ? "The bass the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."

@@ -272,7 +272,7 @@ async function build(id) {
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(r.present.title)} — At-Etudes hub door</title>
+<title>${esc(r.present.title)} · At-Etudes</title>
 <!-- BUILT FILE. Door "${r.door}", lock ${esc(JSON.stringify(r.lock))}.
      Contains: ${r.filesIn.join(", ")}
      Regenerate: node hub/tools/build.mjs ${r.door}

@@ -1,3 +1,29 @@
+## 2026-09-01 — v0.4.0, THE STABLE PASS: the beta reconciliation — four studies move
+
+- **Source edition v0.4.0** (night 20; Update Log 260915.1; the full report in the night's
+  working note). The reconciled family baseline: **OWED_DRIFT is EMPTY** — the debt this
+  version's name depends on is actually gone.
+- **Four studies moved, and why:**
+  - **multetudes** — republished cmp-identical (579,495 bytes): the night's fixes (the CC-1
+    audit's hcRef paint fix), the honest-unnamed symbol sentence, and the family changes below.
+  - **tetradetudes** — republished cmp-identical (429,273 bytes) for the first time since
+    260830: clears the standing 517-byte marker drift AND the accumulated owed drift
+    (figure, voices, notepad, notepad-surface).
+  - **metronome** and **triadetudes** — the hand-authored studies: `notepad` and
+    `notepad-surface` re-inlined verbatim (the four OWED_DRIFT entries removed as each
+    module landed); both exercised in-browser.
+- **The house skin is v0.9's** (register entry 3, direction 2026-08-28, RESOLVED tonight):
+  white ground, #FAFAFB cards with #E6E6EA edges, the system font stack, the 17px title —
+  one shell change, every door republished with it.
+- **A live sentence changed on every notepad face**: the privacy promise now reads
+  "Your notes stay on this computer — nothing is uploaded…" (same guarantee, a player's
+  words; was "the file is the handoff channel: nothing leaves this machine"). The notepad's
+  chart refusal says "block" where it said "fence". The doors' page `<title>` reads
+  "· At-Etudes" (was "— At-Etudes hub door" — our word, not a visitor's).
+- Verified: engine 570/570 · four-door gate 17,747/0 · family floor 20 surfaces 13/7-exempt/0 ·
+  bite 37/37 (hub/tests/out/bite-0901-1215.log) · hugo exit 0 · check_site 21 pages · the ritual on ALL FOUR moved studies at
+  1380px and 390px, exercised, zero console errors.
+
 ## 2026-08-31 — DEPLOYED: Multetudes v0.3.0 live
 
 - Actions run 33465344361 green (full gates in CI); the live study's shasum matches the

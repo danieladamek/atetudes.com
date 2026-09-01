@@ -2,7 +2,7 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Multetudes — At-Etudes hub door</title>
+<title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
      Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/field.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
@@ -10,14 +10,20 @@
       names its pruned modules still contains their names.) -->
 <style>
 :root{
-  --ground:#ECECEE; --card:#FFFFFF; --ink:#212126; --gray:#73737A; --line:#D8D8DC;
+  /* THE HOUSE SKIN IS v0.9's (register entry 3, direction set 2026-08-28,
+   * landed 260915 at the beta reconciliation): white ground, #FAFAFB cards
+   * with #E6E6EA edges, the system font stack, the 17px title. v0.9's own
+   * distinction is kept: cards wear --edge, controls wear --line. */
+  --ground:#FFFFFF; --card:#FAFAFB; --ink:#212126; --gray:#73737A;
+  --line:#B9B9BF; --edge:#E6E6EA;
   --red:#B82929;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);
-     font-family:Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+     -webkit-font-smoothing:antialiased}
 .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
-header h1{font-size:26px;margin:6px 0 2px}
+header h1{font-size:17px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
 /* cards in one row share a height (default stretch), exactly the triad app's
  * rule — align-items:flex-start had let the metronome fall short of the
@@ -94,13 +100,13 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .clpsum{display:none}
 
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
 .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
 
 
-.board{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.board{background:var(--card);border:1px solid var(--edge);border-radius:10px;
        padding:10px 12px;margin-bottom:12px;position:relative}
 .board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
            font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
@@ -4534,17 +4540,31 @@ function objectTones(parsed, object, dyad = [3, 7]) {
 }
 
 /** gripFit(tones, slots) → { tones, dropped, refuse? } — a stack deeper
- * than the strings can carry drops tones by a NAMED rule (260914 item 3,
- * PROPOSED like `bed`, not yet ratified): the 5th goes first, then the
- * non-naming extensions 11-before-9; the root, the 3rd, the 7th and the
- * NAMING extension (the last role — what the chord is called after) are
- * never dropped. Whatever is dropped is returned by name so every face can
- * SAY it. Past the rule's reach it refuses by name rather than inventing a
- * further omission. A stack that fits passes through verbatim. */
+ * than the strings can carry drops tones by a NAMED rule (260914 item 3;
+ * RATIFIED 260915): the 5th goes first, then the non-naming extensions
+ * 11-before-9; the root, the 3rd, the 7th and the NAMING extension (the
+ * last role — what the chord is called after) are never dropped. Whatever
+ * is dropped is returned by name so every face can SAY it. Past the
+ * rule's reach it refuses by name rather than inventing a further
+ * omission. A stack that fits passes through verbatim.
+ *
+ * Recorded with the ratification, not acted on: on MINOR shapes the
+ * natural 11 is consonant (m11 is a real sonority), so 11-before-9 is a
+ * weaker preference there — one order for all qualities is simpler and
+ * defensible; and the ROOT is conventionally droppable when a bass
+ * sounds it (rootless voicings), but the `shell` object already offers
+ * that reduction by another door. */
 function gripFit(tones, slots) {
   if (tones.length <= slots) return { tones, dropped: [] };
   const roles = tones.map((t) => t.role);
   const naming = roles[roles.length - 1];
+  /* THE ORDER'S REASON (ratified 260915, written here so it is never
+   * re-litigated): the 5th is the most redundant tone — implied by the
+   * root, carrying no quality. Then 11 BEFORE 9 because the natural 11
+   * sits a minor 9th above the major 3rd — the one real clash inside a
+   * diatonic stack, which is why it is the conventional second omission.
+   * R, 3, 7 are anchor and guide tones; the naming extension is what the
+   * chord is CALLED after. Not taste; an interval. */
   const droppable = ["5", ...["11", "9"].filter((r) => roles.includes(r) && r !== naming)];
   const dropped = [];
   let keep = [...tones];
@@ -6116,6 +6136,10 @@ function chartBodyOf(chords, bars, fld) {
  *   symbol   the chip's name: the chord's own for a typed one; for a
  *            diatonic bar, compositeOver's read-back name (or the bare root
  *            when no honest suffix reads back)
+ *   unnamed  null when the symbol is a real name; otherwise the sentence
+ *            the face must say (ruled 260915: a silent bare root tells a
+ *            player their 13th is a plain triad — the refusal is named,
+ *            reference.mjs's own honestly-unnamed idiom)
  *   roman    the analysis line — v0.9's rule: lower case when the third is
  *            minor, ° when diminished, "—" when the root is off the key
  *   tones    the object's PLAYABLE tones ({role,pc}; off-key ones removed)
@@ -6147,6 +6171,10 @@ function chordAt(prog, index, fld, object, dyad = [3, 7]) {
     const tri = diatonicTones(fld, degree, objectOffsets("triad")).map((t) => t.pc);
     return { kind: c.kind, degree, rootPc,
       symbol: named.name || named.bassName,
+      unnamed: named.name ? null
+        : `${named.bassName} is the root, not the name — this ${object}'s `
+          + "stack reads back no taught symbol (honestly unnamed; the "
+          + "naming pass owes the words)",
       roman: romanOf(degree, tri),
       tones, absent: [], offKey: [] };
   }
@@ -6938,6 +6966,7 @@ const fieldBoard = {
             + `${run.strings.length * cfg.notesPer} slots carry `
             + fdFit.tones.map((t) => t.role).join(" "));
         if (fdFit.refuse) parts.push(fdFit.refuse);
+        if (cur.unnamed) parts.push(cur.unnamed);
         if (cur.absent.length) parts.push(`${cur.symbol} has no ${cur.absent.join(" or ")}`);
         if (r.capped && r.capped.length) {
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
@@ -7733,6 +7762,12 @@ const harmonyCard = {
          * 260914 as the scale centre's source (centreDegreeOf). */
         fill(byId("hcRef"), REFERENCE_CHOICES.map(([v, l]) => ({ value: v, label: l })),
           cfg.bass);
+        /* the chord-mode paint must CLEAR the scale paint's disable (CC-1
+         * audit, 260915): the bass is chord-relative by construction, so
+         * centreSrc cannot contradict it — a scale→follows→chord walk was
+         * leaving this select dead with no reason on the face (rule 10:
+         * the PAINT site is one of the three) */
+        byId("hcRef").disabled = false;
         byId("hcRefLab").textContent = "Bass tone";   // the ruled word (260914)
         byId("hcNote").textContent = cfg.bass === "none"
           ? "The bass the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
@@ -8477,6 +8512,7 @@ const neckReadout = {
               + `${run.strings.length * cfg.notesPer} slots carry `
               + roFit.tones.map((t) => t.role).join(" "));
           if (roFit.refuse) absences.push(roFit.refuse);
+          if (cur.unnamed) absences.push(cur.unnamed);
           if (cur.absent.length)
             absences.push(`${cur.symbol} has no ${cur.absent.join(" or ")} — the chord cannot fill that slot`);
           if (cur.offKey.length)
@@ -8785,9 +8821,13 @@ function toAtchart(doc, meta) {
      * instruction. The player needs the route, and the route is the pad's
      * own lift: its one chart fence becomes the file's chart block. Host-
      * neutral by necessity — this string is carried into every door. */
-    throw new Error("a saved note holds a ```chart fence — move the chart into " +
-      "the pad, where its one ```chart fence becomes the file's chart block; " +
-      "a fence that is just prose can be a plain ``` fence");
+    /* REWORDED 260915 (5f, the plain-English pass): "fence" was
+     * markdown's word; "block" was ALREADY this message's own word for the
+     * destination ("the file's chart block"), so the region takes the same
+     * word. The rule is unchanged. */
+    throw new Error("a saved note holds a ```chart block — move the chart into " +
+      "the pad, where its one ```chart block becomes the file's chart block; " +
+      "a ``` block that is just prose can stay plain ```");
   const at = doc._at
     ? JSON.parse(JSON.stringify(doc._at))
     : { meta: { atchart: 1, ...(meta || {}) },
@@ -8803,7 +8843,7 @@ function toAtchart(doc, meta) {
       (chartFences.length === 1 && strayOpeners > 1))
     throw new Error("the pad holds " + (strayOpeners || chartFences.length) +
       " ```chart openers — the format holds one chart per file (v1), " +
-      "and an unclosed chart fence cannot be written");
+      "and a ```chart with no closing ``` cannot be written");
   let body;
   // where does the stored file keep its chart? slot at body[0] = file-level
   // (the classic layout); slot deeper in = the pad owns it (a prior lift)
@@ -9647,7 +9687,8 @@ const { createPalette } = __m_engine_palette_mjs;
  * neither FAILS LOUDLY by capability name. Never silent omission. Labels
  * come from the adapter's declared nouns ({item, apply}) — no save or apply
  * verb is hand-written in any page. The paragraph-level handoff guarantee
- * ("the file is the handoff channel: nothing leaves this machine", web
+ * ("Your notes stay on this computer — nothing is uploaded. Export
+ * writes a file; that file is the only way notes move.", web
  * contract sections 5/6) is emitted by the surface in every host: it is a
  * charter guarantee, not helper prose.
  *
@@ -9760,7 +9801,7 @@ function createNotepadSurface(opts) {
     persist(); onChange();
   }
 
-  // ---- export / import / clipboard: the file is the handoff channel ----
+  // ---- export / import / clipboard: the FILE is the only way notes move ----
   function exportText() { return toAtchart(doc, { title: file.title }); }
   function importText(text) {
     let inc;
@@ -9993,7 +10034,12 @@ function createNotepadSurface(opts) {
       (els.controls || els.pad).appendChild(h);
     }
     h.setAttribute("data-cap", "handoff");
-    h.textContent = "The file is the handoff channel: nothing leaves this machine.";
+    /* REWORDED 260915 (5d, the plain-English pass — Daniel: "none of
+     * that means anything to me"). The PRIVACY PROMISE IS KEPT — only the
+     * words changed: the old sentence said it in engineer's English
+     * ("the file is the handoff channel: nothing leaves this machine"). */
+    h.textContent = "Your notes stay on this computer — nothing is uploaded. "
+      + "Moving notes anywhere happens only through the file Export writes.";
   }
   if (!storageOK && els.storeNote)
     els.storeNote.textContent =
@@ -11239,14 +11285,20 @@ const __m_hub_shell_mjs = (() => {
 
 const SHELL_STYLES = `
 :root{
-  --ground:#ECECEE; --card:#FFFFFF; --ink:#212126; --gray:#73737A; --line:#D8D8DC;
+  /* THE HOUSE SKIN IS v0.9's (register entry 3, direction set 2026-08-28,
+   * landed 260915 at the beta reconciliation): white ground, #FAFAFB cards
+   * with #E6E6EA edges, the system font stack, the 17px title. v0.9's own
+   * distinction is kept: cards wear --edge, controls wear --line. */
+  --ground:#FFFFFF; --card:#FAFAFB; --ink:#212126; --gray:#73737A;
+  --line:#B9B9BF; --edge:#E6E6EA;
   --red:#B82929;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);
-     font-family:Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+     -webkit-font-smoothing:antialiased}
 .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
-header h1{font-size:26px;margin:6px 0 2px}
+header h1{font-size:17px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
 /* cards in one row share a height (default stretch), exactly the triad app's
  * rule — align-items:flex-start had let the metronome fall short of the
@@ -11343,7 +11395,7 @@ const WRAPPERS = {
   cards: {
     html: (inner, extra) => `<div class="card${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
 .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
@@ -11356,7 +11408,7 @@ const WRAPPERS = {
   strips: {
     html: (inner, extra) => `<div class="card strip${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.card.strip{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card.strip{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;margin-bottom:12px;position:relative}
 .card.strip h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
@@ -11372,7 +11424,7 @@ const WRAPPERS = {
   boards: {
     html: (inner, extra) => `<div class="board${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.board{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.board{background:var(--card);border:1px solid var(--edge);border-radius:10px;
        padding:10px 12px;margin-bottom:12px;position:relative}
 .board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
            font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
@@ -11520,7 +11572,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.3.0","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.4.0","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

@@ -154,3 +154,32 @@ test("THE SPLIT CYCLE: a one-chord bar takes the next slot — 1+1+1+1 makes a c
     "a matching bar takes the slots whole; the single-chord bar cycles");
   assert.deepEqual(beatsOf([[0], [1]], 4, null), [[4], [4]], "no split: the bar's meter, as before");
 });
+
+// ---------------------------------------------------------------------------
+// 260915 item 3b — THE BARE ROOT SAYS IT IS UNNAMED, AND WHY (ruled)
+// ---------------------------------------------------------------------------
+
+test("260915-3b: a diatonic stack the vocabulary cannot name carries the honest refusal; a named one carries null", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const prog = progressionOf({ source: "cycle" }, "Bb", "major");
+  let unnamedSeen = 0, namedSeen = 0;
+  for (const obj of ["triad", "tetrad", "ninth", "eleventh", "thirteenth"])
+    for (let i = 0; i < prog.chords.length; i++) {
+      const c = chordAt(prog, i, fld, obj);
+      if (c.unnamed) {
+        unnamedSeen++;
+        assert.equal(c.symbol, fld.notes[c.degree].name,
+          "unnamed fires exactly on the bare-root fallback");
+        assert.ok(c.unnamed.includes("honestly unnamed")
+          && c.unnamed.includes(obj) && c.unnamed.startsWith(c.symbol),
+          `the sentence names the root, the object and the refusal: ${c.unnamed}`);
+      } else {
+        namedSeen++;
+        assert.notEqual(c.symbol, undefined);
+        if (obj === "triad" || obj === "tetrad")
+          assert.equal(c.unnamed, null, "the four-tone stacks always name");
+      }
+    }
+  assert.ok(unnamedSeen >= 8, `the corpus really exercises the refusal (${unnamedSeen})`);
+  assert.ok(namedSeen >= 20, `and the named path (${namedSeen})`);
+});

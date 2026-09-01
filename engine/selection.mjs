@@ -154,17 +154,31 @@ export function objectTones(parsed, object, dyad = [3, 7]) {
 }
 
 /** gripFit(tones, slots) → { tones, dropped, refuse? } — a stack deeper
- * than the strings can carry drops tones by a NAMED rule (260914 item 3,
- * PROPOSED like `bed`, not yet ratified): the 5th goes first, then the
- * non-naming extensions 11-before-9; the root, the 3rd, the 7th and the
- * NAMING extension (the last role — what the chord is called after) are
- * never dropped. Whatever is dropped is returned by name so every face can
- * SAY it. Past the rule's reach it refuses by name rather than inventing a
- * further omission. A stack that fits passes through verbatim. */
+ * than the strings can carry drops tones by a NAMED rule (260914 item 3;
+ * RATIFIED 260915): the 5th goes first, then the non-naming extensions
+ * 11-before-9; the root, the 3rd, the 7th and the NAMING extension (the
+ * last role — what the chord is called after) are never dropped. Whatever
+ * is dropped is returned by name so every face can SAY it. Past the
+ * rule's reach it refuses by name rather than inventing a further
+ * omission. A stack that fits passes through verbatim.
+ *
+ * Recorded with the ratification, not acted on: on MINOR shapes the
+ * natural 11 is consonant (m11 is a real sonority), so 11-before-9 is a
+ * weaker preference there — one order for all qualities is simpler and
+ * defensible; and the ROOT is conventionally droppable when a bass
+ * sounds it (rootless voicings), but the `shell` object already offers
+ * that reduction by another door. */
 export function gripFit(tones, slots) {
   if (tones.length <= slots) return { tones, dropped: [] };
   const roles = tones.map((t) => t.role);
   const naming = roles[roles.length - 1];
+  /* THE ORDER'S REASON (ratified 260915, written here so it is never
+   * re-litigated): the 5th is the most redundant tone — implied by the
+   * root, carrying no quality. Then 11 BEFORE 9 because the natural 11
+   * sits a minor 9th above the major 3rd — the one real clash inside a
+   * diatonic stack, which is why it is the conventional second omission.
+   * R, 3, 7 are anchor and guide tones; the naming extension is what the
+   * chord is CALLED after. Not taste; an interval. */
   const droppable = ["5", ...["11", "9"].filter((r) => roles.includes(r) && r !== naming)];
   const dropped = [];
   let keep = [...tones];

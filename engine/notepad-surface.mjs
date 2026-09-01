@@ -28,7 +28,8 @@
  * neither FAILS LOUDLY by capability name. Never silent omission. Labels
  * come from the adapter's declared nouns ({item, apply}) — no save or apply
  * verb is hand-written in any page. The paragraph-level handoff guarantee
- * ("the file is the handoff channel: nothing leaves this machine", web
+ * ("Your notes stay on this computer — nothing is uploaded. Export
+ * writes a file; that file is the only way notes move.", web
  * contract sections 5/6) is emitted by the surface in every host: it is a
  * charter guarantee, not helper prose.
  *
@@ -143,7 +144,7 @@ export function createNotepadSurface(opts) {
     persist(); onChange();
   }
 
-  // ---- export / import / clipboard: the file is the handoff channel ----
+  // ---- export / import / clipboard: the FILE is the only way notes move ----
   function exportText() { return toAtchart(doc, { title: file.title }); }
   function importText(text) {
     let inc;
@@ -376,7 +377,12 @@ export function createNotepadSurface(opts) {
       (els.controls || els.pad).appendChild(h);
     }
     h.setAttribute("data-cap", "handoff");
-    h.textContent = "The file is the handoff channel: nothing leaves this machine.";
+    /* REWORDED 260915 (5d, the plain-English pass — Daniel: "none of
+     * that means anything to me"). The PRIVACY PROMISE IS KEPT — only the
+     * words changed: the old sentence said it in engineer's English
+     * ("the file is the handoff channel: nothing leaves this machine"). */
+    h.textContent = "Your notes stay on this computer — nothing is uploaded. "
+      + "Moving notes anywhere happens only through the file Export writes.";
   }
   if (!storageOK && els.storeNote)
     els.storeNote.textContent =

@@ -168,9 +168,13 @@ export function toAtchart(doc, meta) {
      * instruction. The player needs the route, and the route is the pad's
      * own lift: its one chart fence becomes the file's chart block. Host-
      * neutral by necessity — this string is carried into every door. */
-    throw new Error("a saved note holds a ```chart fence — move the chart into " +
-      "the pad, where its one ```chart fence becomes the file's chart block; " +
-      "a fence that is just prose can be a plain ``` fence");
+    /* REWORDED 260915 (5f, the plain-English pass): "fence" was
+     * markdown's word; "block" was ALREADY this message's own word for the
+     * destination ("the file's chart block"), so the region takes the same
+     * word. The rule is unchanged. */
+    throw new Error("a saved note holds a ```chart block — move the chart into " +
+      "the pad, where its one ```chart block becomes the file's chart block; " +
+      "a ``` block that is just prose can stay plain ```");
   const at = doc._at
     ? JSON.parse(JSON.stringify(doc._at))
     : { meta: { atchart: 1, ...(meta || {}) },
@@ -186,7 +190,7 @@ export function toAtchart(doc, meta) {
       (chartFences.length === 1 && strayOpeners > 1))
     throw new Error("the pad holds " + (strayOpeners || chartFences.length) +
       " ```chart openers — the format holds one chart per file (v1), " +
-      "and an unclosed chart fence cannot be written");
+      "and a ```chart with no closing ``` cannot be written");
   let body;
   // where does the stored file keep its chart? slot at body[0] = file-level
   // (the classic layout); slot deeper in = the pad owns it (a prior lift)

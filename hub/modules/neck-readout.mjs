@@ -91,6 +91,7 @@ export const neckReadout = {
               + `${run.strings.length * cfg.notesPer} slots carry `
               + roFit.tones.map((t) => t.role).join(" "));
           if (roFit.refuse) absences.push(roFit.refuse);
+          if (cur.unnamed) absences.push(cur.unnamed);
           if (cur.absent.length)
             absences.push(`${cur.symbol} has no ${cur.absent.join(" or ")} — the chord cannot fill that slot`);
           if (cur.offKey.length)

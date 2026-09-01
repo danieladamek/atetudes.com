@@ -269,7 +269,10 @@ test("the handoff guarantee is emitted by the surface in every host", () => {
     const h = els.controls.childNodes.find(
       (n) => n.attributes && n.attributes["data-cap"] === "handoff");
     assert.ok(h, host.name + " carries the sentence");
+    /* PIN REWRITTEN 260915 (5d): same guarantee, plain words — see
+     * host-conformance's twin pin for the ruling. */
     assert.equal(h.textContent,
-      "The file is the handoff channel: nothing leaves this machine.");
+      "Your notes stay on this computer — nothing is uploaded. "
+        + "Moving notes anywhere happens only through the file Export writes.");
   }
 });

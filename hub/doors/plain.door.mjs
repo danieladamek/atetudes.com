@@ -11,7 +11,7 @@ export default {
   lock: { notepad: false },
   present: {
     title: "Plain",
-    blurb: "the clock alone — no notebook, and none of its engine",
+    blurb: "the clock alone — no notebook, and none of its engine · v0.4.0",
     footer: "A hub door built from hub/doors/plain.door.mjs. Not a published study.",
   },
 };

@@ -409,6 +409,7 @@ export const fieldBoard = {
             + `${run.strings.length * cfg.notesPer} slots carry `
             + fdFit.tones.map((t) => t.role).join(" "));
         if (fdFit.refuse) parts.push(fdFit.refuse);
+        if (cur.unnamed) parts.push(cur.unnamed);
         if (cur.absent.length) parts.push(`${cur.symbol} has no ${cur.absent.join(" or ")}`);
         if (r.capped && r.capped.length) {
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();

@@ -72,6 +72,14 @@ export default {
      * measurements 260820); the grip and arrows write scale TRIPLES now
      * (e5ba874 un-flattened at the user's seam); a bar with no anchored
      * shape reaches outside and the hint counts it. Off = the pinned path.
+     * v0.4.0 (260915, THE STABLE PASS — the reconciled family baseline):
+     * every door wears this version at the freeze. OWED_DRIFT emptied (the
+     * four owed modules re-inlined/republished), the 260830 marker drift
+     * cleared, the house skin is v0.9's (register entry 3, landed), the
+     * privacy sentence in plain words, the page title in the visitor's
+     * words. Declared only because the debt is actually gone.
+     * (tetradetudes' own line ended at v0.1.13; from the freeze the four
+     * doors share the family baseline version.)
      * v0.1.12 (2026-08-21): THE WINDOW IS A POSITION (ratified family law) —
      * the box IS the zone's span, one rigid dashed rectangle that dragging
      * TRANSLATES; binding is the default; the overhang, anchor strip,
@@ -80,7 +88,7 @@ export default {
      * metronome range is 15–300 bpm (Daniel's call, first modification under
      * the foundational-components ruling; the transport mirror moves with
      * it, the tap clamp widens in metronome.mjs, re-inlined per census). */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.1.13",
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.4.0",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

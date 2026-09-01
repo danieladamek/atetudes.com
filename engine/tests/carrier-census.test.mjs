@@ -74,27 +74,27 @@ for (const mod of ENGINE_MODULES) {
      * nothing is missing any more, this test goes red until the ledger
      * entry is removed. Every module outside the ledger pins verbatim,
      * exactly as before. */
-    /* A sharper form was drafted 260913 (owed drift excused only for
-     * hand-authored carriers, derived doors always verbatim) and REVERTED
-     * the same night: it exposed that the published tetradetudes study is
-     * itself a DERIVED door build already carrying the known marker debt —
-     * so the sharp pin cannot land until the beta republish clears that
-     * debt. The draft is in the night-17 report; re-apply it with the
-     * republish. */
+    /* THE SHARP FORM, LANDED 260915 (drafted 260913, reverted the same
+     * night because the published tetradetudes was itself a derived build
+     * carrying the marker debt; the beta republish cleared it): an OWED
+     * exemption excuses only HAND-AUTHORED carriers — a derived door's
+     * publish is one command, so its drift is never owed, always red. */
     const owed = OWED_DRIFT.get(mod);
     let missing = 0;
     for (const slug of carriers) {
       const html = readFileSync(studyPath(slug), "utf8");
+      const derived = CENSUS.get(slug).source === "derived";
       for (const def of segs)
         for (const seg of def) {
           if (html.includes(seg)) continue;
           missing++;
-          if (!owed)
+          if (!owed || derived)
             assert.fail(
               `${slug}/study.html has DRIFTED from engine/${mod}.mjs — ` +
-              (CENSUS.get(slug).source === "derived"
+              (derived
                 ? "rebuild the door and re-publish. "
                 : "re-inline the module into the hand-authored study. ") +
+              (owed && derived ? "(OWED excuses only hand-authored carriers — the sharp form.) " : "") +
               `Missing:\n${seg.slice(0, 90)}…`);
         }
     }

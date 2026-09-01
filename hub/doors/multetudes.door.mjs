@@ -70,6 +70,12 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
+    /* v0.4.0 (260915, THE STABLE PASS — the reconciled family baseline):
+     * every door wears this version at the freeze. OWED_DRIFT emptied (the
+     * four owed modules re-inlined/republished), the 260830 marker drift
+     * cleared, the house skin is v0.9's (register entry 3, landed), the
+     * privacy sentence in plain words, the page title in the visitor's
+     * words. Declared only because the debt is actually gone. */
     /* v0.3.0 (260914, centricity): the centre gets a SOURCE — fixed (a
      * pedal under the moving chords) or follows (each bar re-centres),
      * completing the 260831 deferral (register 26); the Harmony card
@@ -99,7 +105,7 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.3.0",
+    blurb: "one tool that holds many études · v0.4.0",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
