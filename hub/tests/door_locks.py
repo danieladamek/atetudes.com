@@ -1077,6 +1077,31 @@ def run_door(pw, door_id):
         check("multetudes-journal-" in np_msg and ".atchart.md" in np_msg,
               f"{tag} an empty field falls back to the standing default name: {np_msg!r}")
 
+        # ---- 260914 item 5: THE TITLE PERSISTS WITH THE PAD (ruled, overruling v0.9) ----
+        # The pad already survives a reload; a note that comes back without
+        # its name teaches distrust. {pad, title, entries} share one store.
+        # Round-tripped AT THE ARTIFACT: type, reload the page, the title is
+        # back, and it still drives file.name() through export's own channel.
+        page.fill("#npTitle", "Dorian week 3"); page.wait_for_timeout(100)
+        page.dispatch_event("#npTitle", "input")
+        page.fill("#journalIn", "the note that keeps its name")
+        page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(450)
+        page.reload(); page.wait_for_timeout(700)
+        np5 = page.evaluate("""() => ({
+          title: document.getElementById('npTitle').value,
+          pad: document.getElementById('journalIn').value })""")
+        check(np5["title"] == "Dorian week 3"
+              and np5["pad"] == "the note that keeps its name",
+              f"{tag} 5: reload brings back the note AND its name: {np5}")
+        page.click("#exportLog"); page.wait_for_timeout(300)
+        np5m = page.evaluate("() => document.getElementById('exportMsg').textContent")
+        check("Dorian-week-3.atchart.md" in np5m,
+              f"{tag} 5: the persisted title still names the exported file: {np5m!r}")
+        # leave the store as the leg found it (an empty title, an empty pad)
+        page.fill("#npTitle", ""); page.dispatch_event("#npTitle", "input")
+        page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(450)
+
         # ---- 260913b item 3: THE NECK'S RING SURVIVES A SHARED-PITCH REBUILD ----
         # The latent twin of the keys' 260911 wipe race, ruled 260912 and
         # deferred once: under STRUM movement every advance announces all
@@ -4431,6 +4456,11 @@ console.log(JSON.stringify(out));
         page.click('#pgSrcSeg >> text=custom'); page.wait_for_timeout(80)
         page.fill("#pgCustom", "Qx7"); page.dispatch_event("#pgCustom", "input")
         page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        # the centre-source seg builds its buttons on the scale-mode paint;
+        # item 5's reload boots the door in chord mode, so enter the state
+        # once (the .clpsd lesson, third instance) — the buttons persist
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
         err_state_for_check = True
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped

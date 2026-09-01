@@ -88,7 +88,8 @@ export function createNotepadSurface(opts) {
       const raw = storage.load();
       if (raw) {
         const d = JSON.parse(raw);
-        return { pad: String(d.pad ?? ""), entries: (d.entries || []).map(makeEntry) };
+        return { pad: String(d.pad ?? ""), title: String(d.title ?? ""),
+                 entries: (d.entries || []).map(makeEntry) };
       }
       const migrated = migrate();
       if (migrated) { trySave(migrated); return migrated; }
@@ -97,7 +98,7 @@ export function createNotepadSurface(opts) {
   }
   function trySave(d) {
     if (!storageOK) return false;
-    try { storage.save(JSON.stringify({ pad: d.pad, entries: d.entries })); return true; }
+    try { storage.save(JSON.stringify({ pad: d.pad, title: d.title ?? "", entries: d.entries })); return true; }
     catch (e) { storageOK = false; return false; }
   }
   function persist() { return trySave(doc); }
@@ -296,6 +297,21 @@ export function createNotepadSurface(opts) {
     padTimer = setTimeout(() => { persist(); onChange(); }, 300);
   });
   els.pad.addEventListener("change", () => { persist(); onChange(); });
+  /* the document's TITLE rides the same store as the pad (ruled 260914,
+   * overruling v0.9's unpersisted field): the pad already survives a reload
+   * — a note that comes back without its name teaches distrust. Same
+   * lifetime, same debounce, same store; the DROPPED per-entry title ruling
+   * is untouched (entry labels stay derived). An optional slot: a host
+   * without els.title keeps exactly the old behaviour. */
+  if (els.title) {
+    els.title.value = doc.title || "";
+    els.title.addEventListener("input", () => {
+      doc = { ...doc, title: els.title.value };
+      if (padTimer) clearTimeout(padTimer);
+      padTimer = setTimeout(() => { persist(); onChange(); }, 300);
+    });
+    els.title.addEventListener("change", () => { persist(); onChange(); });
+  }
   mountCap("save", (b) => b.addEventListener("click", save));
   mountCap("clear", (b) => b.addEventListener("click", () => {
     if (!String(els.pad.value ?? "").trim()) { discard(); return; }

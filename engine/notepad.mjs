@@ -51,7 +51,7 @@ function entryId() {
   return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
 }
 
-export function emptyDoc() { return { pad: "", entries: [] }; }
+export function emptyDoc() { return { pad: "", title: "", entries: [] }; }
 
 // ---------- pure entry operations (every one returns a NEW document) ----------
 
