@@ -147,9 +147,13 @@ test("§4.3 notepad: the RENDERED capability set is identical across all hosts",
 test("§4.3 notepad: charter guarantee statements render in every host", () => {
   for (const host of NOTEPAD_HOSTS) {
     const { els } = mountHost(host);
+    /* PIN REWRITTEN 260915 (5d, the plain-English pass — rule 7, never
+     * relaxed): the guarantee is IDENTICAL, the words are a player's.
+     * Daniel, on the old sentence: "none of that means anything to me". */
     assert.equal(els.handoff.textContent,
-      "The file is the handoff channel: nothing leaves this machine.",
-      `[${host.name}] must render the §5/§6 handoff guarantee — it is a ` +
+      "Your notes stay on this computer — nothing is uploaded. "
+        + "Moving notes anywhere happens only through the file Export writes.",
+      `[${host.name}] must render the §5/§6 privacy guarantee — it is a ` +
       `charter statement, not helper prose`);
   }
 });

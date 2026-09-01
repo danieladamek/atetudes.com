@@ -2,7 +2,7 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tetradetudes — At-Etudes hub door</title>
+<title>Tetradetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "tetradetudes", lock {"material":"tetrad","notepad":true,"audio":true,"transport":true}.
      Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, hub/modules/chord-timeline.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs tetradetudes
@@ -10,14 +10,20 @@
       names its pruned modules still contains their names.) -->
 <style>
 :root{
-  --ground:#ECECEE; --card:#FFFFFF; --ink:#212126; --gray:#73737A; --line:#D8D8DC;
+  /* THE HOUSE SKIN IS v0.9's (register entry 3, direction set 2026-08-28,
+   * landed 260915 at the beta reconciliation): white ground, #FAFAFB cards
+   * with #E6E6EA edges, the system font stack, the 17px title. v0.9's own
+   * distinction is kept: cards wear --edge, controls wear --line. */
+  --ground:#FFFFFF; --card:#FAFAFB; --ink:#212126; --gray:#73737A;
+  --line:#B9B9BF; --edge:#E6E6EA;
   --red:#B82929;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);
-     font-family:Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+     -webkit-font-smoothing:antialiased}
 .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
-header h1{font-size:26px;margin:6px 0 2px}
+header h1{font-size:17px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
 /* cards in one row share a height (default stretch), exactly the triad app's
  * rule — align-items:flex-start had let the metronome fall short of the
@@ -94,13 +100,13 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .clpsum{display:none}
 
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
 .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
 
 
-.card.strip{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card.strip{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;margin-bottom:12px;position:relative}
 .card.strip h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
@@ -113,7 +119,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .seg button:disabled{opacity:.45;cursor:not-allowed}
 
-.board{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.board{background:var(--card);border:1px solid var(--edge);border-radius:10px;
        padding:10px 12px;margin-bottom:12px;position:relative}
 .board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
            font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
@@ -208,8 +214,12 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
+#npTitle{font:inherit;font-size:11.5px;padding:2px 7px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink);width:170px}
 .journalcontrols{margin-top:10px}
 .journalconfirm{display:none;margin-top:6px}
+.padmsgs{margin-top:6px;min-height:0}
+.padmsgs .hint:empty{display:none}
 .nomargin{margin:0}
 .storenote{text-transform:none;letter-spacing:0;font-weight:normal}
 .hist{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
@@ -425,9 +435,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
           <div class="seg" id="placeSeg" data-control="placeSeg"></div></div>
         <div class="smTight"><label>Playback</label>
           <div class="seg" id="playbackSeg" data-control="playbackSeg">
-            <button data-pb="block" class="on" title="the harmony, strummed">Block</button>
+            <button data-pb="strum" class="on" title="the harmony, strummed — the word was Block until the 260913 ruling">Strum</button>
             <button data-pb="arpeggiated" title="the figure as a line — the figure IS the rhythm">Arpeggiated</button>
-            <button data-pb="both" title="the line over a short strummed harmony">Both</button>
+            <button data-pb="both" title="the line over a short harmony bed">Both</button>
           </div></div>
       </div>
       <label class="chk"><input type="checkbox" id="rootsChk" data-control="rootsChk"> Show root notes on lower strings</label>
@@ -477,17 +487,35 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     </div>
     <div id="dragBar" title="drag to resize"></div>
     <div class="jcol" id="noteCol">
+      <!-- THE DOCUMENT'S TITLE (260913b, item 2 — D11 unblocked): fills
+           file.title and drives file.name(); empty falls back to today's
+           default, so an untouched field changes nothing that ships. It
+           does NOT relabel entries — those keep deriving (260811.3). The
+           shell seats it in the header band via data-header-slot. -->
+      <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
       <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
         placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
+      <!-- v0.9's ratified row (260911, item 1): six buttons, one row, THAT
+           order — Copy between Export and Import. The host takes the
+           placement the auto-append was covering for; the message line sits
+           UNDER the row so it can never wrap the buttons. -->
       <div class="transport journalcontrols" id="journalControls">
         <button id="saveEntry" data-control="saveEntry" class="primary"></button>
         <button id="clearPad" data-control="clearPad"></button>
         <button id="exportLog" data-control="exportLog"></button>
+        <button id="copyBtn" data-control="copyBtn"></button>
         <button id="importBtn" data-control="importBtn"></button>
+        <button id="paletteBtn" data-control="paletteBtn"></button>
         <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json">
-        <span id="saveMsg" class="hint nomargin"></span>
       </div>
+      <!-- the message prints where the press happened (260911, item 2b):
+           one slot per talking capability, all on the line under the row —
+           an empty slot collapses, so the row itself can never wrap -->
+      <div class="padmsgs"><span id="saveMsg" class="hint nomargin"></span><span
+        id="exportMsg" class="hint nomargin"></span><span
+        id="copyMsg" class="hint nomargin"></span></div>
+      <div id="paletteRoot" data-control="paletteRoot"></div>
       <div class="transport journalconfirm" id="clearConfirm" data-control="clearConfirm">
         <span class="hint nomargin">that note is filed nowhere —</span>
         <button id="clearSave" data-control="clearSave" class="primary">Save and clear</button>
@@ -633,18 +661,19 @@ const SUSTAIN_HOLD = "chord";
 /** Only DUR is voice-dependent — voices CONSUME the event list, they never
  * re-derive it (the v0.6.5 seam). tone keeps every event's own dur, which is
  * the anti-drift baseline; pluck rings to the chord change, capped, because a
- * struck string decays on its own; sustain holds. Strummed harmony-context
- * events keep their short dur in every voice, and the bass pedal holds with
- * the sustain voice. */
+ * struck string decays on its own; sustain holds. Harmony-BED events (the
+ * short strummed context under a line — `bed` since 260913, when the strum
+ * word went to the movement) keep their short dur in every voice, and the
+ * bass pedal holds with the sustain voice. */
 function voiceSchedule(evs, voice, durBeats, bpm) {
   const span = (durBeats || 2) * (60 / bpm);
   return evs.map((ev, i) => {
     let dur = ev.dur;
-    if (!ev.strum) {
+    if (!ev.bed) {
       if (voice === "pluck") dur = Math.min(1.1, Math.max(ev.dur, span - ev.onset));
       if (voice === "sustain") {
         if (SUSTAIN_HOLD === "slot" && ev.role !== "bass") {
-          const next = evs.slice(i + 1).find((e) => !e.strum && e.role !== "bass" && e.onset > ev.onset);
+          const next = evs.slice(i + 1).find((e) => !e.bed && e.role !== "bass" && e.onset > ev.onset);
           dur = (next ? next.onset : span) - ev.onset;
         } else dur = span - ev.onset;
       }
@@ -3148,18 +3177,26 @@ function orderFigure(parsed, step, address = "slots", ctx = null) {
 }
 
 /** THE ONE CALL: events for a step, figure applied. `playback` is the door's
- * segment — block (harmony only), arpeggiated (the line), both (line over a
- * short strummed harmony, the reference's onsetsFor). */
-function figureEvents(step, { parsed = null, address = "slots", playback = "block",
+ * segment — strum (the whole harmony at once; the value was "block" until
+ * 260913, when the PO ruled the truer word: a block IS a strum, and
+ * note-events has always staggered it), arpeggiated (the line), both (the
+ * line over a short harmony BED, the reference's onsetsFor — the bed was
+ * called `strum` before the movement took that word; renamed with the
+ * ruling so one word means one thing). */
+function figureEvents(step, { parsed = null, address = "slots", playback = "strum",
   bassMidi = null, durBeats = 2, bpm = 72, ctx = null } = {}) {
-  const order = playback === "block" ? null : orderFigure(parsed, step, address, ctx);
+  const order = playback === "strum" ? null : orderFigure(parsed, step, address, ctx);
   if (!order) return noteEvents(step.voicing, null, bassMidi, durBeats, bpm);
   const line = noteEvents(step.voicing, order, bassMidi, durBeats, bpm);
   if (playback !== "both") return line;
-  const strum = noteEvents(step.voicing, null, null, durBeats, bpm)
-    .map((ev) => ({ ...ev, dur: Math.min(ev.dur, 0.5), strum: true }));   // harmony context, not steps
-  return [...strum, ...line];
+  const bed = noteEvents(step.voicing, null, null, durBeats, bpm)
+    .map((ev) => ({ ...ev, dur: Math.min(ev.dur, 0.5), bed: true }));   // harmony context, not steps
+  return [...bed, ...line];
 }
+
+/** LEGACY WORD (260913 rename): saved études from before the ruling carry
+ * playback "block"; the map is the one place the old word is known. */
+const playbackWord = (w) => (w === "block" ? "strum" : w);
 
 /** the figure back in its own words — drill's for slots/tones, motion's for enclosures */
 function describeFigure(parsed, address = "slots") {
@@ -3177,7 +3214,7 @@ function describeFigure(parsed, address = "slots") {
   const bad = parseFigure("1-2-9", "slots"); if (!bad.err) throw new Error("figure: a bad slot must fail loudly");
   const enc = parseFigure("(-1,+2)3 7", "tones"); if (enc.err || enc.source !== "motion") throw new Error("figure: enclosure routing broke: " + enc.err);
 }
-return { SLOT_MATERIAL, TONE_MATERIAL, TONE_ORDER, SLOT_ORDER, ADDRESS, toneIndexOf, parseFigure, orderFigure, figureEvents, describeFigure };
+return { SLOT_MATERIAL, TONE_MATERIAL, TONE_ORDER, SLOT_ORDER, ADDRESS, toneIndexOf, parseFigure, orderFigure, figureEvents, playbackWord, describeFigure };
 })();
 
 /* ===== hub/bus.mjs ===== */
@@ -3337,7 +3374,7 @@ const __m_hub_modules_audio_card_mjs = (() => {
 const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES } = __m_engine_voices_mjs;
 const { tetradPass, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
-const { parseFigure, figureEvents } = __m_engine_figure_mjs;
+const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } = __m_hub_bus_mjs;
 /* audio-card.mjs — the hub's ears: an AudioContext, a mixer, and nothing else.
  *
@@ -3482,12 +3519,12 @@ const audioCard = {
       // only — the four voicing notes are on the chord bus and keep sounding
       const bass = cfg && cfg.bass === "none" ? null : bassSeat(low, step.chord.root.pc);
       /* THE FIGURE CHAIN: one event list per chord from engine/figure.mjs —
-       * block strum, the figure as a line, or both — then voice-scheduled. The
+       * whole-harmony strum, the figure as a line, or both — then voice-scheduled. The
        * same list the stage pulses and the score draws; nothing re-derived. */
       const parsed = parseFigure(cfg && cfg.figure, (cfg && cfg.address) || "slots");
       const events = figureEvents(step, {
         parsed: parsed.err ? null : parsed.pattern, address: (cfg && cfg.address) || "slots",
-        playback: (cfg && cfg.playback) || "block", bassMidi: bass, durBeats, bpm,
+        playback: playbackWord(cfg && cfg.playback) || "strum", bassMidi: bass, durBeats, bpm,
         ctx: { scalePcs: scaleNotes(cfg.key || "C", cfg.scale || "major").map((n) => n.pc),
           tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,
           open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
@@ -3499,7 +3536,7 @@ const audioCard = {
         // started inaudible sources would pass over a broken mute forever
         if ((ev.role === "bass" ? bassVol : chordVol) === 0) continue;
         sound(voiceFor(ev.role, voice), ev.midi, t0 + ev.onset, ev.dur,
-          ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.strum ? 0.14 : 0.2);
+          ev.role === "bass" ? 0.3 : ev.role === "approach" ? 0.16 : ev.bed ? 0.14 : 0.2);
       }
     };
 
@@ -3577,10 +3614,19 @@ const audioCard = {
      * before the first Play, exactly as the triad keyboard does. */
     listen(d, NOTE, (m) => {
       if (!m || typeof m.midi !== "number") return;
-      if (chordVol === 0) return;              // a muted chord voice presses silently
+      /* ADDITIVE (260906): a NOTE may name its role — "bass" routes to the
+       * bass bus and its slider, exactly as the walked pass's bass events
+       * always did (the soundStep gate above); a NOTE without a role is a
+       * chord note, byte-for-byte the old behaviour. The optional-field
+       * precedent is STEP_CHANGED's attack. Until this, the only producer
+       * of a bass-role event was the tetrad pass, and a door without it had
+       * a bass slider controlling nothing. */
+      const role = m.role === "bass" ? "bass" : "chord";
+      if ((role === "bass" ? bassVol : chordVol) === 0) return;
       const a = audio();
       if (!a) return;
-      sound(voiceFor("chord", voice), m.midi, a.currentTime + 0.02, 0.7, 0.24);
+      sound(voiceFor(role, voice), m.midi, a.currentTime + 0.02, 0.7,
+        role === "bass" ? 0.3 : 0.24);
     });
     listen(d, ATTACK, (m) => {
       if (!m || typeof m.index !== "number") return;
@@ -4008,7 +4054,7 @@ const __m_hub_modules_fretboard_stage_mjs = (() => {
 const { tetradPass, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { keysOf } = __m_engine_voice_identity_mjs;
-const { parseFigure, figureEvents, toneIndexOf } = __m_engine_figure_mjs;
+const { parseFigure, figureEvents, toneIndexOf, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } = __m_hub_bus_mjs;
 /* fretboard-stage.mjs — the neck, the dots, the armed rings, the transitions.
  *
@@ -4419,12 +4465,12 @@ const fretboardStage = {
       try {
         events = figureEvents(cur, {
           parsed: parsed.err ? null : parsed.pattern, address: cfg.address || "slots",
-          playback: cfg.playback || "block", durBeats, bpm,
+          playback: playbackWord(cfg.playback) || "strum", durBeats, bpm,
           ctx: { scalePcs: scale.map((n) => n.pc), tonicPc: scale[0].pc, open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
         });
       } catch { return; }
-      const line = events.filter((e) => e.role !== "bass" && !e.strum);
-      const isLine = (cfg.playback || "block") !== "block" && !!parsed.pattern;
+      const line = events.filter((e) => e.role !== "bass" && !e.bed);
+      const isLine = (playbackWord(cfg.playback) || "strum") !== "strum" && !!parsed.pattern;
       line.forEach((ev) => {
         const t = d.defaultView.setTimeout(() => {
           if (ev.string == null || ev.fret == null) return;
@@ -5091,11 +5137,20 @@ const metronomeCard = {
 
     /* a REQUEST from elsewhere — the transport asking for the grid it walks on.
      * It is applied here, by the owner, and answered with the resulting state. */
+    /* THE OWNER CLAMPS EVERY DOOR IN (260913 — found by the under-neck
+     * view's clamp pin): the 15–300 rule lived only in the slider's own
+     * attributes, so a bus REQUEST (and a fast tap) walked straight past
+     * it into the core — a requested 999 ran the clock at 999 with the
+     * readout agreeing. The bounds derive from the slider's declared
+     * min/max — the rule stays stated once. */
+    const clampBpm = (v) =>
+      Math.max(+byId("bpmRange").min, Math.min(+byId("bpmRange").max, v));
     listen(d, CLOCK, (m) => {
       if (!m) return;
       if (typeof m.bpm === "number") {
-        core.setBpm(m.bpm);
-        byId("bpmRange").value = m.bpm; byId("bpmVal").textContent = m.bpm;
+        const v = clampBpm(m.bpm);
+        core.setBpm(v);
+        byId("bpmRange").value = v; byId("bpmVal").textContent = v;
       }
       if (typeof m.meter === "number") {
         core.setMeter(m.meter);
@@ -5124,7 +5179,8 @@ const metronomeCard = {
     });
     byId("tapBtn").addEventListener("click", () => {
       const bpm = tap(now());
-      if (bpm) { core.setBpm(bpm); byId("bpmRange").value = bpm; byId("bpmVal").textContent = bpm; publish(); }
+      if (bpm) { const v = clampBpm(bpm); core.setBpm(v);
+        byId("bpmRange").value = v; byId("bpmVal").textContent = v; publish(); }
     });
     byId("bpmRange").addEventListener("input", (e) => {
       core.setBpm(+e.target.value); byId("bpmVal").textContent = e.target.value; publish();
@@ -5683,7 +5739,7 @@ function entryId() {
   return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
 }
 
-function emptyDoc() { return { pad: "", entries: [] }; }
+function emptyDoc() { return { pad: "", title: "", entries: [] }; }
 
 // ---------- pure entry operations (every one returns a NEW document) ----------
 
@@ -5793,8 +5849,18 @@ function toAtchart(doc, meta) {
   // already carries a chart all refuse by name; nothing is lost or mangled.
   const offends = (t) => String(t ?? "").split("\n").some((l) => CHART_OPENER.test(l));
   if (doc.entries.some((e) => offends(e.text)))
-    throw new Error("a ```chart fence belongs in the file's chart block — " +
-      "the format holds one chart per file (v1); use a plain ``` fence in notes");
+    /* REWORDED 260911 (item 2a, PO finding): the old message cited the spec
+     * ("the format holds one chart per file (v1)") — a citation, not an
+     * instruction. The player needs the route, and the route is the pad's
+     * own lift: its one chart fence becomes the file's chart block. Host-
+     * neutral by necessity — this string is carried into every door. */
+    /* REWORDED 260915 (5f, the plain-English pass): "fence" was
+     * markdown's word; "block" was ALREADY this message's own word for the
+     * destination ("the file's chart block"), so the region takes the same
+     * word. The rule is unchanged. */
+    throw new Error("a saved note holds a ```chart block — move the chart into " +
+      "the pad, where its one ```chart block becomes the file's chart block; " +
+      "a ``` block that is just prose can stay plain ```");
   const at = doc._at
     ? JSON.parse(JSON.stringify(doc._at))
     : { meta: { atchart: 1, ...(meta || {}) },
@@ -5810,7 +5876,7 @@ function toAtchart(doc, meta) {
       (chartFences.length === 1 && strayOpeners > 1))
     throw new Error("the pad holds " + (strayOpeners || chartFences.length) +
       " ```chart openers — the format holds one chart per file (v1), " +
-      "and an unclosed chart fence cannot be written");
+      "and a ```chart with no closing ``` cannot be written");
   let body;
   // where does the stored file keep its chart? slot at body[0] = file-level
   // (the classic layout); slot deeper in = the pad owns it (a prior lift)
@@ -6787,7 +6853,8 @@ const { createPalette } = __m_engine_palette_mjs;
  * neither FAILS LOUDLY by capability name. Never silent omission. Labels
  * come from the adapter's declared nouns ({item, apply}) — no save or apply
  * verb is hand-written in any page. The paragraph-level handoff guarantee
- * ("the file is the handoff channel: nothing leaves this machine", web
+ * ("Your notes stay on this computer — nothing is uploaded. Export
+ * writes a file; that file is the only way notes move.", web
  * contract sections 5/6) is emitted by the surface in every host: it is a
  * charter guarantee, not helper prose.
  *
@@ -6845,7 +6912,8 @@ function createNotepadSurface(opts) {
       const raw = storage.load();
       if (raw) {
         const d = JSON.parse(raw);
-        return { pad: String(d.pad ?? ""), entries: (d.entries || []).map(makeEntry) };
+        return { pad: String(d.pad ?? ""), title: String(d.title ?? ""),
+                 entries: (d.entries || []).map(makeEntry) };
       }
       const migrated = migrate();
       if (migrated) { trySave(migrated); return migrated; }
@@ -6854,16 +6922,23 @@ function createNotepadSurface(opts) {
   }
   function trySave(d) {
     if (!storageOK) return false;
-    try { storage.save(JSON.stringify({ pad: d.pad, entries: d.entries })); return true; }
+    try { storage.save(JSON.stringify({ pad: d.pad, title: d.title ?? "", entries: d.entries })); return true; }
     catch (e) { storageOK = false; return false; }
   }
   function persist() { return trySave(doc); }
 
-  function msgSet(t, sticky) {
-    if (!els.msg) return;
-    els.msg.textContent = t;
+  /* THE MESSAGE PRINTS WHERE THE PRESS HAPPENED (260911, item 2b): each
+   * capability may have its own slot — els.<cap>Msg — and a host that
+   * declares only the shared els.msg keeps exactly the old behaviour (the
+   * same fallback shape as import's own slot, generalised). The slot is
+   * addressed per call site, so a refusal lands beside the button that
+   * refused, not six inches away beside Save. */
+  function msgSet(cap, t, sticky) {
+    const slot = els[cap + "Msg"] || els.msg;
+    if (!slot) return;
+    slot.textContent = t;
     if (t && !sticky) setTimeout(() => {
-      if (els.msg.textContent === t) els.msg.textContent = "";
+      if (slot.textContent === t) slot.textContent = "";
     }, 2200);
   }
 
@@ -6876,8 +6951,8 @@ function createNotepadSurface(opts) {
     doc = { ...doc, pad: "" };
     els.pad.value = "";
     const ok = persist();
-    if (!ok) msgSet("saved in this tab only — use Export to keep it", true);
-    else if (!text) msgSet("captured without a note"); // something must confirm
+    if (!ok) msgSet("save", "saved in this tab only — use Export to keep it", true);
+    else if (!text) msgSet("save", "captured without a note"); // something must confirm
     renderRows(); onChange();
   }
 
@@ -6892,7 +6967,7 @@ function createNotepadSurface(opts) {
     persist(); onChange();
   }
 
-  // ---- export / import / clipboard: the file is the handoff channel ----
+  // ---- export / import / clipboard: the FILE is the only way notes move ----
   function exportText() { return toAtchart(doc, { title: file.title }); }
   function importText(text) {
     let inc;
@@ -6936,22 +7011,28 @@ function createNotepadSurface(opts) {
     } catch (e) { importMsg("import failed: " + e.message); }
   }
   function download() {
-    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    let text; try { text = exportText(); } catch (e) { msgSet("export", e.message, true); return; }
     const docm = els.pad.ownerDocument, win = docm.defaultView;
     const blob = new win.Blob([text], { type: "text/markdown" });
     const a = docm.createElement("a");
     a.href = win.URL.createObjectURL(blob);
-    a.download = file.name();
+    const name = file.name();
+    a.download = name;
     a.click();
     setTimeout(() => win.URL.revokeObjectURL(a.href), 2000);
+    /* SUCCESS SAYS SO (260911, item 2c): this was the surface's one silent
+     * success — the browser's download chrome is not this page's answer, and
+     * a successful Export looked exactly like a dead button. The message
+     * names the file it wrote. */
+    msgSet("export", "exported " + name + " — check your downloads");
   }
   async function copy() {
-    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    let text; try { text = exportText(); } catch (e) { msgSet("copy", e.message, true); return; }
     try {
       const win = els.pad.ownerDocument.defaultView;
       await win.navigator.clipboard.writeText(text);
-      msgSet("copied — one .atchart.md, ready to paste");
-    } catch (e) { msgSet("clipboard unavailable — use Export", true); }
+      msgSet("copy", "copied — one .atchart.md, ready to paste");
+    } catch (e) { msgSet("copy", "clipboard unavailable — use Export", true); }
   }
 
   // ---- the rows: read-surface rendering, derived labels, inert foreigners ----
@@ -7040,6 +7121,21 @@ function createNotepadSurface(opts) {
     padTimer = setTimeout(() => { persist(); onChange(); }, 300);
   });
   els.pad.addEventListener("change", () => { persist(); onChange(); });
+  /* the document's TITLE rides the same store as the pad (ruled 260914,
+   * overruling v0.9's unpersisted field): the pad already survives a reload
+   * — a note that comes back without its name teaches distrust. Same
+   * lifetime, same debounce, same store; the DROPPED per-entry title ruling
+   * is untouched (entry labels stay derived). An optional slot: a host
+   * without els.title keeps exactly the old behaviour. */
+  if (els.title) {
+    els.title.value = doc.title || "";
+    els.title.addEventListener("input", () => {
+      doc = { ...doc, title: els.title.value };
+      if (padTimer) clearTimeout(padTimer);
+      padTimer = setTimeout(() => { persist(); onChange(); }, 300);
+    });
+    els.title.addEventListener("change", () => { persist(); onChange(); });
+  }
   mountCap("save", (b) => b.addEventListener("click", save));
   mountCap("clear", (b) => b.addEventListener("click", () => {
     if (!String(els.pad.value ?? "").trim()) { discard(); return; }
@@ -7104,7 +7200,12 @@ function createNotepadSurface(opts) {
       (els.controls || els.pad).appendChild(h);
     }
     h.setAttribute("data-cap", "handoff");
-    h.textContent = "The file is the handoff channel: nothing leaves this machine.";
+    /* REWORDED 260915 (5d, the plain-English pass — Daniel: "none of
+     * that means anything to me"). The PRIVACY PROMISE IS KEPT — only the
+     * words changed: the old sentence said it in engineer's English
+     * ("the file is the handoff channel: nothing leaves this machine"). */
+    h.textContent = "Your notes stay on this computer — nothing is uploaded. "
+      + "Moving notes anywhere happens only through the file Export writes.";
   }
   if (!storageOK && els.storeNote)
     els.storeNote.textContent =
@@ -7168,10 +7269,18 @@ const notepadCard = {
   /* the notebook is where a take is written DOWN, so it reads last on any door
    * that also carries material boards (build.mjs `order`, default 0) */
   order: 90,
-  controls: ["journalIn", "saveEntry", "clearPad", "exportLog", "importBtn",
+  controls: ["journalIn", "saveEntry", "clearPad", "exportLog", "copyBtn",
+    "importBtn", "paletteBtn", "paletteRoot", "npTitle",
     "histList", "histCount", "clearConfirm", "clearSave", "clearDiscard",
     "clearCancel", "storeNote", "handoffNote"],
 
+  /* PART MARKERS (the parts primitive, 2026-08-30): the PAD — the note
+   * column — is marked `pad`, so a door may seat it away from the log (the
+   * multetudes door rows it beside the metronome under a "Notepad" heading,
+   * v0.9's own card). The log half, its header and the history column, stays
+   * at this module's own mount. A door that seats nothing renders every byte
+   * in place, markers stripped: one module, one surface, one state, wherever
+   * the parts sit. */
   markup: `
   <div class="bh"><span>Practice log — <span id="histCount" data-control="histCount">0</span> saved</span>
     <span id="storeNote" data-control="storeNote" class="storenote"></span></div>
@@ -7181,18 +7290,36 @@ const notepadCard = {
       <span id="importMsg" class="hint"></span>
     </div>
     <div id="dragBar" title="drag to resize"></div>
-    <div class="jcol" id="noteCol">
+    <!--part:pad--><div class="jcol" id="noteCol">
+      <!-- THE DOCUMENT'S TITLE (260913b, item 2 — D11 unblocked): fills
+           file.title and drives file.name(); empty falls back to today's
+           default, so an untouched field changes nothing that ships. It
+           does NOT relabel entries — those keep deriving (260811.3). The
+           shell seats it in the header band via data-header-slot. -->
+      <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
       <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
         placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
+      <!-- v0.9's ratified row (260911, item 1): six buttons, one row, THAT
+           order — Copy between Export and Import. The host takes the
+           placement the auto-append was covering for; the message line sits
+           UNDER the row so it can never wrap the buttons. -->
       <div class="transport journalcontrols" id="journalControls">
         <button id="saveEntry" data-control="saveEntry" class="primary"></button>
         <button id="clearPad" data-control="clearPad"></button>
         <button id="exportLog" data-control="exportLog"></button>
+        <button id="copyBtn" data-control="copyBtn"></button>
         <button id="importBtn" data-control="importBtn"></button>
+        <button id="paletteBtn" data-control="paletteBtn"></button>
         <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json">
-        <span id="saveMsg" class="hint nomargin"></span>
       </div>
+      <!-- the message prints where the press happened (260911, item 2b):
+           one slot per talking capability, all on the line under the row —
+           an empty slot collapses, so the row itself can never wrap -->
+      <div class="padmsgs"><span id="saveMsg" class="hint nomargin"></span><span
+        id="exportMsg" class="hint nomargin"></span><span
+        id="copyMsg" class="hint nomargin"></span></div>
+      <div id="paletteRoot" data-control="paletteRoot"></div>
       <div class="transport journalconfirm" id="clearConfirm" data-control="clearConfirm">
         <span class="hint nomargin">that note is filed nowhere —</span>
         <button id="clearSave" data-control="clearSave" class="primary">Save and clear</button>
@@ -7200,7 +7327,7 @@ const notepadCard = {
         <button id="clearCancel" data-control="clearCancel">keep writing</button>
       </div>
       <div class="hint" id="handoffNote" data-control="handoffNote"></div>
-    </div>
+    </div><!--/part:pad-->
   </div>`,
 
   /* Every rule below names a token only this module ships. In the shipped
@@ -7218,8 +7345,12 @@ const notepadCard = {
   color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
+#npTitle{font:inherit;font-size:11.5px;padding:2px 7px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink);width:170px}
 .journalcontrols{margin-top:10px}
 .journalconfirm{display:none;margin-top:6px}
+.padmsgs{margin-top:6px;min-height:0}
+.padmsgs .hint:empty{display:none}
 .nomargin{margin:0}
 .storenote{text-transform:none;letter-spacing:0;font-weight:normal}
 .hist{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
@@ -7302,10 +7433,31 @@ const notepadCard = {
       return parts.join(" · ") || "no configuration attached";
     };
 
-    createNotepadSurface({
+    /* THE CHART CHANNEL (child 7): the pad's one ```chart fence, announced
+     * so the progression can read the note back — §8's handoff closing. The
+     * fence pair is scanned here (first opener to its closer, the same shape
+     * notepad.mjs enforces one-of at export); the CONTENT is never parsed
+     * here — the progression parses it through parseAtchart, whose
+     * assertions gate the read. Announced only when the body CHANGES. */
+    let lastChart;
+    const announceChart = (pad) => {
+      const lines = String(pad || "").split("\n");
+      let body = null;
+      const open = lines.findIndex((l) => /^```chart\s*$/.test(l));
+      if (open >= 0) {
+        const close = lines.findIndex((l, i) => i > open && /^```\s*$/.test(l));
+        if (close > open) body = lines.slice(open + 1, close).join("\n");
+      }
+      if (body !== lastChart) { lastChart = body; announce(d, CONFIG_CHANGED, { chart: body }); }
+    };
+
+    let surface = null;
+    surface = createNotepadSurface({
       adapter: {
         app: doorId, version: 1,
-        nouns: { item: "entry", apply: "Restore étude" },
+        /* v0.9's wording, adopted 260911 (item 1 / D12): "Save note", not
+         * "Save entry" — the label derives from this noun, never hand-set */
+        nouns: { item: "note", apply: "Restore étude" },
         snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}) }),
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
@@ -7331,19 +7483,35 @@ const notepadCard = {
           return fromTriadetudesV1(log).entries;
         } catch { return null; }
       },
-      els: { pad: byId("journalIn"), saveBtn: byId("saveEntry"),
+      els: { pad: byId("journalIn"), title: byId("npTitle"), saveBtn: byId("saveEntry"),
         clearBtn: byId("clearPad"), confirmRoot: byId("clearConfirm"),
         confirmSave: byId("clearSave"), confirmDiscard: byId("clearDiscard"),
         confirmCancel: byId("clearCancel"), exportBtn: byId("exportLog"),
+        copyBtn: byId("copyBtn"), paletteBtn: byId("paletteBtn"),
+        paletteRoot: byId("paletteRoot"),
         importBtn: byId("importBtn"), importFile: byId("importFile"),
         msg: byId("saveMsg"), importMsg: byId("importMsg"),
+        exportMsg: byId("exportMsg"), copyMsg: byId("copyMsg"),
         list: byId("histList"), count: byId("histCount"),
         storeNote: byId("storeNote"), controls: byId("journalControls"),
         handoff: byId("handoffNote") },
-      file: { title: doorId + " journal",
-        name: () => doorId + "-journal-" + new Date().toISOString().slice(0, 10) + ".atchart.md" },
-      onChange: () => ctx.changed(),
+      /* the typed title wins; empty falls back to the standing default —
+       * read per call (a getter), so the export always sees the field NOW */
+      file: {
+        get title() {
+          return (byId("npTitle").value || "").trim() || doorId + " journal";
+        },
+        name: () => {
+          const t = (byId("npTitle").value || "").trim();
+          return (t ? t.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-")
+                    : doorId + "-journal-" + new Date().toISOString().slice(0, 10))
+            + ".atchart.md";
+        },
+      },
+      onChange: () => { ctx.changed(); announceChart(surface ? surface.getDoc().pad : ""); },
     });
+    announceChart(surface.getDoc().pad);
+    byId("npTitle").placeholder = "title — " + new Date().toISOString().slice(0, 10);
   },
 };
 return { notepadCard };
@@ -7355,7 +7523,7 @@ const { tetradPass, degreeLabel, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes, LETTER_PC } = __m_engine_chord_mjs;
 const { patternOf } = __m_engine_transport_mjs;
 const { writtenValue } = __m_engine_drill_mjs;
-const { parseFigure, figureEvents } = __m_engine_figure_mjs;
+const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 /* score-board.mjs — "The étude — end to end": the reference's grand-staff score
@@ -7521,14 +7689,35 @@ const scoreBoard = {
          * cue-size, hollow, degree-coloured when diatonic and violet when not. */
         const parsedFig = parseFigure(cfg.figure, cfg.address || "slots");
         let events;
+        /* THE REASON IS CARRIED (260911, item 3; register 22): the engine
+         * fails loudly and BY NAME ("naming it at source protects every
+         * caller"), and this catch used to discard the name and draw
+         * something else — a §4.4 silent divergence in a shipped module.
+         * The catch still keeps the board alive; the bar now says it could
+         * not honour the figure, and why, where the player is looking. */
+        let figErr = null;
         try {
           events = figureEvents(s, { parsed: parsedFig.err ? null : parsedFig.pattern,
-            address: cfg.address || "slots", playback: cfg.playback || "block", durBeats: beats, bpm: 72,
+            address: cfg.address || "slots", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: 72,
             ctx: { scalePcs: scaleNotes(cfg.key, cfg.scale).map((n) => n.pc), tonicPc: scaleNotes(cfg.key, cfg.scale)[0].pc,
               open: OPEN_MIDI, nfrets: 15, set: pass.set.strings } });
-        } catch { events = null; }
-        const seqEvents = events && (cfg.playback || "block") !== "block" && parsedFig.pattern
-          ? events.filter((ev) => ev.role !== "bass" && !ev.strum) : null;
+        } catch (e) { events = null; figErr = e && e.message ? e.message : String(e); }
+        if (figErr && parsedFig.pattern && (playbackWord(cfg.playback) || "strum") !== "strum") {
+          const fe = el("text", { x: x + 3, y: 40, "font-size": "8", fill: "#B82929",
+            "data-scfigerr": "" }, svg);
+          const feWords = ("the figure cannot sound here — " + figErr).split(" ");
+          let feLine = "", feFirst = true;
+          for (const wd of feWords) {
+            if ((feLine + " " + wd).length > Math.max(18, w / 5) && feLine) {
+              const ts = el("tspan", { x: x + 3, dy: feFirst ? 0 : 9 }, fe);
+              ts.textContent = feLine; feFirst = false; feLine = wd;
+            } else feLine = feLine ? feLine + " " + wd : wd;
+          }
+          const ts = el("tspan", { x: x + 3, dy: feFirst ? 0 : 9 }, fe);
+          ts.textContent = feLine;
+        }
+        const seqEvents = events && (playbackWord(cfg.playback) || "strum") !== "strum" && parsedFig.pattern
+          ? events.filter((ev) => ev.role !== "bass" && !ev.bed) : null;
         const labOf = (midi) => degreeLabel(s.chord, midi);
         if (!seqEvents) {
           const open = beats >= 2, xh = x + 16;
@@ -7630,6 +7819,7 @@ const { FAMILIES } = __m_engine_tetrad_voicings_mjs;
 const { PLACEMENTS } = __m_engine_isolation_mjs;
 const { parseFigure, describeFigure, SLOT_ORDER, TONE_ORDER } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, announce, listen } = __m_hub_bus_mjs;
+const { playbackWord } = __m_engine_figure_mjs;
 /* shape-motion.mjs — the SHAPE & MOTION strip, the reference's form with the
  * tetrad's content.
  *
@@ -7681,6 +7871,7 @@ const { CONFIG_CHANGED, announce, listen } = __m_hub_bus_mjs;
 
 
 
+
 const FAMILY_LABEL = { close: "Close", drop2: "Drop-2", drop3: "Drop-3" };
 const PLACE_LABEL = { grip: "Grip", line: "Line", free: "Free" };
 
@@ -7721,9 +7912,9 @@ const shapeMotion = {
           <div class="seg" id="placeSeg" data-control="placeSeg"></div></div>
         <div class="smTight"><label>Playback</label>
           <div class="seg" id="playbackSeg" data-control="playbackSeg">
-            <button data-pb="block" class="on" title="the harmony, strummed">Block</button>
+            <button data-pb="strum" class="on" title="the harmony, strummed — the word was Block until the 260913 ruling">Strum</button>
             <button data-pb="arpeggiated" title="the figure as a line — the figure IS the rhythm">Arpeggiated</button>
-            <button data-pb="both" title="the line over a short strummed harmony">Both</button>
+            <button data-pb="both" title="the line over a short harmony bed">Both</button>
           </div></div>
       </div>
       <label class="chk"><input type="checkbox" id="rootsChk" data-control="rootsChk"> Show root notes on lower strings</label>
@@ -7767,7 +7958,7 @@ const shapeMotion = {
        * engine/figure.mjs, never pre-digested here, so the pass stays the only
        * derived thing and the text stays the stored fact. `playback` is the
        * reference's segment. `guide` is the guide-tone reduction view. */
-      address: "slots", figure: "", playback: "block", guide: false,
+      address: "slots", figure: "", playback: "strum", guide: false,
       /* THE ZONE (audit 260818 §A2) is a SHAPE fact — where on the neck — so it
        * is owned here. `null` means "the pass's own default"; the stage's Box
        * mode announces a value the moment the user moves it, and this owner
@@ -7814,7 +8005,7 @@ const shapeMotion = {
       // hostile; the door keeps both, the picker writing into the field
       const letters = cfg.address === "tones" ? TONE_ORDER : SLOT_ORDER;
       const presets = [
-        ["", "— block —"],
+        ["", "— strum —"],   // was "— block —" until the 260913 word ruling
         [letters.join("-"), "up " + letters.join("-")],
         [[...letters].reverse().join("-"), "down " + [...letters].reverse().join("-")],
         [letters[0] + "-" + letters[2] + "-" + letters[1] + "-" + letters[3], "broken " + letters[0] + "-" + letters[2] + "-" + letters[1] + "-" + letters[3]],
@@ -7843,7 +8034,7 @@ const shapeMotion = {
         // identical silent chord. Disable them until a figure parses; enabling is
         // LIVE (render runs on every change). Playback stays three real buttons —
         // not collapsed, not renamed; this only gates when the axis is inert.
-        b.disabled = b.dataset.pb !== "block" && !hasFig;
+        b.disabled = b.dataset.pb !== "strum" && !hasFig;
       }
 
       /* THE PANEL NARRATES ITSELF (this item: state the rules in the hints, so
@@ -7865,16 +8056,16 @@ const shapeMotion = {
       if (cfg.placement === "free")
         parts.push("Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it");
       // the sounding rule, and the two ways to reach the silent block chord
-      if (cfg.playback === "block")
+      if (cfg.playback === "strum")
         parts.push(hasFig
-          ? "Playback is Block, so the figure is typed but not sounding — choose Arpeggiated or Both to hear it"
-          : "Block chords");
+          ? "Playback is Strum, so the figure is typed but not sounding — choose Arpeggiated or Both to hear it"
+          : "Strum chords");
       else
         parts.push(hasFig
           ? `${cfg.playback}: ${figWords}`
-          : `${cfg.playback} has no figure to sound — Block chords until one parses`);
+          : `${cfg.playback} has no figure to sound — Strum chords until one parses`);
       // the address toggle only bites while a figure is actually sounding
-      if (hasFig && cfg.playback !== "block")
+      if (hasFig && cfg.playback !== "strum")
         parts.push(cfg.address === "tones" ? "spelled by tone role" : "spelled by slot");
       if (cfg.guide) parts.push("guide tones lit — a neck view that dims R and 5");
       byId("smHint").textContent = parts.join(" · ");
@@ -7896,7 +8087,11 @@ const shapeMotion = {
       if (!m || typeof m !== "object") return;
       let changed = false;
       for (const k of MINE) if (k in m && JSON.stringify(m[k]) !== JSON.stringify(cfg[k])) {
-        cfg[k] = Array.isArray(m[k]) ? [...m[k]] : m[k]; changed = true;
+        /* a restored pre-260913 étude says playback "block" — the alias map
+         * is the one place the old word is known */
+        const v = k === "playback" ? playbackWord(m[k]) : m[k];
+        if (JSON.stringify(v) === JSON.stringify(cfg[k])) continue;
+        cfg[k] = Array.isArray(v) ? [...v] : v; changed = true;
       }
       if (changed) render();
     });
@@ -8245,14 +8440,20 @@ const __m_hub_shell_mjs = (() => {
 
 const SHELL_STYLES = `
 :root{
-  --ground:#ECECEE; --card:#FFFFFF; --ink:#212126; --gray:#73737A; --line:#D8D8DC;
+  /* THE HOUSE SKIN IS v0.9's (register entry 3, direction set 2026-08-28,
+   * landed 260915 at the beta reconciliation): white ground, #FAFAFB cards
+   * with #E6E6EA edges, the system font stack, the 17px title. v0.9's own
+   * distinction is kept: cards wear --edge, controls wear --line. */
+  --ground:#FFFFFF; --card:#FAFAFB; --ink:#212126; --gray:#73737A;
+  --line:#B9B9BF; --edge:#E6E6EA;
   --red:#B82929;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);
-     font-family:Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+     -webkit-font-smoothing:antialiased}
 .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
-header h1{font-size:26px;margin:6px 0 2px}
+header h1{font-size:17px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
 /* cards in one row share a height (default stretch), exactly the triad app's
  * rule — align-items:flex-start had let the metronome fall short of the
@@ -8349,7 +8550,7 @@ const WRAPPERS = {
   cards: {
     html: (inner, extra) => `<div class="card${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
 .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
@@ -8362,7 +8563,7 @@ const WRAPPERS = {
   strips: {
     html: (inner, extra) => `<div class="card strip${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.card.strip{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card.strip{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;margin-bottom:12px;position:relative}
 .card.strip h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
@@ -8378,7 +8579,7 @@ const WRAPPERS = {
   boards: {
     html: (inner, extra) => `<div class="board${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.board{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.board{background:var(--card);border:1px solid var(--edge);border-radius:10px;
        padding:10px 12px;margin-bottom:12px;position:relative}
 .board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
            font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
@@ -8436,6 +8637,19 @@ function initCollapse(doc) {
     const sum = doc.createElement("div");
     sum.className = "clpsSum";
     if (header) header.after(sum); else p.prepend(sum);
+    /* THE HEADER SLOT (260913b, item 2 — the first shell change in
+     * seventeen nights, reported not absorbed): a panel's module may mark
+     * ONE element `data-header-slot`; the shell seats it in the header
+     * band, left of the ⓘ and the chevron — the ⓘ's own precedent. The
+     * shell owns placement; the element, its id and its behaviour stay
+     * the module's. Hidden while collapsed, as the ⓘ is. */
+    const slot = p.querySelector("[data-header-slot]");
+    if (slot) {
+      // placement styled inline: a stylesheet rule would orphan the CSS
+      // check in every door whose modules declare no slot
+      slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
+      p.appendChild(slot);
+    }
     const btn = doc.createElement("button");
     btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse";
     btn.addEventListener("click", () => {
@@ -8513,7 +8727,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.1.13","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.4.0","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

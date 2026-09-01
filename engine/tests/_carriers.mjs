@@ -64,10 +64,11 @@ export const studyPath = (slug) => join(STUDIES, slug, "study.html");
  * ledger is emptied. An exemption is never counted as a pass — the
  * family_floor idiom. */
 export const OWED_DRIFT = new Map([
-  ["notepad", "260911 item 2a — the chart-fence refusal reworded to name the route; re-inline at the beta republish"],
-  ["notepad-surface", "260911 items 2b/2c — per-capability message slots; Export's success names its file; re-inline at the beta republish"],
-  ["figure", "260913 item 2 — the strum flag renamed bed, playback 'block' renamed 'strum' (the PO's vocabulary ruling); re-inline at the beta republish"],
-  ["voices", "260913 item 2 — voiceSchedule branches on ev.bed (was ev.strum); re-inline at the beta republish"],
+  /* EMPTIED 260915 — the beta reconciliation: notepad and notepad-surface
+   * re-inlined into the hand-authored metronome and triadetudes studies;
+   * figure and voices (and everything else) cleared by republishing the
+   * derived tetradetudes build. Four entries in, four out, each removed as
+   * its module landed — the ledger's own self-expiry demanded it. */
 ]);
 
 /** each exported definition of a module, split at import lines and trimmed —

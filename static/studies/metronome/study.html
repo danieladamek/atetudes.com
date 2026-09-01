@@ -1649,7 +1649,7 @@ function entryId() {
   return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
 }
 
-function emptyDoc() { return { pad: "", entries: [] }; }
+function emptyDoc() { return { pad: "", title: "", entries: [] }; }
 
 // ---------- pure entry operations (every one returns a NEW document) ----------
 
@@ -1760,8 +1760,18 @@ function toAtchart(doc, meta) {
   // already carries a chart all refuse by name; nothing is lost or mangled.
   const offends = (t) => String(t ?? "").split("\n").some((l) => CHART_OPENER.test(l));
   if (doc.entries.some((e) => offends(e.text)))
-    throw new Error("a ```chart fence belongs in the file's chart block — " +
-      "the format holds one chart per file (v1); use a plain ``` fence in notes");
+    /* REWORDED 260911 (item 2a, PO finding): the old message cited the spec
+     * ("the format holds one chart per file (v1)") — a citation, not an
+     * instruction. The player needs the route, and the route is the pad's
+     * own lift: its one chart fence becomes the file's chart block. Host-
+     * neutral by necessity — this string is carried into every door. */
+    /* REWORDED 260915 (5f, the plain-English pass): "fence" was
+     * markdown's word; "block" was ALREADY this message's own word for the
+     * destination ("the file's chart block"), so the region takes the same
+     * word. The rule is unchanged. */
+    throw new Error("a saved note holds a ```chart block — move the chart into " +
+      "the pad, where its one ```chart block becomes the file's chart block; " +
+      "a ``` block that is just prose can stay plain ```");
   const at = doc._at
     ? JSON.parse(JSON.stringify(doc._at))
     : { meta: { atchart: 1, ...(meta || {}) },
@@ -1777,7 +1787,7 @@ function toAtchart(doc, meta) {
       (chartFences.length === 1 && strayOpeners > 1))
     throw new Error("the pad holds " + (strayOpeners || chartFences.length) +
       " ```chart openers — the format holds one chart per file (v1), " +
-      "and an unclosed chart fence cannot be written");
+      "and a ```chart with no closing ``` cannot be written");
   let body;
   // where does the stored file keep its chart? slot at body[0] = file-level
   // (the classic layout); slot deeper in = the pad owns it (a prior lift)
@@ -1925,8 +1935,8 @@ function hashStr(s) {
   if (mig.entries[0].payload.data.bpm !== 60)
     throw new Error("notepad: the v1.0 migration must carry the config");
 }
-return { makeEntry, emptyDoc, addEntry, editEntry, deleteEntry, reorderEntry,
-  fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart };
+
+return { makeEntry, emptyDoc, addEntry, editEntry, deleteEntry, reorderEntry, fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart };
 })();
 /* ============ motion grammar — shared component v1 ============
    Canonical source: engine/motion.mjs (same anti-drift discipline). */
@@ -2754,7 +2764,8 @@ const { createPalette } = PALETTE;
  * neither FAILS LOUDLY by capability name. Never silent omission. Labels
  * come from the adapter's declared nouns ({item, apply}) — no save or apply
  * verb is hand-written in any page. The paragraph-level handoff guarantee
- * ("the file is the handoff channel: nothing leaves this machine", web
+ * ("Your notes stay on this computer — nothing is uploaded. Export
+ * writes a file; that file is the only way notes move.", web
  * contract sections 5/6) is emitted by the surface in every host: it is a
  * charter guarantee, not helper prose.
  *
@@ -2811,7 +2822,8 @@ function createNotepadSurface(opts) {
       const raw = storage.load();
       if (raw) {
         const d = JSON.parse(raw);
-        return { pad: String(d.pad ?? ""), entries: (d.entries || []).map(makeEntry) };
+        return { pad: String(d.pad ?? ""), title: String(d.title ?? ""),
+                 entries: (d.entries || []).map(makeEntry) };
       }
       const migrated = migrate();
       if (migrated) { trySave(migrated); return migrated; }
@@ -2820,16 +2832,23 @@ function createNotepadSurface(opts) {
   }
   function trySave(d) {
     if (!storageOK) return false;
-    try { storage.save(JSON.stringify({ pad: d.pad, entries: d.entries })); return true; }
+    try { storage.save(JSON.stringify({ pad: d.pad, title: d.title ?? "", entries: d.entries })); return true; }
     catch (e) { storageOK = false; return false; }
   }
   function persist() { return trySave(doc); }
 
-  function msgSet(t, sticky) {
-    if (!els.msg) return;
-    els.msg.textContent = t;
+  /* THE MESSAGE PRINTS WHERE THE PRESS HAPPENED (260911, item 2b): each
+   * capability may have its own slot — els.<cap>Msg — and a host that
+   * declares only the shared els.msg keeps exactly the old behaviour (the
+   * same fallback shape as import's own slot, generalised). The slot is
+   * addressed per call site, so a refusal lands beside the button that
+   * refused, not six inches away beside Save. */
+  function msgSet(cap, t, sticky) {
+    const slot = els[cap + "Msg"] || els.msg;
+    if (!slot) return;
+    slot.textContent = t;
     if (t && !sticky) setTimeout(() => {
-      if (els.msg.textContent === t) els.msg.textContent = "";
+      if (slot.textContent === t) slot.textContent = "";
     }, 2200);
   }
 
@@ -2842,8 +2861,8 @@ function createNotepadSurface(opts) {
     doc = { ...doc, pad: "" };
     els.pad.value = "";
     const ok = persist();
-    if (!ok) msgSet("saved in this tab only — use Export to keep it", true);
-    else if (!text) msgSet("captured without a note"); // something must confirm
+    if (!ok) msgSet("save", "saved in this tab only — use Export to keep it", true);
+    else if (!text) msgSet("save", "captured without a note"); // something must confirm
     renderRows(); onChange();
   }
 
@@ -2858,7 +2877,7 @@ function createNotepadSurface(opts) {
     persist(); onChange();
   }
 
-  // ---- export / import / clipboard: the file is the handoff channel ----
+  // ---- export / import / clipboard: the FILE is the only way notes move ----
   function exportText() { return toAtchart(doc, { title: file.title }); }
   function importText(text) {
     let inc;
@@ -2902,22 +2921,28 @@ function createNotepadSurface(opts) {
     } catch (e) { importMsg("import failed: " + e.message); }
   }
   function download() {
-    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    let text; try { text = exportText(); } catch (e) { msgSet("export", e.message, true); return; }
     const docm = els.pad.ownerDocument, win = docm.defaultView;
     const blob = new win.Blob([text], { type: "text/markdown" });
     const a = docm.createElement("a");
     a.href = win.URL.createObjectURL(blob);
-    a.download = file.name();
+    const name = file.name();
+    a.download = name;
     a.click();
     setTimeout(() => win.URL.revokeObjectURL(a.href), 2000);
+    /* SUCCESS SAYS SO (260911, item 2c): this was the surface's one silent
+     * success — the browser's download chrome is not this page's answer, and
+     * a successful Export looked exactly like a dead button. The message
+     * names the file it wrote. */
+    msgSet("export", "exported " + name + " — check your downloads");
   }
   async function copy() {
-    let text; try { text = exportText(); } catch (e) { msgSet(e.message, true); return; }
+    let text; try { text = exportText(); } catch (e) { msgSet("copy", e.message, true); return; }
     try {
       const win = els.pad.ownerDocument.defaultView;
       await win.navigator.clipboard.writeText(text);
-      msgSet("copied — one .atchart.md, ready to paste");
-    } catch (e) { msgSet("clipboard unavailable — use Export", true); }
+      msgSet("copy", "copied — one .atchart.md, ready to paste");
+    } catch (e) { msgSet("copy", "clipboard unavailable — use Export", true); }
   }
 
   // ---- the rows: read-surface rendering, derived labels, inert foreigners ----
@@ -3006,6 +3031,21 @@ function createNotepadSurface(opts) {
     padTimer = setTimeout(() => { persist(); onChange(); }, 300);
   });
   els.pad.addEventListener("change", () => { persist(); onChange(); });
+  /* the document's TITLE rides the same store as the pad (ruled 260914,
+   * overruling v0.9's unpersisted field): the pad already survives a reload
+   * — a note that comes back without its name teaches distrust. Same
+   * lifetime, same debounce, same store; the DROPPED per-entry title ruling
+   * is untouched (entry labels stay derived). An optional slot: a host
+   * without els.title keeps exactly the old behaviour. */
+  if (els.title) {
+    els.title.value = doc.title || "";
+    els.title.addEventListener("input", () => {
+      doc = { ...doc, title: els.title.value };
+      if (padTimer) clearTimeout(padTimer);
+      padTimer = setTimeout(() => { persist(); onChange(); }, 300);
+    });
+    els.title.addEventListener("change", () => { persist(); onChange(); });
+  }
   mountCap("save", (b) => b.addEventListener("click", save));
   mountCap("clear", (b) => b.addEventListener("click", () => {
     if (!String(els.pad.value ?? "").trim()) { discard(); return; }
@@ -3070,7 +3110,12 @@ function createNotepadSurface(opts) {
       (els.controls || els.pad).appendChild(h);
     }
     h.setAttribute("data-cap", "handoff");
-    h.textContent = "The file is the handoff channel: nothing leaves this machine.";
+    /* REWORDED 260915 (5d, the plain-English pass — Daniel: "none of
+     * that means anything to me"). The PRIVACY PROMISE IS KEPT — only the
+     * words changed: the old sentence said it in engineer's English
+     * ("the file is the handoff channel: nothing leaves this machine"). */
+    h.textContent = "Your notes stay on this computer — nothing is uploaded. "
+      + "Moving notes anywhere happens only through the file Export writes.";
   }
   if (!storageOK && els.storeNote)
     els.storeNote.textContent =
@@ -3085,7 +3130,8 @@ function createNotepadSurface(opts) {
     get storageOK() { return storageOK; },
   };
 }
-return { createNotepadSurface, CAPABILITIES };
+
+return { CAPABILITIES, createNotepadSurface };
 })();
 
 const SUB_OFFSETS={1:[],2:[0.5],3:[1/3,2/3],4:[0.25,0.5,0.75]};

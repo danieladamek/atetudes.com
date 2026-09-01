@@ -2980,10 +2980,12 @@ console.log(JSON.stringify(out));
         #   · live engine output (derived dots ≠ the prototype's stored ones)
         #   · regions whose child has not landed (progression, timeline bars,
         #     the bass clef, figures) — asserted VISIBLY inert elsewhere
-        #   · register entries: the page chrome & control metrics (shell-owned,
-        #     untouchable without republishing the family), the pad/log split
+        #   · register entries: the pad/log split
         #     (the CSS ownership wall), the gaps card (prototype self-audit,
         #     dropped), the collapse chevron (family idiom, kept).
+        #   RETIRED 260915: the page-chrome & control-metrics class — the
+        #   house skin became v0.9's at the beta reconciliation (register
+        #   entry 3 RESOLVED), so chrome no longer needs an allow-list.
         proto = ctx.new_page()
         # the ORACLE ships with the gate (260911, the publish): notes/ is the
         # gitignored vault, so CI had no v0.9 and the comparison aborted the

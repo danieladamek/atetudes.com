@@ -20,14 +20,20 @@
 
 export const SHELL_STYLES = `
 :root{
-  --ground:#ECECEE; --card:#FFFFFF; --ink:#212126; --gray:#73737A; --line:#D8D8DC;
+  /* THE HOUSE SKIN IS v0.9's (register entry 3, direction set 2026-08-28,
+   * landed 260915 at the beta reconciliation): white ground, #FAFAFB cards
+   * with #E6E6EA edges, the system font stack, the 17px title. v0.9's own
+   * distinction is kept: cards wear --edge, controls wear --line. */
+  --ground:#FFFFFF; --card:#FAFAFB; --ink:#212126; --gray:#73737A;
+  --line:#B9B9BF; --edge:#E6E6EA;
   --red:#B82929;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);
-     font-family:Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+     -webkit-font-smoothing:antialiased}
 .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
-header h1{font-size:26px;margin:6px 0 2px}
+header h1{font-size:17px;margin:6px 0 2px}
 header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
 /* cards in one row share a height (default stretch), exactly the triad app's
  * rule — align-items:flex-start had let the metronome fall short of the
@@ -124,7 +130,7 @@ export const WRAPPERS = {
   cards: {
     html: (inner, extra) => `<div class="card${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
 .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
@@ -137,7 +143,7 @@ export const WRAPPERS = {
   strips: {
     html: (inner, extra) => `<div class="card strip${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.card.strip{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card.strip{background:var(--card);border:1px solid var(--edge);border-radius:10px;
       padding:12px 14px;margin-bottom:12px;position:relative}
 .card.strip h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
          color:var(--gray);margin:0 0 10px;font-weight:bold}
@@ -153,7 +159,7 @@ export const WRAPPERS = {
   boards: {
     html: (inner, extra) => `<div class="board${extra ? " " + extra : ""}">${inner}</div>`,
     styles: `
-.board{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.board{background:var(--card);border:1px solid var(--edge);border-radius:10px;
        padding:10px 12px;margin-bottom:12px;position:relative}
 .board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
            font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
