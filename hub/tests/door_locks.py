@@ -284,8 +284,16 @@ def run_door(pw, door_id):
               f"{tag} the boot's current chip is not bar 1's B\u266dmaj7")
         check(page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") == 4
               and page.eval_on_selector_all("#stSvg ellipse", "e => e.length") >= 4
-              and page.eval_on_selector_all("#kySvg circle", "e => e.length") == 4,
+              # the keys' CHORD circles (260917, item 3: the bass sounds at boot by
+              # ruling and draws its own hollow mark, data-kyref — excluded by role)
+              and page.eval_on_selector_all("#kySvg circle:not([data-kyref])", "e => e.length") == 4,
               f"{tag} the staff and the keys are not populated on first paint")
+        # 260917 item 3 (ruled): the bass DEFAULTS TO THE ROOT — on the fresh
+        # page the under-neck view reads root and the neck draws B♭ on string 6
+        boot_bass = page.evaluate("""() => { const g = document.querySelector('#fieldSvg .fd-ref');
+          return { v: (document.getElementById('fdBass2') || {}).value, s: g && g.dataset.refstr, f: g && g.dataset.reffret }; }""")
+        check(boot_bass["v"] == "root" and boot_bass["s"] == "6" and boot_bass["f"] == "6",
+              f"{tag} item 3: at boot the bass is the ROOT — B♭ on string 6, fret 6, drawn: {boot_bass}")
         # ... and the block is THE B♭ TETRAD — the chord roots at the KEY, not
         # at the window's anchor degree. Found 260831 (child 4): the door
         # booted on Gm7 (the startDeg chord) while v0.9 boots on B♭maj7 in the
@@ -538,7 +546,7 @@ def run_door(pw, door_id):
         check(sorted(d0["label"] for d0 in grip) == ["3", "5", "7", "R"],
               f"{tag} the four roles must all be worn: {[d0['label'] for d0 in grip]}")
         # TAKE IS NOT PLACEMENT, on the artifact: Line must not move a note
-        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(100)
         check(addrs(sel_dots()) == addrs(grip),
               f"{tag} raising the ceiling CHANGED the voicing — Take and Placement have collapsed "
               f"({addrs(grip)} -> {addrs(sel_dots())})")
@@ -567,12 +575,12 @@ def run_door(pw, door_id):
         set_strings([3, 2])
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 0, nearFret: 5 } }))""")
-        page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(60)
+        page.click('#fdNSeg button[data-nps=\"1\"]'); page.wait_for_timeout(60)
         page.uncheck("#fdAllTones"); page.wait_for_timeout(100)
         check("no placement fits" in hint(),
               f"{tag} a tetrad on two strings at one-per-string must refuse LOUDLY: {hint()!r}")
         page.select_option("#hcObj", "triad"); page.wait_for_timeout(60)
-        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(100)
         r7 = sel_dots()
         check(len(r7) == 3 and sorted(per_string(r7).values()) == [1, 2],
               f"{tag} R7: a triad folded onto two strings is 2+1, not {per_string(r7)}")
@@ -599,7 +607,7 @@ def run_door(pw, door_id):
               f"{tag} R14: tetrad lines must double somewhere and stay tetrad tones: {r14}")
         # leave the field as the door boots: R15
         page.uncheck("#fdAllTones"); page.wait_for_timeout(30)
-        page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(30)
+        page.click('#fdNSeg button[data-nps=\"1\"]'); page.wait_for_timeout(30)
         set_strings([4, 3, 2, 1])
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(60)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
@@ -669,7 +677,7 @@ def run_door(pw, door_id):
           document.addEventListener('atetudes:note', (e) => {
             const m = e.detail || {};
             if (typeof m.midi !== 'number') return;
-            const row = { ev: 'NOTE', midi: m.midi, rang: false };
+            const row = { ev: 'NOTE', midi: m.midi, role: m.role || null, rang: false };
             window.__pulseLog.push(row);
             setTimeout(() => {
               const svg = document.getElementById('fieldSvg');
@@ -696,8 +704,10 @@ def run_door(pw, door_id):
         plog = page.evaluate("() => window.__pulseLog")
         step_i = next((i for i, r in enumerate(plog) if r["ev"] == "STEP"), None)
         check(step_i is not None, f"{tag} the played pass reached an advance (log: {plog[:6]})")
-        notes = [r for r in plog if r["ev"] == "NOTE"]
-        first_after = next((r for r in plog[step_i:] if r["ev"] == "NOTE"), None) if step_i is not None else None
+        # bass NOTEs excluded BY ROLE (260917, item 3): the bass sounds at boot by
+        # ruling (root default) and rings at the hollow reference, not a selection dot
+        notes = [r for r in plog if r["ev"] == "NOTE" and r.get("role") != "bass"]
+        first_after = next((r for r in plog[step_i:] if r["ev"] == "NOTE" and r.get("role") != "bass"), None) if step_i is not None else None
         check(bool(notes) and all(r["rang"] for r in notes),
               f"{tag} EVERY sounded note rings at its dot — silent-ringed: "
               f"{[r['midi'] for r in notes if not r['rang']]}")
@@ -865,12 +875,16 @@ def run_door(pw, door_id):
               f"{tag} CC-1(a): under follows the fixed pick is off WITH its reason "
               f"on its own label: {cc1}")
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(250)
+        # PIN REWRITTEN 260917 (item 4, register 31): in chord mode the card's
+        # bass WINDOW is closed (hidden, never dead-with-no-reason); the bass
+        # control lives under the neck and is live there — CC-1's audit fix
+        # (the scale disable cleared) now proves itself on the surviving view
         cc1 = page.evaluate("""() => ({
-          dis: document.getElementById('hcRef').disabled,
-          lab: document.getElementById('hcRefLab').textContent })""")
-        check(cc1["dis"] is False and cc1["lab"] == "Bass tone",
-              f"{tag} CC-1 audit fix: the chord-mode paint CLEARS the scale "
-              f"disable — the bass is chord-relative, nothing contradicts it: {cc1}")
+          hidden: document.getElementById('hcRef').hidden,
+          labHidden: document.getElementById('hcRefLab').hidden,
+          bass2dis: document.getElementById('fdBass2').disabled })""")
+        check(cc1["hidden"] is True and cc1["labHidden"] is True and cc1["bass2dis"] is False,
+              f"{tag} item 4: chord mode closes the card's bass window and the under-neck control is live: {cc1}")
         page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
         page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
           .find(x => x.dataset.src === 'fixed').click(); }""")
@@ -1226,50 +1240,101 @@ def run_door(pw, door_id):
         page.wait_for_timeout(400)
         n_before = page.evaluate("() => JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length")
         page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(200)   # newest row: the named note
-        cf = page.evaluate("""() => { const c = document.getElementById('clearConfirm');
-          return { shown: getComputedStyle(c).display !== 'none', intent: c.getAttribute('data-intent'),
+        # PINS REWRITTEN 260917 (item 0b, rule 7): the confirm appears IN THE
+        # ROW that was pressed — Daniel: "the restore doesn't occur BUT it
+        # also doesn't indicate that it didn't restore". It was DISPLACED,
+        # not silent: #clearConfirm lives under the pad (right column), the
+        # Restore button in the log (left). Night 16's 2b recurring. The
+        # host's row is Clear's alone now and must stay hidden here.
+        cf = page.evaluate("""() => { const row = document.querySelector('.hist');
+          const c = row.querySelector('[data-cap="restore-confirm"]');
+          return { inRow: !!c, intent: c && c.getAttribute('data-intent'),
+            hostRow: getComputedStyle(document.getElementById('clearConfirm')).display !== 'none',
             pad: document.getElementById('journalIn').value,
-            labels: ['clearSave', 'clearDiscard', 'clearCancel'].map(i => document.getElementById(i).textContent) }; }""")
+            labels: c ? ['confirm-save', 'confirm-discard', 'confirm-cancel']
+              .map(k => c.querySelector('[data-cap="' + k + '"]').textContent) : null }; }""")
         check(cf["pad"] == "unsaved words that must survive",
               f"{tag} 1: Restore overwrote unsaved pad text — the pad now reads {cf['pad']!r}")
-        check(cf["shown"] and cf["intent"] == "restore",
-              f"{tag} 1: unsaved text must ASK before restoring (row shown={cf['shown']}, intent={cf['intent']!r})")
+        check(cf["inRow"] and cf["intent"] == "restore",
+              f"{tag} 0b: dirty text must ASK before restoring, IN THE ROW that was pressed: {cf}")
+        check(not cf["hostRow"], f"{tag} 0b: the host's Clear row stays hidden — the answer is in the row, not under the pad")
         check(cf["labels"] == ["Save and restore", "Discard and restore", "keep writing"],
               f"{tag} 1: the row is worded for restoring: {cf['labels']}")
         # answer 1 — keep writing: nothing moves
-        page.click("#clearCancel"); page.wait_for_timeout(100)
+        page.click(".hist [data-cap='confirm-cancel']"); page.wait_for_timeout(100)
         a1 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
-          shown: getComputedStyle(document.getElementById('clearConfirm')).display !== 'none',
+          shown: !!document.querySelector('.hist [data-cap="restore-confirm"]'),
           n: JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length })""")
         check(a1["pad"] == "unsaved words that must survive" and not a1["shown"] and a1["n"] == n_before,
               f"{tag} 1: keep writing keeps the text, restores nothing, files nothing: {a1}")
         # answer 2 — Discard and restore: the draft is dropped, the note returns
         page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
-        page.click("#clearDiscard"); page.wait_for_timeout(250)
+        page.click(".hist [data-cap='confirm-discard']"); page.wait_for_timeout(250)
         a2 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+          title: document.getElementById('npTitle').value,
           n: JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length })""")
         check(a2["pad"] == "the named note" and a2["n"] == n_before,
               f"{tag} 1: Discard and restore drops the draft and restores the entry's note: {a2}")
-        # answer 3 — Save and restore: the draft is FILED, then the note returns
+        # ---- 260917 item 0a: RESTORE FILLS THE TITLE with that entry's name ----
+        check(a2["title"] == "Dorian week 3",
+              f"{tag} 0a: restore brings the entry's name into the title field: {a2}")
+        # answer 3 — Save and restore: the draft is FILED, then the note returns.
+        # 6c: the restored text is CLEAN — editing it is what makes it dirty
         page.fill("#journalIn", "a second draft worth keeping"); page.dispatch_event("#journalIn", "input")
         page.wait_for_timeout(400)
+        # (measured on the first run: the draft is not filed until confirm-save
+        # is pressed, so at THIS click the named note is still row 0)
         page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
-        page.click("#clearSave"); page.wait_for_timeout(250)
+        page.click(".hist [data-cap='confirm-save']"); page.wait_for_timeout(250)
         a3 = page.evaluate("""() => { const es = JSON.parse(localStorage.getItem('multetudes.v1.log')).entries;
-          return { pad: document.getElementById('journalIn').value, n: es.length, last: es.at(-1).text }; }""")
+          return { pad: document.getElementById('journalIn').value, n: es.length,
+                   last: es.at(-1).text, lastName: es.at(-1).heading,
+                   title: document.getElementById('npTitle').value }; }""")
         check(a3["n"] == n_before + 1 and a3["last"] == "a second draft worth keeping" and a3["pad"] == "the named note",
               f"{tag} 1: Save and restore FILES the draft, then restores the note: {a3}")
-        # the common case keeps no ceremony: an empty pad restores at once
-        page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
-        page.click(".hist .acts button[data-cap='apply'] >> nth=1"); page.wait_for_timeout(200)   # the named note again
+        # settled by the rule: the edit was a CONTINUATION of the restored note
+        check(a3["lastName"] == "Dorian week 3" and a3["title"] == "Dorian week 3",
+              f"{tag} 0: restore → edit → save files under the restored name, and the restore that followed re-fills it: {a3}")
+        # 6c: a just-restored note is not unsaved work — restoring ANOTHER
+        # entry over it asks nothing (register 30; this changed shipped behaviour)
+        page.click(".hist .acts button[data-cap='apply'] >> nth=2"); page.wait_for_timeout(200)   # the default-named entry
         a4 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+          title: document.getElementById('npTitle').value,
+          shown: !!document.querySelector('.hist [data-cap="restore-confirm"]') })""")
+        check(a4["pad"] == "untouched-field export" and not a4["shown"],
+              f"{tag} 6c: restoring over a CLEAN restored note asks nothing — it restores: {a4}")
+        check(a4["title"] == np_default,
+              f"{tag} 0a: an entry filed under the default re-fills the default: {a4}")
+        # ---- 260917 item 0c: SAVE EMPTIES THE PAD AND RESETS THE TITLE ----
+        page.fill("#npTitle", "Phrygian week 4"); page.dispatch_event("#npTitle", "input")
+        page.fill("#journalIn", "filed under a typed name"); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(400)
+        page.click("#saveEntry"); page.wait_for_timeout(250)
+        a5 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+          title: document.getElementById('npTitle').value,
+          stored: JSON.parse(localStorage.getItem('multetudes.v1.log')).title,
+          lastName: JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.at(-1).heading })""")
+        check(a5["lastName"] == "Phrygian week 4" and a5["pad"] == "",
+              f"{tag} 0c: the note filed under the typed name and the pad emptied: {a5}")
+        check(a5["title"] == np_default and a5["stored"] == "",
+              f"{tag} 0c: on save the title returns to the dated default — the next note cannot inherit 'Phrygian week 4': {a5}")
+        # 6c: Clear over a clean restored note asks nothing either
+        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(200)
+        page.click("#clearPad"); page.wait_for_timeout(150)
+        a6 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           shown: getComputedStyle(document.getElementById('clearConfirm')).display !== 'none' })""")
-        check(a4["pad"] == "the named note" and not a4["shown"],
-              f"{tag} 1: an empty pad restores at once, no ceremony: {a4}")
+        check(a6["pad"] == "" and not a6["shown"],
+              f"{tag} 6c: Clear over a clean restored note clears without asking: {a6}")
+        # the common case keeps no ceremony: an empty pad restores at once
+        page.click(".hist .acts button[data-cap='apply'] >> nth=1"); page.wait_for_timeout(200)
+        a7 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+          shown: !!document.querySelector('.hist [data-cap="restore-confirm"]') })""")
+        check(a7["pad"] != "" and not a7["shown"],
+              f"{tag} 1: an empty pad restores at once, no ceremony: {a7}")
         # leave the log and the store as this leg found them — by role
         n_all = page.evaluate("""() => { const ds = [...document.querySelectorAll('.hist .acts button[data-cap="delete"]')];
           ds.forEach(d => d.click()); return ds.length; }""")
-        check(n_all == 3, f"{tag} the cleanup found {n_all} Delete controls by role — expected this leg's three entries")
+        check(n_all == 4, f"{tag} the cleanup found {n_all} Delete controls by role — expected this leg's four entries")
         page.wait_for_timeout(200)
         page.fill("#npTitle", ""); page.dispatch_event("#npTitle", "input")
         page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")
@@ -1294,6 +1359,7 @@ def run_door(pw, door_id):
             document.addEventListener('atetudes:note', (e) => {
               const m = e.detail || {};
               if (typeof m.midi !== 'number') return;
+              if (m.role === 'bass') return;   // 260917 item 3: the bass rings at the hollow reference, not a selection dot
               const row = { midi: m.midi, drawn: false, rang: false };
               window.__fdRing.push(row);
               setTimeout(() => {
@@ -1334,9 +1400,14 @@ def run_door(pw, door_id):
           return { voice: top('fdVoice'), harm: top('fdHarmVol'),
                    ref: top('fdBass2'), bass: top('fdBassVol') }; }""")
         check(all(v is not None for v in pair.values())
-              and abs(pair["harm"] - pair["voice"]) <= 8
-              and abs(pair["bass"] - pair["ref"]) <= 8
-              and abs(pair["harm"] - pair["bass"]) > 8,
+              # tolerance 8 → 10 (260917, measured): the designed offset between a
+              # 25px select and a 16px slider centred in one row is ~8.5px; v0.4.1
+              # read 8 and tonight's build 9 with the row's geometry byte-identical
+              # (a 12px page shift crossed the rounding). The stacked-column case
+              # this pin exists to refuse is a full row apart (39px), never 10.
+              and abs(pair["harm"] - pair["voice"]) <= 10
+              and abs(pair["bass"] - pair["ref"]) <= 10
+              and abs(pair["harm"] - pair["bass"]) > 10,
               f"{tag} the harmony slider sits WITH voice and the bass slider WITH the "
               f"reference — association, not a column: {pair}")
 
@@ -1350,22 +1421,22 @@ def run_door(pw, door_id):
                      ".map(b => ({ rn: (b.querySelector('.tl-rn') || {}).textContent || null,"
                      " slash: (b.querySelector('.tl-slash') || {}).textContent || null,"
                      " sym: b.getAttribute('data-tlchip') }))")
-        page.select_option("#hcRef", "none"); page.wait_for_timeout(250)
+        page.select_option("#fdBass2", "none"); page.wait_for_timeout(250)
         chips0 = page.evaluate(chip_read)
         check(all(c["rn"] and c["slash"] is None for c in chips0),
               f"{tag} with no reference the chip is exactly what it was — roman, no "
               f"slash: {chips0[:3]}")
-        page.select_option("#hcRef", "third"); page.wait_for_timeout(300)
+        page.select_option("#fdBass2", "third"); page.wait_for_timeout(300)
         chips3 = page.evaluate(chip_read)
         check(all(c["rn"] for c in chips3),
               f"{tag} the roman SURVIVES the reference — function stays named: {chips3[:3]}")
         check(all(c["slash"] and c["slash"].startswith(c["sym"] + "/") for c in chips3),
               f"{tag} a 3rd-below reference slashes EVERY chip, derived: {chips3[:3]}")
-        page.select_option("#hcRef", "root"); page.wait_for_timeout(300)
+        page.select_option("#fdBass2", "root"); page.wait_for_timeout(300)
         chipsR = page.evaluate(chip_read)
         check(all(c["rn"] and c["slash"] is None for c in chipsR),
               f"{tag} a ROOT reference adds nothing to the spelling — no slash: {chipsR[:3]}")
-        page.select_option("#hcRef", "none"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "none"); page.wait_for_timeout(200)
 
         # ---- 260913 item 4: REPEAT LOOPS THE CURRENT BAR ----
         # Ruled scope: the current bar, nothing else. Consulted only at the
@@ -1454,7 +1525,8 @@ def run_door(pw, door_id):
               " bpmCard: (document.getElementById('bpmRange') || {}).value,"
               " bpmVal: (document.getElementById('bpmVal') || {}).textContent,"
               " bass2: (document.getElementById('fdBass2') || {}).value,"
-              " hcRef: (document.getElementById('hcRef') || {}).value })")
+              " refDots: document.querySelectorAll('#fieldSvg .fd-ref').length,"
+              " ro: (document.getElementById('roLine') || {}).textContent || '' })")
         # crash-proof (the m28 lesson): a build without the view yields a
         # NAMED failure, never a 30s fill timeout that masks later pins
         if not page.evaluate("() => !!document.getElementById('fdBpm')"):
@@ -1483,16 +1555,19 @@ def run_door(pw, door_id):
         # the bass view, both directions — read at the two selects' pixels
         page.select_option("#fdBass2", "third"); page.wait_for_timeout(150)
         st3 = page.evaluate(u3)
-        check(st3["hcRef"] == "third" and st3["bass2"] == "third",
-              f"{tag} the under-neck bass 'third' lands on Harmony's select: {st3}")
+        # PIN REWRITTEN 260917 (item 4, rule 7 — register 31): the card's bass
+        # WINDOW is closed; the STATE is untouched and is read where its effect
+        # is (rule 3) — the neck's reference dot and the readout's "over" sentence
+        check(st3["bass2"] == "third" and st3["refDots"] == 1 and "over G" in st3["ro"],
+              f"{tag} the under-neck bass 'third' reaches the owner's state — the neck and readout consume it: {st3}")
         ref_dot = page.eval_on_selector_all("#fieldSvg .fd-ref", "e => e.length")
         check(ref_dot == 1,
               f"{tag} and the reference actually DRAWS — the view drives the state "
               f"({ref_dot} ref dots)")
-        page.select_option("#hcRef", "none"); page.wait_for_timeout(150)
+        page.select_option("#fdBass2", "none"); page.wait_for_timeout(150)
         st3 = page.evaluate(u3)
-        check(st3["bass2"] == "none",
-              f"{tag} Harmony's 'none' lands back on the under-neck view: {st3}")
+        check(st3["bass2"] == "none" and st3["refDots"] == 0 and "over " not in st3["ro"],
+              f"{tag} 'none' clears the state's consumers — no reference dot, no 'over' sentence: {st3}")
         # the transport mini under the neck asks, the owner answers
         page.click('#fdMini button[data-role="next"]'); page.wait_for_timeout(200)
         check(page.eval_on_selector_all("#tlScroll button.tl-cur",
@@ -1517,7 +1592,7 @@ def run_door(pw, door_id):
         # the value proof discriminates at LINE (n=3): under Grip every
         # occurrence caps to one per string and equals one-of-each by count —
         # the capped case, not a defect (register 18)
-        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(150)
+        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(150)
         page.uncheck("#fdAllTones"); page.wait_for_timeout(150)
         one_dots = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
         page.check("#fdAllTones"); page.wait_for_timeout(250)
@@ -1528,7 +1603,7 @@ def run_door(pw, door_id):
               f"values the select produced (one@Line: {one_dots}, all@Line: {all_dots})")
         check("one of each" in one_word and "every occurrence" in all_word,
               f"{tag} the face still speaks the take words")
-        page.uncheck("#fdAllTones"); page.click('#fdNSeg >> text=Grip')
+        page.uncheck("#fdAllTones"); page.click('#fdNSeg button[data-nps=\"1\"]')
         page.wait_for_timeout(200)
 
         # ---- 260913 item 2: THE RENAME HOLDS, AND THE OLD WORDS STILL LAND ----
@@ -1584,7 +1659,7 @@ def run_door(pw, door_id):
         # note of a played pass — the reference's bass note included — must
         # find its drawn key and ring there; a note with no key to ring on
         # is named, which is the containment failing loudly.
-        page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
         page.evaluate("""() => {
           if (!window.__kyRendersHooked) { window.__kyRendersHooked = true; window.__kyRenders = 0;
             new MutationObserver((mu) => { if (mu.some(x => x.removedNodes.length > 5)) window.__kyRenders++; })
@@ -1629,7 +1704,7 @@ def run_door(pw, door_id):
         check(all(r["rang"] for r in ky_rows),
               f"{tag} every sounded note RINGS at its key — silent: "
               f"{[r for r in ky_rows if not r['rang']]} (all: {ky_rows})")
-        page.select_option("#hcRef", "none"); page.wait_for_timeout(150)
+        page.select_option("#fdBass2", "none"); page.wait_for_timeout(150)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
@@ -2192,7 +2267,7 @@ console.log(JSON.stringify(out));
         # channel. Now it names its role and audio-card routes it. Asserted
         # AT THE AUDIOCONTEXT (the 260905 lesson — not at the message), both
         # sliders exercised.
-        page.select_option("#hcRef", "third"); page.uncheck("#fdMetChk")
+        page.select_option("#fdBass2", "third"); page.uncheck("#fdMetChk")
         page.wait_for_timeout(200)
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
@@ -2231,7 +2306,7 @@ console.log(JSON.stringify(out));
               f"{tag} the chord slider at zero must leave the reference ALONE sounding: "
               f"raw {muted_chord[1]}")
         page.fill("#fdHarmVol", "100"); page.dispatch_event("#fdHarmVol", "input")
-        page.select_option("#hcRef", "none"); page.check("#fdMetChk")
+        page.select_option("#fdBass2", "none"); page.check("#fdMetChk")
         page.wait_for_timeout(150)
 
         # ---- 260906 item 3: THE BOARD DRAWS THE ENGINE'S OWN SELECTION ----
@@ -2362,14 +2437,14 @@ console.log(JSON.stringify(out));
                   and st["onBg"] == "rgb(33, 33, 38)",
                   f"{tag} #{seg}: the chosen segment must WEAR its choice (ink on, "
                   f"one per group): {st}")
-        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(100)
         line_on = page.evaluate("""() => {
           const b = [...document.querySelectorAll('#fdNSeg button')]
             .find(x => x.textContent.trim() === 'Line');
           return b.classList.contains('on') && getComputedStyle(b).backgroundColor; }""")
         check(line_on == "rgb(33, 33, 38)",
               f"{tag} the .on must FOLLOW a click, visibly: {line_on}")
-        page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"1\"]'); page.wait_for_timeout(100)
 
         # ---- child 3b: the strings-address and the order bracket ----
         brackets = lambda: page.evaluate("""() =>
@@ -2384,7 +2459,7 @@ console.log(JSON.stringify(out));
         # the item's case: every occurrence at Line doubles string 4, and
         # 4,3,4,3,2,1 walks its two notes low → high — THE REPEAT IS THE ORDINAL
         page.check("#fdAllTones"); page.wait_for_timeout(80)
-        page.click('#fdNSeg >> text=Line'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(100)
         page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
         page.wait_for_timeout(150)
         steps = [x.split("/") for x in figorder().split(",")]
@@ -2417,14 +2492,14 @@ console.log(JSON.stringify(out));
         # old pattern-shaped figure is now refused by the mode-mismatch
         # notice instead of being half-read, so the block types the tones
         # alphabet; the mismatch itself is pinned in the 260902 block)
-        page.click('#fdAddrSeg >> text=tones'); page.wait_for_timeout(80)
+        page.click('#fdAddrSeg button[data-addr=\"tones\"]'); page.wait_for_timeout(80)
         page.fill("#fdFigIn", "R-3-5-7"); page.dispatch_event("#fdFigIn", "input")
         page.wait_for_timeout(120)
         bt = brackets()
         typed = {k: v for k, v in bt.items() if v["text"] and "{" in v["text"] and v["fill"] == "#B9B9BF"}
         check(len(typed) >= 1, f"{tag} under tones the bracket is derived and greyed: {bt}")
         # refusals, loud on the face
-        page.click('#fdAddrSeg >> text=pattern'); page.wait_for_timeout(80)
+        page.click('#fdAddrSeg button[data-addr=\"pattern\"]'); page.wait_for_timeout(80)
         page.fill("#fdFigIn", "(-1,+2)4"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
         check("approaches" in page.inner_text("#fdFigNote") and "off the field" in page.inner_text("#fdFigNote"),
               f"{tag} an approach must refuse by name on the face: {page.inner_text('#fdFigNote')!r}")
@@ -2434,7 +2509,7 @@ console.log(JSON.stringify(out));
         # back to the boot state
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
         page.uncheck("#fdAllTones"); page.wait_for_timeout(60)
-        page.click('#fdNSeg >> text=Grip'); page.wait_for_timeout(80)
+        page.click('#fdNSeg button[data-nps=\"1\"]'); page.wait_for_timeout(80)
 
         # ---- child 4: dyads, the shell, and the one derivation ----
         roles = lambda: sorted(set(page.eval_on_selector_all(
@@ -2451,20 +2526,102 @@ console.log(JSON.stringify(out));
               f"{tag} a shell must wear exactly R, 3, 7 on the field: {roles()}")
         # the DYAD defaults to the guide tones, and its menu only shows here
         page.select_option("#hcObj", "dyad"); page.wait_for_timeout(150)
-        check(not page.evaluate("() => document.querySelector('#hcDyad').hidden")
-              and page.input_value("#hcDyad") == "3,7",
-              f"{tag} the dyad menu must appear, defaulted to the guide tones")
+        # PINS REWRITTEN 260917 (item 1, rule 7): the dyad's pair MENU is the
+        # tones FIELD now — the figure field's own notation (R,3,5,7), one
+        # way to name tones in the app — and it serves every stacked object
+        tones_field = lambda: page.evaluate("() => ({ hidden: document.getElementById('hcTones').hidden, value: document.getElementById('hcTones').value })")
+        check(not tones_field()["hidden"] and tones_field()["value"] == "3,7",
+              f"{tag} the tones field appears under a dyad, defaulted to the guide tones: {tones_field()}")
         check(roles() == ["3", "7"],
               f"{tag} the default dyad is 3rd + 7th, nothing else: {roles()}")
         # any two tones by role: Root + 5th re-derives the field's dots
-        page.select_option("#hcDyad", "1,5"); page.wait_for_timeout(150)
+        page.fill("#hcTones", "R,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
         check(roles() == ["5", "R"],
               f"{tag} the Root + 5th dyad must wear exactly R and 5: {roles()}")
         # the choice travels the bus: the staff re-derives from the same value
         st_n = page.eval_on_selector_all("#stSvg ellipse", "e => e.length")
         check(st_n == 16,
               f"{tag} the staff must speak the dyad in every bar — 2 heads × the derived 8 (got {st_n})")
-        page.select_option("#hcDyad", "3,7"); page.wait_for_timeout(80)
+        page.fill("#hcTones", "3,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(80)
+
+        # ---- 260917 item 1: TONE SELECTION extends to Triad, Tetrad and the extensions ----
+        # Ruled: Triad picks three, Tetrad four, the extensions their depth's
+        # worth; fewer is legitimate; a tone the object cannot hold refuses
+        # BY NAME; the FIGURE FIELD'S notation and parser — never a second.
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        check(tones_field()["value"] == "R,3,5,7" and not tones_field()["hidden"],
+              f"{tag} 1: a tetrad's field fills with its whole stack: {tones_field()}")
+        page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        check(roles() == ["3", "7", "R"],
+              f"{tag} 1: a tetrad picked R,3,7 draws exactly those three: {roles()}")
+        # the pick reaches the SOUND and the staff — one derivation, every board
+        st_pick = page.eval_on_selector_all("#stSvg ellipse", "e => e.length")
+        check(st_pick == 24,
+              f"{tag} 1: the staff speaks the pick in every bar — 3 heads × 8 bars (got {st_pick})")
+        # the refusal, BY NAME, in the object's own words — the drawn set unchanged
+        page.fill("#hcTones", "R,3,13"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        hc_note = page.inner_text("#hcNote")
+        check("13 is not a tone of a tetrad" in hc_note and "a tetrad holds R, 3, 5, 7" in hc_note,
+              f"{tag} 1: a tone the object cannot hold refuses by name: {hc_note!r}")
+        check(roles() == ["3", "7", "R"],
+              f"{tag} 1: a refused pick leaves the last lawful one standing: {roles()}")
+        # junk refuses in the FIGURE's own voice — one parser, one vocabulary
+        page.fill("#hcTones", "R,Q"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        hc_note = page.inner_text("#hcNote")
+        check('"Q" is not a tone — tones are R, 3, 5, 7, 9, 11, 13' in hc_note,
+              f"{tag} 1: junk is refused in the figure field's own words: {hc_note!r}")
+        # an extension picks its own depth's worth: a 9th chord narrowed to R,3,7,9
+        page.select_option("#hcObj", "ninth"); page.wait_for_timeout(150)
+        check(tones_field()["value"] == "R,3,5,7,9",
+              f"{tag} 1: a 9th's field fills with five: {tones_field()}")
+        page.fill("#hcTones", "R,3,7,9"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
+        check(roles() == ["3", "7", "9", "R"],
+              f"{tag} 1: a 9th picked R,3,7,9 draws those four (no drop needed on four strings): {roles()}")
+        # BUILT (proposed otherwise, rule 11): the grip's named drop still
+        # applies to a hand-picked set that outruns the strings
+        page.fill("#hcTones", "R,3,5,7,9"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
+        check("the 5 dropped by the grip rule" in page.inner_text("#fdHint"),
+              f"{tag} 1: a hand-picked 9th on four strings drops the 5th by the rule and SAYS so: {page.inner_text('#fdHint')[:120]!r}")
+        # ---- 260917 item 2: SHELL is a PRESET of the selector — choosing it fills R,3,7 visibly ----
+        page.select_option("#hcObj", "shell"); page.wait_for_timeout(150)
+        check(tones_field()["value"] == "R,3,7" and not tones_field()["hidden"] and roles() == ["3", "7", "R"],
+              f"{tag} 2: Shell fills the tones as R,3,7, visibly — a player sees WHY a shell is a shell: {tones_field()} {roles()}")
+        page.fill("#hcTones", "R,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        check(roles() == ["7", "R"],
+              f"{tag} 2: a shell edited is a pick like any other — nothing removed, nothing duplicated: {roles()}")
+        # a scale has no tones to pick: the field is hidden, not dead
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
+        check(tones_field()["hidden"], f"{tag} 1: a scale hides the tones field — there is no stack to narrow")
+        # ---- 260917 item 5: EACH PASSING CHORD NAMES ITS MODE, beside voice under the neck ----
+        # Derived from the chord's degree in the scale (field.mjs's MODES
+        # table, never re-tabled): bar 1 of the B♭ cycle is I → Ionian,
+        # bar 2 (E♭maj7, IV) → Lydian; harmonic minor renames every bar.
+        fd_mode = lambda: page.evaluate("() => (document.getElementById('fdMode') || {}).textContent || ''")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+        check("Ionian" in fd_mode(), f"{tag} 5: under a scale, bar 1 (I) reads its mode beside voice: {fd_mode()!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 1, request: true } }))""")
+        page.wait_for_timeout(200)
+        check("Lydian" in fd_mode(), f"{tag} 5: bar 2 (IV) reads Lydian: {fd_mode()!r}")
+        page.select_option("#hcScale", "harm"); page.wait_for_timeout(250)
+        check("Lydian" not in fd_mode() and fd_mode().strip() != "",
+              f"{tag} 5: the mode name follows the SCALE — harmonic minor's fourth degree is not Lydian: {fd_mode()!r}")
+        page.select_option("#hcScale", "major"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        check(fd_mode().strip() == "",
+              f"{tag} 5: under a chord object the mode line is empty — the display is the scale's: {fd_mode()!r}")
+        # ---- 260917 item 4: the card's bass window is closed in chord mode, the CENTRE stays in scale mode ----
+        hc_win = lambda: page.evaluate("() => ({ hidden: document.getElementById('hcRef').hidden, lab: document.getElementById('hcRefLab').textContent })")
+        check(hc_win()["hidden"] is True, f"{tag} 4: chord mode — the card shows no bass window: {hc_win()}")
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+        check(hc_win()["hidden"] is False and hc_win()["lab"].startswith("Centre"),
+              f"{tag} 4: scale mode — the card's select is the CENTRE and stays: {hc_win()}")
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(150)
         # the recipes the item names, each one exercised, none merely listed
         # R4 UPDATED 260907 (the octave amendment): the two-string window now
         # widens until the set covers the octave (5–11 here), so the guide-
@@ -2496,21 +2653,41 @@ console.log(JSON.stringify(out));
         ref_el = lambda: page.evaluate("""() => { const g = document.querySelector('#fieldSvg .fd-ref');
           return g ? { s: g.dataset.refstr, f: g.dataset.reffret, st: g.dataset.refstretch } : null }""")
         # the three relative options are live; at boot there is NO reference
+        # PINS REWRITTEN 260917 (item 3, rule 7): the bass DEFAULTS TO THE ROOT
+        # (Daniel: "we should always default to the root"), the options are
+        # the tones THE OBJECT HOLDS plus the two relative ones (kept,
+        # explained), and they live on the under-neck view (item 4)
         ref_opts = page.evaluate("""() =>
-          Object.fromEntries([...document.querySelectorAll('#hcRef option')]
+          Object.fromEntries([...document.querySelectorAll('#fdBass2 option')]
             .map(o => [o.value, o.disabled]))""")
         check(ref_opts.get("root") is False and ref_opts.get("third") is False
               and ref_opts.get("fifth") is False,
-              f"{tag} the three relative references must be live (child 5): {ref_opts}")
+              f"{tag} the root and the two relative references are live (child 5, kept 260917): {ref_opts}")
+        check(all(ref_opts.get("tone:" + d) is False for d in ("3", "5", "7"))
+              and "tone:9" not in ref_opts,
+              f"{tag} item 3: the bass offers exactly the tetrad's own tones (3, 5, 7 beside the root), no 9: {ref_opts}")
+        # (measured on the first run: this leg runs after the two-views leg left
+        # the bass at 'none' — the DEFAULT is pinned on the fresh page above;
+        # here the root is chosen and its placement asserted)
+        page.select_option("#fdBass2", "root"); page.wait_for_timeout(200)
+        check(ref_el() is not None and ref_el()["s"] == "6" and ref_el()["f"] == "6",
+              f"{tag} item 3: the root in the bass is B♭ on string 6, fret 6, drawn: {ref_el()}")
+        page.select_option("#fdBass2", "none"); page.wait_for_timeout(200)
         check(ref_el() is None
               and page.eval_on_selector_all("#stSvg [data-strefmidi]", "e => e.length") == 0,
-              f"{tag} at boot (bass none) neither neck nor bass clef may show a reference")
+              f"{tag} 'none' clears the reference from the neck and the bass clef")
+        # a chord TONE in the bass: the 3rd of B♭ (D) — placed, and the composite named
+        page.select_option("#fdBass2", "tone:3"); page.wait_for_timeout(250)
+        rr3 = ref_el()
+        ro3 = page.inner_text("#roLine")
+        check(rr3 is not None and "over D" in ro3 and "the stack is Bbmaj7/D" not in ro3,
+              f"{tag} item 3: the 3rd in the bass places D and the readout names the stack over it: {rr3} {ro3[-90:]!r}")
         # a 3rd below the B♭ chord: G, string 6 fret 3 — updated 260904: the
         # boot window moved to frets 3–7 (the boot-placement pin's choice),
         # so the G now sits INSIDE the box and the flag reads false. The
         # STRETCH behaviour keeps its own live demonstration below against
         # the old window, deliberately dispatched — updated, never relaxed.
-        page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
         rr = ref_el()
         check(rr == {"s": "6", "f": "3", "st": "false"},
               f"{tag} a 3rd below B♭ must fret G on string 6 fret 3, in the 3–7 box: {rr}")
@@ -2534,7 +2711,7 @@ console.log(JSON.stringify(out));
               f"{tag} the bass clef must walk a 3rd below every bar of the cycle "
               f"(G C F B\u266d E\u266d A D G): {st_ref}")
         # R18's shape: a set that TAKES string 6 pushes the reference to 5
-        page.select_option("#hcRef", "root"); page.wait_for_timeout(100)
+        page.select_option("#fdBass2", "root"); page.wait_for_timeout(100)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [6, 4, 3, 1], startDeg: 4, nearFret: 3 } }))""")
         page.wait_for_timeout(200)
@@ -2555,7 +2732,7 @@ console.log(JSON.stringify(out));
         check(roles() == ["3", "5", "7", "R"] and "Gm9" in page.inner_text("#roLine"),
               f"{tag} R19 must build the tetrad and name Gm9: {roles()}, {page.inner_text('#roLine')!r}")
         # back to the boot state
-        page.select_option("#hcRef", "none"); page.wait_for_timeout(60)
+        page.select_option("#fdBass2", "none"); page.wait_for_timeout(60)
         page.evaluate("""() => { const s = document.querySelector('#psSel'); s.selectedIndex = 0; }""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, notesPer: 1 } }))""")
@@ -2565,7 +2742,7 @@ console.log(JSON.stringify(out));
         tlline = lambda: page.get_attribute("#tlScroll", "data-tlline") or ""
         # THE FORM AND THE CASE RULE, on the face: ii–V–I in B♭ is Cm7 F7
         # B♭maj7 — the minor seventh. A dominant here is the signature defect.
-        page.click('#pgSrcSeg >> text=form'); page.wait_for_timeout(150)
+        page.click('#pgSrcSeg button[data-src=\"form\"]'); page.wait_for_timeout(150)
         page.select_option("#pgForm", "ii-V-I"); page.wait_for_timeout(200)
         check(tlline() == "Cm7 F7 Bbmaj7",
               f"{tag} ii–V–I in B♭ must read Cm7 F7 Bbmaj7 on the chart line: {tlline()!r}")
@@ -2574,7 +2751,7 @@ console.log(JSON.stringify(out));
         # Start on means nothing under a form — it must not stand there
         check(page.evaluate("() => getComputedStyle(document.querySelector('#pgStart')).display") == "none",
               f"{tag} 'Start on' must hide under a form — a control that means nothing misleads")
-        page.click('#pgSrcSeg >> text=cycle'); page.wait_for_timeout(150)
+        page.click('#pgSrcSeg button[data-src=\"cycle\"]'); page.wait_for_timeout(150)
         check(page.evaluate("() => getComputedStyle(document.querySelector('#pgStart')).display") != "none",
               f"{tag} 'Start on' must show under a cycle")
         # NO BAR-COUNT CONTROL EXISTS — derived means underivable by hand
@@ -2583,7 +2760,7 @@ console.log(JSON.stringify(out));
               and "8 bars, derived" in page.inner_text("#pgNote"),
               f"{tag} the bar count must be derived and say so, with no control: {page.inner_text('#pgNote')!r}")
         # TWELVE-BAR BLUES: the off-key tone says WHICH absence it is, on two faces
-        page.click('#pgSrcSeg >> text=form'); page.wait_for_timeout(100)
+        page.click('#pgSrcSeg button[data-src=\"form\"]'); page.wait_for_timeout(100)
         page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(200)
         check(tlline() == "Bb7 Eb7 Bb7 Bb7 Eb7 Eb7 Bb7 Bb7 F7 Eb7 Bb7 F7",
               f"{tag} twelve-bar blues in B♭, chip for chip: {tlline()!r}")
@@ -2600,7 +2777,7 @@ console.log(JSON.stringify(out));
         check(page.eval_on_selector_all("#stSvg [data-stcur]", "es => es.map(e => +e.dataset.stcur)") == [8],
               f"{tag} the staff must shade the jumped-to bar")
         # TYPED CHANGES (G28 closes): romans by the case rule, refusal BY NAME
-        page.click('#pgSrcSeg >> text=custom'); page.wait_for_timeout(100)
+        page.click('#pgSrcSeg button[data-src=\"custom\"]'); page.wait_for_timeout(100)
         page.fill("#pgCustom", "ii7 V7 Imaj7"); page.dispatch_event("#pgCustom", "input")
         page.wait_for_timeout(200)
         check(tlline() == "Cm7 F7 Bbmaj7",
@@ -2642,7 +2819,7 @@ console.log(JSON.stringify(out));
         # the spans below assume the boot cycle's four-beat bars — seat it
         # (the block above leaves the two-bar chart custom playing, whose
         # 2-beat Cm7 is CORRECT and failed these pins' first run honestly)
-        page.click('#pgSrcSeg >> text=cycle'); page.wait_for_timeout(120)
+        page.click('#pgSrcSeg button[data-src=\"cycle\"]'); page.wait_for_timeout(120)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(120)
@@ -2656,7 +2833,7 @@ console.log(JSON.stringify(out));
                 window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }
           window.__nt = []; window.__adv = []; }""")
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
-        page.check("#fdAllTones"); page.click('#fdNSeg >> text=Line')
+        page.check("#fdAllTones"); page.click('#fdNSeg button[data-nps=\"3\"]')
         page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
         page.wait_for_timeout(200)
         # the expected sequence, DERIVED FROM THE ARTIFACT: the neck's own
@@ -2690,7 +2867,7 @@ console.log(JSON.stringify(out));
         # asserted the coupling Daniel corrected: take=all forced the spread).
         # Back on BAR 0 first, as before.
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
-        page.uncheck("#fdAllTones"); page.click('#fdNSeg >> text=Grip')
+        page.uncheck("#fdAllTones"); page.click('#fdNSeg button[data-nps=\"1\"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
@@ -2703,7 +2880,7 @@ console.log(JSON.stringify(out));
               f"{[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:5]]}")
         # THE DECOUPLING, both directions:
         # (a) one-of-each + arpeggio — the combination Take used to FORBID
-        page.click('#fdMoveSeg >> text=arpeggiate')
+        page.click('#fdMoveSeg button[data-move=\"arpeggiate\"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
@@ -2721,8 +2898,8 @@ console.log(JSON.stringify(out));
         # (b) every-occurrence + block — the combination Take used to FORCE
         # apart. At Line, so the box offers its true seven-note cluster
         # (Grip's one-per-string cap would leave only four).
-        page.click('#fdMoveSeg >> text=strum'); page.check("#fdAllTones")
-        page.click('#fdNSeg >> text=Line')
+        page.click('#fdMoveSeg button[data-move=\"strum\"]'); page.check("#fdAllTones")
+        page.click('#fdNSeg button[data-nps=\"3\"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
@@ -2733,7 +2910,7 @@ console.log(JSON.stringify(out));
         check(len(heard) >= 5 and (heard[len(heard) - 1]["t"] - heard[0]["t"]) < 40,
               f"{tag} every-occurrence + BLOCK must sound together — the material must "
               f"not decide the movement: {[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:8]]}")
-        page.uncheck("#fdAllTones"); page.click('#fdNSeg >> text=Grip')
+        page.uncheck("#fdAllTones"); page.click('#fdNSeg button[data-nps=\"1\"]')
         page.wait_for_timeout(150)
 
         # ---- 260905 item 5: THE PULSE — what you see pulsing is what you hear
@@ -2765,7 +2942,7 @@ console.log(JSON.stringify(out));
               f"{tag} the pulse must fade — a ring that stays is a marker, not a pulse")
         page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(200)
         # and in ARPEGGIO movement the rings arrive one at a time
-        page.click('#fdMoveSeg >> text=arpeggiate')
+        page.click('#fdMoveSeg button[data-move=\"arpeggiate\"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
@@ -2774,7 +2951,7 @@ console.log(JSON.stringify(out));
         page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
         check(1 <= midbar <= 2,
               f"{tag} an ARPEGGIO pulses one dot at a time, not the chord at once: {midbar} rings mid-bar")
-        page.click('#fdMoveSeg >> text=strum')
+        page.click('#fdMoveSeg button[data-move=\"strum\"]')
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(100)
 
@@ -2940,12 +3117,12 @@ console.log(JSON.stringify(out));
         note = page.inner_text("#fdFigNote")
         check("reads as a TONES figure" in note and "switch it to tones" in note,
               f"{tag} R-3-5-7 under pattern must name the likely mode, not report string 5: {note!r}")
-        page.click('#fdAddrSeg >> text=tones'); page.wait_for_timeout(120)
+        page.click('#fdAddrSeg button[data-addr=\"tones\"]'); page.wait_for_timeout(120)
         page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
         page.wait_for_timeout(150)
         check("reads as a string PATTERN" in page.inner_text("#fdFigNote"),
               f"{tag} the reverse mismatch must be named too: {page.inner_text('#fdFigNote')!r}")
-        page.click('#fdAddrSeg >> text=pattern'); page.wait_for_timeout(80)
+        page.click('#fdAddrSeg button[data-addr=\"pattern\"]'); page.wait_for_timeout(80)
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
 
         # ---- 260905 item 2: TAKE IS MATERIAL, MOVEMENT IS THE RAIL'S ----
@@ -2991,7 +3168,7 @@ console.log(JSON.stringify(out));
               const rf = document.querySelector('#fieldSvg .fd-ref');
               window.__cf.bars.push({ i, t, drawn,
                 ref: rf ? +rf.dataset.refmidi : null }); }); }); }""")
-        page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
         compared = [0]
 
@@ -3068,7 +3245,7 @@ console.log(JSON.stringify(out));
         check(compared[0] >= 14,
               f"{tag} the sound≡sight corpus floor: {compared[0]} complete bars compared (want ≥ 14)")
         # restore
-        page.uncheck("#fdAllTones"); page.select_option("#hcRef", "none")
+        page.uncheck("#fdAllTones"); page.select_option("#fdBass2", "none")
         page.press("#fieldSvg", "ArrowLeft"); page.wait_for_timeout(150)
         page.fill("#bpmRange", "72"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(100)
@@ -3079,7 +3256,7 @@ console.log(JSON.stringify(out));
         # block seats the cycle early) — clear it without a visibility wait
         page.evaluate("""() => { const c = document.querySelector('#pgCustom');
           c.value = ''; c.dispatchEvent(new Event('input', { bubbles: true })); }""")
-        page.click('#pgSrcSeg >> text=cycle'); page.wait_for_timeout(150)
+        page.click('#pgSrcSeg button[data-src=\"cycle\"]'); page.wait_for_timeout(150)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
@@ -3667,7 +3844,7 @@ console.log(JSON.stringify(out));
         # Follow: the viewBox narrows to the pass's fret window (the frozen
         # study's auto-crop, as a camera over the same drawing)
         full_vb = page.get_attribute("#fretSvg", "viewBox")
-        page.click("#winSeg >> text=Follow")
+        page.click("#winSeg button[data-win=\"follow\"]")
         page.wait_for_timeout(80)
         follow_vb = page.get_attribute("#fretSvg", "viewBox")
         check(follow_vb != full_vb and float(follow_vb.split()[2]) < 1160,
@@ -3675,7 +3852,7 @@ console.log(JSON.stringify(out));
         check(frets_now() == frets_now(),
               f"{tag} Follow moved the dots — the crop must be a camera over the same drawing")
         # Box: the zone draws, and it is CONFIG — announced, adopted, and it moves the pass
-        page.click("#winSeg >> text=Box")
+        page.click("#winSeg button[data-win=\"box\"]")
         page.wait_for_timeout(80)
         # ONE rectangle (ratified 2026-08-21) — the window; the inner strip is
         # retracted, so exactly one, not "at least two"
@@ -3687,7 +3864,7 @@ console.log(JSON.stringify(out));
         # Read the dots at STEP 2, not step 0: the first chord is the SEED and
         # sits at its bottom-tone anchor whatever the zone (root-position Cmaj7
         # drop-2 has one home) — the zone moves the pass from step 1 onward.
-        page.click("#placeSeg >> text=Grip")
+        page.click("#placeSeg button[data-v=\"grip\"]")
         page.wait_for_timeout(120)
         page.click("#tlBars >> button >> nth=2")
         page.wait_for_timeout(120)
@@ -3885,7 +4062,7 @@ console.log(JSON.stringify(out));
         check(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.length") == 2,
               f"{tag} clearing the figure did not re-disable Arpeggiated/Both — the gate is not live")
         # 2. arpErr — figures fail LOUDLY (audit A3): a bad slot, and parens in slot mode
-        page.click("#figAddrSeg >> text=slots")
+        page.click("#figAddrSeg button[data-mm=\"slots\"]")
         page.fill("#arpIn", "1-2-9"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
         err = page.inner_text("#arpErr")
         check("9" in err and "slot" in err, f"{tag} a bad slot did not fail loudly: {err!r}")
@@ -3898,7 +4075,7 @@ console.log(JSON.stringify(out));
         check(page.inner_text("#arpErr") == "", f"{tag} a good figure left an error standing")
         # 4. TONES: switching address re-lists the picker in tone letters and
         #    the guide-tone preset exists — the pedagogy in one control
-        page.click("#figAddrSeg >> text=tones"); page.wait_for_timeout(60)
+        page.click("#figAddrSeg button[data-mm=\"tones\"]"); page.wait_for_timeout(60)
         opts = page.eval_on_selector_all("#figSel option", "e => e.map(x => x.value)")
         check("3-7-3-7" in opts and any(o.startswith("(") for o in opts),
               f"{tag} the tone picker lacks the guide-tone / enclosure presets: {opts}")
@@ -3922,7 +4099,7 @@ console.log(JSON.stringify(out));
         # 4-voice strum; both is the 4 strummed + 4 line. Pedal rides all three.
         page.select_option("#figSel", "3-7-3-7")
         def sources_for(mode):
-            page.click(f"#playbackSeg >> text={mode}"); page.wait_for_timeout(60)
+            page.click(f"#playbackSeg button[data-pb='{mode.lower()}']"); page.wait_for_timeout(60)
             # step away and let ALL prior sources finish (a 2-beat step at 120bpm
             # rings ~1s; wait past it) so the counter starts from silence
             page.click("#tlBars >> button >> nth=4"); page.wait_for_timeout(1400)
@@ -3938,7 +4115,7 @@ console.log(JSON.stringify(out));
         check(both_n > block_n, f"{tag} Both must sound MORE sources than Strum (both {both_n}, strum {block_n})")
         check(both_n >= arp_n, f"{tag} Both carries the line, so it is at least Arpeggiated (both {both_n}, arp {arp_n})")
         # 6. the pulse rings appear from the SAME event list, at their onsets
-        page.click("#playbackSeg >> text=Arpeggiated"); page.select_option("#figSel", "3-7-3-7")
+        page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.select_option("#figSel", "3-7-3-7")
         page.click("#nextBtn")
         seen = 0
         for _ in range(8):
@@ -3947,9 +4124,9 @@ console.log(JSON.stringify(out));
         check(seen >= 1, f"{tag} the sounding-note pulse never rang for the figure")
         # 7. the score draws the figure at its onsets: an arpeggiated 4-note line
         #    over a 4-beat bar writes quarters — four heads per bar, not one stack
-        page.click("#playbackSeg >> text=Strum"); page.wait_for_timeout(120)
+        page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(120)
         stems_block = page.eval_on_selector_all("#score line[stroke-width='1.2']", "e => e.length")
-        page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(120)
+        page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.wait_for_timeout(120)
         stems_arp = page.eval_on_selector_all("#score line[stroke-width='1.1']", "e => e.length")
         check(stems_arp > stems_block, f"{tag} the score does not draw the figure as a line (block stems {stems_block}, line stems {stems_arp})")
         # 8. GUIDE TONES: dim R and 5, leave 3 and 7 full — a view, not a mode
@@ -3960,9 +4137,9 @@ console.log(JSON.stringify(out));
         page.uncheck("#guideChk")
         # 9. FOLLOW-THE-LINE: in Follow, with a line playing, the window's viewBox
         #    x moves as the sounding note moves (a camera move over the same drawing)
-        page.click("#winSeg >> text=Follow"); page.click("#figAddrSeg >> text=slots")
-        page.select_option("#figSel", "1-2-3-4"); page.click("#placeSeg >> text=Free"); page.wait_for_timeout(120)
-        page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(80)
+        page.click("#winSeg button[data-win=\"follow\"]"); page.click("#figAddrSeg button[data-mm=\"slots\"]")
+        page.select_option("#figSel", "1-2-3-4"); page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(120)
+        page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.wait_for_timeout(80)
         vbs = [page.get_attribute("#fretSvg", "viewBox")]
         page.click("#nextBtn")
         for _ in range(14):
@@ -3973,8 +4150,8 @@ console.log(JSON.stringify(out));
               f"{tag} follow-the-line: the window never moved while a 1-2-3-4 line played — {sorted(xs)}")
         check(all(float(v.split()[2]) < 1160 for v in vbs),
               f"{tag} follow-the-line widened to the whole neck — it must stay a crop while tracking")
-        page.click("#winSeg >> text=Full"); page.click("#placeSeg >> text=Grip")
-        page.select_option("#figSel", ""); page.click("#playbackSeg >> text=Strum"); page.wait_for_timeout(80)
+        page.click("#winSeg button[data-win=\"full\"]"); page.click("#placeSeg button[data-v=\"grip\"]")
+        page.select_option("#figSel", ""); page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(80)
 
         # 10. THE PANEL NARRATES ITS OWN RULES (this item: state the rules in the
         #     hints). The figure sounds ONLY when Playback != Block AND a figure
@@ -3985,24 +4162,24 @@ console.log(JSON.stringify(out));
         #     but the selection stays; the hint says it sounds as Strum until a
         #     figure parses. (Arpeggiated can no longer be CLICKED with no figure,
         #     so reach the state by selecting it with a figure, then clearing.)
-        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg >> text=Arpeggiated"); page.wait_for_timeout(60)
+        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.wait_for_timeout(60)
         page.select_option("#figSel", ""); page.wait_for_timeout(80)
         check("no figure" in hint() and "strum" in hint(),
               f"{tag} Arpeggiated with no figure does not say it sounds as Strum: {page.inner_text('#smHint')!r}")
         # (b) a figure typed but Playback = Strum — the figure is ignored, silently
-        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg >> text=Strum"); page.wait_for_timeout(80)
+        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(80)
         check("not sounding" in hint(),
               f"{tag} Block with a figure does not say the figure is ignored: {page.inner_text('#smHint')!r}")
         # (c) Placement = Free makes the Box inert — stated from this panel too
-        page.click("#placeSeg >> text=Free"); page.wait_for_timeout(80)
+        page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(80)
         check("box" in hint() and "pull" in hint(),
               f"{tag} Free does not warn that the Box won't pull: {page.inner_text('#smHint')!r}")
         # (d) every disabled control states WHY in the panel, not only in a tooltip
         check("line" in page.inner_text("#smWhy").lower(),
               f"{tag} the disabled Line placement has no stated reason in the panel")
         # reset to a clean default for the blocks below
-        page.click("#placeSeg >> text=Grip"); page.select_option("#figSel", "")
-        page.click("#playbackSeg >> text=Strum"); page.wait_for_timeout(80)
+        page.click("#placeSeg button[data-v=\"grip\"]"); page.select_option("#figSel", "")
+        page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(80)
 
     if "keySel" in r["controlsPresent"]:
         # ---- the Harmony panel, in the reference's form: labelled selects,
@@ -4279,14 +4456,14 @@ console.log(JSON.stringify(out));
         page.select_option("#scaleSel", "harm")
         page.select_option("#progSel", "sixths")
         page.select_option("#bottomSel", "2")            # start bottom on the 5th
-        page.click("#setSeg >> text=B–G–D–A")           # the middle set (index 1), labelled high → low
-        page.click("#famSeg >> text=Drop-3")
-        page.click("#figAddrSeg >> text=tones")          # P3: the address is CONFIG; its value must
+        page.click("#setSeg button[data-v=\"1\"]")           # the middle set (index 1), labelled high → low
+        page.click("#famSeg button[data-v=\"drop3\"]")
+        page.click("#figAddrSeg button[data-mm=\"tones\"]")          # P3: the address is CONFIG; its value must
         page.wait_for_timeout(150)                       # round-trip though the control was renamed
         if "winSeg" in r["controlsPresent"]:
             # the zone is CONFIG: set it here, on this fresh page, so it is part
             # of the configuration this entry snapshots and must round-trip
-            page.click("#winSeg >> text=Box")
+            page.click("#winSeg button[data-win=\"box\"]")
             page.wait_for_timeout(60)
             page.focus("#fretSvg")
             for _ in range(4):
@@ -4368,7 +4545,7 @@ console.log(JSON.stringify(out));
         if "winSeg" in r["controlsPresent"]:
             # the zone came back too: Shape & Motion adopted it, and the stage's
             # hint (Box mode) names the restored frets
-            page.click("#winSeg >> text=Box")
+            page.click("#winSeg button[data-win=\"box\"]")
             page.wait_for_timeout(80)
             restored_hint = page.inner_text("#fsBoxHint")
             check(zone_saved and f"frets {min(zone_saved['frets'])}–{max(zone_saved['frets'])}" in restored_hint,
@@ -4487,6 +4664,26 @@ console.log(JSON.stringify(out));
     check("clpsd" in (panel.get_attribute("class") or ""), f"{tag} the chevron did not collapse the panel")
     check(not body.is_visible(), f"{tag} the body is still visible after collapse — the collapse did nothing")
     check(panel.query_selector(".clpsSum").is_visible(), f"{tag} no summary line shows when collapsed")
+    # ---- 260917 item 6a: ROW COLLAPSE — cards sharing a row collapse together ----
+    # Ruled (night 21's option b): per-card chevrons act on the ROW, because
+    # equal-height cards make a lone collapse invisible; THE CONDITION: the
+    # control SAYS its scope in its title, naming the row. Membership is
+    # derived from the build's own row wrapper, never listed.
+    row_state = page.evaluate("""(el) => { const row = el.parentElement;
+      if (!row || !row.classList.contains('cardrow')) return { rowed: false };
+      const kids = [...row.children];
+      return { rowed: true, allCollapsed: kids.every(k => k.classList.contains('clpsd')),
+        titles: kids.map(k => k.querySelector('.clpsBtn').title) }; }""", panel)
+    if row_state["rowed"]:
+        check(row_state["allCollapsed"],
+              f"{tag} 6a: collapsing one card collapsed its whole row — the row moves as one: {row_state}")
+        check(all(t.startswith("expand this row: ") and " and " in t for t in row_state["titles"]),
+              f"{tag} 6a: every chevron in the row SAYS its scope, naming the row-mates: {row_state['titles']}")
+        check(row_state["titles"][0] == "expand this row: Metronome and Notepad" if door_id == "multetudes" else True,
+              f"{tag} 6a: the title names the row's cards in order: {row_state['titles'][0]!r}")
+    else:
+        check(panel.query_selector(".clpsBtn").get_attribute("title") == "expand",
+              f"{tag} 6a: an unrowed card's chevron keeps the plain word — no false scope")
     # THE SHRINK, under the N1 stretch rule (shell parity, 260819.4): cards in a
     # shared row stretch together — the triad app's own behaviour — so one
     # collapsed card keeps the row's height while its neighbour stands. The
@@ -4642,9 +4839,9 @@ console.log(JSON.stringify(out));
     # a door that never refused would call them orphans (the .clpsd lesson)
     err_state_for_check = False
     if door_id == "multetudes":
-        page.click('#pgSrcSeg >> text=custom'); page.wait_for_timeout(80)
+        page.click('#pgSrcSeg button[data-src=\"custom\"]'); page.wait_for_timeout(80)
         page.fill("#pgCustom", "Qx7"); page.dispatch_event("#pgCustom", "input")
-        page.select_option("#hcRef", "third"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
         # the centre-source seg builds its buttons on the scale-mode paint;
         # item 5's reload boots the door in chord mode, so enter the state
         # once (the .clpsd lesson, third instance) — the buttons persist
@@ -4686,9 +4883,9 @@ console.log(JSON.stringify(out));
     if rail_shut_for_check:
         page.click("#fdRailBtn")
     if err_state_for_check:
-        page.select_option("#hcRef", "none")
+        page.select_option("#fdBass2", "none")
         page.fill("#pgCustom", ""); page.dispatch_event("#pgCustom", "input")
-        page.click('#pgSrcSeg >> text=cycle')
+        page.click('#pgSrcSeg button[data-src=\"cycle\"]')
     page.wait_for_timeout(40)
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") == "true":
         muted_for_check.click(); page.wait_for_timeout(40)
@@ -4713,7 +4910,8 @@ console.log(JSON.stringify(out));
     print(f"  {tag} {len(r['controlsPresent'])}/{len(r['controlsAbsent'])} controls "
           f"present/locked · {len(r['filesOut'])} file(s) pruned · "
           f"{len(r['tokensAbsent'])} markup token(s) locked out · "
-          f"{len(selectors)} selectors, all matched · {len(html) // 1024} kB")
+          f"{len(selectors)} selectors, all matched · {len(html) // 1024} kB "
+          f"({html_path.stat().st_size} bytes on disk)")   # 6d (260917): bytes beside the payload kB
 
 
 def redrun_pin():

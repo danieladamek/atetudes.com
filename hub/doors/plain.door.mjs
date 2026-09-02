@@ -11,7 +11,9 @@ export default {
   lock: { notepad: false },
   present: {
     title: "Plain",
-    blurb: "the clock alone — no notebook, and none of its engine · v0.4.0",
+    /* v0.4.2 (260917, night 22): carried along — the shell moved (row collapse,
+     * the chevron naming its row) and the notepad surface again (item 0). */
+    blurb: "the clock alone — no notebook, and none of its engine · v0.4.2",
     footer: "A hub door built from hub/doors/plain.door.mjs. Not a published study.",
   },
 };

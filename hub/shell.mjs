@@ -230,13 +230,39 @@ function initCollapse(doc) {
       slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
       p.appendChild(slot);
     }
+    /* ROW COLLAPSE (260917, night 22 item 6a — ruled, night 21's option b):
+     * cards sharing a declared row collapse TOGETHER. Cards in a row are
+     * equal height by design, so collapsing one alone cannot shrink
+     * anything — the taller card sets the height; the honest behaviour IS
+     * the row. Membership is DERIVED from the build's own row wrapper (a
+     * panel whose parent is a .cardrow shares that row) — nothing listed by
+     * hand. THE CONDITION: the control SAYS its scope — its title names the
+     * row ("collapse this row: Metronome and Notepad"), CC-1's third clause
+     * applied to an affordance. A single-card row degrades to one name. */
+    const row = p.parentElement && p.parentElement.classList.contains("cardrow")
+      ? p.parentElement : null;
+    const mates = row ? [...row.children].filter((c) => c !== p && c.matches(".card, .board")) : [];
+    const nameOf = (x) => {
+      const h = x.querySelector("h2, .bh span");
+      return h ? h.textContent.replace(/\s+/g, " ").trim() : "this panel";
+    };
+    const scope = mates.length
+      ? " this row: " + [p, ...mates].map(nameOf).reduce((acc, n, i, all) =>
+          acc + (i === 0 ? "" : i === all.length - 1 ? " and " : ", ") + n, "")
+      : "";
     const btn = doc.createElement("button");
-    btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse";
+    btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse" + scope;
     btn.addEventListener("click", () => {
       const on = p.classList.toggle("clpsd");
       btn.textContent = on ? "▸" : "▾";
-      btn.title = on ? "expand" : "collapse";
+      btn.title = (on ? "expand" : "collapse") + scope;
       if (on) sum.textContent = summaryOf(p);
+      for (const m of mates) {                    // the row moves as one
+        m.classList.toggle("clpsd", on);
+        const mb = m.querySelector(".clpsBtn"), ms = m.querySelector(".clpsSum");
+        if (mb) { mb.textContent = on ? "▸" : "▾"; mb.title = (on ? "expand" : "collapse") + scope; }
+        if (on && ms) ms.textContent = summaryOf(m);
+      }
     });
     p.appendChild(btn);
     panels.push([p, sum]);

@@ -342,3 +342,77 @@ test("260914-3: the dyad guard derives from the tetrad's own depth — no litera
   assert.throws(() => objectTones(parseChord("C"), "dyad", [9, 3]),
     /dyad/, "a degree outside the tetrad's reach refuses");
 });
+
+// ---- 260917 (night 22, item 1): tone SELECTION extends to every stacked object ----
+// Dyad already chose WHICH two; the ruling generalises it — Triad picks three,
+// Tetrad four, the extensions their depth's worth, fewer is legitimate, a tone
+// the object cannot hold refuses BY NAME — in the FIGURE FIELD'S OWN NOTATION
+// (R,3,5,7): one parser, one refusal vocabulary, never a second.
+import { parseTones, objectDegrees, defaultPick, tonePick, orderBy } from "../selection.mjs";
+
+test("260917-1: parseTones IS the figure's tones parser — one vocabulary, asserted by identity of the refusal", () => {
+  assert.deepEqual(parseTones("R,3,5,7").tones, ["R", "3", "5", "7"]);
+  assert.deepEqual(parseTones("R-3-7 · 13").tones, ["R", "3", "7", "13"], "every separator the figure accepts");
+  assert.deepEqual(parseTones("").tones, [], "no tokens is no pick, not an error");
+  assert.equal(parseTones("").err, null);
+  const junk = parseTones("R,Q");
+  assert.match(junk.err, /"Q" is not a tone — tones are R, 3, 5, 7, 9, 11, 13/);
+  // the SAME words the figure field speaks — the parser is shared, not copied
+  assert.equal(junk.err, orderBy("tones", "R,Q", []).err, "the figure and the selection refuse in one voice");
+  // a pattern digit: the parser refuses it plainly and FLAGS it; only the
+  // figure (which has another mode) turns the flag into its switch notice
+  assert.match(parseTones("1,2").err, /"1" is not a tone/);
+  assert.equal(parseTones("1,2").patternDigit, true);
+  assert.match(orderBy("tones", "1,2", []).err, /reads as a string PATTERN/);
+});
+
+test("260917-1: each object's degrees derive from STACK_DEPTH; dyad and shell pick from the tetrad's", () => {
+  assert.deepEqual(objectDegrees("triad"), [1, 3, 5]);
+  assert.deepEqual(objectDegrees("thirteenth"), [1, 3, 5, 7, 9, 11, 13]);
+  assert.deepEqual(objectDegrees("dyad"), [1, 3, 5, 7]);
+  assert.deepEqual(objectDegrees("shell"), [1, 3, 5, 7]);
+  assert.equal(objectDegrees("scale"), null, "a scale has no tones to pick");
+  assert.deepEqual(defaultPick("triad"), [1, 3, 5], "a stack's default is the whole stack");
+  assert.deepEqual(defaultPick("dyad"), [3, 7], "the guide tones");
+  assert.deepEqual(defaultPick("shell"), [1, 3, 7], "R + the guide tones — Shell is a PRESET of the selector (item 2)");
+});
+
+test("260917-1: a hand-picked tone set narrows the stack; fewer than the depth is legitimate", () => {
+  assert.deepEqual(objectOffsets("triad", [1, 3]), [0, 2]);
+  assert.deepEqual(objectOffsets("tetrad", [1, 3, 7]), [0, 2, 6], "a tetrad picked R,3,7 IS a shell — the same offsets");
+  assert.deepEqual(objectOffsets("ninth", [1, 3, 7, 9]), [0, 2, 6, 8]);
+  assert.deepEqual(objectOffsets("thirteenth", [1, 13]), [0, 12]);
+  assert.deepEqual(objectOffsets("shell", [1, 7]), [0, 6], "shell edited is a pick like any other");
+  assert.deepEqual(objectOffsets("shell"), [0, 2, 6], "shell unedited is R,3,7 (unchanged)");
+  const fld = field({ key: "Bb", scale: "major" });
+  assert.deepEqual(diatonicTones(fld, 0, objectOffsets("tetrad", [1, 3, 7])).map((t) => t.role), ["R", "3", "7"]);
+});
+
+test("260917-1: a tone the object cannot hold refuses BY NAME — the object's own degrees in the sentence", () => {
+  assert.throws(() => objectOffsets("triad", [1, 13]), /13 is not a tone of a triad — a triad holds R, 3, 5/);
+  assert.throws(() => objectOffsets("tetrad", [1, 9]), /9 is not a tone of a tetrad — a tetrad holds R, 3, 5, 7/);
+  assert.throws(() => objectOffsets("tetrad", [3, 3]), /distinct/, "a repeat is refused");
+  assert.throws(() => objectOffsets("tetrad", []), /at least one/, "an empty pick is refused, never a silent full stack");
+  assert.throws(() => objectOffsets("dyad", [1, 3, 5]), /two/, "a dyad is exactly two");
+  assert.throws(() => objectOffsets("triad", [2]), /2 is not a tone/, "a scale step is not a chord tone");
+});
+
+test("260917-1: tonePick is the ONE place the legacy word is known — saved études carrying `dyad` still restore", () => {
+  assert.deepEqual(tonePick({ tones: [1, 5] }), [1, 5]);
+  assert.deepEqual(tonePick({ dyad: [3, 7] }), [3, 7], "a v0.4.x saved étude");
+  assert.deepEqual(tonePick({ tones: [1, 3], dyad: [3, 7] }), [1, 3], "tones wins when both are present");
+  assert.equal(tonePick({}), null, "no pick → the object's default");
+});
+
+test("260917-1 (BUILT, PROPOSED OTHERWISE): the grip's named drop still applies to a hand-picked set", () => {
+  // The dispatch asked which outranks which — an explicit choice, or the
+  // automatic drop rule. BUILT tonight: the rule applies unchanged (a pick
+  // is a stack like any other). PROPOSED (rule 11): an explicit choice
+  // outranks the rule and the refusal is named instead. If Daniel rules
+  // for the proposal, this pin is rewritten with the reason.
+  const fld = field({ key: "Bb", scale: "major" });
+  const picked = diatonicTones(fld, 0, objectOffsets("ninth", [1, 5, 9]));
+  const fit = gripFit(picked, 2);
+  assert.deepEqual(fit.dropped, ["5"], "the 5th, though chosen by hand, is dropped by the rule (built)");
+  assert.deepEqual(fit.tones.map((t) => t.role), ["R", "9"]);
+});

@@ -34,7 +34,7 @@ export const PRESETS = [
   ["R16 · an open voicing on a skipped set", { strings: [6, 4, 3, 1], notesPer: 1, object: "tetrad" }],
   ["R17 · a shell", { strings: [6, 4, 3], notesPer: 1, object: "shell" }],
   ["R19 · a tetrad over a third below", { strings: [4, 3, 2, 1], notesPer: 1, object: "tetrad", bass: "third" }],
-  ["R26 · a guide-tone dyad", { strings: [4, 3], notesPer: 1, object: "dyad", dyad: [3, 7] }],
+  ["R26 · a guide-tone dyad", { strings: [4, 3], notesPer: 1, object: "dyad", tones: [3, 7] }],
 ];
 
 export const presetsCard = {
@@ -119,7 +119,7 @@ export const presetsCard = {
     let take;
     if (p.object === "scale") take = scaleTake(pool);
     else {
-      const tones = diatonicTones(fld, 0, objectOffsets(p.object, p.dyad));
+      const tones = diatonicTones(fld, 0, objectOffsets(p.object, p.tones));
       take = (p.take === "all")
         ? everyOccurrence(tones, pool, { n: p.notesPer })
         : oneOfEach(tones, pool, { n: p.notesPer, centre: pos.centre });

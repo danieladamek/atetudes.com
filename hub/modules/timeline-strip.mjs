@@ -25,6 +25,8 @@ import { placeReference, compositeOver, REF_OFFSET } from "../../engine/referenc
 import { positionOf } from "../../engine/position.mjs";
 import { diatonicTones, objectOffsets } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+import { tonePick, pickOf } from "../../engine/selection.mjs";
 
 export const timelineStrip = {
   id: "timeline-strip",
@@ -69,7 +71,7 @@ export const timelineStrip = {
     /* mirrors of the owners' halves; `index` is MINE (the position) */
     let cfg = { key: "Bb", scale: "major", ref: 0,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
-      object: "tetrad", dyad: [3, 7], bass: "none",
+      object: "tetrad", tones: [1, 3, 5, 7], bass: "root",
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, split: null };
     let meter = 4;
     let index = 0;
@@ -82,13 +84,13 @@ export const timelineStrip = {
       const beats = beatsOf(prog.bars, meter, cfg.split);
       if (index >= prog.chords.length) index = 0;
       host.setAttribute("data-tlline", prog.chords.map((_, i) =>
-        chordAt(prog, i, fld, cfg.object, cfg.dyad).symbol).join(" "));
+        chordAt(prog, i, fld, cfg.object, pickOf(cfg)).symbol).join(" "));
       host.setAttribute("data-tlbars", String(prog.bars.length));
       prog.bars.forEach((bar, bi) => {
         const el = d.createElement("div");
         el.className = "tl-bar" + (bar.includes(index) ? " tl-curbar" : "");
         bar.forEach((ci, k) => {
-          const c = chordAt(prog, ci, fld, cfg.object, cfg.dyad);
+          const c = chordAt(prog, ci, fld, cfg.object, pickOf(cfg));
           const b = d.createElement("button");
           b.className = ci === index ? "tl-cur" : "";
           b.style.flex = `${beats[bi][k]} 1 0`;
@@ -109,7 +111,7 @@ export const timelineStrip = {
           if (cfg.bass !== "none" && cfg.object !== "scale" && c.degree >= 0 && c.tones) {
             const pos = positionOf({ field: fld, anchorString: Math.max(...cfg.strings),
               startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: cfg.strings });
-            const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos);
+            const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos, pickOf(cfg));
             if (rp.note) {
               const comp = compositeOver(fld, rp.note.keyDeg, c.tones.map((t) => t.pc));
               if (comp.name) {

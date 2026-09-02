@@ -7,7 +7,9 @@ export default {
     /* v0.4.1 (260916, night 21): carried along — the notepad surface moved
      * (Restore confirms over unsaved text; the title is pre-populated and
      * names each entry; entries export on their own). */
-    blurb: "the clock and the notebook — stage 2 proving ground · v0.4.1",
+    /* v0.4.2 (260917, night 22): carried along — the shell moved (row collapse,
+     * the chevron naming its row) and the notepad surface again (item 0). */
+    blurb: "the clock and the notebook — stage 2 proving ground · v0.4.2",
     footer: "A hub door built from hub/doors/scribe.door.mjs. Not a published study.",
   },
 };

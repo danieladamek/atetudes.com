@@ -560,8 +560,9 @@ def m19_chord_reroots_at_the_window():
     # ruling (register 11) and v0.9 hold the B-flat tetrad block. The
     # strengthened boot-block pin must still bite.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        "      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);",
-        "      const cur = chordAt({ chords: [{ kind: \"diatonic\", degree: pos.startDeg }], bars: [[0]] }, 0, fld, cfg.object, cfg.dyad);")
+        # anchor re-aimed 260917 (item 1: the pick threads as tonePick(cfg))
+        "      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));",
+        "      const cur = chordAt({ chords: [{ kind: \"diatonic\", degree: pos.startDeg }], bars: [[0]] }, 0, fld, cfg.object, pickOf(cfg));")
     try:
         p.write_text(mutated)
         build()
@@ -880,8 +881,10 @@ def m34_the_figure_tolerates_junk_again():
     p, original, mutated = patch("engine/selection.mjs",
         # anchor re-aimed 260913b (item 4b restructured the tokenizer;
         # the tones junk refusal is one line in the greedy scan)
-        '      return { order: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13` };',
-        '      { i += 1; continue; }   // tolerant again: junk vanishes without a word')
+        # anchor re-aimed 260917 (item 1: the tones tokenizer is parseTones,
+        # shared by the figure and the selection — one refusal, one anchor)
+        '    return { tones: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13`,\n      patternDigit: "12468".includes(ch) };',
+        '    { i += 1; continue; }   // tolerant again: junk vanishes without a word')
     try:
         p.write_text(mutated)
         build()
@@ -961,6 +964,50 @@ def m37_restore_overwrites_the_pad_again():
         record("Restore silently overwrites unsaved pad text again",
                r.returncode != 0 and hit,
                "suite exit %d; the item-1 pin bit at the pad: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutation 38
+def m38_a_tone_the_object_cannot_hold_slips_through():
+    # 260917 item 1: the pick's guard removed — "R,3,13" under a tetrad would
+    # be accepted in silence; the door pin must name the refusal on the face.
+    # ANCHOR RE-AIMED after the first run (260917): removing the guard whole
+    # broke the BUILD — selection.mjs's own load assertion (a dyad of [2,7]
+    # must refuse) threw at import, so the engine refused the mutation before
+    # any door pin could. The mutation now accepts every degree 1–13 for
+    # every object: [2,7] still refuses at load, and a tetrad's "R,3,13"
+    # slips through — exactly the silence the door pin must name.
+    p, original, mutated = patch("engine/selection.mjs",
+        "    if (!degrees.includes(d))\n      throw new Error(`objectOffsets: ${roleWord(d)} is not a tone of a ${object}",
+        "    if (!objectDegrees(\"thirteenth\").includes(d))\n      throw new Error(`objectOffsets: ${roleWord(d)} is not a tone of a ${object}")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "a tone the object cannot hold refuses by name" in r.stdout
+        record("a tone the object cannot hold slips through unrefused",
+               r.returncode != 0 and hit,
+               "suite exit %d; the item-1 refusal pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutation 39
+def m39_the_row_stops_moving_as_one():
+    # 260917 6a: the chevron collapses its card alone again — on an equal-
+    # height row nothing visibly shrinks and the title lies about its scope.
+    p, original, mutated = patch("hub/shell.mjs",
+        "      for (const m of mates) {                    // the row moves as one",
+        "      for (const m of []) {                       // the row does NOT move")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "collapsing one card collapsed its whole row" in r.stdout
+        record("the row stops collapsing as one",
+               r.returncode != 0 and hit,
+               "suite exit %d; the 6a row pin bit: %s" % (r.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -1065,7 +1112,8 @@ def main():
                m30_the_window_forgets_the_octave, m31_a_bar_dies_without_a_reason,
                m32_the_override_goes_silent_again, m33_the_audition_goes_silent,
                m34_the_figure_tolerates_junk_again, m35_the_engine_refusal_swallowed_again,
-               m36_repeat_stops_repeating, m37_restore_overwrites_the_pad_again)
+               m36_repeat_stops_repeating, m37_restore_overwrites_the_pad_again,
+               m38_a_tone_the_object_cannot_hold_slips_through, m39_the_row_stops_moving_as_one)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

@@ -46,6 +46,8 @@ import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } from "../../engine/selection.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE,
   listen, announce } from "../bus.mjs";
 
@@ -63,7 +65,7 @@ export const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
+      tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -104,7 +106,7 @@ export const etudeWalk = {
     };
     const soundCurrent = () => {
       const { fld, prog } = derive();
-      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
       const run = makeRun(cfg.strings);
       const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
@@ -145,7 +147,7 @@ export const etudeWalk = {
        * A mode is only audible against its centre; now it sounds. */
       if (cfg.bass !== "none" && refDeg != null && refDeg >= 0 && sel.length
           && (cfg.object === "scale" || cur.degree >= 0)) {
-        const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos);
+        const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos, pickOf(cfg));
         if (rp.note) refMidi = rp.note.midi;
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value

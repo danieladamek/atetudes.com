@@ -87,10 +87,47 @@ export const REFERENCE_CHOICES = [
   ["fifth", "a 5th below"],
 ];
 
-export function placeReference(kind, chordDeg, fld, strings, pos) {
+/* THE BASS IS CHOSEN FROM THE TONES THE OBJECT HOLDS (260917, night 22
+ * item 3 — Daniel: "the bass tone could always be the root, we should
+ * always default to the root, and if the user wants to select something
+ * else then that should be possible"). A chord TONE in the bass is the kind
+ * `tone:<degree>` — its offset is degree arithmetic like the relative ones
+ * (the 3rd is +2 scale steps, the 7th +6, the 9 wraps to +1), never a
+ * table — and the offered list is derived from the CURRENT PICK (item 1):
+ * a tone not selected is not offerable. The two relative options (a 3rd
+ * below, a 5th below) STAY, explained on the face rather than removed. */
+export const refOffsetOf = (kind) =>
+  kind in REF_OFFSET ? REF_OFFSET[kind]
+  : /^tone:\d+$/.test(String(kind)) ? mod7(Number(String(kind).slice(5)) - 1) : null;
+const degreeWord = (d) => d + ({ 3: "rd" }[d] || "th");
+export function referenceChoicesFor(pick) {
+  const tones = (Array.isArray(pick) ? pick : []).filter((d) => d !== 1);
+  return [
+    ["none", "none"],
+    ["root", "the root"],
+    ...tones.map((d) => ["tone:" + d, `the ${degreeWord(d)} in the bass`]),
+    ["third", "a 3rd below"],
+    ["fifth", "a 5th below"],
+  ];
+}
+
+export function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   if (kind === "none" || kind == null) return { note: null, stretch: false, reason: null };
-  if (!(kind in REF_OFFSET))
+  const off = refOffsetOf(kind);
+  if (off === null)
     throw new Error(`placeReference: "${kind}" is not a reference this engine knows`);
+  /* a chord TONE in the bass must be among the CHOSEN tones (item 3 reads
+   * item 1): a pick that no longer holds it refuses BY NAME here — the one
+   * derivation every board and the walk share, so what sounds is what is
+   * drawn. `pick` absent (a scale, or a caller with no pick) applies no
+   * guard. CC-1: the state is never switched under the player; the face
+   * says why the bass is silent. */
+  if (Array.isArray(pick) && /^tone:/.test(String(kind))) {
+    const d = Number(String(kind).slice(5));
+    if (!pick.includes(d))
+      return { note: null, stretch: false,
+        reason: `the bass names the ${degreeWord(d)}, which the chosen tones do not hold — pick it, or choose another bass` };
+  }
   if (!Number.isInteger(chordDeg) || chordDeg < 0 || chordDeg > 6)
     throw new Error(`placeReference: chordDeg 0..6, not ${chordDeg}`);
   const free = [6, 5].filter((s) => !strings.includes(s));
@@ -98,7 +135,7 @@ export function placeReference(kind, chordDeg, fld, strings, pos) {
     return { note: null, stretch: false,
       reason: "strings 5 and 6 are both in the set — the reference is refused: it has nowhere to sit" };
   const bs = free[0];
-  const keyDeg = mod7(chordDeg + REF_OFFSET[kind]);
+  const keyDeg = mod7(chordDeg + off);
   const cands = notesOn(bs, fld).filter((n) => n.keyDeg === keyDeg);
   if (!cands.length)
     return { note: null, stretch: false,

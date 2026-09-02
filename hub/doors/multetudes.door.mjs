@@ -70,6 +70,14 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
+    /* v0.4.2 (260917, night 22 — the tones and the neck; Daniel's v0.4.0
+     * review completed): the title describes what is in the pad (item 0);
+     * tone selection for every stacked object in the figure's notation
+     * (item 1), Shell its preset (2); the bass root by default, chosen from
+     * the object's tones (3); the Centricity bass window closed (4,
+     * register 31); each passing chord names its mode beside voice (5);
+     * row collapse, the chevron naming its row (6a — the shell's third
+     * move); the centre reversal recorded (register 32). */
     /* v0.4.1 (260916, night 21 — the notepad, from Daniel's v0.4.0 review):
      * Restore never silently overwrites unsaved pad text (the same confirm
      * row as Clear, worded for restoring — item 1, live); the title field
@@ -113,7 +121,7 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.4.1",
+    blurb: "one tool that holds many études · v0.4.2",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

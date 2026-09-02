@@ -40,13 +40,17 @@ import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit } from "../../engine/selection.mjs";
-import { placeReference, REFERENCE_CHOICES, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
+import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
+// 260917 item 5: the mode names, the one table
+import { MODES } from "../../engine/field.mjs";
 import { progressionOf, chordAt, movementWord } from "../../engine/progression.mjs";
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+import { tonePick, pickOf } from "../../engine/selection.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -98,7 +102,7 @@ export const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat"],
+    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode"],
 
   markup: `
   <div class="bh"><span>On the neck</span></div>
@@ -181,6 +185,12 @@ export const fieldBoard = {
     <div class="fd-railrow fd-pairrow">
       <span class="fd-lab2">voice</span>
       <select id="fdVoice" data-control="fdVoice"></select>
+      <!-- EACH PASSING CHORD NAMES ITS MODE (260917, item 5 — ruled; Daniel
+           found the space himself, beside voice): under Scale-or-mode, the
+           bar's chord degree in the chosen scale, read off field.mjs's own
+           MODES table — derived, never placed. Empty under a chord object. -->
+      <span class="fd-lab2 fd-modelab" id="fdMode" data-control="fdMode"
+        title="the mode this bar's chord is, in the context of the chosen scale"></span>
       <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
         <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">harmony</span>
@@ -203,8 +213,11 @@ export const fieldBoard = {
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
   deliberately: a line, an arpeggio and a block chord are all harmonic relationships, and "chord"
-  is too narrow for what this app puts on the neck. The bass channel waits on child 5's fretted
-  reference.</div>
+  is too narrow for what this app puts on the neck. <b>Bass tone:</b> the root by default; any
+  tone the object holds may sit in the bass instead; <b>a 3rd below</b> or <b>a 5th below</b> place a
+  scale tone beneath the chord — a triad over a 3rd below is a seventh chord, and the readout
+  names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
+  <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.</div>
   <div class="hint" id="fdHint"></div>
   <div class="fd-legend" id="fdLegend"></div>`,
 
@@ -289,7 +302,7 @@ export const fieldBoard = {
        * refused E-flat maj7 at bar 2, teaching refusal first. Chosen by the
        * boot-placement pin's search, not by taste. */
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-      object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
+      object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
        * Harmony is doing movement (partial) duty here which it shouldn't
        * be."). Take is MATERIAL — which notes exist (one of each · every
@@ -382,7 +395,7 @@ export const fieldBoard = {
        * missing slot, the key's missing tone, and the frame's. */
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
-      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
       let sel = [], selMsg = "";
       if (prog.err) selMsg = prog.err;
       const fdRefDeg = cfg.object === "scale"
@@ -462,7 +475,7 @@ export const fieldBoard = {
         refP = { note: null, stretch: false,
           reason: `the reference is relative to the chord's degree, and ${cur.symbol}'s root is not in the key` };
       } else if (cfg.bass !== "none" && fdRefDeg != null) {
-        refP = placeReference(cfg.bass, fdRefDeg, fld, run.strings, pos);
+        refP = placeReference(cfg.bass, fdRefDeg, fld, run.strings, pos, pickOf(cfg));
         if (refP.note) {
           const rf = FAM[refP.note.deg];
           const g = el("g", { class: "fd-ref", "data-refstr": refP.note.string,
@@ -591,9 +604,39 @@ export const fieldBoard = {
         rb.style.color = cfg.repeat ? "#fff" : "";
         rb.style.borderColor = cfg.repeat ? "var(--ink)" : "";
       }
-      /* the bass view paints from the same build — Harmony's state, echoed */
+      /* THE MODE LINE (260917, item 5): under a scale, this bar's chord
+       * degree names its mode from the one table; a root off the key says so;
+       * a chord object leaves the line empty (the display is the scale's) */
+      {
+        const ml = byId("fdMode");
+        ml.textContent = cfg.object !== "scale" ? ""
+          : cur.degree >= 0 ? `${cur.symbol} — ${MODES[cfg.scale][cur.degree]}`
+          : `${cur.symbol} — not in the key`;
+      }
+      /* the bass view paints from the same build — Harmony's state, echoed.
+       * ITS OPTIONS DERIVE FROM THE PICK (260917, item 3): the root, then
+       * the tones the object actually holds, then the two relative options
+       * (kept, explained in the popout); refilled only when the offered set
+       * changes. A standing bass the pick no longer holds is kept VISIBLE as
+       * a disabled option (CC-1: never switched under the player) and the
+       * neck says why it is silent (placeReference's own refusal). */
       {
         const b2 = byId("fdBass2");
+        const offered = referenceChoicesFor(pickOf(cfg));
+        const have = [...b2.options].map((o) => o.value);
+        const want = offered.map(([v]) => v);
+        if (want.join() !== have.join() || (!want.includes(cfg.bass) && ![...b2.options].some((o) => o.value === cfg.bass && o.disabled))) {
+          b2.textContent = "";
+          for (const [v, l] of offered) {
+            const o = d.createElement("option"); o.value = v; o.textContent = l;
+            b2.appendChild(o);
+          }
+          if (!want.includes(cfg.bass) && cfg.bass) {
+            const o = d.createElement("option"); o.value = cfg.bass; o.disabled = true;
+            o.textContent = `${cfg.bass.replace(/^tone:/, "the ") + (cfg.bass.startsWith("tone:") ? " in the bass" : "")} — not among the chosen tones`;
+            b2.appendChild(o);
+          }
+        }
         if (b2.value !== cfg.bass) b2.value = cfg.bass;
         b2.disabled = false;   // 4a: live in scale mode too — the centre works
         b2.title = cfg.object === "scale"
@@ -898,12 +941,9 @@ export const fieldBoard = {
      * same shape: announce the change, paint from the announced state. The
      * choices fill from the engine's own list, stated once. */
     {
+      /* the options are filled at PAINT time from the current pick (item 3)
+       * — see the build; here only the announce is wired */
       const b2 = byId("fdBass2");
-      for (const [v, l] of REFERENCE_CHOICES) {
-        const o = d.createElement("option"); o.value = v; o.textContent = l;
-        b2.appendChild(o);
-      }
-      b2.value = cfg.bass;
       b2.addEventListener("change", (e) =>
         announce(d, CONFIG_CHANGED, { bass: e.target.value }));
     }
@@ -973,8 +1013,11 @@ export const fieldBoard = {
           const v = k === "movement" ? movementWord(m[k]) : m[k];
           if (v !== cfg[k]) { cfg = { ...cfg, [k]: v }; changed = true; }
         }
-      if ("dyad" in m && Array.isArray(m.dyad) && m.dyad.join() !== cfg.dyad.join()) {
-        cfg = { ...cfg, dyad: [...m.dyad] }; changed = true;
+      /* the pick (260917, item 1): `tones` is the word; a saved étude's
+       * `dyad` is read through tonePick — the one alias site */
+      {
+        const pk = tonePick(m);
+        if (pk && pk.join() !== (cfg.tones || []).join()) { cfg = { ...cfg, tones: [...pk] }; changed = true; }
       }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {

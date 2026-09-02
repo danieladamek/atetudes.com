@@ -195,8 +195,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .hc-srcseg[hidden]{display:none}
 #hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
-#hcRef,#hcDyad{width:100%}
-#hcDyadLab[hidden],#hcDyad[hidden]{display:none}
+#hcRef,#hcTones{width:100%}
+#hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}
 
 #kySvg{width:100%;height:auto;display:block}
 #kySvg rect{cursor:pointer}
@@ -447,8 +447,17 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
   </div>
-  <label id="hcDyadLab" hidden>Which two tones</label>
-  <select id="hcDyad" data-control="hcDyad" hidden></select>
+  <!-- THE TONES (260917, item 1 — ruled): every stacked object picks its
+       tones in the FIGURE FIELD'S OWN NOTATION (R,3,5,7); the dyad's pair
+       menu became this field. Shell is a PRESET of it (item 2): choosing
+       Shell fills R,3,7 visibly. Hidden under a scale — no stack to narrow. -->
+  <label id="hcTonesLab" hidden>Tones</label>
+  <input type="text" id="hcTones" data-control="hcTones" autocomplete="off" hidden>
+  <!-- THE CENTRE (scale mode). In chord mode the bass WINDOW here is
+       CLOSED (260917, item 4 — register 31): the bass is a note you sound
+       and lives under the neck beside the mixer that drives it. One state,
+       two views (night 18) was about the WIRING and stands; this is about
+       which window earns its place. -->
   <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
   <!-- THE CENTRE'S SOURCE (260914, completing 260831): visible in scale
@@ -574,6 +583,12 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <div class="fd-railrow fd-pairrow">
       <span class="fd-lab2">voice</span>
       <select id="fdVoice" data-control="fdVoice"></select>
+      <!-- EACH PASSING CHORD NAMES ITS MODE (260917, item 5 — ruled; Daniel
+           found the space himself, beside voice): under Scale-or-mode, the
+           bar's chord degree in the chosen scale, read off field.mjs's own
+           MODES table — derived, never placed. Empty under a chord object. -->
+      <span class="fd-lab2 fd-modelab" id="fdMode" data-control="fdMode"
+        title="the mode this bar's chord is, in the context of the chosen scale"></span>
       <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
         <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">harmony</span>
@@ -596,8 +611,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
   deliberately: a line, an arpeggio and a block chord are all harmonic relationships, and "chord"
-  is too narrow for what this app puts on the neck. The bass channel waits on child 5's fretted
-  reference.</div>
+  is too narrow for what this app puts on the neck. <b>Bass tone:</b> the root by default; any
+  tone the object holds may sit in the bass instead; <b>a 3rd below</b> or <b>a 5th below</b> place a
+  scale tone beneath the chord — a triad over a 3rd below is a seventh chord, and the readout
+  names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
+  <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.</div>
   <div class="hint" id="fdHint"></div>
   <div class="fd-legend" id="fdLegend"></div></div>
 <div class="board">
@@ -4494,31 +4512,115 @@ const OFFSET_ROLE = new Proxy({}, {
  * row here, and objectOffsets/objectTones/the hub menus all derive from it. */
 const STACK_DEPTH = { triad: 3, tetrad: 4, ninth: 5, eleventh: 6, thirteenth: 7 };
 
-/* the degrees a dyad may name — the tetrad's own degrees, derived */
-const DYAD_DEGREES = Array.from({ length: STACK_DEPTH.tetrad }, (_, i) => 2 * i + 1);
+/* ---------------- TONE SELECTION (260917, night 22 item 1 — ruled) ----------------
+ *
+ * Dyad already chose WHICH two tones; the ruling generalises it to every
+ * stacked object: Triad picks three, Tetrad four, the extensions their
+ * depth's worth, FEWER is legitimate (that is the whole point), a tone the
+ * object cannot hold refuses BY NAME. The tones are named in the FIGURE
+ * FIELD'S OWN NOTATION — R,3,5,7 — and parsed by the figure's own parser
+ * (parseTones, shared with orderBy): one way to name tones in the app, one
+ * refusal vocabulary. A second parser would be two vocabularies, the defect
+ * this project has paid for twice.
+ *
+ * The degrees an object may hold DERIVE from STACK_DEPTH (dyad and shell
+ * pick from the tetrad's); a pick is degree numbers (R = 1), the stored
+ * identity; the face renders them in the figure notation. */
 
-/** objectOffsets(object, dyad) → the scale-step offsets an object selects,
+/** the degree numbers an object can hold — 1, 3, 5 … up to its depth */
+function objectDegrees(object) {
+  if (object === "scale") return null;
+  const depth = object in STACK_DEPTH ? STACK_DEPTH[object]
+    : (object === "dyad" || object === "shell") ? STACK_DEPTH.tetrad : null;
+  if (depth === null) throw new Error(`objectDegrees: "${object}" is not an object this engine knows`);
+  return Array.from({ length: depth }, (_, i) => 2 * i + 1);
+}
+/** the pick an object starts with: a stack is its whole stack; a dyad the
+ * guide tones; a SHELL is R + the guide tones — Shell is a PRESET of the
+ * selector (item 2): choosing it fills the tones as R,3,7, visibly */
+function defaultPick(object) {
+  if (object === "scale") return null;
+  if (object === "dyad") return [3, 7];
+  if (object === "shell") return [1, 3, 7];
+  return objectDegrees(object);
+}
+/** the ONE place the legacy word is known (movementWord's shape): a saved
+ * étude from v0.4.x carries `dyad: [3,7]`; `tones` is tonight's word and
+ * wins when both are present; neither → the object's default */
+const tonePick = (cfg) =>
+  Array.isArray(cfg && cfg.tones) ? cfg.tones
+  : Array.isArray(cfg && cfg.dyad) ? cfg.dyad : null;
+const roleWord = (d) => (d === 1 ? "R" : String(d));
+/** the pick a consumer is actually placing: the object's default when none
+ * is chosen, null under a scale — what the bass is offered from (item 3) */
+const pickOf = (cfg) => {
+  if (!cfg || cfg.object === "scale") return null;
+  const pk = tonePick(cfg);
+  if (!pk) return defaultPick(cfg.object);
+  /* THE TRANSIENT (260917, measured at the staff): a message that names an
+   * OBJECT without a pick (a preset, a restore, a synthetic config) reaches
+   * every mirror before the owner's derived default does, so for one tick a
+   * mirror holds a triad with a tetrad's pick. An unlawful pick here takes
+   * the object's default — never a throw in a board's paint — and the owner
+   * announces the real default in the same dispatch. User input never
+   * reaches this branch: the field refuses an unlawful pick by name first. */
+  try { objectOffsets(cfg.object, pk); return pk; }
+  catch { return defaultPick(cfg.object); }
+};
+/** degrees → the figure notation the face shows ("R,3,7") and back */
+const renderPick = (pick) => (pick || []).map(roleWord).join(",");
+const degreeOfTone = (t) => (t === "R" ? 1 : Number(t));
+
+/** parseTones(text) → { tones: ["R","3",…] | null, err } — THE tones
+ * tokenizer, shared by the figure (orderBy) and the selection: R 3 5 7 9 11
+ * 13, longest first so 11 and 13 never half-read; every character is a
+ * separator, a legal token, or refused BY NAME (register 21's manners).
+ * A pattern-alphabet digit (1/2/4/6/8) is flagged so the FIGURE can offer
+ * its mode-switch notice; the selection has no other mode and says the
+ * plain refusal. Incomplete is not invalid — a trailing separator is
+ * skipped, so "R," on the way to "R,3" never errs. */
+function parseTones(text) {
+  const raw = String(text || "").toUpperCase();
+  const TONE_TOKENS = ["13", "11", "9", "7", "5", "3", "R"];
+  const toks = [];
+  let i = 0;
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (/[,\-\s.·]/.test(ch)) { i += 1; continue; }
+    const hit = TONE_TOKENS.find((t) => raw.startsWith(t, i));
+    if (hit) { toks.push(hit); i += hit.length; continue; }
+    return { tones: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13`,
+      patternDigit: "12468".includes(ch) };
+  }
+  return { tones: toks, err: null };
+}
+
+/** objectOffsets(object, pick) → the scale-step offsets an object selects,
  * or null for a scale (the whole box — scaleTake's territory). CHILD 4's
  * consolidation: this derivation was spelled `object === "triad" ? [0,2,4]
  * : [0,2,4,6]` in FIVE hub modules — the duplicated-fact defect in exactly
  * the shape coreTetrad's error message warned about. One derivation now:
- *   - a stack of diatonic thirds is offsets 2i (triad n=3, tetrad n=4);
- *   - a DYAD is any two chord tones named by degree (default 3+7, the guide
- *     tones): offset = degree − 1, pitch-class math, never a pair table;
- *   - a SHELL is the root under the guide-tone dyad: degrees [1,3,7].
- * Unknown objects and malformed dyads refuse by name (the loud-refusal law). */
-function objectOffsets(object, dyad = [3, 7]) {
+ *   - offset = degree − 1, pitch-class math, never a table (2i for a full
+ *     stack falls out: degrees 1,3,5… are offsets 0,2,4…);
+ *   - the PICK narrows the stack (item 1): any non-empty, distinct subset
+ *     of the object's own degrees; absent → the object's default;
+ *   - a DYAD is exactly two; a SHELL is R,3,7 unless edited.
+ * Unknown objects and unlawful picks refuse by name (the loud-refusal law). */
+function objectOffsets(object, pick) {
   if (object === "scale") return null;
-  if (object in STACK_DEPTH)
-    return Array.from({ length: STACK_DEPTH[object] }, (_, i) => 2 * i);
-  if (object === "shell") return [1, 3, 7].map((d) => d - 1);
-  if (object === "dyad") {
-    if (!Array.isArray(dyad) || dyad.length !== 2 || dyad[0] === dyad[1] ||
-        dyad.some((d) => !DYAD_DEGREES.includes(d)))
-      throw new Error(`objectOffsets: a dyad is two distinct chord-tone degrees from ${DYAD_DEGREES.join("/")}, not ${JSON.stringify(dyad)}`);
-    return dyad.map((d) => d - 1);
-  }
-  throw new Error(`objectOffsets: "${object}" is not an object this engine knows`);
+  const degrees = objectDegrees(object);           // refuses an unknown object by name
+  const holds = degrees.map(roleWord).join(", ");
+  const chosen = pick == null ? defaultPick(object) : pick;
+  if (!Array.isArray(chosen) || !chosen.length)
+    throw new Error(`objectOffsets: a ${object} needs at least one tone from ${holds}`);
+  for (const d of chosen)
+    if (!degrees.includes(d))
+      throw new Error(`objectOffsets: ${roleWord(d)} is not a tone of a ${object} — a ${object} holds ${holds}`);
+  if (new Set(chosen).size !== chosen.length)
+    throw new Error(`objectOffsets: a ${object}'s tones must be distinct, not ${renderPick(chosen)}`);
+  if (object === "dyad" && chosen.length !== 2)
+    throw new Error(`objectOffsets: a dyad is exactly two chord-tone degrees from ${holds}, not ${renderPick(chosen)}`);
+  return chosen.map((d) => d - 1);
 }
 
 /** objectTones(parsed, object, dyad) → { tones:[{role,pc}], absent:[role…] }
@@ -4532,10 +4634,10 @@ function objectOffsets(object, dyad = [3, 7]) {
  * "7", the seventh-slot, as v0.9 labels it). A slot the chord does not
  * carry is ABSENT, BY NAME — a dyad's 7 on a plain triad, a tetrad's 7 on
  * "C" — never silently narrowed (the coreTetrad lesson, third sighting). */
-function objectTones(parsed, object, dyad = [3, 7]) {
+function objectTones(parsed, object, pick) {
   if (!parsed || !parsed.root || !Array.isArray(parsed.intervals))
     throw new Error("objectTones expects parseChord() output");
-  const offsets = objectOffsets(object, dyad);
+  const offsets = objectOffsets(object, pick);
   if (offsets === null)
     throw new Error("objectTones: a scale is not a chord object — the scale path is scaleTake's");
   const SLOT_ROLE = Array.from({ length: 7 }, (_, i) => roleOfOffset(2 * i));
@@ -4927,18 +5029,17 @@ function orderBy(address, text, notes) {
       return { order: null, err: `"${ch}" is not a string — strings are 1–6` };
     }
   } else {
-    const TONE_TOKENS = ["13", "11", "9", "7", "5", "3", "R"];
-    let i = 0;
-    while (i < raw.length) {
-      const ch = raw[i];
-      if (/[,\-\s.·]/.test(ch)) { i += 1; continue; }
-      const hit = TONE_TOKENS.find((t) => raw.startsWith(t, i));
-      if (hit) { toks.push(hit); i += hit.length; continue; }
-      if ("12468".includes(ch))
-        return { order: null, err: "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
-          "the address is set to tones; switch it to pattern" };
-      return { order: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13` };
-    }
+    /* ONE PARSER (260917, item 1): the tones alphabet is parseTones' — the
+     * selection field reads the same tokens and refuses in the same words;
+     * only the mode-mismatch notice is the figure's own, because only the
+     * figure has another mode to switch to */
+    const r = parseTones(raw);
+    if (r.err)
+      return { order: null, err: r.patternDigit
+        ? "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
+          "the address is set to tones; switch it to pattern"
+        : r.err };
+    toks.push(...r.tones);
   }
   if (!toks.length) return { order: null, err: null };
   /* a selection whose notes carry no ROLES is the scale box (scaleTake) —
@@ -5060,7 +5161,7 @@ function bracketOf(order) {
   if (dy.tones.length !== 1 || dy.absent.join() !== "7")
     throw new Error("selection: a dyad's 7 on a plain triad must be ABSENT BY NAME, never silently narrowed");
 }
-return { STACK_DEPTH, objectOffsets, objectTones, gripFit, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, orderBy, bracketOf };
+return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, gripFit, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, orderBy, bracketOf };
 })();
 
 /* ===== engine/atchart.mjs ===== */
@@ -5756,10 +5857,47 @@ const REFERENCE_CHOICES = [
   ["fifth", "a 5th below"],
 ];
 
-function placeReference(kind, chordDeg, fld, strings, pos) {
+/* THE BASS IS CHOSEN FROM THE TONES THE OBJECT HOLDS (260917, night 22
+ * item 3 — Daniel: "the bass tone could always be the root, we should
+ * always default to the root, and if the user wants to select something
+ * else then that should be possible"). A chord TONE in the bass is the kind
+ * `tone:<degree>` — its offset is degree arithmetic like the relative ones
+ * (the 3rd is +2 scale steps, the 7th +6, the 9 wraps to +1), never a
+ * table — and the offered list is derived from the CURRENT PICK (item 1):
+ * a tone not selected is not offerable. The two relative options (a 3rd
+ * below, a 5th below) STAY, explained on the face rather than removed. */
+const refOffsetOf = (kind) =>
+  kind in REF_OFFSET ? REF_OFFSET[kind]
+  : /^tone:\d+$/.test(String(kind)) ? mod7(Number(String(kind).slice(5)) - 1) : null;
+const degreeWord = (d) => d + ({ 3: "rd" }[d] || "th");
+function referenceChoicesFor(pick) {
+  const tones = (Array.isArray(pick) ? pick : []).filter((d) => d !== 1);
+  return [
+    ["none", "none"],
+    ["root", "the root"],
+    ...tones.map((d) => ["tone:" + d, `the ${degreeWord(d)} in the bass`]),
+    ["third", "a 3rd below"],
+    ["fifth", "a 5th below"],
+  ];
+}
+
+function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   if (kind === "none" || kind == null) return { note: null, stretch: false, reason: null };
-  if (!(kind in REF_OFFSET))
+  const off = refOffsetOf(kind);
+  if (off === null)
     throw new Error(`placeReference: "${kind}" is not a reference this engine knows`);
+  /* a chord TONE in the bass must be among the CHOSEN tones (item 3 reads
+   * item 1): a pick that no longer holds it refuses BY NAME here — the one
+   * derivation every board and the walk share, so what sounds is what is
+   * drawn. `pick` absent (a scale, or a caller with no pick) applies no
+   * guard. CC-1: the state is never switched under the player; the face
+   * says why the bass is silent. */
+  if (Array.isArray(pick) && /^tone:/.test(String(kind))) {
+    const d = Number(String(kind).slice(5));
+    if (!pick.includes(d))
+      return { note: null, stretch: false,
+        reason: `the bass names the ${degreeWord(d)}, which the chosen tones do not hold — pick it, or choose another bass` };
+  }
   if (!Number.isInteger(chordDeg) || chordDeg < 0 || chordDeg > 6)
     throw new Error(`placeReference: chordDeg 0..6, not ${chordDeg}`);
   const free = [6, 5].filter((s) => !strings.includes(s));
@@ -5767,7 +5905,7 @@ function placeReference(kind, chordDeg, fld, strings, pos) {
     return { note: null, stretch: false,
       reason: "strings 5 and 6 are both in the set — the reference is refused: it has nowhere to sit" };
   const bs = free[0];
-  const keyDeg = mod7(chordDeg + REF_OFFSET[kind]);
+  const keyDeg = mod7(chordDeg + off);
   const cands = notesOn(bs, fld).filter((n) => n.keyDeg === keyDeg);
   if (!cands.length)
     return { note: null, stretch: false,
@@ -5883,7 +6021,7 @@ function compositeOver(fld, refKeyDeg, tonePcs) {
   if (!far.note || far.stretch !== true || far.note.fret >= 0 && far.note.fret <= 3)
     throw new Error("reference: a reach past the box must carry the stretch flag");
 }
-return { REF_OFFSET, centreDegreeOf, centreMaterialRef, reRead, CENTRE_SOURCES, REFERENCE_CHOICES, placeReference, compositeOver };
+return { REF_OFFSET, centreDegreeOf, centreMaterialRef, reRead, CENTRE_SOURCES, REFERENCE_CHOICES, refOffsetOf, referenceChoicesFor, placeReference, compositeOver };
 })();
 
 /* ===== engine/progression.mjs ===== */
@@ -6137,7 +6275,7 @@ function chartBodyOf(chords, bars, fld) {
 }
 
 /**
- * chordAt(prog, index, fld, object, dyad) → THE ONE DERIVATION every board
+ * chordAt(prog, index, fld, object, pick) → THE ONE DERIVATION every board
  * shares (last night found the object→offsets fact spelled in five modules;
  * this is the same lesson one level up — the per-bar chord read is derived
  * once, here, and mirrored everywhere):
@@ -6159,7 +6297,7 @@ function chartBodyOf(chords, bars, fld) {
  * A scale object carries no chord: tones null, the symbol is the bar root's
  * name, and the boards keep their scale path.
  */
-function chordAt(prog, index, fld, object, dyad = [3, 7]) {
+function chordAt(prog, index, fld, object, pick) {   // pick: tonePick(cfg) — degrees, or null for the object's default (260917, item 1)
   if (!prog || !Array.isArray(prog.chords) || !prog.chords.length)
     throw new Error("chordAt: no progression");
   const c = prog.chords[((index % prog.chords.length) + prog.chords.length) % prog.chords.length];
@@ -6175,7 +6313,7 @@ function chordAt(prog, index, fld, object, dyad = [3, 7]) {
     if (object === "scale")
       return { kind: c.kind, degree, rootPc, symbol: fld.notes[degree].name,
         roman: ROMAN[degree], tones: null, absent: [], offKey: [] };
-    const tones = diatonicTones(fld, degree, objectOffsets(object, dyad));
+    const tones = diatonicTones(fld, degree, objectOffsets(object, pick));
     const named = compositeOver(fld, degree, tones.map((t) => t.pc));
     // the analysis line reads the DEGREE's own triad — a dyad on ii is still ii
     const tri = diatonicTones(fld, degree, objectOffsets("triad")).map((t) => t.pc);
@@ -6192,7 +6330,7 @@ function chordAt(prog, index, fld, object, dyad = [3, 7]) {
   if (object === "scale")
     return { kind: c.kind, degree, rootPc, symbol: c.parsed.root.name,
       roman: degree < 0 ? "—" : ROMAN[degree], tones: null, absent: [], offKey: [] };
-  const ot = objectTones(c.parsed, object, dyad);
+  const ot = objectTones(c.parsed, object, pick);
   const part = fieldPartition(ot.tones, fld);
   return { kind: c.kind, degree, rootPc, symbol: c.symbol,
     roman: romanOf(degree, c.parsed.pcs),
@@ -6233,6 +6371,7 @@ const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } = __m_engine_selection_mjs;
 const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
+const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, listen, announce } = __m_hub_bus_mjs;
 /* etude-walk.mjs — THE WALK (child 7; the TIME DIMENSION 260902): Play
  * walks the bars, and THE FIGURE WALKS THE SELECTION ACROSS THE CHORD'S
@@ -6282,6 +6421,8 @@ const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, list
 
 
 
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+
 
 const etudeWalk = {
   id: "etude-walk",
@@ -6297,7 +6438,7 @@ const etudeWalk = {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
-      dyad: [3, 7], bass: "none", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
+      tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
@@ -6338,7 +6479,7 @@ const etudeWalk = {
     };
     const soundCurrent = () => {
       const { fld, prog } = derive();
-      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
       const run = makeRun(cfg.strings);
       const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
@@ -6379,7 +6520,7 @@ const etudeWalk = {
        * A mode is only audible against its centre; now it sounds. */
       if (cfg.bass !== "none" && refDeg != null && refDeg >= 0 && sel.length
           && (cfg.object === "scale" || cur.degree >= 0)) {
-        const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos);
+        const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos, pickOf(cfg));
         if (rp.note) refMidi = rp.note.midi;
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
@@ -6559,13 +6700,15 @@ const { field, notesOn } = __m_engine_field_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit } = __m_engine_selection_mjs;
-const { placeReference, REFERENCE_CHOICES, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
+const { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
+const { MODES } = __m_engine_field_mjs;
 const { progressionOf, chordAt, movementWord } = __m_engine_progression_mjs;
 const { STRING_SETS } = __m_engine_tetrad_sequence_mjs;
 const { NOTE_VOICE_NAMES } = __m_engine_voices_mjs;
 const { SPLITS } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
+const { tonePick, pickOf } = __m_engine_selection_mjs;
 /* field-board.mjs — ON THE NECK: Multetudes' neck, v0.9's card (children 0,
  * 2, 3a; the surface rework of 2026-08-29 under the identical-to-v0.9
  * ruling).
@@ -6609,11 +6752,15 @@ const { mountMini } = __m_hub_mini_mjs;
 
 
 
+// 260917 item 5: the mode names, the one table
 
 
 
 
 
+
+
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -6665,7 +6812,7 @@ const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat"],
+    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode"],
 
   markup: `
   <div class="bh"><span>On the neck</span></div>
@@ -6748,6 +6895,12 @@ const fieldBoard = {
     <div class="fd-railrow fd-pairrow">
       <span class="fd-lab2">voice</span>
       <select id="fdVoice" data-control="fdVoice"></select>
+      <!-- EACH PASSING CHORD NAMES ITS MODE (260917, item 5 — ruled; Daniel
+           found the space himself, beside voice): under Scale-or-mode, the
+           bar's chord degree in the chosen scale, read off field.mjs's own
+           MODES table — derived, never placed. Empty under a chord object. -->
+      <span class="fd-lab2 fd-modelab" id="fdMode" data-control="fdMode"
+        title="the mode this bar's chord is, in the context of the chosen scale"></span>
       <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
         <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">harmony</span>
@@ -6770,8 +6923,11 @@ const fieldBoard = {
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
   deliberately: a line, an arpeggio and a block chord are all harmonic relationships, and "chord"
-  is too narrow for what this app puts on the neck. The bass channel waits on child 5's fretted
-  reference.</div>
+  is too narrow for what this app puts on the neck. <b>Bass tone:</b> the root by default; any
+  tone the object holds may sit in the bass instead; <b>a 3rd below</b> or <b>a 5th below</b> place a
+  scale tone beneath the chord — a triad over a 3rd below is a seventh chord, and the readout
+  names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
+  <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.</div>
   <div class="hint" id="fdHint"></div>
   <div class="fd-legend" id="fdLegend"></div>`,
 
@@ -6856,7 +7012,7 @@ const fieldBoard = {
        * refused E-flat maj7 at bar 2, teaching refusal first. Chosen by the
        * boot-placement pin's search, not by taste. */
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
-      object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
+      object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
        * Harmony is doing movement (partial) duty here which it shouldn't
        * be."). Take is MATERIAL — which notes exist (one of each · every
@@ -6949,7 +7105,7 @@ const fieldBoard = {
        * missing slot, the key's missing tone, and the frame's. */
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
-      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
       let sel = [], selMsg = "";
       if (prog.err) selMsg = prog.err;
       const fdRefDeg = cfg.object === "scale"
@@ -7029,7 +7185,7 @@ const fieldBoard = {
         refP = { note: null, stretch: false,
           reason: `the reference is relative to the chord's degree, and ${cur.symbol}'s root is not in the key` };
       } else if (cfg.bass !== "none" && fdRefDeg != null) {
-        refP = placeReference(cfg.bass, fdRefDeg, fld, run.strings, pos);
+        refP = placeReference(cfg.bass, fdRefDeg, fld, run.strings, pos, pickOf(cfg));
         if (refP.note) {
           const rf = FAM[refP.note.deg];
           const g = el("g", { class: "fd-ref", "data-refstr": refP.note.string,
@@ -7158,9 +7314,39 @@ const fieldBoard = {
         rb.style.color = cfg.repeat ? "#fff" : "";
         rb.style.borderColor = cfg.repeat ? "var(--ink)" : "";
       }
-      /* the bass view paints from the same build — Harmony's state, echoed */
+      /* THE MODE LINE (260917, item 5): under a scale, this bar's chord
+       * degree names its mode from the one table; a root off the key says so;
+       * a chord object leaves the line empty (the display is the scale's) */
+      {
+        const ml = byId("fdMode");
+        ml.textContent = cfg.object !== "scale" ? ""
+          : cur.degree >= 0 ? `${cur.symbol} — ${MODES[cfg.scale][cur.degree]}`
+          : `${cur.symbol} — not in the key`;
+      }
+      /* the bass view paints from the same build — Harmony's state, echoed.
+       * ITS OPTIONS DERIVE FROM THE PICK (260917, item 3): the root, then
+       * the tones the object actually holds, then the two relative options
+       * (kept, explained in the popout); refilled only when the offered set
+       * changes. A standing bass the pick no longer holds is kept VISIBLE as
+       * a disabled option (CC-1: never switched under the player) and the
+       * neck says why it is silent (placeReference's own refusal). */
       {
         const b2 = byId("fdBass2");
+        const offered = referenceChoicesFor(pickOf(cfg));
+        const have = [...b2.options].map((o) => o.value);
+        const want = offered.map(([v]) => v);
+        if (want.join() !== have.join() || (!want.includes(cfg.bass) && ![...b2.options].some((o) => o.value === cfg.bass && o.disabled))) {
+          b2.textContent = "";
+          for (const [v, l] of offered) {
+            const o = d.createElement("option"); o.value = v; o.textContent = l;
+            b2.appendChild(o);
+          }
+          if (!want.includes(cfg.bass) && cfg.bass) {
+            const o = d.createElement("option"); o.value = cfg.bass; o.disabled = true;
+            o.textContent = `${cfg.bass.replace(/^tone:/, "the ") + (cfg.bass.startsWith("tone:") ? " in the bass" : "")} — not among the chosen tones`;
+            b2.appendChild(o);
+          }
+        }
         if (b2.value !== cfg.bass) b2.value = cfg.bass;
         b2.disabled = false;   // 4a: live in scale mode too — the centre works
         b2.title = cfg.object === "scale"
@@ -7465,12 +7651,9 @@ const fieldBoard = {
      * same shape: announce the change, paint from the announced state. The
      * choices fill from the engine's own list, stated once. */
     {
+      /* the options are filled at PAINT time from the current pick (item 3)
+       * — see the build; here only the announce is wired */
       const b2 = byId("fdBass2");
-      for (const [v, l] of REFERENCE_CHOICES) {
-        const o = d.createElement("option"); o.value = v; o.textContent = l;
-        b2.appendChild(o);
-      }
-      b2.value = cfg.bass;
       b2.addEventListener("change", (e) =>
         announce(d, CONFIG_CHANGED, { bass: e.target.value }));
     }
@@ -7540,8 +7723,11 @@ const fieldBoard = {
           const v = k === "movement" ? movementWord(m[k]) : m[k];
           if (v !== cfg[k]) { cfg = { ...cfg, [k]: v }; changed = true; }
         }
-      if ("dyad" in m && Array.isArray(m.dyad) && m.dyad.join() !== cfg.dyad.join()) {
-        cfg = { ...cfg, dyad: [...m.dyad] }; changed = true;
+      /* the pick (260917, item 1): `tones` is the word; a saved étude's
+       * `dyad` is read through tonePick — the one alias site */
+      {
+        const pk = tonePick(m);
+        if (pk && pk.join() !== (cfg.tones || []).join()) { cfg = { ...cfg, tones: [...pk] }; changed = true; }
       }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {
@@ -7589,8 +7775,9 @@ return { deriveField, fieldBoard };
 /* ===== hub/modules/harmony-card.mjs ===== */
 const __m_hub_modules_harmony_card_mjs = (() => {
 const { field } = __m_engine_field_mjs;
-const { REFERENCE_CHOICES, CENTRE_SOURCES } = __m_engine_reference_mjs;
+const { CENTRE_SOURCES } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
+const { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, objectOffsets, pickOf } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
 /* harmony-card.mjs — v0.9's HARMONY card: the field, what sits on it, and the
  * reference underneath (Multetudes surface, 2026-08-29 — identical-to-v0.9
@@ -7616,11 +7803,12 @@ const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
 
 
 
+
 const KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const SCALES = [["major", "Major"], ["harm", "Harmonic minor"], ["mel", "Melodic minor"]];
 const OBJECTS = [
   ["scale", "Scale or mode", true],
-  ["dyad", "Dyad", true],           // child 4: two chord tones, by role
+  ["dyad", "Dyad", true],           // child 4: two chord tones, by role — since 260917 picked in the Tones field
   ["triad", "Triad", true],
   ["tetrad", "Tetrad", true],
   ["ninth", "9th chord", true],     // 260914 item 3: depth is data —
@@ -7635,7 +7823,7 @@ const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcDyad", "hcCentreSrc"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcTones", "hcCentreSrc"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -7664,8 +7852,17 @@ const harmonyCard = {
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
   </div>
-  <label id="hcDyadLab" hidden>Which two tones</label>
-  <select id="hcDyad" data-control="hcDyad" hidden></select>
+  <!-- THE TONES (260917, item 1 — ruled): every stacked object picks its
+       tones in the FIGURE FIELD'S OWN NOTATION (R,3,5,7); the dyad's pair
+       menu became this field. Shell is a PRESET of it (item 2): choosing
+       Shell fills R,3,7 visibly. Hidden under a scale — no stack to narrow. -->
+  <label id="hcTonesLab" hidden>Tones</label>
+  <input type="text" id="hcTones" data-control="hcTones" autocomplete="off" hidden>
+  <!-- THE CENTRE (scale mode). In chord mode the bass WINDOW here is
+       CLOSED (260917, item 4 — register 31): the bass is a note you sound
+       and lives under the neck beside the mixer that drives it. One state,
+       two views (night 18) was about the WIRING and stands; this is about
+       which window earns its place. -->
   <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
   <!-- THE CENTRE'S SOURCE (260914, completing 260831): visible in scale
@@ -7683,8 +7880,8 @@ const harmonyCard = {
 .hc-srcseg[hidden]{display:none}
 #hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
-#hcRef,#hcDyad{width:100%}
-#hcDyadLab[hidden],#hcDyad[hidden]{display:none}`,
+#hcRef,#hcTones{width:100%}
+#hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -7693,9 +7890,10 @@ const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
-    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "none", dyad: [3, 7],
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "root", tones: [1, 3, 5, 7],
       centreSrc: "fixed" };   // the source, not a resolved value (260914)
 
+    let tonesErr = null;   // the tones field's standing refusal, by name (null when the field is lawful)
     const fill = (sel, items, current) => {
       sel.textContent = "";
       for (const it of items) {
@@ -7713,18 +7911,26 @@ const harmonyCard = {
       fill(byId("hcObj"), OBJECTS.map(([v, l, live]) => ({ value: v, label: l,
         disabled: !live, title: live ? "" : "arrives with child 4 (dyads, and the chord vocabulary)" })),
         cfg.object);
-      /* THE DYAD MENU (child 4): v0.9's six pairs — every 2-subset of the
-       * chord-tone degrees {1,3,5,7}, guide tones first. The pair LIST is
-       * combinatorics, the labels are derived from the degrees; what a pair
-       * MEANS in offsets is objectOffsets' business, stated once. */
-      const DEGNAME = { 1: "Root", 3: "3rd", 5: "5th", 7: "7th" };
-      const PAIRS = [[3, 7], [1, 3], [1, 5], [1, 7], [3, 5], [5, 7]];
-      fill(byId("hcDyad"), PAIRS.map((p) => ({ value: p.join(","),
-        label: `${DEGNAME[p[0]]} + ${DEGNAME[p[1]]}` + (p[0] === 3 && p[1] === 7 ? " \u2014 guide tones" : "") })),
-        cfg.dyad.join(","));
-      byId("hcDyadLab").hidden = cfg.object !== "dyad";
-      byId("hcDyad").hidden = cfg.object !== "dyad";
       const isScale = cfg.object === "scale";
+      /* THE TONES FIELD (260917, item 1 \u2014 the dyad's six-pair menu became
+       * this): the pick in the figure's notation. The field is repainted
+       * from the model only when it does not already SAY the current pick
+       * (a caret mid-edit is never moved), and a refused edit keeps its
+       * text on the face with the refusal beside it \u2014 the figure field's
+       * own manners (register 21). The label names the degrees this
+       * object can hold, derived from its depth. */
+      {
+        const f = byId("hcTones"), lab = byId("hcTonesLab");
+        f.hidden = isScale; lab.hidden = isScale;
+        if (!isScale) {
+          const pick = pickOf(cfg);
+          const says = parseTones(f.value);
+          const saysPick = says.tones ? renderPick(says.tones.map(degreeOfTone)) : null;
+          if (!tonesErr && saysPick !== renderPick(pick)) f.value = renderPick(pick);
+          lab.textContent = `Tones \u2014 pick from ${renderPick(objectDegrees(cfg.object)).split(",").join(", ")}`;
+          f.placeholder = renderPick(defaultPick(cfg.object));
+        }
+      }
       /* THE REFERENCE. Under a scale it is the CENTRE — pick any note of the
        * collection and the field is re-read against it, which is what a mode
        * is (LIVE — child 1's field.ref). Under a chord it is what sits
@@ -7749,6 +7955,11 @@ const harmonyCard = {
         for (const b of seg.querySelectorAll("button"))
           b.classList.toggle("on", b.dataset.src === (cfg.centreSrc || "fixed"));
       }
+      /* item 4 (260917, register 31): the card's select is the CENTRE and
+       * shows in scale mode only; in chord mode the bass window is closed —
+       * the control lives under the neck. Hidden, never dead-with-no-reason. */
+      byId("hcRef").hidden = !isScale;
+      byId("hcRefLab").hidden = !isScale;
       if (isScale) {
         const f = field({ key: cfg.key, scale: cfg.scale });
         const follows = cfg.centreSrc === "follows";
@@ -7766,40 +7977,71 @@ const harmonyCard = {
             ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the centre, not the key.`
             : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.");
       } else {
-        /* THE THREE RELATIVE OPTIONS (child 5, ruled 260831): root, a 3rd
-         * below, a 5th below — relative to the chord. The FIXED half of that
-         * ruling — deferred "until the chords change" — was completed
-         * 260914 as the scale centre's source (centreDegreeOf). */
-        fill(byId("hcRef"), REFERENCE_CHOICES.map(([v, l]) => ({ value: v, label: l })),
-          cfg.bass);
-        /* the chord-mode paint must CLEAR the scale paint's disable (CC-1
-         * audit, 260915): the bass is chord-relative by construction, so
-         * centreSrc cannot contradict it — a scale→follows→chord walk was
-         * leaving this select dead with no reason on the face (rule 10:
-         * the PAINT site is one of the three) */
+        /* chord mode: the face speaks for the TONES — a refusal, by name and
+         * red, or the one sentence that says what the pick is and where the
+         * bass went (item 4). The chord-mode fill of the bass select is gone
+         * with the window; CC-1's audit fix (the scale disable cleared) now
+         * lives on the surviving view under the neck. */
         byId("hcRef").disabled = false;
-        byId("hcRefLab").textContent = "Bass tone";   // the ruled word (260914)
-        byId("hcNote").textContent = cfg.bass === "none"
-          ? "The bass the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
-          : "A real fretted note on string 5 or 6, chosen against the window — the neck shows it hollow, the readout names what the stack becomes over it.";
+        const note = byId("hcNote");
+        if (tonesErr) {
+          note.textContent = "tones: " + tonesErr;
+          note.style.color = "#B82929";
+        } else {
+          note.style.color = "";
+          const pick = pickOf(cfg);
+          const whole = renderPick(pick) === renderPick(objectDegrees(cfg.object));
+          note.textContent = (cfg.object === "shell"
+            ? "A shell is the root under the guide tones — R,3,7, the tones above; edit them and it is a pick like any other. "
+            : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point; a tone this object cannot hold is refused by name. `
+            : `The ${cfg.object} narrowed to ${renderPick(pick).split(",").join(" ")}. `)
+            + "The bass tone lives under the neck, beside the mixer that drives it.";
+        }
       }
     };
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
-    const MINE = ["key", "scale", "object", "ref", "bass", "dyad", "centreSrc"];
+    const MINE = ["key", "scale", "object", "ref", "bass", "tones", "centreSrc"];
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
       for (const k of MINE) if (k in m && !same(m[k], cfg[k])) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+      /* a saved étude's `dyad` arrives as the pick (tonePick is the one
+       * alias site); an OBJECT arriving without a pick (a preset) takes its
+       * default — a triad preset must not inherit a dyad's [3,7] */
+      if (!("tones" in m) && Array.isArray(m.dyad) && !same(m.dyad, cfg.tones)) {
+        cfg = { ...cfg, tones: [...m.dyad] }; changed = true;
+      } else if ("object" in m && !("tones" in m) && !("dyad" in m) && changed) {
+        cfg = { ...cfg, tones: defaultPick(cfg.object) }; tonesErr = null;
+        /* the owner SAYS the pick it derived — every mirror that heard the
+         * object without one hears the default in the same dispatch */
+        announce(d, CONFIG_CHANGED, { tones: cfg.tones });
+      }
       if (changed) render();
     });
 
     byId("hcKey").addEventListener("change", (e) => { cfg = { ...cfg, key: e.target.value }; push(); });
     byId("hcScale").addEventListener("change", (e) => { cfg = { ...cfg, scale: e.target.value }; push(); });
-    byId("hcObj").addEventListener("change", (e) => { cfg = { ...cfg, object: e.target.value }; push(); });
-    byId("hcDyad").addEventListener("change", (e) => { cfg = { ...cfg, dyad: e.target.value.split(",").map(Number) }; push(); });
+    /* choosing an object FILLS its tones (item 2's whole point for Shell:
+     * R,3,7 appears, visibly) — a refused edit is forgotten with the object */
+    byId("hcObj").addEventListener("change", (e) => {
+      tonesErr = null;
+      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value) }; push();
+    });
+    /* THE TONES FIELD: parsed by the figure's parser, checked by the one
+     * derivation (objectOffsets) — a refusal is a value on the face and the
+     * last lawful pick stands; validation is live, as the figure's is */
+    byId("hcTones").addEventListener("input", (e) => {
+      const r = parseTones(e.target.value);
+      if (r.err) { tonesErr = r.err; render(); return; }
+      const pick = r.tones.map(degreeOfTone);
+      try { objectOffsets(cfg.object, pick); }
+      catch (err) { tonesErr = String(err.message || err).replace(/^objectOffsets: /, ""); render(); return; }
+      tonesErr = null;
+      cfg = { ...cfg, tones: pick }; push();
+    });
     byId("hcRef").addEventListener("change", (e) => {
       const v = e.target.value;
       if (v.startsWith("mode:")) cfg = { ...cfg, ref: +v.slice(5) };
@@ -7823,6 +8065,7 @@ const { progressionOf, chordAt } = __m_engine_progression_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
+const { tonePick, pickOf } = __m_engine_selection_mjs;
 /* keys-board.mjs — v0.9's ON THE KEYS for Multetudes (surface, 2026-08-29).
  *
  * C2–C6, whites then blacks, C labels, and the current SELECTION as coloured
@@ -7845,6 +8088,8 @@ const { mountMini } = __m_hub_mini_mjs;
 
 
 
+
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const FAM = ["R", "2", "3", "4", "5", "6", "7"];
@@ -7880,7 +8125,7 @@ const keysBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] , bass: "none",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, centreSrc: "fixed" };
     let index = 0;
     let pulseTimers = [];       // the sounding-note pulse (260911, item 4 — field-board's idiom)
@@ -7941,7 +8186,7 @@ const keysBoard = {
        * progression owns which chord; chordAt owns what its tones are */
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
-      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
       let sel = [];
       const kyRefDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
@@ -7962,7 +8207,7 @@ const keysBoard = {
       /* 4a (260913b): the centre's reference rings here too */
       if (cfg.bass !== "none" && kyRefDeg != null
           && (cfg.object === "scale" || cur.degree >= 0)) {
-        const rp = placeReference(cfg.bass, kyRefDeg, fld, cfg.strings, pos);
+        const rp = placeReference(cfg.bass, kyRefDeg, fld, cfg.strings, pos, pickOf(cfg));
         if (rp.note && rp.note.midi >= LO && rp.note.midi <= HI) {
           const black = BLACK.includes(mod(rp.note.midi, 12));
           const cx = xOf(rp.note.midi) + (black ? ww * 0.3 : ww / 2);
@@ -8430,6 +8675,7 @@ const { oneOfEach, everyOccurrence, scaleTake, gripFit } = __m_engine_selection_
 const { progressionOf, chordAt } = __m_engine_progression_mjs;
 const { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, listen } = __m_hub_bus_mjs;
+const { tonePick, pickOf } = __m_engine_selection_mjs;
 /* neck-readout.mjs — v0.9's READOUT and ASSERT lines (Multetudes surface,
  * 2026-08-29).
  *
@@ -8449,6 +8695,8 @@ const { CONFIG_CHANGED, STEP_CHANGED, listen } = __m_hub_bus_mjs;
 
 
 
+
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
@@ -8475,8 +8723,8 @@ const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
-      bass: "none" ,
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7],
+      bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       centreSrc: "fixed" };
     let index = 0;
@@ -8506,7 +8754,7 @@ const neckReadout = {
          * cannot reach (the window's report, unchanged). */
         const prog = progressionOf(cfg, cfg.key, cfg.scale);
         if (index >= prog.chords.length) index = 0;
-        const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+        const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
         let sel = [], msg = "", absences = [];
         if (prog.err) absences.push(prog.err);
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
@@ -8580,7 +8828,7 @@ const neckReadout = {
          * guitar knowledge, one line. */
         let placeK = 0;
         for (let bi = 0; bi < prog.chords.length; bi++) {
-          const bc = chordAt(prog, bi, fld, cfg.object, cfg.dyad);
+          const bc = chordAt(prog, bi, fld, cfg.object, pickOf(cfg));
           if (cfg.object === "scale") { placeK++; continue; }
           const br = cfg.take === "all"
             ? { notes: true }
@@ -8606,7 +8854,7 @@ const neckReadout = {
           bits.push(`<span style="color:#B82929">reference refused: the reference is relative to the ` +
             `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
         } else if (cfg.bass !== "none" && roRefDeg != null) {
-          const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos);
+          const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos, pickOf(cfg));
           check("the reference is a real fretted note or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
@@ -9681,12 +9929,15 @@ const { createPalette } = __m_engine_palette_mjs;
  *   - Save files the note, CLEARS the pad, no prompt, no toast — the emptied
  *     pad is the confirmation. An empty pad still saves (config capture).
  *   - Clear confirms; "Save and clear" is the PRIMARY action, Discard second.
- *   - Restore NEVER silently overwrites unsaved pad text (260916, item 1):
- *     it asks through the same row, worded for restoring ("Save and
- *     restore" / "Discard and restore" / keep writing); an empty pad
- *     restores at once.
- *   - The document's title (els.title, optional) is PRE-POPULATED with the
- *     host's default name and is the single source of the name — for the
+ *   - Restore NEVER silently overwrites DIRTY pad text (260916, item 1;
+ *     260917, 6c): text edited since it was last loaded or saved asks, IN
+ *     THE ROW THAT WAS PRESSED (260917, 0b), worded for restoring ("Save
+ *     and restore" / "Discard and restore" / keep writing); a clean or
+ *     empty pad restores at once. Clear reads the same predicate.
+ *   - THE TITLE DESCRIBES WHAT IS CURRENTLY IN THE PAD (260917, item 0):
+ *     empty → the host's dated default; a restore → that entry's name;
+ *     typing → what was typed; on save the pad empties and the title
+ *     returns to the default. It is the single source of the name — for the
  *     export file and for each entry filed while it stands (260916, item 2).
  *   - Every entry exports on its own, through the one download path,
  *     named from its own name; both outcomes speak in the row (260916, 3).
@@ -9780,8 +10031,12 @@ function createNotepadSurface(opts) {
       const raw = storage.load();
       if (raw) {
         const d = JSON.parse(raw);
+        /* `base` (260917, 6c): the pad's text as it was last LOADED OR SAVED
+         * — what "dirty" is measured against. A store from before tonight
+         * has none: an empty base makes any standing text dirty, which is
+         * the safe reading (it asks once more, never once less). */
         return { pad: String(d.pad ?? ""), title: String(d.title ?? ""),
-                 entries: (d.entries || []).map(makeEntry) };
+                 base: String(d.base ?? ""), entries: (d.entries || []).map(makeEntry) };
       }
       const migrated = migrate();
       if (migrated) { trySave(migrated); return migrated; }
@@ -9790,7 +10045,8 @@ function createNotepadSurface(opts) {
   }
   function trySave(d) {
     if (!storageOK) return false;
-    try { storage.save(JSON.stringify({ pad: d.pad, title: d.title ?? "", entries: d.entries })); return true; }
+    try { storage.save(JSON.stringify({ pad: d.pad, title: d.title ?? "", base: d.base ?? "",
+      entries: d.entries })); return true; }
     catch (e) { storageOK = false; return false; }
   }
   function persist() { return trySave(doc); }
@@ -9826,13 +10082,32 @@ function createNotepadSurface(opts) {
    * name is the player's, the summary is the configuration's. */
   const nameNow = () =>
     els.title ? (String(els.title.value ?? "").trim() || file.title) : null;
+  /* THE TITLE DESCRIBES WHAT IS CURRENTLY IN THE PAD (260917, item 0 —
+   * the rule that was missing; Daniel's three findings on v0.4.1 were three
+   * transitions nobody had written down):
+   *     pad empty             → the dated default (the host's file.title)
+   *     pad holds a restore   → THAT ENTRY'S NAME (an old entry: the default)
+   *     pad holds typing      → whatever the player typed
+   *     on save, pad empties  → back to the dated default
+   * paintTitle() is the one place the field is written from the model: an
+   * empty model title paints the host's default (read with the field
+   * emptied first, so a host whose default derives from the field-or-
+   * fallback sees the fallback). Restore→edit→save therefore files under
+   * the restored name — a continuation — and THEN resets: settled by the
+   * rule, never a question. A host without the field is untouched. */
+  function paintTitle() {
+    if (!els.title) return;
+    els.title.value = "";
+    els.title.value = doc.title || file.title;
+  }
   function save() {
     clearConfirmShow(false);
     const text = String(els.pad.value ?? "").trim();
     doc = addEntry(doc, { savedAt: new Date().toISOString(), text, heading: nameNow(),
       payload: { app: adapter.app, v: adapter.version, data: adapter.snapshot() } });
-    doc = { ...doc, pad: "" };
+    doc = { ...doc, pad: "", base: "", title: "" };   // the pad empties: the title returns to the default
     els.pad.value = "";
+    paintTitle();
     const ok = persist();
     if (!ok) msgSet("save", "saved in this tab only — use Export to keep it", true);
     else if (!text) msgSet("save", "captured without a note"); // something must confirm
@@ -9847,27 +10122,69 @@ function createNotepadSurface(opts) {
    * shows in `data-intent`, so a harness can address the state by role and
    * never by the words on the buttons (rule 12). `clearConfirmShow(true)`
    * with no intent is the clear — the public seam keeps its old meaning. */
-  let pending = null;
-  function clearConfirmShow(on, intent) {
-    pending = on ? (intent || { kind: "clear" }) : null;
-    const kind = on ? pending.kind : "none";
+  /* 260917 (item 0b): the host's row now guards CLEAR ONLY. The restore
+   * confirm moved INTO THE ROW that was pressed (rowConfirmShow) — night
+   * 16's "the message prints nowhere near the press" had recurred through
+   * this shared fixture: Restore lives in the log column, the row lived
+   * under the pad, and the answer appeared in the other column. */
+  function clearConfirmShow(on) {
     if (els.confirmRoot) {
       els.confirmRoot.style.display = on ? "flex" : "none";
-      els.confirmRoot.setAttribute("data-intent", kind);
+      els.confirmRoot.setAttribute("data-intent", on ? "clear" : "none");
     }
-    const L = LABELS.confirm[on ? kind : "clear"];
+    const L = LABELS.confirm.clear;
     if (els.confirmSave) els.confirmSave.textContent = L.save;
     if (els.confirmDiscard) els.confirmDiscard.textContent = L.discard;
     if (els.confirmCancel) els.confirmCancel.textContent = L.cancel;
   }
-  /* the pad holds UNSAVED text when it holds any text at all — the same
-   * predicate Clear has always used, so the two guards can never disagree
-   * about what needs asking (an empty pad asks nothing, either way) */
-  const padUnsaved = () => Boolean(String(els.pad.value ?? "").trim());
+  /* DIRTY, not merely non-empty (260917, 6c — register 30): the pad holds
+   * unsaved work when its text differs from what was last loaded or saved
+   * (`doc.base`). A just-restored note is not unsaved work — it came from a
+   * saved entry and losing it costs nothing — and asking about it trains a
+   * player to dismiss the confirm, which is how a guard stops guarding.
+   * Clear and Restore both read THIS predicate, so the two guards can never
+   * disagree; an empty pad is never dirty (nothing to lose). */
+  const padDirty = () => {
+    const t = String(els.pad.value ?? "").trim();
+    return t !== "" && t !== String(doc.base ?? "").trim();
+  };
+  /* THE RESTORE CONFIRM, IN THE ROW THAT WAS PRESSED (260917, item 0b): one
+   * open at a time; the three answers carry roles (confirm-save /
+   * confirm-discard / confirm-cancel) under a root stamped data-intent, so a
+   * harness addresses the state and never the verbs. Same idiom, same
+   * labels (LABELS.confirm.restore), a different seat. */
+  let openConfirm = null;   // { root, container } — the seat is remembered, not looked up
+  function rowConfirmClose() {
+    if (openConfirm) openConfirm.container.removeChild(openConfirm.root);
+    openConfirm = null;
+  }
+  function rowConfirmShow(container, apply) {
+    rowConfirmClose();
+    const docm = container.ownerDocument;
+    const L = LABELS.confirm.restore;
+    const root = docm.createElement("span"); root.className = "rconfirm";
+    root.setAttribute("data-cap", "restore-confirm");
+    root.setAttribute("data-intent", "restore");
+    const lead = docm.createElement("span"); lead.className = "rlead";
+    lead.textContent = "that note is filed nowhere —";
+    root.appendChild(lead);
+    const mk = (cap, label, onClick) => {
+      const b = docm.createElement("button"); b.textContent = label;
+      b.setAttribute("data-cap", cap);
+      b.addEventListener("click", onClick);
+      root.appendChild(b);
+    };
+    mk("confirm-save", L.save, () => { rowConfirmClose(); save(); apply(); });
+    mk("confirm-discard", L.discard, () => { rowConfirmClose(); discard(); apply(); });
+    mk("confirm-cancel", L.cancel, () => rowConfirmClose());
+    container.appendChild(root);
+    openConfirm = { root, container };
+  }
   function discard() {
     clearConfirmShow(false);
     els.pad.value = "";
-    doc = { ...doc, pad: "" };
+    doc = { ...doc, pad: "", base: "", title: "" };   // the pad empties: the title returns to the default
+    paintTitle();
     persist(); onChange();
   }
 
@@ -10013,19 +10330,24 @@ function createNotepadSurface(opts) {
         const applyEntry = () => {
           adapter.apply(p.data);
           els.pad.value = en.text || "";           // canonical: the note returns
-          doc = { ...doc, pad: els.pad.value };    // as uncommitted scratch
+          /* …WITH ITS NAME (260917, 0a): the pad holds a restore, so the
+           * title is that entry's name — the other half of the round trip
+           * save() writes (heading). An entry filed before names existed
+           * carries none and paints the dated default, never an empty
+           * field. The restored text is the new BASE: clean, not dirty. */
+          doc = { ...doc, pad: els.pad.value, base: els.pad.value, title: en.heading || "" };
+          paintTitle();
           persist(); onChange(); onApplied();
         };
         const rb = docm.createElement("button"); rb.textContent = applyLabel;
         rb.setAttribute("data-cap", "apply");
         /* RESTORE NEVER SILENTLY OVERWRITES THE PAD (260916, item 1 —
          * measured at this line: `els.pad.value = en.text` ran
-         * unconditionally, and Daniel lost a note to it). Unsaved text
-         * asks, through Clear's own row worded for restoring; an empty pad
-         * restores at once, as it always did — Clear's precedent for the
-         * common case, no new friction. */
+         * unconditionally, and Daniel lost a note to it). DIRTY text asks
+         * (260917: dirty, not merely non-empty), in THIS ROW (260917, 0b);
+         * a clean or empty pad restores at once — no new friction. */
         rb.addEventListener("click", () => {
-          if (padUnsaved()) clearConfirmShow(true, { kind: "restore", apply: applyEntry });
+          if (padDirty()) rowConfirmShow(acts, applyEntry);
           else applyEntry();
         });
         acts.appendChild(rb);
@@ -10087,7 +10409,7 @@ function createNotepadSurface(opts) {
      * untouched field persists nothing, so tomorrow's first paint carries
      * tomorrow's date exactly as v0.4.0's fallback did, and an edit sticks
      * through the input listener below (night 19's persistence). */
-    els.title.value = doc.title || file.title;
+    paintTitle();
     els.title.addEventListener("input", () => {
       doc = { ...doc, title: els.title.value };
       if (padTimer) clearTimeout(padTimer);
@@ -10097,22 +10419,18 @@ function createNotepadSurface(opts) {
   }
   mountCap("save", (b) => b.addEventListener("click", save));
   mountCap("clear", (b) => b.addEventListener("click", () => {
-    if (!String(els.pad.value ?? "").trim()) { discard(); return; }
+    /* 6c (260917): a clean pad — empty, or exactly what was last loaded
+     * or saved — clears without asking; only DIRTY text is guarded */
+    if (!padDirty()) { discard(); return; }
     clearConfirmShow(true);
   }));
   if (!els.confirmRoot || !els.confirmSave || !els.confirmDiscard || !els.confirmCancel)
     throw new Error("notepad-surface: the clear capability needs its confirm " +
       "row — provide els.confirmRoot/confirmSave/confirmDiscard/confirmCancel");
-  /* the three answers, intent-aware (260916, item 1): under a restore, Save
-   * files the pad and THEN restores; Discard drops it and then restores;
-   * keep writing does nothing at all. Under a clear, the old three. The
-   * intent is read before save()/discard() hide the row and clear it. */
-  els.confirmSave.addEventListener("click", () => {
-    const p = pending; save(); if (p && p.apply) p.apply();
-  });
-  els.confirmDiscard.addEventListener("click", () => {
-    const p = pending; discard(); if (p && p.apply) p.apply();
-  });
+  /* the host's row answers CLEAR (260917: the restore's three answers moved
+   * into the pressed row — rowConfirmShow) */
+  els.confirmSave.addEventListener("click", save);
+  els.confirmDiscard.addEventListener("click", discard);
   els.confirmCancel.addEventListener("click", () => clearConfirmShow(false));
   els.confirmSave.setAttribute("data-cap", "clear-save");
   els.confirmDiscard.setAttribute("data-cap", "clear-discard");
@@ -10183,8 +10501,9 @@ function createNotepadSurface(opts) {
   return {
     getDoc: () => doc,
     setDoc: (d) => { doc = { pad: String(d.pad ?? ""), title: String(d.title ?? ""),
+        base: String(d.pad ?? ""),   // a programmatic load: the pad starts clean
         entries: (d.entries || []).map(makeEntry) };
-      els.pad.value = doc.pad; persist(); renderRows(); onChange(); },
+      els.pad.value = doc.pad; paintTitle(); persist(); renderRows(); onChange(); },
     save, clearConfirmShow, exportText, importText, renderRows,
     get storageOK() { return storageOK; },
   };
@@ -10548,7 +10867,7 @@ const PRESETS = [
   ["R16 · an open voicing on a skipped set", { strings: [6, 4, 3, 1], notesPer: 1, object: "tetrad" }],
   ["R17 · a shell", { strings: [6, 4, 3], notesPer: 1, object: "shell" }],
   ["R19 · a tetrad over a third below", { strings: [4, 3, 2, 1], notesPer: 1, object: "tetrad", bass: "third" }],
-  ["R26 · a guide-tone dyad", { strings: [4, 3], notesPer: 1, object: "dyad", dyad: [3, 7] }],
+  ["R26 · a guide-tone dyad", { strings: [4, 3], notesPer: 1, object: "dyad", tones: [3, 7] }],
 ];
 
 const presetsCard = {
@@ -10633,7 +10952,7 @@ const presetsCard = {
     let take;
     if (p.object === "scale") take = scaleTake(pool);
     else {
-      const tones = diatonicTones(fld, 0, objectOffsets(p.object, p.dyad));
+      const tones = diatonicTones(fld, 0, objectOffsets(p.object, p.tones));
       take = (p.take === "all")
         ? everyOccurrence(tones, pool, { n: p.notesPer })
         : oneOfEach(tones, pool, { n: p.notesPer, centre: pos.centre });
@@ -10825,6 +11144,7 @@ const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engi
 const { writtenValue } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
+const { tonePick, pickOf } = __m_engine_selection_mjs;
 /* staff-board.mjs — v0.9's ÉTUDE STAFF for Multetudes (surface, 2026-08-29).
  *
  * "The étude — end to end": the grand staff, treble carrying the material
@@ -10854,6 +11174,8 @@ const { mountMini } = __m_hub_mini_mjs;
 
 
 
+
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const FAM = ["R", "2", "3", "4", "5", "6", "7"];
@@ -10891,7 +11213,7 @@ const staffBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       movement: "strum",
       address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null,
@@ -10980,7 +11302,7 @@ const staffBoard = {
 
       /* the label band above the HIGHEST note in the whole étude (v0.9's
        * register fix), so no bar's run collides with the names */
-      const chords = prog.chords.map((_, ci) => chordAt(prog, ci, fld, cfg.object, cfg.dyad));
+      const chords = prog.chords.map((_, ci) => chordAt(prog, ci, fld, cfg.object, pickOf(cfg)));
       const rs = chords.map((c) => selOf(c));
       const sels = rs.map((r) => r.notes || []);
       /* EVERY BAR WEARS THE FIGURE (260911, item 5 — Daniel's ruling,
@@ -11153,7 +11475,7 @@ const staffBoard = {
           : c.degree;
         if (cfg.bass !== "none" && stRefDeg != null
             && (cfg.object === "scale" || c.degree >= 0)) {
-          const rp = placeReference(cfg.bass, stRefDeg, fld, cfg.strings, pos);
+          const rp = placeReference(cfg.bass, stRefDeg, fld, cfg.strings, pos, pickOf(cfg));
           if (rp.note) {
             const m0 = rp.note.midi, pc2 = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;
             const sp = fld.notes.find((n) => n.pc === pc2);
@@ -11227,6 +11549,7 @@ const { placeReference, compositeOver, REF_OFFSET } = __m_engine_reference_mjs;
 const { positionOf } = __m_engine_position_mjs;
 const { diatonicTones, objectOffsets } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
+const { tonePick, pickOf } = __m_engine_selection_mjs;
 /* timeline-strip.mjs — v0.9's CHART LINE, LIVE (child 7).
  *
  * Bars of chips, one per chord, widths from the chord's beats — so the split
@@ -11253,6 +11576,8 @@ const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_
 
 
 
+
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 const timelineStrip = {
   id: "timeline-strip",
@@ -11297,7 +11622,7 @@ const timelineStrip = {
     /* mirrors of the owners' halves; `index` is MINE (the position) */
     let cfg = { key: "Bb", scale: "major", ref: 0,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
-      object: "tetrad", dyad: [3, 7], bass: "none",
+      object: "tetrad", tones: [1, 3, 5, 7], bass: "root",
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, split: null };
     let meter = 4;
     let index = 0;
@@ -11310,13 +11635,13 @@ const timelineStrip = {
       const beats = beatsOf(prog.bars, meter, cfg.split);
       if (index >= prog.chords.length) index = 0;
       host.setAttribute("data-tlline", prog.chords.map((_, i) =>
-        chordAt(prog, i, fld, cfg.object, cfg.dyad).symbol).join(" "));
+        chordAt(prog, i, fld, cfg.object, pickOf(cfg)).symbol).join(" "));
       host.setAttribute("data-tlbars", String(prog.bars.length));
       prog.bars.forEach((bar, bi) => {
         const el = d.createElement("div");
         el.className = "tl-bar" + (bar.includes(index) ? " tl-curbar" : "");
         bar.forEach((ci, k) => {
-          const c = chordAt(prog, ci, fld, cfg.object, cfg.dyad);
+          const c = chordAt(prog, ci, fld, cfg.object, pickOf(cfg));
           const b = d.createElement("button");
           b.className = ci === index ? "tl-cur" : "";
           b.style.flex = `${beats[bi][k]} 1 0`;
@@ -11337,7 +11662,7 @@ const timelineStrip = {
           if (cfg.bass !== "none" && cfg.object !== "scale" && c.degree >= 0 && c.tones) {
             const pos = positionOf({ field: fld, anchorString: Math.max(...cfg.strings),
               startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: cfg.strings });
-            const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos);
+            const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos, pickOf(cfg));
             if (rp.note) {
               const comp = compositeOver(fld, rp.note.keyDeg, c.tones.map((t) => t.pc));
               if (comp.name) {
@@ -11651,13 +11976,39 @@ function initCollapse(doc) {
       slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
       p.appendChild(slot);
     }
+    /* ROW COLLAPSE (260917, night 22 item 6a — ruled, night 21's option b):
+     * cards sharing a declared row collapse TOGETHER. Cards in a row are
+     * equal height by design, so collapsing one alone cannot shrink
+     * anything — the taller card sets the height; the honest behaviour IS
+     * the row. Membership is DERIVED from the build's own row wrapper (a
+     * panel whose parent is a .cardrow shares that row) — nothing listed by
+     * hand. THE CONDITION: the control SAYS its scope — its title names the
+     * row ("collapse this row: Metronome and Notepad"), CC-1's third clause
+     * applied to an affordance. A single-card row degrades to one name. */
+    const row = p.parentElement && p.parentElement.classList.contains("cardrow")
+      ? p.parentElement : null;
+    const mates = row ? [...row.children].filter((c) => c !== p && c.matches(".card, .board")) : [];
+    const nameOf = (x) => {
+      const h = x.querySelector("h2, .bh span");
+      return h ? h.textContent.replace(/\s+/g, " ").trim() : "this panel";
+    };
+    const scope = mates.length
+      ? " this row: " + [p, ...mates].map(nameOf).reduce((acc, n, i, all) =>
+          acc + (i === 0 ? "" : i === all.length - 1 ? " and " : ", ") + n, "")
+      : "";
     const btn = doc.createElement("button");
-    btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse";
+    btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse" + scope;
     btn.addEventListener("click", () => {
       const on = p.classList.toggle("clpsd");
       btn.textContent = on ? "▸" : "▾";
-      btn.title = on ? "expand" : "collapse";
+      btn.title = (on ? "expand" : "collapse") + scope;
       if (on) sum.textContent = summaryOf(p);
+      for (const m of mates) {                    // the row moves as one
+        m.classList.toggle("clpsd", on);
+        const mb = m.querySelector(".clpsBtn"), ms = m.querySelector(".clpsSum");
+        if (mb) { mb.textContent = on ? "▸" : "▾"; mb.title = (on ? "expand" : "collapse") + scope; }
+        if (on && ms) ms.textContent = summaryOf(m);
+      }
     });
     p.appendChild(btn);
     panels.push([p, sum]);
@@ -11728,7 +12079,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.4.1","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.4.2","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

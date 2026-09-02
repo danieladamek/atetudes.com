@@ -28,6 +28,8 @@ import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../
 import { writtenValue } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+import { tonePick, pickOf } from "../../engine/selection.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const FAM = ["R", "2", "3", "4", "5", "6", "7"];
@@ -65,7 +67,7 @@ export const staffBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7], bass: "none",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       movement: "strum",
       address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null,
@@ -154,7 +156,7 @@ export const staffBoard = {
 
       /* the label band above the HIGHEST note in the whole étude (v0.9's
        * register fix), so no bar's run collides with the names */
-      const chords = prog.chords.map((_, ci) => chordAt(prog, ci, fld, cfg.object, cfg.dyad));
+      const chords = prog.chords.map((_, ci) => chordAt(prog, ci, fld, cfg.object, pickOf(cfg)));
       const rs = chords.map((c) => selOf(c));
       const sels = rs.map((r) => r.notes || []);
       /* EVERY BAR WEARS THE FIGURE (260911, item 5 — Daniel's ruling,
@@ -327,7 +329,7 @@ export const staffBoard = {
           : c.degree;
         if (cfg.bass !== "none" && stRefDeg != null
             && (cfg.object === "scale" || c.degree >= 0)) {
-          const rp = placeReference(cfg.bass, stRefDeg, fld, cfg.strings, pos);
+          const rp = placeReference(cfg.bass, stRefDeg, fld, cfg.strings, pos, pickOf(cfg));
           if (rp.note) {
             const m0 = rp.note.midi, pc2 = mod(m0, 12), oct = Math.floor(m0 / 12) - 1;
             const sp = fld.notes.find((n) => n.pc === pc2);

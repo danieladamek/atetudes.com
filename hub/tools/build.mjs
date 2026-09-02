@@ -294,7 +294,12 @@ __m_hub_shell_mjs.boot(MODULES, DOOR, document);
   mkdirSync(join(HUB, "build"), { recursive: true });
   writeFileSync(join(HUB, "build", r.door + ".html"), html);
   const kb = (html.length / 1024).toFixed(1);
-  console.log(`built ${r.door}.html  ${kb} kB  ${r.filesIn.length} file(s) in, ` +
+  /* BYTES BESIDE THE kB (260917, 6d — flagged night 19): the kB figure is
+   * the payload's character count; the FILE'S bytes are what `wc -c` and
+   * the SITELOG report, and a session once lost real time to the two being
+   * compared as one quantity */
+  const bytes = Buffer.byteLength(html, "utf8");
+  console.log(`built ${r.door}.html  ${kb} kB (${bytes} bytes)  ${r.filesIn.length} file(s) in, ` +
     `${r.filesOut.length} pruned  controls ${r.controlsPresent.length}/${r.controlsAbsent.length} ` +
     `present/locked  tokens locked out: ${r.tokensAbsent.length}`);
 }

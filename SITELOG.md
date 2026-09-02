@@ -1,3 +1,41 @@
+## 2026-09-01 — Multetudes v0.4.2: night 22, the tones and the neck — Daniel's v0.4.0 review completed; four studies move
+
+- **Source edition v0.4.2** (night 22; the full report in `notes/working/Multetudes build run
+  260917.md`; the rulings in `notes/working/Multetudes PO rulings 260917 — night 21's open
+  points.md` and `… PO finding 260917 — the title describes the pad.md`).
+- **The notepad, on every carrier (item 0, committed first):** THE TITLE DESCRIBES WHAT IS IN THE
+  PAD — restore fills it with the entry's name, save empties the pad and resets it to the dated
+  default, so a stale name can no longer misfile the next note; the restore confirm now appears
+  in the row that was pressed (it was displaced, not silent); Clear and Restore ask only over
+  DIRTY text — a just-restored note asks nothing (register 30: shipped behaviour changed).
+- **Multetudes' Centricity and neck:**
+  - **Tone selection for every stacked object** (item 1) — the Tones field, in the figure's own
+    notation (R,3,5,7), parsed by the figure's own parser: Triad picks three, Tetrad four, the
+    extensions their depth's worth, fewer is legitimate, a tone the object cannot hold refuses by
+    name. The dyad's pair menu is gone into it. **Shell is a preset of it** (item 2): choosing
+    Shell fills R,3,7 visibly.
+  - **The bass defaults to the root** and is chosen from the tones the object actually holds,
+    with a 3rd below and a 5th below kept and explained (item 3); at boot the neck now draws the
+    root under the B♭ block and the readout names the stack over it.
+  - **The Centricity bass window is closed** (item 4, register 31) — the control lives under the
+    neck beside the mixer; the centre picker stays on the card in scale mode.
+  - **Each passing chord names its mode** beside `voice` under the neck (item 5), derived from the
+    scale's own mode table.
+  - **Row collapse** (6a): a card's chevron collapses its row, and its title says so —
+    "collapse this row: Metronome and Notepad". `hub/shell.mjs` moved for the third time
+    (18,040 bytes); every door republished with it.
+- **Recorded, not built:** the centre stays in Centricity and the object keeps the name "Scale
+  or mode" (register 32 carries Daniel's reversal and its reason); the mechanism that makes an
+  unsnapshotted red-run impossible or loud is PROPOSED in the report (item 7).
+- **Four studies moved:** multetudes (610,575 bytes) and tetradetudes (445,614) republished
+  cmp-identical; metronome (164,086) and triadetudes (340,797) re-inlined verbatim
+  (`notepad-surface`). OWED_DRIFT stayed EMPTY.
+- Verified: engine 589/589 · four-door gate 18,222/0 (`hub/tests/out/doors-0901-2229.log`) · hub tests 4/4 · family floor
+  20 surfaces 13/7-exempt/0 · bite 39/40 (`hub/tests/out/bite-0901-2236.log`) + m38 re-aimed and proven alone (`hub/tests/out/bite-m38-0902-0136.log`) — all forty behaviours · hugo exit 0 · check_site 21 pages · the ritual on ALL FOUR
+  moved studies at 1380px and 390px on the served build, exercised, zero console errors.
+- The harness: 56 text-addressed seg clicks re-aimed by attribute BEFORE any edit (6b); the
+  build and the gate print bytes beside the kB (6d).
+
 ## 2026-09-01 — Landing page: Triadetudes and Tetradetudes delisted (URLs stay live)
 
 - Daniel removed the two cards from `content/_index.md` — a DELISTING only. The study pages

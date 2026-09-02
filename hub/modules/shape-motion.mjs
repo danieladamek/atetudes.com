@@ -149,6 +149,10 @@ export const shapeMotion = {
       items.forEach(({ value, label, title }) => {
         const b = d.createElement("button");
         b.textContent = label;
+        /* the VALUE rides the button as a role (260917, rule 12): a harness
+         * that finds "Drop-3" or "B–G–D–A" by its label is reading a word a
+         * relabel may change — the stored identity is what to address */
+        b.dataset.v = String(value);
         if (title) b.title = title;
         if (value === current) b.className = "on";
         if (disabled(value)) b.disabled = true;

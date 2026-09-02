@@ -98,31 +98,115 @@ const OFFSET_ROLE = new Proxy({}, {
  * row here, and objectOffsets/objectTones/the hub menus all derive from it. */
 export const STACK_DEPTH = { triad: 3, tetrad: 4, ninth: 5, eleventh: 6, thirteenth: 7 };
 
-/* the degrees a dyad may name — the tetrad's own degrees, derived */
-const DYAD_DEGREES = Array.from({ length: STACK_DEPTH.tetrad }, (_, i) => 2 * i + 1);
+/* ---------------- TONE SELECTION (260917, night 22 item 1 — ruled) ----------------
+ *
+ * Dyad already chose WHICH two tones; the ruling generalises it to every
+ * stacked object: Triad picks three, Tetrad four, the extensions their
+ * depth's worth, FEWER is legitimate (that is the whole point), a tone the
+ * object cannot hold refuses BY NAME. The tones are named in the FIGURE
+ * FIELD'S OWN NOTATION — R,3,5,7 — and parsed by the figure's own parser
+ * (parseTones, shared with orderBy): one way to name tones in the app, one
+ * refusal vocabulary. A second parser would be two vocabularies, the defect
+ * this project has paid for twice.
+ *
+ * The degrees an object may hold DERIVE from STACK_DEPTH (dyad and shell
+ * pick from the tetrad's); a pick is degree numbers (R = 1), the stored
+ * identity; the face renders them in the figure notation. */
 
-/** objectOffsets(object, dyad) → the scale-step offsets an object selects,
+/** the degree numbers an object can hold — 1, 3, 5 … up to its depth */
+export function objectDegrees(object) {
+  if (object === "scale") return null;
+  const depth = object in STACK_DEPTH ? STACK_DEPTH[object]
+    : (object === "dyad" || object === "shell") ? STACK_DEPTH.tetrad : null;
+  if (depth === null) throw new Error(`objectDegrees: "${object}" is not an object this engine knows`);
+  return Array.from({ length: depth }, (_, i) => 2 * i + 1);
+}
+/** the pick an object starts with: a stack is its whole stack; a dyad the
+ * guide tones; a SHELL is R + the guide tones — Shell is a PRESET of the
+ * selector (item 2): choosing it fills the tones as R,3,7, visibly */
+export function defaultPick(object) {
+  if (object === "scale") return null;
+  if (object === "dyad") return [3, 7];
+  if (object === "shell") return [1, 3, 7];
+  return objectDegrees(object);
+}
+/** the ONE place the legacy word is known (movementWord's shape): a saved
+ * étude from v0.4.x carries `dyad: [3,7]`; `tones` is tonight's word and
+ * wins when both are present; neither → the object's default */
+export const tonePick = (cfg) =>
+  Array.isArray(cfg && cfg.tones) ? cfg.tones
+  : Array.isArray(cfg && cfg.dyad) ? cfg.dyad : null;
+const roleWord = (d) => (d === 1 ? "R" : String(d));
+/** the pick a consumer is actually placing: the object's default when none
+ * is chosen, null under a scale — what the bass is offered from (item 3) */
+export const pickOf = (cfg) => {
+  if (!cfg || cfg.object === "scale") return null;
+  const pk = tonePick(cfg);
+  if (!pk) return defaultPick(cfg.object);
+  /* THE TRANSIENT (260917, measured at the staff): a message that names an
+   * OBJECT without a pick (a preset, a restore, a synthetic config) reaches
+   * every mirror before the owner's derived default does, so for one tick a
+   * mirror holds a triad with a tetrad's pick. An unlawful pick here takes
+   * the object's default — never a throw in a board's paint — and the owner
+   * announces the real default in the same dispatch. User input never
+   * reaches this branch: the field refuses an unlawful pick by name first. */
+  try { objectOffsets(cfg.object, pk); return pk; }
+  catch { return defaultPick(cfg.object); }
+};
+/** degrees → the figure notation the face shows ("R,3,7") and back */
+export const renderPick = (pick) => (pick || []).map(roleWord).join(",");
+export const degreeOfTone = (t) => (t === "R" ? 1 : Number(t));
+
+/** parseTones(text) → { tones: ["R","3",…] | null, err } — THE tones
+ * tokenizer, shared by the figure (orderBy) and the selection: R 3 5 7 9 11
+ * 13, longest first so 11 and 13 never half-read; every character is a
+ * separator, a legal token, or refused BY NAME (register 21's manners).
+ * A pattern-alphabet digit (1/2/4/6/8) is flagged so the FIGURE can offer
+ * its mode-switch notice; the selection has no other mode and says the
+ * plain refusal. Incomplete is not invalid — a trailing separator is
+ * skipped, so "R," on the way to "R,3" never errs. */
+export function parseTones(text) {
+  const raw = String(text || "").toUpperCase();
+  const TONE_TOKENS = ["13", "11", "9", "7", "5", "3", "R"];
+  const toks = [];
+  let i = 0;
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (/[,\-\s.·]/.test(ch)) { i += 1; continue; }
+    const hit = TONE_TOKENS.find((t) => raw.startsWith(t, i));
+    if (hit) { toks.push(hit); i += hit.length; continue; }
+    return { tones: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13`,
+      patternDigit: "12468".includes(ch) };
+  }
+  return { tones: toks, err: null };
+}
+
+/** objectOffsets(object, pick) → the scale-step offsets an object selects,
  * or null for a scale (the whole box — scaleTake's territory). CHILD 4's
  * consolidation: this derivation was spelled `object === "triad" ? [0,2,4]
  * : [0,2,4,6]` in FIVE hub modules — the duplicated-fact defect in exactly
  * the shape coreTetrad's error message warned about. One derivation now:
- *   - a stack of diatonic thirds is offsets 2i (triad n=3, tetrad n=4);
- *   - a DYAD is any two chord tones named by degree (default 3+7, the guide
- *     tones): offset = degree − 1, pitch-class math, never a pair table;
- *   - a SHELL is the root under the guide-tone dyad: degrees [1,3,7].
- * Unknown objects and malformed dyads refuse by name (the loud-refusal law). */
-export function objectOffsets(object, dyad = [3, 7]) {
+ *   - offset = degree − 1, pitch-class math, never a table (2i for a full
+ *     stack falls out: degrees 1,3,5… are offsets 0,2,4…);
+ *   - the PICK narrows the stack (item 1): any non-empty, distinct subset
+ *     of the object's own degrees; absent → the object's default;
+ *   - a DYAD is exactly two; a SHELL is R,3,7 unless edited.
+ * Unknown objects and unlawful picks refuse by name (the loud-refusal law). */
+export function objectOffsets(object, pick) {
   if (object === "scale") return null;
-  if (object in STACK_DEPTH)
-    return Array.from({ length: STACK_DEPTH[object] }, (_, i) => 2 * i);
-  if (object === "shell") return [1, 3, 7].map((d) => d - 1);
-  if (object === "dyad") {
-    if (!Array.isArray(dyad) || dyad.length !== 2 || dyad[0] === dyad[1] ||
-        dyad.some((d) => !DYAD_DEGREES.includes(d)))
-      throw new Error(`objectOffsets: a dyad is two distinct chord-tone degrees from ${DYAD_DEGREES.join("/")}, not ${JSON.stringify(dyad)}`);
-    return dyad.map((d) => d - 1);
-  }
-  throw new Error(`objectOffsets: "${object}" is not an object this engine knows`);
+  const degrees = objectDegrees(object);           // refuses an unknown object by name
+  const holds = degrees.map(roleWord).join(", ");
+  const chosen = pick == null ? defaultPick(object) : pick;
+  if (!Array.isArray(chosen) || !chosen.length)
+    throw new Error(`objectOffsets: a ${object} needs at least one tone from ${holds}`);
+  for (const d of chosen)
+    if (!degrees.includes(d))
+      throw new Error(`objectOffsets: ${roleWord(d)} is not a tone of a ${object} — a ${object} holds ${holds}`);
+  if (new Set(chosen).size !== chosen.length)
+    throw new Error(`objectOffsets: a ${object}'s tones must be distinct, not ${renderPick(chosen)}`);
+  if (object === "dyad" && chosen.length !== 2)
+    throw new Error(`objectOffsets: a dyad is exactly two chord-tone degrees from ${holds}, not ${renderPick(chosen)}`);
+  return chosen.map((d) => d - 1);
 }
 
 /** objectTones(parsed, object, dyad) → { tones:[{role,pc}], absent:[role…] }
@@ -136,10 +220,10 @@ export function objectOffsets(object, dyad = [3, 7]) {
  * "7", the seventh-slot, as v0.9 labels it). A slot the chord does not
  * carry is ABSENT, BY NAME — a dyad's 7 on a plain triad, a tetrad's 7 on
  * "C" — never silently narrowed (the coreTetrad lesson, third sighting). */
-export function objectTones(parsed, object, dyad = [3, 7]) {
+export function objectTones(parsed, object, pick) {
   if (!parsed || !parsed.root || !Array.isArray(parsed.intervals))
     throw new Error("objectTones expects parseChord() output");
-  const offsets = objectOffsets(object, dyad);
+  const offsets = objectOffsets(object, pick);
   if (offsets === null)
     throw new Error("objectTones: a scale is not a chord object — the scale path is scaleTake's");
   const SLOT_ROLE = Array.from({ length: 7 }, (_, i) => roleOfOffset(2 * i));
@@ -531,18 +615,17 @@ export function orderBy(address, text, notes) {
       return { order: null, err: `"${ch}" is not a string — strings are 1–6` };
     }
   } else {
-    const TONE_TOKENS = ["13", "11", "9", "7", "5", "3", "R"];
-    let i = 0;
-    while (i < raw.length) {
-      const ch = raw[i];
-      if (/[,\-\s.·]/.test(ch)) { i += 1; continue; }
-      const hit = TONE_TOKENS.find((t) => raw.startsWith(t, i));
-      if (hit) { toks.push(hit); i += hit.length; continue; }
-      if ("12468".includes(ch))
-        return { order: null, err: "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
-          "the address is set to tones; switch it to pattern" };
-      return { order: null, err: `"${ch}" is not a tone — tones are R, 3, 5, 7, 9, 11, 13` };
-    }
+    /* ONE PARSER (260917, item 1): the tones alphabet is parseTones' — the
+     * selection field reads the same tokens and refuses in the same words;
+     * only the mode-mismatch notice is the figure's own, because only the
+     * figure has another mode to switch to */
+    const r = parseTones(raw);
+    if (r.err)
+      return { order: null, err: r.patternDigit
+        ? "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
+          "the address is set to tones; switch it to pattern"
+        : r.err };
+    toks.push(...r.tones);
   }
   if (!toks.length) return { order: null, err: null };
   /* a selection whose notes carry no ROLES is the scale box (scaleTake) —

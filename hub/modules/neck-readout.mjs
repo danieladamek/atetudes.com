@@ -18,6 +18,8 @@ import { oneOfEach, everyOccurrence, scaleTake, gripFit } from "../../engine/sel
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+import { tonePick, pickOf } from "../../engine/selection.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
@@ -44,8 +46,8 @@ export const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7],
-      bass: "none" ,
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7],
+      bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       centreSrc: "fixed" };
     let index = 0;
@@ -75,7 +77,7 @@ export const neckReadout = {
          * cannot reach (the window's report, unchanged). */
         const prog = progressionOf(cfg, cfg.key, cfg.scale);
         if (index >= prog.chords.length) index = 0;
-        const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+        const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
         let sel = [], msg = "", absences = [];
         if (prog.err) absences.push(prog.err);
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
@@ -149,7 +151,7 @@ export const neckReadout = {
          * guitar knowledge, one line. */
         let placeK = 0;
         for (let bi = 0; bi < prog.chords.length; bi++) {
-          const bc = chordAt(prog, bi, fld, cfg.object, cfg.dyad);
+          const bc = chordAt(prog, bi, fld, cfg.object, pickOf(cfg));
           if (cfg.object === "scale") { placeK++; continue; }
           const br = cfg.take === "all"
             ? { notes: true }
@@ -175,7 +177,7 @@ export const neckReadout = {
           bits.push(`<span style="color:#B82929">reference refused: the reference is relative to the ` +
             `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
         } else if (cfg.bass !== "none" && roRefDeg != null) {
-          const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos);
+          const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos, pickOf(cfg));
           check("the reference is a real fretted note or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret

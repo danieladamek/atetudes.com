@@ -21,6 +21,8 @@ import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+import { tonePick, pickOf } from "../../engine/selection.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const FAM = ["R", "2", "3", "4", "5", "6", "7"];
@@ -56,7 +58,7 @@ export const keysBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, dyad: [3, 7] , bass: "none",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, centreSrc: "fixed" };
     let index = 0;
     let pulseTimers = [];       // the sounding-note pulse (260911, item 4 — field-board's idiom)
@@ -117,7 +119,7 @@ export const keysBoard = {
        * progression owns which chord; chordAt owns what its tones are */
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
-      const cur = chordAt(prog, index, fld, cfg.object, cfg.dyad);
+      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
       let sel = [];
       const kyRefDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
@@ -138,7 +140,7 @@ export const keysBoard = {
       /* 4a (260913b): the centre's reference rings here too */
       if (cfg.bass !== "none" && kyRefDeg != null
           && (cfg.object === "scale" || cur.degree >= 0)) {
-        const rp = placeReference(cfg.bass, kyRefDeg, fld, cfg.strings, pos);
+        const rp = placeReference(cfg.bass, kyRefDeg, fld, cfg.strings, pos, pickOf(cfg));
         if (rp.note && rp.note.midi >= LO && rp.note.midi <= HI) {
           const black = BLACK.includes(mod(rp.note.midi, 12));
           const cx = xOf(rp.note.midi) + (black ? ww * 0.3 : ww / 2);

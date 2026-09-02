@@ -78,3 +78,44 @@ test("THE GREP extends: no quality interval set spelled in reference.mjs", () =>
   for (const re of BANNED)
     assert.ok(!re.test(src), `reference.mjs spells a quality interval set (${re})`);
 });
+
+// ---- 260917 (night 22, item 3): the bass is chosen from the tones the object holds ----
+import { referenceChoicesFor, refOffsetOf } from "../reference.mjs";
+
+test("260917-3: the offered basses are the pick's own tones beside the root, plus the two relative options — kept", () => {
+  assert.deepEqual(referenceChoicesFor([1, 3, 5, 7]).map(([v]) => v),
+    ["none", "root", "tone:3", "tone:5", "tone:7", "third", "fifth"], "a tetrad offers its 3rd, 5th and 7th");
+  assert.deepEqual(referenceChoicesFor([1, 3, 7]).map(([v]) => v),
+    ["none", "root", "tone:3", "tone:7", "third", "fifth"], "a tone not selected is not offerable");
+  assert.deepEqual(referenceChoicesFor([3, 7]).map(([v]) => v),
+    ["none", "root", "tone:3", "tone:7", "third", "fifth"], "the root is always offered, picked or not");
+  assert.deepEqual(referenceChoicesFor(null).map(([v]) => v),
+    ["none", "root", "third", "fifth"], "a scale (no pick) offers the ruled trio — unchanged");
+  assert.equal(referenceChoicesFor([1, 3, 5, 7, 9])[5][1], "the 9th in the bass");
+});
+
+test("260917-3: a tone in the bass is degree arithmetic — the 3rd is +2 steps, the 7th +6, the 9 wraps to +1", () => {
+  assert.equal(refOffsetOf("root"), 0); assert.equal(refOffsetOf("third"), -2); assert.equal(refOffsetOf("fifth"), -4);
+  assert.equal(refOffsetOf("tone:3"), 2); assert.equal(refOffsetOf("tone:7"), 6); assert.equal(refOffsetOf("tone:9"), 1);
+  assert.equal(refOffsetOf("tone:13"), 5); assert.equal(refOffsetOf("pedal"), null, "an unknown kind is null, and placeReference refuses it by name");
+  const fld = field({ key: "Bb", scale: "major" });
+  const pos = { fLo: 3, fHi: 7, centre: 5 };
+  const d3 = placeReference("tone:3", 0, fld, [4, 3, 2, 1], pos, [1, 3, 5, 7]);
+  assert.ok(d3.note && fld.pcs[d3.note.keyDeg] === 2, "the 3rd of B♭ in the bass is D");
+  // a triad with a 3rd BELOW is a seventh chord — the composite names it (measured before it was touched: already so)
+  const tri = [0, 2, 4].map((o) => fld.pcs[o]);
+  const below = placeReference("third", 0, fld, [4, 3, 2, 1], pos);
+  assert.equal(compositeOver(fld, below.note.keyDeg, tri).name, "Gm7", "B♭ over G IS Gm7 — the readout names the full chord");
+});
+
+test("260917-3: a bass tone the pick no longer holds is refused BY NAME at the one derivation — sound = sight", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const pos = { fLo: 3, fHi: 7, centre: 5 };
+  const r = placeReference("tone:5", 0, fld, [4, 3, 2, 1], pos, [1, 3, 7]);
+  assert.equal(r.note, null);
+  assert.match(r.reason, /the bass names the 5th, which the chosen tones do not hold/);
+  const ok = placeReference("tone:5", 0, fld, [4, 3, 2, 1], pos, [1, 3, 5, 7]);
+  assert.ok(ok.note, "…and places when the pick holds it");
+  const noPick = placeReference("tone:5", 0, fld, [4, 3, 2, 1], pos);
+  assert.ok(noPick.note, "no pick (a scale) applies no guard");
+});

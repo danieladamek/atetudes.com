@@ -19,15 +19,16 @@
  * Visibly inert, not absent: the menu is the model's, the grey is tonight's.
  */
 import { field } from "../../engine/field.mjs";
-import { REFERENCE_CHOICES, CENTRE_SOURCES } from "../../engine/reference.mjs";
+import { CENTRE_SOURCES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
+import { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, objectOffsets, pickOf } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
 
 const KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const SCALES = [["major", "Major"], ["harm", "Harmonic minor"], ["mel", "Melodic minor"]];
 const OBJECTS = [
   ["scale", "Scale or mode", true],
-  ["dyad", "Dyad", true],           // child 4: two chord tones, by role
+  ["dyad", "Dyad", true],           // child 4: two chord tones, by role — since 260917 picked in the Tones field
   ["triad", "Triad", true],
   ["tetrad", "Tetrad", true],
   ["ninth", "9th chord", true],     // 260914 item 3: depth is data —
@@ -42,7 +43,7 @@ export const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcDyad", "hcCentreSrc"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcTones", "hcCentreSrc"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -71,8 +72,17 @@ export const harmonyCard = {
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
   </div>
-  <label id="hcDyadLab" hidden>Which two tones</label>
-  <select id="hcDyad" data-control="hcDyad" hidden></select>
+  <!-- THE TONES (260917, item 1 — ruled): every stacked object picks its
+       tones in the FIGURE FIELD'S OWN NOTATION (R,3,5,7); the dyad's pair
+       menu became this field. Shell is a PRESET of it (item 2): choosing
+       Shell fills R,3,7 visibly. Hidden under a scale — no stack to narrow. -->
+  <label id="hcTonesLab" hidden>Tones</label>
+  <input type="text" id="hcTones" data-control="hcTones" autocomplete="off" hidden>
+  <!-- THE CENTRE (scale mode). In chord mode the bass WINDOW here is
+       CLOSED (260917, item 4 — register 31): the bass is a note you sound
+       and lives under the neck beside the mixer that drives it. One state,
+       two views (night 18) was about the WIRING and stands; this is about
+       which window earns its place. -->
   <label id="hcRefLab">Bass / reference tone</label>
   <select id="hcRef" data-control="hcRef"></select>
   <!-- THE CENTRE'S SOURCE (260914, completing 260831): visible in scale
@@ -90,8 +100,8 @@ export const harmonyCard = {
 .hc-srcseg[hidden]{display:none}
 #hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
-#hcRef,#hcDyad{width:100%}
-#hcDyadLab[hidden],#hcDyad[hidden]{display:none}`,
+#hcRef,#hcTones{width:100%}
+#hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -100,9 +110,10 @@ export const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
-    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "none", dyad: [3, 7],
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "root", tones: [1, 3, 5, 7],
       centreSrc: "fixed" };   // the source, not a resolved value (260914)
 
+    let tonesErr = null;   // the tones field's standing refusal, by name (null when the field is lawful)
     const fill = (sel, items, current) => {
       sel.textContent = "";
       for (const it of items) {
@@ -120,18 +131,26 @@ export const harmonyCard = {
       fill(byId("hcObj"), OBJECTS.map(([v, l, live]) => ({ value: v, label: l,
         disabled: !live, title: live ? "" : "arrives with child 4 (dyads, and the chord vocabulary)" })),
         cfg.object);
-      /* THE DYAD MENU (child 4): v0.9's six pairs — every 2-subset of the
-       * chord-tone degrees {1,3,5,7}, guide tones first. The pair LIST is
-       * combinatorics, the labels are derived from the degrees; what a pair
-       * MEANS in offsets is objectOffsets' business, stated once. */
-      const DEGNAME = { 1: "Root", 3: "3rd", 5: "5th", 7: "7th" };
-      const PAIRS = [[3, 7], [1, 3], [1, 5], [1, 7], [3, 5], [5, 7]];
-      fill(byId("hcDyad"), PAIRS.map((p) => ({ value: p.join(","),
-        label: `${DEGNAME[p[0]]} + ${DEGNAME[p[1]]}` + (p[0] === 3 && p[1] === 7 ? " \u2014 guide tones" : "") })),
-        cfg.dyad.join(","));
-      byId("hcDyadLab").hidden = cfg.object !== "dyad";
-      byId("hcDyad").hidden = cfg.object !== "dyad";
       const isScale = cfg.object === "scale";
+      /* THE TONES FIELD (260917, item 1 \u2014 the dyad's six-pair menu became
+       * this): the pick in the figure's notation. The field is repainted
+       * from the model only when it does not already SAY the current pick
+       * (a caret mid-edit is never moved), and a refused edit keeps its
+       * text on the face with the refusal beside it \u2014 the figure field's
+       * own manners (register 21). The label names the degrees this
+       * object can hold, derived from its depth. */
+      {
+        const f = byId("hcTones"), lab = byId("hcTonesLab");
+        f.hidden = isScale; lab.hidden = isScale;
+        if (!isScale) {
+          const pick = pickOf(cfg);
+          const says = parseTones(f.value);
+          const saysPick = says.tones ? renderPick(says.tones.map(degreeOfTone)) : null;
+          if (!tonesErr && saysPick !== renderPick(pick)) f.value = renderPick(pick);
+          lab.textContent = `Tones \u2014 pick from ${renderPick(objectDegrees(cfg.object)).split(",").join(", ")}`;
+          f.placeholder = renderPick(defaultPick(cfg.object));
+        }
+      }
       /* THE REFERENCE. Under a scale it is the CENTRE — pick any note of the
        * collection and the field is re-read against it, which is what a mode
        * is (LIVE — child 1's field.ref). Under a chord it is what sits
@@ -156,6 +175,11 @@ export const harmonyCard = {
         for (const b of seg.querySelectorAll("button"))
           b.classList.toggle("on", b.dataset.src === (cfg.centreSrc || "fixed"));
       }
+      /* item 4 (260917, register 31): the card's select is the CENTRE and
+       * shows in scale mode only; in chord mode the bass window is closed —
+       * the control lives under the neck. Hidden, never dead-with-no-reason. */
+      byId("hcRef").hidden = !isScale;
+      byId("hcRefLab").hidden = !isScale;
       if (isScale) {
         const f = field({ key: cfg.key, scale: cfg.scale });
         const follows = cfg.centreSrc === "follows";
@@ -173,40 +197,71 @@ export const harmonyCard = {
             ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the centre, not the key.`
             : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.");
       } else {
-        /* THE THREE RELATIVE OPTIONS (child 5, ruled 260831): root, a 3rd
-         * below, a 5th below — relative to the chord. The FIXED half of that
-         * ruling — deferred "until the chords change" — was completed
-         * 260914 as the scale centre's source (centreDegreeOf). */
-        fill(byId("hcRef"), REFERENCE_CHOICES.map(([v, l]) => ({ value: v, label: l })),
-          cfg.bass);
-        /* the chord-mode paint must CLEAR the scale paint's disable (CC-1
-         * audit, 260915): the bass is chord-relative by construction, so
-         * centreSrc cannot contradict it — a scale→follows→chord walk was
-         * leaving this select dead with no reason on the face (rule 10:
-         * the PAINT site is one of the three) */
+        /* chord mode: the face speaks for the TONES — a refusal, by name and
+         * red, or the one sentence that says what the pick is and where the
+         * bass went (item 4). The chord-mode fill of the bass select is gone
+         * with the window; CC-1's audit fix (the scale disable cleared) now
+         * lives on the surviving view under the neck. */
         byId("hcRef").disabled = false;
-        byId("hcRefLab").textContent = "Bass tone";   // the ruled word (260914)
-        byId("hcNote").textContent = cfg.bass === "none"
-          ? "The bass the harmony sits on — a real fretted note on string 5 or 6, outside the isolation. Relative to the chord: it will follow the changes."
-          : "A real fretted note on string 5 or 6, chosen against the window — the neck shows it hollow, the readout names what the stack becomes over it.";
+        const note = byId("hcNote");
+        if (tonesErr) {
+          note.textContent = "tones: " + tonesErr;
+          note.style.color = "#B82929";
+        } else {
+          note.style.color = "";
+          const pick = pickOf(cfg);
+          const whole = renderPick(pick) === renderPick(objectDegrees(cfg.object));
+          note.textContent = (cfg.object === "shell"
+            ? "A shell is the root under the guide tones — R,3,7, the tones above; edit them and it is a pick like any other. "
+            : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point; a tone this object cannot hold is refused by name. `
+            : `The ${cfg.object} narrowed to ${renderPick(pick).split(",").join(" ")}. `)
+            + "The bass tone lives under the neck, beside the mixer that drives it.";
+        }
       }
     };
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
-    const MINE = ["key", "scale", "object", "ref", "bass", "dyad", "centreSrc"];
+    const MINE = ["key", "scale", "object", "ref", "bass", "tones", "centreSrc"];
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
       for (const k of MINE) if (k in m && !same(m[k], cfg[k])) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+      /* a saved étude's `dyad` arrives as the pick (tonePick is the one
+       * alias site); an OBJECT arriving without a pick (a preset) takes its
+       * default — a triad preset must not inherit a dyad's [3,7] */
+      if (!("tones" in m) && Array.isArray(m.dyad) && !same(m.dyad, cfg.tones)) {
+        cfg = { ...cfg, tones: [...m.dyad] }; changed = true;
+      } else if ("object" in m && !("tones" in m) && !("dyad" in m) && changed) {
+        cfg = { ...cfg, tones: defaultPick(cfg.object) }; tonesErr = null;
+        /* the owner SAYS the pick it derived — every mirror that heard the
+         * object without one hears the default in the same dispatch */
+        announce(d, CONFIG_CHANGED, { tones: cfg.tones });
+      }
       if (changed) render();
     });
 
     byId("hcKey").addEventListener("change", (e) => { cfg = { ...cfg, key: e.target.value }; push(); });
     byId("hcScale").addEventListener("change", (e) => { cfg = { ...cfg, scale: e.target.value }; push(); });
-    byId("hcObj").addEventListener("change", (e) => { cfg = { ...cfg, object: e.target.value }; push(); });
-    byId("hcDyad").addEventListener("change", (e) => { cfg = { ...cfg, dyad: e.target.value.split(",").map(Number) }; push(); });
+    /* choosing an object FILLS its tones (item 2's whole point for Shell:
+     * R,3,7 appears, visibly) — a refused edit is forgotten with the object */
+    byId("hcObj").addEventListener("change", (e) => {
+      tonesErr = null;
+      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value) }; push();
+    });
+    /* THE TONES FIELD: parsed by the figure's parser, checked by the one
+     * derivation (objectOffsets) — a refusal is a value on the face and the
+     * last lawful pick stands; validation is live, as the figure's is */
+    byId("hcTones").addEventListener("input", (e) => {
+      const r = parseTones(e.target.value);
+      if (r.err) { tonesErr = r.err; render(); return; }
+      const pick = r.tones.map(degreeOfTone);
+      try { objectOffsets(cfg.object, pick); }
+      catch (err) { tonesErr = String(err.message || err).replace(/^objectOffsets: /, ""); render(); return; }
+      tonesErr = null;
+      cfg = { ...cfg, tones: pick }; push();
+    });
     byId("hcRef").addEventListener("change", (e) => {
       const v = e.target.value;
       if (v.startsWith("mode:")) cfg = { ...cfg, ref: +v.slice(5) };

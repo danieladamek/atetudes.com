@@ -242,7 +242,7 @@ export function chartBodyOf(chords, bars, fld) {
 }
 
 /**
- * chordAt(prog, index, fld, object, dyad) → THE ONE DERIVATION every board
+ * chordAt(prog, index, fld, object, pick) → THE ONE DERIVATION every board
  * shares (last night found the object→offsets fact spelled in five modules;
  * this is the same lesson one level up — the per-bar chord read is derived
  * once, here, and mirrored everywhere):
@@ -264,7 +264,7 @@ export function chartBodyOf(chords, bars, fld) {
  * A scale object carries no chord: tones null, the symbol is the bar root's
  * name, and the boards keep their scale path.
  */
-export function chordAt(prog, index, fld, object, dyad = [3, 7]) {
+export function chordAt(prog, index, fld, object, pick) {   // pick: tonePick(cfg) — degrees, or null for the object's default (260917, item 1)
   if (!prog || !Array.isArray(prog.chords) || !prog.chords.length)
     throw new Error("chordAt: no progression");
   const c = prog.chords[((index % prog.chords.length) + prog.chords.length) % prog.chords.length];
@@ -280,7 +280,7 @@ export function chordAt(prog, index, fld, object, dyad = [3, 7]) {
     if (object === "scale")
       return { kind: c.kind, degree, rootPc, symbol: fld.notes[degree].name,
         roman: ROMAN[degree], tones: null, absent: [], offKey: [] };
-    const tones = diatonicTones(fld, degree, objectOffsets(object, dyad));
+    const tones = diatonicTones(fld, degree, objectOffsets(object, pick));
     const named = compositeOver(fld, degree, tones.map((t) => t.pc));
     // the analysis line reads the DEGREE's own triad — a dyad on ii is still ii
     const tri = diatonicTones(fld, degree, objectOffsets("triad")).map((t) => t.pc);
@@ -297,7 +297,7 @@ export function chordAt(prog, index, fld, object, dyad = [3, 7]) {
   if (object === "scale")
     return { kind: c.kind, degree, rootPc, symbol: c.parsed.root.name,
       roman: degree < 0 ? "—" : ROMAN[degree], tones: null, absent: [], offKey: [] };
-  const ot = objectTones(c.parsed, object, dyad);
+  const ot = objectTones(c.parsed, object, pick);
   const part = fieldPartition(ot.tones, fld);
   return { kind: c.kind, degree, rootPc, symbol: c.symbol,
     roman: romanOf(degree, c.parsed.pcs),
