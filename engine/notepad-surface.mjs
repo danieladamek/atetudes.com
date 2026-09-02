@@ -12,12 +12,15 @@
  *   - Save files the note, CLEARS the pad, no prompt, no toast — the emptied
  *     pad is the confirmation. An empty pad still saves (config capture).
  *   - Clear confirms; "Save and clear" is the PRIMARY action, Discard second.
- *   - Restore NEVER silently overwrites unsaved pad text (260916, item 1):
- *     it asks through the same row, worded for restoring ("Save and
- *     restore" / "Discard and restore" / keep writing); an empty pad
- *     restores at once.
- *   - The document's title (els.title, optional) is PRE-POPULATED with the
- *     host's default name and is the single source of the name — for the
+ *   - Restore NEVER silently overwrites DIRTY pad text (260916, item 1;
+ *     260917, 6c): text edited since it was last loaded or saved asks, IN
+ *     THE ROW THAT WAS PRESSED (260917, 0b), worded for restoring ("Save
+ *     and restore" / "Discard and restore" / keep writing); a clean or
+ *     empty pad restores at once. Clear reads the same predicate.
+ *   - THE TITLE DESCRIBES WHAT IS CURRENTLY IN THE PAD (260917, item 0):
+ *     empty → the host's dated default; a restore → that entry's name;
+ *     typing → what was typed; on save the pad empties and the title
+ *     returns to the default. It is the single source of the name — for the
  *     export file and for each entry filed while it stands (260916, item 2).
  *   - Every entry exports on its own, through the one download path,
  *     named from its own name; both outcomes speak in the row (260916, 3).
@@ -113,8 +116,12 @@ export function createNotepadSurface(opts) {
       const raw = storage.load();
       if (raw) {
         const d = JSON.parse(raw);
+        /* `base` (260917, 6c): the pad's text as it was last LOADED OR SAVED
+         * — what "dirty" is measured against. A store from before tonight
+         * has none: an empty base makes any standing text dirty, which is
+         * the safe reading (it asks once more, never once less). */
         return { pad: String(d.pad ?? ""), title: String(d.title ?? ""),
-                 entries: (d.entries || []).map(makeEntry) };
+                 base: String(d.base ?? ""), entries: (d.entries || []).map(makeEntry) };
       }
       const migrated = migrate();
       if (migrated) { trySave(migrated); return migrated; }
@@ -123,7 +130,8 @@ export function createNotepadSurface(opts) {
   }
   function trySave(d) {
     if (!storageOK) return false;
-    try { storage.save(JSON.stringify({ pad: d.pad, title: d.title ?? "", entries: d.entries })); return true; }
+    try { storage.save(JSON.stringify({ pad: d.pad, title: d.title ?? "", base: d.base ?? "",
+      entries: d.entries })); return true; }
     catch (e) { storageOK = false; return false; }
   }
   function persist() { return trySave(doc); }
@@ -159,13 +167,32 @@ export function createNotepadSurface(opts) {
    * name is the player's, the summary is the configuration's. */
   const nameNow = () =>
     els.title ? (String(els.title.value ?? "").trim() || file.title) : null;
+  /* THE TITLE DESCRIBES WHAT IS CURRENTLY IN THE PAD (260917, item 0 —
+   * the rule that was missing; Daniel's three findings on v0.4.1 were three
+   * transitions nobody had written down):
+   *     pad empty             → the dated default (the host's file.title)
+   *     pad holds a restore   → THAT ENTRY'S NAME (an old entry: the default)
+   *     pad holds typing      → whatever the player typed
+   *     on save, pad empties  → back to the dated default
+   * paintTitle() is the one place the field is written from the model: an
+   * empty model title paints the host's default (read with the field
+   * emptied first, so a host whose default derives from the field-or-
+   * fallback sees the fallback). Restore→edit→save therefore files under
+   * the restored name — a continuation — and THEN resets: settled by the
+   * rule, never a question. A host without the field is untouched. */
+  function paintTitle() {
+    if (!els.title) return;
+    els.title.value = "";
+    els.title.value = doc.title || file.title;
+  }
   function save() {
     clearConfirmShow(false);
     const text = String(els.pad.value ?? "").trim();
     doc = addEntry(doc, { savedAt: new Date().toISOString(), text, heading: nameNow(),
       payload: { app: adapter.app, v: adapter.version, data: adapter.snapshot() } });
-    doc = { ...doc, pad: "" };
+    doc = { ...doc, pad: "", base: "", title: "" };   // the pad empties: the title returns to the default
     els.pad.value = "";
+    paintTitle();
     const ok = persist();
     if (!ok) msgSet("save", "saved in this tab only — use Export to keep it", true);
     else if (!text) msgSet("save", "captured without a note"); // something must confirm
@@ -180,27 +207,69 @@ export function createNotepadSurface(opts) {
    * shows in `data-intent`, so a harness can address the state by role and
    * never by the words on the buttons (rule 12). `clearConfirmShow(true)`
    * with no intent is the clear — the public seam keeps its old meaning. */
-  let pending = null;
-  function clearConfirmShow(on, intent) {
-    pending = on ? (intent || { kind: "clear" }) : null;
-    const kind = on ? pending.kind : "none";
+  /* 260917 (item 0b): the host's row now guards CLEAR ONLY. The restore
+   * confirm moved INTO THE ROW that was pressed (rowConfirmShow) — night
+   * 16's "the message prints nowhere near the press" had recurred through
+   * this shared fixture: Restore lives in the log column, the row lived
+   * under the pad, and the answer appeared in the other column. */
+  function clearConfirmShow(on) {
     if (els.confirmRoot) {
       els.confirmRoot.style.display = on ? "flex" : "none";
-      els.confirmRoot.setAttribute("data-intent", kind);
+      els.confirmRoot.setAttribute("data-intent", on ? "clear" : "none");
     }
-    const L = LABELS.confirm[on ? kind : "clear"];
+    const L = LABELS.confirm.clear;
     if (els.confirmSave) els.confirmSave.textContent = L.save;
     if (els.confirmDiscard) els.confirmDiscard.textContent = L.discard;
     if (els.confirmCancel) els.confirmCancel.textContent = L.cancel;
   }
-  /* the pad holds UNSAVED text when it holds any text at all — the same
-   * predicate Clear has always used, so the two guards can never disagree
-   * about what needs asking (an empty pad asks nothing, either way) */
-  const padUnsaved = () => Boolean(String(els.pad.value ?? "").trim());
+  /* DIRTY, not merely non-empty (260917, 6c — register 30): the pad holds
+   * unsaved work when its text differs from what was last loaded or saved
+   * (`doc.base`). A just-restored note is not unsaved work — it came from a
+   * saved entry and losing it costs nothing — and asking about it trains a
+   * player to dismiss the confirm, which is how a guard stops guarding.
+   * Clear and Restore both read THIS predicate, so the two guards can never
+   * disagree; an empty pad is never dirty (nothing to lose). */
+  const padDirty = () => {
+    const t = String(els.pad.value ?? "").trim();
+    return t !== "" && t !== String(doc.base ?? "").trim();
+  };
+  /* THE RESTORE CONFIRM, IN THE ROW THAT WAS PRESSED (260917, item 0b): one
+   * open at a time; the three answers carry roles (confirm-save /
+   * confirm-discard / confirm-cancel) under a root stamped data-intent, so a
+   * harness addresses the state and never the verbs. Same idiom, same
+   * labels (LABELS.confirm.restore), a different seat. */
+  let openConfirm = null;   // { root, container } — the seat is remembered, not looked up
+  function rowConfirmClose() {
+    if (openConfirm) openConfirm.container.removeChild(openConfirm.root);
+    openConfirm = null;
+  }
+  function rowConfirmShow(container, apply) {
+    rowConfirmClose();
+    const docm = container.ownerDocument;
+    const L = LABELS.confirm.restore;
+    const root = docm.createElement("span"); root.className = "rconfirm";
+    root.setAttribute("data-cap", "restore-confirm");
+    root.setAttribute("data-intent", "restore");
+    const lead = docm.createElement("span"); lead.className = "rlead";
+    lead.textContent = "that note is filed nowhere —";
+    root.appendChild(lead);
+    const mk = (cap, label, onClick) => {
+      const b = docm.createElement("button"); b.textContent = label;
+      b.setAttribute("data-cap", cap);
+      b.addEventListener("click", onClick);
+      root.appendChild(b);
+    };
+    mk("confirm-save", L.save, () => { rowConfirmClose(); save(); apply(); });
+    mk("confirm-discard", L.discard, () => { rowConfirmClose(); discard(); apply(); });
+    mk("confirm-cancel", L.cancel, () => rowConfirmClose());
+    container.appendChild(root);
+    openConfirm = { root, container };
+  }
   function discard() {
     clearConfirmShow(false);
     els.pad.value = "";
-    doc = { ...doc, pad: "" };
+    doc = { ...doc, pad: "", base: "", title: "" };   // the pad empties: the title returns to the default
+    paintTitle();
     persist(); onChange();
   }
 
@@ -346,19 +415,24 @@ export function createNotepadSurface(opts) {
         const applyEntry = () => {
           adapter.apply(p.data);
           els.pad.value = en.text || "";           // canonical: the note returns
-          doc = { ...doc, pad: els.pad.value };    // as uncommitted scratch
+          /* …WITH ITS NAME (260917, 0a): the pad holds a restore, so the
+           * title is that entry's name — the other half of the round trip
+           * save() writes (heading). An entry filed before names existed
+           * carries none and paints the dated default, never an empty
+           * field. The restored text is the new BASE: clean, not dirty. */
+          doc = { ...doc, pad: els.pad.value, base: els.pad.value, title: en.heading || "" };
+          paintTitle();
           persist(); onChange(); onApplied();
         };
         const rb = docm.createElement("button"); rb.textContent = applyLabel;
         rb.setAttribute("data-cap", "apply");
         /* RESTORE NEVER SILENTLY OVERWRITES THE PAD (260916, item 1 —
          * measured at this line: `els.pad.value = en.text` ran
-         * unconditionally, and Daniel lost a note to it). Unsaved text
-         * asks, through Clear's own row worded for restoring; an empty pad
-         * restores at once, as it always did — Clear's precedent for the
-         * common case, no new friction. */
+         * unconditionally, and Daniel lost a note to it). DIRTY text asks
+         * (260917: dirty, not merely non-empty), in THIS ROW (260917, 0b);
+         * a clean or empty pad restores at once — no new friction. */
         rb.addEventListener("click", () => {
-          if (padUnsaved()) clearConfirmShow(true, { kind: "restore", apply: applyEntry });
+          if (padDirty()) rowConfirmShow(acts, applyEntry);
           else applyEntry();
         });
         acts.appendChild(rb);
@@ -420,7 +494,7 @@ export function createNotepadSurface(opts) {
      * untouched field persists nothing, so tomorrow's first paint carries
      * tomorrow's date exactly as v0.4.0's fallback did, and an edit sticks
      * through the input listener below (night 19's persistence). */
-    els.title.value = doc.title || file.title;
+    paintTitle();
     els.title.addEventListener("input", () => {
       doc = { ...doc, title: els.title.value };
       if (padTimer) clearTimeout(padTimer);
@@ -430,22 +504,18 @@ export function createNotepadSurface(opts) {
   }
   mountCap("save", (b) => b.addEventListener("click", save));
   mountCap("clear", (b) => b.addEventListener("click", () => {
-    if (!String(els.pad.value ?? "").trim()) { discard(); return; }
+    /* 6c (260917): a clean pad — empty, or exactly what was last loaded
+     * or saved — clears without asking; only DIRTY text is guarded */
+    if (!padDirty()) { discard(); return; }
     clearConfirmShow(true);
   }));
   if (!els.confirmRoot || !els.confirmSave || !els.confirmDiscard || !els.confirmCancel)
     throw new Error("notepad-surface: the clear capability needs its confirm " +
       "row — provide els.confirmRoot/confirmSave/confirmDiscard/confirmCancel");
-  /* the three answers, intent-aware (260916, item 1): under a restore, Save
-   * files the pad and THEN restores; Discard drops it and then restores;
-   * keep writing does nothing at all. Under a clear, the old three. The
-   * intent is read before save()/discard() hide the row and clear it. */
-  els.confirmSave.addEventListener("click", () => {
-    const p = pending; save(); if (p && p.apply) p.apply();
-  });
-  els.confirmDiscard.addEventListener("click", () => {
-    const p = pending; discard(); if (p && p.apply) p.apply();
-  });
+  /* the host's row answers CLEAR (260917: the restore's three answers moved
+   * into the pressed row — rowConfirmShow) */
+  els.confirmSave.addEventListener("click", save);
+  els.confirmDiscard.addEventListener("click", discard);
   els.confirmCancel.addEventListener("click", () => clearConfirmShow(false));
   els.confirmSave.setAttribute("data-cap", "clear-save");
   els.confirmDiscard.setAttribute("data-cap", "clear-discard");
@@ -516,8 +586,9 @@ export function createNotepadSurface(opts) {
   return {
     getDoc: () => doc,
     setDoc: (d) => { doc = { pad: String(d.pad ?? ""), title: String(d.title ?? ""),
+        base: String(d.pad ?? ""),   // a programmatic load: the pad starts clean
         entries: (d.entries || []).map(makeEntry) };
-      els.pad.value = doc.pad; persist(); renderRows(); onChange(); },
+      els.pad.value = doc.pad; paintTitle(); persist(); renderRows(); onChange(); },
     save, clearConfirmShow, exportText, importText, renderRows,
     get storageOK() { return storageOK; },
   };

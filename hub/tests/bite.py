@@ -948,9 +948,11 @@ def m37_restore_overwrites_the_pad_again():
     # 260916 item 1: Restore's guard removed — the pad is overwritten in
     # silence, exactly as Daniel lost work during the v0.4.0 review. The
     # door pin must name the overwrite at the pad, not at the row.
+    # ANCHOR UPDATED 260917 (item 0b moved the confirm into the row; 6c made
+    # the predicate DIRTY) — the mutation is the same: the guard removed.
     p, original, mutated = patch("engine/notepad-surface.mjs",
-        '          if (padUnsaved()) clearConfirmShow(true, { kind: "restore", apply: applyEntry });',
-        '          if (false) clearConfirmShow(true, { kind: "restore", apply: applyEntry });   // silent again')
+        '          if (padDirty()) rowConfirmShow(acts, applyEntry);',
+        '          if (false) rowConfirmShow(acts, applyEntry);   // silent again')
     try:
         p.write_text(mutated)
         build()

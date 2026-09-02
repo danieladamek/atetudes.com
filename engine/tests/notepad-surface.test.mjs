@@ -129,9 +129,14 @@ for (const host of HOSTS) {
       els: els2, file: host.file });
     assert.equal(els2.title.value, "Dorian week 3", "the name came back with the note");
     assert.equal(s2.getDoc().title, "Dorian week 3", "and the model agrees");
-    // save clears the PAD, never the title — the document keeps its name
+    /* PIN REWRITTEN 260917 (item 0c, rule 7): the title DESCRIBES WHAT IS
+     * IN THE PAD — save empties the pad, so the title returns to the dated
+     * default. The old line ("save clears the pad, not the name") was the
+     * transition nobody had written down: a stale title silently misfiled
+     * the next note under the last one's name. Persistence itself (night
+     * 19) is untouched — the reload above proves it. */
     els2.saveBtn.click();
-    assert.equal(els2.title.value, "Dorian week 3", "save clears the pad, not the name");
+    assert.equal(els2.title.value, host.file.title, "save empties the pad, and the title returns to the default");
     // a legacy store without the key loads as the empty title, not undefined
     const stOld = memStorage(false);
     stOld.save(JSON.stringify({ pad: "old", entries: [] }));
@@ -304,38 +309,47 @@ for (const host of HOSTS) {
       "the row's controls carry roles, not just words");
     // MEASURED (engine/notepad-surface.mjs:259 before tonight): apply ran
     // unconditionally and the pad was overwritten. Now: unsaved text ASKS.
+    /* PIN REWRITTEN 260917 (item 0b, rule 7): the confirm appears IN THE
+     * ROW that was pressed — night 16's "the message prints nowhere near
+     * the press" had recurred through the host's shared row (Restore in
+     * the log column, the answer under the pad). The host's row stays
+     * hidden; the three answers carry roles under a data-intent root. */
+    const rowConfirm = () => btn("restore-confirm");
     els.pad.value = "unsaved words that must survive"; els.pad.dispatch("input");
     btn("apply").click();
-    assert.equal(els.confirmRoot.style.display, "flex", "unsaved text asks before restoring");
-    assert.equal(els.confirmRoot.attributes["data-intent"], "restore", "the row says what it guards");
+    assert.ok(rowConfirm(), "dirty text asks before restoring — IN THE ROW");
+    assert.equal(rowConfirm().attributes["data-intent"], "restore", "the row says what it guards");
+    assert.equal(els.confirmRoot.style.display, "none", "the host's row (Clear's) stays hidden");
     assert.equal(els.pad.value, "unsaved words that must survive", "nothing was overwritten by the press");
-    assert.deepEqual([els.confirmSave.textContent, els.confirmDiscard.textContent, els.confirmCancel.textContent],
+    assert.deepEqual([btn("confirm-save").textContent, btn("confirm-discard").textContent, btn("confirm-cancel").textContent],
       ["Save and restore", "Discard and restore", "keep writing"], "the row is worded for restoring");
     assert.equal(applied.length, 0, "the restore has NOT happened yet");
     // answer 1 — keep writing: nothing moves
-    els.confirmCancel.click();
-    assert.equal(els.confirmRoot.style.display, "none");
+    btn("confirm-cancel").click();
+    assert.equal(rowConfirm(), null, "the confirm leaves the row");
     assert.equal(els.pad.value, "unsaved words that must survive", "keep writing keeps the text");
     assert.equal(applied.length, 0, "…and restores nothing");
     assert.equal(s.getDoc().entries.length, 1, "…and files nothing");
     // answer 2 — Discard and restore: the draft is dropped, the entry returns
-    btn("apply").click(); els.confirmDiscard.click();
+    btn("apply").click(); btn("confirm-discard").click();
     assert.equal(applied.length, 1, "Discard and restore RESTORES");
     assert.equal(els.pad.value, "the filed note", "the entry's note returns to the pad");
     assert.equal(s.getDoc().entries.length, 1, "the draft was filed nowhere");
     // answer 3 — Save and restore: the draft is filed first, then the entry returns
     els.pad.value = "a second draft worth keeping"; els.pad.dispatch("input");
-    btn("apply").click(); els.confirmSave.click();
+    btn("apply").click(); btn("confirm-save").click();
     assert.equal(applied.length, 2, "Save and restore RESTORES");
     assert.equal(s.getDoc().entries.at(-1).text, "a second draft worth keeping", "…after FILING the draft");
     assert.equal(els.pad.value, "the filed note", "…and the entry's note is back in the pad");
     // the common case keeps no ceremony: an empty pad restores at once
     els.pad.value = ""; els.pad.dispatch("input");
     btn("apply").click();
-    assert.notEqual(els.confirmRoot.style.display, "flex", "an empty pad restores without asking");
+    assert.equal(rowConfirm(), null, "an empty pad restores without asking");
     assert.equal(applied.length, 3);
     assert.equal(els.pad.value, "the filed note");
-    // and Clear still wears its own words when it is Clear that asks
+    // and Clear still wears its own words when it is Clear that asks —
+    // over DIRTY text (260917, 6c: the restored note above is clean)
+    els.pad.value = "the filed note, edited"; els.pad.dispatch("input");
     els.clearBtn.click();
     assert.equal(els.confirmRoot.attributes["data-intent"], "clear");
     assert.deepEqual([els.confirmSave.textContent, els.confirmDiscard.textContent],
@@ -425,5 +439,104 @@ for (const host of HOSTS) {
     xb.click();
     assert.equal(win.downloads.length, 1, "a refused export writes nothing");
     assert.match(emsg.textContent, /a saved note holds a ```chart block/, "the refusal names its reason, in the row");
+  });
+}
+
+// ---- 260917, item 0 — the title has a lifecycle; and 6c, dirty not merely non-empty ----
+
+for (const host of HOSTS) {
+  test(`260917 item 0 [${host.name}]: THE TITLE DESCRIBES WHAT IS IN THE PAD — the three transitions`, () => {
+    const els = makeEls();
+    const s = createNotepadSurface({ adapter: host.adapter, storage: memStorage(false), els, file: host.file });
+    const btn = (row, cap) => { let b = null; (function walk(n) {
+      if (n.attributes && n.attributes["data-cap"] === cap) b = n;
+      (n.childNodes || []).forEach(walk); })(row); return b; };
+    // file two entries: one named, one under the default
+    els.title.value = "Dorian week 3"; els.title.dispatch("input");
+    els.pad.value = "the dorian note"; els.pad.dispatch("input");
+    els.saveBtn.click();
+    // 0c: SAVE EMPTIES THE PAD AND RESETS THE TITLE — the next note cannot
+    // inherit the last one's name (a stale title silently misfiles)
+    assert.equal(els.pad.value, "");
+    assert.equal(els.title.value, host.file.title, "on save the title returns to the dated default");
+    assert.equal(s.getDoc().title, "", "…and the model's title is empty again");
+    els.pad.value = "a second note, under the default"; els.pad.dispatch("input");
+    els.saveBtn.click();
+    assert.equal(s.getDoc().entries[1].heading, host.file.title, "the second note filed under the DEFAULT, not 'Dorian week 3'");
+    // 0a: RESTORE FILLS THE TITLE with that entry's name — the other half of the round trip
+    const rows = els.list.childNodes;                       // newest first: [default-named, Dorian]
+    btn(rows[1], "apply").click();
+    assert.equal(els.pad.value, "the dorian note");
+    assert.equal(els.title.value, "Dorian week 3", "restore brings the entry's name into the title");
+    assert.equal(s.getDoc().title, "Dorian week 3", "…and the model agrees (a reload keeps it)");
+    // settled for free: restore → edit → save files under the restored name, THEN resets
+    els.pad.value = "the dorian note, continued"; els.pad.dispatch("input");
+    els.saveBtn.click();
+    assert.equal(s.getDoc().entries.at(-1).heading, "Dorian week 3", "the edit files as a continuation of the note it came from");
+    assert.equal(els.title.value, host.file.title, "…and then the title resets");
+    // an entry filed before names existed: the DEFAULT, never an empty field
+    s.setDoc({ pad: "", title: "", entries: [{ id: "old", savedAt: "2026-09-01T10:00:00.000Z",
+      heading: null, text: "a pre-v0.4.1 note", payload: { app: host.adapter.app, v: 1, data: {} } }] });
+    btn(els.list.childNodes[0], "apply").click();
+    assert.equal(els.pad.value, "a pre-v0.4.1 note");
+    assert.equal(els.title.value, host.file.title, "a heading-less entry paints the dated default");
+    assert.equal(s.getDoc().title, "", "…and persists nothing for it");
+  });
+
+  test(`260917 6c [${host.name}]: DIRTY, not non-empty — a restored note is not unsaved work`, () => {
+    const st = memStorage(false);
+    const els = makeEls();
+    const applied = [];
+    const s = createNotepadSurface({ adapter: { ...host.adapter, apply: (d) => applied.push(d) },
+      storage: st, els, file: host.file });
+    const btn = (row, cap) => { let b = null; (function walk(n) {
+      if (n.attributes && n.attributes["data-cap"] === cap) b = n;
+      (n.childNodes || []).forEach(walk); })(row); return b; };
+    els.pad.value = "first"; els.pad.dispatch("input"); els.saveBtn.click();
+    els.pad.value = "second"; els.pad.dispatch("input"); els.saveBtn.click();
+    const rows = () => els.list.childNodes;                 // newest first: [second, first]
+    // a just-restored note is CLEAN: Restore of another entry does not ask…
+    btn(rows()[0], "apply").click();
+    assert.equal(els.pad.value, "second");
+    btn(rows()[1], "apply").click();
+    assert.equal(btn(rows()[1], "restore-confirm"), null, "restoring over a clean restored note asks nothing");
+    assert.equal(els.pad.value, "first", "…it simply restores");
+    assert.equal(applied.length, 2);
+    // …and Clear does not ask either — the shipped behaviour that changed (register 30)
+    els.clearBtn.click();
+    assert.equal(els.confirmRoot.style.display, "none", "Clear over a clean restored note asks nothing");
+    assert.equal(els.pad.value, "", "…it clears");
+    // an EDIT makes it dirty again: both guards return
+    btn(rows()[0], "apply").click();
+    els.pad.value = "second, edited"; els.pad.dispatch("input");
+    btn(rows()[1], "apply").click();
+    assert.ok(btn(rows()[1], "restore-confirm"), "edited text asks");
+    btn(rows()[1], "confirm-cancel").click();
+    els.clearBtn.click();
+    assert.equal(els.confirmRoot.style.display, "flex", "…and so does Clear");
+    els.confirmCancel.click();
+    // typing the restored text back makes it clean again: dirty is a comparison, not a flag set by keystrokes
+    els.pad.value = "second"; els.pad.dispatch("input");
+    els.clearBtn.click();
+    assert.equal(els.confirmRoot.style.display, "none", "text equal to the base is clean, however it got there");
+    // THE BASE IS STORED, so cleanliness survives a reload: a restored note
+    // reloaded is still clean (Clear asks nothing), while typed text with no
+    // base is still dirty (Clear asks). Both halves, or the store is not
+    // carrying the base — this is the pin a base-less load fails.
+    const raw = JSON.parse(st.peek());
+    const clean = memStorage(false);
+    clean.save(JSON.stringify({ ...raw, pad: "a restored note", base: "a restored note" }));
+    const elsC = makeEls();
+    createNotepadSurface({ adapter: host.adapter, storage: clean, els: elsC, file: host.file });
+    assert.equal(elsC.pad.value, "a restored note");
+    elsC.clearBtn.click();
+    assert.equal(elsC.confirmRoot.style.display, "none", "a restored note is still CLEAN after a reload — the base came back with it");
+    const dirtyStore = memStorage(false);
+    dirtyStore.save(JSON.stringify({ ...raw, pad: "typed before a reload", base: "" }));
+    const elsD = makeEls();
+    createNotepadSurface({ adapter: host.adapter, storage: dirtyStore, els: elsD, file: host.file });
+    elsD.clearBtn.click();
+    assert.equal(elsD.confirmRoot.style.display, "flex", "typed-but-unsaved text is still dirty after a reload");
+    void s;
   });
 }
