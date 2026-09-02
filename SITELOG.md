@@ -1,3 +1,12 @@
+## 2026-09-02 — DEPLOYED: v0.4.2 live, all four moved studies spot-checked; the landing page delisting live
+
+- Actions run 33600470502 green (full gates in CI, commit `8740c3f`, which carries Daniel's delisting
+  `cff477f` and night 22's item-0 commit `5e7c8e1`). Every moved study's live shasum matches the
+  repo byte-for-byte: multetudes 40048453622d · tetradetudes 4f08c4642f8f · metronome
+  4d0286872a93 · triadetudes 8961724a8894; all four wrappers answer 200; the multetudes blurb
+  serves v0.4.2. The landing page no longer lists Triadetudes or Tetradetudes; their URLs serve.
+  Daniel's v0.4.0 review is complete on the site.
+
 ## 2026-09-01 — Multetudes v0.4.2: night 22, the tones and the neck — Daniel's v0.4.0 review completed; four studies move
 
 - **Source edition v0.4.2** (night 22; the full report in `notes/working/Multetudes build run
