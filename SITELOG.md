@@ -1,3 +1,10 @@
+## 2026-09-02 — DEPLOYED: v0.5.0 live, all four moved studies spot-checked byte-identical
+
+- Actions run 33678678808 green (full gates in CI, commit `f6df323`, with the palette export `636e4d7`
+  before it). Every moved study's live shasum matches the repo byte-for-byte: multetudes
+  bb670646c099 · tetradetudes 55ff32a66a09 · metronome bb1d4196dd35 · triadetudes 9682210722a3;
+  all four wrappers answer 200; the multetudes blurb serves v0.5.0. The approach note is live.
+
 ## 2026-09-02 — Multetudes v0.5.0: night 24, the approach note — Design Spec §2.6 on the neck; the degree dot; the nearest reference
 
 - **Source edition v0.5.0** (night 24; the report in `notes/working/Multetudes build run
