@@ -70,6 +70,16 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
+    /* v0.5.0 (260918, night 24 — the approach note): the (…) refusal is
+     * lifted — CR-1 ruled the rule for chromatic notes and Design Spec §2.6
+     * specifies the mark (0.6 of the host radius, hollow; violet when
+     * chromatic, the degree colour when diatonic; no ring, no label, the
+     * slur under the dots; drawn while the figure is live, the ordinary
+     * pulse on play), engraved on the staff as cue-size heads; the guards
+     * name the missing role (item 1). The degree DOT beside the chord name
+     * in the readout and on every chip; --red means the key and nothing
+     * else (item 2, register 35); the palette stated once (2a). The
+     * reference picks the NEAREST note across the free strings (item 3). */
     /* v0.4.3 (260918, night 23 — the light night): the Key selector in bold
      * red, the degree palette's own R (item 1); the harmonic readout moved
      * up beside Repeat, boxed, larger, bold, reading the chord AND its mode
@@ -126,7 +136,7 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.4.3",
+    blurb: "one tool that holds many études · v0.5.0",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

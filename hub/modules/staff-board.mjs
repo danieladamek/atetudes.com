@@ -31,7 +31,7 @@ import { mountMini } from "../mini.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
-import { FAM_COLOR, FAM_TEXT, FAM } from "../palette.mjs";
+import { FAM_COLOR, FAM_TEXT, FAM, VIOLET } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
@@ -143,10 +143,27 @@ export const staffBoard = {
       /* WRITTEN AN OCTAVE ABOVE (v0.9's rule) — the step from the FIELD'S OWN
        * SPELLING, asserted a real spelled note before it draws */
       const WRITTEN = 12;
-      const stepOf = (m0) => {
-        const m2 = m0 + WRITTEN, pc = mod(m2, 12), oct = Math.floor(m2 / 12) - 1;
-        const sp = fld.notes.find((n) => n.pc === pc);
-        if (!sp) throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable");
+      /* THE ROLE TEST (CR-1 §3, 260918): an off-field pitch is drawable ONLY
+       * as a role-carrying APPROACH — spelled the way score-board's speller
+       * spells a chromatic note (the nearest existing implementation of
+       * §2.6's colour half, read for its law: a flat key takes the letter
+       * above, flattened; a sharp key the letter below, sharpened) — and an
+       * unlabelled off-field note still throws, naming the missing role. */
+      const flatKey = String(cfg.key).includes("b") || cfg.key === "F";
+      const stepOf = (m0, role) => {
+        const m2 = m0 + WRITTEN, pc = mod(m2, 12);
+        let oct = Math.floor(m2 / 12) - 1;
+        let sp = fld.notes.find((n) => n.pc === pc);
+        if (!sp) {
+          if (role !== "approach")
+            throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable " +
+              "unless it carries a role (CR-1 §3), and this one carries " + (role ? `"${role}"` : "none"));
+          const nb = fld.notes.find((n) => n.pc === mod(pc + (flatKey ? 1 : -1), 12));
+          if (!nb) throw new Error("staff-board: a chromatic approach has no field neighbour to spell from");
+          sp = { name: nb.name[0] + (flatKey ? "b" : "#") };
+          if (sp.name.startsWith("Cb")) oct += 1;
+          if (sp.name.startsWith("B#")) oct -= 1;
+        }
         return oct * 7 + LETTERS.indexOf(sp.name[0]);
       };
       const yTreble = (s) => TY + GAP * 8 - (s - (4 * 7 + 2)) * GAP;
@@ -162,11 +179,11 @@ export const staffBoard = {
        * figure resolves against EACH bar's own selection, exactly as the
        * walk will sound it when the bar arrives. A bar whose selection
        * cannot honour it prints the refusal in the bar. */
-      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl));
+      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings }));
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
-      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi));
-      for (const fg of figs) if (fg.order) for (const nt of fg.order) allSteps.push(stepOf(nt.midi));
+      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role));
+      for (const fg of figs) if (fg.order) for (const nt of fg.order) allSteps.push(stepOf(nt.midi, nt.role));
       const topStep = allSteps.length ? Math.max(...allSteps) : (4 * 7 + 2) + 8;
       /* a sequenced bar's stems rise 24 above the top head and the tuplet
        * numeral 4 more (260910, item 3) — the label band clears the BEAM,
@@ -251,7 +268,7 @@ export const staffBoard = {
         const open = together ? beats >= 2 : wv >= 2;
         const xsL = [], ysL = [];
         seq.forEach((nt, k) => {
-          const st = stepOf(nt.midi), y = yTreble(st);
+          const st = stepOf(nt.midi, nt.role), y = yTreble(st);
           /* the x IS the onset: at/beats through the bar, centred in its own
            * written slot — identical to the family's (k+0.5)·(w/L) when the
            * schedule is uniform, but sourced from the event itself */
@@ -261,6 +278,19 @@ export const staffBoard = {
             el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
           for (let q = (4 * 7 + 2) + 10; st >= q; q += 2)
             el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
+          if (nt.role === "approach") {
+            /* §2.6 "Engraved notation. Approach tones render as cue-size
+             * noteheads under the same color rules." — score-board's own
+             * sizes (rx 4.5, ry 3.4); violet when chromatic, the degree
+             * colour when diatonic; hollow when the value is open; NO label
+             * (§2.6's one stated exception). Derived from the entry's role. */
+            const col = nt.chromatic ? VIOLET : FAM_COLOR[FAM[nt.deg]];
+            const head = { cx: x, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : col, stroke: col,
+              "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${x} ${y})`, "data-stmidi": nt.midi,
+              "data-stbar": ci, "data-stapproach": nt.chromatic ? "chromatic" : "diatonic" };
+            if (figHere) head["data-stfig"] = k;
+            el("ellipse", head, svg);
+          } else {
           const fam = FAM[nt.deg];
           const head = open
             ? { cx: x, cy: y, rx: 6.4, ry: 5, fill: "#fff", stroke: FAM_COLOR[fam],
@@ -273,6 +303,7 @@ export const staffBoard = {
           const t = el("text", { x, y: y + 3, "text-anchor": "middle", "font-size": "7.5",
             fill: open ? FAM_COLOR[fam] : FAM_TEXT[fam], "font-weight": "bold", class: "st-lab" }, svg);
           t.textContent = nt.role || fam;
+          }
           if (!stacked) { xsL.push(x); ysL.push(y); }
           if (ci === index) {
             const fr = el("text", { x, y: TY + GAP * 8 + 15 + (stacked ? k * 10 : 0),
@@ -283,7 +314,7 @@ export const staffBoard = {
         /* the notation — score-board's, on this board's heads */
         if (stacked && seq.length && beats < 4) {
           let yTop = 1e9, yLow = -1e9;
-          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi));
+          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi, nt.role));
             yTop = Math.min(yTop, y2); yLow = Math.max(yLow, y2); }
           el("line", { x1: x0 + BW * 0.34 + 6, y1: yLow, x2: x0 + BW * 0.34 + 6,
             y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "stack" }, svg);

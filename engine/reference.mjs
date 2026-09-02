@@ -14,12 +14,21 @@
  * are indistinguishable — the distinction only exists once the chords change,
  * which is child 7's progression.
  *
- * PLACEMENT: string 6 if free, else string 5, else REFUSED BY NAME — both
- * reference strings in the set is a fact the face must say, not an empty
- * board. The nearest occurrence of the target degree to the window's centre
- * wins; outside the window it is a STRETCH — a real reach past the box,
- * carried as a flag (full colour, unmarked, per the ruling — the flag is for
- * prose, not for a badge).
+ * PLACEMENT (rewritten 260918, night 24 item 3 — Daniel: "the bass note
+ * shown on the fretboard should be the closest one available"): NEARNESS
+ * GOVERNS. The candidates are every occurrence of the target degree on EVERY
+ * free reference string (6 and 5 — a string in the set is not free); the one
+ * nearest the window's centre wins, and string 6 is only the TIEBREAK when
+ * two occurrences are equally near — so no placement that was already the
+ * nearest moves. Before tonight the string was decided FIRST by fixed
+ * priority ("6 if free, else 5") and nearness was applied to the fret
+ * inside that one string, which put the reference at fret 11 on string 6
+ * while fret 6 on string 5 sat inside the box. Both reference strings in
+ * the set → REFUSED BY NAME, a fact the face must say, not an empty board.
+ * Outside the window the placement is a STRETCH — a real reach past the
+ * box, carried as a flag (full colour, unmarked, per the ruling — the flag
+ * is for prose, not for a badge) — and under the nearest law the flag means
+ * what it says.
  *
  * THE COMPOSITE IS NAMED BY READ-BACK, never by a reverse lookup table
  * (v0.9's REV_QUAL stays in v0.9): the interval set over the reference is
@@ -134,16 +143,17 @@ export function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   if (!free.length)
     return { note: null, stretch: false,
       reason: "strings 5 and 6 are both in the set — the reference is refused: it has nowhere to sit" };
-  const bs = free[0];
   const keyDeg = mod7(chordDeg + off);
-  const cands = notesOn(bs, fld).filter((n) => n.keyDeg === keyDeg);
+  /* NEARNESS GOVERNS (260918): every occurrence on every free string, the
+   * nearest to the window's centre first; string 6 breaks a tie */
+  const cands = free.flatMap((bs) => notesOn(bs, fld).filter((n) => n.keyDeg === keyDeg));
   if (!cands.length)
     return { note: null, stretch: false,
-      reason: `that reference tone is not on string ${bs}` };
-  cands.sort((a, b) => Math.abs(a.fret - pos.centre) - Math.abs(b.fret - pos.centre));
+      reason: `that reference tone is not on string${free.length > 1 ? "s" : ""} ${free.join(" or ")}` };
+  cands.sort((a, b) => (Math.abs(a.fret - pos.centre) - Math.abs(b.fret - pos.centre)) || (b.string - a.string));
   const note = { ...cands[0] };
   // A REAL FRETTED NOTE, asserted — the exemption this module refuses to inherit
-  if (note.string !== bs || !Number.isInteger(note.fret) || note.fret < 0
+  if (!free.includes(note.string) || !Number.isInteger(note.fret) || note.fret < 0
       || note.midi !== OPEN_MIDI[note.string] + note.fret)
     throw new Error("placeReference: the reference must be a real fretted note — string, fret, midi agreeing");
   if (note.keyDeg !== keyDeg)
@@ -226,10 +236,21 @@ export function compositeOver(fld, refKeyDeg, tonePcs) {
   // parsed back, and the read-back agreed
   const tet = [0, 2, 4, 6].map((o) => fld.pcs[o % 7]);
   const third = placeReference("third", 0, fld, [4, 3, 2, 1], pos);
-  if (!third.note || third.note.string !== 6)
-    throw new Error("reference: a 3rd below the B♭ chord must fret on string 6");
+  /* ASSERTION REWRITTEN 260918 (item 3, rule 7): it used to demand string 6.
+   * Under the nearest law the G a 3rd below B♭ is fret 10 on string 5 from
+   * centre 6.67 (3.33 away) — string 6's fret 3 is 3.67 away, and the old
+   * law had put it there. The claim now: a free string, the nearest
+   * occurrence of all, DERIVED here rather than named. */
+  if (!third.note || ![6, 5].includes(third.note.string))
+    throw new Error("reference: a 3rd below the B♭ chord must fret on a free reference string");
   if (fld.pcs[third.note.keyDeg] !== 7)
     throw new Error("reference: a 3rd below B♭ is G");
+  {
+    const all = [6, 5].flatMap((s) => notesOn(s, fld).filter((n) => n.keyDeg === third.note.keyDeg));
+    const nearest = Math.min(...all.map((n) => Math.abs(n.fret - pos.centre)));
+    if (Math.abs(third.note.fret - pos.centre) !== nearest)
+      throw new Error("reference: the placed G is not the nearest G on the free strings");
+  }
   const gm9 = compositeOver(fld, third.note.keyDeg, tet);
   if (gm9.name !== "Gm9")
     throw new Error(`reference: B♭maj7 over G must read back as Gm9, not ${gm9.name}`);
@@ -246,8 +267,12 @@ export function compositeOver(fld, refKeyDeg, tonePcs) {
   if (refusal.note !== null || !/strings 5 and 6 are both in the set/.test(refusal.reason || ""))
     throw new Error("reference: a full set must refuse by name");
 
-  // a placement outside the window is a stretch, said as a flag
-  const far = placeReference("root", 0, fld, [4, 3, 2, 1], { fLo: 0, fHi: 3, centre: 1.5 });
-  if (!far.note || far.stretch !== true || far.note.fret >= 0 && far.note.fret <= 3)
+  // a placement outside the window is a stretch, said as a flag.
+  // PROBE MOVED 260918 (item 3): the old window 0–3 was a stretch only under
+  // the string-first law (string 6's B♭ at fret 6); under the nearest law
+  // string 5's B♭ at fret 1 sits INSIDE it. A window at 8–9 has no B♭ on
+  // either free string inside it (6 on string 6, 1 and 13 on string 5).
+  const far = placeReference("root", 0, fld, [4, 3, 2, 1], { fLo: 8, fHi: 9, centre: 8.5 });
+  if (!far.note || far.stretch !== true || (far.note.fret >= 8 && far.note.fret <= 9))
     throw new Error("reference: a reach past the box must carry the stretch flag");
 }

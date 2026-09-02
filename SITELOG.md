@@ -1,3 +1,31 @@
+## 2026-09-02 — Multetudes v0.5.0: night 24, the approach note — Design Spec §2.6 on the neck; the degree dot; the nearest reference
+
+- **Source edition v0.5.0** (night 24; the report in `notes/working/Multetudes build run
+  260918b.md`; the ruling in `notes/specs/multetudes-doctrine-CR1-chromatic-roles.md`; the
+  marks in `docs/design-language-and-engine-spec.md` §2.6, ratified 2026-08-10).
+- **The approach note (item 1):** a figure carrying `( … )[ … ]` under the tones address —
+  `(b3)[3]`, `(-s)[3]`, `(-1,+2)[R]` — now parses through the motion grammar and draws per
+  §2.6: 0.6 of the host radius, hollow; violet when chromatic, the degree colour when diatonic;
+  no ring, no label; a slur to the target in the annotation gray, under the dots; engraved on
+  the staff as cue-size heads. Drawn while the figure is live; the ordinary pulse on play.
+  The refusal "the field's rendering law for off-field notes is undecided" is answered: an
+  off-field note is legal only as a role-carrying approach, and the guards name the missing
+  role (register 34).
+- **The degree dot (item 2):** the chord's root degree as a filled dot beside its name in the
+  readout box and on every chip; selection on outline + fill; `--red` means the key and
+  nothing else (register 35). The palette is stated once in `hub/palette.mjs` (five hand
+  copies retired; rendering proven identical).
+- **The reference picks the nearest note (item 3):** across both free strings, string 6 the
+  tiebreak only; the doctrine sentence rewritten; the stretch flag means what it says.
+- **Deferred, watched:** chromatic chord tones (role A) until the v1.4 Spec amendment.
+- **Studies moved:** multetudes (634,365 bytes, cmp-identical) · tetradetudes (449,042,
+  cmp-identical — the palette, the strip's selection ink, motion's exported names) · metronome
+  (165,289) and triadetudes (342,000), hand-authored, `motion.mjs` re-inlined verbatim.
+  OWED_DRIFT stays EMPTY. The shell did not move (18,040).
+- Verified: engine 596/596 · four-door gate 18,580/0 (`hub/tests/out/doors-0902-1155.log`) · hub tests 4/4 · family floor
+  20 surfaces 13/7-exempt/0 · bite 42/42 (`hub/tests/out/bite-0902-1201.log`; m40 and m41, the two colour branches, both bit) · hugo exit 0 · check_site 21 pages · the ritual on all
+  four moved studies at 1380px and 390px on the served build, zero console errors.
+
 ## 2026-09-02 — DEPLOYED: v0.4.3 live (second run), the one moved study spot-checked byte-identical
 
 - Actions run 33652997145 green (full gates in CI, commit `467a157` — the night's commit `6e00fce`

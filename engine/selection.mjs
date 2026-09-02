@@ -76,6 +76,9 @@
 import { parseChord } from "./chord.mjs";
 import { field } from "./field.mjs";
 import { positionOf, materialIn } from "./position.mjs";
+// 260918 (CR-1): the approach grammar and arithmetic, owned by motion.mjs — imported by their exported names (the door build blanks imports; an alias would name nothing)
+import { parseMotion, describeMotion, approachMidi, placeNear } from "./motion.mjs";
+import { OPEN_MIDI } from "./field.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
 
@@ -281,6 +284,11 @@ export function gripFit(tones, slots) {
  * the FIELD can carry at all. The field is the key, so a tone outside the
  * key can never be material: NOT IN THE KEY is a different absence from NOT
  * IN THIS FRAME, and both are teaching (child 7's own deliverable). */
+/* CR-1 §3 (260918): this partition still answers only NOT IN THE KEY. An
+ * offKey tone that reaches a board is legal only wearing a role (an approach
+ * tonight; a chord-supplied member once role A is ruled — deferred, see the
+ * register's chromatic-chord-alterations entry). §4's doctrine amendment is
+ * deferred with it. */
 export function fieldPartition(tones, fld) {
   const inKey = [], offKey = [];
   for (const t of tones) (fld.degOf(t.pc) >= 0 ? inKey : offKey).push(t);
@@ -578,13 +586,24 @@ export function offersOn(notes) {
  * Errors are VALUES, loud on the face, never throws: the surface owes the
  * user the reason, not a dead console.
  */
-export function orderBy(address, text, notes) {
+export function orderBy(address, text, notes, ctx) {
   const raw = String(text || "").toUpperCase();
-  if (/[()]/.test(raw))
-    return { order: null, err: "approaches — (…) — are not built yet: an approach note is " +
-      "chromatic, off the field, and the field's rendering law for off-field notes is undecided" };
-  if (/[\[\]]/.test(raw))
-    return { order: null, err: "[…] is a TARGET in the ratified motion grammar — the order bracket is { }" };
+  /* THE APPROACH NOTE (260918, night 24 — CR-1 ruled it, Design Spec §2.6
+   * marks it): a figure carrying ( … ) or [ … ] under the TONES address is
+   * the ratified motion grammar — (b3)[3] · (-s)[3] · (-1,+2)[R] — parsed
+   * by motion.mjs's own parser and resolved through its own arithmetic
+   * (approachMidi, placeNear). The old refusal ("the field's rendering law
+   * for off-field notes is undecided") is answered: an off-field note is
+   * legal ONLY as an APPROACH — an event that exists while it points at a
+   * target — and never as a member of the field (CR-1 §3: the guards get
+   * stronger, not weaker; see the assertion at the end). */
+  if (/[()\[\]]/.test(raw)) {
+    if (address !== "tones")
+      return { order: null, err: "approaches — (…)[…] — name TONES: the address is set to pattern; switch it to tones" };
+    if (!ctx || !ctx.fld || !Array.isArray(ctx.strings))
+      return { order: null, err: "approaches need the field and the strings to place on — this caller supplied neither" };
+    return orderWithApproaches(String(text || ""), notes, ctx);
+  }
   /* THE MODE MISMATCH, noticed by the alphabet (260902 — Daniel typed
    * R-3-5-7 under pattern and was told a true-but-useless fact about string
    * 5). R and 7 are not string numbers; 1/2/4/6 are not tone names. A figure
@@ -665,10 +684,96 @@ export function orderBy(address, text, notes) {
       order.push(hit);
     }
   }
-  // derived, then asserted: every ordered step is a note of the selection
-  for (const n of order)
-    if (!notes.includes(n)) throw new Error("orderBy: an ordered step left the selection");
+  assertOrder(order, notes);
   return { order, err: null };
+}
+
+/* THE ROLE TEST (CR-1 §3): a step is legal if it IS a note of the selection,
+ * or if it is an APPROACH that carries a target the selection holds. An
+ * off-field step with no role, or a role with no target, throws NAMING the
+ * missing role — the bug class the old assertion caught stays caught. */
+function assertOrder(order, notes) {
+  for (const n of order) {
+    if (notes.includes(n)) continue;
+    if (n.role !== "approach")
+      throw new Error("orderBy: an ordered step left the selection carrying no role — " +
+        "an off-field note must be an approach (CR-1), and this one is unlabelled");
+    if (!n.target || !notes.includes(n.target))
+      throw new Error("orderBy: an approach step names no target in the selection — " +
+        "an approach exists only while it points at one");
+  }
+}
+
+/** orderWithApproaches(text, notes, {fld, strings}) → { order, err, describe }
+ * — the motion grammar over the Multetudes selection. A TARGET names a role
+ * the selection carries (R 3 5 7 9 11 13 by ROLE under a chord; a DEGREE
+ * from the centre under the scale box — the same two laws the plain tones
+ * figure obeys); accidentals on a target are refused by name (a role is not
+ * a spelling). Each APPROACH is resolved by motion.mjs's own arithmetic
+ * against that target's midi — semitones, scale steps through the field's
+ * pitch classes, or an absolute degree of the key — and placed at the
+ * nearest playable position on the run's strings, the target's own string
+ * preferred. The entry carries its ROLE, its TARGET, whether it is CHROMATIC
+ * (§2.6: a pitch class outside the current scale) and, when diatonic, the
+ * degree it wears — read the way the selection reads degrees (re-rooted
+ * under a centre by the same shift the target carries). describe() is
+ * motion's own sentence, routed to the face rather than rewritten. */
+function orderWithApproaches(text, notes, ctx) {
+  const src = text.replace(/\bR\b/gi, "1").replace(/S/g, "s");   // the figure's R is motion's 1; `s` is the scale
+  const parsed = parseMotion(src, "tones");
+  if (parsed.error) return { order: null, err: "figure — " + parsed.error.message };
+  const fld = ctx.fld;
+  const degreeAddressed = notes.length > 0 && notes.every((n) => n.role == null);
+  const wordOf = (d) => (d === 1 ? "root" : d + ({ 3: "rd" }[d] || "th"));
+  const order = [], used = {};
+  for (const fig of parsed.figures) {
+    const t = fig.target;
+    if (t.acc !== 0)
+      return { order: null, err: `a target is a role, not a spelling — [${t.text}] cannot be picked; the roles are R, 3, 5, 7 (9, 11, 13)` };
+    let target;
+    if (degreeAddressed) {
+      const dg = (t.deg - 1) % 7;
+      const occ = notes.filter((n) => n.deg === dg).sort((a, b) => a.midi - b.midi);
+      if (!occ.length) return { order: null, err: `this box carries no ${wordOf(t.deg)} of the centre — step or widen the window` };
+      const k = (used[t.deg] || 0) % occ.length; used[t.deg] = (used[t.deg] || 0) + 1;   // a repeat is the ordinal
+      target = occ[k];
+    } else {
+      const role = t.deg === 1 ? "R" : String(t.deg);
+      target = notes.find((n) => n.role === role);
+      if (!target) return { order: null, err: `this selection carries no ${wordOf(t.deg)}` };
+    }
+    const shift = target.deg == null ? 0 : (((target.deg - fld.degOf(target.midi)) % 7) + 7) % 7;
+    for (const it of fig.approaches) {
+      let midi;
+      try { midi = approachMidi(it, target.midi, { scalePcs: fld.pcs, tonicPc: fld.pcs[0] }); }
+      catch (e) { return { order: null, err: "figure — " + String(e.message || e).replace(/^motion: /, "") }; }
+      /* THE OCTAVE TIE (measured on the staff, 260918): an absolute-degree
+       * approach takes "the octave nearest the target", and when the two
+       * octaves are EQUALLY near motion's rule keeps the lower — which a
+       * top-four set cannot always fret. The arithmetic stands; the
+       * placement tries the equally-near octave before it refuses, and a
+       * genuinely nearer-but-unplayable note still refuses by name. */
+      const placing = { set: ctx.strings, open: OPEN_MIDI, nfrets: 15 };
+      const dist = Math.abs(midi - target.midi);
+      const octaves = [midi, ...[midi + 12, midi - 12].filter((m) => Math.abs(m - target.midi) === dist)];
+      let pos = null;
+      for (const m of octaves) { try { pos = placeNear(m, target.fret, target.string, placing); midi = m; break; } catch (e) { /* the next equally-near octave */ } }
+      if (!pos) return { order: null, err: `the approach ${midi - target.midi > 0 ? "+" : ""}${midi - target.midi} to the ${wordOf(t.deg)} has no playable position on these strings` };
+      const keyDeg = fld.degOf(midi);
+      const chromatic = keyDeg < 0;
+      order.push({ midi, string: pos.string, fret: pos.fret, role: "approach", target,
+        chromatic, deg: chromatic ? -1 : (keyDeg + shift) % 7, keyDeg });
+    }
+    order.push(target);
+  }
+  // derived, then asserted: every approach is its written relation to its target, and is placed honestly
+  for (const n of order) {
+    if (n.role !== "approach") continue;
+    if (OPEN_MIDI[n.string] + n.fret !== n.midi) throw new Error("orderBy: an approach's placement is dishonest");
+    if (n.chromatic !== (fld.degOf(n.midi) < 0)) throw new Error("orderBy: an approach's function disagrees with the field");
+  }
+  assertOrder(order, notes);
+  return { order, err: null, describe: describeMotion(parsed) };
 }
 
 /** the bracket beside each string: which steps of the order land there —

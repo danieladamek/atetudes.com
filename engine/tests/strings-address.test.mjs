@@ -86,12 +86,16 @@ test("an empty string refuses by name; approaches and targets refuse with their 
   const gone = orderBy("pattern", "5", sel);              // string 5 not in the run
   assert.equal(gone.order, null);
   assert.match(gone.err, /string 5 carries nothing/);
+  /* PIN REWRITTEN 260918 (night 24, item 1 — rule 7): approaches are BUILT
+   * (CR-1; Spec §2.6) under the TONES address. Under PATTERN they still
+   * refuse by name — the grammar names tones — and the refusal offers the
+   * switch, the mode-mismatch manners. v0.9 silently dropped parentheses;
+   * this address must still refuse them by name. */
   const appr = orderBy("pattern", "(-1,+2)4", sel);
   assert.equal(appr.order, null);
-  assert.match(appr.err, /approaches[\s\S]*off the field/,
-    "v0.9 silently dropped parentheses; this address must refuse them by name");
+  assert.match(appr.err, /approaches[\s\S]*name TONES[\s\S]*switch it to tones/);
   const tgt = orderBy("pattern", "[4]", sel);
-  assert.match(tgt.err, /TARGET in the ratified motion grammar/);
+  assert.match(tgt.err, /name TONES/, "a bracketed target is the same grammar, refused the same way under pattern");
 });
 
 test("no tokens is a block, not an error", () => {

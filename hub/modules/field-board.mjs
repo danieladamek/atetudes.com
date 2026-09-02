@@ -52,7 +52,7 @@ import { mountMini } from "../mini.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
-import { FAM_COLOR, FAM_TEXT, FAM } from "../palette.mjs";
+import { FAM_COLOR, FAM_TEXT, FAM, VIOLET, ANNOTATION_GRAY } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -88,7 +88,9 @@ export function deriveField(fld) {
   }
   for (const d of dots)
     if (fld.degOf(d.midi) < 0 || d.fret < 0 || d.fret > NFRETS)
-      throw new Error("field-board: a derived dot is off the field or off the neck");
+      throw new Error("field-board: a derived dot is off the field or off the neck — the field's " +
+        "dots are members; an off-field dot is drawn only as a role-carrying approach from the " +
+        "figure's order (CR-1 §3), and this one carries " + (d.role ? `the role "${d.role}"` : "no role"));
   return dots;
 }
 
@@ -272,9 +274,14 @@ export const fieldBoard = {
   border:1px solid var(--edge);border-radius:8px;background:#fff;padding:5px 12px;
   font-size:15px;font-weight:bold;color:var(--ink);white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;text-align:center}
-/* variant (a): the chord's name in the degree palette's R — the shell's
- * --red IS that palette's Root (its own comment says so); no second red */
-.fd-readbox .fd-readchord{color:var(--red)}
+/* VARIANT (b), 260918 (night 24, item 2 — correcting night 23's (a), which
+ * coloured EVERY chord name in R's red, a function most chords do not have):
+ * the chord's ROOT DEGREE is a filled dot beside the name — the legend's own
+ * mark — and the name stays ink. Golden rule 8: the palette encodes function
+ * and nothing else; four of its seven colours cannot carry text, which is
+ * why the dot exists. Text red now means exactly one thing: the key. */
+.fd-readbox .fd-readchord{color:var(--ink)}
+.fd-readbox .fd-readdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
 .fd-readbox .fd-readmode{font-weight:600}
 .fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 .fd-mixrow{max-width:376px;margin-top:8px}
@@ -502,6 +509,19 @@ export const fieldBoard = {
           t.textContent = rf;
         }
       }
+      /* THE FIGURE, resolved here — before the selection dots — because §2.6's
+       * slur is drawn UNDER the dots (the under-draw convention) */
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings });
+      const approaches = (fig.order || []).filter((n) => n.role === "approach");
+      /* §2.6 "Connection. An approach figure joins its target with a slur in
+       * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */
+      for (const ap of approaches) {
+        const x1 = fx(ap.fret), y1 = fy(ap.string), x2 = fx(ap.target.fret), y2 = fy(ap.target.string);
+        const bulge = Math.max(10, Math.abs(x2 - x1) * 0.25);
+        el("path", { class: "fd-slur", "data-role": "slur",
+          d: `M${x1},${y1} Q${(x1 + x2) / 2},${Math.min(y1, y2) - bulge} ${x2},${y2}`,
+          fill: "none", stroke: ANNOTATION_GRAY, "stroke-width": 1.2, "pointer-events": "none" }, svg);
+      }
       for (const x of sel) {
         const fam = FAM[x.deg];
         const g = el("g", { class: "fd-sel", "data-selmidi": x.midi,
@@ -513,10 +533,36 @@ export const fieldBoard = {
         t.textContent = x.role || fam;
       }
 
+      /* THE APPROACH MARK (260918, night 24 — CR-1 ruled it; Design Spec §2.6
+       * specifies it, every clause quoted here so the mark is the Spec's and
+       * not a design):
+       *   "Role is weight, never color. … Approach tones draw at 0.6 of the
+       *    host marker's radius, hollow — the color becomes the stroke on an
+       *    unfilled mark, with stroke weight scaling from the marker."
+       *      → r 13 × 0.6 = 7.8, fill none, the colour as the stroke; the host
+       *        dot's stroke is 2, scaled 0.6 → 1.2 … tuned to 1.6 at render
+       *        inspection ("the ratio is law; the exact value may be tuned").
+       *   "Function is still color. A diatonic approach tone is a scale
+       *    degree and keeps its §2.1 color. A chromatic approach tone — pitch
+       *    class outside the current scale — takes violet #7847A8."
+       *      → chromatic ? VIOLET : FAM_COLOR[its degree], from the one palette.
+       *   "No new ring." → none; the sounding pulse is not a role mark.
+       *   "No interval label." → no text on the mark.
+       *   "Role marks derive from the note event's role" → from the order's
+       *    entries, which carry role/target/chromatic — never assigned here.
+       * WHEN (CR-1 §2): persistently while the figure is live; data-selmidi
+       * lets the ordinary sounding pulse ring it when it sounds. */
+      for (const ap of approaches) {
+        const stroke = ap.chromatic ? VIOLET : FAM_COLOR[FAM[ap.deg]];
+        const g = el("g", { class: "fd-sel fd-appr", "data-selmidi": ap.midi, "data-role": "approach",
+          "data-selstr": ap.string, "data-selfret": ap.fret,
+          "data-chromatic": String(ap.chromatic), "data-deg": ap.chromatic ? "" : FAM[ap.deg] }, svg);
+        el("circle", { cx: fx(ap.fret), cy: fy(ap.string), r: 13 * 0.6, fill: "none",
+          stroke, "stroke-width": 1.6 }, g);
+      }
       /* THE FIGURE'S ORDER (child 3b): parsed against the selection itself,
        * drawn as v0.9 draws it — a dashed line through the ordered notes —
        * and exposed on the artifact as data-figorder for the gate */
-      const fig = orderBy(cfg.address, cfg.figure, sel);
       if (fig.order && fig.order.length > 1)
         el("polyline", { points: fig.order.map((n) => fx(n.fret) + "," + fy(n.string)).join(" "),
           fill: "none", stroke: "#212126", "stroke-width": 1.3,
@@ -623,10 +669,16 @@ export const fieldBoard = {
        * a chord object leaves the line empty (the display is the scale's) */
       {
         /* ALWAYS (260918, item 2 — register 33): the chord and its mode, for
-         * every object. VARIANT (a), Daniel's mockup as drawn: the chord
-         * name in the degree palette's R — the same red the key wears. */
+         * every object. VARIANT (b), night 24: the root's DEGREE DOT beside
+         * the name, from the one palette, keyed to the chord's actual degree
+         * — derived from chordAt.degree, never assigned. Ink text. */
         const ml = byId("fdMode");
         ml.textContent = "";
+        if (cur.degree >= 0) {
+          const dot = d.createElement("i"); dot.className = "fd-readdot";
+          dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[cur.degree]);
+          dot.style.background = FAM_COLOR[FAM[cur.degree]]; ml.appendChild(dot);
+        }
         const ch = d.createElement("b"); ch.className = "fd-readchord"; ch.textContent = cur.symbol;
         const md = d.createElement("span"); md.className = "fd-readmode";
         md.textContent = cur.degree >= 0
@@ -707,7 +759,9 @@ export const fieldBoard = {
         noteEl.style.color = "#B82929"; noteEl.style.fontStyle = "normal";
       } else {
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
-        noteEl.textContent = cfg.address === "pattern"
+        noteEl.textContent = fig.describe
+          ? fig.describe + (approaches.some((a2) => a2.chromatic) ? " Chromatic approaches wear violet — outside the key; diatonic ones keep their degree colour." : "")
+          : cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
           : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
       }

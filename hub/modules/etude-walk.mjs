@@ -152,7 +152,7 @@ export const etudeWalk = {
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
        * the bracket and the polyline draw — or the take's own shape */
-      const fig = orderBy(cfg.address, cfg.figure, sel);
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings });
       /* 260905, the coupling severed: Take chooses the MATERIAL, the rail's
        * Movement control chooses together-or-sequence (a scale stays a run —
        * the box has no chord to sound as one). A typed figure sequences

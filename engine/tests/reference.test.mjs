@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { placeReference, compositeOver, REF_OFFSET } from "../reference.mjs";
-import { field } from "../field.mjs";
+import { notesOn, field } from "../field.mjs";
 import { diatonicTones, objectOffsets } from "../selection.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +26,16 @@ test("the placement corpus: every kind on every chord degree frets a real note o
     for (let cd = 0; cd < 7; cd++) {
       const r = placeReference(kind, cd, fld, [4, 3, 2, 1], BOOT);
       assert.ok(r.note, `${kind} on degree ${cd} must place`);
-      assert.equal(r.note.string, 6, "string 6 is free and preferred");
+      /* PIN REWRITTEN 260918 (item 3, rule 7): "string 6 is free and
+       * preferred" was the string-first law. Under the nearest law the claim
+       * is: a FREE reference string, and the nearest occurrence of all —
+       * derived here from both free strings, never a named string. */
+      assert.ok([6, 5].includes(r.note.string), "a free reference string");
+      {
+        const all = [6, 5].flatMap((s) => notesOn(s, fld).filter((n) => n.keyDeg === r.note.keyDeg));
+        const nearest = Math.min(...all.map((n) => Math.abs(n.fret - BOOT.centre)));
+        assert.equal(Math.abs(r.note.fret - BOOT.centre), nearest, `${kind} on degree ${cd}: the nearest occurrence across the free strings`);
+      }
       assert.equal(r.note.keyDeg, ((cd + REF_OFFSET[kind]) % 7 + 7) % 7,
         `${kind} lands ${REF_OFFSET[kind]} scale steps from degree ${cd}`);
       assert.equal(r.note.midi % 12, fld.pcs[r.note.keyDeg] % 12,
@@ -46,9 +55,12 @@ test("string 5 serves when 6 is taken; both taken refuses BY NAME", () => {
 });
 
 test("a reach past the box is a stretch — flagged, still a real fretted note", () => {
-  const far = placeReference("root", 0, fld, [4, 3, 2, 1], { fLo: 0, fHi: 3, centre: 1.5 });
+  // PIN REWRITTEN 260918 (item 3, rule 7): the 0–3 window stretched only under
+  // the string-first law; under the nearest law string 5's B♭ at fret 1 is in
+  // that box. A window at 8–9 holds no B♭ on either free string.
+  const far = placeReference("root", 0, fld, [4, 3, 2, 1], { fLo: 8, fHi: 9, centre: 8.5 });
   assert.ok(far.note && far.stretch === true);
-  assert.ok(far.note.fret > 3, "the stretch really is outside the window");
+  assert.ok(far.note.fret < 8 || far.note.fret > 9, "the stretch really is outside the window");
   const near = placeReference("root", 0, fld, [4, 3, 2, 1], BOOT);
   assert.equal(near.stretch, false, "in the window is not a stretch");
 });
@@ -118,4 +130,28 @@ test("260917-3: a bass tone the pick no longer holds is refused BY NAME at the o
   assert.ok(ok.note, "…and places when the pick holds it");
   const noPick = placeReference("tone:5", 0, fld, [4, 3, 2, 1], pos);
   assert.ok(noPick.note, "no pick (a scale) applies no guard");
+});
+
+// ---- 260918 (night 24, item 3): the reference picks the NEAREST note across the free strings ----
+test("260918-3: nearness governs the string too — a nearer occurrence on string 5 beats string 6's fixed priority", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  // the root under B♭ with the window high on the neck: string 6 holds B♭ at fret 6
+  // (and 18, off the neck); string 5 holds it at fret 1 and fret 13. Centre 11 →
+  // fret 13 on string 5 is 2 away, fret 6 on string 6 is 5 away.
+  const high = { fLo: 9, fHi: 13, centre: 11 };
+  const r = placeReference("root", 0, fld, [4, 3, 2, 1], high);
+  assert.ok(r.note, "placed");
+  assert.equal(r.note.string, 5, "the nearer occurrence wins the STRING, not only the fret");
+  assert.equal(r.note.fret, 13);
+  assert.equal(r.stretch, false, "…and the flag then means what it says: inside the window is no stretch");
+  // string 6 is the TIEBREAK only: equally near on both strings → 6
+  // (B♭ on string 6 fret 6 and on string 5 fret 1 are 2.5 apart from centre 3.5 each)
+  const tie = placeReference("root", 0, fld, [4, 3, 2, 1], { fLo: 2, fHi: 5, centre: 3.5 });
+  assert.equal(tie.note.string, 6, "a tie falls to string 6");
+  // the boot case does not move: G a 3rd below B♭ at centre 5 is fret 3 on 6 (2 away) vs fret 10 on 5 (5 away)
+  const boot = placeReference("third", 0, fld, [4, 3, 2, 1], { fLo: 3, fHi: 7, centre: 5 });
+  assert.deepEqual([boot.note.string, boot.note.fret], [6, 3], "the ruled boot placement is unchanged");
+  // with string 6 in the set only string 5 is free: unchanged behaviour
+  const on5 = placeReference("root", 0, fld, [6, 4, 3], high);
+  assert.equal(on5.note.string, 5);
 });

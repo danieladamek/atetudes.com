@@ -92,9 +92,11 @@ export default {
      * shares moved (Restore confirms over unsaved text; the title is
      * pre-populated and names each entry; entries export on their own).
      * Nothing of this door's own changed. */
+    /* v0.5.0 (260918, night 24): carried along — the palette stated once, the
+     * chip strip's selection on outline + fill, motion.mjs's exported names. */
     /* v0.4.2 (260917, night 22): carried along — the shell moved (row collapse,
      * the chevron naming its row) and the notepad surface again (item 0). */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.4.2",
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.5.0",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

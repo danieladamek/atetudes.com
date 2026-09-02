@@ -155,7 +155,9 @@ export function materialIn(pos, strings, fld) {
     out.push(...notesOn(s, fld).filter((n) => n.fret >= pos.fLo && n.fret <= pos.fHi));
   for (const n of out)
     if (fld.degOf(n.midi) < 0)
-      throw new Error("materialIn: a note outside the field leaked into the material");
+      throw new Error("materialIn: a note outside the field leaked into the material — " +
+        "the material is the field's own; an off-field note is legal only as a role-carrying " +
+        "APPROACH in the figure's order (CR-1 §3), and this one carries " + (n.role ? `the role "${n.role}", which is not a member's` : "no role"));
   return out;
 }
 

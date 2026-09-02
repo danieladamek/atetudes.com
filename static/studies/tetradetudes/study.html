@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tetradetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "tetradetudes", lock {"material":"tetrad","notepad":true,"audio":true,"transport":true}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, hub/modules/chord-timeline.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs tetradetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -141,9 +141,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
        display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
 .tlbar button:hover{border-color:var(--line);background:#fff}
-.tlbar button.cur{border-color:var(--red);color:var(--red);font-weight:bold;background:#fff}
+/* SELECTION IS WEIGHT AND NEUTRAL INK (260918 — golden rule 8): outline + fill,
+ * the text ink; --red means the key, nowhere else */
+.tlbar button.cur{border-color:var(--red);font-weight:bold;background:#fff}
 .tlbar button .tlrn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
-.tlbar button.cur .tlrn{color:var(--red)}
+.tlbar button.cur .tlrn{color:var(--gray)}
 #tlMini{display:flex;gap:4px;flex:0 0 auto}
 #tlMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -2771,20 +2773,50 @@ function describe(parsed) {
  * Returns entries [{midi,string,fret,slot,role}...] in playing order.
  * Every derivation is asserted before return (spec §8).
  */
+/** approachMidi(item, targetMidi, {scalePcs, tonicPc}) → the approach's
+ * midi — the ONE implementation of the three approach kinds (260918, CR-1:
+ * exported so the Multetudes selection resolves approaches through the path
+ * this module already owns rather than a second arithmetic):
+ *   semi   → the target ± n semitones
+ *   scale  → k scale tones below/above, walked through scalePcs
+ *   degree → an absolute degree of the KEY, in the octave nearest the target */
+function approachMidi(it, targetMidi, ctx) {
+  if (it.kind === "semi") return targetMidi + it.delta;
+  if (it.kind === "scale") {
+    const dir = it.delta < 0 ? -1 : 1;
+    let m = targetMidi, steps = Math.abs(it.delta);
+    while (steps > 0) {
+      m += dir;
+      if (ctx.scalePcs.includes(mod12(m))) steps--;
+      if (Math.abs(m - targetMidi) > 24)
+        throw new Error("motion: scale walk ran away — scale context broken");
+    }
+    return m;
+  }
+  const pc = mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc));
+  const base = targetMidi - mod12(targetMidi) + pc;      // the octave nearest the target
+  return [base - 12, base, base + 12].reduce((a, b2) =>
+    Math.abs(b2 - targetMidi) < Math.abs(a - targetMidi) ? b2 : a);
+}
+
+/** placeNear(midi, nearFret, preferString, {set, open, nfrets}) → the nearest
+ * playable position to nearFret on the set; the target's own string wins a
+ * tie (exported 260918 for the same reason as approachMidi) */
+function placeNear(midi, nearFret, preferString, ctx) {
+  let best = null;
+  for (const sn of ctx.set) {
+    const f = midi - ctx.open[sn];
+    if (f < 0 || f > ctx.nfrets + 2) continue;
+    const d = Math.abs(f - nearFret) + (sn === preferString ? 0 : 0.25);
+    if (!best || d < best.d) best = { string: sn, fret: f, d };
+  }
+  if (!best) throw new Error("motion: no playable position for midi " + midi);
+  return best;
+}
+
 function resolve(parsed, ctx) {
   const out = [];
-  const placeOnSet = (midi, nearFret, preferString) => {
-    // nearest playable position to nearFret; prefer the target's own string
-    let best = null;
-    for (const sn of ctx.set) {
-      const f = midi - ctx.open[sn];
-      if (f < 0 || f > ctx.nfrets + 2) continue;
-      const d = Math.abs(f - nearFret) + (sn === preferString ? 0 : 0.25);
-      if (!best || d < best.d) best = { string: sn, fret: f, d };
-    }
-    if (!best) throw new Error("motion: no playable position for midi " + midi);
-    return best;
-  };
+  const placeOnSet = (midi, nearFret, preferString) => placeNear(midi, nearFret, preferString, ctx);
   let prevFret = null;
   for (const fig of parsed.figures) {
     // target first — approaches are relative to it
@@ -2831,26 +2863,7 @@ function resolve(parsed, ctx) {
     }
     // approaches, in written order, target last
     for (const it of fig.approaches) {
-      let midi;
-      if (it.kind === "semi") midi = tNote.midi + it.delta;
-      else if (it.kind === "scale") {
-        const dir = it.delta < 0 ? -1 : 1;
-        let m = tNote.midi, steps = Math.abs(it.delta);
-        while (steps > 0) {
-          m += dir;
-          if (ctx.scalePcs.includes(mod12(m))) steps--;
-          if (Math.abs(m - tNote.midi) > 24)
-            throw new Error("motion: scale walk ran away — scale context broken");
-        }
-        midi = m;
-      } else {
-        const pc = mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc));
-        // the octave nearest the target
-        const base = tNote.midi - mod12(tNote.midi) + pc;
-        const cands = [base - 12, base, base + 12];
-        midi = cands.reduce((a, b) =>
-          Math.abs(b - tNote.midi) < Math.abs(a - tNote.midi) ? b : a);
-      }
+      const midi = approachMidi(it, tNote.midi, ctx);
       const pos = placeOnSet(midi, tNote.fret, tNote.string);
       const ev = { midi, string: pos.string, fret: pos.fret,
         slot: ctx.setLowHigh.indexOf(pos.string), role: "approach" };
@@ -2873,6 +2886,15 @@ function resolve(parsed, ctx) {
     throw new Error("motion: " + out.length + " notes — " + MAX_EVENTS + " is the ceiling");
   return out;
 }
+
+/* NAMED for a shared scope (260918): the door build inlines every module into
+ * one scope and blanks the import lines, so an importer cannot alias —
+ * `parse as parseMotion` names a symbol that never exists in the built page —
+ * and the build REFUSES a re-export list by name (the night the build dropped
+ * one in silence is in the verification doctrine). So the shared names are
+ * plain exported constants; the Multetudes selection imports exactly these. */
+const parseMotion = parse;
+const describeMotion = describe;
 
 // ---------- the sketchpad's emitter (the grammar's first external producer) ----------
 
@@ -3024,7 +3046,7 @@ function emitFromClicks(clicks, ctx) {
   probe([{ midi: 65, role: "approach", form: "semi" },
     { midi: 67, role: "target", degText: "5" }], "(-2)[5]");  // the tap override
 }
-return { MAX_EVENTS, degreeSemis, classify, parse, serialize, describe, resolve, approachForms, emitFromClicks };
+return { MAX_EVENTS, degreeSemis, classify, parse, serialize, describe, approachMidi, placeNear, resolve, parseMotion, describeMotion, approachForms, emitFromClicks };
 })();
 
 /* ===== engine/figure.mjs ===== */
@@ -3987,9 +4009,11 @@ const chordTimeline = {
        min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
        display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
 .tlbar button:hover{border-color:var(--line);background:#fff}
-.tlbar button.cur{border-color:var(--red);color:var(--red);font-weight:bold;background:#fff}
+/* SELECTION IS WEIGHT AND NEUTRAL INK (260918 — golden rule 8): outline + fill,
+ * the text ink; --red means the key, nowhere else */
+.tlbar button.cur{border-color:var(--red);font-weight:bold;background:#fff}
 .tlbar button .tlrn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
-.tlbar button.cur .tlrn{color:var(--red)}
+.tlbar button.cur .tlrn{color:var(--gray)}
 #tlMini{display:flex;gap:4px;flex:0 0 auto}
 #tlMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -4059,6 +4083,44 @@ const chordTimeline = {
 return { chordTimeline };
 })();
 
+/* ===== hub/palette.mjs ===== */
+const __m_hub_palette_mjs = (() => {
+/* palette.mjs — THE DEGREE PALETTE, stated once (260918, night 24 item 2a).
+ *
+ * Design Spec §2.1 is the law: colour encodes FUNCTION against the current
+ * root and nothing else (golden rule 8 — never status, selection, error or
+ * emphasis). These are its seven hexes and the text rule that travels with
+ * them: the LIGHT marks (4/11 silver, 6/13 cyan, 7 amber) take dark text;
+ * the dark marks take white. Violet is OUTSIDE the palette — §2.1: "spent at
+ * v1.3 on chromatic approach tones (§2.6); it is an annotation channel and
+ * never denotes a degree."
+ *
+ * Until tonight this table was hand-copied, literal for literal, in FIVE hub
+ * modules (field-board, fretboard-stage, keyboard-strip, score-board,
+ * staff-board — the dispatch counted three) with the violet a sixth literal
+ * in score-board: standing rule 6 five times over, made due by the chip
+ * strips becoming the next consumers. One place now; the consumers import.
+ * A helper module like bus.mjs or mini.mjs — it contributes no markup, no
+ * styles, no control, so the resolver treats it as reached code only.
+ */
+const FAM = ["R", "2", "3", "4", "5", "6", "7"];
+const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
+  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
+const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
+  "5": "#fff", "6": "#212126", "7": "#212126" };
+/** §2.6's chromatic-approach colour — an annotation channel, never a degree */
+const VIOLET = "#7847A8";
+/** §2.2/§2.6's annotation gray (0.45, 0.45, 0.48) — the slur's colour */
+const ANNOTATION_GRAY = "#73737A";
+{
+  // §2.1's own text rule, asserted: light marks (4, 6, 7) take dark text
+  for (const f of ["4", "6", "7"]) if (FAM_TEXT[f] !== "#212126") throw new Error("palette: light mark " + f + " must take dark text");
+  for (const f of ["R", "2", "3", "5"]) if (FAM_TEXT[f] !== "#fff") throw new Error("palette: dark mark " + f + " must take white text");
+  if (Object.values(FAM_COLOR).includes(VIOLET)) throw new Error("palette: violet must never enter the degree palette");
+}
+return { FAM, FAM_COLOR, FAM_TEXT, VIOLET, ANNOTATION_GRAY };
+})();
+
 /* ===== hub/modules/fretboard-stage.mjs ===== */
 const __m_hub_modules_fretboard_stage_mjs = (() => {
 const { tetradPass, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
@@ -4066,6 +4128,7 @@ const { scaleNotes } = __m_engine_chord_mjs;
 const { keysOf } = __m_engine_voice_identity_mjs;
 const { parseFigure, figureEvents, toneIndexOf, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } = __m_hub_bus_mjs;
+const { FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 /* fretboard-stage.mjs — the neck, the dots, the armed rings, the transitions.
  *
  * The stage the frozen study calls its crown jewel, rebuilt as a door
@@ -4093,6 +4156,8 @@ const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announc
 
 
 
+// the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
  * viewBox, string 1 at the top. The study's `FX0=46,FW=71,SY0=34,SGAP=34` and
@@ -4103,10 +4168,7 @@ const fx = (f) => (f === 0 ? FX0 - 22 : FX0 + (f - 0.5) * FW);
 const fy = (str) => SY0 + (str - 1) * SGAP;
 /* the scale-degree family palette and its text colours — the Spec's, and the
  * study's FAM_COLOR/FAM_TEXT verbatim: light marks (4, 6, 7) take dark text */
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+
 
 const fretboardStage = {
   id: "fretboard-stage",
@@ -4734,6 +4796,7 @@ const __m_hub_modules_keyboard_strip_mjs = (() => {
 const { tetradPass } = __m_engine_tetrad_sequence_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
+const { FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 /* keyboard-strip.mjs — the reference's keyboard strip.
  *
  * `#kbd` in static/studies/triadetudes/study.html, ported: C2–C6 across a
@@ -4749,13 +4812,12 @@ const { mountMini } = __m_hub_mini_mjs;
 
 
 
+// the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 const SVGNS = "http://www.w3.org/2000/svg";
 const KBD = { LO: 36, HI: 84, WK: 22, WH: 92, BH: 56, BW: 13 };
 const isWhite = (m) => [0, 2, 4, 5, 7, 9, 11].includes(m % 12);
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+
 const famOf = (lab) => lab === "R" ? "R" : lab.replace(/[#b]/g, "")
   .replace("9", "2").replace("11", "4").replace("13", "6");
 
@@ -7753,6 +7815,7 @@ const { writtenValue } = __m_engine_drill_mjs;
 const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
+const { FAM_COLOR, FAM_TEXT, VIOLET } = __m_hub_palette_mjs;
 /* score-board.mjs — "The étude — end to end": the reference's grand-staff score
  * at four voices.
  *
@@ -7780,12 +7843,11 @@ const { mountMini } = __m_hub_mini_mjs;
 
 
 
+// the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 const SVGNS = "http://www.w3.org/2000/svg";
 const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+
 const famOf = (lab) => lab === "R" ? "R" : lab.replace(/[#b]/g, "")
   .replace("9", "2").replace("11", "4").replace("13", "6");
 
@@ -7972,8 +8034,8 @@ const scoreBoard = {
                 a.textContent = acc.replace(/#/g, "♯").replace(/b/g, "♭"); }
               const chrom = !scalePcs.includes(((ev.midi % 12) + 12) % 12);
               const fam = famOf(labOf(ev.midi));
-              el("ellipse", { cx: xk, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : (chrom ? "#7847A8" : FAM_COLOR[fam]),
-                stroke: chrom ? "#7847A8" : FAM_COLOR[fam], "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${xk} ${y})` }, svg);
+              el("ellipse", { cx: xk, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : (chrom ? VIOLET : FAM_COLOR[fam]),
+                stroke: chrom ? VIOLET : FAM_COLOR[fam], "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${xk} ${y})` }, svg);
             } else {
               const lab = labOf(ev.midi);
               y = head(xk, sp.name, sp.oct, famOf(lab), lab, open);
@@ -8984,7 +9046,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.4.2","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.5.0","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

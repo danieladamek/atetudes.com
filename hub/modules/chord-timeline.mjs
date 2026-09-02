@@ -51,9 +51,11 @@ export const chordTimeline = {
        min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
        display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
 .tlbar button:hover{border-color:var(--line);background:#fff}
-.tlbar button.cur{border-color:var(--red);color:var(--red);font-weight:bold;background:#fff}
+/* SELECTION IS WEIGHT AND NEUTRAL INK (260918 — golden rule 8): outline + fill,
+ * the text ink; --red means the key, nowhere else */
+.tlbar button.cur{border-color:var(--red);font-weight:bold;background:#fff}
 .tlbar button .tlrn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
-.tlbar button.cur .tlrn{color:var(--red)}
+.tlbar button.cur .tlrn{color:var(--gray)}
 #tlMini{display:flex;gap:4px;flex:0 0 auto}
 #tlMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}

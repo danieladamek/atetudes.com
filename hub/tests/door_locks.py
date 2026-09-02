@@ -2500,12 +2500,74 @@ console.log(JSON.stringify(out));
         check(len(typed) >= 1, f"{tag} under tones the bracket is derived and greyed: {bt}")
         # refusals, loud on the face
         page.click('#fdAddrSeg button[data-addr=\"pattern\"]'); page.wait_for_timeout(80)
+        # PIN REWRITTEN 260918 (night 24, item 1 — rule 7): approaches are BUILT
+        # (CR-1; Spec §2.6). Under the PATTERN address they still refuse, by
+        # name, offering the switch — the mode-mismatch manners.
         page.fill("#fdFigIn", "(-1,+2)4"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
-        check("approaches" in page.inner_text("#fdFigNote") and "off the field" in page.inner_text("#fdFigNote"),
-              f"{tag} an approach must refuse by name on the face: {page.inner_text('#fdFigNote')!r}")
+        check("name TONES" in page.inner_text("#fdFigNote") and "switch it to tones" in page.inner_text("#fdFigNote"),
+              f"{tag} an approach under pattern refuses by name, offering tones: {page.inner_text('#fdFigNote')!r}")
         page.fill("#fdFigIn", "5"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
         check("string 5 carries nothing" in page.inner_text("#fdFigNote"),
               f"{tag} an absent string must refuse by name: {page.inner_text('#fdFigNote')!r}")
+
+        # ---- 260918 (night 24, item 1): THE APPROACH NOTE — Design Spec §2.6, implemented ----
+        # Every assertion below is a §2.6 clause read off the ARTIFACT: weight
+        # (0.6 of the host radius, hollow, no text), colour by FUNCTION
+        # (violet when chromatic, the degree colour when diatonic), no new
+        # ring, the slur UNDER the dots in annotation gray at 1.2, derived
+        # from the order's role — and CR-1 §2's WHEN: drawn before play, the
+        # ordinary pulse on play.
+        page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(80)
+        ap_read = """() => { const svg = document.getElementById('fieldSvg'); const kids = [...svg.children];
+          const host = svg.querySelector('.fd-sel:not(.fd-appr) circle');
+          const aps = [...svg.querySelectorAll('.fd-appr')].map(g => { const c = g.querySelector('circle'); return {
+            chrom: g.dataset.chromatic, deg: g.dataset.deg, r: +c.getAttribute('r'), stroke: c.getAttribute('stroke'),
+            fill: c.getAttribute('fill'), text: !!g.querySelector('text'), hostR: +host.getAttribute('r') }; });
+          const slurs = [...svg.querySelectorAll('.fd-slur')];
+          const firstDot = kids.indexOf(svg.querySelector('.fd-sel'));
+          return { aps, slurs: slurs.map(sl => ({ under: kids.indexOf(sl) < firstDot, stroke: sl.getAttribute('stroke'), w: sl.getAttribute('stroke-width') })),
+            note: document.getElementById('fdFigNote').textContent }; }"""
+        # (b3)[3] — chromatic: violet, hollow, 0.6 of the host, no label, drawn BEFORE play
+        page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        apc = page.evaluate(ap_read)
+        check(len(apc["aps"]) == 1 and apc["aps"][0]["chrom"] == "true" and apc["aps"][0]["stroke"] == "#7847A8",
+              f"{tag} §2.6 colour: a CHROMATIC approach takes violet #7847A8: {apc['aps']}")
+        check(apc["aps"] and abs(apc["aps"][0]["r"] / apc["aps"][0]["hostR"] - 0.6) < 0.01 and apc["aps"][0]["fill"] == "none",
+              f"{tag} §2.6 weight: 0.6 of the host radius, hollow: {apc['aps']}")
+        check(apc["aps"] and not apc["aps"][0]["text"],
+              f"{tag} §2.6: no interval label on an approach mark: {apc['aps']}")
+        check(len(apc["slurs"]) == 1 and apc["slurs"][0]["under"] and apc["slurs"][0]["stroke"] == "#73737A" and apc["slurs"][0]["w"] == "1.2",
+              f"{tag} §2.6 connection: the slur in annotation gray, 1.2, UNDER the dots: {apc['slurs']}")
+        check("approached from the ♭3" in apc["note"],
+              f"{tag} CR-1 §5: motion's own phrasing reaches the face: {apc['note']!r}")
+        # no new RING meaning approach: no ring element exists outside the pulse layer
+        check(page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-appr circle').length === 1 && document.querySelectorAll('#fieldSvg .fd-appr *').length === 1"),
+              f"{tag} §2.6: no new ring — the approach group holds exactly its one hollow circle")
+        # (-s)[3] — diatonic: the scale tone below the 3rd is the 2nd — green, its §2.1 colour
+        page.fill("#fdFigIn", "(-s)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        apd = page.evaluate(ap_read)
+        check(len(apd["aps"]) == 1 and apd["aps"][0]["chrom"] == "false" and apd["aps"][0]["deg"] == "2" and apd["aps"][0]["stroke"] == "#3C8B2F",
+              f"{tag} §2.6 colour: a DIATONIC approach keeps its degree colour — the 2nd, green: {apd['aps']}")
+        check("approached from the scale tone below" in apd["note"], f"{tag} the diatonic sentence: {apd['note']!r}")
+        # CR-1 §2 WHEN: the ordinary sounding pulse rings the approach on play — the
+        # mark carries data-selmidi and ringFor finds it like any dot
+        page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        page.evaluate("""() => { window.__apRings = []; const svg = document.getElementById('fieldSvg');
+          new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.classList && n.classList.contains('fd-pulse'))
+            window.__apRings.push(n.getAttribute('cx') + ',' + n.getAttribute('cy')); }))).observe(svg, { childList: true, subtree: true }); }""")
+        page.uncheck("#fdMetChk"); page.wait_for_timeout(80)
+        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(2600)
+        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(300)
+        rung = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-appr circle')]
+          .some(c => window.__apRings.includes(c.getAttribute('cx') + ',' + c.getAttribute('cy')))""")
+        check(rung, f"{tag} CR-1 §2: the approach takes the ORDINARY sounding pulse when it sounds")
+        page.check("#fdMetChk"); page.wait_for_timeout(80)
+        # the staff engraves it (§2.6 "cue-size noteheads under the same color rules")
+        st_ap = page.evaluate("""() => [...document.querySelectorAll('#stSvg [data-stapproach]')].map(e => ({ chrom: e.dataset.stapproach, fill: e.getAttribute('fill'), stroke: e.getAttribute('stroke'), rx: +e.getAttribute('rx') }))""")
+        check(len(st_ap) >= 1 and st_ap[0]["chrom"] == "chromatic" and "#7847A8" in (st_ap[0]["fill"] + st_ap[0]["stroke"]) and st_ap[0]["rx"] < 6.4,
+              f"{tag} §2.6 engraved: the staff draws the approach as a cue-size head in violet: {st_ap[:2]}")
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
+        page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(80)
         # back to the boot state
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
         page.uncheck("#fdAllTones"); page.wait_for_timeout(60)
@@ -2735,8 +2797,13 @@ console.log(JSON.stringify(out));
           { detail: { startDeg: 5, nearFret: 5 } }))""")
         page.wait_for_timeout(200)
         rr = ref_el()
-        check(rr == {"s": "6", "f": "3", "st": "true"},
-              f"{tag} under the old 5–8 window the same G IS a stretch: {rr}")
+        # PIN REWRITTEN 260918 (night 24, item 3 — rule 7): NEARNESS GOVERNS THE
+        # STRING now. From the 5–8 window's centre (6.67) the G on string 5 at
+        # fret 10 is 3.33 away and string 6's fret 3 is 3.67, so the nearer G
+        # is chosen — and it is STILL a stretch (10 is past 8), which is the
+        # claim this pin has always made.
+        check(rr == {"s": "5", "f": "10", "st": "true"},
+              f"{tag} under the old 5–8 window the nearest G (string 5, fret 10) IS a stretch: {rr}")
         check("a stretch past the box" in page.inner_text("#fdHint"),
               f"{tag} the stretch must be said in the hint: {page.inner_text('#fdHint')!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
@@ -2747,7 +2814,12 @@ console.log(JSON.stringify(out));
               f"{tag} the readout must name the composite (R19: the stack is Gm9): {ro!r}")
         st_ref = page.eval_on_selector_all("#stSvg [data-strefmidi]",
             "es => es.map(e => +e.getAttribute('data-strefmidi'))")
-        check(st_ref == [43, 48, 41, 46, 51, 45, 50, 43],
+        # PIN REWRITTEN 260918 (night 24, item 3 — rule 7): the claim is the
+        # WALK — a 3rd below every bar, G C F B♭ E♭ A D G — by pitch class;
+        # the OCTAVE is the placement's (the nearest occurrence across the
+        # free strings: F now sits at fret 8 on string 5, 53, where string
+        # 6's fret 1, 41, was the old law's).
+        check([m % 12 for m in st_ref] == [7, 0, 5, 10, 3, 9, 2, 7] and len(st_ref) == 8,
               f"{tag} the bass clef must walk a 3rd below every bar of the cycle "
               f"(G C F B\u266d E\u266d A D G): {st_ref}")
         # R18's shape: a set that TAKES string 6 pushes the reference to 5

@@ -27,6 +27,7 @@ import { diatonicTones, objectOffsets } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
+import { FAM, FAM_COLOR } from "../palette.mjs";
 
 export const timelineStrip = {
   id: "timeline-strip",
@@ -53,12 +54,17 @@ export const timelineStrip = {
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex;
   flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
 .tl-bar button:hover{border-color:var(--line);background:#fff}
-.tl-bar button.tl-cur{border-color:#B82929;color:#B82929;font-weight:bold;background:#fff}
+/* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own
+ * remedy): the current chip keeps its outline and fill; its text is ink. The
+ * red text it wore said "root" about chords that were not one. */
+.tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
+/* the chord's ROOT DEGREE dot — the legend's mark, the one palette (item 2) */
+.tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
 .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
 .tl-bar button .tl-slash{display:block;font-size:10px;color:var(--gray);line-height:1.2}
-.tl-bar button.tl-cur .tl-rn{color:#B82929}
+.tl-bar button.tl-cur .tl-rn{color:var(--gray)}
 .tl-bar button .tl-us{font-size:10.5px;font-weight:600;color:var(--ink)}
-.tl-bar button.tl-cur .tl-us{color:#B82929}
+.tl-bar button.tl-cur .tl-us{color:var(--ink)}
 #tlStripMini{position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5}
 #tlStripMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -106,6 +112,13 @@ export const timelineStrip = {
            * chord's own degree, the bass from the same placeReference /
            * compositeOver derivation child 5 landed — never parsed from
            * the symbol, never tabled. */
+          /* the degree dot (260918, item 2): derived from chordAt.degree — an
+           * off-key root wears none, honestly */
+          if (c.degree >= 0) {
+            const dot = d.createElement("i"); dot.className = "tl-dot";
+            dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[c.degree]);
+            dot.style.background = FAM_COLOR[FAM[c.degree]]; b.insertBefore(dot, b.firstChild);
+          }
           const rn = d.createElement("span"); rn.className = "tl-rn";
           rn.textContent = c.roman; b.appendChild(rn);
           if (cfg.bass !== "none" && cfg.object !== "scale" && c.degree >= 0 && c.tones) {

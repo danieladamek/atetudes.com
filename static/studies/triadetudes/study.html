@@ -2599,20 +2599,50 @@ function describe(parsed) {
  * Returns entries [{midi,string,fret,slot,role}...] in playing order.
  * Every derivation is asserted before return (spec §8).
  */
+/** approachMidi(item, targetMidi, {scalePcs, tonicPc}) → the approach's
+ * midi — the ONE implementation of the three approach kinds (260918, CR-1:
+ * exported so the Multetudes selection resolves approaches through the path
+ * this module already owns rather than a second arithmetic):
+ *   semi   → the target ± n semitones
+ *   scale  → k scale tones below/above, walked through scalePcs
+ *   degree → an absolute degree of the KEY, in the octave nearest the target */
+function approachMidi(it, targetMidi, ctx) {
+  if (it.kind === "semi") return targetMidi + it.delta;
+  if (it.kind === "scale") {
+    const dir = it.delta < 0 ? -1 : 1;
+    let m = targetMidi, steps = Math.abs(it.delta);
+    while (steps > 0) {
+      m += dir;
+      if (ctx.scalePcs.includes(mod12(m))) steps--;
+      if (Math.abs(m - targetMidi) > 24)
+        throw new Error("motion: scale walk ran away — scale context broken");
+    }
+    return m;
+  }
+  const pc = mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc));
+  const base = targetMidi - mod12(targetMidi) + pc;      // the octave nearest the target
+  return [base - 12, base, base + 12].reduce((a, b2) =>
+    Math.abs(b2 - targetMidi) < Math.abs(a - targetMidi) ? b2 : a);
+}
+
+/** placeNear(midi, nearFret, preferString, {set, open, nfrets}) → the nearest
+ * playable position to nearFret on the set; the target's own string wins a
+ * tie (exported 260918 for the same reason as approachMidi) */
+function placeNear(midi, nearFret, preferString, ctx) {
+  let best = null;
+  for (const sn of ctx.set) {
+    const f = midi - ctx.open[sn];
+    if (f < 0 || f > ctx.nfrets + 2) continue;
+    const d = Math.abs(f - nearFret) + (sn === preferString ? 0 : 0.25);
+    if (!best || d < best.d) best = { string: sn, fret: f, d };
+  }
+  if (!best) throw new Error("motion: no playable position for midi " + midi);
+  return best;
+}
+
 function resolve(parsed, ctx) {
   const out = [];
-  const placeOnSet = (midi, nearFret, preferString) => {
-    // nearest playable position to nearFret; prefer the target's own string
-    let best = null;
-    for (const sn of ctx.set) {
-      const f = midi - ctx.open[sn];
-      if (f < 0 || f > ctx.nfrets + 2) continue;
-      const d = Math.abs(f - nearFret) + (sn === preferString ? 0 : 0.25);
-      if (!best || d < best.d) best = { string: sn, fret: f, d };
-    }
-    if (!best) throw new Error("motion: no playable position for midi " + midi);
-    return best;
-  };
+  const placeOnSet = (midi, nearFret, preferString) => placeNear(midi, nearFret, preferString, ctx);
   let prevFret = null;
   for (const fig of parsed.figures) {
     // target first — approaches are relative to it
@@ -2659,26 +2689,7 @@ function resolve(parsed, ctx) {
     }
     // approaches, in written order, target last
     for (const it of fig.approaches) {
-      let midi;
-      if (it.kind === "semi") midi = tNote.midi + it.delta;
-      else if (it.kind === "scale") {
-        const dir = it.delta < 0 ? -1 : 1;
-        let m = tNote.midi, steps = Math.abs(it.delta);
-        while (steps > 0) {
-          m += dir;
-          if (ctx.scalePcs.includes(mod12(m))) steps--;
-          if (Math.abs(m - tNote.midi) > 24)
-            throw new Error("motion: scale walk ran away — scale context broken");
-        }
-        midi = m;
-      } else {
-        const pc = mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc));
-        // the octave nearest the target
-        const base = tNote.midi - mod12(tNote.midi) + pc;
-        const cands = [base - 12, base, base + 12];
-        midi = cands.reduce((a, b) =>
-          Math.abs(b - tNote.midi) < Math.abs(a - tNote.midi) ? b : a);
-      }
+      const midi = approachMidi(it, tNote.midi, ctx);
       const pos = placeOnSet(midi, tNote.fret, tNote.string);
       const ev = { midi, string: pos.string, fret: pos.fret,
         slot: ctx.setLowHigh.indexOf(pos.string), role: "approach" };
@@ -2701,6 +2712,15 @@ function resolve(parsed, ctx) {
     throw new Error("motion: " + out.length + " notes — " + MAX_EVENTS + " is the ceiling");
   return out;
 }
+
+/* NAMED for a shared scope (260918): the door build inlines every module into
+ * one scope and blanks the import lines, so an importer cannot alias —
+ * `parse as parseMotion` names a symbol that never exists in the built page —
+ * and the build REFUSES a re-export list by name (the night the build dropped
+ * one in silence is in the verification doctrine). So the shared names are
+ * plain exported constants; the Multetudes selection imports exactly these. */
+const parseMotion = parse;
+const describeMotion = describe;
 
 // ---------- the sketchpad's emitter (the grammar's first external producer) ----------
 

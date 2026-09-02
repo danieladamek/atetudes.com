@@ -47,6 +47,34 @@ const read = (p) => readFileSync(join(ROOT, p), "utf8");
  * The firing is the mechanism proven on real entries, end to end. */
 export const DEFERRALS = [
   {
+    /* 260918 (night 24) — CR-1 §6's deferred half. THE DISPATCH'S PROBES WERE
+     * WRONG ON THE ARTIFACT, corrected here: (1) its `until` said the harmony
+     * "cannot yet select a chord whose tones leave the key" — it can, today:
+     * a custom change of Db7 in B♭ major partitions R, 5 and 7 off the key
+     * and the face says so; (2) its `due` watched selection.mjs no longer
+     * refusing (…), which the approach half lifted the SAME night, so the
+     * entry would have fired DUE the moment it was written. The precondition
+     * that is genuinely unmet is DANIEL'S: the v1.4 Spec amendment extending
+     * §2.6's colour rule to chromatic CHORD tones, observable as the Spec's
+     * own frontmatter version. */
+    name: "chromatic-chord-alterations",
+    deferred: "CR-1 role A — a chord-supplied chromatic tone is MATERIAL (a "
+      + "member of the harmony) rather than a member of the field; drawn "
+      + "full-size, solid (§2.6's role channel). Ruled 260918; its COLOUR is "
+      + "unratified: Spec §2.6 governs approach tones only, and extending "
+      + "violet to chromatic CHORD tones needs a v1.4 amendment with an Update "
+      + "Log entry — Daniel's, not a build session's. Multetudes CAN already "
+      + "select such a chord (custom changes), so nothing but the ruling waits",
+    until: "Design Spec v1.4 — the amendment that extends §2.6's colour rule "
+      + "to every derived note event. Observable: the Spec's frontmatter "
+      + "reads doc_version: v1.4 (or later)",
+    due: () => /^doc_version: v1\.([4-9]|\d{2,})/m.test(read("docs/design-language-and-engine-spec.md")),
+    built: () => /fieldPartition[\s\S]{0,400}material/.test(read("engine/tests/selection.test.mjs")),
+    then: "build role A WITH the CR-1 §4 fieldPartition amendment in the same "
+      + "pass — the doctrine sentence and the behaviour must not land apart — "
+      + "then remove this entry",
+  },
+  {
     name: "extended-symbol-naming",
     deferred: "read-back naming past the 9th — assembleSuffix's vocabulary "
       + "stops before 11/13, so chordAt's diatonic 11ths/13ths fall back to "

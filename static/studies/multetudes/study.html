@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/field.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/field.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, hub/palette.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -166,9 +166,14 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   border:1px solid var(--edge);border-radius:8px;background:#fff;padding:5px 12px;
   font-size:15px;font-weight:bold;color:var(--ink);white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;text-align:center}
-/* variant (a): the chord's name in the degree palette's R — the shell's
- * --red IS that palette's Root (its own comment says so); no second red */
-.fd-readbox .fd-readchord{color:var(--red)}
+/* VARIANT (b), 260918 (night 24, item 2 — correcting night 23's (a), which
+ * coloured EVERY chord name in R's red, a function most chords do not have):
+ * the chord's ROOT DEGREE is a filled dot beside the name — the legend's own
+ * mark — and the name stays ink. Golden rule 8: the palette encodes function
+ * and nothing else; four of its seven colours cannot carry text, which is
+ * why the dot exists. Text red now means exactly one thing: the key. */
+.fd-readbox .fd-readchord{color:var(--ink)}
+.fd-readbox .fd-readdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
 .fd-readbox .fd-readmode{font-weight:600}
 .fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 .fd-mixrow{max-width:376px;margin-top:8px}
@@ -357,12 +362,17 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex;
   flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
 .tl-bar button:hover{border-color:var(--line);background:#fff}
-.tl-bar button.tl-cur{border-color:#B82929;color:#B82929;font-weight:bold;background:#fff}
+/* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own
+ * remedy): the current chip keeps its outline and fill; its text is ink. The
+ * red text it wore said "root" about chords that were not one. */
+.tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
+/* the chord's ROOT DEGREE dot — the legend's mark, the one palette (item 2) */
+.tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
 .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
 .tl-bar button .tl-slash{display:block;font-size:10px;color:var(--gray);line-height:1.2}
-.tl-bar button.tl-cur .tl-rn{color:#B82929}
+.tl-bar button.tl-cur .tl-rn{color:var(--gray)}
 .tl-bar button .tl-us{font-size:10.5px;font-weight:600;color:var(--ink)}
-.tl-bar button.tl-cur .tl-us{color:#B82929}
+.tl-bar button.tl-cur .tl-us{color:var(--ink)}
 #tlStripMini{position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5}
 #tlStripMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -2904,20 +2914,50 @@ function describe(parsed) {
  * Returns entries [{midi,string,fret,slot,role}...] in playing order.
  * Every derivation is asserted before return (spec §8).
  */
+/** approachMidi(item, targetMidi, {scalePcs, tonicPc}) → the approach's
+ * midi — the ONE implementation of the three approach kinds (260918, CR-1:
+ * exported so the Multetudes selection resolves approaches through the path
+ * this module already owns rather than a second arithmetic):
+ *   semi   → the target ± n semitones
+ *   scale  → k scale tones below/above, walked through scalePcs
+ *   degree → an absolute degree of the KEY, in the octave nearest the target */
+function approachMidi(it, targetMidi, ctx) {
+  if (it.kind === "semi") return targetMidi + it.delta;
+  if (it.kind === "scale") {
+    const dir = it.delta < 0 ? -1 : 1;
+    let m = targetMidi, steps = Math.abs(it.delta);
+    while (steps > 0) {
+      m += dir;
+      if (ctx.scalePcs.includes(mod12(m))) steps--;
+      if (Math.abs(m - targetMidi) > 24)
+        throw new Error("motion: scale walk ran away — scale context broken");
+    }
+    return m;
+  }
+  const pc = mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc));
+  const base = targetMidi - mod12(targetMidi) + pc;      // the octave nearest the target
+  return [base - 12, base, base + 12].reduce((a, b2) =>
+    Math.abs(b2 - targetMidi) < Math.abs(a - targetMidi) ? b2 : a);
+}
+
+/** placeNear(midi, nearFret, preferString, {set, open, nfrets}) → the nearest
+ * playable position to nearFret on the set; the target's own string wins a
+ * tie (exported 260918 for the same reason as approachMidi) */
+function placeNear(midi, nearFret, preferString, ctx) {
+  let best = null;
+  for (const sn of ctx.set) {
+    const f = midi - ctx.open[sn];
+    if (f < 0 || f > ctx.nfrets + 2) continue;
+    const d = Math.abs(f - nearFret) + (sn === preferString ? 0 : 0.25);
+    if (!best || d < best.d) best = { string: sn, fret: f, d };
+  }
+  if (!best) throw new Error("motion: no playable position for midi " + midi);
+  return best;
+}
+
 function resolve(parsed, ctx) {
   const out = [];
-  const placeOnSet = (midi, nearFret, preferString) => {
-    // nearest playable position to nearFret; prefer the target's own string
-    let best = null;
-    for (const sn of ctx.set) {
-      const f = midi - ctx.open[sn];
-      if (f < 0 || f > ctx.nfrets + 2) continue;
-      const d = Math.abs(f - nearFret) + (sn === preferString ? 0 : 0.25);
-      if (!best || d < best.d) best = { string: sn, fret: f, d };
-    }
-    if (!best) throw new Error("motion: no playable position for midi " + midi);
-    return best;
-  };
+  const placeOnSet = (midi, nearFret, preferString) => placeNear(midi, nearFret, preferString, ctx);
   let prevFret = null;
   for (const fig of parsed.figures) {
     // target first — approaches are relative to it
@@ -2964,26 +3004,7 @@ function resolve(parsed, ctx) {
     }
     // approaches, in written order, target last
     for (const it of fig.approaches) {
-      let midi;
-      if (it.kind === "semi") midi = tNote.midi + it.delta;
-      else if (it.kind === "scale") {
-        const dir = it.delta < 0 ? -1 : 1;
-        let m = tNote.midi, steps = Math.abs(it.delta);
-        while (steps > 0) {
-          m += dir;
-          if (ctx.scalePcs.includes(mod12(m))) steps--;
-          if (Math.abs(m - tNote.midi) > 24)
-            throw new Error("motion: scale walk ran away — scale context broken");
-        }
-        midi = m;
-      } else {
-        const pc = mod12(ctx.tonicPc + degreeSemis(it.deg, it.acc));
-        // the octave nearest the target
-        const base = tNote.midi - mod12(tNote.midi) + pc;
-        const cands = [base - 12, base, base + 12];
-        midi = cands.reduce((a, b) =>
-          Math.abs(b - tNote.midi) < Math.abs(a - tNote.midi) ? b : a);
-      }
+      const midi = approachMidi(it, tNote.midi, ctx);
       const pos = placeOnSet(midi, tNote.fret, tNote.string);
       const ev = { midi, string: pos.string, fret: pos.fret,
         slot: ctx.setLowHigh.indexOf(pos.string), role: "approach" };
@@ -3006,6 +3027,15 @@ function resolve(parsed, ctx) {
     throw new Error("motion: " + out.length + " notes — " + MAX_EVENTS + " is the ceiling");
   return out;
 }
+
+/* NAMED for a shared scope (260918): the door build inlines every module into
+ * one scope and blanks the import lines, so an importer cannot alias —
+ * `parse as parseMotion` names a symbol that never exists in the built page —
+ * and the build REFUSES a re-export list by name (the night the build dropped
+ * one in silence is in the verification doctrine). So the shared names are
+ * plain exported constants; the Multetudes selection imports exactly these. */
+const parseMotion = parse;
+const describeMotion = describe;
 
 // ---------- the sketchpad's emitter (the grammar's first external producer) ----------
 
@@ -3157,7 +3187,7 @@ function emitFromClicks(clicks, ctx) {
   probe([{ midi: 65, role: "approach", form: "semi" },
     { midi: 67, role: "target", degText: "5" }], "(-2)[5]");  // the tap override
 }
-return { MAX_EVENTS, degreeSemis, classify, parse, serialize, describe, resolve, approachForms, emitFromClicks };
+return { MAX_EVENTS, degreeSemis, classify, parse, serialize, describe, approachMidi, placeNear, resolve, parseMotion, describeMotion, approachForms, emitFromClicks };
 })();
 
 /* ===== engine/figure.mjs ===== */
@@ -4239,7 +4269,9 @@ function materialIn(pos, strings, fld) {
     out.push(...notesOn(s, fld).filter((n) => n.fret >= pos.fLo && n.fret <= pos.fHi));
   for (const n of out)
     if (fld.degOf(n.midi) < 0)
-      throw new Error("materialIn: a note outside the field leaked into the material");
+      throw new Error("materialIn: a note outside the field leaked into the material — " +
+        "the material is the field's own; an off-field note is legal only as a role-carrying " +
+        "APPROACH in the figure's order (CR-1 §3), and this one carries " + (n.role ? `the role "${n.role}", which is not a member's` : "no role"));
   return out;
 }
 
@@ -4437,6 +4469,8 @@ const __m_engine_selection_mjs = (() => {
 const { parseChord } = __m_engine_chord_mjs;
 const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
+const { parseMotion, describeMotion, approachMidi, placeNear } = __m_engine_motion_mjs;
+const { OPEN_MIDI } = __m_engine_field_mjs;
 /* selection.mjs — THE SELECTION: what is taken from the field's pool
  * (Multetudes child 3a — Route B, ratified 2026-08-28).
  *
@@ -4513,6 +4547,9 @@ const { positionOf, materialIn } = __m_engine_position_mjs;
  * Pure: no DOM, no globals, load-time structural assertions.
  */
 
+
+
+// 260918 (CR-1): the approach grammar and arithmetic, owned by motion.mjs — imported by their exported names (the door build blanks imports; an alias would name nothing)
 
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
@@ -4719,6 +4756,11 @@ function gripFit(tones, slots) {
  * the FIELD can carry at all. The field is the key, so a tone outside the
  * key can never be material: NOT IN THE KEY is a different absence from NOT
  * IN THIS FRAME, and both are teaching (child 7's own deliverable). */
+/* CR-1 §3 (260918): this partition still answers only NOT IN THE KEY. An
+ * offKey tone that reaches a board is legal only wearing a role (an approach
+ * tonight; a chord-supplied member once role A is ruled — deferred, see the
+ * register's chromatic-chord-alterations entry). §4's doctrine amendment is
+ * deferred with it. */
 function fieldPartition(tones, fld) {
   const inKey = [], offKey = [];
   for (const t of tones) (fld.degOf(t.pc) >= 0 ? inKey : offKey).push(t);
@@ -5016,13 +5058,24 @@ function offersOn(notes) {
  * Errors are VALUES, loud on the face, never throws: the surface owes the
  * user the reason, not a dead console.
  */
-function orderBy(address, text, notes) {
+function orderBy(address, text, notes, ctx) {
   const raw = String(text || "").toUpperCase();
-  if (/[()]/.test(raw))
-    return { order: null, err: "approaches — (…) — are not built yet: an approach note is " +
-      "chromatic, off the field, and the field's rendering law for off-field notes is undecided" };
-  if (/[\[\]]/.test(raw))
-    return { order: null, err: "[…] is a TARGET in the ratified motion grammar — the order bracket is { }" };
+  /* THE APPROACH NOTE (260918, night 24 — CR-1 ruled it, Design Spec §2.6
+   * marks it): a figure carrying ( … ) or [ … ] under the TONES address is
+   * the ratified motion grammar — (b3)[3] · (-s)[3] · (-1,+2)[R] — parsed
+   * by motion.mjs's own parser and resolved through its own arithmetic
+   * (approachMidi, placeNear). The old refusal ("the field's rendering law
+   * for off-field notes is undecided") is answered: an off-field note is
+   * legal ONLY as an APPROACH — an event that exists while it points at a
+   * target — and never as a member of the field (CR-1 §3: the guards get
+   * stronger, not weaker; see the assertion at the end). */
+  if (/[()\[\]]/.test(raw)) {
+    if (address !== "tones")
+      return { order: null, err: "approaches — (…)[…] — name TONES: the address is set to pattern; switch it to tones" };
+    if (!ctx || !ctx.fld || !Array.isArray(ctx.strings))
+      return { order: null, err: "approaches need the field and the strings to place on — this caller supplied neither" };
+    return orderWithApproaches(String(text || ""), notes, ctx);
+  }
   /* THE MODE MISMATCH, noticed by the alphabet (260902 — Daniel typed
    * R-3-5-7 under pattern and was told a true-but-useless fact about string
    * 5). R and 7 are not string numbers; 1/2/4/6 are not tone names. A figure
@@ -5103,10 +5156,96 @@ function orderBy(address, text, notes) {
       order.push(hit);
     }
   }
-  // derived, then asserted: every ordered step is a note of the selection
-  for (const n of order)
-    if (!notes.includes(n)) throw new Error("orderBy: an ordered step left the selection");
+  assertOrder(order, notes);
   return { order, err: null };
+}
+
+/* THE ROLE TEST (CR-1 §3): a step is legal if it IS a note of the selection,
+ * or if it is an APPROACH that carries a target the selection holds. An
+ * off-field step with no role, or a role with no target, throws NAMING the
+ * missing role — the bug class the old assertion caught stays caught. */
+function assertOrder(order, notes) {
+  for (const n of order) {
+    if (notes.includes(n)) continue;
+    if (n.role !== "approach")
+      throw new Error("orderBy: an ordered step left the selection carrying no role — " +
+        "an off-field note must be an approach (CR-1), and this one is unlabelled");
+    if (!n.target || !notes.includes(n.target))
+      throw new Error("orderBy: an approach step names no target in the selection — " +
+        "an approach exists only while it points at one");
+  }
+}
+
+/** orderWithApproaches(text, notes, {fld, strings}) → { order, err, describe }
+ * — the motion grammar over the Multetudes selection. A TARGET names a role
+ * the selection carries (R 3 5 7 9 11 13 by ROLE under a chord; a DEGREE
+ * from the centre under the scale box — the same two laws the plain tones
+ * figure obeys); accidentals on a target are refused by name (a role is not
+ * a spelling). Each APPROACH is resolved by motion.mjs's own arithmetic
+ * against that target's midi — semitones, scale steps through the field's
+ * pitch classes, or an absolute degree of the key — and placed at the
+ * nearest playable position on the run's strings, the target's own string
+ * preferred. The entry carries its ROLE, its TARGET, whether it is CHROMATIC
+ * (§2.6: a pitch class outside the current scale) and, when diatonic, the
+ * degree it wears — read the way the selection reads degrees (re-rooted
+ * under a centre by the same shift the target carries). describe() is
+ * motion's own sentence, routed to the face rather than rewritten. */
+function orderWithApproaches(text, notes, ctx) {
+  const src = text.replace(/\bR\b/gi, "1").replace(/S/g, "s");   // the figure's R is motion's 1; `s` is the scale
+  const parsed = parseMotion(src, "tones");
+  if (parsed.error) return { order: null, err: "figure — " + parsed.error.message };
+  const fld = ctx.fld;
+  const degreeAddressed = notes.length > 0 && notes.every((n) => n.role == null);
+  const wordOf = (d) => (d === 1 ? "root" : d + ({ 3: "rd" }[d] || "th"));
+  const order = [], used = {};
+  for (const fig of parsed.figures) {
+    const t = fig.target;
+    if (t.acc !== 0)
+      return { order: null, err: `a target is a role, not a spelling — [${t.text}] cannot be picked; the roles are R, 3, 5, 7 (9, 11, 13)` };
+    let target;
+    if (degreeAddressed) {
+      const dg = (t.deg - 1) % 7;
+      const occ = notes.filter((n) => n.deg === dg).sort((a, b) => a.midi - b.midi);
+      if (!occ.length) return { order: null, err: `this box carries no ${wordOf(t.deg)} of the centre — step or widen the window` };
+      const k = (used[t.deg] || 0) % occ.length; used[t.deg] = (used[t.deg] || 0) + 1;   // a repeat is the ordinal
+      target = occ[k];
+    } else {
+      const role = t.deg === 1 ? "R" : String(t.deg);
+      target = notes.find((n) => n.role === role);
+      if (!target) return { order: null, err: `this selection carries no ${wordOf(t.deg)}` };
+    }
+    const shift = target.deg == null ? 0 : (((target.deg - fld.degOf(target.midi)) % 7) + 7) % 7;
+    for (const it of fig.approaches) {
+      let midi;
+      try { midi = approachMidi(it, target.midi, { scalePcs: fld.pcs, tonicPc: fld.pcs[0] }); }
+      catch (e) { return { order: null, err: "figure — " + String(e.message || e).replace(/^motion: /, "") }; }
+      /* THE OCTAVE TIE (measured on the staff, 260918): an absolute-degree
+       * approach takes "the octave nearest the target", and when the two
+       * octaves are EQUALLY near motion's rule keeps the lower — which a
+       * top-four set cannot always fret. The arithmetic stands; the
+       * placement tries the equally-near octave before it refuses, and a
+       * genuinely nearer-but-unplayable note still refuses by name. */
+      const placing = { set: ctx.strings, open: OPEN_MIDI, nfrets: 15 };
+      const dist = Math.abs(midi - target.midi);
+      const octaves = [midi, ...[midi + 12, midi - 12].filter((m) => Math.abs(m - target.midi) === dist)];
+      let pos = null;
+      for (const m of octaves) { try { pos = placeNear(m, target.fret, target.string, placing); midi = m; break; } catch (e) { /* the next equally-near octave */ } }
+      if (!pos) return { order: null, err: `the approach ${midi - target.midi > 0 ? "+" : ""}${midi - target.midi} to the ${wordOf(t.deg)} has no playable position on these strings` };
+      const keyDeg = fld.degOf(midi);
+      const chromatic = keyDeg < 0;
+      order.push({ midi, string: pos.string, fret: pos.fret, role: "approach", target,
+        chromatic, deg: chromatic ? -1 : (keyDeg + shift) % 7, keyDeg });
+    }
+    order.push(target);
+  }
+  // derived, then asserted: every approach is its written relation to its target, and is placed honestly
+  for (const n of order) {
+    if (n.role !== "approach") continue;
+    if (OPEN_MIDI[n.string] + n.fret !== n.midi) throw new Error("orderBy: an approach's placement is dishonest");
+    if (n.chromatic !== (fld.degOf(n.midi) < 0)) throw new Error("orderBy: an approach's function disagrees with the field");
+  }
+  assertOrder(order, notes);
+  return { order, err: null, describe: describeMotion(parsed) };
 }
 
 /** the bracket beside each string: which steps of the order land there —
@@ -5809,12 +5948,21 @@ const { parseChord } = __m_engine_chord_mjs;
  * are indistinguishable — the distinction only exists once the chords change,
  * which is child 7's progression.
  *
- * PLACEMENT: string 6 if free, else string 5, else REFUSED BY NAME — both
- * reference strings in the set is a fact the face must say, not an empty
- * board. The nearest occurrence of the target degree to the window's centre
- * wins; outside the window it is a STRETCH — a real reach past the box,
- * carried as a flag (full colour, unmarked, per the ruling — the flag is for
- * prose, not for a badge).
+ * PLACEMENT (rewritten 260918, night 24 item 3 — Daniel: "the bass note
+ * shown on the fretboard should be the closest one available"): NEARNESS
+ * GOVERNS. The candidates are every occurrence of the target degree on EVERY
+ * free reference string (6 and 5 — a string in the set is not free); the one
+ * nearest the window's centre wins, and string 6 is only the TIEBREAK when
+ * two occurrences are equally near — so no placement that was already the
+ * nearest moves. Before tonight the string was decided FIRST by fixed
+ * priority ("6 if free, else 5") and nearness was applied to the fret
+ * inside that one string, which put the reference at fret 11 on string 6
+ * while fret 6 on string 5 sat inside the box. Both reference strings in
+ * the set → REFUSED BY NAME, a fact the face must say, not an empty board.
+ * Outside the window the placement is a STRETCH — a real reach past the
+ * box, carried as a flag (full colour, unmarked, per the ruling — the flag
+ * is for prose, not for a badge) — and under the nearest law the flag means
+ * what it says.
  *
  * THE COMPOSITE IS NAMED BY READ-BACK, never by a reverse lookup table
  * (v0.9's REV_QUAL stays in v0.9): the interval set over the reference is
@@ -5928,16 +6076,17 @@ function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   if (!free.length)
     return { note: null, stretch: false,
       reason: "strings 5 and 6 are both in the set — the reference is refused: it has nowhere to sit" };
-  const bs = free[0];
   const keyDeg = mod7(chordDeg + off);
-  const cands = notesOn(bs, fld).filter((n) => n.keyDeg === keyDeg);
+  /* NEARNESS GOVERNS (260918): every occurrence on every free string, the
+   * nearest to the window's centre first; string 6 breaks a tie */
+  const cands = free.flatMap((bs) => notesOn(bs, fld).filter((n) => n.keyDeg === keyDeg));
   if (!cands.length)
     return { note: null, stretch: false,
-      reason: `that reference tone is not on string ${bs}` };
-  cands.sort((a, b) => Math.abs(a.fret - pos.centre) - Math.abs(b.fret - pos.centre));
+      reason: `that reference tone is not on string${free.length > 1 ? "s" : ""} ${free.join(" or ")}` };
+  cands.sort((a, b) => (Math.abs(a.fret - pos.centre) - Math.abs(b.fret - pos.centre)) || (b.string - a.string));
   const note = { ...cands[0] };
   // A REAL FRETTED NOTE, asserted — the exemption this module refuses to inherit
-  if (note.string !== bs || !Number.isInteger(note.fret) || note.fret < 0
+  if (!free.includes(note.string) || !Number.isInteger(note.fret) || note.fret < 0
       || note.midi !== OPEN_MIDI[note.string] + note.fret)
     throw new Error("placeReference: the reference must be a real fretted note — string, fret, midi agreeing");
   if (note.keyDeg !== keyDeg)
@@ -6020,10 +6169,21 @@ function compositeOver(fld, refKeyDeg, tonePcs) {
   // parsed back, and the read-back agreed
   const tet = [0, 2, 4, 6].map((o) => fld.pcs[o % 7]);
   const third = placeReference("third", 0, fld, [4, 3, 2, 1], pos);
-  if (!third.note || third.note.string !== 6)
-    throw new Error("reference: a 3rd below the B♭ chord must fret on string 6");
+  /* ASSERTION REWRITTEN 260918 (item 3, rule 7): it used to demand string 6.
+   * Under the nearest law the G a 3rd below B♭ is fret 10 on string 5 from
+   * centre 6.67 (3.33 away) — string 6's fret 3 is 3.67 away, and the old
+   * law had put it there. The claim now: a free string, the nearest
+   * occurrence of all, DERIVED here rather than named. */
+  if (!third.note || ![6, 5].includes(third.note.string))
+    throw new Error("reference: a 3rd below the B♭ chord must fret on a free reference string");
   if (fld.pcs[third.note.keyDeg] !== 7)
     throw new Error("reference: a 3rd below B♭ is G");
+  {
+    const all = [6, 5].flatMap((s) => notesOn(s, fld).filter((n) => n.keyDeg === third.note.keyDeg));
+    const nearest = Math.min(...all.map((n) => Math.abs(n.fret - pos.centre)));
+    if (Math.abs(third.note.fret - pos.centre) !== nearest)
+      throw new Error("reference: the placed G is not the nearest G on the free strings");
+  }
   const gm9 = compositeOver(fld, third.note.keyDeg, tet);
   if (gm9.name !== "Gm9")
     throw new Error(`reference: B♭maj7 over G must read back as Gm9, not ${gm9.name}`);
@@ -6040,9 +6200,13 @@ function compositeOver(fld, refKeyDeg, tonePcs) {
   if (refusal.note !== null || !/strings 5 and 6 are both in the set/.test(refusal.reason || ""))
     throw new Error("reference: a full set must refuse by name");
 
-  // a placement outside the window is a stretch, said as a flag
-  const far = placeReference("root", 0, fld, [4, 3, 2, 1], { fLo: 0, fHi: 3, centre: 1.5 });
-  if (!far.note || far.stretch !== true || far.note.fret >= 0 && far.note.fret <= 3)
+  // a placement outside the window is a stretch, said as a flag.
+  // PROBE MOVED 260918 (item 3): the old window 0–3 was a stretch only under
+  // the string-first law (string 6's B♭ at fret 6); under the nearest law
+  // string 5's B♭ at fret 1 sits INSIDE it. A window at 8–9 has no B♭ on
+  // either free string inside it (6 on string 6, 1 and 13 on string 5).
+  const far = placeReference("root", 0, fld, [4, 3, 2, 1], { fLo: 8, fHi: 9, centre: 8.5 });
+  if (!far.note || far.stretch !== true || (far.note.fret >= 8 && far.note.fret <= 9))
     throw new Error("reference: a reach past the box must carry the stretch flag");
 }
 return { REF_OFFSET, centreDegreeOf, centreMaterialRef, reRead, CENTRE_SOURCES, REFERENCE_CHOICES, refOffsetOf, referenceChoicesFor, placeReference, compositeOver };
@@ -6549,7 +6713,7 @@ const etudeWalk = {
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
        * the bracket and the polyline draw — or the take's own shape */
-      const fig = orderBy(cfg.address, cfg.figure, sel);
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings });
       /* 260905, the coupling severed: Take chooses the MATERIAL, the rail's
        * Movement control chooses together-or-sequence (a scale stays a run —
        * the box has no chord to sound as one). A typed figure sequences
@@ -6718,6 +6882,44 @@ function mountMini(ctx, host) {
 return { mountMini };
 })();
 
+/* ===== hub/palette.mjs ===== */
+const __m_hub_palette_mjs = (() => {
+/* palette.mjs — THE DEGREE PALETTE, stated once (260918, night 24 item 2a).
+ *
+ * Design Spec §2.1 is the law: colour encodes FUNCTION against the current
+ * root and nothing else (golden rule 8 — never status, selection, error or
+ * emphasis). These are its seven hexes and the text rule that travels with
+ * them: the LIGHT marks (4/11 silver, 6/13 cyan, 7 amber) take dark text;
+ * the dark marks take white. Violet is OUTSIDE the palette — §2.1: "spent at
+ * v1.3 on chromatic approach tones (§2.6); it is an annotation channel and
+ * never denotes a degree."
+ *
+ * Until tonight this table was hand-copied, literal for literal, in FIVE hub
+ * modules (field-board, fretboard-stage, keyboard-strip, score-board,
+ * staff-board — the dispatch counted three) with the violet a sixth literal
+ * in score-board: standing rule 6 five times over, made due by the chip
+ * strips becoming the next consumers. One place now; the consumers import.
+ * A helper module like bus.mjs or mini.mjs — it contributes no markup, no
+ * styles, no control, so the resolver treats it as reached code only.
+ */
+const FAM = ["R", "2", "3", "4", "5", "6", "7"];
+const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
+  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
+const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
+  "5": "#fff", "6": "#212126", "7": "#212126" };
+/** §2.6's chromatic-approach colour — an annotation channel, never a degree */
+const VIOLET = "#7847A8";
+/** §2.2/§2.6's annotation gray (0.45, 0.45, 0.48) — the slur's colour */
+const ANNOTATION_GRAY = "#73737A";
+{
+  // §2.1's own text rule, asserted: light marks (4, 6, 7) take dark text
+  for (const f of ["4", "6", "7"]) if (FAM_TEXT[f] !== "#212126") throw new Error("palette: light mark " + f + " must take dark text");
+  for (const f of ["R", "2", "3", "5"]) if (FAM_TEXT[f] !== "#fff") throw new Error("palette: dark mark " + f + " must take white text");
+  if (Object.values(FAM_COLOR).includes(VIOLET)) throw new Error("palette: violet must never enter the degree palette");
+}
+return { FAM, FAM_COLOR, FAM_TEXT, VIOLET, ANNOTATION_GRAY };
+})();
+
 /* ===== hub/modules/field-board.mjs ===== */
 const __m_hub_modules_field_board_mjs = (() => {
 const { field, notesOn } = __m_engine_field_mjs;
@@ -6733,6 +6935,7 @@ const { SPLITS } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
+const { FAM_COLOR, FAM_TEXT, FAM, VIOLET, ANNOTATION_GRAY } = __m_hub_palette_mjs;
 /* field-board.mjs — ON THE NECK: Multetudes' neck, v0.9's card (children 0,
  * 2, 3a; the surface rework of 2026-08-29 under the identical-to-v0.9
  * ruling).
@@ -6786,6 +6989,8 @@ const { tonePick, pickOf } = __m_engine_selection_mjs;
 
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
+// the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
  * the set squares AND the pattern-bracket gutter, as v0.9 draws them */
@@ -6794,11 +6999,7 @@ const STR_X = FX0 + NFRETS * FW + 42;
 const BRK_X = FX0 + NFRETS * FW + 76;
 const fx = (f) => (f === 0 ? FX0 - 22 : FX0 + (f - 0.5) * FW);
 const fy = (str) => SY0 + (str - 1) * SGAP;
-const FAM = ["R", "2", "3", "4", "5", "6", "7"];
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+
 
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
@@ -6824,7 +7025,9 @@ function deriveField(fld) {
   }
   for (const d of dots)
     if (fld.degOf(d.midi) < 0 || d.fret < 0 || d.fret > NFRETS)
-      throw new Error("field-board: a derived dot is off the field or off the neck");
+      throw new Error("field-board: a derived dot is off the field or off the neck — the field's " +
+        "dots are members; an off-field dot is drawn only as a role-carrying approach from the " +
+        "figure's order (CR-1 §3), and this one carries " + (d.role ? `the role "${d.role}"` : "no role"));
   return dots;
 }
 
@@ -7008,9 +7211,14 @@ const fieldBoard = {
   border:1px solid var(--edge);border-radius:8px;background:#fff;padding:5px 12px;
   font-size:15px;font-weight:bold;color:var(--ink);white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;text-align:center}
-/* variant (a): the chord's name in the degree palette's R — the shell's
- * --red IS that palette's Root (its own comment says so); no second red */
-.fd-readbox .fd-readchord{color:var(--red)}
+/* VARIANT (b), 260918 (night 24, item 2 — correcting night 23's (a), which
+ * coloured EVERY chord name in R's red, a function most chords do not have):
+ * the chord's ROOT DEGREE is a filled dot beside the name — the legend's own
+ * mark — and the name stays ink. Golden rule 8: the palette encodes function
+ * and nothing else; four of its seven colours cannot carry text, which is
+ * why the dot exists. Text red now means exactly one thing: the key. */
+.fd-readbox .fd-readchord{color:var(--ink)}
+.fd-readbox .fd-readdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
 .fd-readbox .fd-readmode{font-weight:600}
 .fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 .fd-mixrow{max-width:376px;margin-top:8px}
@@ -7238,6 +7446,19 @@ const fieldBoard = {
           t.textContent = rf;
         }
       }
+      /* THE FIGURE, resolved here — before the selection dots — because §2.6's
+       * slur is drawn UNDER the dots (the under-draw convention) */
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings });
+      const approaches = (fig.order || []).filter((n) => n.role === "approach");
+      /* §2.6 "Connection. An approach figure joins its target with a slur in
+       * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */
+      for (const ap of approaches) {
+        const x1 = fx(ap.fret), y1 = fy(ap.string), x2 = fx(ap.target.fret), y2 = fy(ap.target.string);
+        const bulge = Math.max(10, Math.abs(x2 - x1) * 0.25);
+        el("path", { class: "fd-slur", "data-role": "slur",
+          d: `M${x1},${y1} Q${(x1 + x2) / 2},${Math.min(y1, y2) - bulge} ${x2},${y2}`,
+          fill: "none", stroke: ANNOTATION_GRAY, "stroke-width": 1.2, "pointer-events": "none" }, svg);
+      }
       for (const x of sel) {
         const fam = FAM[x.deg];
         const g = el("g", { class: "fd-sel", "data-selmidi": x.midi,
@@ -7249,10 +7470,36 @@ const fieldBoard = {
         t.textContent = x.role || fam;
       }
 
+      /* THE APPROACH MARK (260918, night 24 — CR-1 ruled it; Design Spec §2.6
+       * specifies it, every clause quoted here so the mark is the Spec's and
+       * not a design):
+       *   "Role is weight, never color. … Approach tones draw at 0.6 of the
+       *    host marker's radius, hollow — the color becomes the stroke on an
+       *    unfilled mark, with stroke weight scaling from the marker."
+       *      → r 13 × 0.6 = 7.8, fill none, the colour as the stroke; the host
+       *        dot's stroke is 2, scaled 0.6 → 1.2 … tuned to 1.6 at render
+       *        inspection ("the ratio is law; the exact value may be tuned").
+       *   "Function is still color. A diatonic approach tone is a scale
+       *    degree and keeps its §2.1 color. A chromatic approach tone — pitch
+       *    class outside the current scale — takes violet #7847A8."
+       *      → chromatic ? VIOLET : FAM_COLOR[its degree], from the one palette.
+       *   "No new ring." → none; the sounding pulse is not a role mark.
+       *   "No interval label." → no text on the mark.
+       *   "Role marks derive from the note event's role" → from the order's
+       *    entries, which carry role/target/chromatic — never assigned here.
+       * WHEN (CR-1 §2): persistently while the figure is live; data-selmidi
+       * lets the ordinary sounding pulse ring it when it sounds. */
+      for (const ap of approaches) {
+        const stroke = ap.chromatic ? VIOLET : FAM_COLOR[FAM[ap.deg]];
+        const g = el("g", { class: "fd-sel fd-appr", "data-selmidi": ap.midi, "data-role": "approach",
+          "data-selstr": ap.string, "data-selfret": ap.fret,
+          "data-chromatic": String(ap.chromatic), "data-deg": ap.chromatic ? "" : FAM[ap.deg] }, svg);
+        el("circle", { cx: fx(ap.fret), cy: fy(ap.string), r: 13 * 0.6, fill: "none",
+          stroke, "stroke-width": 1.6 }, g);
+      }
       /* THE FIGURE'S ORDER (child 3b): parsed against the selection itself,
        * drawn as v0.9 draws it — a dashed line through the ordered notes —
        * and exposed on the artifact as data-figorder for the gate */
-      const fig = orderBy(cfg.address, cfg.figure, sel);
       if (fig.order && fig.order.length > 1)
         el("polyline", { points: fig.order.map((n) => fx(n.fret) + "," + fy(n.string)).join(" "),
           fill: "none", stroke: "#212126", "stroke-width": 1.3,
@@ -7359,10 +7606,16 @@ const fieldBoard = {
        * a chord object leaves the line empty (the display is the scale's) */
       {
         /* ALWAYS (260918, item 2 — register 33): the chord and its mode, for
-         * every object. VARIANT (a), Daniel's mockup as drawn: the chord
-         * name in the degree palette's R — the same red the key wears. */
+         * every object. VARIANT (b), night 24: the root's DEGREE DOT beside
+         * the name, from the one palette, keyed to the chord's actual degree
+         * — derived from chordAt.degree, never assigned. Ink text. */
         const ml = byId("fdMode");
         ml.textContent = "";
+        if (cur.degree >= 0) {
+          const dot = d.createElement("i"); dot.className = "fd-readdot";
+          dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[cur.degree]);
+          dot.style.background = FAM_COLOR[FAM[cur.degree]]; ml.appendChild(dot);
+        }
         const ch = d.createElement("b"); ch.className = "fd-readchord"; ch.textContent = cur.symbol;
         const md = d.createElement("span"); md.className = "fd-readmode";
         md.textContent = cur.degree >= 0
@@ -7443,7 +7696,9 @@ const fieldBoard = {
         noteEl.style.color = "#B82929"; noteEl.style.fontStyle = "normal";
       } else {
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
-        noteEl.textContent = cfg.address === "pattern"
+        noteEl.textContent = fig.describe
+          ? fig.describe + (approaches.some((a2) => a2.chromatic) ? " Chromatic approaches wear violet — outside the key; diatonic ones keep their degree colour." : "")
+          : cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
           : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
       }
@@ -11200,6 +11455,7 @@ const { writtenValue } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
+const { FAM_COLOR, FAM_TEXT, FAM, VIOLET } = __m_hub_palette_mjs;
 /* staff-board.mjs — v0.9's ÉTUDE STAFF for Multetudes (surface, 2026-08-29).
  *
  * "The étude — end to end": the grand staff, treble carrying the material
@@ -11232,12 +11488,10 @@ const { tonePick, pickOf } = __m_engine_selection_mjs;
 
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
+// the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 const SVGNS = "http://www.w3.org/2000/svg";
-const FAM = ["R", "2", "3", "4", "5", "6", "7"];
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+
 const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
 const mod = (n, m) => ((n % m) + m) % m;
 
@@ -11346,10 +11600,27 @@ const staffBoard = {
       /* WRITTEN AN OCTAVE ABOVE (v0.9's rule) — the step from the FIELD'S OWN
        * SPELLING, asserted a real spelled note before it draws */
       const WRITTEN = 12;
-      const stepOf = (m0) => {
-        const m2 = m0 + WRITTEN, pc = mod(m2, 12), oct = Math.floor(m2 / 12) - 1;
-        const sp = fld.notes.find((n) => n.pc === pc);
-        if (!sp) throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable");
+      /* THE ROLE TEST (CR-1 §3, 260918): an off-field pitch is drawable ONLY
+       * as a role-carrying APPROACH — spelled the way score-board's speller
+       * spells a chromatic note (the nearest existing implementation of
+       * §2.6's colour half, read for its law: a flat key takes the letter
+       * above, flattened; a sharp key the letter below, sharpened) — and an
+       * unlabelled off-field note still throws, naming the missing role. */
+      const flatKey = String(cfg.key).includes("b") || cfg.key === "F";
+      const stepOf = (m0, role) => {
+        const m2 = m0 + WRITTEN, pc = mod(m2, 12);
+        let oct = Math.floor(m2 / 12) - 1;
+        let sp = fld.notes.find((n) => n.pc === pc);
+        if (!sp) {
+          if (role !== "approach")
+            throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable " +
+              "unless it carries a role (CR-1 §3), and this one carries " + (role ? `"${role}"` : "none"));
+          const nb = fld.notes.find((n) => n.pc === mod(pc + (flatKey ? 1 : -1), 12));
+          if (!nb) throw new Error("staff-board: a chromatic approach has no field neighbour to spell from");
+          sp = { name: nb.name[0] + (flatKey ? "b" : "#") };
+          if (sp.name.startsWith("Cb")) oct += 1;
+          if (sp.name.startsWith("B#")) oct -= 1;
+        }
         return oct * 7 + LETTERS.indexOf(sp.name[0]);
       };
       const yTreble = (s) => TY + GAP * 8 - (s - (4 * 7 + 2)) * GAP;
@@ -11365,11 +11636,11 @@ const staffBoard = {
        * figure resolves against EACH bar's own selection, exactly as the
        * walk will sound it when the bar arrives. A bar whose selection
        * cannot honour it prints the refusal in the bar. */
-      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl));
+      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings }));
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
-      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi));
-      for (const fg of figs) if (fg.order) for (const nt of fg.order) allSteps.push(stepOf(nt.midi));
+      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role));
+      for (const fg of figs) if (fg.order) for (const nt of fg.order) allSteps.push(stepOf(nt.midi, nt.role));
       const topStep = allSteps.length ? Math.max(...allSteps) : (4 * 7 + 2) + 8;
       /* a sequenced bar's stems rise 24 above the top head and the tuplet
        * numeral 4 more (260910, item 3) — the label band clears the BEAM,
@@ -11454,7 +11725,7 @@ const staffBoard = {
         const open = together ? beats >= 2 : wv >= 2;
         const xsL = [], ysL = [];
         seq.forEach((nt, k) => {
-          const st = stepOf(nt.midi), y = yTreble(st);
+          const st = stepOf(nt.midi, nt.role), y = yTreble(st);
           /* the x IS the onset: at/beats through the bar, centred in its own
            * written slot — identical to the family's (k+0.5)·(w/L) when the
            * schedule is uniform, but sourced from the event itself */
@@ -11464,6 +11735,19 @@ const staffBoard = {
             el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
           for (let q = (4 * 7 + 2) + 10; st >= q; q += 2)
             el("line", { x1: x - 9, y1: yTreble(q), x2: x + 9, y2: yTreble(q), stroke: "#B9B9BF", "stroke-width": 1 }, svg);
+          if (nt.role === "approach") {
+            /* §2.6 "Engraved notation. Approach tones render as cue-size
+             * noteheads under the same color rules." — score-board's own
+             * sizes (rx 4.5, ry 3.4); violet when chromatic, the degree
+             * colour when diatonic; hollow when the value is open; NO label
+             * (§2.6's one stated exception). Derived from the entry's role. */
+            const col = nt.chromatic ? VIOLET : FAM_COLOR[FAM[nt.deg]];
+            const head = { cx: x, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : col, stroke: col,
+              "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${x} ${y})`, "data-stmidi": nt.midi,
+              "data-stbar": ci, "data-stapproach": nt.chromatic ? "chromatic" : "diatonic" };
+            if (figHere) head["data-stfig"] = k;
+            el("ellipse", head, svg);
+          } else {
           const fam = FAM[nt.deg];
           const head = open
             ? { cx: x, cy: y, rx: 6.4, ry: 5, fill: "#fff", stroke: FAM_COLOR[fam],
@@ -11476,6 +11760,7 @@ const staffBoard = {
           const t = el("text", { x, y: y + 3, "text-anchor": "middle", "font-size": "7.5",
             fill: open ? FAM_COLOR[fam] : FAM_TEXT[fam], "font-weight": "bold", class: "st-lab" }, svg);
           t.textContent = nt.role || fam;
+          }
           if (!stacked) { xsL.push(x); ysL.push(y); }
           if (ci === index) {
             const fr = el("text", { x, y: TY + GAP * 8 + 15 + (stacked ? k * 10 : 0),
@@ -11486,7 +11771,7 @@ const staffBoard = {
         /* the notation — score-board's, on this board's heads */
         if (stacked && seq.length && beats < 4) {
           let yTop = 1e9, yLow = -1e9;
-          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi));
+          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi, nt.role));
             yTop = Math.min(yTop, y2); yLow = Math.max(yLow, y2); }
           el("line", { x1: x0 + BW * 0.34 + 6, y1: yLow, x2: x0 + BW * 0.34 + 6,
             y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "stack" }, svg);
@@ -11605,6 +11890,7 @@ const { positionOf } = __m_engine_position_mjs;
 const { diatonicTones, objectOffsets } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
+const { FAM, FAM_COLOR } = __m_hub_palette_mjs;
 /* timeline-strip.mjs — v0.9's CHART LINE, LIVE (child 7).
  *
  * Bars of chips, one per chord, widths from the chord's beats — so the split
@@ -11634,6 +11920,7 @@ const { tonePick, pickOf } = __m_engine_selection_mjs;
 
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
+
 const timelineStrip = {
   id: "timeline-strip",
   layer: "surface",
@@ -11659,12 +11946,17 @@ const timelineStrip = {
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex;
   flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
 .tl-bar button:hover{border-color:var(--line);background:#fff}
-.tl-bar button.tl-cur{border-color:#B82929;color:#B82929;font-weight:bold;background:#fff}
+/* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own
+ * remedy): the current chip keeps its outline and fill; its text is ink. The
+ * red text it wore said "root" about chords that were not one. */
+.tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
+/* the chord's ROOT DEGREE dot — the legend's mark, the one palette (item 2) */
+.tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
 .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
 .tl-bar button .tl-slash{display:block;font-size:10px;color:var(--gray);line-height:1.2}
-.tl-bar button.tl-cur .tl-rn{color:#B82929}
+.tl-bar button.tl-cur .tl-rn{color:var(--gray)}
 .tl-bar button .tl-us{font-size:10.5px;font-weight:600;color:var(--ink)}
-.tl-bar button.tl-cur .tl-us{color:#B82929}
+.tl-bar button.tl-cur .tl-us{color:var(--ink)}
 #tlStripMini{position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5}
 #tlStripMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -11712,6 +12004,13 @@ const timelineStrip = {
            * chord's own degree, the bass from the same placeReference /
            * compositeOver derivation child 5 landed — never parsed from
            * the symbol, never tabled. */
+          /* the degree dot (260918, item 2): derived from chordAt.degree — an
+           * off-key root wears none, honestly */
+          if (c.degree >= 0) {
+            const dot = d.createElement("i"); dot.className = "tl-dot";
+            dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[c.degree]);
+            dot.style.background = FAM_COLOR[FAM[c.degree]]; b.insertBefore(dot, b.firstChild);
+          }
           const rn = d.createElement("span"); rn.className = "tl-rn";
           rn.textContent = c.roman; b.appendChild(rn);
           if (cfg.bass !== "none" && cfg.object !== "scale" && c.degree >= 0 && c.tones) {
@@ -12134,7 +12433,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.4.3","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.5.0","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

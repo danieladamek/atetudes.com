@@ -1012,6 +1012,44 @@ def m39_the_row_stops_moving_as_one():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 40
+def m40_every_approach_goes_violet():
+    # 260918 item 1: the FUNCTION channel collapses — a diatonic scale-step
+    # approach is painted violet; the §2.6 colour pin for the diatonic case bites.
+    p, original, mutated = patch("engine/selection.mjs",
+        "      const chromatic = keyDeg < 0;",
+        "      const chromatic = true;   // every approach violet")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "a DIATONIC approach keeps its degree colour" in r.stdout
+        record("every approach painted violet (the diatonic case loses its degree)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the diatonic colour pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutation 41
+def m41_no_approach_goes_violet():
+    # 260918 item 1: the other way — a chromatic approach painted in a degree
+    # colour it does not have; the chromatic colour pin bites.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "        const stroke = ap.chromatic ? VIOLET : FAM_COLOR[FAM[ap.deg]];",
+        "        const stroke = FAM_COLOR[FAM[Math.max(0, ap.deg)]];   // never violet")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "a CHROMATIC approach takes violet" in r.stdout
+        record("no approach painted violet (a chromatic one wears a degree colour)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the chromatic colour pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1113,7 +1151,8 @@ def main():
                m32_the_override_goes_silent_again, m33_the_audition_goes_silent,
                m34_the_figure_tolerates_junk_again, m35_the_engine_refusal_swallowed_again,
                m36_repeat_stops_repeating, m37_restore_overwrites_the_pad_again,
-               m38_a_tone_the_object_cannot_hold_slips_through, m39_the_row_stops_moving_as_one)
+               m38_a_tone_the_object_cannot_hold_slips_through, m39_the_row_stops_moving_as_one,
+               m40_every_approach_goes_violet, m41_no_approach_goes_violet)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__
