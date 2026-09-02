@@ -943,6 +943,26 @@ def m36_repeat_stops_repeating():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 37
+def m37_restore_overwrites_the_pad_again():
+    # 260916 item 1: Restore's guard removed — the pad is overwritten in
+    # silence, exactly as Daniel lost work during the v0.4.0 review. The
+    # door pin must name the overwrite at the pad, not at the row.
+    p, original, mutated = patch("engine/notepad-surface.mjs",
+        '          if (padUnsaved()) clearConfirmShow(true, { kind: "restore", apply: applyEntry });',
+        '          if (false) clearConfirmShow(true, { kind: "restore", apply: applyEntry });   // silent again')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "Restore overwrote unsaved pad text" in r.stdout
+        record("Restore silently overwrites unsaved pad text again",
+               r.returncode != 0 and hit,
+               "suite exit %d; the item-1 pin bit at the pad: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1043,7 +1063,7 @@ def main():
                m30_the_window_forgets_the_octave, m31_a_bar_dies_without_a_reason,
                m32_the_override_goes_silent_again, m33_the_audition_goes_silent,
                m34_the_figure_tolerates_junk_again, m35_the_engine_refusal_swallowed_again,
-               m36_repeat_stops_repeating)
+               m36_repeat_stops_repeating, m37_restore_overwrites_the_pad_again)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

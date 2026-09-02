@@ -2748,6 +2748,15 @@ const { createPalette } = PALETTE;
  *   - Save files the note, CLEARS the pad, no prompt, no toast — the emptied
  *     pad is the confirmation. An empty pad still saves (config capture).
  *   - Clear confirms; "Save and clear" is the PRIMARY action, Discard second.
+ *   - Restore NEVER silently overwrites unsaved pad text (260916, item 1):
+ *     it asks through the same row, worded for restoring ("Save and
+ *     restore" / "Discard and restore" / keep writing); an empty pad
+ *     restores at once.
+ *   - The document's title (els.title, optional) is PRE-POPULATED with the
+ *     host's default name and is the single source of the name — for the
+ *     export file and for each entry filed while it stands (260916, item 2).
+ *   - Every entry exports on its own, through the one download path,
+ *     named from its own name; both outcomes speak in the row (260916, 3).
  *   - The pad is PERSISTENT UNCOMMITTED SCRATCH: autosaved on a debounce, it
  *     survives a reload and clears on save.
  *   - Storage-denied keeps working in memory AND SAYS SO, steering to Export.
@@ -2784,7 +2793,11 @@ const { createPalette } = PALETTE;
  *     confirmCancel, exportBtn?, copyBtn?, importBtn?, importFile?,
  *     msg, importMsg?, list, count?, storeNote?
  *   }
- *   file:     {title, name():string}                    // export identity
+ *   file:     {title, name(stem?):string}               // export identity —
+ *             title is the document's name NOW (a host with a title field
+ *             reads the field, falling back to its standing default); name()
+ *             derives the filename from that same string, or from the stem
+ *             it is handed (an entry's own name)
  *   adapter.nouns: {item: "entry"|"note"|…, apply: "Restore étude"|…} —
  *             the host's vocabulary; the surface composes every label
  *   importFallback?: (text) => entries[]|null           // legacy log formats
@@ -2811,7 +2824,18 @@ function createNotepadSurface(opts) {
   const applyLabel = nouns.apply || "Apply settings";
   const LABELS = { save: "Save " + itemNoun, clear: "Clear",
     export: "Export (.atchart.md)", import: "Import", copy: "Copy",
-    palette: "Palette" };
+    palette: "Palette",
+    /* THE CONFIRM ROW IS ONE IDIOM, WORDED FOR WHAT IT GUARDS (260916,
+     * item 1 — Daniel lost work to a silent Restore during the v0.4.0
+     * review: "a definite must have"). The row's verbs are composed here
+     * per INTENT, never hand-written in a host: a host's static labels are
+     * overwritten at mount, exactly as Save's are. */
+    confirm: {
+      clear:   { save: "Save and clear",   discard: "Discard",             cancel: "keep writing" },
+      restore: { save: "Save and restore", discard: "Discard and restore", cancel: "keep writing" } },
+    /* the row's own controls (260916, item 3): a saved note exports on its
+     * own, named from the document's title — no second export path */
+    entryExport: "Export", delete: "Delete" };
   let doc = emptyDoc();
   let storageOK = true;
   let padTimer = null;
@@ -2843,8 +2867,12 @@ function createNotepadSurface(opts) {
    * same fallback shape as import's own slot, generalised). The slot is
    * addressed per call site, so a refusal lands beside the button that
    * refused, not six inches away beside Save. */
-  function msgSet(cap, t, sticky) {
-    const slot = els[cap + "Msg"] || els.msg;
+  /* …and a PRESS THAT HAPPENED IN A ROW speaks in that row (260916, item 3):
+   * an explicit slot wins over the capability's, so an entry's export names
+   * its file — or its refusal — beside the button that was pressed, not up
+   * at the pad. Same message, same timing, one function. */
+  function msgSet(cap, t, sticky, slotEl) {
+    const slot = slotEl || els[cap + "Msg"] || els.msg;
     if (!slot) return;
     slot.textContent = t;
     if (t && !sticky) setTimeout(() => {
@@ -2853,10 +2881,21 @@ function createNotepadSurface(opts) {
   }
 
   // ---- save: file the note, CLEAR the pad, no prompt, no toast ----
+  /* THE DOCUMENT'S TITLE NAMES THE ENTRY TOO (260916, item 2b — ruled):
+   * the field is the single source of the name for the export file AND the
+   * practice-log entry. The name is taken at SAVE time into the entry's own
+   * `heading` slot — the model already had one, the file format already
+   * writes it (`### <heading>`) and reads it back; nothing new is tabled.
+   * A host without a title field (the hand-authored studies) files entries
+   * exactly as before: heading null, the row labelled by its derived
+   * summary. The SUMMARY still derives on every render (260811.3) — the
+   * name is the player's, the summary is the configuration's. */
+  const nameNow = () =>
+    els.title ? (String(els.title.value ?? "").trim() || file.title) : null;
   function save() {
     clearConfirmShow(false);
     const text = String(els.pad.value ?? "").trim();
-    doc = addEntry(doc, { savedAt: new Date().toISOString(), text,
+    doc = addEntry(doc, { savedAt: new Date().toISOString(), text, heading: nameNow(),
       payload: { app: adapter.app, v: adapter.version, data: adapter.snapshot() } });
     doc = { ...doc, pad: "" };
     els.pad.value = "";
@@ -2867,9 +2906,30 @@ function createNotepadSurface(opts) {
   }
 
   // ---- clear: destructive, so it CONFIRMS; Save-and-clear is primary ----
-  function clearConfirmShow(on) {
-    if (els.confirmRoot) els.confirmRoot.style.display = on ? "flex" : "none";
+  /* THE ROW CARRIES AN INTENT (260916, item 1): `pending` is what the row is
+   * guarding — a clear, or a restore that would overwrite unsaved pad text.
+   * The three answers keep their seats and their data-cap; their VERBS
+   * follow the intent (LABELS.confirm), and the root says which intent it
+   * shows in `data-intent`, so a harness can address the state by role and
+   * never by the words on the buttons (rule 12). `clearConfirmShow(true)`
+   * with no intent is the clear — the public seam keeps its old meaning. */
+  let pending = null;
+  function clearConfirmShow(on, intent) {
+    pending = on ? (intent || { kind: "clear" }) : null;
+    const kind = on ? pending.kind : "none";
+    if (els.confirmRoot) {
+      els.confirmRoot.style.display = on ? "flex" : "none";
+      els.confirmRoot.setAttribute("data-intent", kind);
+    }
+    const L = LABELS.confirm[on ? kind : "clear"];
+    if (els.confirmSave) els.confirmSave.textContent = L.save;
+    if (els.confirmDiscard) els.confirmDiscard.textContent = L.discard;
+    if (els.confirmCancel) els.confirmCancel.textContent = L.cancel;
   }
+  /* the pad holds UNSAVED text when it holds any text at all — the same
+   * predicate Clear has always used, so the two guards can never disagree
+   * about what needs asking (an empty pad asks nothing, either way) */
+  const padUnsaved = () => Boolean(String(els.pad.value ?? "").trim());
   function discard() {
     clearConfirmShow(false);
     els.pad.value = "";
@@ -2920,13 +2980,14 @@ function createNotepadSurface(opts) {
         (n === 0 ? " — everything was already here" : ""));
     } catch (e) { importMsg("import failed: " + e.message); }
   }
-  function download() {
-    let text; try { text = exportText(); } catch (e) { msgSet("export", e.message, true); return; }
+  /* ONE DOWNLOAD PATH (260916, item 3): the document's Export and an
+   * entry's Export both come through here — the text, the name and the
+   * slot differ, the mechanism does not. Reused, not forked. */
+  function download(text, name, slotEl) {
     const docm = els.pad.ownerDocument, win = docm.defaultView;
     const blob = new win.Blob([text], { type: "text/markdown" });
     const a = docm.createElement("a");
     a.href = win.URL.createObjectURL(blob);
-    const name = file.name();
     a.download = name;
     a.click();
     setTimeout(() => win.URL.revokeObjectURL(a.href), 2000);
@@ -2934,7 +2995,25 @@ function createNotepadSurface(opts) {
      * success — the browser's download chrome is not this page's answer, and
      * a successful Export looked exactly like a dead button. The message
      * names the file it wrote. */
-    msgSet("export", "exported " + name + " — check your downloads");
+    msgSet("export", "exported " + name + " — check your downloads", false, slotEl);
+  }
+  function exportDoc() {
+    let text; try { text = exportText(); } catch (e) { msgSet("export", e.message, true); return; }
+    download(text, file.name());
+  }
+  /* an entry exports ALONE, as a pure notepad file holding that one note:
+   * its title is the entry's own name (item 2's title, taken at save), and
+   * the host's name() derives the filename from the same string — the one
+   * naming rule, applied to the smaller document. An entry with no name
+   * (filed before tonight, or in a host without the field) takes the
+   * document's. Both outcomes speak in the ROW's slot: a refusal (a
+   * ```chart block in the note) names its reason exactly as Export does. */
+  function exportEntry(en, slotEl) {
+    const title = en.heading || file.title;
+    let text;
+    try { text = toAtchart({ pad: "", entries: [en] }, { title }); }
+    catch (e) { msgSet("export", e.message, true, slotEl); return; }
+    download(text, file.name(en.heading || undefined), slotEl);
   }
   async function copy() {
     let text; try { text = exportText(); } catch (e) { msgSet("copy", e.message, true); return; }
@@ -2972,35 +3051,64 @@ function createNotepadSurface(opts) {
       const hd = docm.createElement("div"); hd.className = "hd";
       const b = docm.createElement("b");
       const p = en.payload;
-      b.textContent = !p ? "note" :
+      const summary = !p ? "note" :
         p.app === adapter.app ? adapter.summarize(p.data)
         : p.app + " · v" + p.v + " (another app's settings — carried untouched)";
+      /* v0.9's own row shape for a NAMED entry (260916, item 2b): the name
+       * leads in bold, the derived summary follows on its own line — an
+       * unnamed entry reads exactly as it always has */
+      b.textContent = en.heading || summary;
       hd.appendChild(b);
       const w = docm.createElement("span"); w.className = "when";
       w.textContent = fmtWhen(en.savedAt); hd.appendChild(w);
       div.appendChild(hd);
+      if (en.heading) {
+        const sm = docm.createElement("div"); sm.className = "sum";
+        sm.textContent = summary; div.appendChild(sm);
+      }
       if (en.text) {
         const tx = docm.createElement("div"); tx.className = "note md";
         renderTo(tx, parseMarkdown(en.text));
         div.appendChild(tx);
       }
       const acts = docm.createElement("div"); acts.className = "acts";
+      /* the row's controls carry data-cap ROLES (rule 12): a harness that
+       * reads "Restore étude" or "Delete" off a button is reading a word
+       * the adapter or a redesign may change tomorrow */
       if (p && p.app === adapter.app && p.data) {
-        const rb = docm.createElement("button"); rb.textContent = applyLabel;
-        rb.addEventListener("click", () => {
+        const applyEntry = () => {
           adapter.apply(p.data);
           els.pad.value = en.text || "";           // canonical: the note returns
           doc = { ...doc, pad: els.pad.value };    // as uncommitted scratch
           persist(); onChange(); onApplied();
+        };
+        const rb = docm.createElement("button"); rb.textContent = applyLabel;
+        rb.setAttribute("data-cap", "apply");
+        /* RESTORE NEVER SILENTLY OVERWRITES THE PAD (260916, item 1 —
+         * measured at this line: `els.pad.value = en.text` ran
+         * unconditionally, and Daniel lost a note to it). Unsaved text
+         * asks, through Clear's own row worded for restoring; an empty pad
+         * restores at once, as it always did — Clear's precedent for the
+         * common case, no new friction. */
+        rb.addEventListener("click", () => {
+          if (padUnsaved()) clearConfirmShow(true, { kind: "restore", apply: applyEntry });
+          else applyEntry();
         });
         acts.appendChild(rb);
       }
+      const emsg = docm.createElement("span"); emsg.className = "emsg";
+      const xb = docm.createElement("button"); xb.textContent = LABELS.entryExport;
+      xb.setAttribute("data-cap", "entry-export");
+      xb.addEventListener("click", () => exportEntry(en, emsg));
+      acts.appendChild(xb);
       const db = docm.createElement("button");
-      db.textContent = "Delete"; db.className = "danger";
+      db.textContent = LABELS.delete; db.className = "danger";
+      db.setAttribute("data-cap", "delete");
       db.addEventListener("click", () => {
         doc = deleteEntry(doc, en.id); persist(); renderRows(); onChange();
       });
       acts.appendChild(db);
+      acts.appendChild(emsg);
       div.appendChild(acts);
       wrap.appendChild(div);
     });
@@ -3038,7 +3146,14 @@ function createNotepadSurface(opts) {
    * is untouched (entry labels stay derived). An optional slot: a host
    * without els.title keeps exactly the old behaviour. */
   if (els.title) {
-    els.title.value = doc.title || "";
+    /* PRE-POPULATED, NOT A PLACEHOLDER (260916, item 2a — ruled): the
+     * field holds a real value on first paint — the host's standing
+     * default (file.title, which the host derives from the field-or-
+     * fallback). The MODEL's title stays what the store holds: an
+     * untouched field persists nothing, so tomorrow's first paint carries
+     * tomorrow's date exactly as v0.4.0's fallback did, and an edit sticks
+     * through the input listener below (night 19's persistence). */
+    els.title.value = doc.title || file.title;
     els.title.addEventListener("input", () => {
       doc = { ...doc, title: els.title.value };
       if (padTimer) clearTimeout(padTimer);
@@ -3054,12 +3169,21 @@ function createNotepadSurface(opts) {
   if (!els.confirmRoot || !els.confirmSave || !els.confirmDiscard || !els.confirmCancel)
     throw new Error("notepad-surface: the clear capability needs its confirm " +
       "row — provide els.confirmRoot/confirmSave/confirmDiscard/confirmCancel");
-  els.confirmSave.addEventListener("click", save);
-  els.confirmDiscard.addEventListener("click", discard);
+  /* the three answers, intent-aware (260916, item 1): under a restore, Save
+   * files the pad and THEN restores; Discard drops it and then restores;
+   * keep writing does nothing at all. Under a clear, the old three. The
+   * intent is read before save()/discard() hide the row and clear it. */
+  els.confirmSave.addEventListener("click", () => {
+    const p = pending; save(); if (p && p.apply) p.apply();
+  });
+  els.confirmDiscard.addEventListener("click", () => {
+    const p = pending; discard(); if (p && p.apply) p.apply();
+  });
   els.confirmCancel.addEventListener("click", () => clearConfirmShow(false));
   els.confirmSave.setAttribute("data-cap", "clear-save");
   els.confirmDiscard.setAttribute("data-cap", "clear-discard");
-  mountCap("export", (b) => b.addEventListener("click", download));
+  clearConfirmShow(false);   // the row's labels are the surface's from first paint
+  mountCap("export", (b) => b.addEventListener("click", exportDoc));
   mountCap("copy", (b) => b.addEventListener("click", copy));
   mountCap("import", (b) => {
     if (!els.importFile) {
@@ -3124,7 +3248,8 @@ function createNotepadSurface(opts) {
 
   return {
     getDoc: () => doc,
-    setDoc: (d) => { doc = { pad: String(d.pad ?? ""), entries: (d.entries || []).map(makeEntry) };
+    setDoc: (d) => { doc = { pad: String(d.pad ?? ""), title: String(d.title ?? ""),
+        entries: (d.entries || []).map(makeEntry) };
       els.pad.value = doc.pad; persist(); renderRows(); onChange(); },
     save, clearConfirmShow, exportText, importText, renderRows,
     get storageOK() { return storageOK; },

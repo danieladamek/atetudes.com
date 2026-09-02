@@ -1,3 +1,38 @@
+## 2026-09-01 — Multetudes v0.4.1: night 21, the notepad — three of Daniel's v0.4.0 findings land; four studies move
+
+- **Source edition v0.4.1** (night 21; the full report in `notes/working/Multetudes build run
+  260916.md`; the rulings in `notes/working/Multetudes PO rulings 260916 — the v0.4.0 review,
+  all ten.md`). The first of two nights: the notepad and the shell. The shell did NOT move
+  (`hub/shell.mjs` 16,401 bytes, unchanged); item 4, row collapse, was measured and PROPOSED.
+- **What changed on every notepad face** (the shared surface, so every carrier):
+  - **Restore never silently overwrites the pad** (item 1, the live defect — Daniel lost work to
+    it). Unsaved pad text now asks through Clear's own row, worded for restoring: *Save and
+    restore · Discard and restore · keep writing*. An empty pad restores at once, as before.
+  - **The title field is real** (item 2): pre-populated with `multetudes journal — <date>` (the
+    export convention Daniel approved, in the placeholder's format), editable, and the single
+    source of the name for the export file AND each entry filed while it stands. **An untouched
+    field writes exactly v0.4.0's file name** — `multetudes-journal-<date>.atchart.md`, pinned
+    as an exact equality. New entries lead with their name; the derived summary follows.
+  - **Every practice-log entry exports on its own** (item 3), named from its title, through the
+    one download path; success and refusal both speak in the row.
+- **Four studies moved, and why:**
+  - **multetudes** — republished cmp-identical (589,642 bytes, was 579,495): the three items
+    above and the v0.4.1 note.
+  - **tetradetudes** — republished cmp-identical (439,420 bytes, was 429,273): carries the same
+    surface; wears v0.4.1 with a note saying nothing of its own changed.
+  - **metronome** (159,804, was 151,984) and **triadetudes** (336,515, was 328,695) — the
+    hand-authored studies: `notepad-surface` re-inlined verbatim. Both gain the restore guard
+    and the row export; neither has a title field, so their entries file exactly as before.
+    OWED_DRIFT stayed EMPTY — re-inlined the same hour, nothing recorded, nothing re-opened.
+- **The harness re-aimed by role** (rule 12): five text/glyph lookups in the door gate
+  re-aimed to `data-cap`/`data-intent`; 57 text-addressed seg-button clicks reported for
+  night 22 with the attribute each already carries.
+- Verified: engine 576/576 (570 at the open; six new pins, each shown red first through
+  `redrun.py`) · four-door gate 17,818/0 (`hub/tests/out/doors-0901-1749.log`) · hub tests ·
+  family floor 20 surfaces 13/7-exempt/0 · bite 38/38 (`hub/tests/out/bite-0901-1755.log`, m37 in) · hugo exit 0 · check_site 21 pages ·
+  the ritual on ALL FOUR moved studies at 1380px and 390px on the served build, the new
+  behaviour exercised, zero console errors on all eight loads.
+
 ## 2026-09-01 — DEPLOYED: v0.4.0 live, all four moved studies spot-checked
 
 - Actions run 33552618431 green (full gates in CI). Every moved study's live shasum

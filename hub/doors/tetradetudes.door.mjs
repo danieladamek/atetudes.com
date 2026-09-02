@@ -88,7 +88,11 @@ export default {
      * metronome range is 15–300 bpm (Daniel's call, first modification under
      * the foundational-components ruling; the transport mirror moves with
      * it, the tap clamp widens in metronome.mjs, re-inlined per census). */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.4.0",
+    /* v0.4.1 (260916, night 21): carried along — the notepad surface it
+     * shares moved (Restore confirms over unsaved text; the title is
+     * pre-populated and names each entry; entries export on their own).
+     * Nothing of this door's own changed. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.4.1",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

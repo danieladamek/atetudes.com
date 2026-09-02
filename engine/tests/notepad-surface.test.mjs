@@ -139,7 +139,12 @@ for (const host of HOSTS) {
     const s3 = createNotepadSurface({ adapter: host.adapter, storage: stOld,
       els: els3, file: host.file });
     assert.equal(s3.getDoc().title, "", "a v1 store loads with the empty name");
-    assert.equal(els3.title.value, "");
+    /* PIN REWRITTEN 260916 (item 2a, rule 7): the FIELD is pre-populated
+     * with the host's standing default while the MODEL's title stays empty
+     * — an untouched field persists nothing, so the fallback (and its date)
+     * is computed fresh on every paint, exactly as v0.4.0's export did. */
+    assert.equal(els3.title.value, host.file.title,
+      "the field shows the standing default; the model's name is still empty");
   });
 
   test(`storage-denied [${host.name}]: still works, SAYS SO, still exports`, () => {
@@ -195,7 +200,10 @@ test("rows: derived labels via the adapter; foreign payloads named, inert, apply
   const btns = [];
   (function walk(n) { if (n.tagName === "BUTTON") btns.push(n.textContent);
     (n.childNodes || []).forEach(walk); })(foreign);
-  assert.deepEqual(btns, ["Delete"], "no apply control on a foreign row");
+  /* PIN REWRITTEN 260916 (item 3, rule 7): a foreign row still has NO apply
+   * control — but every row exports, a foreign one included: the file is
+   * how another app's entry travels back to the app that can read it. */
+  assert.deepEqual(btns, ["Export", "Delete"], "no apply control on a foreign row — Export and Delete only");
   // and the note markdown rendered as DOM (em node), never as markup text
   const mine = rows.find((r) => r.textContent.includes("Eb · 96 bpm"));
   let em = null;
@@ -276,3 +284,146 @@ test("the handoff guarantee is emitted by the surface in every host", () => {
         + "Moving notes anywhere happens only through the file Export writes.");
   }
 });
+
+// ---- 260916, the v0.4.0 review — items 1, 2 and 3 of the notepad night ----
+
+for (const host of HOSTS) {
+  test(`260916 item 1 [${host.name}]: Restore never silently overwrites unsaved pad text — the three answers`, () => {
+    const els = makeEls();
+    const applied = [];
+    const adapter = { ...host.adapter, apply: (d) => applied.push(d) };
+    const s = createNotepadSurface({ adapter, storage: memStorage(false), els, file: host.file });
+    // an entry to restore, with a note of its own
+    els.pad.value = "the filed note"; els.pad.dispatch("input");
+    els.saveBtn.click();
+    const row = els.list.childNodes[0];
+    const btn = (cap) => { let b = null; (function walk(n) {
+      if (n.attributes && n.attributes["data-cap"] === cap) b = n;
+      (n.childNodes || []).forEach(walk); })(row); return b; };
+    assert.ok(btn("apply") && btn("delete") && btn("entry-export"),
+      "the row's controls carry roles, not just words");
+    // MEASURED (engine/notepad-surface.mjs:259 before tonight): apply ran
+    // unconditionally and the pad was overwritten. Now: unsaved text ASKS.
+    els.pad.value = "unsaved words that must survive"; els.pad.dispatch("input");
+    btn("apply").click();
+    assert.equal(els.confirmRoot.style.display, "flex", "unsaved text asks before restoring");
+    assert.equal(els.confirmRoot.attributes["data-intent"], "restore", "the row says what it guards");
+    assert.equal(els.pad.value, "unsaved words that must survive", "nothing was overwritten by the press");
+    assert.deepEqual([els.confirmSave.textContent, els.confirmDiscard.textContent, els.confirmCancel.textContent],
+      ["Save and restore", "Discard and restore", "keep writing"], "the row is worded for restoring");
+    assert.equal(applied.length, 0, "the restore has NOT happened yet");
+    // answer 1 — keep writing: nothing moves
+    els.confirmCancel.click();
+    assert.equal(els.confirmRoot.style.display, "none");
+    assert.equal(els.pad.value, "unsaved words that must survive", "keep writing keeps the text");
+    assert.equal(applied.length, 0, "…and restores nothing");
+    assert.equal(s.getDoc().entries.length, 1, "…and files nothing");
+    // answer 2 — Discard and restore: the draft is dropped, the entry returns
+    btn("apply").click(); els.confirmDiscard.click();
+    assert.equal(applied.length, 1, "Discard and restore RESTORES");
+    assert.equal(els.pad.value, "the filed note", "the entry's note returns to the pad");
+    assert.equal(s.getDoc().entries.length, 1, "the draft was filed nowhere");
+    // answer 3 — Save and restore: the draft is filed first, then the entry returns
+    els.pad.value = "a second draft worth keeping"; els.pad.dispatch("input");
+    btn("apply").click(); els.confirmSave.click();
+    assert.equal(applied.length, 2, "Save and restore RESTORES");
+    assert.equal(s.getDoc().entries.at(-1).text, "a second draft worth keeping", "…after FILING the draft");
+    assert.equal(els.pad.value, "the filed note", "…and the entry's note is back in the pad");
+    // the common case keeps no ceremony: an empty pad restores at once
+    els.pad.value = ""; els.pad.dispatch("input");
+    btn("apply").click();
+    assert.notEqual(els.confirmRoot.style.display, "flex", "an empty pad restores without asking");
+    assert.equal(applied.length, 3);
+    assert.equal(els.pad.value, "the filed note");
+    // and Clear still wears its own words when it is Clear that asks
+    els.clearBtn.click();
+    assert.equal(els.confirmRoot.attributes["data-intent"], "clear");
+    assert.deepEqual([els.confirmSave.textContent, els.confirmDiscard.textContent],
+      ["Save and clear", "Discard"], "Clear's row keeps Clear's verbs");
+    els.confirmCancel.click();
+  });
+
+  test(`260916 item 2 [${host.name}]: the title is PRE-POPULATED and names the entry too`, async () => {
+    const st = memStorage(false);
+    const els = makeEls();
+    const s = createNotepadSurface({ adapter: host.adapter, storage: st, els, file: host.file });
+    // 2a: a real value on first paint — the host's standing default — while
+    // the model's title stays empty (an untouched field persists nothing)
+    assert.equal(els.title.value, host.file.title, "the field holds the default, not a placeholder");
+    assert.equal(s.getDoc().title, "", "…and nothing was persisted for it");
+    // 2b: an entry filed under the untouched field carries the default name
+    els.pad.value = "filed under the default name"; els.pad.dispatch("input");
+    els.saveBtn.click();
+    assert.equal(s.getDoc().entries[0].heading, host.file.title, "the entry is named from the field");
+    // a typed name sticks (night 19's persistence) and names the next entry
+    els.title.value = "Dorian week 3"; els.title.dispatch("input");
+    await new Promise((r) => setTimeout(r, 350));
+    assert.equal(JSON.parse(st.peek()).title, "Dorian week 3", "the edit persisted");
+    els.pad.value = "filed under the typed name"; els.pad.dispatch("input");
+    els.saveBtn.click();
+    assert.equal(s.getDoc().entries[1].heading, "Dorian week 3");
+    // the row leads with the name in bold and carries the derived summary below
+    const row = els.list.childNodes[0];                    // newest first
+    let b = null, sum = null;
+    (function walk(n) { if (n.tagName === "B") b = n; if (n.className === "sum") sum = n;
+      (n.childNodes || []).forEach(walk); })(row);
+    assert.equal(b && b.textContent, "Dorian week 3", "the name leads");
+    assert.ok(sum && sum.textContent.length > 0 && sum.textContent !== "Dorian week 3",
+      "the derived summary still shows — Restore is not blind");
+    // the name reaches the FILE (### <name>) and comes back through import
+    const text = s.exportText();
+    assert.ok(text.includes("\n### Dorian week 3\n"), "the entry's heading is its name in the file");
+    assert.ok(text.includes("\n### " + host.file.title + "\n"));
+    const els2 = makeEls();
+    const s2 = createNotepadSurface({ adapter: host.adapter, storage: memStorage(false),
+      els: els2, file: host.file });
+    s2.importText(text);
+    assert.deepEqual(s2.getDoc().entries.map((e) => e.heading), [host.file.title, "Dorian week 3"],
+      "the names survive the round trip");
+    // an emptied field falls back to the default for the next entry
+    els.title.value = ""; els.title.dispatch("input");
+    els.pad.value = "filed after emptying the field"; els.pad.dispatch("input");
+    els.saveBtn.click();
+    assert.equal(s.getDoc().entries[2].heading, host.file.title, "empty falls back to the same default");
+  });
+
+  test(`260916 item 3 [${host.name}]: every entry exports on its own, named from its title, speaking in its row`, () => {
+    const els = makeEls();
+    const names = [];
+    const file = { ...host.file, name: (stem) => { names.push(stem); return (stem || "doc") + ".atchart.md"; } };
+    const s = createNotepadSurface({ adapter: host.adapter, storage: memStorage(false), els, file });
+    els.title.value = "Dorian week 3"; els.title.dispatch("input");
+    els.pad.value = "one note, exported alone"; els.pad.dispatch("input");
+    els.saveBtn.click();
+    const win = els.pad.ownerDocument.defaultView;
+    const row = els.list.childNodes[0];
+    let xb = null, emsg = null;
+    (function walk(n) { if (n.attributes && n.attributes["data-cap"] === "entry-export") xb = n;
+      if (n.className === "emsg") emsg = n; (n.childNodes || []).forEach(walk); })(row);
+    assert.ok(xb && emsg, "the row carries an Export control and its own message slot");
+    xb.click();
+    assert.equal(names.at(-1), "Dorian week 3", "the filename derives from the ENTRY's name through the host's one rule");
+    assert.equal(win.downloads.length, 1, "one file was written");
+    assert.equal(win.downloads[0].download, "Dorian week 3.atchart.md");
+    const written = win.downloads[0].text;
+    assert.ok(written.includes("one note, exported alone") && written.includes("### Dorian week 3"),
+      "the file holds that entry, under its name");
+    assert.ok(!written.includes("## Notes\n\n### " + host.file.title), "…and no other");
+    assert.equal(emsg.textContent, "exported Dorian week 3.atchart.md — check your downloads",
+      "success speaks IN THE ROW and names the file");
+    assert.equal(els.msg.textContent, "", "…not up at the pad");
+    // the whole-document Export still names the document, not the entry
+    els.exportBtn = null;
+    // the refusal names its reason in the row too: a note holding a chart block
+    s.setDoc({ pad: "", title: "t", entries: [{ id: "c", savedAt: "2026-09-01T10:00:00.000Z",
+      heading: "chart note", text: "```chart\n| Dm7 G7 |\n```",
+      payload: { app: host.adapter.app, v: 1, data: {} } }] });
+    const row2 = els.list.childNodes[0];
+    xb = null; emsg = null;
+    (function walk(n) { if (n.attributes && n.attributes["data-cap"] === "entry-export") xb = n;
+      if (n.className === "emsg") emsg = n; (n.childNodes || []).forEach(walk); })(row2);
+    xb.click();
+    assert.equal(win.downloads.length, 1, "a refused export writes nothing");
+    assert.match(emsg.textContent, /a saved note holds a ```chart block/, "the refusal names its reason, in the row");
+  });
+}

@@ -70,6 +70,14 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
+    /* v0.4.1 (260916, night 21 — the notepad, from Daniel's v0.4.0 review):
+     * Restore never silently overwrites unsaved pad text (the same confirm
+     * row as Clear, worded for restoring — item 1, live); the title field
+     * is REAL — pre-populated with the standing default and the single
+     * source of the name for the export file and each entry (item 2); every
+     * practice-log entry exports on its own, named from that title, through
+     * the one download path (item 3). The row-collapse (item 4) is PROPOSED,
+     * not built — the shell did not move. */
     /* v0.4.0 (260915, THE STABLE PASS — the reconciled family baseline):
      * every door wears this version at the freeze. OWED_DRIFT emptied (the
      * four owed modules re-inlined/republished), the 260830 marker drift
@@ -105,7 +113,7 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.4.0",
+    blurb: "one tool that holds many études · v0.4.1",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

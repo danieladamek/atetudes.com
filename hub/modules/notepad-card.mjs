@@ -116,8 +116,11 @@ export const notepadCard = {
   color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
+/* 215px (260916, item 2a): wide enough to show the whole pre-populated
+ * default, "multetudes journal — 2026-09-16" — a field that clips the value
+ * it holds does not visibly hold it (170px clipped the date) */
 #npTitle{font:inherit;font-size:11.5px;padding:2px 7px;border:1px solid var(--line);
-  border-radius:6px;color:var(--ink);width:170px}
+  border-radius:6px;color:var(--ink);width:215px}
 .journalcontrols{margin-top:10px}
 .journalconfirm{display:none;margin-top:6px}
 .padmsgs{margin-top:6px;min-height:0}
@@ -132,6 +135,13 @@ export const notepadCard = {
 .hist .acts button{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
 .hist .acts button.danger{color:var(--red)}
+/* a NAMED entry (260916, item 2b) leads with its name in bold and carries
+ * its derived summary on the line below — v0.9's own row shape */
+.hist .sum{color:var(--gray);font-size:11.5px;margin:1px 0 2px}
+/* the row's own message slot (260916, item 3): an entry's export speaks
+ * beside the button that was pressed, never up at the pad */
+.hist .acts .emsg{font-size:11px;color:var(--gray);align-self:center}
+.hist .acts .emsg:empty{display:none}
 .hist .note.md{white-space:normal}
 .hist .note.md p{margin:4px 0}
 .hist .note.md pre{background:var(--ground);border-radius:6px;padding:5px 7px;
@@ -222,6 +232,11 @@ export const notepadCard = {
       if (body !== lastChart) { lastChart = body; announce(d, CONFIG_CHANGED, { chart: body }); }
     };
 
+    const typed = () => (byId("npTitle").value || "").trim();
+    const fallback = () => doorId + " journal — " + new Date().toISOString().slice(0, 10);
+    const safeName = (t) => t.replace(/[\\/:*?"<>|]+/g, "").replace(/[\s—–-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
     let surface = null;
     surface = createNotepadSurface({
       adapter: {
@@ -266,22 +281,28 @@ export const notepadCard = {
         list: byId("histList"), count: byId("histCount"),
         storeNote: byId("storeNote"), controls: byId("journalControls"),
         handoff: byId("handoffNote") },
-      /* the typed title wins; empty falls back to the standing default —
-       * read per call (a getter), so the export always sees the field NOW */
+      /* THE ONE NAMING RULE (260916, item 2 — ruled): the field is the single
+       * source of the name; empty falls back to the standing default, which
+       * is v0.4.0's export convention Daniel approved verbatim ("multetudes
+       * journal, that's what I'd hope for") in the placeholder's own format —
+       * `<door> journal — <date>`. The filename DERIVES from that string by
+       * one sanitiser (illegal filename characters dropped; whitespace and
+       * dashes fold to one hyphen), so an untouched field writes EXACTLY
+       * v0.4.0's `multetudes-journal-<date>.atchart.md` — proven at the
+       * artifact by the door gate. name() takes an optional stem: an entry's
+       * own name, so the surface's per-entry export names its file by the
+       * same rule (item 3) and no second naming path exists. Read per call
+       * (a getter), so the export always sees the field NOW. */
       file: {
-        get title() {
-          return (byId("npTitle").value || "").trim() || doorId + " journal";
-        },
-        name: () => {
-          const t = (byId("npTitle").value || "").trim();
-          return (t ? t.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-")
-                    : doorId + "-journal-" + new Date().toISOString().slice(0, 10))
-            + ".atchart.md";
-        },
+        get title() { return typed() || fallback(); },
+        name: (stem) => safeName(stem !== undefined ? String(stem).trim() || fallback()
+                                                     : typed() || fallback()) + ".atchart.md",
       },
       onChange: () => { ctx.changed(); announceChart(surface ? surface.getDoc().pad : ""); },
     });
     announceChart(surface.getDoc().pad);
-    byId("npTitle").placeholder = "title — " + new Date().toISOString().slice(0, 10);
+    /* the placeholder is the fallback itself: a field the player empties
+     * shows, greyed, exactly the name the export will fall back to */
+    byId("npTitle").placeholder = fallback();
   },
 };

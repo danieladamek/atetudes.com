@@ -5,7 +5,22 @@
  * them. No innerHTML exists anywhere in it.
  */
 export function makeDoc() {
+  /* a window just wide enough for the download path (260916, item 3): a
+   * Blob keeps its text, an object URL is a key back to it, and an <a>
+   * element's click() records {download, text} in win.downloads — so the
+   * surface's real download() runs headless and the test reads WHAT WAS
+   * WRITTEN (the artifact), never a flag. navigator has no clipboard:
+   * copy's "unavailable" outcome stays exercised. */
+  const blobs = new Map();
+  const win = {
+    downloads: [],
+    Blob: class { constructor(parts) { this.text = parts.join(""); } },
+    URL: { createObjectURL(b) { const u = "blob:" + blobs.size; blobs.set(u, b); return u; },
+           revokeObjectURL() {} },
+    navigator: {},
+  };
   const doc = {
+    defaultView: win,
     createElement(tag) {
       const el = {
         tagName: tag.toUpperCase(), ownerDocument: doc, childNodes: [],
@@ -18,7 +33,12 @@ export function makeDoc() {
         get className() { return this.attributes.class || ""; },
         addEventListener(t, fn) { (this._ls[t] = this._ls[t] || []).push(fn); },
         dispatch(t, ev) { for (const fn of this._ls[t] || []) fn(ev || { target: this }); },
-        click() { this.dispatch("click"); },
+        click() {
+          if (this.tagName === "A" && this.download !== undefined)
+            win.downloads.push({ download: this.download,
+              text: (blobs.get(this.href) || { text: "" }).text });
+          this.dispatch("click");
+        },
         set textContent(t) { this.childNodes = [doc.createTextNode(String(t))]; },
         get textContent() { return this.childNodes.map((c) => c.textContent).join(""); },
       };

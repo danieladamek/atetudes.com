@@ -25,6 +25,7 @@ zero console errors, and exercising the door rather than merely loading it.
 
 usage:  python3 hub/tests/door_locks.py [--shots]
 """
+import datetime
 import json
 import re
 import subprocess
@@ -460,7 +461,9 @@ def run_door(pw, door_id):
             "() => JSON.stringify(JSON.parse(localStorage.getItem('multetudes.v1.log')).entries[0])")
         page.click('#fieldSvg [data-fdstr="2"]'); page.wait_for_timeout(100)
         check(hint() != saved_hint, f"{tag} changing the set changed nothing to restore")
-        page.click(".hist .acts button >> text=Restore étude"); page.wait_for_timeout(150)
+        # RE-AIMED BY ROLE 260916 (rule 12): was `>> text=Restore étude` — a
+        # label the adapter composes and a redesign may reword
+        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
         check(hint() == saved_hint,
               f"{tag} the restored étude is not the saved one:\n  saved    {saved_hint!r}\n  restored {hint()!r}")
         check_window("after Restore")
@@ -1092,8 +1095,15 @@ def run_door(pw, door_id):
         check(np_t.get("there") and np_t["slot"] and np_t["topAligned"] and np_t["leftOfChevron"],
               f"{tag} the title sits in the header band, top-aligned, left of the "
               f"chevron: {np_t}")
-        check(np_t.get("there") and np_t["placeholder"].startswith("title — 2"),
-              f"{tag} the placeholder carries today's derived date: {np_t.get('placeholder')!r}")
+        # PIN REWRITTEN 260916 (item 2a, rule 7): the field is PRE-POPULATED
+        # with the standing default, and the placeholder now IS that default
+        # (was "title — <date>"), so an emptied field shows, greyed, exactly
+        # the name the export will fall back to. The date is derived here
+        # independently (UTC, as the page's ISO stamp is).
+        today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+        np_default = f"multetudes journal — {today}"
+        check(np_t.get("there") and np_t["placeholder"] == np_default,
+              f"{tag} the placeholder is the standing default name: {np_t.get('placeholder')!r}")
         # the typed title reaches the EXPORTED ARTIFACT: the success message
         # names the file it wrote (the 260911 channel), and the file's name
         # derives from the field
@@ -1108,8 +1118,11 @@ def run_door(pw, door_id):
         page.fill("#npTitle", ""); page.wait_for_timeout(100)
         page.click("#exportLog"); page.wait_for_timeout(300)
         np_msg = page.evaluate("() => document.getElementById('exportMsg').textContent")
-        check("multetudes-journal-" in np_msg and ".atchart.md" in np_msg,
-              f"{tag} an empty field falls back to the standing default name: {np_msg!r}")
+        # PIN SHARPENED 260916 (item 2, rule 7): the fallback name is asserted
+        # EXACTLY — v0.4.0's `multetudes-journal-<date>.atchart.md`, the
+        # convention Daniel approved verbatim, now derived from the field
+        check(np_msg == f"exported multetudes-journal-{today}.atchart.md — check your downloads",
+              f"{tag} an empty field falls back to v0.4.0's exact default name: {np_msg!r}")
 
         # ---- 260914 item 5: THE TITLE PERSISTS WITH THE PAD (ruled, overruling v0.9) ----
         # The pad already survives a reload; a note that comes back without
@@ -1132,6 +1145,132 @@ def run_door(pw, door_id):
         check("Dorian-week-3.atchart.md" in np5m,
               f"{tag} 5: the persisted title still names the exported file: {np5m!r}")
         # leave the store as the leg found it (an empty title, an empty pad)
+        page.fill("#npTitle", ""); page.dispatch_event("#npTitle", "input")
+        page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(450)
+
+        # ---- 260916 item 2: THE TITLE IS REAL — pre-populated, the single source ----
+        # Ruled at the v0.4.0 review: a real value on first paint (not a
+        # placeholder), editable, and the ONE source of the name for the
+        # export file AND the practice-log entry. The convention Daniel
+        # approved verbatim ("multetudes journal") stays; the field drives it.
+        page.reload(); page.wait_for_timeout(700)      # the store's title is empty: a first paint
+        np2 = page.evaluate("""() => { const t = document.getElementById('npTitle');
+          return { value: t.value, placeholder: t.placeholder }; }""")
+        check(np2["value"] == np_default,
+              f"{tag} 2a: the field holds the standing default on first paint: {np2}")
+        # THE UNTOUCHED FIELD BEHAVES EXACTLY AS v0.4.0: the export is named
+        # byte-for-byte as before — the proof that this is no behaviour
+        # change for an existing user
+        page.fill("#journalIn", "untouched-field export"); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(400)
+        page.click("#exportLog"); page.wait_for_timeout(300)
+        np2m = page.evaluate("() => document.getElementById('exportMsg').textContent")
+        check(np2m == f"exported multetudes-journal-{today}.atchart.md — check your downloads",
+              f"{tag} 2: an untouched field writes v0.4.0's exact file name: {np2m!r}")
+        # 2b: the entry filed under the untouched field carries the default
+        # name in bold and its DERIVED summary on the line below (v0.9's row)
+        page.click("#saveEntry"); page.wait_for_timeout(200)
+        row0 = page.evaluate("""() => { const r = document.querySelector('.hist');
+          const b = r.querySelector('b'), s = r.querySelector('.sum');
+          return { name: b && b.textContent, sum: s && s.textContent }; }""")
+        check(row0["name"] == np_default,
+              f"{tag} 2b: the entry is named from the field: {row0}")
+        check(bool(row0["sum"]) and "bpm" in row0["sum"] and "B" in row0["sum"],
+              f"{tag} 2b: the derived summary still shows under the name — Restore is not blind: {row0}")
+        stored_h = page.evaluate("() => JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.at(-1).heading")
+        check(stored_h == np_default, f"{tag} 2b: the stored entry carries its name: {stored_h!r}")
+        # a typed name names the next entry
+        page.fill("#npTitle", "Dorian week 3"); page.dispatch_event("#npTitle", "input")
+        page.fill("#journalIn", "the named note"); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(400)
+        page.click("#saveEntry"); page.wait_for_timeout(200)
+        row1 = page.evaluate("() => document.querySelector('.hist b').textContent")
+        check(row1 == "Dorian week 3", f"{tag} 2b: the typed name names the entry: {row1!r}")
+
+        # ---- 260916 item 3: EVERY ENTRY EXPORTS ON ITS OWN, named from its title ----
+        # Restore → Export was the only route (counterproductive, and until
+        # item 1 it destroyed the pad). Each row exports through the ONE
+        # download path; both outcomes speak in the row's own slot.
+        page.click(".hist .acts button[data-cap='entry-export']"); page.wait_for_timeout(300)
+        row_msg = page.evaluate("() => document.querySelector('.hist .acts .emsg').textContent")
+        check(row_msg == "exported Dorian-week-3.atchart.md — check your downloads",
+              f"{tag} 3: the entry exports alone, named from its title, speaking in its row: {row_msg!r}")
+        # MEASURED on the first run (rule 4): the pad's slot was not empty —
+        # it still held the DOCUMENT export's message from 1.4 s earlier
+        # (messages live 2.2 s), not the row's. The honest assertion is the
+        # effect: the row's file name never appears in the pad's slot.
+        pad_slot = page.evaluate("() => document.getElementById('exportMsg').textContent")
+        check("Dorian-week-3" not in pad_slot,
+              f"{tag} 3: the row's export must not speak up at the pad: {pad_slot!r}")
+        # the refusal: a note holding a ```chart block cannot be written — the
+        # reason lands in the row, in the same plain words Export uses
+        page.fill("#journalIn", "with a chart\n```chart\n| Dm7 G7 |\n```")
+        page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
+        page.click("#saveEntry"); page.wait_for_timeout(200)
+        page.click(".hist .acts button[data-cap='entry-export']"); page.wait_for_timeout(300)
+        row_msg = page.evaluate("() => document.querySelector('.hist .acts .emsg').textContent")
+        check("a saved note holds a ```chart block" in row_msg and "move the chart into the pad" in row_msg,
+              f"{tag} 3: a refused entry export names its reason in the row: {row_msg!r}")
+        n_del = page.evaluate("""() => { const d = document.querySelector('.hist .acts button[data-cap="delete"]');
+          if (!d) return 0; d.click(); return 1; }""")
+        check(n_del == 1, f"{tag} 3: the chart entry's Delete control was not found by role")
+        page.wait_for_timeout(150)
+
+        # ---- 260916 item 1: RESTORE NEVER SILENTLY OVERWRITES THE PAD (first: it is live) ----
+        # MEASURED at engine/notepad-surface.mjs:259 — `els.pad.value = en.text`
+        # ran unconditionally; Daniel lost work to it during the review. Now
+        # unsaved text asks through Clear's own row, worded for restoring;
+        # the three answers are pinned; an empty pad restores at once.
+        page.fill("#journalIn", "unsaved words that must survive"); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(400)
+        n_before = page.evaluate("() => JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length")
+        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(200)   # newest row: the named note
+        cf = page.evaluate("""() => { const c = document.getElementById('clearConfirm');
+          return { shown: getComputedStyle(c).display !== 'none', intent: c.getAttribute('data-intent'),
+            pad: document.getElementById('journalIn').value,
+            labels: ['clearSave', 'clearDiscard', 'clearCancel'].map(i => document.getElementById(i).textContent) }; }""")
+        check(cf["pad"] == "unsaved words that must survive",
+              f"{tag} 1: Restore overwrote unsaved pad text — the pad now reads {cf['pad']!r}")
+        check(cf["shown"] and cf["intent"] == "restore",
+              f"{tag} 1: unsaved text must ASK before restoring (row shown={cf['shown']}, intent={cf['intent']!r})")
+        check(cf["labels"] == ["Save and restore", "Discard and restore", "keep writing"],
+              f"{tag} 1: the row is worded for restoring: {cf['labels']}")
+        # answer 1 — keep writing: nothing moves
+        page.click("#clearCancel"); page.wait_for_timeout(100)
+        a1 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+          shown: getComputedStyle(document.getElementById('clearConfirm')).display !== 'none',
+          n: JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length })""")
+        check(a1["pad"] == "unsaved words that must survive" and not a1["shown"] and a1["n"] == n_before,
+              f"{tag} 1: keep writing keeps the text, restores nothing, files nothing: {a1}")
+        # answer 2 — Discard and restore: the draft is dropped, the note returns
+        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
+        page.click("#clearDiscard"); page.wait_for_timeout(250)
+        a2 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+          n: JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length })""")
+        check(a2["pad"] == "the named note" and a2["n"] == n_before,
+              f"{tag} 1: Discard and restore drops the draft and restores the entry's note: {a2}")
+        # answer 3 — Save and restore: the draft is FILED, then the note returns
+        page.fill("#journalIn", "a second draft worth keeping"); page.dispatch_event("#journalIn", "input")
+        page.wait_for_timeout(400)
+        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
+        page.click("#clearSave"); page.wait_for_timeout(250)
+        a3 = page.evaluate("""() => { const es = JSON.parse(localStorage.getItem('multetudes.v1.log')).entries;
+          return { pad: document.getElementById('journalIn').value, n: es.length, last: es.at(-1).text }; }""")
+        check(a3["n"] == n_before + 1 and a3["last"] == "a second draft worth keeping" and a3["pad"] == "the named note",
+              f"{tag} 1: Save and restore FILES the draft, then restores the note: {a3}")
+        # the common case keeps no ceremony: an empty pad restores at once
+        page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
+        page.click(".hist .acts button[data-cap='apply'] >> nth=1"); page.wait_for_timeout(200)   # the named note again
+        a4 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+          shown: getComputedStyle(document.getElementById('clearConfirm')).display !== 'none' })""")
+        check(a4["pad"] == "the named note" and not a4["shown"],
+              f"{tag} 1: an empty pad restores at once, no ceremony: {a4}")
+        # leave the log and the store as this leg found them — by role
+        n_all = page.evaluate("""() => { const ds = [...document.querySelectorAll('.hist .acts button[data-cap="delete"]')];
+          ds.forEach(d => d.click()); return ds.length; }""")
+        check(n_all == 3, f"{tag} the cleanup found {n_all} Delete controls by role — expected this leg's three entries")
+        page.wait_for_timeout(200)
         page.fill("#npTitle", ""); page.dispatch_event("#npTitle", "input")
         page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")
         page.wait_for_timeout(450)
@@ -1634,8 +1773,12 @@ console.log(JSON.stringify(out));
         check("move the chart into the pad" in np_t,
               f"{tag} copy's refusal prints in COPY's slot, same named route: {np_t!r}")
         # clean up the fence entry so later blocks see a clean log
-        page.evaluate("""() => { const del = [...document.querySelectorAll('.hist .acts button')]
-          .find(b => b.textContent === 'Delete'); if (del) del.click(); }""")
+        # RE-AIMED BY ROLE 260916 (rule 12): was a textContent hunt for
+        # 'Delete' inside a silent `if (del)` — night 20's exact shape. The
+        # cleanup now fails loudly if the control is not found by role.
+        n_del = page.evaluate("""() => { const del = document.querySelector('.hist .acts button[data-cap="delete"]');
+          if (!del) return 0; del.click(); return 1; }""")
+        check(n_del == 1, f"{tag} the fence entry's Delete control was not found by role — the cleanup did not run")
         page.wait_for_timeout(250)
         # copy on a clean pad: never silent — one of its two NAMED outcomes,
         # in its own slot (headless file:// usually has no clipboard grant)
@@ -1652,8 +1795,11 @@ console.log(JSON.stringify(out));
         np_t = page.evaluate(np_msg, "saveMsg")
         check("captured without a note" in np_t,
               f"{tag} save's empty-pad confirmation, in save's slot: {np_t!r}")
-        page.evaluate("""() => { for (const b of [...document.querySelectorAll('.hist .acts button')]
-          .filter(x => x.textContent === 'Delete')) b.click(); }""")
+        # RE-AIMED BY ROLE 260916 (rule 12): was a textContent filter on
+        # 'Delete'; the count is returned so an empty sweep cannot pass quietly
+        n_del = page.evaluate("""() => { const ds = [...document.querySelectorAll('.hist .acts button[data-cap="delete"]')];
+          ds.forEach(b => b.click()); return ds.length; }""")
+        check(n_del == 2, f"{tag} the cleanup found {n_del} Delete controls by role — expected the leg's two entries")
         page.wait_for_timeout(250)
 
         # ---- 260910 item 2: THE FIGURE REFUSES JUNK BY NAME ----
@@ -3127,7 +3273,8 @@ console.log(JSON.stringify(out));
         check(page.eval_on_selector_all(".hist", "e => e.length") == 1,
               f"{tag} the entry was not filed")
         check(page.inner_text("#histCount") == "1", f"{tag} the count did not follow")
-        pal = page.query_selector("#journalControls >> text=Palette")
+        # RE-AIMED BY ROLE 260916 (rule 12): was `>> text=Palette`
+        pal = page.query_selector("#journalControls [data-cap='palette']")
         # message updated 260911 (item 1): the card now DECLARES the palette
         # button (v0.9's row), so "auto-append" no longer describes the doors
         # that carry it — the assertion itself is unchanged: Palette exists
@@ -4200,7 +4347,8 @@ console.log(JSON.stringify(out));
         # the page came back at defaults — prove it, so restore is a real change
         check(page.input_value("#keySel") == "C", f"{tag} the page did not reload to defaults")
         # RESTORE. The pass, family, set and bottom must all return.
-        page.click(".hist >> text=Restore étude")
+        # RE-AIMED BY ROLE 260916 (rule 12): was `>> text=Restore étude`
+        page.click(".hist .acts button[data-cap='apply']")
         page.wait_for_timeout(200)
         check(page.input_value("#keySel") == "Ab", f"{tag} restore did not bring the key back")
         check(page.input_value("#scaleSel") == "harm", f"{tag} restore did not bring the scale back")
