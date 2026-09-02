@@ -1,3 +1,11 @@
+## 2026-09-02 — DEPLOYED: v0.4.3 live (second run), the one moved study spot-checked byte-identical
+
+- Actions run 33652997145 green (full gates in CI, commit `467a157` — the night's commit `6e00fce`
+  plus one pin rewritten). The live multetudes study's shasum matches the repo byte-for-byte
+  (e3b47200207d) and its blurb serves v0.4.3; tetradetudes, metronome and triadetudes are
+  byte-identical to the repo as before; all four wrappers answer 200. The first run's failure
+  and its cause are recorded in the entry below, corrected in place.
+
 ## 2026-09-02 — DEPLOYED: v0.4.3 live, the one moved study spot-checked
 
 - **CORRECTION (the record above was written before the run was read — wrong, and left here
