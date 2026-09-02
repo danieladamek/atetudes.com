@@ -25,13 +25,12 @@ import { writtenValue } from "../../engine/drill.mjs";
 import { parseFigure, figureEvents, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+// the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+import { FAM_COLOR, FAM_TEXT, VIOLET } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+
 const famOf = (lab) => lab === "R" ? "R" : lab.replace(/[#b]/g, "")
   .replace("9", "2").replace("11", "4").replace("13", "6");
 
@@ -218,8 +217,8 @@ export const scoreBoard = {
                 a.textContent = acc.replace(/#/g, "♯").replace(/b/g, "♭"); }
               const chrom = !scalePcs.includes(((ev.midi % 12) + 12) % 12);
               const fam = famOf(labOf(ev.midi));
-              el("ellipse", { cx: xk, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : (chrom ? "#7847A8" : FAM_COLOR[fam]),
-                stroke: chrom ? "#7847A8" : FAM_COLOR[fam], "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${xk} ${y})` }, svg);
+              el("ellipse", { cx: xk, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : (chrom ? VIOLET : FAM_COLOR[fam]),
+                stroke: chrom ? VIOLET : FAM_COLOR[fam], "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${xk} ${y})` }, svg);
             } else {
               const lab = labOf(ev.midi);
               y = head(xk, sp.name, sp.oct, famOf(lab), lab, open);

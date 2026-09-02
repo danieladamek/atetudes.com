@@ -51,6 +51,8 @@ import { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, li
 import { mountMini } from "../mini.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
+// the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+import { FAM_COLOR, FAM_TEXT, FAM } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -60,11 +62,7 @@ const STR_X = FX0 + NFRETS * FW + 42;
 const BRK_X = FX0 + NFRETS * FW + 76;
 const fx = (f) => (f === 0 ? FX0 - 22 : FX0 + (f - 0.5) * FW);
 const fy = (str) => SY0 + (str - 1) * SGAP;
-const FAM = ["R", "2", "3", "4", "5", "6", "7"];
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+
 
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];

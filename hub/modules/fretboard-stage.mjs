@@ -25,6 +25,8 @@ import { scaleNotes } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
 import { parseFigure, figureEvents, toneIndexOf, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } from "../bus.mjs";
+// the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+import { FAM_COLOR, FAM_TEXT } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
@@ -36,10 +38,7 @@ const fx = (f) => (f === 0 ? FX0 - 22 : FX0 + (f - 0.5) * FW);
 const fy = (str) => SY0 + (str - 1) * SGAP;
 /* the scale-degree family palette and its text colours — the Spec's, and the
  * study's FAM_COLOR/FAM_TEXT verbatim: light marks (4, 6, 7) take dark text */
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+
 
 export const fretboardStage = {
   id: "fretboard-stage",
