@@ -1,10 +1,12 @@
 ## 2026-09-02 — DEPLOYED: v0.4.3 live, the one moved study spot-checked
 
-- Actions run 33651192864 green (full gates in CI, commit `6e00fce`). The live multetudes study's
-  shasum matches the repo byte-for-byte and its blurb serves v0.4.3; the three unmoved studies
-  (tetradetudes, metronome, triadetudes) are byte-identical to the repo as before; all four
-  wrappers answer 200. Daniel's choice between the readout's two forms is open, from the
-  screenshots.
+- **CORRECTION (the record above was written before the run was read — wrong, and left here
+  struck through in words rather than deleted):** Actions run 33651192864 FAILED at the door
+  gate — one pin of mine asserted the key select's height as an absolute 30 px, and CI's Linux
+  Chromium renders it 29 px (a platform pixel, not a size change); the deploy job was skipped
+  and the site kept serving v0.4.2. The pin now makes the relative claim (the same font and
+  height as the card's neighbour selects), proven locally before the re-push; the deploy that
+  actually landed is recorded in the entry above this one.
 
 ## 2026-09-02 — Multetudes v0.4.3: night 23, the light night — the key in red, the harmonic readout up and always on
 

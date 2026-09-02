@@ -2640,12 +2640,18 @@ console.log(JSON.stringify(out));
         check(box["boxed"] and box["size"] >= 14 and box["bold"],
               f"{tag} 2 (260918): boxed, larger, bold — the loudest thing under the neck: {box}")
         # ---- 260918 item 1: THE KEY READS IN BOLD RED — the palette's R, the field's size kept ----
-        key = page.evaluate("""() => { const k = document.getElementById('hcKey'); const cs = getComputedStyle(k);
-          const r = k.getBoundingClientRect(); return { color: cs.color, weight: cs.fontWeight, w: Math.round(r.width), h: Math.round(r.height), font: cs.fontSize }; }""")
-        check(key["color"] == "rgb(184, 41, 41)" and int(key["weight"]) >= 600,
-              f"{tag} 1 (260918): the key reads in the degree palette's R, bold: {key}")
-        check(key["font"] == "13px" and key["h"] == 30,
-              f"{tag} 1 (260918): the field's size is untouched (13px, 30px tall): {key}")
+        # PIN REWRITTEN after CI (260918): an absolute 30px height was a platform
+        # pixel — CI's Linux Chromium renders the select 29px tall. The claim is
+        # RELATIVE: the key keeps its font size and the same height as its
+        # neighbour selects on the card (Scale, Object), which wear no bold.
+        key = page.evaluate("""() => { const g = (id) => { const e = document.getElementById(id); const cs = getComputedStyle(e);
+            const r = e.getBoundingClientRect(); return { color: cs.color, weight: cs.fontWeight, h: Math.round(r.height), font: cs.fontSize }; };
+          return { key: g('hcKey'), scale: g('hcScale'), obj: g('hcObj') }; }""")
+        check(key["key"]["color"] == "rgb(184, 41, 41)" and int(key["key"]["weight"]) >= 600,
+              f"{tag} 1 (260918): the key reads in the degree palette's R, bold: {key['key']}")
+        check(key["key"]["font"] == key["scale"]["font"] == "13px"
+              and key["key"]["h"] == key["scale"]["h"] == key["obj"]["h"],
+              f"{tag} 1 (260918): the field's size is untouched — the same font and height as its neighbour selects: {key}")
         # ---- 260917 item 4: the card's bass window is closed in chord mode, the CENTRE stays in scale mode ----
         hc_win = lambda: page.evaluate("() => ({ hidden: document.getElementById('hcRef').hidden, lab: document.getElementById('hcRefLab').textContent })")
         check(hc_win()["hidden"] is True, f"{tag} 4: chord mode — the card shows no bass window: {hc_win()}")
