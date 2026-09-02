@@ -2610,8 +2610,42 @@ console.log(JSON.stringify(out));
               f"{tag} 5: the mode name follows the SCALE — harmonic minor's fourth degree is not Lydian: {fd_mode()!r}")
         page.select_option("#hcScale", "major"); page.wait_for_timeout(150)
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
-        check(fd_mode().strip() == "",
-              f"{tag} 5: under a chord object the mode line is empty — the display is the scale's: {fd_mode()!r}")
+        # PIN REWRITTEN 260918 (item 2, register 33 — rule 7): the readout speaks
+        # for EVERY object now — the chord AND its mode; night 22's gate on
+        # the object was lifted by ruling ("everything you need to understand
+        # the harmonic context"). Under a tetrad, bar 1: "Bbmaj7 — Bb Ionian".
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+        check(fd_mode().replace("\u00a0", " ").strip() == "Bbmaj7 — Bb Ionian",
+              f"{tag} 2 (260918): under a chord object the readout names the chord AND its mode: {fd_mode()!r}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
+          { detail: { index: 1, request: true } }))""")
+        page.wait_for_timeout(200)
+        check(fd_mode().strip() == "Ebmaj7 — Eb Lydian",
+              f"{tag} 2 (260918): the bar turns and the readout follows: {fd_mode()!r}")
+        # the box sits in ROW 1, right of Repeat, above the sliders (Daniel's
+        # mockup) — geometry read at the pixels, never from a class name
+        box = page.evaluate("""() => { const r = (id) => document.getElementById(id).getBoundingClientRect();
+          const b = r('fdMode'), rep = r('fdRepeat');
+          // the column the box shares is the MIXER ROW (icon, label, slider, value) —
+          // measured on the first run: the slider track ends 40px short of the row
+          const mix = document.getElementById('fdHarmVol').closest('.fd-mixrow').getBoundingClientRect();
+          const cs = getComputedStyle(document.getElementById('fdMode'));
+          return { level: Math.abs(b.top - rep.top) < 14, rightOfRepeat: b.left >= rep.right,
+            aboveSliders: b.bottom <= mix.top && Math.abs(b.right - mix.right) < 4 && Math.abs(b.left - mix.left) < 4,
+            boxed: cs.borderStyle === 'solid', size: parseFloat(cs.fontSize), bold: parseInt(cs.fontWeight) >= 600 }; }""")
+        check(box["level"] and box["rightOfRepeat"] and box["aboveSliders"],
+              f"{tag} 2 (260918): the readout box sits in row 1 right of Repeat, above the sliders: {box}")
+        check(box["boxed"] and box["size"] >= 14 and box["bold"],
+              f"{tag} 2 (260918): boxed, larger, bold — the loudest thing under the neck: {box}")
+        # ---- 260918 item 1: THE KEY READS IN BOLD RED — the palette's R, the field's size kept ----
+        key = page.evaluate("""() => { const k = document.getElementById('hcKey'); const cs = getComputedStyle(k);
+          const r = k.getBoundingClientRect(); return { color: cs.color, weight: cs.fontWeight, w: Math.round(r.width), h: Math.round(r.height), font: cs.fontSize }; }""")
+        check(key["color"] == "rgb(184, 41, 41)" and int(key["weight"]) >= 600,
+              f"{tag} 1 (260918): the key reads in the degree palette's R, bold: {key}")
+        check(key["font"] == "13px" and key["h"] == 30,
+              f"{tag} 1 (260918): the field's size is untouched (13px, 30px tall): {key}")
         # ---- 260917 item 4: the card's bass window is closed in chord mode, the CENTRE stays in scale mode ----
         hc_win = lambda: page.evaluate("() => ({ hidden: document.getElementById('hcRef').hidden, lab: document.getElementById('hcRefLab').textContent })")
         check(hc_win()["hidden"] is True, f"{tag} 4: chord mode — the card shows no bass window: {hc_win()}")

@@ -100,6 +100,14 @@ export const harmonyCard = {
 .hc-srcseg[hidden]{display:none}
 #hcRefLab{display:block;margin-top:10px}
 #hcNote{margin-top:7px}
+/* THE KEY READS IN BOLD RED (260918, item 1 — ruled). Not decoration: the
+ * legend under the neck says "colour = function against the key", and R —
+ * the root — is red. The key IS the root, so this is the colour law applied
+ * to the control that sets it: the one place it was stated everywhere
+ * except at its own origin. The red is the degree palette's R — the shell's
+ * --red is that palette's Root by its own comment — never a new literal.
+ * The field's SIZE is untouched (Daniel: the cards' proportions are settled). */
+#hcKey{color:var(--red);font-weight:bold}
 #hcRef,#hcTones{width:100%}
 #hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 

@@ -70,6 +70,11 @@ export default {
      * v0.0.4 (260829, the surface): v0.9's page — declared rows, one neck,
      * the harmony/progression/presets cards, the chart line, the readout,
      * the étude and the keys; the tetrad-pass modules unmounted (see above). */
+    /* v0.4.3 (260918, night 23 — the light night): the Key selector in bold
+     * red, the degree palette's own R (item 1); the harmonic readout moved
+     * up beside Repeat, boxed, larger, bold, reading the chord AND its mode
+     * for every object (item 2 — register 33 records the one un-gating).
+     * Two UI items, no engine change, no carried module. */
     /* v0.4.2 (260917, night 22 — the tones and the neck; Daniel's v0.4.0
      * review completed): the title describes what is in the pad (item 0);
      * tone selection for every stacked object in the figure's notation
@@ -121,7 +126,7 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.4.2",
+    blurb: "one tool that holds many études · v0.4.3",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

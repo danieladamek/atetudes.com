@@ -181,16 +181,20 @@ export const fieldBoard = {
       <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
       <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
         title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
+      <!-- THE HARMONIC READOUT (260918, item 2 — Daniel's mockup): the one
+           line that says what you are looking at — THE CHORD AND ITS MODE,
+           "Bbmaj7 — Bb Ionian" — boxed, larger, bold, right of Repeat and
+           above the sliders it shares a column with. It speaks for EVERY
+           object now: the chord name is the strip's own (chordAt.symbol),
+           the mode the one table's (MODES); nothing new is computed —
+           night 22's item 5 withheld the mode outside Scale-or-mode, and
+           un-gating it is the behaviour change register 33 records. -->
+      <div class="fd-readbox" id="fdMode" data-control="fdMode"
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div>
     </div>
     <div class="fd-railrow fd-pairrow">
       <span class="fd-lab2">voice</span>
       <select id="fdVoice" data-control="fdVoice"></select>
-      <!-- EACH PASSING CHORD NAMES ITS MODE (260917, item 5 — ruled; Daniel
-           found the space himself, beside voice): under Scale-or-mode, the
-           bar's chord degree in the chosen scale, read off field.mjs's own
-           MODES table — derived, never placed. Empty under a chord object. -->
-      <span class="fd-lab2 fd-modelab" id="fdMode" data-control="fdMode"
-        title="the mode this bar's chord is, in the context of the chosen scale"></span>
       <div class="bpmrow fd-mixrow" title="the mixer: the harmony level — muted is this slider at zero">
         <button class="muteBtn" id="fdHarmMute" data-control="fdHarmMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">harmony</span>
@@ -262,6 +266,18 @@ export const fieldBoard = {
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
   border:1px solid var(--line);border-radius:6px;color:var(--ink)}
 .fd-lab2{font-size:12px;color:var(--gray)}
+/* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
+ * Repeat, sharing the mixer's column (margin-left:auto, the same 380px
+ * basis) so it sits ABOVE the harmony and bass sliders. Card edge, not
+ * control edge (--edge for boxes, v0.9's own distinction). */
+.fd-readbox{margin-left:auto;flex:0 1 380px;max-width:376px;min-width:0;
+  border:1px solid var(--edge);border-radius:8px;background:#fff;padding:5px 12px;
+  font-size:15px;font-weight:bold;color:var(--ink);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;text-align:center}
+/* variant (a): the chord's name in the degree palette's R — the shell's
+ * --red IS that palette's Root (its own comment says so); no second red */
+.fd-readbox .fd-readchord{color:var(--red)}
+.fd-readbox .fd-readmode{font-weight:600}
 .fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 .fd-mixrow{max-width:376px;margin-top:8px}
 .fd-mixlab{width:52px}
@@ -608,10 +624,17 @@ export const fieldBoard = {
        * degree names its mode from the one table; a root off the key says so;
        * a chord object leaves the line empty (the display is the scale's) */
       {
+        /* ALWAYS (260918, item 2 — register 33): the chord and its mode, for
+         * every object. VARIANT (a), Daniel's mockup as drawn: the chord
+         * name in the degree palette's R — the same red the key wears. */
         const ml = byId("fdMode");
-        ml.textContent = cfg.object !== "scale" ? ""
-          : cur.degree >= 0 ? `${cur.symbol} — ${MODES[cfg.scale][cur.degree]}`
-          : `${cur.symbol} — not in the key`;
+        ml.textContent = "";
+        const ch = d.createElement("b"); ch.className = "fd-readchord"; ch.textContent = cur.symbol;
+        const md = d.createElement("span"); md.className = "fd-readmode";
+        md.textContent = cur.degree >= 0
+          ? ` — ${fld.notes[cur.degree].name} ${MODES[cfg.scale][cur.degree]}`
+          : " — not in the key";
+        ml.appendChild(ch); ml.appendChild(md);
       }
       /* the bass view paints from the same build — Harmony's state, echoed.
        * ITS OPTIONS DERIVE FROM THE PICK (260917, item 3): the root, then

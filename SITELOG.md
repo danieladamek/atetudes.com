@@ -1,3 +1,25 @@
+## 2026-09-02 — Multetudes v0.4.3: night 23, the light night — the key in red, the harmonic readout up and always on
+
+- **Source edition v0.4.3** (night 23; the report in `notes/working/Multetudes build run
+  260918.md`; the rulings in `notes/working/Multetudes PO rulings 260918 — the v0.4.2 review,
+  the harmonic readout.md`). Two UI items, one note; no engine change, no carried module.
+- **The Key selector reads in bold red** — the degree palette's own R (the shell's `--red`),
+  because the key IS the root and the legend's law ("colour = function against the key") now
+  holds at its origin. The card's proportions are unchanged (measured 562×283 / 250×283).
+- **The harmonic readout** moved up beside Repeat, boxed, larger, bold, above the sliders, and
+  reads the chord AND its mode — `Bbmaj7 — Bb Ionian` — for EVERY object (register 33: night
+  22's gate on the mode lifted; nothing new computed, something existing no longer withheld).
+  Daniel's mockup as drawn (the chord name in red) is what ships; the degree-dot form (b) is
+  prototyped and screenshotted beside it for his choice (`notes/working/shots-260918/`).
+- **Captured, not built:** the non-diatonic-collections backlog item now carries its
+  motivating case (blues and rhythm changes under a key/scale that cannot supply their chords).
+- **One study moved:** multetudes, republished cmp-identical (614,386 bytes, was 610,575). The
+  shell did not move (18,040); plain, scribe, tetradetudes byte-identical; the hand-authored
+  studies untouched. OWED_DRIFT stays EMPTY.
+- Verified: engine 589/589 · four-door gate 18,296/0 (`hub/tests/out/doors-0902-0740.log`) · hub tests 4/4 · family floor
+  20 surfaces 13/7-exempt/0 · bite 40/40 (`hub/tests/out/bite-0902-0745.log`) · hugo exit 0 · check_site 21 pages · the ritual at 1380px
+  and 390px on the served build, the readout and the key exercised, zero console errors.
+
 ## 2026-09-02 — DEPLOYED: v0.4.2 live, all four moved studies spot-checked; the landing page delisting live
 
 - Actions run 33600470502 green (full gates in CI, commit `8740c3f`, which carries Daniel's delisting
