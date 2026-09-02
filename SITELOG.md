@@ -1,3 +1,11 @@
+## 2026-09-02 — DEPLOYED: v0.4.3 live, the one moved study spot-checked
+
+- Actions run 33651192864 green (full gates in CI, commit `6e00fce`). The live multetudes study's
+  shasum matches the repo byte-for-byte and its blurb serves v0.4.3; the three unmoved studies
+  (tetradetudes, metronome, triadetudes) are byte-identical to the repo as before; all four
+  wrappers answer 200. Daniel's choice between the readout's two forms is open, from the
+  screenshots.
+
 ## 2026-09-02 — Multetudes v0.4.3: night 23, the light night — the key in red, the harmonic readout up and always on
 
 - **Source edition v0.4.3** (night 23; the report in `notes/working/Multetudes build run
