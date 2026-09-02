@@ -1,3 +1,10 @@
+## 2026-09-01 — Landing page: Triadetudes and Tetradetudes delisted (URLs stay live)
+
+- Daniel removed the two cards from `content/_index.md` — a DELISTING only. The study pages
+  and their wrappers are untouched and keep serving at `/studies/triadetudes/` and
+  `/studies/tetradetudes/` (published URLs are permanent); the site's link check still walks
+  them. Committed on its own, apart from night 22's work.
+
 ## 2026-09-01 — DEPLOYED: v0.4.1 live, all four moved studies spot-checked
 
 - Actions run 33580933446 green (full gates in CI, commit `5164f4a`). Every moved study's live shasum

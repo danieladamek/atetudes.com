@@ -39,24 +39,11 @@ other.</p>
 <h2 id="studies" class="hx:text-2xl hx:font-semibold hx:mt-8 hx:mb-4">Studies</h2>
 
 {{< cards >}}
-
   {{< card
     link="/studies/metronome/"
     image="/assets/cards/metronome.png"
     title="Metronome"
     subtitle="The At-Etudes metronome, standing alone — three click voices, tap tempo, accents, subdivisions — with a notepad that saves every idea alongside the tempo it arrived at."
-  >}}
-  {{< card
-    link="/studies/triadetudes/"
-    image="/assets/cards/triadetudes.png"
-    title="Triadetudes — the Triad Étude Designer"
-    subtitle="Design your own isolation étude: three pivot notes anchor triads cycling with minimal voice movement — fretboard, notation, playable keyboard, metronome, and a practice log."
-  >}}
-  {{< card
-    link="/studies/tetradetudes/"
-    image="/assets/cards/tetradetudes.png"
-    title="Tetradetudes — the Tetrad Étude Designer"
-    subtitle="Design a four-voice tetrad étude: pick a key, a cycle, a string set and a voicing family — close, drop-2 and drop-3 chords walk through progressions with minimal voice movement, on the neck, the staff and the keyboard."
   >}}
   {{< card
     link="/studies/multetudes/"
