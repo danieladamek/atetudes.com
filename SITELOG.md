@@ -1,3 +1,11 @@
+## 2026-09-01 — DEPLOYED: v0.4.1 live, all four moved studies spot-checked
+
+- Actions run 33580933446 green (full gates in CI, commit `5164f4a`). Every moved study's live shasum
+  matches the repo byte-for-byte: multetudes 8da4534b4a4f · tetradetudes 3376da62ef23 ·
+  metronome b66e5e39b18d · triadetudes feb69187bda6; all four wrappers answer 200; the
+  multetudes page's blurb serves v0.4.1. Night 21 is live; night 22 (the tones and the neck)
+  is next.
+
 ## 2026-09-01 — Multetudes v0.4.1: night 21, the notepad — three of Daniel's v0.4.0 findings land; four studies move
 
 - **Source edition v0.4.1** (night 21; the full report in `notes/working/Multetudes build run
