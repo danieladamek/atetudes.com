@@ -1,3 +1,42 @@
+## 2026-09-02 — Multetudes v0.5.2: night 26, one rule applied twice — one tuning, one speller, and the readout on every étude representation
+
+- **Source edition v0.5.2** (night 26; the report in `notes/working/Multetudes build run
+  260920.md`; the item in `notes/Backlog/The tuning is stated twice - one OPEN_MIDI, derived,
+  exported once.md`). Standing rule 6 — never hand-maintain a list the code can compute —
+  applied twice in the tetrad path, then the harmonic readout shared as one component.
+- **One OPEN_MIDI (item 1):** the tuning is declared once, derived from its named rule in
+  `engine/field.mjs`; `engine/tetrad-sequence.mjs` no longer states the six numbers and
+  imports the one; every consumer (audio-card, score-board, fretboard-stage and three tests)
+  repoints. The test that pinned the two copies EQUAL now pins that ONE declaration exists,
+  and the door gate reads the same off every built page's bytes. Nothing visible changed:
+  every board's SVG byte-identical and every door pixel-identical at 1280 and 390.
+- **One chromatic speller (item 2):** `chromaticSpeller(key, scale)` lives in
+  `engine/chord.mjs` beside LETTER_PC and resolveRoman's law (keep the letter, move the
+  accidental, refuse past ±2); score-board's and staff-board's copies are gone. Flatness is
+  read from the key signature, so the hand-kept `|| key === "F"` falls out unsaid. The two
+  copies shared a defect (letter + one accidental drew a wrong pitch beside an altered
+  degree); fixed at the owner and pinned as pitch honesty over every key and scale. Reading
+  the scale's own collection was measured to change three minor keys and was NOT shipped —
+  Daniel's ruling.
+- **Two more palette copies retired on the way:** fretboard-stage's violet literal (a real
+  copy, mounted in tetradetudes) and keys-board's whole degree table (a sixth copy night 24's
+  sweep missed).
+- **The readout on every étude representation (item 3):** the étude end to end and the keys
+  now carry the harmonic readout in their headers, as the neck does — ONE component
+  (`hub/readout.mjs`, mini.mjs's shape), three instances, each deriving the bar's chord and
+  mode from the bus itself; pinned by emptying all three boxes and stepping the bar. The two
+  boards' mini transports move into the header row (they were absolutely positioned over the
+  new box at phone width); at phone width the box shares the mini's row and the neck keeps
+  its single row. The grammar is the page's (three boards render it) and ships from the build half of
+  the shell for exactly the doors that reach the helper; shell.mjs stays at 18,040 bytes.
+- **Studies moved:** multetudes and tetradetudes (rebuilt, cmp-identical); metronome and
+  triadetudes (hand-authored; chord.mjs re-inlined verbatim, +2,666 bytes each).
+- **Gates from their logs:** engine 601/601 · doors 18,533/0 (`hub/tests/out/doors-0903-0227.log`)
+  · red-run: the inverted flatness reds exactly the two F-major pins (`doors-0902-2226-red-speller.log`)
+  · bite 42/43 (`bite-0902-2258.log`) + m10 re-sited to the neck's dots and biting alone
+  (`bite-m10-0903-0233.log`) · hugo 0 · check_site 21 · served ritual over http, five pages, two
+  widths, console clean · shell.mjs 18,040 unchanged.
+
 ## 2026-09-02 — DEPLOYED: v0.5.1 live, multetudes spot-checked byte-identical, the other three unmoved
 
 - Actions run 33709899718 green (full gates in CI, commit `e24b3fc` on main, the work in

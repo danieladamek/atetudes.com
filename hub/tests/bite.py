@@ -367,7 +367,7 @@ def m10_field_frozen_on_key_change():
         # re-sited 260919: the neck's header box is the neck's own face (the readout
         # re-derives from the bus and follows the key even with the neck frozen)
         hit = ("the field did not re-derive" in r.stdout
-               or "the neck's header did not follow the key" in r.stdout)
+               or "the neck's dots did not follow the key" in r.stdout)   # re-sited 260920: the dots the neck draws
         record("the field no longer re-derives on a key change",
                r.returncode != 0 and hit,
                "suite exit %d; caught on the artifact (dots or hint), not the handler: %s"

@@ -344,13 +344,17 @@ def run_door(pw, door_id):
         check(dots_now() == expect_dots(d_pcs) and root_dots_now() == expect_pc(d_pcs, NAME_PC["D"]),
               f"{tag} the field did not re-derive for D major: {dots_now()} dots, "
               f"{root_dots_now()} roots (want {expect_dots(d_pcs)}, {expect_pc(d_pcs, NAME_PC['D'])})")
-        # RE-SITED 260919 (rule 7, twice): the hint's key clause moved to the readout —
-        # but the readout RE-DERIVES from the bus (§4.2.3), so it follows the key even
-        # when the NECK is frozen (bite m10 went silent on a readout-only pin). The
-        # neck's own face is its header box: the bar's chord and mode, painted by the
-        # neck. In D the boot bar reads Dmaj7 — D Ionian.
-        check(page.inner_text("#fdMode").startswith("Dmaj7") and "D Ionian" in page.inner_text("#fdMode"),
-              f"{tag} the neck's header did not follow the key: {page.inner_text('#fdMode')!r}")
+        # RE-SITED 260919 (rule 7, twice) AND AGAIN 260920 (three times): the hint's key
+        # clause moved to the readout, which RE-DERIVES from the bus and follows the key
+        # even when the NECK is frozen (bite m10 went silent); then the header box became
+        # the shared readout's own instance (night 26 item 3) — bus-derived too, so m10
+        # went silent again. The neck's own face is what its build() DRAWS: the dots'
+        # degree labels. CONTENT, not a count — D major and B♭ major hold the same number
+        # of dots and of roots, so the count pin above cannot tell them apart. The D at
+        # midi 62 (string 2, fret 3) wears R in D major; it wore 3 in B♭.
+        d_lab = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg g.fd-dot[data-midi="62"] text')].map(t => t.textContent)""")
+        check(d_lab and all(x == "R" for x in d_lab),
+              f"{tag} the neck's dots did not follow the key — the D at midi 62 must wear R in D major: {d_lab}")
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(120)   # back to the boot key
         # a field dot SOUNDS (floor F3): clicking one announces NOTE with its midi
         note_probe = """() => { window.__fdNote = null;
@@ -2718,7 +2722,7 @@ console.log(JSON.stringify(out));
         # still boxed, >=14px, bold. Geometry read at the pixels, never from a
         # class name; this pin is what stops a later layout pass undoing this one.
         box = page.evaluate("""() => { const box = document.getElementById('fdMode'); const r = (e) => e.getBoundingClientRect();
-          const bh = box.closest('.bh'); const title = bh && bh.querySelector('span'); const spacer = bh && bh.querySelector('.fd-headspace');
+          const bh = box.closest('.bh'); const title = bh && bh.querySelector('span'); const spacer = bh && bh.querySelector('.headspace');
           const svg = document.getElementById('fieldSvg'); const cs = getComputedStyle(box);
           return { inBh: !!bh, afterTitle: !!title && title.nextElementSibling === box, leftOfSpacer: !!spacer && r(box).right <= r(spacer).left + 1,
             aboveSvg: r(box).bottom <= r(svg).top, boxed: cs.borderStyle === 'solid', size: parseFloat(cs.fontSize), bold: parseInt(cs.fontWeight) >= 600,
@@ -2733,6 +2737,64 @@ console.log(JSON.stringify(out));
           const t = p.querySelector('.clpsSum').textContent; p.querySelector('.clpsBtn').click(); return t; }""")
         check(summ.startswith("A pattern is a sequence") and "Ionian" not in summ and "Bbmaj7" not in summ,
               f"{tag} 1 (260919): the collapsed summary is the figure note as before — the readout does not leak into it: {summ[:60]!r}")
+        # ---- 260920 (night 26 item 3): THE READOUT ON EVERY ÉTUDE REPRESENTATION — ONE
+        # component (hub/readout.mjs), three instances, three INDEPENDENT derivations.
+        # (a) the same seat on all three boards: in .bh, after the title span, boxed;
+        # (b) the same value on all three after a STEP_CHANGED (ruled: identical in all
+        #     three places); (c) INDEPENDENCE, not just agreement: every box is EMPTIED,
+        #     the bar is stepped, and every box refills with the same string — none could
+        #     have copied a sibling, because every sibling was empty; (d) the collapsed
+        #     summaries of the two new hosts are still their titles.
+        ro_ids = ["fdMode", "stMode", "kyMode"]
+        seats = page.evaluate("""(ids) => ids.map(id => { const box = document.getElementById(id); if (!box) return null;
+          const bh = box.closest('.bh'); const title = bh && bh.querySelector('span');
+          return { inBh: !!bh, afterTitle: !!title && title.nextElementSibling === box, boxed: getComputedStyle(box).borderStyle === 'solid',
+            board: box.closest('.board').querySelector('.bh span').textContent.trim() }; })""", ro_ids)
+        check(all(x and x["inBh"] and x["afterTitle"] and x["boxed"] for x in seats),
+              f"{tag} 3 (260920): the readout sits in the header of all three boards, after each title: {seats}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 2, request: true } }))""")
+        page.wait_for_timeout(250)
+        texts = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", ro_ids)
+        check(len(set(texts)) == 1 and texts[0].startswith("Am7b5") and "Locrian" in texts[0],
+              f"{tag} 3 (260920): after a STEP_CHANGED all three read the same bar — Am7b5, A Locrian: {texts}")
+        page.evaluate("(ids) => ids.forEach(id => { document.getElementById(id).querySelector('.readtext').textContent = ''; })", ro_ids)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 3, request: true } }))""")
+        page.wait_for_timeout(250)
+        texts2 = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", ro_ids)
+        check(len(set(texts2)) == 1 and texts2[0].startswith("Dm7") and all(t for t in texts2),
+              f"{tag} 3 (260920): EMPTIED, then stepped — every box refilled on its own derivation (no sibling to copy from): {texts2}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'F' } }))""")
+        page.wait_for_timeout(250)
+        texts3 = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", ro_ids)
+        check(len(set(texts3)) == 1 and texts3[0].startswith("Am7") and "A Phrygian" in texts3[0],
+              f"{tag} 3 (260920): a CONFIG_CHANGED (key F) moves all three alike — bar 4 in F is Am7, A Phrygian: {texts3}")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'Bb' } }))""")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(250)
+        # NOTHING COVERS THE READOUT at phone width (found on the 390 screenshot: the two
+        # boards' absolutely positioned minis sat over the box). The box ends before the
+        # board's mini and before the shell's ⓘ, on all three boards, at 390.
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(250)
+        clear = page.evaluate("""(ids) => ids.map(id => { const box = document.getElementById(id); const bd = box.closest('.board'); const r = (e) => e.getBoundingClientRect();
+          const mini = bd.querySelector('.bh .mini'); const info = bd.querySelector('.infoBtn') || bd.querySelector('.clpsBtn');
+          const ch = box.querySelector('.readchord'); const title = bd.querySelector('.bh span');
+          return { id, w: Math.round(r(box).width), clearsMini: !mini || r(box).right <= r(mini).left, clearsBtn: r(box).right <= r(info).left, oneLine: r(box).height < 40,
+            chordWhole: r(ch).right <= r(box).right - 1, neckOneRow: !!mini || Math.abs(r(box).top - r(title).top) < 12 }; })""", ro_ids)
+        check(all(c["w"] > 60 and c["clearsMini"] and c["clearsBtn"] and c["oneLine"] and c["chordWhole"] and c["neckOneRow"] for c in clear),
+              f"{tag} 3 (260920): at 390 the readout is visible, uncovered, one line, the chord whole, on all three boards — and the neck's stays beside its title: {clear}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(250)
+        for bid, want in (("stMode", "The étude — end to end"), ("kyMode", "On the keys")):
+            summ2 = page.evaluate("""(id) => { const p = document.getElementById(id).closest('.board'); p.querySelector('.clpsBtn').click();
+              const t = p.querySelector('.clpsSum').textContent; p.querySelector('.clpsBtn').click(); return t; }""", bid)
+            check(summ2.strip().startswith(want) and "Ionian" not in summ2,
+                  f"{tag} 3 (260920): {bid}'s board still collapses to its title, the readout does not leak: {summ2[:60]!r}")
+        # the helper is reached, not mounted, and reads no sibling: source pins on the artifact's parts
+        ro_src = (REPO / "hub" / "readout.mjs").read_text()
+        check("getElementById" not in ro_src and "querySelector" not in ro_src.replace("host.", ""),
+              f"{tag} 3 (260920): hub/readout.mjs reaches for no one's DOM — it paints only the host it was handed")
+        check("progressionOf(" in ro_src and "chordAt(" in ro_src and "MODES[" in ro_src,
+              f"{tag} 3 (260920): each instance derives through progressionOf/chordAt and the one MODES table")
+
         # THE CLOCK CLOSES RANKS (item 2): transport, repeat, bar split, bpm, metronome — contiguous, in that order
         clock = page.evaluate("""() => ['fdMini','fdRepeat','fdSplit','fdBpm','fdMetChk'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().left))""")
         check(all(clock[i] >= clock[i - 1] for i in range(1, 5)) and page.evaluate("() => document.getElementById('fdMini').closest('.fd-railrow') === document.getElementById('fdMetChk').closest('.fd-railrow')"),
@@ -2746,7 +2808,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(250)
         page.set_viewport_size({"width": 360, "height": 900}); page.wait_for_timeout(250)
-        trunc = page.evaluate("""() => { const box = document.getElementById('fdMode'), t = box.querySelector('.fd-readtext'), ch = box.querySelector('.fd-readchord'); const r = (e) => e.getBoundingClientRect();
+        trunc = page.evaluate("""() => { const box = document.getElementById('fdMode'), t = box.querySelector('.readtext'), ch = box.querySelector('.readchord'); const r = (e) => e.getBoundingClientRect();
           return { text: box.textContent, clipped: t.scrollWidth > t.clientWidth, chordWhole: r(ch).right <= r(box).right - 1, oneLine: r(box).height < 40 }; }""")
         check(trunc["clipped"] and trunc["chordWhole"] and trunc["oneLine"] and trunc["text"].startswith("Ebmaj7#11"),
               f"{tag} 1 (260919): at 360px the long name IS clipped, the CHORD survives whole and the line stays one — the ellipsis eats the mode: {trunc}")
@@ -4250,8 +4312,11 @@ console.log(JSON.stringify(out));
           .map(e => [e.dataset.scname, e.dataset.scapproach])""")
         # the score writes the figure in EVERY bar: under each bar's 3rd the approach is a flat
         # (A♭ D♭ G♭ C♭ across the cycle) — all chromatic, all flats, the first A♭
-        check(sc_heads and sc_heads[0][0] == "Ab" and all(n.endswith("b") and k == "chromatic" for n, k in sc_heads),
-              f"{tag} 2 (260920): in F major the −1 approach under each bar's 3rd spells with a FLAT, from the key signature: {sc_heads[:4]}")
+        # (the −1 under a 3rd is chromatic only where the semitone below is off the key —
+        # A♭ D♭ G♭ E♭ across F's cycle; under Em7b5, Am7 and Dm7 it is the diatonic B, E, A)
+        chrom = [n for n, k in sc_heads if k == "chromatic"]
+        check(sc_heads and sc_heads[0][0] == "Ab" and len(chrom) >= 3 and all(n.endswith("b") for n in chrom),
+              f"{tag} 2 (260920): in F major every CHROMATIC −1 approach under a 3rd spells with a FLAT, from the key signature: {sc_heads}")
         page.select_option("#keySel", key_was); page.wait_for_timeout(200)
         # restore exactly what this block moved: figure, address, playback
         page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input")
@@ -5079,6 +5144,14 @@ console.log(JSON.stringify(out));
     # classes are part of this door's DOM, and a check run against a stopped
     # metronome would call them orphans
 
+    # multetudes: a board whose header carries a mini is COLLAPSED going into the
+    # orphan check — `.clpsd>.bh.readhead .mini` (260920) is a state rule, and the
+    # panel the gate collapses for .clpsd is not one of these (the .clpsd lesson)
+    readhead_shut_for_check = False
+    if door_id == "multetudes" and page.query_selector("#stMode") is not None:
+        page.evaluate("() => document.getElementById('stMode').closest('.board').querySelector('.clpsBtn').click()")
+        page.wait_for_timeout(80); readhead_shut_for_check = True
+
     # ---------------- 4. no orphan selector ---------------------------------
     selectors = page.evaluate(SELECTOR_JS)
     check(len(selectors) > 10, f"{tag} only {len(selectors)} selectors found — the check is vacuous")
@@ -5095,6 +5168,9 @@ console.log(JSON.stringify(out));
     check(not orphans,
           f"{tag} CSS with nothing to match in this door: {orphans}\n"
           f"       a rule that survives its markup is the trace §4.2.1 forbids")
+    if readhead_shut_for_check:
+        page.evaluate("() => document.getElementById('stMode').closest('.board').querySelector('.clpsBtn').click()")
+        page.wait_for_timeout(80)
 
     check(not errors and not [c for c in console if c[0] in ("error", "warning")],
           f"{tag} console dirtied by interaction: {console}")

@@ -21,6 +21,7 @@ import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+import { mountReadout } from "../readout.mjs";
 import { FAM, FAM_COLOR, FAM_TEXT } from "../palette.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
@@ -37,17 +38,17 @@ export const keysBoard = {
   requires: { surface: "multetudes" },
   mount_point: "boards",
   order: 22,
-  controls: ["kySvg", "kyMini"],
+  controls: ["kySvg", "kyMini", "kyMode"],
 
   markup: `
-  <span class="mini" id="kyMini" data-control="kyMini"></span>
-  <div class="bh"><span>On the keys</span></div>
+  <div class="bh readhead"><span>On the keys</span><div class="readbox" id="kyMode" data-control="kyMode"
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="kyMini" data-control="kyMini"></span></div>
   <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>`,
 
   styles: `
 #kySvg{width:100%;height:auto;display:block}
 #kySvg rect{cursor:pointer}
-#kyMini{position:absolute;top:8px;right:44px;display:flex;gap:4px;z-index:6}
+#kyMini{display:flex;gap:4px;flex:0 0 auto}   /* 260920: IN FLOW in the header row, after the readout's spacer — it was absolute at the shell buttons' own offsets (a copied number) and covered the readout at phone width */
 #kyMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 #kyMini button:hover{border-color:var(--ink)}
@@ -216,6 +217,7 @@ export const keysBoard = {
       if (m.index !== index) { index = m.index; render(); }
     });
     mountMini(ctx, byId("kyMini"));
+    mountReadout(ctx, byId("kyMode"));   // 260920: the shared readout — this board's own instance, its own derivation
     render();
   },
 };

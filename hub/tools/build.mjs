@@ -52,6 +52,56 @@ const ROW_WRAPPER = {
 `,
 };
 
+/* THE READOUT GRAMMAR (260920, night 26 item 3): the harmonic readout box seated
+ * in a board's header — night 25's seat on the neck, ruled by Daniel (after the
+ * title, one line at every width, the ellipsis on the inner span, the chord
+ * surviving whole) — rendered by three boards through hub/readout.mjs, so by the
+ * resolver's own rule the grammar is the page's and is stated ONCE. It lives in
+ * THIS half of the shell, not shell.mjs, for the same reason ROW_WRAPPER does:
+ * shell.mjs is inlined verbatim into every door and its rules must match in
+ * every door (the orphan gate), while this grammar is right only where a door
+ * reaches the helper — so it ships exactly there, and shell.mjs stays byte-still.
+ *
+ *   .readhead   the header row: title · box · spacer · (a board's mini, in flow)
+ *   .readbox    the box; .readtext the inner ellipsis span; .readdot the root's
+ *               degree colour from the one palette; .readchord / .readmode
+ *
+ * The 66px is the band the shell's own ⓘ (.infoBtn right:38px, 27px wide) and ▾
+ * occupy at the header's right — an in-flow row must end before it. AT PHONE
+ * WIDTH title, box, mini and band cannot share one row and the readout must stay
+ * ONE line beside its title (no extra row, no dropped title — the ruling), so the
+ * header becomes a grid: a board WITH a mini already needs a second row there and
+ * the box shares it with the mini (box left, shrinking to its ellipsis; mini
+ * right) while the title keeps the first row; a board WITHOUT one (the neck)
+ * keeps title and box on its single row. Collapsed, the mini hides with the rest
+ * of the board (the !important outranks a module's own #id rule, as the shell's
+ * collapse rules do); the readout stays. */
+const READOUT_GRAMMAR = {
+  reaches: "hub/readout.mjs",
+  styles: `
+.board .bh.readhead{gap:10px;min-width:0;justify-content:flex-start;padding-right:66px}
+.board .bh.readhead>span:first-child{flex:0 0 auto}
+.headspace{flex:1 1 0;min-width:0}
+.readbox{flex:0 1 auto;min-width:0;max-width:100%;
+  border:1px solid var(--edge);border-radius:8px;background:#fff;padding:3px 12px;
+  font-size:15px;font-weight:bold;color:var(--ink);letter-spacing:0;text-transform:none;
+  white-space:nowrap;overflow:hidden;line-height:1.3}
+.readbox .readtext{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.readbox .readchord{color:var(--ink)}
+.readbox .readdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
+.readbox .readmode{font-weight:600}
+@media (max-width:480px){
+  .board .bh.readhead{display:grid!important;grid-template-columns:auto minmax(0,1fr);align-items:center}
+  .board .bh.readhead .headspace{display:none}
+  .board .bh.readhead:has(.mini){grid-template-columns:minmax(0,1fr) auto}
+  .board .bh.readhead:has(.mini)>span:first-child{grid-column:1 / -1}
+  .board .bh.readhead:has(.mini) .readbox{grid-column:1}
+  .board .bh.readhead:has(.mini) .mini{grid-column:2;justify-content:flex-end}
+}
+.clpsd>.bh.readhead .mini{display:none!important}
+`,
+};
+
 /* NAMED PARTS (the parts primitive, 2026-08-30 — register entry 4's route):
  * a module's markup may mark regions as a named part —
  *
@@ -251,6 +301,7 @@ async function build(id) {
     + Object.keys(slots).filter(slotUsed)
         .map((k) => shell.WRAPPERS[k].styles).join("\n")
     + (rows.length ? ROW_WRAPPER.styles : "")
+    + (r.filesIn.includes(READOUT_GRAMMAR.reaches) ? READOUT_GRAMMAR.styles : "")
     + mods.map((m) => m.styles ?? "").join("\n");
   /* a rows-only door still carries a .cards element (hidden, empty) so the
    * shell's always-shipped .cards rule has something to match — the orphan

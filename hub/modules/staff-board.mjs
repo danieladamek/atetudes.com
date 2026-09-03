@@ -29,6 +29,7 @@ import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../
 import { writtenValue } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+import { mountReadout } from "../readout.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
@@ -45,11 +46,11 @@ export const staffBoard = {
   requires: { surface: "multetudes" },
   mount_point: "boards",
   order: 20,
-  controls: ["stSvg", "stMini"],
+  controls: ["stSvg", "stMini", "stMode"],
 
   markup: `
-  <span class="mini" id="stMini" data-control="stMini"></span>
-  <div class="bh"><span>The étude — end to end</span></div>
+  <div class="bh readhead"><span>The étude — end to end</span><div class="readbox" id="stMode" data-control="stMode"
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="stMini" data-control="stMini"></span></div>
   <div class="hint info">Treble carries the material, written an octave above where it sounds —
   the 8 under the clef. The bass clef carries the reference tone, at sounding pitch, when one is
   chosen; the full progression of bars arrives with child 7. Until then the étude holds one bar.</div>
@@ -57,7 +58,7 @@ export const staffBoard = {
 
   styles: `
 #stSvg{width:100%;height:auto;display:block}
-#stMini{position:absolute;top:8px;right:44px;display:flex;gap:4px;z-index:6}
+#stMini{display:flex;gap:4px;flex:0 0 auto}   /* 260920: IN FLOW in the header row, after the readout's spacer — it was absolute at the shell buttons' own offsets (a copied number) and covered the readout at phone width */
 #stMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 #stMini button:hover{border-color:var(--ink)}
@@ -415,6 +416,7 @@ export const staffBoard = {
       if (m.index !== index) { index = m.index; render(); }
     });
     mountMini(ctx, byId("stMini"));
+    mountReadout(ctx, byId("stMode"));   // 260920: the shared readout — this board's own instance, its own derivation
     render();
   },
 };

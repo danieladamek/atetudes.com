@@ -140,7 +140,11 @@ export default {
      * into the neck's header, the clock closes ranks, the hint keeps reason and
      * affordance while the readout says what is; the approach sentence names its
      * centre. No engine change. */
-    blurb: "one tool that holds many études · v0.5.1",
+    /* v0.5.2 (260920, night 26 — one rule applied twice): one OPEN_MIDI (field.mjs),
+     * one chromatic speller (chord.mjs), two more palette copies retired, and the
+     * harmonic readout on every étude representation as ONE component (hub/readout.mjs)
+     * with the minis in flow beside it. */
+    blurb: "one tool that holds many études · v0.5.2",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

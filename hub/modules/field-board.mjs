@@ -49,6 +49,7 @@ import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+import { mountReadout } from "../readout.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
@@ -114,8 +115,8 @@ export const fieldBoard = {
        AFTER the title span so nothing about the collapsed summary changes.
        Content unchanged: the dot, the chord, its mode — the strip is
        scanned, the box is read. -->
-  <div class="bh fd-neckhead"><span>On the neck</span><div class="fd-readbox" id="fdMode" data-control="fdMode"
-        title="this bar's chord, and the mode it is in the context of the chosen scale"><span class="fd-readtext"></span></div><span class="fd-headspace"></span></div>
+  <div class="bh readhead"><span>On the neck</span><div class="readbox" id="fdMode" data-control="fdMode"
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -278,23 +279,8 @@ export const fieldBoard = {
  * readout keeps ONE LINE at every width — flex:0 1 auto and min-width:0 let it
  * shrink, and the ellipsis lives on an INNER span so the border never clips.
  * The mixer-column basis (380px, margin-left:auto) is gone with the seat. */
-.fd-neckhead{display:flex;align-items:center;gap:10px;min-width:0}
-.fd-neckhead>span:first-child{flex:0 0 auto}
-.fd-headspace{flex:1 1 0;min-width:0}
-.fd-readbox{flex:0 1 auto;min-width:0;max-width:100%;
-  border:1px solid var(--edge);border-radius:8px;background:#fff;padding:3px 12px;
-  font-size:15px;font-weight:bold;color:var(--ink);letter-spacing:0;text-transform:none;
-  white-space:nowrap;overflow:hidden;line-height:1.3}
-.fd-readbox .fd-readtext{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* VARIANT (b), 260918 (night 24, item 2 — correcting night 23's (a), which
- * coloured EVERY chord name in R's red, a function most chords do not have):
- * the chord's ROOT DEGREE is a filled dot beside the name — the legend's own
- * mark — and the name stays ink. Golden rule 8: the palette encodes function
- * and nothing else; four of its seven colours cannot carry text, which is
- * why the dot exists. Text red now means exactly one thing: the key. */
-.fd-readbox .fd-readchord{color:var(--ink)}
-.fd-readbox .fd-readdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
-.fd-readbox .fd-readmode{font-weight:600}
+/* the readout's seat and box are the SHELL's grammar since 260920 (night 26 item 3):
+ * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
 .fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 .fd-mixrow{max-width:376px;margin-top:8px}
 .fd-mixlab{width:52px}
@@ -679,25 +665,10 @@ export const fieldBoard = {
       /* THE MODE LINE (260917, item 5): under a scale, this bar's chord
        * degree names its mode from the one table; a root off the key says so;
        * a chord object leaves the line empty (the display is the scale's) */
-      {
-        /* ALWAYS (260918, item 2 — register 33): the chord and its mode, for
-         * every object. VARIANT (b), night 24: the root's DEGREE DOT beside
-         * the name, from the one palette, keyed to the chord's actual degree
-         * — derived from chordAt.degree, never assigned. Ink text. */
-        const ml = byId("fdMode").querySelector(".fd-readtext");
-        ml.textContent = "";
-        if (cur.degree >= 0) {
-          const dot = d.createElement("i"); dot.className = "fd-readdot";
-          dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[cur.degree]);
-          dot.style.background = FAM_COLOR[FAM[cur.degree]]; ml.appendChild(dot);
-        }
-        const ch = d.createElement("b"); ch.className = "fd-readchord"; ch.textContent = cur.symbol;
-        const md = d.createElement("span"); md.className = "fd-readmode";
-        md.textContent = cur.degree >= 0
-          ? ` — ${fld.notes[cur.degree].name} ${MODES[cfg.scale][cur.degree]}`
-          : " — not in the key";
-        ml.appendChild(ch); ml.appendChild(md);
-      }
+      /* the readout box (#fdMode) paints ITSELF — hub/readout.mjs's instance,
+       * mounted below, derives this bar's chord and mode from the bus through
+       * the same chordAt and MODES this render uses; nothing is handed to it
+       * (260920, night 26 item 3 — one component for three boards, §4.2.3) */
       /* the bass view paints from the same build — Harmony's state, echoed.
        * ITS OPTIONS DERIVE FROM THE PICK (260917, item 3): the root, then
        * the tones the object actually holds, then the two relative options
@@ -1039,6 +1010,7 @@ export const fieldBoard = {
         announce(d, CONFIG_CHANGED, { bass: e.target.value }));
     }
     mountMini(ctx, byId("fdMini"));
+    mountReadout(ctx, byId("fdMode"));   // 260920: the shared readout, its own derivation
     let pulseT = null;
     listen(d, BEAT, () => {
       const p = byId("fdPulse");
