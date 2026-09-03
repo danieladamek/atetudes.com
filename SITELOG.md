@@ -1,3 +1,11 @@
+## 2026-09-03 — DEPLOYED: v0.5.2 live, all four moved studies spot-checked byte-identical
+
+- Actions run 33729408189 green (full gates in CI, commit `5c54b54` on main; items 1+2 in
+  `88be55b` before it). Every moved study's live shasum matches the repo byte-for-byte:
+  multetudes 3ff21bf2b072 · tetradetudes e5649851a1bb · metronome 3ec34d6a2d92 · triadetudes
+  f2eecb6ce637; all four wrappers answer 200; the multetudes blurb serves v0.5.2. Read from
+  the run and the live bytes.
+
 ## 2026-09-02 — Multetudes v0.5.2: night 26, one rule applied twice — one tuning, one speller, and the readout on every étude representation
 
 - **Source edition v0.5.2** (night 26; the report in `notes/working/Multetudes build run
