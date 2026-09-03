@@ -632,6 +632,61 @@ function romanQualitySuffix(r) {
  * leading b/# bends the spelled note, not the pitch class table (bVII in
  * Eb major is Db, not C#).
  */
+/**
+ * THE CHROMATIC SPELLER (260920, night 26 item 2 — standing rule 6). Until
+ * tonight this rule lived twice, in score-board.mjs and staff-board.mjs, each
+ * importing LETTER_PC from here and re-stating the law beside it — the tell
+ * that the rule belonged beside its data. The law is resolveRoman's: KEEP THE
+ * LETTER, MOVE THE ACCIDENTAL, throw past ±2.
+ *
+ *   chromaticSpeller("F", "major") → (midi) => { name, oct }
+ *
+ * A diatonic pitch class takes the scale's own spelled name. A chromatic one
+ * takes the nearest scale note ABOVE in a flat key, lowered by the distance,
+ * or the nearest scale note BELOW in a sharp key, raised by it — letter kept,
+ * accidental moved (Db major: pc 2 is E♭ lowered → Ebb, never "Eb", which is
+ * a different pitch; C harmonic minor: pc 9 lies in the augmented second, so
+ * B lowered twice → Bbb). The two retired copies did letter + one accidental
+ * and were wrong whenever the neighbour already carried one (staff-board drew
+ * a WRONG PITCH a semitone off; score-board fell back to "C").
+ *
+ * WHICH WAY IS "FLAT" IS READ FROM THE KEY SIGNATURE, NOT A TABLE: the tonic's
+ * major collection carries a flat (F major's B♭ — the old `|| key === "F"`
+ * special case falls out with nothing said). Measured before choosing
+ * (260920): reading the scale's OWN collection disagrees with the old rule
+ * for C/G harmonic and C melodic minor and is undecidable for C major, D
+ * harmonic and G melodic (equal counts); reading the key signature agrees in
+ * all 45 key × scale cases. The other reading is Daniel's to rule on.
+ *
+ * The written octave follows the LETTER (a Cb/Cbb sounds below its C; a
+ * B#/B## above its B), which is why those two lines survive here verbatim.
+ */
+function chromaticSpeller(key, scaleType = "major") {
+  const notes = scaleNotes(key, scaleType);
+  const byPc = new Map(notes.map((n) => [n.pc, n.name]));
+  const flatKey = scaleNotes(key, "major").some((n) => n.name.includes("b"));
+  const dir = flatKey ? 1 : -1;
+  const respell = (name, delta) => {
+    const acc = accOf(name) + delta;
+    if (Math.abs(acc) > 2)
+      throw new Error(`spelling a chromatic note in ${key} ${scaleType} needs ${Math.abs(acc)} accidentals`);
+    return name[0] + (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc));
+  };
+  return (midi) => {
+    const pc = mod12(midi);
+    let name = byPc.get(pc);
+    if (!name) {
+      let d = 1;
+      while (!byPc.has(mod12(pc + dir * d))) d++;
+      name = respell(byPc.get(mod12(pc + dir * d)), -dir * d);
+    }
+    let oct = Math.floor(midi / 12) - 1;
+    if (name.startsWith("Cb")) oct += 1;
+    if (name.startsWith("B#")) oct -= 1;
+    return { name, oct };
+  };
+}
+
 function resolveRoman(tok, key, scaleType = "major") {
   const r = parseRoman(tok);
   if (!r) return null;

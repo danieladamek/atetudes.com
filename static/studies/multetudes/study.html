@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/field.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, hub/palette.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, hub/palette.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -1399,6 +1399,61 @@ function romanQualitySuffix(r) {
  * leading b/# bends the spelled note, not the pitch class table (bVII in
  * Eb major is Db, not C#).
  */
+/**
+ * THE CHROMATIC SPELLER (260920, night 26 item 2 — standing rule 6). Until
+ * tonight this rule lived twice, in score-board.mjs and staff-board.mjs, each
+ * importing LETTER_PC from here and re-stating the law beside it — the tell
+ * that the rule belonged beside its data. The law is resolveRoman's: KEEP THE
+ * LETTER, MOVE THE ACCIDENTAL, throw past ±2.
+ *
+ *   chromaticSpeller("F", "major") → (midi) => { name, oct }
+ *
+ * A diatonic pitch class takes the scale's own spelled name. A chromatic one
+ * takes the nearest scale note ABOVE in a flat key, lowered by the distance,
+ * or the nearest scale note BELOW in a sharp key, raised by it — letter kept,
+ * accidental moved (Db major: pc 2 is E♭ lowered → Ebb, never "Eb", which is
+ * a different pitch; C harmonic minor: pc 9 lies in the augmented second, so
+ * B lowered twice → Bbb). The two retired copies did letter + one accidental
+ * and were wrong whenever the neighbour already carried one (staff-board drew
+ * a WRONG PITCH a semitone off; score-board fell back to "C").
+ *
+ * WHICH WAY IS "FLAT" IS READ FROM THE KEY SIGNATURE, NOT A TABLE: the tonic's
+ * major collection carries a flat (F major's B♭ — the old `|| key === "F"`
+ * special case falls out with nothing said). Measured before choosing
+ * (260920): reading the scale's OWN collection disagrees with the old rule
+ * for C/G harmonic and C melodic minor and is undecidable for C major, D
+ * harmonic and G melodic (equal counts); reading the key signature agrees in
+ * all 45 key × scale cases. The other reading is Daniel's to rule on.
+ *
+ * The written octave follows the LETTER (a Cb/Cbb sounds below its C; a
+ * B#/B## above its B), which is why those two lines survive here verbatim.
+ */
+function chromaticSpeller(key, scaleType = "major") {
+  const notes = scaleNotes(key, scaleType);
+  const byPc = new Map(notes.map((n) => [n.pc, n.name]));
+  const flatKey = scaleNotes(key, "major").some((n) => n.name.includes("b"));
+  const dir = flatKey ? 1 : -1;
+  const respell = (name, delta) => {
+    const acc = accOf(name) + delta;
+    if (Math.abs(acc) > 2)
+      throw new Error(`spelling a chromatic note in ${key} ${scaleType} needs ${Math.abs(acc)} accidentals`);
+    return name[0] + (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc));
+  };
+  return (midi) => {
+    const pc = mod12(midi);
+    let name = byPc.get(pc);
+    if (!name) {
+      let d = 1;
+      while (!byPc.has(mod12(pc + dir * d))) d++;
+      name = respell(byPc.get(mod12(pc + dir * d)), -dir * d);
+    }
+    let oct = Math.floor(midi / 12) - 1;
+    if (name.startsWith("Cb")) oct += 1;
+    if (name.startsWith("B#")) oct -= 1;
+    return { name, oct };
+  };
+}
+
 function resolveRoman(tok, key, scaleType = "major") {
   const r = parseRoman(tok);
   if (!r) return null;
@@ -1413,7 +1468,7 @@ function resolveRoman(tok, key, scaleType = "major") {
   const symbol = name + romanQualitySuffix(r);
   return { symbol, parsed: parseChord(symbol) };
 }
-return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, resolveRoman };
+return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, chromaticSpeller, resolveRoman };
 })();
 
 /* ===== engine/tetrad-voicings.mjs ===== */
@@ -2212,12 +2267,166 @@ function voiceLines(voicings, channelOf = DEFAULT_CHANNEL) {
 return { DEFAULT_CHANNEL, voiceKey, keysOf, matchVoices, transitions, octaveLeap, holding, voiceLines };
 })();
 
+/* ===== engine/field.mjs ===== */
+const __m_engine_field_mjs = (() => {
+const { scaleNotes, SCALE_STEPS } = __m_engine_chord_mjs;
+/* field.mjs — THE FIELD: a key, a scale, and a reference tone that re-roots it
+ * (Multetudes child 1; multetudes-prd.md §2.1).
+ *
+ * The model this encodes, Daniel's: choose a key and the whole neck shows
+ * every note of it; everything else is a NARROWING of that constant field. The
+ * reference tone re-roots the collection — the same seven notes read against a
+ * different centre, WHICH IS WHAT A MODE IS. The collection never changes;
+ * only the reading does.
+ *
+ * THE TWO DEGREES, AND WHY BOTH EXIST. Every note the field offers carries
+ *
+ *   deg      its degree AGAINST THE REFERENCE — what colours and labels read.
+ *            Under C Dorian (the B♭ collection re-rooted on C), C wears R.
+ *   keyDeg   its index IN THE KEY'S SCALE — what chords and the bass read.
+ *            The diatonic stack of thirds on a note is the same three or four
+ *            pitches whatever the reference is; a chord builder that read
+ *            `deg` would re-spell every chord when the user changed the mode.
+ *
+ * Conflating them is the bug this pair exists to prevent (the item's words),
+ * and the pair is asserted apart at load and in engine/tests/field.test.mjs.
+ *
+ * WHAT IS DELEGATED: the seven spelled degrees come from engine/chord.mjs's
+ * scaleNotes() — the letters climb one per degree, accidentals derived — and
+ * are NOT re-derived here. The tuning is derived below from its named rule
+ * and this is ITS ONE DECLARATION SITE (260920, night 26 item 1): until
+ * tonight engine/tetrad-sequence.mjs stated the same six numbers as a literal
+ * and the tests pinned the two equal — a pin that two copies agree keeps both
+ * alive and turns a divergence into a test failure rather than an
+ * impossibility. Now tetrad-sequence and every hub consumer import from here;
+ * the test pins that exactly one declaration exists, so the class of defect
+ * cannot return. (An alternate tuning will move through this one value.)
+ *
+ * Pure: no DOM, no audio, no app state. Load-time structural assertions.
+ */
+
+/** Standard tuning, DERIVED from the named rule rather than typed: string 6 is
+ * E2 (midi 40), and each higher string sits a perfect fourth above the one
+ * below it except string 2, which sits a major third above string 3 (G→B). */
+const OPEN_MIDI = (() => {
+  const open = { 6: 40 };
+  for (let s = 6; s > 1; s--) open[s - 1] = open[s] + (s === 3 ? 4 : 5);
+  return open;
+})();
+
+/** The mode names, one per degree per scale — the brief §2.1's table, verbatim.
+ * One name each where several are current; aliases are a decision, not a build
+ * problem (the brief's words). Names are vocabulary, not derived musical fact —
+ * what IS derived is everything the name is attached to. */
+const MODES = {
+  major: ["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"],
+  harm: ["Harmonic minor", "Locrian ♮6", "Ionian ♯5", "Dorian ♯4", "Phrygian dominant",
+    "Lydian ♯2", "Altered ♭♭7"],
+  mel: ["Melodic minor", "Dorian ♭2", "Lydian augmented", "Lydian dominant", "Mixolydian ♭6",
+    "Locrian ♮2", "Altered"],
+};
+
+const mod7 = (n) => ((n % 7) + 7) % 7;
+const mod12 = (n) => ((n % 12) + 12) % 12;
+
+/** the degree a keyDeg wears against the reference — re-rooting as arithmetic */
+const degAgainst = (keyDeg, ref) => mod7(keyDeg - ref);
+
+/**
+ * field({ key, scale, ref }) → the field value:
+ *   notes     the seven spelled degrees, [{ name, pc }], indexed by keyDeg
+ *   pcs       their pitch classes, same order
+ *   ref       the reference degree (0..6; 0 = the key itself)
+ *   refNote   the spelled note the field is read against
+ *   modeName  what that reading is called (MODES[scale][ref])
+ *   degOf(pc) the degree a pitch class wears against the reference, or -1
+ */
+function field({ key, scale = "major", ref = 0 } = {}) {
+  if (!SCALE_STEPS[scale])
+    throw new Error(`field: unknown scale "${scale}" — chord.mjs knows ${Object.keys(SCALE_STEPS).join(", ")}`);
+  if (!Number.isInteger(ref) || ref < 0 || ref > 6)
+    throw new Error(`field: the reference is a degree 0..6, not ${ref}`);
+  const notes = scaleNotes(key, scale);
+  const pcs = notes.map((n) => n.pc);
+  return {
+    key, scale, ref, notes, pcs,
+    refNote: notes[ref],
+    modeName: MODES[scale][ref],
+    degOf: (pc) => {
+      const i = pcs.indexOf(mod12(pc));
+      return i < 0 ? -1 : degAgainst(i, ref);
+    },
+  };
+}
+
+/** every note of the field on one string, ascending by fret:
+ * [{ string, fret, midi, deg, keyDeg }] — BOTH degrees, always. */
+function notesOn(string, fld, nfrets = 15) {
+  if (!Number.isInteger(string) || string < 1 || string > 6)
+    throw new Error(`notesOn: string ${string} is not a real string`);
+  const out = [];
+  for (let f = 0; f <= nfrets; f++) {
+    const midi = OPEN_MIDI[string] + f;
+    const keyDeg = fld.pcs.indexOf(mod12(midi));
+    if (keyDeg >= 0)
+      out.push({ string, fret: f, midi, deg: degAgainst(keyDeg, fld.ref), keyDeg });
+  }
+  return out;
+}
+
+/* ---------------- load-time structural assertions (golden rule 1) ---------------- */
+
+{
+  // the derived tuning obeys its own named rule, stated independently: six
+  // strings, lowest E2, neighbouring gaps all fourths except G→B
+  const order = [6, 5, 4, 3, 2, 1];
+  if (OPEN_MIDI[6] !== 40) throw new Error("field: string 6 must be E2 (midi 40)");
+  for (let i = 1; i < order.length; i++) {
+    const gap = OPEN_MIDI[order[i]] - OPEN_MIDI[order[i - 1]];
+    if (gap !== (order[i - 1] === 3 ? 4 : 5))
+      throw new Error(`field: string ${order[i]} is ${gap} semitones above ${order[i - 1]}`);
+  }
+  // the mode-name table is total and unambiguous per scale
+  for (const [sc, names] of Object.entries(MODES)) {
+    if (names.length !== 7 || new Set(names).size !== 7)
+      throw new Error(`field: MODES.${sc} must carry seven distinct names`);
+    if (!SCALE_STEPS[sc]) throw new Error(`field: MODES names a scale chord.mjs does not know: ${sc}`);
+  }
+  const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+  for (const key of ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"])
+    for (const scale of Object.keys(SCALE_STEPS)) {
+      const f0 = field({ key, scale });
+      // seven distinct pitch classes
+      if (f0.pcs.length !== 7 || new Set(f0.pcs).size !== 7)
+        throw new Error(`field: ${key} ${scale} is not seven distinct pitch classes`);
+      // the spelling's letters ascend one per degree
+      const l0 = LETTERS.indexOf(f0.notes[0].name[0]);
+      for (let i = 0; i < 7; i++)
+        if (f0.notes[i].name[0] !== LETTERS[mod7(l0 + i)])
+          throw new Error(`field: ${key} ${scale} degree ${i + 1} is spelled ${f0.notes[i].name} — letters must ascend one per degree`);
+      // re-rooting is a rotation and never changes the collection
+      for (let ref = 0; ref < 7; ref++) {
+        const fr = field({ key, scale, ref });
+        if (fr.pcs.join() !== f0.pcs.join())
+          throw new Error(`field: re-rooting ${key} ${scale} on degree ${ref + 1} changed the collection`);
+        if (fr.degOf(fr.refNote.pc) !== 0)
+          throw new Error(`field: the reference of ${key} ${scale} ref ${ref} does not read as its own root`);
+        for (let kd = 0; kd < 7; kd++)
+          if (degAgainst(kd, ref) !== mod7(kd - ref))
+            throw new Error("field: re-rooting is not a rotation");
+      }
+    }
+}
+return { OPEN_MIDI, MODES, degAgainst, field, notesOn };
+})();
+
 /* ===== engine/tetrad-sequence.mjs ===== */
 const __m_engine_tetrad_sequence_mjs = (() => {
 const { parseChord, scaleNotes, SCALE_STEPS } = __m_engine_chord_mjs;
 const { tetradCandidates } = __m_engine_tetrad_voicings_mjs;
 const { chooseVoicings, makeZone } = __m_engine_isolation_mjs;
 const { keysOf } = __m_engine_voice_identity_mjs;
+const { OPEN_MIDI } = __m_engine_field_mjs;
 /* tetrad-sequence.mjs — THE DERIVED PASS: a scale, a cycle, and the voiced
  * chords that walk it.
  *
@@ -2246,13 +2455,14 @@ const { keysOf } = __m_engine_voice_identity_mjs;
 
 
 
-/* ---------------- the instrument ---------------- */
+/* THE TUNING IS THE FIELD'S FACT (260920, night 26 item 1 — standing rule 6):
+ * this module stated standard tuning as a six-number literal beside
+ * field.mjs's derived one, and the tests pinned the two equal. One value now,
+ * derived in field.mjs from its named rule and imported here; nothing is
+ * re-exported (the door build reads exports by declaration, so a re-export
+ * would be silently dropped) — every consumer imports from field.mjs. */
 
-/** Standard tuning, in the family's string numbering (string-sets.mjs: 1 is the
- * HIGHEST pitch). Asserted at load against the named rule rather than trusted:
- * every neighbouring pair is a perfect fourth except G→B, which is a major
- * third. A typo'd number would otherwise silently retune the app. */
-const OPEN_MIDI = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };
+/* ---------------- the instrument ---------------- */
 
 /** the three four-string groups the frozen study offers, derived by sliding a
  * window of four down the six strings rather than listed */
@@ -2490,7 +2700,7 @@ function degreeLabel(chord, midi) {
   if (row !== "Cmaj7 Dm7 Em7 Fmaj7 G7 Am7 Bm7b5")
     throw new Error("tetrad-sequence: C major's diatonic sevenths are wrong — got " + row);
 }
-return { OPEN_MIDI, STRING_SETS, CYCLES, cycleDegrees, tetradOnDegree, romanOf, defaultZoneFrets, tetradPass, degreeLabel };
+return { STRING_SETS, CYCLES, cycleDegrees, tetradOnDegree, romanOf, defaultZoneFrets, tetradPass, degreeLabel };
 })();
 
 /* ===== engine/drill.mjs ===== */
@@ -3557,7 +3767,8 @@ return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, 
 /* ===== hub/modules/audio-card.mjs ===== */
 const __m_hub_modules_audio_card_mjs = (() => {
 const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES } = __m_engine_voices_mjs;
-const { tetradPass, OPEN_MIDI } = __m_engine_tetrad_sequence_mjs;
+const { tetradPass } = __m_engine_tetrad_sequence_mjs;
+const { OPEN_MIDI } = __m_engine_field_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } = __m_hub_bus_mjs;
@@ -3591,6 +3802,7 @@ const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, li
  * be the empty box the reference has none of. The click's own level stays in
  * the metronome card, because the shared component owns its own sound.
  */
+
 
 
 
@@ -3831,155 +4043,6 @@ const audioCard = {
   },
 };
 return { audioCard };
-})();
-
-/* ===== engine/field.mjs ===== */
-const __m_engine_field_mjs = (() => {
-const { scaleNotes, SCALE_STEPS } = __m_engine_chord_mjs;
-/* field.mjs — THE FIELD: a key, a scale, and a reference tone that re-roots it
- * (Multetudes child 1; multetudes-prd.md §2.1).
- *
- * The model this encodes, Daniel's: choose a key and the whole neck shows
- * every note of it; everything else is a NARROWING of that constant field. The
- * reference tone re-roots the collection — the same seven notes read against a
- * different centre, WHICH IS WHAT A MODE IS. The collection never changes;
- * only the reading does.
- *
- * THE TWO DEGREES, AND WHY BOTH EXIST. Every note the field offers carries
- *
- *   deg      its degree AGAINST THE REFERENCE — what colours and labels read.
- *            Under C Dorian (the B♭ collection re-rooted on C), C wears R.
- *   keyDeg   its index IN THE KEY'S SCALE — what chords and the bass read.
- *            The diatonic stack of thirds on a note is the same three or four
- *            pitches whatever the reference is; a chord builder that read
- *            `deg` would re-spell every chord when the user changed the mode.
- *
- * Conflating them is the bug this pair exists to prevent (the item's words),
- * and the pair is asserted apart at load and in engine/tests/field.test.mjs.
- *
- * WHAT IS DELEGATED: the seven spelled degrees come from engine/chord.mjs's
- * scaleNotes() — the letters climb one per degree, accidentals derived — and
- * are NOT re-derived here. The tuning is derived below from its named rule;
- * engine/tetrad-sequence.mjs states the same table and asserts the same rule,
- * and the two are pinned equal in the tests (§4.3: consistency asserted, not
- * remembered) rather than one importing the other's whole pass machinery.
- *
- * Pure: no DOM, no audio, no app state. Load-time structural assertions.
- */
-
-/** Standard tuning, DERIVED from the named rule rather than typed: string 6 is
- * E2 (midi 40), and each higher string sits a perfect fourth above the one
- * below it except string 2, which sits a major third above string 3 (G→B). */
-const OPEN_MIDI = (() => {
-  const open = { 6: 40 };
-  for (let s = 6; s > 1; s--) open[s - 1] = open[s] + (s === 3 ? 4 : 5);
-  return open;
-})();
-
-/** The mode names, one per degree per scale — the brief §2.1's table, verbatim.
- * One name each where several are current; aliases are a decision, not a build
- * problem (the brief's words). Names are vocabulary, not derived musical fact —
- * what IS derived is everything the name is attached to. */
-const MODES = {
-  major: ["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"],
-  harm: ["Harmonic minor", "Locrian ♮6", "Ionian ♯5", "Dorian ♯4", "Phrygian dominant",
-    "Lydian ♯2", "Altered ♭♭7"],
-  mel: ["Melodic minor", "Dorian ♭2", "Lydian augmented", "Lydian dominant", "Mixolydian ♭6",
-    "Locrian ♮2", "Altered"],
-};
-
-const mod7 = (n) => ((n % 7) + 7) % 7;
-const mod12 = (n) => ((n % 12) + 12) % 12;
-
-/** the degree a keyDeg wears against the reference — re-rooting as arithmetic */
-const degAgainst = (keyDeg, ref) => mod7(keyDeg - ref);
-
-/**
- * field({ key, scale, ref }) → the field value:
- *   notes     the seven spelled degrees, [{ name, pc }], indexed by keyDeg
- *   pcs       their pitch classes, same order
- *   ref       the reference degree (0..6; 0 = the key itself)
- *   refNote   the spelled note the field is read against
- *   modeName  what that reading is called (MODES[scale][ref])
- *   degOf(pc) the degree a pitch class wears against the reference, or -1
- */
-function field({ key, scale = "major", ref = 0 } = {}) {
-  if (!SCALE_STEPS[scale])
-    throw new Error(`field: unknown scale "${scale}" — chord.mjs knows ${Object.keys(SCALE_STEPS).join(", ")}`);
-  if (!Number.isInteger(ref) || ref < 0 || ref > 6)
-    throw new Error(`field: the reference is a degree 0..6, not ${ref}`);
-  const notes = scaleNotes(key, scale);
-  const pcs = notes.map((n) => n.pc);
-  return {
-    key, scale, ref, notes, pcs,
-    refNote: notes[ref],
-    modeName: MODES[scale][ref],
-    degOf: (pc) => {
-      const i = pcs.indexOf(mod12(pc));
-      return i < 0 ? -1 : degAgainst(i, ref);
-    },
-  };
-}
-
-/** every note of the field on one string, ascending by fret:
- * [{ string, fret, midi, deg, keyDeg }] — BOTH degrees, always. */
-function notesOn(string, fld, nfrets = 15) {
-  if (!Number.isInteger(string) || string < 1 || string > 6)
-    throw new Error(`notesOn: string ${string} is not a real string`);
-  const out = [];
-  for (let f = 0; f <= nfrets; f++) {
-    const midi = OPEN_MIDI[string] + f;
-    const keyDeg = fld.pcs.indexOf(mod12(midi));
-    if (keyDeg >= 0)
-      out.push({ string, fret: f, midi, deg: degAgainst(keyDeg, fld.ref), keyDeg });
-  }
-  return out;
-}
-
-/* ---------------- load-time structural assertions (golden rule 1) ---------------- */
-
-{
-  // the derived tuning obeys its own named rule, stated independently: six
-  // strings, lowest E2, neighbouring gaps all fourths except G→B
-  const order = [6, 5, 4, 3, 2, 1];
-  if (OPEN_MIDI[6] !== 40) throw new Error("field: string 6 must be E2 (midi 40)");
-  for (let i = 1; i < order.length; i++) {
-    const gap = OPEN_MIDI[order[i]] - OPEN_MIDI[order[i - 1]];
-    if (gap !== (order[i - 1] === 3 ? 4 : 5))
-      throw new Error(`field: string ${order[i]} is ${gap} semitones above ${order[i - 1]}`);
-  }
-  // the mode-name table is total and unambiguous per scale
-  for (const [sc, names] of Object.entries(MODES)) {
-    if (names.length !== 7 || new Set(names).size !== 7)
-      throw new Error(`field: MODES.${sc} must carry seven distinct names`);
-    if (!SCALE_STEPS[sc]) throw new Error(`field: MODES names a scale chord.mjs does not know: ${sc}`);
-  }
-  const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
-  for (const key of ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"])
-    for (const scale of Object.keys(SCALE_STEPS)) {
-      const f0 = field({ key, scale });
-      // seven distinct pitch classes
-      if (f0.pcs.length !== 7 || new Set(f0.pcs).size !== 7)
-        throw new Error(`field: ${key} ${scale} is not seven distinct pitch classes`);
-      // the spelling's letters ascend one per degree
-      const l0 = LETTERS.indexOf(f0.notes[0].name[0]);
-      for (let i = 0; i < 7; i++)
-        if (f0.notes[i].name[0] !== LETTERS[mod7(l0 + i)])
-          throw new Error(`field: ${key} ${scale} degree ${i + 1} is spelled ${f0.notes[i].name} — letters must ascend one per degree`);
-      // re-rooting is a rotation and never changes the collection
-      for (let ref = 0; ref < 7; ref++) {
-        const fr = field({ key, scale, ref });
-        if (fr.pcs.join() !== f0.pcs.join())
-          throw new Error(`field: re-rooting ${key} ${scale} on degree ${ref + 1} changed the collection`);
-        if (fr.degOf(fr.refNote.pc) !== 0)
-          throw new Error(`field: the reference of ${key} ${scale} ref ${ref} does not read as its own root`);
-        for (let kd = 0; kd < 7; kd++)
-          if (degAgainst(kd, ref) !== mod7(kd - ref))
-            throw new Error("field: re-rooting is not a rotation");
-      }
-    }
-}
-return { OPEN_MIDI, MODES, degAgainst, field, notesOn };
 })();
 
 /* ===== engine/string-sets.mjs ===== */
@@ -8403,6 +8466,7 @@ const { progressionOf, chordAt } = __m_engine_progression_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
+const { FAM, FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 /* keys-board.mjs — v0.9's ON THE KEYS for Multetudes (surface, 2026-08-29).
  *
@@ -8427,14 +8491,12 @@ const { tonePick, pickOf } = __m_engine_selection_mjs;
 
 
 
+
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 const SVGNS = "http://www.w3.org/2000/svg";
-const FAM = ["R", "2", "3", "4", "5", "6", "7"];
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+/* 260920 (night 26): the palette's, not a copy — night 24 retired five hand
+ * copies and this was a sixth its sweep missed; the same rule, repointed */
 const mod = (n, m) => ((n % m) + m) % m;
 const BLACK = [1, 3, 6, 8, 10];
 
@@ -11497,6 +11559,7 @@ return { progressionCard };
 /* ===== hub/modules/staff-board.mjs ===== */
 const __m_hub_modules_staff_board_mjs = (() => {
 const { field } = __m_engine_field_mjs;
+const { chromaticSpeller } = __m_engine_chord_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } = __m_engine_selection_mjs;
@@ -11528,6 +11591,7 @@ const { FAM_COLOR, FAM_TEXT, FAM, VIOLET } = __m_hub_palette_mjs;
  * spelling (the letter index arithmetic v0.9 uses), asserted before drawing —
  * never copied from the prototype's stored markup.
  */
+
 
 
 
@@ -11657,22 +11721,18 @@ const staffBoard = {
        * §2.6's colour half, read for its law: a flat key takes the letter
        * above, flattened; a sharp key the letter below, sharpened) — and an
        * unlabelled off-field note still throws, naming the missing role. */
-      const flatKey = String(cfg.key).includes("b") || cfg.key === "F";
+      /* THE SPELLER IS chord.mjs's (260920, night 26 item 2): the copy that
+       * lived here (letter + one accidental, `|| cfg.key === "F"`) drew a WRONG
+       * PITCH whenever the neighbour already carried an accidental (Db major,
+       * pc 2: "Eb"). One speller, the law resolveRoman's; the role test stays. */
+      const spell = chromaticSpeller(cfg.key, cfg.scale);
       const stepOf = (m0, role) => {
         const m2 = m0 + WRITTEN, pc = mod(m2, 12);
-        let oct = Math.floor(m2 / 12) - 1;
-        let sp = fld.notes.find((n) => n.pc === pc);
-        if (!sp) {
-          if (role !== "approach")
-            throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable " +
-              "unless it carries a role (CR-1 §3), and this one carries " + (role ? `"${role}"` : "none"));
-          const nb = fld.notes.find((n) => n.pc === mod(pc + (flatKey ? 1 : -1), 12));
-          if (!nb) throw new Error("staff-board: a chromatic approach has no field neighbour to spell from");
-          sp = { name: nb.name[0] + (flatKey ? "b" : "#") };
-          if (sp.name.startsWith("Cb")) oct += 1;
-          if (sp.name.startsWith("B#")) oct -= 1;
-        }
-        return oct * 7 + LETTERS.indexOf(sp.name[0]);
+        if (!fld.notes.some((n) => n.pc === pc) && role !== "approach")
+          throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable " +
+            "unless it carries a role (CR-1 §3), and this one carries " + (role ? `"${role}"` : "none"));
+        const sp = spell(m2);
+        return sp.oct * 7 + LETTERS.indexOf(sp.name[0]);
       };
       const yTreble = (s) => TY + GAP * 8 - (s - (4 * 7 + 2)) * GAP;
       const yBass = (q) => BY + GAP * 8 - (q - (2 * 7 + 4)) * GAP;
@@ -11795,7 +11855,8 @@ const staffBoard = {
             const col = nt.chromatic ? VIOLET : FAM_COLOR[FAM[nt.deg]];
             const head = { cx: x, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : col, stroke: col,
               "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${x} ${y})`, "data-stmidi": nt.midi,
-              "data-stbar": ci, "data-stapproach": nt.chromatic ? "chromatic" : "diatonic" };
+              "data-stbar": ci, "data-stapproach": nt.chromatic ? "chromatic" : "diatonic",
+              "data-stname": spell(nt.midi + WRITTEN).name };   // the spelled name, addressable (260920: the one speller's answer, on the artifact)
             if (figHere) head["data-stfig"] = k;
             el("ellipse", head, svg);
           } else {

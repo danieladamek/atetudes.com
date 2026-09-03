@@ -20,6 +20,7 @@
  * never copied from the prototype's stored markup.
  */
 import { field } from "../../engine/field.mjs";
+import { chromaticSpeller } from "../../engine/chord.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } from "../../engine/selection.mjs";
@@ -149,22 +150,18 @@ export const staffBoard = {
        * §2.6's colour half, read for its law: a flat key takes the letter
        * above, flattened; a sharp key the letter below, sharpened) — and an
        * unlabelled off-field note still throws, naming the missing role. */
-      const flatKey = String(cfg.key).includes("b") || cfg.key === "F";
+      /* THE SPELLER IS chord.mjs's (260920, night 26 item 2): the copy that
+       * lived here (letter + one accidental, `|| cfg.key === "F"`) drew a WRONG
+       * PITCH whenever the neighbour already carried an accidental (Db major,
+       * pc 2: "Eb"). One speller, the law resolveRoman's; the role test stays. */
+      const spell = chromaticSpeller(cfg.key, cfg.scale);
       const stepOf = (m0, role) => {
         const m2 = m0 + WRITTEN, pc = mod(m2, 12);
-        let oct = Math.floor(m2 / 12) - 1;
-        let sp = fld.notes.find((n) => n.pc === pc);
-        if (!sp) {
-          if (role !== "approach")
-            throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable " +
-              "unless it carries a role (CR-1 §3), and this one carries " + (role ? `"${role}"` : "none"));
-          const nb = fld.notes.find((n) => n.pc === mod(pc + (flatKey ? 1 : -1), 12));
-          if (!nb) throw new Error("staff-board: a chromatic approach has no field neighbour to spell from");
-          sp = { name: nb.name[0] + (flatKey ? "b" : "#") };
-          if (sp.name.startsWith("Cb")) oct += 1;
-          if (sp.name.startsWith("B#")) oct -= 1;
-        }
-        return oct * 7 + LETTERS.indexOf(sp.name[0]);
+        if (!fld.notes.some((n) => n.pc === pc) && role !== "approach")
+          throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable " +
+            "unless it carries a role (CR-1 §3), and this one carries " + (role ? `"${role}"` : "none"));
+        const sp = spell(m2);
+        return sp.oct * 7 + LETTERS.indexOf(sp.name[0]);
       };
       const yTreble = (s) => TY + GAP * 8 - (s - (4 * 7 + 2)) * GAP;
       const yBass = (q) => BY + GAP * 8 - (q - (2 * 7 + 4)) * GAP;
@@ -287,7 +284,8 @@ export const staffBoard = {
             const col = nt.chromatic ? VIOLET : FAM_COLOR[FAM[nt.deg]];
             const head = { cx: x, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : col, stroke: col,
               "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${x} ${y})`, "data-stmidi": nt.midi,
-              "data-stbar": ci, "data-stapproach": nt.chromatic ? "chromatic" : "diatonic" };
+              "data-stbar": ci, "data-stapproach": nt.chromatic ? "chromatic" : "diatonic",
+              "data-stname": spell(nt.midi + WRITTEN).name };   // the spelled name, addressable (260920: the one speller's answer, on the artifact)
             if (figHere) head["data-stfig"] = k;
             el("ellipse", head, svg);
           } else {

@@ -18,8 +18,9 @@
  * scale (chromatic notes fall back to the key's accidental side), staff
  * position from the letter and octave. Nothing here is hand-placed.
  */
-import { tetradPass, degreeLabel, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
-import { scaleNotes, LETTER_PC } from "../../engine/chord.mjs";
+import { tetradPass, degreeLabel } from "../../engine/tetrad-sequence.mjs";
+import { OPEN_MIDI } from "../../engine/field.mjs";
+import { scaleNotes, LETTER_PC, chromaticSpeller } from "../../engine/chord.mjs";
 import { patternOf } from "../../engine/transport.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
 import { parseFigure, figureEvents, playbackWord } from "../../engine/figure.mjs";
@@ -34,25 +35,11 @@ const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
 const famOf = (lab) => lab === "R" ? "R" : lab.replace(/[#b]/g, "")
   .replace("9", "2").replace("11", "4").replace("13", "6");
 
-/** spell a midi note in the current key: the scale's own name when diatonic,
- * else the nearest letter with the key's accidental (flats in flat keys) */
-function speller(key, scale) {
-  const notes = scaleNotes(key, scale);
-  const byPc = new Map(notes.map((n) => [n.pc, n.name]));
-  const flatKey = key.includes("b") || key === "F";
-  return (midi) => {
-    const pc = ((midi % 12) + 12) % 12;
-    let name = byPc.get(pc);
-    if (!name) {
-      const L = Object.entries(LETTER_PC).find(([, v]) => v === (flatKey ? (pc + 1) % 12 : (pc + 11) % 12));
-      name = L ? L[0] + (flatKey ? "b" : "#") : "C";
-    }
-    let oct = Math.floor(midi / 12) - 1;
-    if (name.startsWith("Cb")) oct += 1;
-    if (name.startsWith("B#")) oct -= 1;
-    return { name, oct };
-  };
-}
+/* THE SPELLER IS chord.mjs's (260920, night 26 item 2): this module carried
+ * its own copy of the chromatic-spelling rule — letter + one accidental, a
+ * hand-kept `|| key === "F"`, and a silent "C" when no letter fit — beside the
+ * LETTER_PC it imported from the rule's owner. One speller now, the law
+ * resolveRoman's (keep the letter, move the accidental). */
 
 export const scoreBoard = {
   id: "score-board",
@@ -87,7 +74,7 @@ export const scoreBoard = {
     const render = () => {
       const svg = byId("score"); svg.textContent = ""; xs = [];
       const pass = tetradPass({ families, ...cfg });
-      const spell = speller(cfg.key, cfg.scale);
+      const spell = chromaticSpeller(cfg.key, cfg.scale);
       const HS = 5.5, yF5 = 44;
       const stepOf = (name, oct) => oct * 7 + LETTERS.indexOf(name[0]);
       const yOf = (name, oct) => yF5 + (stepOf("F", 5) - stepOf(name, oct)) * HS;
@@ -218,7 +205,8 @@ export const scoreBoard = {
               const chrom = !scalePcs.includes(((ev.midi % 12) + 12) % 12);
               const fam = famOf(labOf(ev.midi));
               el("ellipse", { cx: xk, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : (chrom ? VIOLET : FAM_COLOR[fam]),
-                stroke: chrom ? VIOLET : FAM_COLOR[fam], "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${xk} ${y})` }, svg);
+                stroke: chrom ? VIOLET : FAM_COLOR[fam], "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${xk} ${y})`,
+                "data-scname": sp.name, "data-scapproach": chrom ? "chromatic" : "diatonic" }, svg);   // the one speller's answer, on the artifact (260920)
             } else {
               const lab = labOf(ev.midi);
               y = head(xk, sp.name, sp.oct, famOf(lab), lab, open);

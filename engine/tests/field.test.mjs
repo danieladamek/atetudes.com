@@ -10,14 +10,33 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { field, notesOn, degAgainst, OPEN_MIDI, MODES } from "../field.mjs";
-import { OPEN_MIDI as SEQ_OPEN_MIDI } from "../tetrad-sequence.mjs";
+import * as SEQ from "../tetrad-sequence.mjs";
 import { SCALE_STEPS } from "../chord.mjs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 
-test("the derived tuning IS the family's stated one — two modules, one fact, asserted equal", () => {
-  assert.deepEqual(OPEN_MIDI, SEQ_OPEN_MIDI,
-    "field.mjs derives standard tuning from the named rule; tetrad-sequence.mjs states it — they must agree");
+/* PIN REWRITTEN 260920 (night 26 item 1, rule 7). It read: "the derived tuning
+ * IS the family's stated one — two modules, one fact, asserted equal", and
+ * imported OPEN_MIDI from both modules. A pin that two copies agree is
+ * strictly weaker than there being one copy: it keeps both alive and makes a
+ * divergence a test failure rather than an impossibility. The claim now is
+ * the stronger one — ONE declaration site in the whole engine, in field.mjs,
+ * and tetrad-sequence.mjs exports no tuning of its own but imports the one. */
+test("THE TUNING HAS ONE DECLARATION SITE — field.mjs; nothing else in the engine states it", () => {
+  const ENGINE = join(dirname(fileURLToPath(import.meta.url)), "..");
+  const declarers = readdirSync(ENGINE).filter((f) => f.endsWith(".mjs"))
+    .filter((f) => /^export\s+const\s+OPEN_MIDI\b/m.test(readFileSync(join(ENGINE, f), "utf8")));
+  assert.deepEqual(declarers, ["field.mjs"], "exactly one module declares OPEN_MIDI");
+  const literal = readdirSync(ENGINE).filter((f) => f.endsWith(".mjs"))
+    .filter((f) => /OPEN_MIDI\s*=\s*\{/.test(readFileSync(join(ENGINE, f), "utf8")));
+  assert.deepEqual(literal, [], "no module states the six numbers as a literal");
+  assert.equal(SEQ.OPEN_MIDI, undefined, "tetrad-sequence.mjs no longer exports a tuning");
+  assert.match(readFileSync(join(ENGINE, "tetrad-sequence.mjs"), "utf8"), /import \{ OPEN_MIDI \} from "\.\/field\.mjs"/,
+    "…it imports the one");
+  assert.equal(OPEN_MIDI[6], 40); assert.equal(OPEN_MIDI[1], 64);
 });
 
 test("the field is seven distinct spelled degrees in every key and scale", () => {

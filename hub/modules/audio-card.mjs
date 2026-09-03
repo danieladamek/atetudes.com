@@ -32,7 +32,8 @@ import {
   NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf,
   pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES,
 } from "../../engine/voices.mjs";
-import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
+import { tetradPass } from "../../engine/tetrad-sequence.mjs";
+import { OPEN_MIDI } from "../../engine/field.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { parseFigure, figureEvents, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } from "../bus.mjs";

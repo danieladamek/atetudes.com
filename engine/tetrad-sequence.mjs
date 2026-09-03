@@ -26,14 +26,15 @@ import { parseChord, scaleNotes, SCALE_STEPS } from "./chord.mjs";
 import { tetradCandidates } from "./tetrad-voicings.mjs";
 import { chooseVoicings, makeZone } from "./isolation.mjs";
 import { keysOf } from "./voice-identity.mjs";
+/* THE TUNING IS THE FIELD'S FACT (260920, night 26 item 1 — standing rule 6):
+ * this module stated standard tuning as a six-number literal beside
+ * field.mjs's derived one, and the tests pinned the two equal. One value now,
+ * derived in field.mjs from its named rule and imported here; nothing is
+ * re-exported (the door build reads exports by declaration, so a re-export
+ * would be silently dropped) — every consumer imports from field.mjs. */
+import { OPEN_MIDI } from "./field.mjs";
 
 /* ---------------- the instrument ---------------- */
-
-/** Standard tuning, in the family's string numbering (string-sets.mjs: 1 is the
- * HIGHEST pitch). Asserted at load against the named rule rather than trusted:
- * every neighbouring pair is a perfect fourth except G→B, which is a major
- * third. A typo'd number would otherwise silently retune the app. */
-export const OPEN_MIDI = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };
 
 /** the three four-string groups the frozen study offers, derived by sliding a
  * window of four down the six strings rather than listed */

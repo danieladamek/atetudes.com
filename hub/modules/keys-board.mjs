@@ -21,15 +21,13 @@ import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+import { FAM, FAM_COLOR, FAM_TEXT } from "../palette.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
-const FAM = ["R", "2", "3", "4", "5", "6", "7"];
-const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
-const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
-  "5": "#fff", "6": "#212126", "7": "#212126" };
+/* 260920 (night 26): the palette's, not a copy — night 24 retired five hand
+ * copies and this was a sixth its sweep missed; the same rule, repointed */
 const mod = (n, m) => ((n % m) + m) % m;
 const BLACK = [1, 3, 6, 8, 10];
 

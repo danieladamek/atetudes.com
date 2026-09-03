@@ -16,9 +16,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  OPEN_MIDI, STRING_SETS, CYCLES, cycleDegrees, tetradOnDegree, romanOf,
+  STRING_SETS, CYCLES, cycleDegrees, tetradOnDegree, romanOf,
   tetradPass, degreeLabel,
 } from "../tetrad-sequence.mjs";
+import { OPEN_MIDI } from "../field.mjs";   // 260920: the one declaration — the tuning pin below reads it from its owner
 import { keysOf, transitions } from "../voice-identity.mjs";
 import { loadOracle } from "./_load-tetrad-oracle.mjs";
 

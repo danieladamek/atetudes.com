@@ -20,13 +20,14 @@
  * The window AUTO-CROPS to the frets the pass actually uses, exactly as the
  * frozen study does: the neck is drawn to the music, not the music to the neck.
  */
-import { tetradPass, OPEN_MIDI } from "../../engine/tetrad-sequence.mjs";
+import { tetradPass } from "../../engine/tetrad-sequence.mjs";
+import { OPEN_MIDI } from "../../engine/field.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
 import { parseFigure, figureEvents, toneIndexOf, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } from "../bus.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
-import { FAM_COLOR, FAM_TEXT } from "../palette.mjs";
+import { FAM_COLOR, FAM_TEXT, VIOLET } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
@@ -417,7 +418,7 @@ export const fretboardStage = {
         const t = d.defaultView.setTimeout(() => {
           if (ev.string == null || ev.fret == null) return;
           const r = el("circle", { cx: fx(ev.fret), cy: fy(ev.string), r: ev.role === "approach" ? 9 : 19,
-            fill: "none", stroke: ev.role === "approach" ? "#7847A8" : "#212126",
+            fill: "none", stroke: ev.role === "approach" ? VIOLET : FAM_COLOR["5"],   // 260920: the palette's, not a literal
             "stroke-width": ev.role === "approach" ? 1.6 : 2.4, opacity: 0.9, "pointer-events": "none" }, pulseLayer);
           const fade = d.defaultView.setTimeout(() => r.remove(), 320);
           pulseTimers.push(fade);

@@ -19,7 +19,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseFigure, figureEvents } from "../figure.mjs";
-import { tetradPass, OPEN_MIDI } from "../tetrad-sequence.mjs";
+import { tetradPass } from "../tetrad-sequence.mjs";
+import { OPEN_MIDI } from "../field.mjs";
 import { voiceSchedule } from "../voices.mjs";
 
 const CTX = () => {

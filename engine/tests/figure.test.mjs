@@ -13,7 +13,8 @@ import {
   SLOT_MATERIAL, TONE_MATERIAL, TONE_ORDER, SLOT_ORDER, ADDRESS, toneIndexOf, parseFigure, orderFigure,
   figureEvents, describeFigure,
 } from "../figure.mjs";
-import { tetradPass, OPEN_MIDI } from "../tetrad-sequence.mjs";
+import { tetradPass } from "../tetrad-sequence.mjs";
+import { OPEN_MIDI } from "../field.mjs";
 import { scaleNotes } from "../chord.mjs";
 import { noteEvents } from "../note-events.mjs";
 import { parsePattern } from "../drill.mjs";

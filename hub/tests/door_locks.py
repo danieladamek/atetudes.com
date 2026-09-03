@@ -148,6 +148,16 @@ def run_door(pw, door_id):
     html = html_path.read_text()
     tag = f"[{door_id}]"
 
+    # ---- 260920 (night 26 item 1): THE TUNING IS DECLARED ONCE IN THE SHIPPED PAGE.
+    # tetrad-sequence.mjs stated the six numbers beside field.mjs's derived rule; a
+    # door carrying both shipped two tunings that merely agreed. Read on the built
+    # bytes: a door that reaches engine/field.mjs declares OPEN_MIDI exactly once,
+    # and no door states the numbers as a literal anywhere.
+    if "engine/field.mjs" in r["filesIn"]:
+        n_decl = len(re.findall(r"\bconst OPEN_MIDI = \(\(\) =>", html))
+        check(n_decl == 1, f"{tag} the built page declares OPEN_MIDI {n_decl} time(s); the tuning is stated once, derived")
+    check(not re.search(r"OPEN_MIDI = \{", html), f"{tag} the built page states the tuning as a literal")
+
     # ---------------- 2. the source grep ------------------------------------
     for rel_path in r["filesOut"]:
         ms = markers(rel_path, r["filesIn"])
@@ -2766,6 +2776,16 @@ console.log(JSON.stringify(out));
         fn = page.inner_text("#fdFigNote")
         check("approached from the key's ♭3" in fn,
               f"{tag} 4 (260919): on a non-tonic bar the readout names the centre the degree is measured from: {fn!r}")
+        # ---- 260920 (night 26 item 2): ONE SPELLER, chord.mjs's. In F MAJOR — the key the
+        # retired `|| key === "F"` special case existed for — the ♭3 approach (A♭) spells
+        # with a FLAT on the staff, read from the approach head's own spelled name; the
+        # flatness comes from the key signature (F major carries B♭), nothing said about F.
+        page.select_option("#hcKey", "F"); page.wait_for_timeout(250)
+        f_heads = page.evaluate("""() => [...document.querySelectorAll('#stSvg [data-stapproach]')]
+          .map(e => [e.dataset.stname, e.dataset.stapproach])""")
+        check(f_heads and all(n == "Ab" and k == "chromatic" for n, k in f_heads),
+              f"{tag} 2 (260920): in F major the ♭3 approach spells A♭ — a FLAT, from the key signature: {f_heads}")
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(100)
         page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(80)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
@@ -4219,6 +4239,20 @@ console.log(JSON.stringify(out));
         check(sc_errs == [],
               f"{tag} a figure the engine can sound draws NO refusal — but when the "
               f"engine refuses, the bar says so in the engine's words: {sc_errs!r}")
+        # ---- 260920 (night 26 item 2): ONE SPELLER in THIS door too. In F major the −1
+        # approach under the 3rd (A) is A♭ — spelled with a FLAT by chord.mjs's speller,
+        # read from the score's approach head. (score-board's retired copy did this with
+        # its own `|| key === "F"`.)
+        key_was = page.eval_on_selector("#keySel", "e => e.value")
+        page.select_option("#keySel", "F"); page.wait_for_timeout(200)
+        page.fill("#arpIn", "(-1)3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(300)
+        sc_heads = page.evaluate("""() => [...document.querySelectorAll('#score [data-scapproach]')]
+          .map(e => [e.dataset.scname, e.dataset.scapproach])""")
+        # the score writes the figure in EVERY bar: under each bar's 3rd the approach is a flat
+        # (A♭ D♭ G♭ C♭ across the cycle) — all chromatic, all flats, the first A♭
+        check(sc_heads and sc_heads[0][0] == "Ab" and all(n.endswith("b") and k == "chromatic" for n, k in sc_heads),
+              f"{tag} 2 (260920): in F major the −1 approach under each bar's 3rd spells with a FLAT, from the key signature: {sc_heads[:4]}")
+        page.select_option("#keySel", key_was); page.wait_for_timeout(200)
         # restore exactly what this block moved: figure, address, playback
         page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input")
         page.wait_for_timeout(100)

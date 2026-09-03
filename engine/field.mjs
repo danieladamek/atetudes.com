@@ -21,10 +21,14 @@
  *
  * WHAT IS DELEGATED: the seven spelled degrees come from engine/chord.mjs's
  * scaleNotes() — the letters climb one per degree, accidentals derived — and
- * are NOT re-derived here. The tuning is derived below from its named rule;
- * engine/tetrad-sequence.mjs states the same table and asserts the same rule,
- * and the two are pinned equal in the tests (§4.3: consistency asserted, not
- * remembered) rather than one importing the other's whole pass machinery.
+ * are NOT re-derived here. The tuning is derived below from its named rule
+ * and this is ITS ONE DECLARATION SITE (260920, night 26 item 1): until
+ * tonight engine/tetrad-sequence.mjs stated the same six numbers as a literal
+ * and the tests pinned the two equal — a pin that two copies agree keeps both
+ * alive and turns a divergence into a test failure rather than an
+ * impossibility. Now tetrad-sequence and every hub consumer import from here;
+ * the test pins that exactly one declaration exists, so the class of defect
+ * cannot return. (An alternate tuning will move through this one value.)
  *
  * Pure: no DOM, no audio, no app state. Load-time structural assertions.
  */
