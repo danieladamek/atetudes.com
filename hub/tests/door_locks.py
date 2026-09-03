@@ -262,13 +262,16 @@ def run_door(pw, door_id):
         # THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
         # frame — the B♭ tetrad block, the window from the 6th at the fifth
         # position, one bar. Re-pinned here from the old C/six-string boot.
-        boot_hint = page.inner_text("#fdHint")
+        # PINS RE-SITED 260919 (night 25 item 3, rule 7): the state's narration
+        # moved from #fdHint to the readout (#roLine) — THE READOUT SAYS WHAT IS.
+        # The claims are unchanged; the site and the phrasing are the readout's.
+        boot_hint = page.inner_text("#roLine")
         check("Bb major" in boot_hint, f"{tag} the boot key is not B\u266d: {boot_hint!r}")
-        check("Strings E–B–G–D" in boot_hint and "E–B–G–D–A" not in boot_hint,
+        check("strings 4–3–2–1" in boot_hint and "5–4–3–2–1" not in boot_hint,
               f"{tag} the boot run is not 4-3-2-1: {boot_hint!r}")
         check("from the 5th on string 4, frets 3–7" in boot_hint,
               f"{tag} the boot window is not v0.9's (the 6th at the fifth position): {boot_hint!r}")
-        check("the tetrad, one of each (grip): 4 notes, 1+1+1+1" in boot_hint,
+        check("grip" in boot_hint and "1+1+1+1 across the set" in boot_hint,
               f"{tag} the boot object is not the tetrad block: {boot_hint!r}")
         # child 7: the boot étude is v0.9's — the cycling-4ths walk, derived
         # to eight bars, IDENTIFIED chip by chip (a count-only pin hid a
@@ -331,8 +334,13 @@ def run_door(pw, door_id):
         check(dots_now() == expect_dots(d_pcs) and root_dots_now() == expect_pc(d_pcs, NAME_PC["D"]),
               f"{tag} the field did not re-derive for D major: {dots_now()} dots, "
               f"{root_dots_now()} roots (want {expect_dots(d_pcs)}, {expect_pc(d_pcs, NAME_PC['D'])})")
-        check("D major" in page.inner_text("#fdHint"),
-              f"{tag} the field hint did not follow the key: {page.inner_text('#fdHint')!r}")
+        # RE-SITED 260919 (rule 7, twice): the hint's key clause moved to the readout —
+        # but the readout RE-DERIVES from the bus (§4.2.3), so it follows the key even
+        # when the NECK is frozen (bite m10 went silent on a readout-only pin). The
+        # neck's own face is its header box: the bar's chord and mode, painted by the
+        # neck. In D the boot bar reads Dmaj7 — D Ionian.
+        check(page.inner_text("#fdMode").startswith("Dmaj7") and "D Ionian" in page.inner_text("#fdMode"),
+              f"{tag} the neck's header did not follow the key: {page.inner_text('#fdMode')!r}")
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(120)   # back to the boot key
         # a field dot SOUNDS (floor F3): clicking one announces NOTE with its midi
         note_probe = """() => { window.__fdNote = null;
@@ -348,9 +356,10 @@ def run_door(pw, door_id):
               f"({page.evaluate('() => window.__fdNote')} vs {first_midi})")
 
         # ---- child 2: the window, the set, the translation, the alias ----
-        hint = lambda: page.inner_text("#fdHint")
-        ord_of = lambda: re.search(r"from the (\S+) on string (\d)", hint()).groups()
-        frets_of = lambda: re.search(r"frets (\d+)–(\d+)", hint()).groups()
+        hint = lambda: page.inner_text("#fdHint")     # reason and affordance (260919)
+        state = lambda: page.inner_text("#roLine")    # what is — the readout (260919, re-sited)
+        ord_of = lambda: re.search(r"from the (\S+) on string (\d)", state()).groups()
+        frets_of = lambda: re.search(r"frets (\d+)–(\d+)", state()).groups()
 
         # THE WINDOW COVERS THE SET'S OCTAVE (the 2026-09-07 amendment to the
         # 2026-08-21 ruling — Daniel's own correction: "a box should never
@@ -401,28 +410,28 @@ def run_door(pw, door_id):
                       f"needs — one fret narrower must lose a class")
 
         check_window("rest")
-        check("Strings E–B–G–D" in hint(),
-              f"{tag} the boot run's derived label is not in the hint: {hint()!r}")
+        check("strings 4–3–2–1" in state(),
+              f"{tag} the boot run's derived label is not in the readout: {state()!r}")
         # the window steps — box shift, reversible, read off the artifact.
         # Updated 260904 with the boot move (frets 3–7, the placement pin's
         # choice): the boot starts on the 5th (F); one step up string 4 is G,
         # the 6th — the values move with the ruled boot, the behaviour stands.
-        h0, f0 = hint(), frets_of()
+        h0, f0 = state(), frets_of()
         page.focus("#fieldSvg")
         page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)
         check(frets_of() != f0 or ord_of() != ("5th", "4"),
-              f"{tag} ArrowRight did not step the window: {hint()!r}")
-        check(ord_of()[0] == "6th", f"{tag} one step from the 5th must start on the 6th: {hint()!r}")
+              f"{tag} ArrowRight did not step the window: {state()!r}")
+        check(ord_of()[0] == "6th", f"{tag} one step from the 5th must start on the 6th: {state()!r}")
         check_window("after ArrowRight")
         page.keyboard.press("ArrowLeft"); page.wait_for_timeout(80)
-        check(hint() == h0, f"{tag} step right then left did not return the same window")
+        check(state() == h0, f"{tag} step right then left did not return the same window")
         check_window("after ArrowLeft")
         page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)   # park on the 7th
         stepped_ord = ord_of()[0]
         # dropping string 3: the set is a SET, the frame stays honest, and the
         # DESIGN SURVIVES — the start degree does not reset with the set
         page.click('#fieldSvg [data-fdstr="3"]'); page.wait_for_timeout(100)
-        check("(skipped)" in hint(), f"{tag} a skipped run must say so: {hint()!r}")
+        check("(skipped)" in state(), f"{tag} a skipped run must say so: {state()!r}")
         check(ord_of()[0] == stepped_ord,
               f"{tag} changing the set RESET the design — the window must translate "
               f"({stepped_ord} -> {ord_of()[0]})")
@@ -430,14 +439,14 @@ def run_door(pw, door_id):
         sq3_fill = page.get_attribute('#fieldSvg [data-fdstr="3"] rect', "fill")
         check(sq3_fill == "#fff", f"{tag} the excluded string's square is not hollow: {sq3_fill}")
         dim3 = page.evaluate("""() => {
-          const m = /frets (\\d+)–(\\d+)/.exec(document.getElementById('fdHint').textContent);
+          const m = /frets (\\d+)–(\\d+)/.exec(document.getElementById('roLine').textContent);
           const [lo, hi] = [+m[1], +m[2]];
           const dots = [...document.querySelectorAll('#fieldSvg [data-str="3"]')]
             .filter(g => +g.dataset.fret >= lo && +g.dataset.fret <= hi);
           return dots.length && dots.every(g => +g.getAttribute('opacity') < 0.28); }""")
         check(dim3, f"{tag} the excluded string's dots inside the frame do not read as excluded")
         page.click('#fieldSvg [data-fdstr="3"]'); page.wait_for_timeout(100)
-        check("(skipped)" not in hint(), f"{tag} re-adding string 3 did not restore the contiguous run")
+        check("(skipped)" not in state(), f"{tag} re-adding string 3 did not restore the contiguous run")
         check_window("after re-adding string 3")
         # THE ALIAS: a restored pre-run snapshot (setIndex + key, no strings)
         # translates through the enumeration it indexed, and the board
@@ -449,13 +458,13 @@ def run_door(pw, door_id):
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { setIndex: 1, families: ["drop2"] } }))""")
         page.wait_for_timeout(120)
-        check("Strings E–B–G–D" in hint() and "B–G–D–A" not in hint(),
-              f"{tag} a live shape-half setIndex (no key) hijacked the field: {hint()!r}")
+        check("strings 4–3–2–1" in state() and "5–4–3–2" not in state(),
+              f"{tag} a live shape-half setIndex (no key) hijacked the field: {state()!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'D', setIndex: 0 } }))""")
         page.wait_for_timeout(120)
-        check("Strings G–D–A–E" in hint() and "string 6" in hint(),
-              f"{tag} setIndex 0 did not migrate to the run it indexed: {hint()!r}")
+        check("strings 6–5–4–3" in state() and "string 6" in state(),
+              f"{tag} setIndex 0 did not migrate to the run it indexed: {state()!r}")
         echoed = page.evaluate("""() => window.__fdCfg.find(m => m && m.strings)""")
         check_window("after the setIndex migration")
         check(echoed is not None and echoed.get("strings") == [6, 5, 4, 3]
@@ -463,17 +472,17 @@ def run_door(pw, door_id):
               f"{tag} the migrated run was not announced as strings-without-setIndex: {echoed}")
         # SAVE, CHANGE, RESTORE: the étude restores byte-identically — the
         # hint reproduces exactly, and the stored entry's bytes never move
-        saved_hint = hint()
+        saved_hint = state()   # the readout is the state's narration now (260919)
         page.click("#saveEntry"); page.wait_for_timeout(120)
         entry_before = page.evaluate(
             "() => JSON.stringify(JSON.parse(localStorage.getItem('multetudes.v1.log')).entries[0])")
         page.click('#fieldSvg [data-fdstr="2"]'); page.wait_for_timeout(100)
-        check(hint() != saved_hint, f"{tag} changing the set changed nothing to restore")
+        check(state() != saved_hint, f"{tag} changing the set changed nothing to restore")
         # RE-AIMED BY ROLE 260916 (rule 12): was `>> text=Restore étude` — a
         # label the adapter composes and a redesign may reword
         page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
-        check(hint() == saved_hint,
-              f"{tag} the restored étude is not the saved one:\n  saved    {saved_hint!r}\n  restored {hint()!r}")
+        check(state() == saved_hint,
+              f"{tag} the restored étude is not the saved one:\n  saved    {saved_hint!r}\n  restored {state()!r}")
         check_window("after Restore")
         entry_after = page.evaluate(
             "() => JSON.stringify(JSON.parse(localStorage.getItem('multetudes.v1.log')).entries[0])")
@@ -535,7 +544,9 @@ def run_door(pw, door_id):
               and page.eval_on_selector_all("#fdNSeg button:disabled", "e => e.length") == 2,
               f"{tag} a scale is not a chord — all tones and Placement must switch OFF "
               f"under it: {at_scale}")
-        check("a scale is not a chord" in hint()
+        # re-sited 260919: the reason lives on Placement's own cap (4e); the hint no longer repeats it
+        check("a scale is not a chord" in page.evaluate("() => document.getElementById('fdNSeg').parentElement.previousElementSibling.textContent")
+              and "a scale is not a chord" not in hint()
               and "a scale takes the whole box" in at_scale["lab"],
               f"{tag} the off-switch must carry its reason on the label: {at_scale['lab']!r}")
         # the tetrad, one of each, Grip: a voicing — one per string, four roles
@@ -613,9 +624,9 @@ def run_door(pw, door_id):
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 4, nearFret: 3 } }))""")
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(60)
-        check("from the 5th on string 4, frets 3–7" in hint()
-              and "the tetrad, one of each (grip): 4 notes" in hint(),
-              f"{tag} the door did not return to its boot state for the shots: {hint()!r}")
+        check("from the 5th on string 4, frets 3–7" in state()
+              and "grip" in state() and "1+1+1+1 across the set" in state(),
+              f"{tag} the door did not return to its boot state for the shots: {state()!r}")
 
         # ---- 260909 item 5: A CHOSEN PRESET LEAVES A TRACE ----
         # Seed-then-release stands (the select empties), but the card now
@@ -774,8 +785,8 @@ def run_door(pw, door_id):
           .map(x => x.textContent.trim()); return h; }""")
         check("Centricity" in c2h and "Harmony" not in c2h,
               f"{tag} the card reads CENTRICITY, and no card reads Harmony: {c2h}")
-        check("the whole field" in page.inner_text("#fdHint"),
-              f"{tag} 'the field' survives in the prose — the set keeps its own word")
+        check("the whole field" in page.inner_text("#roLine"),   # re-sited 260919: the readout says what is
+              f"{tag} 'the field' survives in the prose — the set keeps its own word: {page.inner_text('#roLine')[:80]!r}")
 
         # ---- 260914 item 1: THE CENTRE HAS A SOURCE, PINNED AT THE SOUND ----
         # A fixed centre and a moving progression were contradictory by
@@ -1588,7 +1599,7 @@ def run_door(pw, door_id):
         check(at_state["there"] and at_state["checked"] is False,
               f"{tag} the all-tones checkbox sits on the rail, unchecked at boot "
               f"(take 'one'): {at_state}")
-        one_word = page.inner_text("#fdHint")
+        one_word = page.inner_text("#roLine")   # re-sited 260919: the take word is the readout's
         # the value proof discriminates at LINE (n=3): under Grip every
         # occurrence caps to one per string and equals one-of-each by count —
         # the capped case, not a defect (register 18)
@@ -1597,7 +1608,7 @@ def run_door(pw, door_id):
         one_dots = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
         page.check("#fdAllTones"); page.wait_for_timeout(250)
         all_dots = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
-        all_word = page.inner_text("#fdHint")
+        all_word = page.inner_text("#roLine")
         check(one_dots == 4 and all_dots > one_dots,
               f"{tag} checked = every occurrence, unchecked = one of each — the same "
               f"values the select produced (one@Line: {one_dots}, all@Line: {all_dots})")
@@ -2376,7 +2387,7 @@ console.log(JSON.stringify(out));
         check(fsel == ["3@1/5", "5@3/5", "R@2/6"],
               f"{tag} Daniel's F must voice R, 3rd AND 5th — never two 3rds, and the "
               f"octave window holds the R the old box lost: {fsel}")
-        hint_f = page.inner_text("#fdHint")
+        hint_f = page.inner_text("#roLine")   # re-sited 260919: the cap's meaning is state — the readout's
         check("every occurrence the grip allows" in hint_f,
               f"{tag} the cap's meaning must be on the face: {hint_f!r}")
         # AND THE RULED CASE ITSELF: IV, ii and vii° — the three chords Daniel
@@ -2538,8 +2549,13 @@ console.log(JSON.stringify(out));
               f"{tag} §2.6: no interval label on an approach mark: {apc['aps']}")
         check(len(apc["slurs"]) == 1 and apc["slurs"][0]["under"] and apc["slurs"][0]["stroke"] == "#73737A" and apc["slurs"][0]["w"] == "1.2",
               f"{tag} §2.6 connection: the slur in annotation gray, 1.2, UNDER the dots: {apc['slurs']}")
-        check("approached from the ♭3" in apc["note"],
-              f"{tag} CR-1 §5: motion's own phrasing reaches the face: {apc['note']!r}")
+        # PIN REWRITTEN 260919 (night 25 item 4, rule 7): motion's phrasing still
+        # reaches the face, and the face now NAMES the centre the degree is measured
+        # from — "the key's ♭3" (rule 12: a bare "the ♭3" addressed the tonic by
+        # appearance; on a non-tonic bar a player read the chord's). The grammar is
+        # untouched; only the readout re-addresses the degree item.
+        check("approached from the key's ♭3" in apc["note"],
+              f"{tag} CR-1 §5: motion's own phrasing reaches the face, its centre named: {apc['note']!r}")
         # no new RING meaning approach: no ring element exists outside the pulse layer
         check(page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-appr circle').length === 1 && document.querySelectorAll('#fieldSvg .fd-appr *').length === 1"),
               f"{tag} §2.6: no new ring — the approach group holds exactly its one hollow circle")
@@ -2686,21 +2702,86 @@ console.log(JSON.stringify(out));
         page.wait_for_timeout(200)
         check(fd_mode().strip() == "Ebmaj7 — Eb Lydian",
               f"{tag} 2 (260918): the bar turns and the readout follows: {fd_mode()!r}")
-        # the box sits in ROW 1, right of Repeat, above the sliders (Daniel's
-        # mockup) — geometry read at the pixels, never from a class name
-        box = page.evaluate("""() => { const r = (id) => document.getElementById(id).getBoundingClientRect();
-          const b = r('fdMode'), rep = r('fdRepeat');
-          // the column the box shares is the MIXER ROW (icon, label, slider, value) —
-          // measured on the first run: the slider track ends 40px short of the row
-          const mix = document.getElementById('fdHarmVol').closest('.fd-mixrow').getBoundingClientRect();
-          const cs = getComputedStyle(document.getElementById('fdMode'));
-          return { level: Math.abs(b.top - rep.top) < 14, rightOfRepeat: b.left >= rep.right,
-            aboveSliders: b.bottom <= mix.top && Math.abs(b.right - mix.right) < 4 && Math.abs(b.left - mix.left) < 4,
-            boxed: cs.borderStyle === 'solid', size: parseFloat(cs.fontSize), bold: parseInt(cs.fontWeight) >= 600 }; }""")
-        check(box["level"] and box["rightOfRepeat"] and box["aboveSliders"],
-              f"{tag} 2 (260918): the readout box sits in row 1 right of Repeat, above the sliders: {box}")
-        check(box["boxed"] and box["size"] >= 14 and box["bold"],
-              f"{tag} 2 (260918): boxed, larger, bold — the loudest thing under the neck: {box}")
+        # PINS REWRITTEN 260919 (night 25 item 1, rule 7): the readout is the
+        # neck's LABEL and moved into the board HEADER — inside .bh, immediately
+        # after the title span, left of the header's spacer, above the neck SVG;
+        # still boxed, >=14px, bold. Geometry read at the pixels, never from a
+        # class name; this pin is what stops a later layout pass undoing this one.
+        box = page.evaluate("""() => { const box = document.getElementById('fdMode'); const r = (e) => e.getBoundingClientRect();
+          const bh = box.closest('.bh'); const title = bh && bh.querySelector('span'); const spacer = bh && bh.querySelector('.fd-headspace');
+          const svg = document.getElementById('fieldSvg'); const cs = getComputedStyle(box);
+          return { inBh: !!bh, afterTitle: !!title && title.nextElementSibling === box, leftOfSpacer: !!spacer && r(box).right <= r(spacer).left + 1,
+            aboveSvg: r(box).bottom <= r(svg).top, boxed: cs.borderStyle === 'solid', size: parseFloat(cs.fontSize), bold: parseInt(cs.fontWeight) >= 600,
+            oneLine: r(box).height < 40 }; }""")
+        check(box["inBh"] and box["afterTitle"] and box["leftOfSpacer"] and box["aboveSvg"],
+              f"{tag} 1 (260919): the readout sits in the neck's header — inside .bh, after the title, left of the spacer, above the SVG: {box}")
+        check(box["boxed"] and box["size"] >= 14 and box["bold"] and box["oneLine"],
+              f"{tag} 1 (260919): boxed, >=14px, bold, ONE line: {box}")
+        # the collapsed summary is UNCHANGED by the seat: the shell reads .clpsum,
+        # then the first live .hint, then .bh span — the neck's is its figure note
+        summ = page.evaluate("""() => { const p = document.getElementById('fieldSvg').closest('.board'); p.querySelector('.clpsBtn').click();
+          const t = p.querySelector('.clpsSum').textContent; p.querySelector('.clpsBtn').click(); return t; }""")
+        check(summ.startswith("A pattern is a sequence") and "Ionian" not in summ and "Bbmaj7" not in summ,
+              f"{tag} 1 (260919): the collapsed summary is the figure note as before — the readout does not leak into it: {summ[:60]!r}")
+        # THE CLOCK CLOSES RANKS (item 2): transport, repeat, bar split, bpm, metronome — contiguous, in that order
+        clock = page.evaluate("""() => ['fdMini','fdRepeat','fdSplit','fdBpm','fdMetChk'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().left))""")
+        check(all(clock[i] >= clock[i - 1] for i in range(1, 5)) and page.evaluate("() => document.getElementById('fdMini').closest('.fd-railrow') === document.getElementById('fdMetChk').closest('.fd-railrow')"),
+              f"{tag} 2 (260919): the clock row runs transport · repeat · bar split · bpm · metronome, in one row: {clock}")
+        # THE TRUNCATION ORDER (item 1): at phone width a long name ellipsises the MODE; the chord survives whole.
+        # Measured on the artifact 260919: at 390 the box is 215px and "Ebmaj7#11 — Eb Lydian" is 189 — it FITS;
+        # the dispatch's "Ebmaj7#11 — Eb Lyd…" needs 360 (box 197). A pin that never truncates proves nothing.
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { source: 'custom', custom: 'Ebmaj7#11 Bbmaj7' } }))""")
+        page.wait_for_timeout(250)
+        # the gate arrives here parked on bar 2 — the long name is bar 1's
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(250)
+        page.set_viewport_size({"width": 360, "height": 900}); page.wait_for_timeout(250)
+        trunc = page.evaluate("""() => { const box = document.getElementById('fdMode'), t = box.querySelector('.fd-readtext'), ch = box.querySelector('.fd-readchord'); const r = (e) => e.getBoundingClientRect();
+          return { text: box.textContent, clipped: t.scrollWidth > t.clientWidth, chordWhole: r(ch).right <= r(box).right - 1, oneLine: r(box).height < 40 }; }""")
+        check(trunc["clipped"] and trunc["chordWhole"] and trunc["oneLine"] and trunc["text"].startswith("Ebmaj7#11"),
+              f"{tag} 1 (260919): at 360px the long name IS clipped, the CHORD survives whole and the line stays one — the ellipsis eats the mode: {trunc}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { source: 'cycle', custom: '' } }))""")
+        page.wait_for_timeout(250)
+        # ---- 260919 item 3: THE PROSE SPLIT — the readout says what is, the hint says why not ----
+        hint0 = page.inner_text("#fdHint")
+        for dropped in ("the whole field", "Strings ", "the window from", "across the set", "Reference: string", "Placement is off"):
+            check(dropped not in hint0, f"{tag} 3 (260919): the hint no longer narrates state — {dropped!r} is the readout's: {hint0!r}")
+        check(hint0.strip() == "Click the numbers to choose strings; ← → step the window.",
+              f"{tag} 3 (260919): in the ordinary case the hint is the affordance alone: {hint0!r}")
+        ro0 = page.inner_text("#roLine")
+        for kept in ("the whole field", "frame from the", "strings", "across the set"):   # the reference clause varies by state
+            check(kept in ro0, f"{tag} 3 (260919): the readout still carries the state the hint dropped — {kept!r}: {ro0[:100]!r}")
+        # the FIGURE clause moved into the readout (a gap, not a duplication): typed, its step count read back
+        page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(80)
+        page.fill("#fdFigIn", "R,3,7,5"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        ro1 = page.inner_text("#roLine")
+        check("figure 4 steps" in ro1 and "(tones)" in ro1,
+              f"{tag} 3 (260919): the figure clause lives in the readout now — 4 typed steps read back: {ro1[-80:]!r}")
+        check("Figure:" not in page.inner_text("#fdHint"), f"{tag} 3 (260919): …and no longer in the hint")
+        # ---- 260919 item 4: the sentence names the centre an absolute degree speaks from ----
+        page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))""")
+        page.wait_for_timeout(250)
+        fn = page.inner_text("#fdFigNote")
+        check("approached from the key's ♭3" in fn,
+              f"{tag} 4 (260919): on a non-tonic bar the readout names the centre the degree is measured from: {fn!r}")
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(100)
+        page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(80)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(200)
+        # the hint earns its space when something is refused: both reference strings in
+        # the set, WITH a reference asked for (the gate arrives here with the bass elsewhere)
+        bass_was = page.eval_on_selector("#fdBass2", "e => e.value")
+        page.select_option("#fdBass2", "root"); page.wait_for_timeout(120)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [6, 5, 4, 3] } }))""")
+        page.wait_for_timeout(300)
+        hint1 = page.inner_text("#fdHint")
+        check("Reference refused: strings 5 and 6 are both in the set" in hint1,
+              f"{tag} 3 (260919): the hint says WHY NOT when the reference is refused: {hint1!r}")
+        page.select_option("#fdBass2", bass_was); page.wait_for_timeout(120)
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [4, 3, 2, 1] } }))""")
+        page.wait_for_timeout(250)
         # ---- 260918 item 1: THE KEY READS IN BOLD RED — the palette's R, the field's size kept ----
         # PIN REWRITTEN after CI (260918): an absolute 30px height was a platform
         # pixel — CI's Linux Chromium renders the select 29px tall. The claim is
@@ -2804,8 +2885,8 @@ console.log(JSON.stringify(out));
         # claim this pin has always made.
         check(rr == {"s": "5", "f": "10", "st": "true"},
               f"{tag} under the old 5–8 window the nearest G (string 5, fret 10) IS a stretch: {rr}")
-        check("a stretch past the box" in page.inner_text("#fdHint"),
-              f"{tag} the stretch must be said in the hint: {page.inner_text('#fdHint')!r}")
+        check("a stretch past the box" in page.inner_text("#roLine"),   # re-sited 260919
+              f"{tag} the stretch must be said in the readout: {page.inner_text('#roLine')!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 4, nearFret: 3 } }))""")
         page.wait_for_timeout(200)

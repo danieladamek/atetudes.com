@@ -11,10 +11,10 @@
  * that derivation, and paints the count. A failing check paints RED — the
  * prototype's honesty, kept.
  */
-import { field, OPEN_MIDI } from "../../engine/field.mjs";
+import { field, OPEN_MIDI, notesOn } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, gripFit } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
@@ -49,7 +49,10 @@ export const neckReadout = {
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7],
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
-      centreSrc: "fixed" };
+      centreSrc: "fixed",
+      /* the figure (260919, item 3): mirrored so the readout can SAY it — the
+       * one piece of state it never carried; the hint's clause moved here */
+      address: "pattern", figure: "" };
     let index = 0;
 
     const render = () => {
@@ -124,9 +127,15 @@ export const neckReadout = {
           sel.every((x) => fld.degOf(x.midi) >= 0 && x.fret >= pos.fLo && x.fret <= pos.fHi));
         check("the étude is at least one bar", () => true);
 
-        bits.push(cfg.ref
+        /* THE FIELD'S OWN COUNT (260919, item 3 — moved from the hint, which
+         * said "the whole field, 57 notes"; the readout carried only the frame's
+         * count): derived here through the engine's notesOn over six strings —
+         * the neck's own arithmetic-checked count, re-derived, never read */
+        const fieldN = [1, 2, 3, 4, 5, 6].reduce((n, s) => n + notesOn(s, fld).length, 0);
+        bits.push((cfg.ref
           ? `<b>${fld.refNote.name} ${fld.modeName}</b> <span class="ro-dim">(the ${cfg.key} ${SCALE_WORD[cfg.scale]} collection)</span>`
-          : `<b>${cfg.key} ${SCALE_WORD[cfg.scale] || cfg.scale}</b>`);
+          : `<b>${cfg.key} ${SCALE_WORD[cfg.scale] || cfg.scale}</b>`)
+          + ` <span class="ro-dim">— the whole field, ${fieldN} notes</span>`);
         bits.push(`bar <b>${index + 1}</b> of ${prog.chords.length}` +
           (cfg.object === "scale" ? "" :
             ` — <b>${cur.symbol}</b> <span class="ro-dim">(${cur.roman})</span>`));
@@ -161,13 +170,27 @@ export const neckReadout = {
         bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`
           + ` <span class="ro-dim">(${pool.length} notes · ${placeK}/${prog.chords.length} bars place)</span>`);
         const ss = [...run.strings].sort((a, b) => b - a).map(String).join("–");
-        bits.push(`strings <b>${ss}</b>${run.contiguous ? "" : ' <span class="ro-dim">(skipped)</span>'}, <b>${cfg.notesPer === 1 ? "grip" : "line"}</b>`);
+        /* THE TAKE WORD (260919, item 3 — moved from the hint; the readout said
+         * grip/line but never one-of-each/every-occurrence, the cap's meaning) */
+        const takeWord = cfg.object === "scale" ? ""
+          : cfg.take === "all"
+            ? (cfg.notesPer === 1 ? ", every occurrence the grip allows" : ", every occurrence")
+            : ", one of each";
+        bits.push(`strings <b>${ss}</b>${run.contiguous ? "" : ' <span class="ro-dim">(skipped)</span>'}, <b>${cfg.notesPer === 1 ? "grip" : "line"}</b>${takeWord}`);
         if (sel.length) {
           const per = {};
           for (const x of sel) per[x.string] = (per[x.string] || 0) + 1;
           const shape = run.strings.map((s) => per[s] || 0).join("+");
           const isLine = Object.values(per).some((c) => c > 1);
           bits.push(`${shape} across the set <span class="ro-dim">(${isLine ? "a line" : "a stack"})</span>`);
+        }
+        /* THE FIGURE, in the readout's voice (260919, item 3 — moved from the
+         * hint; the readout never mentioned it): derived here through the same
+         * orderBy the neck uses, never read from the neck */
+        if (String(cfg.figure || "").trim()) {
+          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings });
+          if (fg.order && fg.order.length)
+            bits.push(`figure <b>${fg.order.length} steps</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""})</span>`);
         }
         /* THE REFERENCE, fretted and NAMED (child 5): the readout says what
          * the stack becomes over it — R19's sentence. The name arrives from

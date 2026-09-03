@@ -136,7 +136,11 @@ export default {
      * end, typed changes through parseChord, the chart round trip closed,
      * and the walk (Play walks the bars through the family's own bus
      * contract). */
-    blurb: "one tool that holds many études · v0.5.0",
+    /* v0.5.1 (260919, night 25 — the layout pass and the prose trim): the readout
+     * into the neck's header, the clock closes ranks, the hint keeps reason and
+     * affordance while the readout says what is; the approach sentence names its
+     * centre. No engine change. */
+    blurb: "one tool that holds many études · v0.5.1",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

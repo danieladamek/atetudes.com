@@ -1,3 +1,40 @@
+## 2026-09-02 — Multetudes v0.5.1: night 25, the layout pass and the prose trim — the readout into the neck's header; the readout says what is, the hint says why not
+
+- **Source edition v0.5.1** (night 25; the report in `notes/working/Multetudes build run
+  260919.md`; the rulings in `notes/working/Multetudes PO rulings 260919 — the neck card's
+  layout pass.md`). No engine change, no new derivation, no new module.
+- **The readout into the header (item 1):** the harmonic readout box (`● Bbmaj7 — Bb Ionian`)
+  leaves the clock row for the neck card's own header, immediately after ON THE NECK, before
+  a spacer; ⓘ and ▾ keep the right edge. One line at every width; under a long name at phone
+  width the ellipsis eats the mode and the chord survives whole (pinned at 360px, where it
+  actually clips). The shell is untouched (18,040 bytes). The old geometry pins (level with
+  Repeat, above the sliders) are rewritten to the new claims, not deleted.
+- **The clock closes ranks (item 2):** transport · repeat · bar split · bpm · metronome,
+  contiguous, in that order.
+- **The prose split (item 3):** THE READOUT SAYS WHAT IS; THE HINT SAYS WHY NOT, AND WHAT YOU
+  CAN DO. The under-neck hint drops every state clause the readout already narrated (the key
+  and field, the strings, the window, the take and shape, the reference's seat) and the
+  Placement reason its own cap has carried since night 23; it keeps the refusals, the forced
+  follow, the silent reference and the affordance. Three facts the readout never carried
+  MOVED there in its voice rather than vanishing: the figure ("figure 2 steps (tones, with
+  approaches)"), the field's own count ("the whole field, 57 notes") and the take word
+  ("grip, one of each" / "every occurrence the grip allows"). The neck's whole narration goes
+  from 123 words to 93 with no fact lost; the ordinary hint is one sentence. 22 door pins
+  re-sited from the hint to the readout with dated reasons.
+- **The centre named (item 4):** the figure's approach sentence reads "approached from the
+  key's ♭3" (or "the centre's ♭3" when the field is re-rooted) — motion's grammar untouched;
+  the readout re-addresses the degree item. Alternatives proposed in the report.
+- **Studies moved:** multetudes only (638,604 bytes, cmp-identical build → static → public);
+  tetradetudes, metronome, triadetudes unmoved (cmp).
+- **Gates from their logs:** engine 596/596 · doors 18,645/0 (`hub/tests/out/doors-0902-2134.log`,
+  up 65 from 18,580) · hugo 0 · check_site 21 · served ritual over http, both widths,
+  console clean · bite 41/43 in the full run (`bite-0902-1733.log`) and the two re-run alone
+  both bite (`bite-m10m27-0902-2140.log`) — m10 had exposed a pin re-sited to the wrong face,
+  corrected (the run note has it).
+- **Noticed, not fixed:** `fretboard-stage.mjs:420` carries a raw violet literal — the module
+  is not mounted in Multetudes (a tetradetudes-door matter, registered); the neck SVG renders
+  at 150×30 at 390px in v0.5.0 and v0.5.1 alike (pre-existing).
+
 ## 2026-09-02 — DEPLOYED: v0.5.0 live, all four moved studies spot-checked byte-identical
 
 - Actions run 33678678808 green (full gates in CI, commit `f6df323`, with the palette export `636e4d7`

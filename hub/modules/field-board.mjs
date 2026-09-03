@@ -105,7 +105,17 @@ export const fieldBoard = {
     "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode"],
 
   markup: `
-  <div class="bh"><span>On the neck</span></div>
+  <!-- THE HEADER (260919, night 25 item 1 — ruled): the harmonic readout is
+       the neck's LABEL, so it sits in the board header immediately after the
+       title span, before a flex spacer; the shell appends ⓘ and ▾ to the
+       panel afterwards and keeps the right edge — no shell change. Daniel's
+       reason for the LEFT seat: the window sits in the low frets for most
+       exercises, so a box after the title sits over its subject. Placed
+       AFTER the title span so nothing about the collapsed summary changes.
+       Content unchanged: the dot, the chord, its mode — the strip is
+       scanned, the box is read. -->
+  <div class="bh fd-neckhead"><span>On the neck</span><div class="fd-readbox" id="fdMode" data-control="fdMode"
+        title="this bar's chord, and the mode it is in the context of the chosen scale"><span class="fd-readtext"></span></div><span class="fd-headspace"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -170,27 +180,21 @@ export const fieldBoard = {
        semantics are the 260906 pins', untouched. -->
   <div class="fd-underneck">
     <div class="fd-railrow">
-      <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-      <span class="fd-pulse" id="fdPulse"></span>
+      <!-- THE CLOCK CLOSES RANKS (260919, item 2 — ruled): transport, repeat,
+           bar split, bpm, metronome — one functional family, contiguous, in
+           that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
+           the Metronome card's state, the mini stays a view that asks. -->
+      <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
+      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
+        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
       <span class="fd-lab2">bar split</span>
       <select id="fdSplit" data-control="fdSplit"
         title="the bar split — a bar's chords take these slots in order"></select>
       <span class="fd-lab2">bpm</span>
       <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
         title="the tempo — one state, two views; the Metronome card owns the clock">
-      <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
-      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
-        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
-      <!-- THE HARMONIC READOUT (260918, item 2 — Daniel's mockup): the one
-           line that says what you are looking at — THE CHORD AND ITS MODE,
-           "Bbmaj7 — Bb Ionian" — boxed, larger, bold, right of Repeat and
-           above the sliders it shares a column with. It speaks for EVERY
-           object now: the chord name is the strip's own (chordAt.symbol),
-           the mode the one table's (MODES); nothing new is computed —
-           night 22's item 5 withheld the mode outside Scale-or-mode, and
-           un-gating it is the behaviour change register 33 records. -->
-      <div class="fd-readbox" id="fdMode" data-control="fdMode"
-        title="this bar's chord, and the mode it is in the context of the chosen scale"></div>
+      <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
+      <span class="fd-pulse" id="fdPulse"></span>
     </div>
     <div class="fd-railrow fd-pairrow">
       <span class="fd-lab2">voice</span>
@@ -270,10 +274,18 @@ export const fieldBoard = {
  * Repeat, sharing the mixer's column (margin-left:auto, the same 380px
  * basis) so it sits ABOVE the harmony and bass sliders. Card edge, not
  * control edge (--edge for boxes, v0.9's own distinction). */
-.fd-readbox{margin-left:auto;flex:0 1 380px;max-width:376px;min-width:0;
-  border:1px solid var(--edge);border-radius:8px;background:#fff;padding:5px 12px;
-  font-size:15px;font-weight:bold;color:var(--ink);white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;text-align:center}
+/* the header row (260919, item 1): a flex row with a gap and a spacer; the
+ * readout keeps ONE LINE at every width — flex:0 1 auto and min-width:0 let it
+ * shrink, and the ellipsis lives on an INNER span so the border never clips.
+ * The mixer-column basis (380px, margin-left:auto) is gone with the seat. */
+.fd-neckhead{display:flex;align-items:center;gap:10px;min-width:0}
+.fd-neckhead>span:first-child{flex:0 0 auto}
+.fd-headspace{flex:1 1 0;min-width:0}
+.fd-readbox{flex:0 1 auto;min-width:0;max-width:100%;
+  border:1px solid var(--edge);border-radius:8px;background:#fff;padding:3px 12px;
+  font-size:15px;font-weight:bold;color:var(--ink);letter-spacing:0;text-transform:none;
+  white-space:nowrap;overflow:hidden;line-height:1.3}
+.fd-readbox .fd-readtext{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* VARIANT (b), 260918 (night 24, item 2 — correcting night 23's (a), which
  * coloured EVERY chord name in R's red, a function most chords do not have):
  * the chord's ROOT DEGREE is a filled dot beside the name — the legend's own
@@ -672,7 +684,7 @@ export const fieldBoard = {
          * every object. VARIANT (b), night 24: the root's DEGREE DOT beside
          * the name, from the one palette, keyed to the chord's actual degree
          * — derived from chordAt.degree, never assigned. Ink text. */
-        const ml = byId("fdMode");
+        const ml = byId("fdMode").querySelector(".fd-readtext");
         ml.textContent = "";
         if (cur.degree >= 0) {
           const dot = d.createElement("i"); dot.className = "fd-readdot";
@@ -759,42 +771,46 @@ export const fieldBoard = {
         noteEl.style.color = "#B82929"; noteEl.style.fontStyle = "normal";
       } else {
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
-        noteEl.textContent = fig.describe
-          ? fig.describe + (approaches.some((a2) => a2.chromatic) ? " Chromatic approaches wear violet — outside the key; diatonic ones keep their degree colour." : "")
+        /* WHICH CENTRE THE DEGREE SPEAKS FROM (260919, item 4): motion's grammar
+         * resolves an absolute-degree approach against the TONIC — on a Dm7 bar
+         * in B♭, "♭3" is D♭, the key's flattened third, and a player reads the
+         * chord's. The grammar is ratified and untouched; the READOUT names the
+         * origin: a bare degree item ("the ♭3", "the 2" — never an ordinal
+         * target like "the 3rd") becomes "the key's ♭3", or "the centre's ♭3"
+         * when the field is re-rooted, because motion's tonicPc IS the field's
+         * root. Rule 12: the sentence addressed a role by its appearance. */
+        const origin = cfg.ref ? "the centre's" : "the key's";
+        const named = fig.describe ? fig.describe.replace(/\bthe ([♭♯]?\d+)(?![a-z0-9])/g, `${origin} $1`) : null;
+        noteEl.textContent = named
+          ? named + (approaches.some((a2) => a2.chromatic) ? " Chromatic approaches wear violet — outside the key; diatonic ones keep their degree colour." : "")
           : cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
           : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
       }
 
-      const per = {};
-      for (const x of sel) per[x.string] = (per[x.string] || 0) + 1;
-      const shape = run.strings.map((s) => per[s] || 0).join("+");
       const isScale = cfg.object === "scale";
-      const takeWord = isScale ? "the scale take"
-        : `the ${cfg.object}, ${cfg.take === "all"
-            ? (cfg.notesPer === 1 ? "every occurrence the grip allows" : "every occurrence")
-            : "one of each"}` +
-          ` (${cfg.notesPer === 1 ? "grip" : "line"})`;
-      const reading = cfg.ref
-        ? `${fld.refNote.name} ${fld.modeName} (the ${cfg.key} ${SCALE_WORD[cfg.scale]} collection)`
-        : `${cfg.key} ${SCALE_WORD[cfg.scale] || cfg.scale}`;
+      /* THE PROSE SPLIT (260919, night 25 item 3 — ruled): THE READOUT SAYS WHAT
+       * IS; THE HINT SAYS WHY NOT, AND WHAT YOU CAN DO. The same configuration
+       * was narrated twice, in two voices — here and in neck-readout, which
+       * RE-DERIVES it from the bus on purpose (§4.2.3) — about seventy words for
+       * one state. The state clauses are DROPPED here (the key and field, the
+       * strings, the window, the take and shape, the reference's seat: the
+       * readout carries every one); the FIGURE clause, which the readout never
+       * had, MOVED there (a gap, not a duplication — a fact must not be lost);
+       * Placement's reason, already on its own cap since 260918 (4e), is no
+       * longer repeated here. What stays is reason and affordance: a selection
+       * refusal, a forced follow, a silent or refused reference, and how to
+       * choose strings and step the window. In the ordinary case this line is
+       * nearly empty, and that is correct — CC-1: it earns its space when
+       * something is off, refused or silent. */
       byId("fdHint").textContent =
-        `${reading} — the whole field, ${dots.length} notes. ` +
-        `Strings ${run.label}${run.contiguous ? "" : " (skipped)"} · ` +
-        `the window from the ${ORD[pos.startDeg]} on string ${anchor}, frets ${pos.fLo}–${pos.fHi} · ` +
-        `${takeWord}: ${sel.length} notes, ${shape} across the set.` +
-        (fig.err ? "" : (fig.order ? ` Figure: ${fig.order.length} steps as ${cfg.address === "pattern" ? "a pattern" : "tones"}.` : "")) +
-        (isScale ? " Placement is off — a scale is not a chord; the box offers every note, three per string at most (the hand's reach)."
-          : (selMsg ? ` ${selMsg}.` : "")) +
+        (selMsg ? `${selMsg}. ` : "") +
         (followMsg && followMsg.sd === cfg.startDeg && followMsg.nf === cfg.nearFret
-          ? ` ${followMsg.text}.` : "") +
+          ? `${followMsg.text}. ` : "") +
         (refP.note
-          ? ` Reference: string ${refP.note.string}, fret ${refP.note.fret}${refP.stretch ? " — a stretch past the box" : ""}.`
-            + (!isScale && !sel.length
-              ? " The reference is drawn but stays silent — nothing sits on top of it."
-              : "")
-          : (refP.reason ? ` Reference refused: ${refP.reason}.` : "")) +
-        ` Click the numbers to choose strings; ← → step the window.`;
+          ? (!isScale && !sel.length ? "The reference is drawn but stays silent — nothing sits on top of it. " : "")
+          : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +
+        "Click the numbers to choose strings; ← → step the window.";
       byId("fdLegend").innerHTML = FAM.map((f2) =>
         `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
         + `<span style="margin-left:8px">colour = function against ${cfg.ref ? "the reference tone" : "the key"}</span>`;

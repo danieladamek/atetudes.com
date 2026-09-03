@@ -364,8 +364,10 @@ def m10_field_frozen_on_key_change():
         p.write_text(mutated)
         build()
         r = suite()
+        # re-sited 260919: the neck's header box is the neck's own face (the readout
+        # re-derives from the bus and follows the key even with the neck frozen)
         hit = ("the field did not re-derive" in r.stdout
-               or "the field hint did not follow the key" in r.stdout)
+               or "the neck's header did not follow the key" in r.stdout)
         record("the field no longer re-derives on a key change",
                r.returncode != 0 and hit,
                "suite exit %d; caught on the artifact (dots or hint), not the handler: %s"
@@ -430,7 +432,7 @@ def m13_live_setindex_hijacks_the_field():
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "hijacked the field" in r.stdout or "derived label is not in the hint" in r.stdout
+        hit = "hijacked the field" in r.stdout or "derived label is not in the readout" in r.stdout
         record("a live shape-half setIndex hijacks the field",
                r.returncode != 0 and hit,
                "suite exit %d; the coexistence gate bit: %s" % (r.returncode, hit))
@@ -578,8 +580,10 @@ def m19_chord_reroots_at_the_window():
 def m20_reference_refusal_goes_silent():
     # child 5's law: both reference strings taken is a fact the FACE must say.
     # Silence the hint's refusal clause and the by-name pin must bite.
+    # ANCHOR REWRITTEN 260919 (night 25 item 3, rule 7): the hint was trimmed to
+    # reason and affordance; the refusal clause now leads its line, no leading space.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        '          : (refP.reason ? ` Reference refused: ${refP.reason}.` : "")) +',
+        '          : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +',
         '          : "") +')
     try:
         p.write_text(mutated)
@@ -1050,6 +1054,25 @@ def m41_no_approach_goes_violet():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 42
+def m42_a_state_clause_returns_to_the_hint():
+    # 260919 item 3: a dropped state clause creeps back into the hint — the
+    # same configuration narrated twice again; the trim pin must name it.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '      byId("fdHint").textContent =\n        (selMsg ? `${selMsg}. ` : "") +',
+        '      byId("fdHint").textContent =\n        `Strings ${run.label} · ` + (selMsg ? `${selMsg}. ` : "") +')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the hint no longer narrates state" in r.stdout
+        record("a state clause returns to the hint (narrated twice again)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the prose-split pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1152,7 +1175,8 @@ def main():
                m34_the_figure_tolerates_junk_again, m35_the_engine_refusal_swallowed_again,
                m36_repeat_stops_repeating, m37_restore_overwrites_the_pad_again,
                m38_a_tone_the_object_cannot_hold_slips_through, m39_the_row_stops_moving_as_one,
-               m40_every_approach_goes_violet, m41_no_approach_goes_violet)
+               m40_every_approach_goes_violet, m41_no_approach_goes_violet,
+               m42_a_state_clause_returns_to_the_hint)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__
