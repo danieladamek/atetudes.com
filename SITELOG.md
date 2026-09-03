@@ -1,3 +1,14 @@
+## 2026-09-03 — DEPLOYED: night 27 live — no study moved; the first record written from the run
+
+- record: run 33803981536 · success · commit 2025ba4 · fetched 2026-09-03T20:52Z · 6/6 studies byte-identical · digest e457c9b9ca6c
+- Actions run 33803981536 green on `2025ba4` — https://github.com/danieladamek/atetudes.com/actions/runs/33803981536 (created 2026-09-03T20:44:09Z, finished 2026-09-03T20:51:21Z).
+- metronome: repo 3ec34d6a2d92 · live 3ec34d6a2d92 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 3ff21bf2b072 · live 3ff21bf2b072 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo e5649851a1bb · live e5649851a1bb — matches.
+- triadetudes: repo f2eecb6ce637 · live f2eecb6ce637 — matches.
+
 <!-- deploy records below this line predate tools/deploy_record.py (260921); records above it are written from the run -->
 
 ## 2026-09-03 — night 27: protection in the path — the build refuses an unbindable import, the pin-independence sweep, the deploy record written from the run
