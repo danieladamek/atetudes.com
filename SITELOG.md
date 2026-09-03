@@ -1,3 +1,12 @@
+## 2026-09-02 — DEPLOYED: v0.5.1 live, multetudes spot-checked byte-identical, the other three unmoved
+
+- Actions run 33709899718 green (full gates in CI, commit `e24b3fc` on main, the work in
+  `b4d9087`). The live multetudes shasum matches the repo byte-for-byte: ce4fa5191acf (was
+  bb670646c099); tetradetudes 55ff32a66a09 · metronome bb1d4196dd35 · triadetudes 9682210722a3
+  unchanged and still matching; all four wrappers answer 200; the multetudes blurb serves
+  v0.5.1. Read from the run and the live bytes, not from the push's word — the first push
+  from the night branch moved nothing (the run note has it).
+
 ## 2026-09-02 — Multetudes v0.5.1: night 25, the layout pass and the prose trim — the readout into the neck's header; the readout says what is, the hint says why not
 
 - **Source edition v0.5.1** (night 25; the report in `notes/working/Multetudes build run
