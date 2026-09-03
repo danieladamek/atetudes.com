@@ -29,7 +29,7 @@
 - **Gates from their logs:** engine 596/596 · doors 18,645/0 (`hub/tests/out/doors-0902-2134.log`,
   up 65 from 18,580) · hugo 0 · check_site 21 · served ritual over http, both widths,
   console clean · bite 41/43 in the full run (`bite-0902-1733.log`) and the two re-run alone
-  both bite (`bite-m10m27-0902-2140.log`) — m10 had exposed a pin re-sited to the wrong face,
+  both bite (`bite-m10m27-0902-2139.log`) — m10 had exposed a pin re-sited to the wrong face,
   corrected (the run note has it).
 - **Noticed, not fixed:** `fretboard-stage.mjs:420` carries a raw violet literal — the module
   is not mounted in Multetudes (a tetradetudes-door matter, registered); the neck SVG renders
