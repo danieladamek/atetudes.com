@@ -19,7 +19,9 @@ import {
   STRING_SETS, CYCLES, cycleDegrees, tetradOnDegree, romanOf,
   tetradPass, degreeLabel,
 } from "../tetrad-sequence.mjs";
-import { OPEN_MIDI } from "../field.mjs";   // 260920: the one declaration — the tuning pin below reads it from its owner
+// 260920: the one declaration — the tuning pin below reads it from its owner
+// (260921: the comment moved off the import line — the class the build now refuses)
+import { OPEN_MIDI } from "../field.mjs";
 import { keysOf, transitions } from "../voice-identity.mjs";
 import { loadOracle } from "./_load-tetrad-oracle.mjs";
 

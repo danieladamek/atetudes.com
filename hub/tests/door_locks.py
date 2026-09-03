@@ -269,6 +269,19 @@ def run_door(pw, door_id):
               f"{tag} the field renders {dots_now()} dots; B\u266d major across six strings holds {expect_dots(bb_pcs)}")
         check(root_dots_now() == expect_pc(bb_pcs, NAME_PC["Bb"]),
               f"{tag} {root_dots_now()} dots wear R; B\u266d occurs {expect_pc(bb_pcs, NAME_PC['Bb'])} times on the neck")
+        # ---- 260921 (night 27 item 2, the palette audit): THE SPEC'S COLOURS ON THE ARTIFACT.
+        # Night 24 unified five hand copies into hub/palette.mjs; no pin read R's hex (or five
+        # of the seven) off anything rendered, so the palette could drift and every pin would
+        # stay green. This reads every neck dot's fill by its degree LABEL against Design Spec
+        # §2.1's table — stated here as the law, never imported from the palette (a pin that
+        # compared the palette to itself would be a tautology). Bite m44 drifts R by one.
+        SPEC_21 = {"R": "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
+                   "5": "#212126", "6": "#1CB8D1", "7": "#D99A08"}
+        fills = page.evaluate("""() => { const out = {}; for (const g of document.querySelectorAll('#fieldSvg g.fd-dot')) {
+          const lab = g.querySelector('text').textContent, fill = g.querySelector('circle').getAttribute('fill');
+          (out[lab] = out[lab] || new Set()).add(fill); } return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, [...v]])); }""")
+        check(sorted(fills) == sorted(SPEC_21) and all(fills[k] == [v] for k, v in SPEC_21.items()),
+              f"{tag} the neck's dots wear the Spec's colours, one hex per degree (§2.1): {fills}")
         # THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
         # frame — the B♭ tetrad block, the window from the 6th at the fifth
         # position, one bar. Re-pinned here from the old C/six-string boot.
@@ -2763,6 +2776,22 @@ console.log(JSON.stringify(out));
         texts2 = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", ro_ids)
         check(len(set(texts2)) == 1 and texts2[0].startswith("Dm7") and all(t for t in texts2),
               f"{tag} 3 (260920): EMPTIED, then stepped — every box refilled on its own derivation (no sibling to copy from): {texts2}")
+        # ---- 260921 (night 27 item 2, the readout audit): the EMPTIED pin above cannot catch a
+        # copier — the neck's instance repaints first, and a sibling that then copies its text
+        # reads the right value (measured with bite m43). So: each box is DETACHED from the
+        # document in turn, the bar is stepped, and the other two must still read the right
+        # string; a copier with its source gone paints nothing. Independence by construction.
+        for gone in ro_ids:
+            others = [i for i in ro_ids if i != gone]
+            page.evaluate("""(id) => { const e = document.getElementById(id); window.__roHold = [e, e.parentNode, e.nextSibling]; e.remove(); }""", gone)
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 4, request: true } }))""")
+            page.wait_for_timeout(250)
+            got = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", others)
+            check(all(t.startswith("Gm7") and "G Aeolian" in t for t in got),   # bar 5 of the cycle in B♭ is the vi
+                  f"{tag} 2 (260921): with {gone} DETACHED the other two still derive bar 5 — Gm7, G Aeolian — on their own: {got}")
+            page.evaluate("""() => { const [e, p, n] = window.__roHold; p.insertBefore(e, n); }""")
+            page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 3, request: true } }))""")
+            page.wait_for_timeout(200)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'F' } }))""")
         page.wait_for_timeout(250)
         texts3 = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", ro_ids)

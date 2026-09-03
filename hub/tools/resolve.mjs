@@ -62,7 +62,64 @@ export const listDoors = () =>
 
 // ---------------- the import graph, parsed from source ----------------
 
-const IMPORT_RE = /^\s*import\s[\s\S]*?from\s+"([^"]+)"\s*;?\s*$/gm;
+/* THE ONE IMPORT PARSER (260921, night 27 item 1). Until tonight the import
+ * statement was read by two regexes that could disagree about one line: a lazy
+ * `import … from "…";`-to-end-of-line matcher that BLANKED, and a strict
+ * `import { … } from "…";` matcher that BOUND. A trailing comment on an import
+ * line made the lazy one run through the NEXT import line and blank both as one
+ * match, while the strict one bound only the second — the page built, and read
+ * `OPEN_MIDI is not defined` in the browser (260918 and again 260920; the
+ * written lesson did not stop the second). Measured 260921: a line comment, a
+ * block comment, and no-semicolon-plus-comment all build and bind nothing; a
+ * comment inside the braces emits a syntax error; a namespace or side-effect
+ * import builds and binds nothing; a default import crashes the build with a
+ * stack. The whole CLASS is "an import statement that is not exactly the one
+ * bindable form" — so there is one parser now, it accepts exactly that form,
+ * everything that binds and everything that blanks comes from it, and anything
+ * else is REFUSED BY NAME with the file and the line. (The same lazy regex is
+ * still restated in hub/tests/door_build.test.mjs — repointed here — and in
+ * hub/tests/door_locks.py, which is Python and keeps its copy, noted 260921.) */
+/* the head and the tail consume exactly the whitespace the old blanking did —
+ * preceding blank lines, and trailing blank lines up to the last newline — so
+ * a door built through the one parser is byte-identical to one built before it
+ * wherever the old transform was right (proven on all four doors, 260921) */
+const IMPORT_HEAD = /^\s*import\b/gm;
+const IMPORT_FORM = /import\s*\{([^{}]*)\}\s*from\s*"([^"]+)"\s*;[ \t]*(?:\n[ \t]*(?=\n))*(?=\n|$)/y;
+
+/** every import statement of a source, in the one form the door build can
+ * bind — `{ start, end, names, spec }` — or a refusal naming file and line */
+export function importStatementsOf(src, relPath = "?") {
+  const out = [];
+  for (const h of src.matchAll(IMPORT_HEAD)) {
+    const at = h.index + h[0].length - "import".length;
+    const line = src.slice(0, at).split("\n").length;
+    const lineText = src.slice(at).split("\n")[0];
+    IMPORT_FORM.lastIndex = at;
+    const m = IMPORT_FORM.exec(src);
+    const refuse = (why) => {
+      throw new Error(`${relPath}:${line}: an import the door build cannot bind — ${why}\n` +
+        `    ${lineText.trim()}\n` +
+        `  Write it as ONE statement of the form  import { a, b } from "./x.mjs";  with nothing after the semicolon: ` +
+        `no trailing comment, no comment inside the braces, no default, namespace or side-effect import. ` +
+        `The build binds imports from exactly this form and blanks exactly what it binds; any other spelling built silently and broke in the browser (260920).`);
+    };
+    if (!m) refuse("not the bindable form, or something follows the semicolon");
+    if (/\/\/|\/\*/.test(m[1])) refuse("a comment inside the braces would be emitted into the binding");
+    const names = m[1].split(",").map((s) => s.trim()).filter(Boolean);
+    if (!names.length) refuse("an empty import list binds nothing");
+    out.push({ start: h.index, end: m.index + m[0].length, names, spec: m[2] });
+  }
+  return out;
+}
+
+/** the source with every (bindable) import statement blanked — the transform
+ * the build, the drift pins and the marker greps share */
+export function withoutImports(src, relPath = "?") {
+  let out = "", last = 0;
+  for (const s of importStatementsOf(src, relPath)) { out += src.slice(last, s.start); last = s.end; }
+  return out + src.slice(last);
+}
+
 /* §4.2.1 carried forward: the derivation is STATIC, so the two ways of
  * defeating it are banned here rather than discovered later. */
 const DYNAMIC_IMPORT = /\bimport\s*\(/;
@@ -75,10 +132,10 @@ export function importsOf(file) {
   if (LOOKUP_BY_STRING.test(src))
     throw new Error(`${rel(file)}: lookup-by-string on a global defeats static reachability — name the binding (family spec §4.2.1)`);
   const out = [];
-  for (const m of src.matchAll(IMPORT_RE)) {
-    if (!m[1].startsWith("."))
-      throw new Error(`${rel(file)}: bare import "${m[1]}" — a door build inlines local sources only`);
-    out.push(resolvePath(dirname(file), m[1]));
+  for (const s of importStatementsOf(src, rel(file))) {
+    if (!s.spec.startsWith("."))
+      throw new Error(`${rel(file)}: bare import "${s.spec}" — a door build inlines local sources only`);
+    out.push(resolvePath(dirname(file), s.spec));
   }
   return out;
 }

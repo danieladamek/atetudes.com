@@ -80,6 +80,16 @@ def main():
                 problems.append(f"{rel}: broken internal link -> {link}")
 
     print(f"checked {pages} page(s)")
+    # THE DEPLOY RECORDS ARE VERIFIED AGAINST GITHUB (260921, night 27 item 3): every
+    # SITELOG deploy record above the mechanism marker must carry the `record:` line
+    # tools/deploy_record.py wrote from the fetched run, and its run id, conclusion
+    # and commit are re-fetched here. A missing gh fails loudly; nothing is skipped.
+    import subprocess
+    v = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "deploy_record.py"), "verify"],
+                       capture_output=True, text=True)
+    print(v.stdout.strip())
+    if v.returncode != 0:
+        problems.append("deploy records: " + (v.stderr.strip() or v.stdout.strip() or "verify failed")[:300])
     if problems:
         for p in problems:
             print(f"PROBLEM: {p}")

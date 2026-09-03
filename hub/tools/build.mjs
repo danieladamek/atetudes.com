@@ -14,14 +14,15 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, relative, dirname, resolve as resolvePath } from "node:path";
 import { pathToFileURL } from "node:url";
-import { resolveDoor, listDoors, HUB, REPO } from "./resolve.mjs";
+import { resolveDoor, listDoors, HUB, REPO, importStatementsOf, withoutImports } from "./resolve.mjs";
 
-const IMPORT_LINE = /^\s*import\s[\s\S]*?from\s+"[^"]+"\s*;?\s*$/gm;
-const IMPORT_PARTS = /^\s*import\s+\{([^}]*)\}\s+from\s+"([^"]+)"\s*;?\s*$/gm;
+/* the import statement is read by resolve.mjs's ONE parser (260921): what
+ * binds and what blanks come from the same match, and any other spelling is
+ * refused by name before a byte is emitted */
 const EXPORT_DECL = /^export\s+(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/gm;
 
-export function inlineForm(src) {
-  return src.replace(IMPORT_LINE, "").replace(/^export\s+/gm, "").trim();
+export function inlineForm(src, relPath = "?") {
+  return withoutImports(src, relPath).replace(/^export\s+/gm, "").trim();
 }
 
 /* A ROW THAT DECLARES ITS COLUMN TEMPLATE (Multetudes child 8, 2026-08-29 —
@@ -160,10 +161,9 @@ const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt
 
 function moduleChunk(relPath, src, resolveDep) {
   const binds = [];
-  for (const m of src.matchAll(IMPORT_PARTS)) {
-    const from = nsOf(resolveDep(relPath, m[2]));
-    const names = m[1].split(",").map((s) => s.trim()).filter(Boolean)
-      .map((s) => s.replace(/\s+as\s+/, ": "));
+  for (const s of importStatementsOf(src, relPath)) {
+    const from = nsOf(resolveDep(relPath, s.spec));
+    const names = s.names.map((n) => n.replace(/\s+as\s+/, ": "));
     binds.push(`const { ${names.join(", ")} } = ${from};`);
   }
   const exports = [...src.matchAll(EXPORT_DECL)].map((m) => m[1]);
@@ -179,7 +179,7 @@ function moduleChunk(relPath, src, resolveDep) {
   if (!exports.length) throw new Error(`${relPath}: exports nothing — a hub module must export what its consumers name`);
   return `/* ===== ${relPath} ===== */\nconst ${nsOf(relPath)} = (() => {\n` +
     (binds.length ? binds.join("\n") + "\n" : "") +
-    inlineForm(src) + `\nreturn { ${exports.join(", ")} };\n})();`;
+    inlineForm(src, relPath) + `\nreturn { ${exports.join(", ")} };\n})();`;
 }
 
 async function build(id) {
@@ -191,8 +191,8 @@ async function build(id) {
   const emitted = new Set();
   const chunks = r.filesIn.map((relPath) => {
     const src = readFileSync(join(REPO, relPath), "utf8");
-    for (const m of src.matchAll(IMPORT_PARTS)) {
-      const dep = resolveDep(relPath, m[2]);
+    for (const s of importStatementsOf(src, relPath)) {
+      const dep = resolveDep(relPath, s.spec);
       if (!emitted.has(dep))
         throw new Error(`${relPath} imports ${dep}, which the reach-set orders after it — the topological order is wrong`);
     }

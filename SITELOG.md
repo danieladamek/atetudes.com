@@ -1,3 +1,31 @@
+<!-- deploy records below this line predate tools/deploy_record.py (260921); records above it are written from the run -->
+
+## 2026-09-03 — night 27: protection in the path — the build refuses an unbindable import, the pin-independence sweep, the deploy record written from the run
+
+- **No study moved.** All four doors rebuild byte-identical to the bytes live as v0.5.2
+  (the report in `notes/working/Multetudes build run 260921.md`).
+- **The build refuses an import it cannot bind (item 1).** One import parser in
+  hub/tools/resolve.mjs reads every import statement for the resolver's graph and the
+  build's binds and blanks; any spelling other than `import { a, b } from "./x.mjs";` —
+  a trailing comment, a comment inside the braces, a default, namespace or side-effect
+  import — is refused by name with the file and the line. Until tonight a trailing comment
+  built "successfully" and broke in the browser (twice). Unit tests in the door build gate
+  prove the eight spellings refused and the tree's 170 reached imports accepted.
+- **The pin-independence sweep (item 2).** Twenty-six pins around the four unifications
+  examined by mutation: one vacuous (the readout's emptied-then-stepped pin could not catch
+  a copier) rewritten to detach each box in turn; one gap (no pin read the palette's hexes
+  off the artifact) filled with Design Spec §2.1's table on the neck's dots; four bite
+  mutations added (m43 a copying readout, m44 the palette drifting by one hex digit, m45 a
+  second tuning declared, m46 a flat key spelling sharp).
+- **The deploy record is written from the run (item 3).** `tools/deploy_record.py emit
+  <sha>` fetches the Actions run and the six live studies' bytes and prints the record's
+  factual half with a digest; `verify` re-fetches every recorded run above the mechanism
+  marker at the top of this file and is run by tools/check_site.py locally and in CI
+  (GH_TOKEN added to the workflow's check step). A hand-typed record cannot pass the path.
+- **Gates from their logs:** engine 601/601 · door build gate 7/7 · doors 18,537/0
+  (`hub/tests/out/doors-0903-0935.log`) · bite 47/47 (`hub/tests/out/bite-0903-0940.log`) ·
+  hugo 0 · check_site 21 with the record verify in its path · door bytes unmoved.
+
 ## 2026-09-03 — DEPLOYED: v0.5.2 live, all four moved studies spot-checked byte-identical
 
 - Actions run 33729408189 green (full gates in CI, commit `5c54b54` on main; items 1+2 in

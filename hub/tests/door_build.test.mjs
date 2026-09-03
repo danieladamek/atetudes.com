@@ -19,13 +19,13 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { listDoors, resolveDoor, REPO, HUB } from "../tools/resolve.mjs";
+import { listDoors, resolveDoor, REPO, HUB, importStatementsOf, withoutImports } from "../tools/resolve.mjs";
 
 const DECL = /^(?:export\s+)?(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/gm;
-const IMPORT_LINE = /^\s*import\s[\s\S]*?from\s+"[^"]+"\s*;?\s*$/gm;
+// the import transform is the resolver's ONE parser (260921) — this test restated it until then
 
 const codeLines = (rel) => new Set(
-  readFileSync(join(REPO, rel), "utf8").replace(IMPORT_LINE, "")
+  withoutImports(readFileSync(join(REPO, rel), "utf8"), rel)
     .replace(/^export\s+/gm, "").split("\n").map((l) => l.trim())
     .filter((l) => l.length >= 16 && !/^[*/]/.test(l)));
 
@@ -120,4 +120,50 @@ test("hub: the doors differ — a gate where both doors ship the same thing prov
     `the doors are within 2× of each other (${sizes.map((s) => s.d + " " + s.bytes).join(", ")}) — ` +
     `the single-file promise is only preserved if a lock actually removes weight`);
   assert.ok(sizes.some((s) => s.out > 0), "no door prunes anything");
+});
+
+
+/* ---- 260921 (night 27 item 1): THE BUILD REFUSES AN IMPORT IT CANNOT BIND ---- */
+const GOOD = 'import { a, b } from "./x.mjs";\nconst y = 1;\n';
+const BAD = {
+  "a trailing line comment": 'const z = 0;\nimport { a } from "./x.mjs";   // the tuning\nconst y = 1;\n',
+  "a trailing block comment": 'const z = 0;\nimport { a } from "./x.mjs"; /* the tuning */\n',
+  "no semicolon and a comment": 'const z = 0;\nimport { a } from "./x.mjs" // x\n',
+  "a comment inside the braces": 'const z = 0;\nimport {\n  a,   // the tuning\n} from "./x.mjs";\n',
+  "a default import": 'const z = 0;\nimport x from "./x.mjs";\n',
+  "a namespace import": 'const z = 0;\nimport * as X from "./x.mjs";\n',
+  "a side-effect import": 'const z = 0;\nimport "./x.mjs";\n',
+  "an empty list": 'const z = 0;\nimport {} from "./x.mjs";\n',
+};
+
+test("the one bindable form is accepted, multi-line braces included, and nothing else is", () => {
+  assert.deepEqual(importStatementsOf(GOOD, "t.mjs").map((s) => [s.names, s.spec]), [[["a", "b"], "./x.mjs"]]);
+  const multi = 'import {\n  a,\n  b,\n} from "./x.mjs";\nconst y = 1;\n';
+  assert.deepEqual(importStatementsOf(multi, "t.mjs")[0].names, ["a", "b"]);
+  assert.equal(withoutImports(multi, "t.mjs").trim(), "const y = 1;", "blanked exactly what it bound");
+  assert.equal(withoutImports("const z = 0;\n", "t.mjs"), "const z = 0;\n", "no imports, nothing blanked");
+});
+
+test("every spelling the build could not bind is REFUSED BY NAME, with the file and the line", () => {
+  let refused = 0;
+  for (const [what, src] of Object.entries(BAD)) {
+    assert.throws(() => importStatementsOf(src, "scratch/bad.mjs"),
+      (e) => e.message.startsWith("scratch/bad.mjs:2:") && /cannot bind/.test(e.message) && /nothing after the semicolon/.test(e.message),
+      `${what} must be refused at scratch/bad.mjs:2`);
+    refused++;
+  }
+  assert.equal(refused, Object.keys(BAD).length, "every bad spelling refused");
+  // the real case, byte for byte (260920): the trailing comment on a repointed import line
+  assert.throws(() => importStatementsOf('import { OPEN_MIDI } from "../../engine/field.mjs";   // the tuning is the field\'s one fact (260920)\n', "hub/modules/audio-card.mjs"),
+    /hub\/modules\/audio-card\.mjs:1: an import the door build cannot bind/);
+});
+
+test("…and stays silent on every import already in the tree: each reached file parses, and the count is not vacuous", async () => {
+  let files = 0, statements = 0;
+  for (const door of listDoors())
+    for (const rel of (await resolveDoor(door)).filesIn) {
+      const n = importStatementsOf(readFileSync(join(REPO, rel), "utf8"), rel).length;
+      files++; statements += n;
+    }
+  assert.ok(files >= 40 && statements >= 150, `the sweep must actually run: ${files} files, ${statements} imports`);
 });

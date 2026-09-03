@@ -1073,6 +1073,82 @@ def m42_a_state_clause_returns_to_the_hint():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutations 43–46
+# 260921 (night 27 item 2): THE PIN-INDEPENDENCE SWEEP. Four unifications landed in
+# four nights (the palette, OPEN_MIDI, the speller, the readout); each is mutated
+# here so the pins around it are proven to fail for the reason they exist.
+def m43_a_readout_copies_the_necks_box():
+    # the readout's paint becomes a COPIER: every instance but the neck's reads
+    # the neck's box text. The three still agree, so an agreement-only pin would
+    # pass; the detached-box pin (and the source pin) must bite.
+    p, original, mutated = patch("hub/readout.mjs",
+        '    text.textContent = "";\n    let fld, cur;',
+        '    text.textContent = "";\n    if (host.id !== "fdMode") { const n = d.getElementById("fdMode"); text.textContent = n ? n.textContent : ""; return; }\n    let fld, cur;')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "DETACHED the other two still derive" in r.stdout or "reaches for no one's DOM" in r.stdout
+        record("a readout copies the neck's box (agreement without independence)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the detached-box or the source pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m44_the_palettes_R_drifts_by_one():
+    # the one palette drifts by a single hex digit: nothing visible to the eye,
+    # and until tonight no pin read R's hex off anything rendered.
+    p, original, mutated = patch("hub/palette.mjs",
+        'R: "#B82929"',
+        'R: "#B82928"')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "wear the Spec's colours" in r.stdout
+        record("the palette's R drifts by one hex digit",
+               r.returncode != 0 and hit,
+               "suite exit %d; the §2.1 colour pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m45_a_second_tuning_is_declared():
+    # tetrad-sequence states the six numbers again — the night-26 defect returning;
+    # the built-page pin ("states the tuning as a literal") must bite.
+    p, original, mutated = patch("engine/tetrad-sequence.mjs",
+        'import { OPEN_MIDI } from "./field.mjs";',
+        'export const OPEN_MIDI = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "states the tuning as a literal" in r.stdout
+        record("a second tuning is declared (the copy returns)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the one-declaration pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m46_a_flat_key_spells_sharp():
+    # the speller's direction inverted: F major spells G#; both doors' F pins bite.
+    p, original, mutated = patch("engine/chord.mjs",
+        '  const flatKey = scaleNotes(key, "major").some((n) => n.name.includes("b"));',
+        '  const flatKey = !scaleNotes(key, "major").some((n) => n.name.includes("b"));')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = r.stdout.count("from the key signature") >= 2
+        record("a flat key spells sharp (the speller's direction inverted)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the F-major pins bit in both doors: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1176,7 +1252,8 @@ def main():
                m36_repeat_stops_repeating, m37_restore_overwrites_the_pad_again,
                m38_a_tone_the_object_cannot_hold_slips_through, m39_the_row_stops_moving_as_one,
                m40_every_approach_goes_violet, m41_no_approach_goes_violet,
-               m42_a_state_clause_returns_to_the_hint)
+               m42_a_state_clause_returns_to_the_hint, m43_a_readout_copies_the_necks_box,
+               m44_the_palettes_R_drifts_by_one, m45_a_second_tuning_is_declared, m46_a_flat_key_spells_sharp)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__
