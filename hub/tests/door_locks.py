@@ -463,7 +463,8 @@ def run_door(pw, door_id):
               f"{tag} changing the set RESET the design — the window must translate "
               f"({stepped_ord} -> {ord_of()[0]})")
         check_window("after dropping string 3")
-        sq3_fill = page.get_attribute('#fieldSvg [data-fdstr="3"] rect', "fill")
+        # (reads .fd-sq since 260923 — the hit target is the group's first rect now)
+        sq3_fill = page.get_attribute('#fieldSvg [data-fdstr="3"] .fd-sq', "fill")
         check(sq3_fill == "#fff", f"{tag} the excluded string's square is not hollow: {sq3_fill}")
         dim3 = page.evaluate("""() => {
           const m = /frets (\\d+)–(\\d+)/.exec(document.getElementById('roLine').textContent);
@@ -474,6 +475,33 @@ def run_door(pw, door_id):
         check(dim3, f"{tag} the excluded string's dots inside the frame do not read as excluded")
         page.click('#fieldSvg [data-fdstr="3"]'); page.wait_for_timeout(100)
         check("(skipped)" not in state(), f"{tag} re-adding string 3 did not restore the contiguous run")
+        # ---- 260923 (night 29 item 2): THE SET SQUARES ARE CONTROLS. Role, name, pressed state
+        # reflecting `on`, a hit target in the module's own idiom, a <title>, hover/focus in
+        # neutral ink only (golden rule 8), Enter/Space toggling, and the bracket gutter beside
+        # them still NOT a control. axe (section 5) catches a square born without a role or a
+        # name; these pin the rest of the affordance on the artifact.
+        sqs = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-str')].map(g => ({ s: +g.dataset.fdstr, role: g.getAttribute('role'),
+          tab: g.getAttribute('tabindex'), pressed: g.getAttribute('aria-pressed'), name: g.getAttribute('aria-label') || '', title: (g.querySelector('title') || {}).textContent || '',
+          hit: !!g.querySelector('.fd-hit'), hitW: g.querySelector('.fd-hit') ? g.querySelector('.fd-hit').getBoundingClientRect().width : 0,
+          sqW: g.querySelector('.fd-sq').getBoundingClientRect().width }))""")
+        run_now = set(page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-str[aria-pressed=\"true\"]')].map(g => +g.dataset.fdstr)"))
+        check(len(sqs) == 6 and all(q["role"] == "button" and q["tab"] == "0" and q["name"].startswith(f"string {q['s']}") and q["title"] and q["hit"] and q["hitW"] > q["sqW"] * 1.4 for q in sqs),
+              f"{tag} 2 (260923): every set square is a named button with a title and an enlarged hit target: {sqs[:2]}")
+        check(run_now == {4, 3, 2, 1} and all((q["pressed"] == "true") == (q["s"] in run_now) for q in sqs),
+              f"{tag} 2 (260923): aria-pressed reflects the run (4 3 2 1 in): {[(q['s'], q['pressed']) for q in sqs]}")
+        page.hover('#fieldSvg .fd-str[data-fdstr="5"] .fd-hit'); page.wait_for_timeout(80)
+        hov = page.evaluate("""() => { const cs = getComputedStyle(document.querySelector('#fieldSvg .fd-str[data-fdstr="5"] .fd-sq')); const rest = getComputedStyle(document.querySelector('#fieldSvg .fd-str[data-fdstr="6"] .fd-sq')); return { stroke: cs.stroke, w: parseFloat(cs.strokeWidth), restW: parseFloat(rest.strokeWidth) }; }""")
+        check(hov["stroke"] == "rgb(33, 33, 38)" and hov["w"] > hov["restW"],
+              f"{tag} 2 (260923): under the pointer the square's border takes INK and weight — neutral ink, never a degree colour: {hov}")
+        page.mouse.move(5, 5)
+        page.focus('#fieldSvg .fd-str[data-fdstr="5"]'); page.keyboard.press("Space"); page.wait_for_timeout(200)
+        check("strings 5–4–3–2–1" in state() and page.get_attribute('#fieldSvg .fd-str[data-fdstr="5"]', "aria-pressed") == "true",
+              f"{tag} 2 (260923): Space on a focused square includes its string, and the pressed state follows: {state()[:90]!r}")
+        page.focus('#fieldSvg .fd-str[data-fdstr="5"]'); page.keyboard.press("Enter"); page.wait_for_timeout(200)
+        check("strings 4–3–2–1" in state(), f"{tag} 2 (260923): Enter toggles it back out: {state()[:90]!r}")
+        gutter = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg text')].filter(t => /^\{/.test(t.textContent)).map(t => [t.getAttribute('role'), t.getAttribute('tabindex'), getComputedStyle(t).cursor])""")
+        check(gutter and all(r is None and tb is None and c != "pointer" for r, tb, c in gutter),
+              f"{tag} 2 (260923): the bracket gutter beside the squares is prose, not a control — no role, no tabindex, no pointer: {gutter[:3]}")
         check_window("after re-adding string 3")
         # THE ALIAS: a restored pre-run snapshot (setIndex + key, no strings)
         # translates through the enumeration it indexed, and the board
@@ -542,7 +570,7 @@ def run_door(pw, door_id):
         def set_strings(target):
             cur = page.evaluate("""() =>
               [...document.querySelectorAll('#fieldSvg [data-fdstr]')]
-                .filter(g => g.querySelector('rect').getAttribute('fill') !== '#fff')
+                .filter(g => g.querySelector('.fd-sq').getAttribute('fill') !== '#fff')   /* .fd-sq since 260923: the hit target is the group's first rect */
                 .map(g => +g.dataset.fdstr)""")
             for s in sorted(set(cur) ^ set(target)):
                 page.click(f'#fieldSvg [data-fdstr="{s}"]')
@@ -5256,6 +5284,53 @@ console.log(JSON.stringify(out));
         page.set_viewport_size({"width": 390, "height": 844})
         page.wait_for_timeout(80)
         page.screenshot(path=str(BUILD / f"{door_id}-390.png"), full_page=True)
+
+    # ---------------- 5. axe-core, per door, both widths (260923, night 29 item 1) ----------
+    # THE FLOOR: WCAG 2 A and AA (axe tags wcag2a, wcag2aa). Left out, deliberately:
+    # best-practice (landmark-one-main / region — a single-page tool of cards, not a
+    # document; label-title-only — the three title-named fields have names) and the
+    # WCAG 2.1/2.2 tags, which axe applies to nothing here that A/AA does not.
+    # THE EXEMPTIONS are the 260923 findings Daniel has not ruled on, NAMED per door by
+    # rule and control, counted in the gate line, and LOUD BOTH WAYS: an unexempted
+    # violation fails the door, and an exemption that no longer matches anything fails
+    # it too, so a fix must retire its exemption (the family floor / OWED_DRIFT idiom —
+    # an exemption is never counted as a pass). Anything new — a control born tonight
+    # without a role or a name — is red on arrival: that is the instrument's job.
+    AXE_FLOOR = ["wcag2a", "wcag2aa"]
+    AXE_EXEMPT = {   # rule → { door → set of axe target selectors }, all reported 260923
+        "label": {   # range sliders with no label: the metronome's, the neck's mixer's
+            "multetudes": {"#bpmRange", "#clickVolR", "#fdHarmVol", "#fdBassVol"},
+            "tetradetudes": {"#bpmRange", "#clickVolR", "#bpmRange2", "#chordVolR", "#bassVolR"},
+            "scribe": {"#bpmRange", "#clickVolR"}, "plain": {"#bpmRange", "#clickVolR"}},
+        "select-name": {   # selects with a visible caption not associated, or none (item 1's list)
+            "multetudes": {"#meterSel", "#subSel", "#voiceSel", "#hcScale", "#hcObj", "#pgCycle", "#pgStart", "#psSel", "#fdVoice"},
+            "tetradetudes": {"#meterSel", "#subSel", "#voiceSel", "#meterSel2", "#splitSel", "#keySel", "#scaleSel", "#progSel", "#startSel", "#bottomSel", "#extSel", "#figSel"},
+            "scribe": {"#meterSel", "#subSel", "#voiceSel"}, "plain": {"#meterSel", "#subSel", "#voiceSel"}},
+        "color-contrast": {   # the neck's four captions in the annotation gray, 4.48:1 on white — a Spec §2.1 question
+            "multetudes": {".fd-cap:nth-child(2)", ".fd-cap:nth-child(4)", ".fd-cap:nth-child(6)", ".fd-cap:nth-child(8)"}},
+    }
+    AXE_JS = Path(HUB / "tests" / "vendor" / "axe.min.js")
+    check(AXE_JS.exists(), f"{tag} axe-core is not vendored at {AXE_JS} — the accessibility check cannot run")
+    for aw in (1280, 390):
+        page.set_viewport_size({"width": aw, "height": 900}); page.wait_for_timeout(150)
+        if not page.evaluate("() => !!window.axe"):
+            page.add_script_tag(path=str(AXE_JS))
+        res = page.evaluate("""(tags) => axe.run(document, { runOnly: { type: 'tag', values: tags } })
+          .then(r => ({ passes: r.passes.length, violations: r.violations.map(v => ({ id: v.id, impact: v.impact, targets: v.nodes.map(n => n.target.join(' ')) })) }))""", AXE_FLOOR)
+        failed, exempt_hits, seen = [], 0, {}
+        for v in res["violations"]:
+            allowed = AXE_EXEMPT.get(v["id"], {}).get(door_id, set())
+            for t in v["targets"]:
+                if t in allowed:
+                    exempt_hits += 1; seen.setdefault(v["id"], set()).add(t)
+                else:
+                    failed.append(f"{v['id']}[{v['impact']}] {t}")
+        stale = [f"{rule} {t}" for rule, doors in AXE_EXEMPT.items() for t in doors.get(door_id, set()) if t not in seen.get(rule, set())]
+        check(not failed, f"{tag} axe @{aw}: {len(failed)} WCAG 2 A/AA violation(s) not on the 260923 exemption list — a control without a role or a name is red on arrival: {failed[:8]}")
+        check(not stale, f"{tag} axe @{aw}: {len(stale)} exemption(s) match nothing — the finding was fixed, retire its exemption: {stale[:6]}")
+        n_ex_rules = len({r for r in seen})
+        print(f"  {tag} axe @{aw}: {res['passes']} rule(s) pass · {n_ex_rules} rule(s) EXEMPT ({exempt_hits} node(s), named 260923) · {len(failed)} failed")
+    page.set_viewport_size({"width": 1280, "height": 900})
     ctx.close()
     print(f"  {tag} {len(r['controlsPresent'])}/{len(r['controlsAbsent'])} controls "
           f"present/locked · {len(r['filesOut'])} file(s) pruned · "

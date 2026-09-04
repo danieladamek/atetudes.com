@@ -308,7 +308,12 @@ export const fieldBoard = {
 .fd-grip{fill:var(--ink);cursor:move}
 .fd-gripv{fill:#fff;stroke:var(--ink);stroke-width:1.6;cursor:ns-resize}
 .fd-hit{fill:transparent}
-.fd-str{cursor:pointer}`,
+.fd-str{cursor:pointer;outline:none}
+/* the square invites the click before it is clicked (260923): under the pointer
+ * or with focus the border takes ink and weight — neutral ink, never a degree
+ * colour (golden rule 8); an included square (ink fill) grows its weight only */
+.fd-str:hover .fd-sq,.fd-str:focus-visible .fd-sq{stroke:#212126;stroke-width:2.2}
+.fd-str:focus-visible .fd-sq{stroke-dasharray:3 2}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -605,8 +610,24 @@ export const fieldBoard = {
       const offers = offersOn(sel);
       for (let s = 1; s <= 6; s++) {
         const on = inRun.has(s);
-        const g = el("g", { class: "fd-str", "data-fdstr": s }, svg);
-        el("rect", { x: STR_X - 12, y: fy(s) - 11, width: 24, height: 22, rx: 6,
+        /* THE SET SQUARES ARE CONTROLS (260923, night 29 item 2 — Daniel: "it's not
+         * made obvious that the strings are selectable"). Until tonight the whole
+         * affordance was `.fd-str{cursor:pointer}` — a signal that arrives only once
+         * the player is already hovering, nothing on touch, no keyboard reach, no
+         * role — while the grip and the edge handles each had an `.fd-hit` target.
+         * Now: the module's own hit idiom (an invisible 40×34 target, sized like
+         * the handles' r-16), a role, a name, the pressed state, keyboard reach
+         * (Enter/Space on the square; the neck's arrow keys stay the svg's), a
+         * <title>, and a hover/focus state in WEIGHT AND NEUTRAL INK ONLY — golden
+         * rule 8: the palette is function, never status. The bracket gutter beside
+         * the squares (BRK_X) is prose, not a control, and gains none of this. */
+        const g = el("g", { class: "fd-str", "data-fdstr": s, role: "button", tabindex: "0",
+          "aria-pressed": on ? "true" : "false",
+          "aria-label": `string ${s}` + (on ? " — in the set" : " — not in the set") }, svg);
+        const ttl = el("title", {}, g);
+        ttl.textContent = on ? `string ${s} is in the set — click to leave it out` : `string ${s} is out of the set — click to include it`;
+        el("rect", { class: "fd-hit", x: STR_X - 20, y: fy(s) - 17, width: 40, height: 34 }, g);
+        el("rect", { class: "fd-sq", x: STR_X - 12, y: fy(s) - 11, width: 24, height: 22, rx: 6,
           fill: on ? "#212126" : "#fff", stroke: on ? "#212126" : "#B9B9BF",
           "stroke-width": 1.3 }, g);
         const t = el("text", { x: STR_X, y: fy(s) + 4, "text-anchor": "middle",
@@ -922,15 +943,15 @@ export const fieldBoard = {
       ringFor(m.midi);
     });
 
+    const toggleSquare = (sq) => {
+      const s = +sq.dataset.fdstr;
+      const has = cfg.strings.includes(s);
+      if (has && cfg.strings.length === 1) return;   // a run is never empty
+      setStrings(has ? cfg.strings.filter((x) => x !== s) : [...cfg.strings, s]);
+    };
     byId("fieldSvg").addEventListener("click", (e) => {
       const sq = e.target.closest("[data-fdstr]");
-      if (sq) {
-        const s = +sq.dataset.fdstr;
-        const has = cfg.strings.includes(s);
-        if (has && cfg.strings.length === 1) return;   // a run is never empty
-        setStrings(has ? cfg.strings.filter((x) => x !== s) : [...cfg.strings, s]);
-        return;
-      }
+      if (sq) { toggleSquare(sq); return; }
       const selHit = e.target.closest("[data-selmidi]");
       const hit = selHit || e.target.closest("[data-midi]");
       if (!hit) return;
@@ -952,6 +973,9 @@ export const fieldBoard = {
     });
 
     byId("fieldSvg").addEventListener("keydown", (e) => {
+      // a focused set square toggles on Enter or Space (260923) — its own key, the click's path
+      const sq = e.target.closest && e.target.closest("[data-fdstr]");
+      if (sq && (e.key === "Enter" || e.key === " ")) { toggleSquare(sq); e.preventDefault(); return; }
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         const next = step(curB.pos, e.key === "ArrowRight" ? 1 : -1, curB.fld, cfg.strings);
         cfg = { ...cfg, startDeg: next.startDeg, nearFret: next.fLo };

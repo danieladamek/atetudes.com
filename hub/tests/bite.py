@@ -1149,6 +1149,45 @@ def m46_a_flat_key_spells_sharp():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutations 47–48
+# 260923 (night 29): THE PAIRING — the axe check must catch the set squares' own
+# defect class: a control born without a name, or without a role.
+def m47_a_set_square_loses_its_name():
+    # MEASURED 260923 before writing: with the aria-label AND the <title> gone, axe's
+    # button-name stays silent — the numeral inside the square names a role=button
+    # from content ("1"). The instrument cannot see the name's QUALITY; the door's own
+    # square pin ("string N …") is what watches it. The pairing is axe + the pin.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '          "aria-label": `string ${s}` + (on ? " — in the set" : " — not in the set") }, svg);',
+        '          }, svg);   /* no name */')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "every set square is a named button" in r.stdout
+        record("a set square loses its accessible name (the numeral is all that names it)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the square's name pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m48_a_set_square_loses_its_role():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '        const g = el("g", { class: "fd-str", "data-fdstr": s, role: "button", tabindex: "0",',
+        '        const g = el("g", { class: "fd-str", "data-fdstr": s, tabindex: "0",')
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "not on the 260923 exemption list" in r.stdout or "every set square is a named button" in r.stdout
+        record("a set square loses its role (a focusable thing that is nothing)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the axe gate or the square pin named it: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1253,7 +1292,8 @@ def main():
                m38_a_tone_the_object_cannot_hold_slips_through, m39_the_row_stops_moving_as_one,
                m40_every_approach_goes_violet, m41_no_approach_goes_violet,
                m42_a_state_clause_returns_to_the_hint, m43_a_readout_copies_the_necks_box,
-               m44_the_palettes_R_drifts_by_one, m45_a_second_tuning_is_declared, m46_a_flat_key_spells_sharp)
+               m44_the_palettes_R_drifts_by_one, m45_a_second_tuning_is_declared, m46_a_flat_key_spells_sharp,
+               m47_a_set_square_loses_its_name, m48_a_set_square_loses_its_role)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

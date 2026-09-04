@@ -1,3 +1,28 @@
+## 2026-09-04 — Multetudes v0.5.4: night 29, axe-core joins the door locks; the set squares become controls
+
+- **Source edition v0.5.4** (night 29; the report in `notes/working/Multetudes build run
+  260923.md`; the item in `notes/Backlog/The set squares are not controls - a cursor is the whole
+  affordance.md`).
+- **The accessibility check (item 1):** axe-core 4.10.3 (MPL-2.0, vendored under
+  `hub/tests/vendor/`, a local test dependency shipped in nothing) runs in the door locks on
+  every door at 1280 and 390. The floor is WCAG 2 A and AA; the 260923 findings Daniel has not
+  ruled on are exempt by rule and control id, named and counted per door in the gate line, and
+  loud both ways (an unexempted violation fails; an exemption that matches nothing fails). The
+  whole list before any change is in the report: multetudes 3 rules / 17 nodes under A/AA (four
+  captions failing contrast, four unlabelled sliders, nine unnamed selects), tetradetudes 2 / 17,
+  scribe and plain 2 / 5. Reported, not fixed — Daniel rules.
+- **The set squares are controls (item 2):** each string-set square on the neck is a named
+  button with a pressed state, a title, an enlarged hit target in the neck's own idiom, hover
+  and focus in neutral ink (never a degree colour), and Enter/Space toggling; the bracket gutter
+  beside them stays prose. The `set` caption is left as is, alternatives proposed.
+- **The pairing, measured:** axe catches a square that loses its role (`aria-pressed` on a bare
+  `g`); it cannot catch a lost name, because the numeral inside names a button from content —
+  the door's own pin watches the name. bite m47 and m48 prove each.
+- **Studies moved:** multetudes only (one module's markup and CSS). Shell 18,040 unchanged.
+- **Gates from their logs:** doors 18,629/0 (`hub/tests/out/doors-0903-2114.log`, axe 0 failed on
+  all eight door-width pairs, exemptions named) · bite 49/49 (`bite-0903-2120.log`) · engine 601/601 ·
+  hugo 0 · check_site 21 with the record verify.
+
 ## 2026-09-04 — DEPLOYED: v0.5.3 live — multetudes moved, the other five unmoved; written from the run
 
 - record: run 33826549185 · success · commit bf8318c · fetched 2026-09-04T01:46Z · 6/6 studies byte-identical · digest f5fa91230879
