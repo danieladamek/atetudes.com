@@ -1,3 +1,14 @@
+## 2026-09-04 — DEPLOYED: v0.5.4 live — multetudes moved, the other five unmoved; written from the run
+
+- record: run 33843923257 · success · commit f0f2c3d · fetched 2026-09-04T06:28Z · 6/6 studies byte-identical · digest 4aa05d877669
+- Actions run 33843923257 green on `f0f2c3d` — https://github.com/danieladamek/atetudes.com/actions/runs/33843923257 (created 2026-09-04T06:20:00Z, finished 2026-09-04T06:27:01Z).
+- metronome: repo 3ec34d6a2d92 · live 3ec34d6a2d92 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 5469123ca1e6 · live 5469123ca1e6 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo e5649851a1bb · live e5649851a1bb — matches.
+- triadetudes: repo f2eecb6ce637 · live f2eecb6ce637 — matches.
+
 ## 2026-09-04 — Multetudes v0.5.4: night 29, axe-core joins the door locks; the set squares become controls
 
 - **Source edition v0.5.4** (night 29; the report in `notes/working/Multetudes build run
