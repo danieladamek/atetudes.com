@@ -68,7 +68,13 @@ export const harmonyCard = {
        label on the card that just had one split). -->
   <h2>Centricity</h2>
   <div class="hc-grid3">
-    <div><label>Key</label><select id="hcKey" data-control="hcKey"></select></div>
+    <!-- THE KEY'S CAPTION IS GONE (260922, night 28 — ruled 260921): "Key" named an
+         APPEARANCE (this collection happens to be a key) where the control's ROLE is
+         the field's centre, and it will not hold once a chromatic collection lands
+         (the vault's own note anticipates it). Its accessible name is the card's own
+         ratified word — never a term invented inside an attribute; the rename ruling
+         is Daniel's and open. -->
+    <div><select id="hcKey" data-control="hcKey" aria-label="Centricity"></select></div>
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
   </div>
@@ -92,7 +98,7 @@ export const harmonyCard = {
   <div class="hint" id="hcNote"></div>`,
 
   styles: `
-.hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px}
+.hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px;align-items:end}
 .hc-srcseg{display:flex;gap:6px;margin-top:6px}
 .hc-srcseg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
   border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
@@ -106,8 +112,17 @@ export const harmonyCard = {
  * to the control that sets it: the one place it was stated everywhere
  * except at its own origin. The red is the degree palette's R — the shell's
  * --red is that palette's Root by its own comment — never a new literal.
- * The field's SIZE is untouched (Daniel: the cards' proportions are settled). */
-#hcKey{color:var(--red);font-weight:bold}
+ * THE FIELD WEARS ITS WEIGHT (260922, night 28 — Daniel, 260921, reversing
+ * 260918's "size untouched"): a larger type, and the field about 1.75× the
+ * height of Scale and Object. Size and weight are the EMPHASIS channel —
+ * golden rule 8 keeps the hue for function — which is why this is legitimate
+ * and a hue change would not be. THE RATIO IS THE LAW, THE VALUE IS TUNABLE
+ * AT RENDER INSPECTION (§2.6's idiom): the gate pins a band around 1.75
+ * against the neighbours, never a pixel (CI's Chromium renders a select 29px
+ * where this machine renders 30). Stated in em so it scales with the type;
+ * the three fields share a BOTTOM edge (ruled: bottom-aligned) and the Key
+ * rises above it. */
+#hcKey{color:var(--red);font-weight:bold;font-size:18px;height:2.9em;padding:0 6px}
 #hcRef,#hcTones{width:100%}
 #hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 

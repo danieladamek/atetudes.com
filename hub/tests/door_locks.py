@@ -2893,19 +2893,37 @@ console.log(JSON.stringify(out));
         page.select_option("#fdBass2", bass_was); page.wait_for_timeout(120)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [4, 3, 2, 1] } }))""")
         page.wait_for_timeout(250)
-        # ---- 260918 item 1: THE KEY READS IN BOLD RED — the palette's R, the field's size kept ----
+        # ---- 260918 item 1: THE KEY READS IN BOLD RED — the palette's R (this claim stands) ----
         # PIN REWRITTEN after CI (260918): an absolute 30px height was a platform
         # pixel — CI's Linux Chromium renders the select 29px tall. The claim is
-        # RELATIVE: the key keeps its font size and the same height as its
-        # neighbour selects on the card (Scale, Object), which wear no bold.
+        # RELATIVE, against the neighbour selects on the card (Scale, Object).
+        # PIN REVERSED 260922 (night 28, rule 7 — Daniel 260921): the second claim
+        # read "the field's size is UNTOUCHED — the same font and height as its
+        # neighbours". Now: THE FIELD WEARS ITS WEIGHT. Its height is a RATIO of the
+        # neighbours' — a band around 1.75, never a pixel (the 29-versus-30 lesson) —
+        # and its type is larger; the neighbours are the baseline and do not move;
+        # the three fields share a BOTTOM edge (ruled: bottom-aligned); the caption
+        # is gone and the select keeps a NAME (the card's own ratified word).
+        # THE BAND: 1.6–1.9. At the shipped 2.9em of 18px the field is 52px, which is
+        # 1.74× a 30px neighbour here and 1.80× CI's 29px; the band holds both with
+        # room for font rounding, and excludes 1.5 (the neighbours' label+field
+        # span — a field that merely matches the column) and 2.0 (a doubled row).
         key = page.evaluate("""() => { const g = (id) => { const e = document.getElementById(id); const cs = getComputedStyle(e);
-            const r = e.getBoundingClientRect(); return { color: cs.color, weight: cs.fontWeight, h: Math.round(r.height), font: cs.fontSize }; };
-          return { key: g('hcKey'), scale: g('hcScale'), obj: g('hcObj') }; }""")
+            const r = e.getBoundingClientRect(); return { color: cs.color, weight: cs.fontWeight, h: r.height, bottom: Math.round(r.bottom), font: parseFloat(cs.fontSize) }; };
+          const k = document.getElementById('hcKey'); const card = k.closest('.card');
+          return { key: g('hcKey'), scale: g('hcScale'), obj: g('hcObj'), name: k.getAttribute('aria-label'),
+            keyCaption: [...card.querySelectorAll('label')].some(l => l.textContent.trim() === 'Key') }; }""")
         check(key["key"]["color"] == "rgb(184, 41, 41)" and int(key["key"]["weight"]) >= 600,
               f"{tag} 1 (260918): the key reads in the degree palette's R, bold: {key['key']}")
-        check(key["key"]["font"] == key["scale"]["font"] == "13px"
-              and key["key"]["h"] == key["scale"]["h"] == key["obj"]["h"],
-              f"{tag} 1 (260918): the field's size is untouched — the same font and height as its neighbour selects: {key}")
+        ratio = key["key"]["h"] / key["scale"]["h"]
+        check(1.6 <= ratio <= 1.9 and key["key"]["font"] > key["scale"]["font"],
+              f"{tag} 1 (260922): the field wears its weight — its height is 1.6–1.9× its neighbours' (ratio {ratio:.3f}) and its type is larger: {key}")
+        check(abs(key["scale"]["h"] - key["obj"]["h"]) < 1 and key["scale"]["font"] == key["obj"]["font"] == 13 and 27 <= key["scale"]["h"] <= 32,
+              f"{tag} 1 (260922): the neighbours are the baseline and did not move — Scale and Object the same 13px field: {key}")
+        check(key["key"]["bottom"] == key["scale"]["bottom"] == key["obj"]["bottom"],
+              f"{tag} 1 (260922): the three fields share a BOTTOM edge (ruled) and the Key rises above it: {key}")
+        check(key["name"] == "Centricity" and not key["keyCaption"],
+              f"{tag} 1 (260922): the caption is gone and the select keeps its NAME — the card's own word: {key['name']!r}, caption {key['keyCaption']}")
         # ---- 260917 item 4: the card's bass window is closed in chord mode, the CENTRE stays in scale mode ----
         hc_win = lambda: page.evaluate("() => ({ hidden: document.getElementById('hcRef').hidden, lab: document.getElementById('hcRefLab').textContent })")
         check(hc_win()["hidden"] is True, f"{tag} 4: chord mode — the card shows no bass window: {hc_win()}")

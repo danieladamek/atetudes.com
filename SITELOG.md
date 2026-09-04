@@ -1,3 +1,27 @@
+## 2026-09-04 — Multetudes v0.5.3: night 28, the Key field wears its weight
+
+- **Source edition v0.5.3** (night 28, a light night; the report in
+  `notes/working/Multetudes build run 260922.md`; the item in `notes/Backlog/The Key field
+  wears its weight - the Centricity card's touch-up.md`; Daniel's rulings 260921: bottom-aligned,
+  the caption dropped).
+- **The Centricity card's Key select** grows to 18px bold in the palette's red (the hue
+  unchanged: colour is function, size and weight are the emphasis channel) and to about
+  1.75× the height of Scale and Object, which do not move; the three fields share a bottom
+  edge and the Key rises above it. The "Key" caption is gone — it named an appearance, and
+  will not hold under a chromatic collection — and the select carries the card's own word as
+  its accessible name (it had none before). The card stays 562×283 and 250×283.
+- **The pin reversed, not dropped:** the 260918 "size untouched" claim now pins a RATIO band
+  of 1.6–1.9 against the neighbours (never a pixel: CI renders a select 29px where this
+  machine renders 30), the neighbours as an unmoved baseline, the shared bottom edge and the
+  accessible name; the bold-red claim stands. Red-run through redrun: the ratio out of its band
+  reddens the size pin alone.
+- **Studies moved:** multetudes only. Noticed, not fixed: the card's three columns clip Object
+  at 390px, before and after.
+- **Gates from their logs:** doors 18,558/0 (`hub/tests/out/doors-0903-2032.log`; the red-run
+  `doors-0903-1632-red-keyratio.log`, the size pin alone red) · bite 47/47 (`bite-0903-1643.log`) ·
+  engine 601/601 · hugo 0 · check_site 21 with the record verify (1 checked) · served ritual both
+  widths console clean · shell 18,040 unchanged.
+
 ## 2026-09-03 — DEPLOYED: night 27 live — no study moved; the first record written from the run
 
 - record: run 33803981536 · success · commit 2025ba4 · fetched 2026-09-03T20:52Z · 6/6 studies byte-identical · digest e457c9b9ca6c

@@ -144,7 +144,10 @@ export default {
      * one chromatic speller (chord.mjs), two more palette copies retired, and the
      * harmonic readout on every étude representation as ONE component (hub/readout.mjs)
      * with the minis in flow beside it. */
-    blurb: "one tool that holds many études · v0.5.2",
+    /* v0.5.3 (260922, night 28 — the Key field wears its weight): the Centricity
+     * card's Key select at 18px bold red, ~1.75× its neighbours, bottom-aligned,
+     * its caption dropped and the select named. A light night. */
+    blurb: "one tool that holds many études · v0.5.3",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
