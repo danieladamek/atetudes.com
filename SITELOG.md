@@ -1,3 +1,14 @@
+## 2026-09-05 — DEPLOYED: night 32 live — triadetudes moved (Strum), the other five unmoved; all six checked; written from the run
+
+- record: run 33964864646 · success · commit 405048a · fetched 2026-09-05T12:09Z · 6/6 studies byte-identical · digest fe892ef293a2
+- Actions run 33964864646 green on `405048a` — https://github.com/danieladamek/atetudes.com/actions/runs/33964864646 (created 2026-09-05T12:01:11Z, finished 2026-09-05T12:08:08Z).
+- metronome: repo 47cd79f8adb2 · live 47cd79f8adb2 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 6dc7eba5a198 · live 6dc7eba5a198 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 39a85617acc0 · live 39a85617acc0 — matches.
+- triadetudes: repo da4c0468c257 · live da4c0468c257 — matches.
+
 ## 2026-09-05 — night 32: the floor, declared and asserted — the family's words as a fourth host list; Block → Strum reaches triadetudes
 
 - **No door moved** (multetudes and tetradetudes builds byte-identical to the served copies);
