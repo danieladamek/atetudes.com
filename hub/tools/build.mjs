@@ -15,6 +15,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, relative, dirname, resolve as resolvePath } from "node:path";
 import { pathToFileURL } from "node:url";
 import { resolveDoor, listDoors, HUB, REPO, importStatementsOf, withoutImports } from "./resolve.mjs";
+import { partsOf, markupWithout } from "./parts.mjs";
 
 /* the import statement is read by resolve.mjs's ONE parser (260921): what
  * binds and what blanks come from the same match, and any other spelling is
@@ -124,32 +125,8 @@ const READOUT_GRAMMAR = {
  * fires, because the RESOLVER never sees a new module. And like the row
  * primitive, this lives in the build half, which ships in nothing: the
  * additive proof (other doors byte-identical) gates it. */
-const PART_OPEN = /<!--part:([\w-]+)-->/g;
-const PART_REGION = /<!--part:([\w-]+)-->([\s\S]*?)<!--\/part:\1-->/g;
-
-/** the named parts of a markup string: Map(name → concatenated regions) */
-function partsOf(markup) {
-  const out = new Map();
-  for (const m of markup.matchAll(PART_REGION))
-    out.set(m[1], (out.get(m[1]) ?? "") + m[2]);
-  // an unpaired marker is a silent half-part — refuse it by name
-  const opens = [...markup.matchAll(PART_OPEN)].length;
-  const paired = [...markup.matchAll(PART_REGION)].length;
-  if (opens !== paired)
-    throw new Error(`a part marker is unpaired (${opens} opens, ${paired} paired regions) — ` +
-      "an unpaired marker would ship half a part in silence");
-  return out;
-}
-
-/** the module's markup with `seated` parts removed and all markers stripped —
- * the default assembly when `seated` is empty. NO trim: the old path passed
- * markup through verbatim, and a stripped leading newline is a byte moved in
- * every door (the additive proof caught exactly that on this function's first
- * draft, 2026-08-30). */
-function markupWithout(markup, seated) {
-  return markup
-    .replace(PART_REGION, (whole, name, inner) => (seated.has(name) ? "" : inner));
-}
+/* partsOf and markupWithout — the parts primitive — live in parts.mjs since
+ * night 35 (260929): a test imports them there; this file builds on import. */
 
 /* Each module is inlined inside its own IIFE that returns its exports, and
  * its imports are destructured from the namespaces of the modules already

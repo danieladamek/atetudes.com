@@ -135,6 +135,29 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-05 — night 35: the metronome study and triadetudes re-housed onto the hub's cards (the pad/log split in all)
+
+- **What:** `static/studies/metronome/study.html` (v1.4.4 → **v1.5.0**) and
+  `static/studies/triadetudes/study.html` (v0.8.13 → **v0.8.14**) now carry
+  `hub/modules/notepad-card.mjs`'s markup and styles and `hub/modules/metronome-card.mjs`'s four
+  row groups and styles VERBATIM, in the build's own assemblies — the metronome study with the
+  pad part seated beside the metronome as the multetudes door seats it, the practice log a board
+  below (its "Saved notes" card retired into it); triadetudes unseated, both columns in the board.
+  Both gain the title field (the export's name, pre-populated, persisted), the per-capability
+  message slots, an explicit Copy and palette mount (triadetudes' Copy was auto-appended — the
+  loss `engine/notepad-surface.mjs`'s header cites), and the pad/log split. The surface's
+  capability set is unchanged: six rendered before, six after. Stored data untouched (same
+  storage keys, same schema); the metronome's default export filename is now
+  `metronome-journal-<date>.atchart.md` (the family's one naming rule).
+- **Why:** Daniel, 260923 — "we'll want to put the same split notepad/log in all including the
+  metronome"; the approved epic *The shared app shell — converging the door on Triadetudes*.
+- **How it is held:** host-conformance's new `§4.3 card carriers` pin — carriers detected, the
+  card's bytes required verbatim in one of `hub/tools/parts.mjs`'s assemblies (moved out of
+  build.mjs so a test can import it; every door rebuilt byte-identical). Red by mutation; bite m53.
+  Carrier census identical before and after; OWED_DRIFT empty at both ends. Round trips, Copy and
+  a reload proven in a real browser on both pages at 1280 and 390.
+- The other four studies are untouched. Multetudes v0.5.6 stays the canon.
+
 ## 2026-09-05 — DEPLOYED: night 34 live — tetradetudes and triadetudes moved (the canon's words), the other four unmoved; all six checked; written from the run
 
 - record: run 33982707799 · success · commit 5602ae9 · fetched 2026-09-05T18:08Z · 6/6 studies byte-identical · digest 6c8476647bda

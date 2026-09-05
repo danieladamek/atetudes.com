@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createNotepadSurface, CAPABILITIES } from "../notepad-surface.mjs";
 import { makeDoc, memStorage, capsOf } from "./_dom-stub.mjs";
-import { carriersOf, CENSUS } from "./_carriers.mjs";
+import { carriersOf, CENSUS, STUDY_SLUGS } from "./_carriers.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const studyOf = (slug) =>
@@ -33,24 +33,34 @@ const studyOf = (slug) =>
 // (auto-append), which is itself asserted present.
 
 const NOTEPAD_HOSTS = [
+  /* RE-HOUSED (night 35, 260929): both hand-authored studies now carry
+   * notepad-card.mjs's own markup — the metronome study with the pad part
+   * seated beside the metronome as the multetudes door seats it, triadetudes
+   * unseated — so their ids ARE the card's, every capability an explicit
+   * mount (copy included: the loss the surface's header cites), plus the
+   * title field and the per-capability message slots. The auto-append path
+   * is exercised by no shipped host any more; it stays the family's net for
+   * a host that has not decided, covered by notepad-surface.test.mjs. */
   { name: "metronome",
     nouns: { item: "note", apply: "Apply settings" },
-    mounts: { pad: "pad", saveBtn: "saveNote", clearBtn: "clearPad",
+    mounts: { pad: "journalIn", title: "npTitle", saveBtn: "saveEntry", clearBtn: "clearPad",
       confirmRoot: "clearConfirm", confirmSave: "clearSave",
       confirmDiscard: "clearDiscard", confirmCancel: "clearCancel",
-      exportBtn: "exportBtn", copyBtn: "copyBtn", importBtn: "importBtn",
-      importFile: "importFile", msg: "saveMsg", list: "noteList",
-      count: "noteCount", storeNote: "storeNote", controls: "padControls",
-      handoff: "handoffNote" } },
-  { name: "triadetudes",   // no copyBtn: Copy arrives by auto-append — by design
+      exportBtn: "exportLog", copyBtn: "copyBtn", paletteBtn: "paletteBtn",
+      paletteRoot: "paletteRoot", importBtn: "importBtn", importFile: "importFile",
+      msg: "saveMsg", importMsg: "importMsg", exportMsg: "exportMsg", copyMsg: "copyMsg",
+      list: "histList", count: "histCount", storeNote: "storeNote",
+      controls: "journalControls", handoff: "handoffNote" } },
+  { name: "triadetudes",
     nouns: { item: "entry", apply: "Restore étude" },
-    mounts: { pad: "journalIn", saveBtn: "saveEntry", clearBtn: "clearPad",
+    mounts: { pad: "journalIn", title: "npTitle", saveBtn: "saveEntry", clearBtn: "clearPad",
       confirmRoot: "clearConfirm", confirmSave: "clearSave",
       confirmDiscard: "clearDiscard", confirmCancel: "clearCancel",
-      exportBtn: "exportLog", importBtn: "importBtn", importFile: "importFile",
-      msg: "saveMsg", importMsg: "importMsg", list: "histList",
-      count: "histCount", storeNote: "storeNote", controls: "journalControls",
-      handoff: "handoffNote" } },
+      exportBtn: "exportLog", copyBtn: "copyBtn", paletteBtn: "paletteBtn",
+      paletteRoot: "paletteRoot", importBtn: "importBtn", importFile: "importFile",
+      msg: "saveMsg", importMsg: "importMsg", exportMsg: "exportMsg", copyMsg: "copyMsg",
+      list: "histList", count: "histCount", storeNote: "storeNote",
+      controls: "journalControls", handoff: "handoffNote" } },
   { name: "tetradetudes",   // the door's notepad-card ports triadetudes' ids wholesale
     nouns: { item: "entry", apply: "Restore étude" },
     mounts: { pad: "journalIn", saveBtn: "saveEntry", clearBtn: "clearPad",
@@ -62,9 +72,10 @@ const NOTEPAD_HOSTS = [
       handoff: "handoffNote" } },
   { name: "multetudes",
     /* item 1 (260911): this host TOOK the placement — copyBtn and paletteRoot
-     * are DECLARED mounts here, not auto-appends. The auto-append path stays
-     * exercised by triadetudes above; it is the family's net for a host that
-     * has not decided, and one host deciding is not a reason to remove it.
+     * are DECLARED mounts here, not auto-appends. The auto-append path was
+     * exercised by triadetudes until night 35 re-housed it onto the card; it
+     * remains the family's net for a host that has not decided, and no host
+     * deciding is not a reason to remove it (notepad-surface.test.mjs keeps it).
      * nouns: "note" is v0.9's word, adopted by the same item (D12) — the
      * entry describes the host as SHIPPED. */
     nouns: { item: "note", apply: "Restore étude" },
@@ -95,7 +106,7 @@ function mountHost(host) {
   const els = {};
   for (const key of Object.keys(host.mounts))
     els[key] = d.createElement(key === "pad" ? "textarea" :
-      key === "importFile" ? "input" : key.endsWith("Btn") ? "button" : "div");
+      key === "importFile" || key === "title" ? "input" : key.endsWith("Btn") ? "button" : "div");
   const surface = createNotepadSurface({
     adapter: { app: host.name, version: 1, nouns: host.nouns,
       snapshot: () => ({ probe: 1 }), apply: () => {},
@@ -188,6 +199,65 @@ test("§4.3 notepad: an unwired host fails NAMING what is missing (the spec for 
     file: { title: "t", name: () => "t.md" } }),
     /declared capability "export" — provide els\.exportBtn or els\.controls/,
     "the failure names the capability and both ways to satisfy it");
+});
+
+// ================= the CARD CARRIERS (night 35, 260929): a hub card's bytes in a hand-authored page =================
+// The two hand-authored studies were RE-HOUSED onto notepad-card.mjs and
+// metronome-card.mjs — Daniel, 260923: "the same split notepad/log in all
+// including the metronome". A page cannot import a hub module, so it carries
+// the card's markup and styles the way it carries an engine module: VERBATIM,
+// and pinned. The markup must appear in one of the BUILD'S OWN assemblies —
+// markupWithout(markup, seats) plus each seated part, computed by the same
+// function the door build runs (hub/tools/parts.mjs) for every subset of the
+// card's parts — so a hand page ships exactly the bytes a door would. Nothing
+// is listed by hand: the carriers are DETECTED (the census's own rule —
+// presence needs the module's name in the page or any 60+ char markup line,
+// so a partially drifted carrier still reads as carried and the pin fires on
+// the drift rather than the card quietly leaving). Door-built pages are the
+// resolver's and the build's business, not this pin's.
+import { notepadCard } from "../../hub/modules/notepad-card.mjs";
+import { metronomeCard } from "../../hub/modules/metronome-card.mjs";
+import { partsOf, markupWithout } from "../../hub/tools/parts.mjs";
+
+/* metronome-card's pinned region is its FOUR ROW GROUPS — the grammar the
+ * family constant above counts; the h2, the collapse summary and the info
+ * prose are the host's (an appliance with no étude cannot say "the étude
+ * subscribes to this grid"). Sliced from the module, never retyped. */
+const rowsOf = (markup) => {
+  const a = markup.indexOf('  <div class="transport">'), b = markup.indexOf('  <div class="clpsum"');
+  assert.ok(a >= 0 && b > a, "metronome-card's markup no longer opens with the transport row and closes with the summary — re-site the slice");
+  return markup.slice(a, b);
+};
+const CARDS = [
+  { card: notepadCard, file: "hub/modules/notepad-card.mjs", markup: notepadCard.markup, styles: notepadCard.styles },
+  { card: metronomeCard, file: "hub/modules/metronome-card.mjs", markup: rowsOf(metronomeCard.markup), styles: metronomeCard.styles },
+];
+const subsets = (names) => names.reduce((acc, n) => acc.concat(acc.map((s) => [...s, n])), [[]]);
+const assembliesOf = (markup) => {
+  const parts = partsOf(markup);
+  return subsets([...parts.keys()]).map((seated) => ({
+    seated, pieces: [markupWithout(markup, new Set(seated)), ...seated.map((n) => parts.get(n))] }));
+};
+const carriesCard = (page, c) =>
+  page.includes(c.file) || c.markup.split("\n").some((l) => l.trim().length >= 60 && page.includes(l));
+
+test("§4.3 card carriers: a hand-authored page that carries a hub card carries its bytes VERBATIM, in one of the build's own assemblies", () => {
+  let pinned = 0;
+  for (const slug of STUDY_SLUGS) {
+    if (CENSUS.get(slug).source !== "detected") continue;   // door-built: the build's proof
+    const page = studyOf(slug);
+    for (const c of CARDS) {
+      if (!carriesCard(page, c)) continue;
+      assert.ok(page.includes(c.styles),
+        `[${slug}] carries ${c.file} but its styles have drifted from the module's — re-copy the styles block verbatim`);
+      const ok = assembliesOf(c.markup).find((a) => a.pieces.every((piece) => page.includes(piece)));
+      assert.ok(ok, `[${slug}] carries ${c.file} but its markup matches none of the build's assemblies ` +
+        `(seats tried: ${assembliesOf(c.markup).map((a) => "{" + a.seated.join(",") + "}").join(" ")}) — ` +
+        "re-copy the markup verbatim from the module; the host's own pieces are seated at init, never typed into the card");
+      pinned++;
+    }
+  }
+  assert.equal(pinned, 4, "two hand-authored studies × two cards: the pin must actually have run four times");
 });
 
 // ================= metronome.mjs: widened to the same shape =================

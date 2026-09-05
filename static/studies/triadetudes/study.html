@@ -25,20 +25,13 @@
            color:var(--gray);margin:0 0 10px;font-weight:bold}
   /* the metronome block: inverted — it is its own appliance, not an étude control.
      Family convention: first card, top-left, in every app. */
-  .card.metro{background:var(--ink);border-color:var(--ink);color:#ECECEE}
-  .card.metro h2{color:#9C9CA4}
-  .card.metro label{color:#9C9CA4}
-  .card.metro .hint{color:#85858D}
-  .card.metro select{background:#2E2E34;color:#ECECEE;border-color:#44444C}
-  .card.metro .transport button{background:#2E2E34;color:#ECECEE;border-color:#44444C}
-  .card.metro .transport button.primary{background:#ECECEE;color:var(--ink);
-    border-color:#ECECEE;font-weight:bold}
-  .card.metro .chk{color:#D8D8DC}
-  .card.metro input[type=range]{accent-color:#ECECEE}
   label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
   select,input[type=text]{
     font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
     border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
+  /* the inverted card's own rules ship with metronome-card.mjs (below); this one is the
+     page's — face prose on the dark card, which the module keeps in a popout */
+  .card.metro .hint{color:#85858D}
   .row2{display:flex;gap:10px;flex-wrap:wrap}
   .row2>div{flex:1 1 90px}
   .row2.alignEnd{align-items:flex-end}   /* selects share a baseline when a label wraps */
@@ -82,7 +75,6 @@
     padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
     cursor:pointer;color:var(--gray);z-index:6}
   .clpsBtn:hover{border-color:var(--ink);color:var(--ink)}
-  .card.metro .clpsBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
   .clpsSum{display:none;font-size:12px;color:var(--gray);margin:0;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:34px}
   .clpsd .clpsSum{display:block}
@@ -97,7 +89,6 @@
     padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
     cursor:pointer;color:var(--gray);z-index:7}
   .infoBtn:hover{border-color:var(--ink);color:var(--ink)}
-  .card.metro .infoBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
   .infoPop{position:absolute;top:32px;left:10px;right:10px;z-index:20;
     background:var(--card);border:1px solid var(--line);border-radius:8px;
     padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.14);max-height:60vh;overflow:auto}
@@ -184,94 +175,142 @@
     border-radius:6px;background:#fff;cursor:pointer}
   textarea{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);
     border-radius:6px;width:100%;resize:vertical;color:var(--ink)}
-  /* the journal (v0.8.0): Log LEFT, note RIGHT; a drag handle between; both
-     columns fold (the collapse the notebook never got in 260810.14); at 390
-     they stack with the NOTE first — the note is written before you play. */
-  .nb2j{display:flex;align-items:stretch}
-  .jcol{min-width:0;position:relative}
-  #logCol{flex:0 1 auto;width:50%;padding-right:12px}
-  #noteCol{flex:1 1 0;padding-left:12px}
-  #dragBar{flex:0 0 8px;cursor:col-resize;border-left:2px solid var(--line);
-    border-radius:2px;touch-action:none}
-  #dragBar:hover{border-left-color:var(--ink)}
-  .colhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-    color:var(--gray);font-weight:bold;margin:0 0 8px}
-  #journalIn{min-height:210px}
-  .hist .note.md{white-space:normal}
-  .hist .note.md p{margin:4px 0}
-  .hist .note.md pre{background:var(--ground);border-radius:6px;padding:5px 7px;
-    overflow:auto;font-size:11.5px}
-  .hist .note.md code{font-family:ui-monospace,monospace;font-size:11.5px}
-  @media (max-width:719px){
-    .nb2j{flex-direction:column}
-    #dragBar{display:none}
-    #logCol{width:auto;padding-right:0;order:2}
-    #noteCol{padding-left:0;order:1;margin-bottom:12px}
-  }
+  /* the title's seat at phone width (night 35): the host's placement rule — in flow above
+     the log header, full width; the shell's inline seat is for widths where the band has room */
+  @media (max-width:719px){ #notepadBoard>#npTitle{position:static!important;width:100%;margin:0 0 8px} }
   #cfgSummary{font-size:12px;color:var(--ink);line-height:1.55;background:var(--ground);
     border-radius:6px;padding:7px 10px;margin-bottom:2px}
-  .hist{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
-  .hist .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-  .hist .when{color:var(--gray);font-size:11.5px;white-space:nowrap}
-  .hist .sum{color:var(--gray);margin:3px 0;font-size:11.5px;line-height:1.45}
-  .hist .note{color:var(--ink);margin:2px 0;white-space:pre-wrap}
-  .hist .acts{display:flex;gap:6px;margin-top:6px}
-  .hist .acts button{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
-    border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-  .hist .acts button.danger{color:var(--red)}
   footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   .dot-label{font-weight:bold;pointer-events:none;user-select:none}
-  /* the music palette (notepad surface capability, child 3) — neutral chrome only */
-  .palette{flex-basis:100%;display:flex;flex-direction:column;gap:6px;margin-top:6px;
-    border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--ground)}
-  .palette .prow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .palette .plab{color:var(--gray);font-size:11px;min-width:62px;text-transform:uppercase;
-    letter-spacing:.4px}
-  .palette select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);
-    border-radius:6px;background:var(--card);color:var(--ink)}
-  .palette button.pbtn{font:inherit;font-size:13px;padding:4px 10px;border:1px solid var(--line);
-    border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
-  .palette button.pbtn:hover{border-color:var(--gray)}
+  /* ===== hub/modules/notepad-card.mjs · styles, VERBATIM (night 35, 260929) — the card is re-housed
+     here; host-conformance pins these bytes to the module's. Edit the module, never this copy. ===== */
+.nb2j{display:flex;align-items:stretch}
+.jcol{min-width:0;position:relative}
+#logCol{flex:0 1 auto;width:50%;padding-right:12px}
+#noteCol{flex:1 1 0;padding-left:12px}
+#dragBar{flex:0 0 8px;cursor:col-resize;border-left:2px solid var(--line);
+  border-radius:2px;touch-action:none}
+#dragBar:hover{border-left-color:var(--ink)}
+.colhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--gray);font-weight:bold;margin:0 0 8px}
+#journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
+#importFile{display:none}
+/* 215px (260916, item 2a): wide enough to show the whole pre-populated
+ * default, "multetudes journal — 2026-09-16" — a field that clips the value
+ * it holds does not visibly hold it (170px clipped the date) */
+#npTitle{font:inherit;font-size:11.5px;padding:2px 7px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink);width:215px}
+.journalcontrols{margin-top:10px}
+.journalconfirm{display:none;margin-top:6px}
+.padmsgs{margin-top:6px;min-height:0}
+.padmsgs .hint:empty{display:none}
+.nomargin{margin:0}
+.storenote{text-transform:none;letter-spacing:0;font-weight:normal}
+.hist{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
+.hist .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.hist .when{color:var(--gray);font-size:11.5px;white-space:nowrap}
+.hist .note{color:var(--ink);margin:2px 0;white-space:pre-wrap}
+.hist .acts{display:flex;gap:6px;margin-top:6px}
+.hist .acts button{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
+.hist .acts button.danger{color:var(--red)}
+/* a NAMED entry (260916, item 2b) leads with its name in bold and carries
+ * its derived summary on the line below — v0.9's own row shape */
+.hist .sum{color:var(--gray);font-size:11.5px;margin:1px 0 2px}
+/* the row's own message slot (260916, item 3): an entry's export speaks
+ * beside the button that was pressed, never up at the pad */
+.hist .acts .emsg{font-size:11px;color:var(--gray);align-self:center}
+.hist .acts .emsg:empty{display:none}
+.hist .note.md{white-space:normal}
+.hist .note.md p{margin:4px 0}
+.hist .note.md pre{background:var(--ground);border-radius:6px;padding:5px 7px;
+  overflow:auto;font-size:11.5px}
+.hist .note.md code{font-family:ui-monospace,monospace;font-size:11.5px}
+.palette{flex-basis:100%;display:flex;flex-direction:column;gap:6px;margin-top:6px;
+  border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--ground)}
+.palette .prow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.palette .plab{color:var(--gray);font-size:11px;min-width:62px;text-transform:uppercase;
+  letter-spacing:.4px}
+.palette select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);
+  border-radius:6px;background:var(--card);color:var(--ink);width:auto}
+.palette button.pbtn{font:inherit;font-size:13px;padding:4px 10px;border:1px solid var(--line);
+  border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
+.palette button.pbtn:hover{border-color:var(--gray)}
+@media (max-width:719px){
+  .nb2j{flex-direction:column}
+  #dragBar{display:none}
+  #logCol{width:auto;padding-right:0;order:2}
+  #noteCol{padding-left:0;order:1;margin-bottom:12px}
+}
+  /* ===== hub/modules/metronome-card.mjs · styles, VERBATIM (night 35, 260929) — same pin. ===== */
+.card.metro{background:var(--ink);border-color:var(--ink);color:#ECECEE}
+.card.metro h2{color:#9C9CA4}
+/* the collapse chevron is shell grammar, but its dark-card variant belongs here
+ * with the inverted card it dresses — metro is this module's own token, so the
+ * rule cannot outlive the card (Shell 4) */
+.card.metro .clpsBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
+.card.metro label{color:#9C9CA4}
+/* the info button's dark-card variant lives here with the inverted card it
+ * dresses — metro is this module's own token, so the rule cannot outlive the
+ * card (same reason as the collapse chevron above). The static prose it reveals
+ * now lives in a white popout, so it needs no dark-card colour of its own. */
+.card.metro .infoBtn{background:#2E2E34;color:#9C9CA4;border-color:#44444C}
+.card.metro .muteBtn{background:transparent}
+.card.metro select{background:#2E2E34;color:#ECECEE;border-color:#44444C}
+.card.metro .transport button{background:#2E2E34;color:#ECECEE;border-color:#44444C}
+.card.metro .transport button.primary{background:#ECECEE;color:var(--ink);
+  border-color:#ECECEE;font-weight:bold}
+.card.metro .chk{color:#D8D8DC}
+.card.metro input[type=range]{accent-color:#ECECEE}
+.metrolabel{font-size:12px;color:#9C9CA4}
+.metroval{font-size:13px;width:30px;text-align:right}
+#beatLamp{display:flex;gap:5px;align-items:center;margin-left:4px}
+#beatLamp span{width:9px;height:9px;border-radius:50%;background:#44444C;display:block}
+#beatLamp span.on{background:#ECECEE}
+#beatLamp span.acc{background:var(--red)}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.13</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.14</div>
 </header>
 
 <div class="cards">
   <div class="card metro">
     <h2>Metronome</h2>
-    <div class="transport">
-      <button id="metroBtn" class="primary">Start</button>
-      <button id="tapBtn" title="tap a tempo">Tap</button>
-      <span id="beatLamp" style="display:flex;gap:5px;align-items:center;margin-left:4px"></span>
-    </div>
-    <div class="bpmrow">
-      <span style="font-size:12px;color:#9C9CA4">BPM</span>
-      <input type="range" id="bpmRange" min="15" max="300" value="72">
-      <span id="bpmVal" style="font-size:13px;width:30px;text-align:right">72</span>
-    </div>
-    <div class="row2">
-      <div><label>Time</label>
-        <select id="meterSel"><option value="4" selected>4/4</option><option value="3">3/4</option>
-          <option value="5">5/4</option><option value="6">6/4</option><option value="7">7/4</option></select></div>
-      <div><label>Subdivision</label>
-        <select id="subSel"><option value="1" selected>beats</option><option value="2">8ths</option>
-          <option value="3">triplets</option><option value="4">16ths</option></select></div>
-      <div><label>Voice</label>
-        <select id="voiceSel"><option value="beep" selected>beep</option>
-          <option value="wood">wood</option><option value="tick">tick</option></select></div>
-      <div class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" checked> accents</label></div>
-    </div>
-    <div class="bpmrow" title="the click level — muted is this slider at zero">
-      <button id="clickMute" class="muteBtn">🔊</button>
-      <span style="font-size:12px;color:#9C9CA4">Vol</span>
-      <input type="range" id="clickVolR" min="0" max="100" value="80">
-      <span id="clickVolVal" style="font-size:13px;width:30px;text-align:right">80</span>
-    </div>
+    <!-- ===== hub/modules/metronome-card.mjs · the four row groups, VERBATIM (night 35, 260929): the card is
+         re-housed here — host-conformance pins these bytes to the module's. Edit the module. ===== -->
+  <div class="transport">
+    <button id="metroBtn" data-control="metroBtn" class="primary">Start</button>
+    <button id="tapBtn" data-control="tapBtn" title="tap a tempo">Tap</button>
+    <span id="beatLamp" data-control="beatLamp"></span>
+  </div>
+  <div class="bpmrow">
+    <span class="metrolabel">BPM</span>
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
+    <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
+  </div>
+  <div class="row2">
+    <div><label>Time</label>
+      <select id="meterSel" data-control="meterSel"><option value="4" selected>4/4</option><option value="3">3/4</option>
+        <option value="5">5/4</option><option value="6">6/4</option><option value="7">7/4</option></select></div>
+    <div><label>Subdivision</label>
+      <select id="subSel" data-control="subSel"><option value="1" selected>beats</option><option value="2">8ths</option>
+        <option value="3">triplets</option><option value="4">16ths</option></select></div>
+    <div><label>Voice</label>
+      <select id="voiceSel" data-control="voiceSel"><option value="beep" selected>beep</option>
+        <option value="wood">wood</option><option value="tick">tick</option></select></div>
+    <div class="rowEnd"><label class="chk"><input type="checkbox" id="accChk" data-control="accChk" checked> accents</label></div>
+  </div>
+  <div class="bpmrow" title="the click level — muted is this slider at zero">
+    <button id="clickMute" data-control="clickMute" class="muteBtn">🔊</button>
+    <span class="metrolabel">Vol</span>
+    <input type="range" id="clickVolR" data-control="clickVolR" min="0" max="100" value="80">
+    <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
+  </div>
+    <!-- ===== /hub/modules/metronome-card.mjs ===== -->
     <div class="hint info">A full metronome on its own clock — use it with or without the étude.
     The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
     metronome, first block, this look.)</div>
@@ -485,58 +524,75 @@
   <svg id="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>
 </div>
 
-<div class="board">
-  <div class="bh"><span>Practice log — <span id="histCount">0</span> saved</span>
-    <span id="storeNote" style="text-transform:none;letter-spacing:0;font-weight:normal"></span></div>
-  <div class="nb2j" id="nbWrap">
+<div class="board" id="notepadBoard">
+  <!-- the host's own pieces — the current étude (a header for Save, not history) and its
+       full configuration — authored here, SEATED into the log column at init (initJournal):
+       the card's markup below stays the module's bytes; the host chooses placement. -->
+  <div id="cfgSummary" title="the current étude — what Save entry will capture"></div>
+  <details id="cfgDetails" style="margin-top:10px"><summary style="cursor:pointer">Full configuration (JSON)</summary>
+    <pre id="cfgPre"></pre>
+    <button id="copyCfgBtn">Copy configuration</button> <span id="copyCfgMsg"></span>
+  </details>
+  <!-- ===== hub/modules/notepad-card.mjs · markup, VERBATIM, unseated (night 35, 260929): the card is re-housed
+       here — host-conformance pins these bytes to the module's. Edit the module, never this copy. ===== -->
+  <div class="bh"><span>Practice log — <span id="histCount" data-control="histCount">0</span> saved</span>
+    <span id="storeNote" data-control="storeNote" class="storenote"></span></div>
+  <div class="nb2j">
     <div class="jcol" id="logCol">
-      <!-- the grey box is the CURRENT étude — a header for Save, not history.
-           Noted (dispatch): it belongs with the Save control when Save moves;
-           left in place this pass. -->
-      <div id="cfgSummary" title="the current étude — what Save entry will capture"></div>
-      <div id="histList"></div>
+      <div id="histList" data-control="histList"></div>
       <span id="importMsg" class="hint"></span>
-      <details style="margin-top:10px"><summary style="cursor:pointer">Full configuration (JSON)</summary>
-        <pre id="cfgPre"></pre>
-        <button id="copyBtn">Copy configuration</button> <span id="copyMsg"></span>
-      </details>
     </div>
     <div id="dragBar" title="drag to resize"></div>
     <div class="jcol" id="noteCol">
+      <!-- THE DOCUMENT'S TITLE (260913b, item 2 — D11 unblocked): fills
+           file.title and drives file.name(); empty falls back to today's
+           default, so an untouched field changes nothing that ships. It
+           does NOT relabel entries — those keep deriving (260811.3). The
+           shell seats it in the header band via data-header-slot. -->
+      <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
       <div class="colhd">Note — what just happened</div>
-      <textarea id="journalIn" placeholder="The note for this take — plain prose (it's markdown underneath). Autosaves as you type; Save entry files it with this étude and clears the pad for the next one."></textarea>
-      <!-- capability labels are composed by the surface from the adapter's
-           nouns; no verb is hand-written here. Copy has no explicit mount:
-           the surface auto-appends it into this controls row (the declared-
-           capability guarantee, exercised live). -->
-      <div class="transport" id="journalControls" style="margin-top:10px">
-        <button id="saveEntry" class="primary"></button>
-        <button id="clearPad"></button>
-        <button id="exportLog"></button>
-        <button id="importBtn"></button>
-        <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json"
-          style="display:none">
-        <span id="saveMsg" class="hint" style="margin:0"></span>
+      <textarea id="journalIn" data-control="journalIn"
+        placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
+      <!-- v0.9's ratified row (260911, item 1): six buttons, one row, THAT
+           order — Copy between Export and Import. The host takes the
+           placement the auto-append was covering for; the message line sits
+           UNDER the row so it can never wrap the buttons. -->
+      <div class="transport journalcontrols" id="journalControls">
+        <button id="saveEntry" data-control="saveEntry" class="primary"></button>
+        <button id="clearPad" data-control="clearPad"></button>
+        <button id="exportLog" data-control="exportLog"></button>
+        <button id="copyBtn" data-control="copyBtn"></button>
+        <button id="importBtn" data-control="importBtn"></button>
+        <button id="paletteBtn" data-control="paletteBtn"></button>
+        <input type="file" id="importFile" accept=".md,.json,text/markdown,application/json">
       </div>
-      <div class="transport" id="clearConfirm" style="display:none;margin-top:6px">
-        <span class="hint" style="margin:0">that note is filed nowhere —</span>
-        <button id="clearSave" class="primary">Save and clear</button>
-        <button id="clearDiscard">Discard</button>
-        <button id="clearCancel">keep writing</button>
+      <!-- the message prints where the press happened (260911, item 2b):
+           one slot per talking capability, all on the line under the row —
+           an empty slot collapses, so the row itself can never wrap -->
+      <div class="padmsgs"><span id="saveMsg" class="hint nomargin"></span><span
+        id="exportMsg" class="hint nomargin"></span><span
+        id="copyMsg" class="hint nomargin"></span></div>
+      <div id="paletteRoot" data-control="paletteRoot"></div>
+      <div class="transport journalconfirm" id="clearConfirm" data-control="clearConfirm">
+        <span class="hint nomargin">that note is filed nowhere —</span>
+        <button id="clearSave" data-control="clearSave" class="primary">Save and clear</button>
+        <button id="clearDiscard" data-control="clearDiscard">Discard</button>
+        <button id="clearCancel" data-control="clearCancel">keep writing</button>
       </div>
-      <div class="hint">Save entry files the note with this étude's full configuration
-      and clears the pad — the emptied pad is the confirmation, and the entry appears in
-      the log beside it; Restore on any row rebuilds that exercise exactly. Saving with
-      an empty pad is fine — it captures the étude alone. Export writes one .atchart.md:
-      anything still in the pad rides on top as uncommitted scratch, the entries below it
-      are committed. Import merges — nothing deleted, duplicates skipped; old exported
-      logs and bare étude configs (.json) still open.</div>
-      <div class="hint" id="handoffNote"></div>
+      <div class="hint" id="handoffNote" data-control="handoffNote"></div>
     </div>
   </div>
+  <!-- ===== /hub/modules/notepad-card.mjs ===== -->
+  <div class="hint" id="hostPadHint">Save entry files the note with this étude's full configuration
+  and clears the pad — the emptied pad is the confirmation, and the entry appears in
+  the log beside it; Restore on any row rebuilds that exercise exactly. Saving with
+  an empty pad is fine — it captures the étude alone. Export writes one .atchart.md:
+  anything still in the pad rides on top as uncommitted scratch, the entries below it
+  are committed. Import merges — nothing deleted, duplicates skipped; old exported
+  logs and bare étude configs (.json) still open.</div>
 </div>
 
-<footer>Triadetudes v0.8.13 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.8.14 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -6639,6 +6695,10 @@ const HOST={app:"triadetudes",version:1,
   snapshot:()=>rawCfg(),                        // surface composes the labels
   apply:(data)=>{ if(data)applyRaw(data); },
   summarize:(data)=>summarizeCfg(data)};   // DERIVED at render, never stored
+// the title field's naming rule (night 35 — the door's, verbatim in spirit: notepad-card.mjs)
+const npTyped=()=>(document.getElementById("npTitle").value||"").trim();
+const npFallback=()=>"triadetudes journal — "+new Date().toISOString().slice(0,10);
+const npSafeName=(t)=>t.replace(/[\\/:*?"<>|]+/g,"").replace(/[\s—–-]+/g,"-").replace(/^-+|-+$/g,"");
 let JOURNAL=null;
 
 function initJournal(){
@@ -6648,6 +6708,7 @@ function initJournal(){
              save:(str)=>localStorage.setItem(JKEY,str)},
     migrate:()=>NOTEPAD.fromTriadetudesV1(loadLog()||[]),
     els:{pad:document.getElementById("journalIn"),
+      title:document.getElementById("npTitle"),
       saveBtn:document.getElementById("saveEntry"),
       clearBtn:document.getElementById("clearPad"),
       confirmRoot:document.getElementById("clearConfirm"),
@@ -6655,17 +6716,26 @@ function initJournal(){
       confirmDiscard:document.getElementById("clearDiscard"),
       confirmCancel:document.getElementById("clearCancel"),
       exportBtn:document.getElementById("exportLog"),
+      copyBtn:document.getElementById("copyBtn"),
+      paletteBtn:document.getElementById("paletteBtn"),
+      paletteRoot:document.getElementById("paletteRoot"),
       importBtn:document.getElementById("importBtn"),
       importFile:document.getElementById("importFile"),
       msg:document.getElementById("saveMsg"),
       importMsg:document.getElementById("importMsg"),
+      exportMsg:document.getElementById("exportMsg"),
+      copyMsg:document.getElementById("copyMsg"),
       list:document.getElementById("histList"),
       count:document.getElementById("histCount"),
       storeNote:document.getElementById("storeNote"),
       controls:document.getElementById("journalControls"),
       handoff:document.getElementById("handoffNote")},
-    file:{title:"Triadetudes journal",
-      name:()=>"triadetudes-journal-"+new Date().toISOString().slice(0,10)+".atchart.md"},
+    /* THE ONE NAMING RULE — the door's (notepad-card.mjs, 260916 item 2): the title field is
+       the single source of the export's name; empty falls back to `<app> journal — <date>`, and
+       the filename DERIVES from that string by one sanitiser. Read per call, so the export sees
+       the field NOW. */
+    file:{get title(){ return npTyped()||npFallback(); },
+      name:(stem)=>npSafeName(stem!==undefined?String(stem).trim()||npFallback():npTyped()||npFallback())+".atchart.md"},
     emptyHint:"No entries yet. Design an étude, jot the note, then save.",
     importFallback:(text)=>{
       const res=parseLogExport(text,new Date().toISOString());
@@ -6681,6 +6751,21 @@ function initJournal(){
     onChange:()=>collapseSummaries(),
     onApplied:()=>window.scrollTo({top:0,behavior:"smooth"}),
   });
+  /* THE HOST'S PIECES, SEATED (night 35): the current étude above the log, its configuration
+     below it — where they have sat since v0.8.0; the card's bytes above stay the module's */
+  { const logCol=document.getElementById("logCol");
+    logCol.insertBefore(document.getElementById("cfgSummary"),document.getElementById("histList"));
+    logCol.appendChild(document.getElementById("cfgDetails")); }
+  /* the host's filing prose, seated into the note column above the guarantee — where it has
+     sat since v0.8.0; the card's bytes stay the module's */
+  document.getElementById("noteCol").insertBefore(document.getElementById("hostPadHint"),document.getElementById("handoffNote"));
+  /* THE TITLE'S SEAT — the shell's rule (shell.mjs, 260913b): the module marks the field
+     data-header-slot; the HOST seats it in the header band, placement styled inline. */
+  { const t=document.getElementById("npTitle"); t.placeholder=npFallback();
+    t.style.position="absolute"; t.style.top="8px"; t.style.right="56px";
+    /* FIRST child, not last: at 390 the page's own rule (the media block by #npTitle) puts the
+       field in flow, where it must read ABOVE the log header it would otherwise sit on */
+    const board=document.getElementById("notepadBoard"); board.insertBefore(t,board.firstChild); }
 }
 // thin aliases: the in-page self-tests and render chain use these names
 function renderHist(){ if(JOURNAL)JOURNAL.renderRows(); }
@@ -7135,8 +7220,8 @@ function initControls(){
   // the pad: wired by the shared surface (autosave, persistence, clearing)
   // the drag handle: pointer capture keeps every event on the bar itself —
   // element-scoped, no document-level listeners (standing constraint)
-  const bar=document.getElementById("dragBar"), nbW=document.getElementById("nbWrap"),
-        logC=document.getElementById("logCol");
+  const bar=document.getElementById("dragBar"), logC=document.getElementById("logCol"),
+        nbW=logC&&logC.parentElement;   // the module's .nb2j — no id of its own
   if(bar){
     let dragging=false;
     bar.addEventListener("pointerdown",e=>{dragging=true;bar.setPointerCapture(e.pointerId);});
@@ -7147,13 +7232,15 @@ function initControls(){
       logC.style.width=w+"px";});
     bar.addEventListener("pointerup",e=>{dragging=false;bar.releasePointerCapture(e.pointerId);});
   }
-  document.getElementById("copyBtn").addEventListener("click",async()=>{
+  // "Copy configuration" is the HOST's control (the raw cfg as JSON); the surface's Copy — the
+  // whole .atchart.md — is #copyBtn, mounted explicitly since night 35
+  document.getElementById("copyCfgBtn").addEventListener("click",async()=>{
     // the copied JSON must round-trip through Import (which reads the rawCfg
     // shape) — copying the display JSON produced a config the app's own
     // import refused. The disclosure still SHOWS the readable cfgObj().
     try{await navigator.clipboard.writeText(JSON.stringify(rawCfg(),null,2));
-      document.getElementById("copyMsg").textContent="copied";
-      setTimeout(()=>document.getElementById("copyMsg").textContent="",1500);}
+      document.getElementById("copyCfgMsg").textContent="copied";
+      setTimeout(()=>document.getElementById("copyCfgMsg").textContent="",1500);}
     catch(e){}
   });
 }

@@ -111,6 +111,12 @@ def suite():
     return sh("python3", "hub/tests/door_locks.py")
 
 
+def conformance():
+    """the engine's host-conformance suite — the gate for a mutation of a HAND-AUTHORED
+    page, which no door pin reads (night 35: the card-carrier pin lives there)"""
+    return sh("node", "--test", "engine/tests/host-conformance.test.mjs")
+
+
 def record(name, ok, detail):
     results.append((ok, name, detail))
     log_line(("  BITES    " if ok else "  NO BITE  ") + name + " — " + detail)
@@ -1276,6 +1282,27 @@ def m52_the_speller_keeps_the_letter_again():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 53
+# 260929 (night 35): the hand-authored studies carry notepad-card.mjs's bytes
+# VERBATIM (host-conformance's card-carrier pin, in the build's own
+# assemblies). A word drifts in the metronome study's carried column head —
+# the drift an "edit the copy, not the module" slip would make.
+def m53_a_carried_card_drifts_in_a_hand_page():
+    p, original, mutated = patch("static/studies/metronome/study.html",
+        '<div class="colhd">Note — what just happened</div>',
+        '<div class="colhd">Note — what happened</div>')
+    try:
+        p.write_text(mutated)
+        # no build(): the mutated file is not a build input; the gate is the engine's
+        r = conformance()
+        hit = "[metronome] carries hub/modules/notepad-card.mjs but its markup matches none of the build's assemblies" in (r.stdout + r.stderr)
+        record("a carried card drifts one word in a hand-authored page",
+               r.returncode != 0 and hit,
+               "conformance exit %d; the card-carrier pin named the page and the card: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1383,7 +1410,8 @@ def main():
                m44_the_palettes_R_drifts_by_one, m45_a_second_tuning_is_declared, m46_a_flat_key_spells_sharp,
                m47_a_set_square_loses_its_name, m48_a_set_square_loses_its_role,
                m49_the_leftover_pass_runs_under_a_cap, m50_the_loss_goes_quiet_again,
-               m51_the_reach_is_unbounded_again, m52_the_speller_keeps_the_letter_again)
+               m51_the_reach_is_unbounded_again, m52_the_speller_keeps_the_letter_again,
+               m53_a_carried_card_drifts_in_a_hand_page)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__
