@@ -1,3 +1,36 @@
+## 2026-09-05 — Multetudes v0.5.6: night 31, the speller and the reach
+
+- **Source edition v0.5.6** (night 31; the report in `notes/working/Multetudes build run
+  260925.md`; two engine laws ruled 260923).
+- **The chromatic speller, rule C (item 1):** a chromatic note is spelled as the alteration of
+  whichever diatonic neighbour needs the fewest accidentals, ties to the nearer, remaining ties to
+  the parent collection's side — the relative major for harmonic and melodic minor (derived from
+  the scale's own ♭3), the tonic's for major. The retired "keep the letter" law was resolveRoman's,
+  correct for a degree and a category error for a pitch class with no degree; it spelled 55 double
+  accidentals across the app's 432 spellings. Now one (D♭ harmonic minor). C harmonic minor reads
+  `C Db D Eb E F Gb G Ab A Bb B`; D♭ replaces C♯ on the staff, D♭ G♭ E B♭ replace C♯ F♯ A♯ on the
+  score. PITCH HONESTY verbatim and passing; the ±2 guard kept; resolveRoman untouched.
+- **The approach reach (item 2):** an approach is placed relative to its target, may sit outside
+  the window and is drawn there, but must lie within k frets of it — k the field's largest scale
+  step, derived (harmonic minor's augmented second gives 3; major 2). No reachable position refuses
+  by name on the face: "the approach +9 to the root sits 6 frets beyond the hand — the root is at
+  fret 6, at the window's edge (frets 3–7), and the reach is 2". The window is required of every
+  caller (four, each passing its own pos; a fitness test keeps a fifth honest); placeNear's tie
+  rule reused, motion.mjs untouched.
+- **Studies moved:** multetudes and tetradetudes (rebuilt); metronome and triadetudes
+  (hand-authored, chord.mjs re-inlined, +1,541 bytes each). Shell 18,040 unchanged.
+
+## 2026-09-05 — DEPLOYED: v0.5.5 live — multetudes moved, the other five unmoved; written from the run
+
+- record: run 33941582417 · success · commit b3f14b3 · fetched 2026-09-05T03:29Z · 6/6 studies byte-identical · digest ac72b6817dda
+- Actions run 33941582417 green on `b3f14b3` — https://github.com/danieladamek/atetudes.com/actions/runs/33941582417 (created 2026-09-05T03:20:31Z, finished 2026-09-05T03:27:31Z).
+- metronome: repo 3ec34d6a2d92 · live 3ec34d6a2d92 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo dfeb5070db1a · live dfeb5070db1a — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo e5649851a1bb · live e5649851a1bb — matches.
+- triadetudes: repo f2eecb6ce637 · live f2eecb6ce637 — matches.
+
 ## 2026-09-04 — Multetudes v0.5.5: night 30, the board stops lying about what it placed
 
 - **Source edition v0.5.5** (night 30; the report in `notes/working/Multetudes build run

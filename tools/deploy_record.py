@@ -61,10 +61,23 @@ def gh_run_by_id(run_id):
     return json.loads(sh("gh", "run", "view", str(run_id), "--json", "databaseId,headSha,conclusion,status,createdAt,updatedAt,url"))
 
 
-def local_shasums():
+def local_shasums(sha=None):
+    """the repo's study bytes AT THE RECORDED COMMIT (`git show <sha>:<path>`), never the working
+    tree — found 260925: a tree already carrying the next night's edits read two untouched
+    studies as DOES NOT MATCH against a deploy that never moved them. The list of studies is
+    derived from the tree at that commit too."""
     out = {}
-    for d in sorted(p for p in STUDIES.iterdir() if p.is_dir() and (p / "study.html").exists()):
-        out[d.name] = hashlib.sha1((d / "study.html").read_bytes()).hexdigest()[:12]
+    if sha is None:
+        for d in sorted(p for p in STUDIES.iterdir() if p.is_dir() and (p / "study.html").exists()):
+            out[d.name] = hashlib.sha1((d / "study.html").read_bytes()).hexdigest()[:12]
+        return out
+    listing = sh("git", "-C", str(REPO), "ls-tree", "--name-only", sha, "static/studies/")
+    for line in listing.split():
+        slug = line.rstrip("/").split("/")[-1]
+        r = subprocess.run(["git", "-C", str(REPO), "show", f"{sha}:static/studies/{slug}/study.html"], capture_output=True)
+        if r.returncode != 0:
+            continue
+        out[slug] = hashlib.sha1(r.stdout).hexdigest()[:12]
     return out
 
 
@@ -84,7 +97,7 @@ def emit(sha):
     run = gh_run_for_sha(sha)
     if run["status"] != "completed":
         raise SystemExit(f"deploy_record: run {run['databaseId']} is {run['status']} — a record is written from a finished run, not a pending one")
-    local = local_shasums(); live = live_shasums(local.keys())
+    local = local_shasums(run["headSha"]); live = live_shasums(local.keys())
     same = [s for s in local if live[s] == local[s]]
     raw = json.dumps(run, sort_keys=True) + "\n" + "\n".join(f"{s} {live[s]}" for s in local)
     digest = hashlib.sha256(raw.encode()).hexdigest()[:12]
