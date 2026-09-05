@@ -150,7 +150,10 @@ export default {
     /* v0.5.4 (260923, night 29 — axe joins the locks; the set squares become
      * controls): role, name, pressed state, hit target, hover/focus in ink,
      * Enter/Space; the accessibility floor gated per door at both widths. */
-    blurb: "one tool that holds many études · v0.5.4",
+    /* v0.5.5 (260924, night 30 — the board stops lying about what it placed):
+     * no doubled tone under a cap, the loss loud on the window in Daniel's
+     * words, one-of-each draws its partial in every view, the captions at AA. */
+    blurb: "one tool that holds many études · v0.5.5",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

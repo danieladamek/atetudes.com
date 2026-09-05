@@ -737,17 +737,27 @@ def m27_the_cap_stops_covering():
     # 260906 item 1: the coverage matching disabled — the cap reverts to
     # fret order and Daniel's F voices as two 3rds again. The F-case pin
     # names the duplicate from the artifact.
+    # RE-AIMED 260924 (night 30, rule 7): disabling the whole matching now trips the
+    # engine's own load-time pin ("every-occurrence in a 4-5 fret window must double a
+    # string somewhere") before the suite can run — under the ruled law a fully capped
+    # take places nothing. The coverage is broken more precisely: the augmenting path is
+    # removed, so a duplicate keeps a slot an uncovered tone could take (Daniel's F loses
+    # its R) — the module loads, and the coverage pin bites.
     p, original, mutated = patch("engine/selection.mjs",
-        "  for (const pc of pcs) tryPlace(pc, new Set());",
-        "  /* matching disabled */")
+        "      if (slotPc[i] === null || tryPlace(slotPc[i], seen)) { slotPc[i] = pc; return true; }",
+        "      if (slotPc[i] === null) { slotPc[i] = pc; return true; }")
     try:
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "never two 3rds" in r.stdout or "duplicate held a slot" in r.stdout
-        record("the cap stops covering",
+        # measured 260924: without the augmenting path Daniel's F still voices R 3 5 — the
+        # old coverage pin stays green — but the capped case and the uncapped window both
+        # move (a tone the matching could have covered goes uncovered); those pins bite.
+        hit = ("never two 3rds" in r.stdout or "duplicate held a slot" in r.stdout
+               or "string 3 SILENT" in r.stdout or "an uncapped window is unchanged" in r.stdout)
+        record("the cap stops covering (the augmenting path removed)",
                r.returncode != 0 and hit,
-               "suite exit %d; the coverage pin bit: %s" % (r.returncode, hit))
+               "suite exit %d; a coverage pin bit: %s" % (r.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -822,7 +832,8 @@ def m31_a_bar_dies_without_a_reason():
     # Remove the neck's refusal element and the playthrough matrix must
     # name the dead bars.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        '      if (cfg.object !== "scale" && !sel.length && selMsg) {',
+        # ANCHOR RE-SITED 260923 (night 30, rule 7): the gate reads "something is wrong with what was placed"
+        '      if (cfg.object !== "scale" && selMsg && wrong) {',
         '      if (false) {')
     try:
         p.write_text(mutated)
@@ -1188,6 +1199,42 @@ def m48_a_set_square_loses_its_role():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutations 49–50
+# 260923 (night 30): the board stops lying about what it placed.
+def m49_the_leftover_pass_runs_under_a_cap():
+    # the ruled gate removed: the leftover pass doubles the 5 again on the capped case
+    p, original, mutated = patch("engine/selection.mjs",
+        "  if (!anyCapped)\n    for (const s of strings)",
+        "  if (true)\n    for (const s of strings)")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the doubled 5 is gone, string 3 SILENT" in r.stdout
+        record("the leftover pass runs under a cap (the doubled 5 returns)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the silent-string pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m50_the_loss_goes_quiet_again():
+    # the render gate reverts to "nothing placed": the capped loss falls back to the hint
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "      const wrong = !sel.length || !!lossMsg;",
+        "      const wrong = !sel.length;")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "LOUD on the window" in r.stdout
+        record("the capped loss goes quiet again (gated on nothing placed)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the loud-on-the-window pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1293,7 +1340,8 @@ def main():
                m40_every_approach_goes_violet, m41_no_approach_goes_violet,
                m42_a_state_clause_returns_to_the_hint, m43_a_readout_copies_the_necks_box,
                m44_the_palettes_R_drifts_by_one, m45_a_second_tuning_is_declared, m46_a_flat_key_spells_sharp,
-               m47_a_set_square_loses_its_name, m48_a_set_square_loses_its_role)
+               m47_a_set_square_loses_its_name, m48_a_set_square_loses_its_role,
+               m49_the_leftover_pass_runs_under_a_cap, m50_the_loss_goes_quiet_again)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

@@ -156,7 +156,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .fd-alltones{font-size:12.5px;color:var(--ink);white-space:nowrap;cursor:pointer}
 .fd-alltones input{vertical-align:-1px}
-.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
+/* the caption ink is the ramp's annotation gray since 260923 (night 30 item 3): #B9B9BF
+ * was 1.87:1 on the card ground; --gray is 4.51:1 there and 4.71:1 on white — AA for
+ * small text, from the existing neutral ramp, no new grey */
+.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--gray);
   font-weight:bold;margin:9px 0 5px}
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
@@ -4985,9 +4988,33 @@ function oneOfEach(tones, pool, { n = 1, centre } = {}) {
     let resolvesAt = null;
     for (let nn = n + 1; nn <= 3 && resolvesAt === null; nn++)
       if (oneOfEach(tones, pool, { n: nn, centre }).notes) resolvesAt = nn;
+    /* THE PARTIAL (260922b ruling 3, built 260923): draw what fits, name what
+     * could not come and why. Derived HERE, once, so every view that asks
+     * (the neck, the staff, the keys, the readout) draws the same three notes:
+     * the colliding roles leave one at a time, LAST FIRST (the 7 before the R
+     * — the root outranks its seventh; the alternative, dropping the R, is
+     * proposed in the 260923 report, not settled here), until a placement
+     * exists. `notes` stays null — the refusal is still the refusal — and
+     * `partial` carries the placement beside it. Asserted: every partial role
+     * is one of the tones, and every dropped role is one the collide named. */
+    let partial = null, dropped = [];
+    if (clash) {
+      const order = [...clash[1]].reverse();
+      for (const role of order) {
+        dropped = order.slice(0, order.indexOf(role) + 1);
+        const kept = present.filter((t) => !dropped.includes(t.role));
+        if (!kept.length) break;
+        const again = oneOfEach(kept, pool, { n, centre });
+        if (again.notes) { partial = again.notes; break; }
+      }
+      if (partial) {
+        if (!partial.every((x) => present.some((t) => t.role === x.role))) throw new Error("oneOfEach: a partial note is not one of the tones");
+        if (!dropped.every((r) => clash[1].includes(r))) throw new Error("oneOfEach: the partial dropped a role the collide did not name");
+      } else dropped = [];
+    }
     return { notes: null, missing: missing.map((t) => t.role), unplaceable: true,
       collide: clash ? { string: +clash[0], roles: clash[1] } : null,
-      resolvesAt };
+      resolvesAt, partial, dropped };
   }
   const notes = [...best].sort((a, b) => a.midi - b.midi);
   if (notes.length !== present.length) throw new Error("oneOfEach: lost a tone in placement");
@@ -5048,14 +5075,26 @@ function everyOccurrence(tones, pool, { n = 3 } = {}) {
     if (!m) throw new Error("everyOccurrence: the matching named an occurrence that is not there");
     used.add(m); chosen.push(m);
   }
-  // leftovers: remaining capacity takes remaining occurrences, fret order
+  /* THE LEFTOVER PASS RUNS ONLY WHEN NOTHING IS CAPPED (260922b, ruled; built
+   * 260923, night 30). The matching above is what coverage permits; a tone
+   * it could not carry (two tones sharing one one-slot string — the Cmaj7 at
+   * frets 0–3 on strings 4–1, where R and 7 both live only on string 2) is a
+   * capped loss. Until tonight the leftover capacity then took a second 5 on
+   * string 1, and R-3-5-5 LOOKED like a full grip where R-3-5 with one string
+   * silent looks like exactly what it is. A doubled tone buys nothing and
+   * disguises the loss. A silent string is the honest picture. Where nothing
+   * is capped, every occurrence is still every occurrence — the leftovers
+   * fill every string the cap allows, as before. */
+  const matchedPcs = new Set(slotPc.filter((pc) => pc !== null));
+  const anyCapped = pcs.some((pc) => !matchedPcs.has(pc));
   const per = {};
   for (const m of chosen) per[m.string] = (per[m.string] || 0) + 1;
-  for (const s of strings)
-    for (const m of cands.get(s)) {
-      if (used.has(m) || (per[s] || 0) >= n) continue;
-      used.add(m); chosen.push(m); per[s] = (per[s] || 0) + 1;
-    }
+  if (!anyCapped)
+    for (const s of strings)
+      for (const m of cands.get(s)) {
+        if (used.has(m) || (per[s] || 0) >= n) continue;
+        used.add(m); chosen.push(m); per[s] = (per[s] || 0) + 1;
+      }
   const notes = chosen.map((m) => ({ ...m, role: roleOf.get(mod12(m.midi)) }))
     .sort((a, b) => a.midi - b.midi);
   if (Object.values(perString(notes)).some((c) => c > n))
@@ -5064,8 +5103,12 @@ function everyOccurrence(tones, pool, { n = 3 } = {}) {
   // DUPLICATE holds a slot that an uncovered tone COULD take, i.e. no
   // duplicated note sits on a string that also carries an occurrence of a
   // tone the selection left unrepresented. (An uncovered tone whose only
-  // strings are full of DISTINCT tones is an honest loss, not a violation —
-  // two tones sharing one one-slot string is the Am case.)
+  // strings are full of DISTINCT tones is an honest loss — two tones sharing
+  // one one-slot string is the Am case.) REWRITTEN 260923 (rule 7): that
+  // sentence was right about LEGALITY and wrong about DESIRABILITY. The loss
+  // is honest; a duplicate drawn BESIDE it is not — it disguises the loss as
+  // a full grip. So the stronger promise, ruled 260922b: while any role is
+  // capped, NO tone is doubled at all. A silent string is the honest picture.
   const present = new Set(notes.map((x) => x.role));
   const counts = {};
   for (const x of notes) counts[x.role] = (counts[x.role] || 0) + 1;
@@ -5074,6 +5117,8 @@ function everyOccurrence(tones, pool, { n = 3 } = {}) {
     if (counts[x.role] > 1
         && uncoveredPcs.some((pc) => cands.get(x.string).some((m) => mod12(m.midi) === pc)))
       throw new Error("everyOccurrence: a duplicate held a slot an uncovered tone could take");
+  if (uncoveredPcs.length && Object.values(counts).some((c) => c > 1))
+    throw new Error("everyOccurrence: a tone is doubled while a role is capped — the leftover pass ran under a cap");
   /* THE CAPPED LOSS, LOUD (260909 — Daniel: "the chord's 7th does not
    * show"): a tone IN THE POOL that the cap could not carry is the honest
    * loss the coverage matching permits (two tones sharing one one-slot
@@ -6792,7 +6837,7 @@ const etudeWalk = {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
-        sel = r.notes || [];
+        sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       }
       /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
        * ruling, 260904). His own ratification is the reason: the reference
@@ -7193,6 +7238,8 @@ const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
  * the set squares AND the pattern-bracket gutter, as v0.9 draws them */
 const NFRETS = 15, FX0 = 46, FW = 71, SY0 = 34, SGAP = 34;
+/* the loss message's role word (260923): "root", else the ordinal of the role token */
+const roleWord = (r) => (r === "R" ? "root" : /^\d+$/.test(r) ? r + ({ 1: "st", 2: "nd", 3: "rd" }[r % 10 === 1 && r !== "11" ? 1 : r % 10 === 2 && r !== "12" ? 2 : r % 10 === 3 && r !== "13" ? 3 : 0] || "th") : r);
 const STR_X = FX0 + NFRETS * FW + 42;
 const BRK_X = FX0 + NFRETS * FW + 76;
 const fx = (f) => (f === 0 ? FX0 - 22 : FX0 + (f - 0.5) * FW);
@@ -7382,7 +7429,10 @@ const fieldBoard = {
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .fd-alltones{font-size:12.5px;color:var(--ink);white-space:nowrap;cursor:pointer}
 .fd-alltones input{vertical-align:-1px}
-.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
+/* the caption ink is the ramp's annotation gray since 260923 (night 30 item 3): #B9B9BF
+ * was 1.87:1 on the card ground; --gray is 4.51:1 there and 4.71:1 on white — AA for
+ * small text, from the existing neutral ramp, no new grey */
+.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--gray);
   font-weight:bold;margin:9px 0 5px}
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
@@ -7554,7 +7604,7 @@ const fieldBoard = {
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
       const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-      let sel = [], selMsg = "";
+      let sel = [], selMsg = "", lossMsg = "";   // lossMsg: the sentence that goes ON THE WINDOW when something is wrong with what was placed (260923)
       if (prog.err) selMsg = prog.err;
       const fdRefDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
@@ -7573,7 +7623,7 @@ const fieldBoard = {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(fdFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
-        sel = r.notes || [];
+        sel = r.notes || r.partial || [];   // 260923: the PARTIAL draws beside the refusal (ruling 3)
         const parts = [];
         if (fdFit.dropped.length)
           parts.push(`the ${fdFit.dropped.join(", ")} dropped by the grip rule — `
@@ -7583,9 +7633,17 @@ const fieldBoard = {
         if (cur.unnamed) parts.push(cur.unnamed);
         if (cur.absent.length) parts.push(`${cur.symbol} has no ${cur.absent.join(" or ")}`);
         if (r.capped && r.capped.length) {
+          /* THE CAPPED LOSS, LOUD (260922b ruling 1, built 260923): Daniel's own words
+           * for the shape — "missing 7th — both R and 7 on string 2 — Line takes both".
+           * The collide is DERIVED by asking one-of-each about the same tones and
+           * pool (the engine names it; nothing here tables it); the escape is
+           * resolvesAt, worded by this module's own control. */
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
-          parts.push(`the ${r.capped.join(" and ")} is in the box but the grip cannot carry it`
-            + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} shows it` : ""));
+          const clash = oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre }).collide;
+          lossMsg = `missing ${r.capped.map(roleWord).join(" and ")}`
+            + (clash ? ` — both ${clash.roles.join(" and ")} on string ${clash.string}` : " — the grip cannot carry it")
+            + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} takes ${clash ? "both" : "it"}` : "");
+          parts.push(lossMsg);
         }
         if (cur.offKey.length)
           parts.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
@@ -7598,9 +7656,14 @@ const fieldBoard = {
           const esc = r.resolvesAt != null && r.resolvesAt <= 3
             ? ` — ${lineWord} takes ${r.collide ? "both" : "them"}`
             : " — and no per-string ceiling resolves it";
-          parts.push((r.collide
+          /* the refusal sentence stays VERBATIM (ruling 3: it is the best prose on the
+           * board and it says the true thing); what changed is that the partial is drawn
+           * beside it — sel above — and the loss goes on the window whether or not
+           * anything was placed */
+          lossMsg = (r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
-            : "no placement fits") + esc);
+            : "no placement fits") + esc;
+          parts.push(lossMsg);
         }
         if (parts.length) selMsg = (selMsg ? selMsg + " " : "") + parts.join(". ");
       }
@@ -7610,11 +7673,28 @@ const fieldBoard = {
        * absence about the neck belongs on the neck, where the dots would
        * have been.) Drawn inside the window's own box, split at the em-dash
        * so the collide and the escape read as two lines. */
-      if (cfg.object !== "scale" && !sel.length && selMsg) {
-        const ry = (fy(Math.min(...run.strings)) + fy(Math.max(...run.strings))) / 2;
-        const rx = (fx(pos.fLo) + fx(pos.fHi)) / 2;
-        const linesTxt = selMsg.split(" — ");
-        const rt = el("text", { class: "fd-refusal", x: rx, y: ry - (linesTxt.length - 1) * 8,
+      /* THE GATE (260922b ruling 1, built 260923): "something is wrong with what was
+       * placed" — a capped loss or a partial — with nothing-placed as its extreme
+       * case, so the existing overlay is not lost (rule 7). The window carries the
+       * LOSS's own sentence; the hint beneath keeps everything. Status, in the one
+       * existing treatment — never a second one, never a degree colour. */
+      const wrong = !sel.length || !!lossMsg;
+      if (cfg.object !== "scale" && selMsg && wrong) {
+        const linesTxt = (sel.length && lossMsg ? lossMsg : selMsg).split(" — ");
+        /* WHERE THE MESSAGE SITS (260923): inside the window's own box when nothing was
+         * placed (as since 260908); when notes ARE drawn the message must not sit on
+         * them — Daniel: "a red message above the view" — so it goes just above the
+         * window, or below it when the window touches the top string. Either way its
+         * x is clamped so the longest line stays inside the neck (a window at the nut
+         * ran the text off the left edge). Width estimated at 0.58em per character. */
+        const half = Math.max(...linesTxt.map((l) => l.length + 2)) * 12.5 * 0.29 + 6;
+        const rx = Math.min(Math.max((fx(pos.fLo) + fx(pos.fHi)) / 2, half), 1280 - half);
+        const sTop = Math.min(...run.strings), sBot = Math.max(...run.strings);
+        let ry;
+        if (!sel.length) ry = (fy(sTop) + fy(sBot)) / 2 - (linesTxt.length - 1) * 8;
+        else if (fy(sTop) - 16 - (linesTxt.length - 1) * 16 > 12) ry = fy(sTop) - 18 - (linesTxt.length - 1) * 16;
+        else ry = fy(sBot) + 30;
+        const rt = el("text", { class: "fd-refusal", x: rx, y: ry, "data-seat": !sel.length ? "in" : (ry < fy(sTop) ? "above" : "below"),
           "text-anchor": "middle", "font-size": "12.5", "font-weight": "bold",
           fill: "#B82929" }, svg);
         linesTxt.forEach((ln, li) => {
@@ -8735,7 +8815,7 @@ const keysBoard = {
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(gripFit(cur.tones, run.strings.length * cfg.notesPer).tones,
               pool, { n: cfg.notesPer, centre: pos.centre });
-        sel = r.notes || [];
+        sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
        * the marks list) — hollow ring, the board's own idiom for "under" */
@@ -9303,7 +9383,7 @@ const neckReadout = {
           const r = cfg.take === "all"
             ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
             : oneOfEach(roFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
-          sel = r.notes || [];
+          sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
           if (roFit.dropped.length)
             absences.push(`the ${roFit.dropped.join(", ")} dropped by the grip rule — `
               + `${run.strings.length * cfg.notesPer} slots carry `
@@ -11879,7 +11959,7 @@ const staffBoard = {
        * register fix), so no bar's run collides with the names */
       const chords = prog.chords.map((_, ci) => chordAt(prog, ci, fld, cfg.object, pickOf(cfg)));
       const rs = chords.map((c) => selOf(c));
-      const sels = rs.map((r) => r.notes || []);
+      const sels = rs.map((r) => r.notes || r.partial || []);   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       /* EVERY BAR WEARS THE FIGURE (260911, item 5 — Daniel's ruling,
        * superseding v0.9's current-bar-only display kept on 260910): the
        * figure resolves against EACH bar's own selection, exactly as the
@@ -11917,7 +11997,10 @@ const staffBoard = {
         const seq = figHere || sels[ci];
         /* the bar's refusals, by name, in the bar — the neck's vocabulary */
         const refuseLines = [];
-        if (cfg.object !== "scale" && !sels[ci].length && c.tones) {
+        /* the refusal is NAMED in the bar whenever one-of-each refused — since 260923
+         * the bar may also carry the PARTIAL (ruling 260922b/3): the sentence stays,
+         * the notes that fit are drawn beside it, and the bar is marked partial */
+        if (cfg.object !== "scale" && (rs[ci].unplaceable || !sels[ci].length) && c.tones) {
           let rWhy = "no placement fits";
           if (rs[ci].collide && rs[ci].collide.roles)
             rWhy += " — the " + rs[ci].collide.roles.join(" and ")
@@ -11930,7 +12013,7 @@ const staffBoard = {
         }
         for (const rTxt of refuseLines) {
           const fe = el("text", { x: x0 + 5, y: labY + 22, "font-size": "8",
-            fill: "#B82929", "data-strefuse": ci }, svg);
+            fill: "#B82929", "data-strefuse": ci, "data-stpartial": rs[ci].partial ? rs[ci].partial.length : 0 }, svg);
           const wds = rTxt.split(" ");
           let ln = "", first = true;
           for (const wd of wds) {
@@ -12684,7 +12767,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.5.4","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.5.5","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

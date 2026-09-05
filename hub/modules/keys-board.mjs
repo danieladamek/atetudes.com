@@ -132,7 +132,7 @@ export const keysBoard = {
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(gripFit(cur.tones, run.strings.length * cfg.notesPer).tones,
               pool, { n: cfg.notesPer, centre: pos.centre });
-        sel = r.notes || [];
+        sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
        * the marks list) — hollow ring, the board's own idiom for "under" */

@@ -412,9 +412,33 @@ export function oneOfEach(tones, pool, { n = 1, centre } = {}) {
     let resolvesAt = null;
     for (let nn = n + 1; nn <= 3 && resolvesAt === null; nn++)
       if (oneOfEach(tones, pool, { n: nn, centre }).notes) resolvesAt = nn;
+    /* THE PARTIAL (260922b ruling 3, built 260923): draw what fits, name what
+     * could not come and why. Derived HERE, once, so every view that asks
+     * (the neck, the staff, the keys, the readout) draws the same three notes:
+     * the colliding roles leave one at a time, LAST FIRST (the 7 before the R
+     * — the root outranks its seventh; the alternative, dropping the R, is
+     * proposed in the 260923 report, not settled here), until a placement
+     * exists. `notes` stays null — the refusal is still the refusal — and
+     * `partial` carries the placement beside it. Asserted: every partial role
+     * is one of the tones, and every dropped role is one the collide named. */
+    let partial = null, dropped = [];
+    if (clash) {
+      const order = [...clash[1]].reverse();
+      for (const role of order) {
+        dropped = order.slice(0, order.indexOf(role) + 1);
+        const kept = present.filter((t) => !dropped.includes(t.role));
+        if (!kept.length) break;
+        const again = oneOfEach(kept, pool, { n, centre });
+        if (again.notes) { partial = again.notes; break; }
+      }
+      if (partial) {
+        if (!partial.every((x) => present.some((t) => t.role === x.role))) throw new Error("oneOfEach: a partial note is not one of the tones");
+        if (!dropped.every((r) => clash[1].includes(r))) throw new Error("oneOfEach: the partial dropped a role the collide did not name");
+      } else dropped = [];
+    }
     return { notes: null, missing: missing.map((t) => t.role), unplaceable: true,
       collide: clash ? { string: +clash[0], roles: clash[1] } : null,
-      resolvesAt };
+      resolvesAt, partial, dropped };
   }
   const notes = [...best].sort((a, b) => a.midi - b.midi);
   if (notes.length !== present.length) throw new Error("oneOfEach: lost a tone in placement");
@@ -475,14 +499,26 @@ export function everyOccurrence(tones, pool, { n = 3 } = {}) {
     if (!m) throw new Error("everyOccurrence: the matching named an occurrence that is not there");
     used.add(m); chosen.push(m);
   }
-  // leftovers: remaining capacity takes remaining occurrences, fret order
+  /* THE LEFTOVER PASS RUNS ONLY WHEN NOTHING IS CAPPED (260922b, ruled; built
+   * 260923, night 30). The matching above is what coverage permits; a tone
+   * it could not carry (two tones sharing one one-slot string — the Cmaj7 at
+   * frets 0–3 on strings 4–1, where R and 7 both live only on string 2) is a
+   * capped loss. Until tonight the leftover capacity then took a second 5 on
+   * string 1, and R-3-5-5 LOOKED like a full grip where R-3-5 with one string
+   * silent looks like exactly what it is. A doubled tone buys nothing and
+   * disguises the loss. A silent string is the honest picture. Where nothing
+   * is capped, every occurrence is still every occurrence — the leftovers
+   * fill every string the cap allows, as before. */
+  const matchedPcs = new Set(slotPc.filter((pc) => pc !== null));
+  const anyCapped = pcs.some((pc) => !matchedPcs.has(pc));
   const per = {};
   for (const m of chosen) per[m.string] = (per[m.string] || 0) + 1;
-  for (const s of strings)
-    for (const m of cands.get(s)) {
-      if (used.has(m) || (per[s] || 0) >= n) continue;
-      used.add(m); chosen.push(m); per[s] = (per[s] || 0) + 1;
-    }
+  if (!anyCapped)
+    for (const s of strings)
+      for (const m of cands.get(s)) {
+        if (used.has(m) || (per[s] || 0) >= n) continue;
+        used.add(m); chosen.push(m); per[s] = (per[s] || 0) + 1;
+      }
   const notes = chosen.map((m) => ({ ...m, role: roleOf.get(mod12(m.midi)) }))
     .sort((a, b) => a.midi - b.midi);
   if (Object.values(perString(notes)).some((c) => c > n))
@@ -491,8 +527,12 @@ export function everyOccurrence(tones, pool, { n = 3 } = {}) {
   // DUPLICATE holds a slot that an uncovered tone COULD take, i.e. no
   // duplicated note sits on a string that also carries an occurrence of a
   // tone the selection left unrepresented. (An uncovered tone whose only
-  // strings are full of DISTINCT tones is an honest loss, not a violation —
-  // two tones sharing one one-slot string is the Am case.)
+  // strings are full of DISTINCT tones is an honest loss — two tones sharing
+  // one one-slot string is the Am case.) REWRITTEN 260923 (rule 7): that
+  // sentence was right about LEGALITY and wrong about DESIRABILITY. The loss
+  // is honest; a duplicate drawn BESIDE it is not — it disguises the loss as
+  // a full grip. So the stronger promise, ruled 260922b: while any role is
+  // capped, NO tone is doubled at all. A silent string is the honest picture.
   const present = new Set(notes.map((x) => x.role));
   const counts = {};
   for (const x of notes) counts[x.role] = (counts[x.role] || 0) + 1;
@@ -501,6 +541,8 @@ export function everyOccurrence(tones, pool, { n = 3 } = {}) {
     if (counts[x.role] > 1
         && uncoveredPcs.some((pc) => cands.get(x.string).some((m) => mod12(m.midi) === pc)))
       throw new Error("everyOccurrence: a duplicate held a slot an uncovered tone could take");
+  if (uncoveredPcs.length && Object.values(counts).some((c) => c > 1))
+    throw new Error("everyOccurrence: a tone is doubled while a role is capped — the leftover pass ran under a cap");
   /* THE CAPPED LOSS, LOUD (260909 — Daniel: "the chord's 7th does not
    * show"): a tone IN THE POOL that the cap could not carry is the honest
    * loss the coverage matching permits (two tones sharing one one-slot

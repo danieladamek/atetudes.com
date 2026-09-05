@@ -171,7 +171,7 @@ export const staffBoard = {
        * register fix), so no bar's run collides with the names */
       const chords = prog.chords.map((_, ci) => chordAt(prog, ci, fld, cfg.object, pickOf(cfg)));
       const rs = chords.map((c) => selOf(c));
-      const sels = rs.map((r) => r.notes || []);
+      const sels = rs.map((r) => r.notes || r.partial || []);   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       /* EVERY BAR WEARS THE FIGURE (260911, item 5 — Daniel's ruling,
        * superseding v0.9's current-bar-only display kept on 260910): the
        * figure resolves against EACH bar's own selection, exactly as the
@@ -209,7 +209,10 @@ export const staffBoard = {
         const seq = figHere || sels[ci];
         /* the bar's refusals, by name, in the bar — the neck's vocabulary */
         const refuseLines = [];
-        if (cfg.object !== "scale" && !sels[ci].length && c.tones) {
+        /* the refusal is NAMED in the bar whenever one-of-each refused — since 260923
+         * the bar may also carry the PARTIAL (ruling 260922b/3): the sentence stays,
+         * the notes that fit are drawn beside it, and the bar is marked partial */
+        if (cfg.object !== "scale" && (rs[ci].unplaceable || !sels[ci].length) && c.tones) {
           let rWhy = "no placement fits";
           if (rs[ci].collide && rs[ci].collide.roles)
             rWhy += " — the " + rs[ci].collide.roles.join(" and ")
@@ -222,7 +225,7 @@ export const staffBoard = {
         }
         for (const rTxt of refuseLines) {
           const fe = el("text", { x: x0 + 5, y: labY + 22, "font-size": "8",
-            fill: "#B82929", "data-strefuse": ci }, svg);
+            fill: "#B82929", "data-strefuse": ci, "data-stpartial": rs[ci].partial ? rs[ci].partial.length : 0 }, svg);
           const wds = rTxt.split(" ");
           let ln = "", first = true;
           for (const wd of wds) {

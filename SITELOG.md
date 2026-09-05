@@ -1,3 +1,29 @@
+## 2026-09-04 — Multetudes v0.5.5: night 30, the board stops lying about what it placed
+
+- **Source edition v0.5.5** (night 30; the report in `notes/working/Multetudes build run
+  260924.md`; PO rulings 260922b, three of four rulings as one item; closes the 260909 complaint).
+- **The engine (ruling 2):** while any role is capped, every-occurrence's leftover pass does not
+  run — a doubled tone disguised the loss as a full grip; a silent string is the honest picture.
+  On the Cmaj7 case (C major, strings 4–1, frets 0–3, R and 7 both only on string 2) the
+  selection goes from `3@s4f2 5@s3f0 R@s2f1 5@s1f3` to `3@s4f2 R@s2f1 5@s1f3`, string 3 silent
+  (the dispatch expected string 1: the matching's own 5 sits on string 1, the leftover was string
+  3's). Proven on a corpus of 90,720 configurations: 87,024 uncapped byte-identical, 960 capped
+  shed only leftovers. All-tones under Grip keeps its meaning (the stop condition pinned).
+- **The board (rulings 1 and 3):** a capped loss goes on the window in Daniel's words — "missing
+  7th — both R and 7 on string 2 — Line takes both" — with the collide derived and the escape
+  resolvesAt; one-of-each draws its PARTIAL beside the verbatim refusal, the partial derived once
+  in the engine so the neck, the staff, the keys, the readout and the walk agree. The message sits
+  clear of the drawn notes and inside the neck at any window.
+- **The captions (item 3):** `.fd-cap` from #B9B9BF (1.87:1) to the ramp's annotation gray
+  (4.51:1 on the card ground by axe's measurement); the night-29 contrast exemption retired, so
+  axe gates the captions at AA. No other text under 4.5:1 on any door.
+- **Studies moved:** multetudes only. Shell 18,040 unchanged.
+- **Gates from their logs:** engine 605/605 (a corpus of 90,720 selections: 87,024 uncapped
+  byte-identical, 960 capped shed only leftovers) · doors 18,715/0 (`hub/tests/out/doors-0904-1737.log`)
+  · bite 50/51 (`bite-0904-1743.log`; m49, m50 bite) + m27 re-aimed and biting alone
+  (`bite-m27-0904-2208.log`) · hugo 0 · check_site 21 with the record verify (3 checked) · served ritual
+  both widths, console clean.
+
 ## 2026-09-04 — DEPLOYED: v0.5.4 live — multetudes moved, the other five unmoved; written from the run
 
 - record: run 33843923257 · success · commit f0f2c3d · fetched 2026-09-04T06:28Z · 6/6 studies byte-identical · digest 4aa05d877669

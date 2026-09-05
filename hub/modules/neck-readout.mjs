@@ -90,7 +90,7 @@ export const neckReadout = {
           const r = cfg.take === "all"
             ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
             : oneOfEach(roFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
-          sel = r.notes || [];
+          sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
           if (roFit.dropped.length)
             absences.push(`the ${roFit.dropped.join(", ")} dropped by the grip rule — `
               + `${run.strings.length * cfg.notesPer} slots carry `

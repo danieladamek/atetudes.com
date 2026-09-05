@@ -1837,13 +1837,16 @@ console.log(JSON.stringify(out));
             .map(e => e.getAttribute('data-stbar')));
           return { withHeads: bars.size,
             refusals: [...svg.querySelectorAll('[data-strefuse]')]
-              .map(e => [...e.querySelectorAll('tspan')].map(t => t.textContent).join(' ')) }; }""")
+              .map(e => [...e.querySelectorAll('tspan')].map(t => t.textContent).join(' ')),
+            partials: [...svg.querySelectorAll('[data-strefuse]')].map(e => +e.dataset.stpartial) }; }""")
         check(len(st_ref5["refusals"]) == 2
               and all("no placement fits" in t and "occur only on string" in t
                       and "Line" in t for t in st_ref5["refusals"]),
               f"{tag} the staff's refused bars refuse BY NAME, in the bar: {st_ref5['refusals']!r}")
-        check(st_ref5["withHeads"] == 6,
-              f"{tag} the six placeable bars still draw ({st_ref5['withHeads']})")
+        # PIN REWRITTEN 260923 (night 30, ruling 260922b/3): the two refused bars now DRAW THEIR
+        # PARTIAL beside the refusal — two of three tones each — so all eight bars carry heads
+        check(st_ref5["withHeads"] == 8 and st_ref5["partials"] == [2, 2],
+              f"{tag} all eight bars draw — six complete, the two refused ones their two-note partial ({st_ref5['withHeads']} bars, partials {st_ref5['partials']})")
         # full boot restore
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
@@ -2109,9 +2112,14 @@ console.log(JSON.stringify(out));
         page.wait_for_timeout(200)
         page.click('#tlScroll button >> nth=1'); page.wait_for_timeout(150)
         hint_cb = page.inner_text("#fdHint")
-        check("the 7 is in the box but the grip cannot carry it" in hint_cb
-              and "Line shows it" in hint_cb,
+        # PIN REWRITTEN 260923 (night 30, rule 7): the capped loss reads in Daniel's own
+        # words now — "missing 7th — both R and 7 on string 2 — Line takes both" — and it
+        # goes ON THE WINDOW as well as in the hint (ruling 260922b/1)
+        check("missing 7th" in hint_cb and "both R and 7 on string" in hint_cb and "Line takes both" in hint_cb,
               f"{tag} the capped loss must be NAMED with its escape: {hint_cb!r}")
+        cb_over = page.evaluate("() => (document.querySelector('#fieldSvg .fd-refusal') || {}).textContent || ''")
+        check("missing 7th" in cb_over and "Line takes both" in cb_over,
+              f"{tag} 1 (260923): the capped loss is LOUD on the window, not only in the hint: {cb_over!r}")
         check("the 7 is in the box" in page.inner_text("#roLine"),
               f"{tag} the readout names the capped loss too: {page.inner_text('#roLine')!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
@@ -2270,10 +2278,15 @@ console.log(JSON.stringify(out));
           { detail: { index: 0, request: true } }))""")
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(150)
-        placed_bars = []
+        # REWRITTEN 260923 (night 30): a refused bar draws its PARTIAL now, so every bar of this
+        # configuration places something; the two states are COMPLETE (no refusal on the window)
+        # and PARTIAL (the refusal named, the notes that fit drawn) — and SOUND = SIGHT over both
+        placed_bars, partial_bars, drawn_counts = [], [], []
         for mx_bar in range(8):
             page.click(f'#tlScroll button >> nth={mx_bar}'); page.wait_for_timeout(70)
-            placed_bars.append(page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") > 0)
+            n_dr = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
+            placed_bars.append(n_dr > 0); drawn_counts.append(n_dr)
+            partial_bars.append(n_dr > 0 and page.query_selector("#fieldSvg .fd-refusal") is not None)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(120)
@@ -2303,20 +2316,20 @@ console.log(JSON.stringify(out));
         # bar's chip stays silent, on the SAME configuration the pass walked
         # crash-proof under a deaf-board mutation: this configuration is
         # CHOSEN for having both states — losing one is a failure, not a crash
-        if True not in placed_bars or False not in placed_bars:
+        if True not in partial_bars or False not in partial_bars:
             check(False, f"{tag} matrix sound half: the configuration must carry both "
-                  f"placed and refused bars for the audition leg (placed: {placed_bars})")
+                  f"complete and PARTIAL bars for the audition leg (partial: {partial_bars})")
         else:
-            mx_place = placed_bars.index(True); mx_refuse = placed_bars.index(False)
+            mx_place = partial_bars.index(False); mx_part = partial_bars.index(True)
             page.evaluate("() => { window.__nt = [] }")
             page.click(f'#tlScroll button >> nth={mx_place}'); page.wait_for_timeout(350)
             mx_aud_p = page.evaluate("() => window.__nt.length")
             page.evaluate("() => { window.__nt = [] }")
-            page.click(f'#tlScroll button >> nth={mx_refuse}'); page.wait_for_timeout(350)
+            page.click(f'#tlScroll button >> nth={mx_part}'); page.wait_for_timeout(350)
             mx_aud_r = page.evaluate("() => window.__nt.length")
-            check(mx_aud_p > 0 and mx_aud_r == 0,
-                  f"{tag} matrix sound half, stopped: a placed chip auditions "
-                  f"({mx_aud_p} NOTEs), a refused chip stays silent ({mx_aud_r})")
+            check(mx_aud_p > 0 and mx_aud_r == drawn_counts[mx_part] and mx_aud_r > 0,
+                  f"{tag} matrix sound half, stopped: a complete chip auditions ({mx_aud_p} NOTEs), a PARTIAL chip "
+                  f"auditions exactly its drawn notes — sound = sight ({mx_aud_r} NOTEs, {drawn_counts[mx_part]} drawn)")
         # restore the boot
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
@@ -2457,8 +2470,10 @@ console.log(JSON.stringify(out));
         # and F both live only on string 2, so the grip refuses BY NAME (the
         # collide case, child 5's law) instead of silently half-placing.
         # Complete where completable; loud where not. Daniel's question 1.
-        expects = [("F", 3, None), ("Dm", 0, "occur only on string 2"),
-                   ("Bdim", 0, "occur only on string 2")]
+        # REWRITTEN 260923 (night 30, ruling 260922b/3): the refused chords draw their
+        # two-note PARTIAL beside the collide sentence — no longer an empty box
+        expects = [("F", 3, None), ("Dm", 2, "occur only on string 2"),
+                   ("Bdim", 2, "occur only on string 2")]
         for ci, (sym, want_n, want_msg) in enumerate(expects):
             page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(150)
             n = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
@@ -2467,9 +2482,9 @@ console.log(JSON.stringify(out));
                 check(n == want_n and "no placement fits" not in hint_c,
                       f"{tag} {sym} must place COMPLETE at the amended window ({n} notes)")
             else:
-                check(n == 0 and want_msg in hint_c,
-                      f"{tag} {sym} must refuse BY NAME (the collide, not a silent "
-                      f"half-chord): {n} notes, {hint_c[:140]!r}")
+                check(n == want_n and want_msg in hint_c,
+                      f"{tag} {sym} must refuse BY NAME and draw its partial beside the refusal "
+                      f"(two of three tones): {n} notes, {hint_c[:140]!r}")
         # full boot restore — this block moved the key, the source AND the step
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
@@ -2909,6 +2924,37 @@ console.log(JSON.stringify(out));
         page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(80)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
+        # ---- 260923 (night 30): THE BOARD STOPS LYING ABOUT WHAT IT PLACED. C major, Cmaj7,
+        # strings 4–1, anchor 4, startDegree 1, frets 0–3: R and 7 both live only on string 2.
+        CASE = "() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'C', scale: 'major', object: 'tetrad', source: 'custom', custom: 'Cmaj7', strings: [4, 3, 2, 1], startDeg: 1, nearFret: 0, take: %s, notesPer: %d } }))"
+        READ = """() => ({ sel: [...document.querySelectorAll('#fieldSvg .fd-sel')].map(g => g.querySelector('text').textContent + '@s' + g.dataset.selstr + 'f' + g.dataset.selfret).join(' '),
+          overlay: (document.querySelector('#fieldSvg .fd-refusal') || {}).textContent || '', staff: document.querySelectorAll('#stSvg [data-stmidi][data-stbar="0"]').length })"""
+        page.evaluate(CASE % ("'all'", 1)); page.wait_for_timeout(300); cs = page.evaluate(READ)
+        check(cs["sel"] == "3@s4f2 R@s2f1 5@s1f3" and cs["staff"] == 3,
+              f"{tag} 1 (260923): all-tones under Grip on the capped case draws R 3 5 once each — the doubled 5 is gone, string 3 SILENT, the staff agrees: {cs}")
+        check(cs["overlay"].replace("— ", "— ").startswith("missing 7th") and "both R and 7 on string 2" in cs["overlay"] and "Line takes both" in cs["overlay"],
+              f"{tag} 1 (260923): the capped loss is LOUD on the window in Daniel's words, the escape derived: {cs['overlay']!r}")
+        # the message's SEAT: clear of the drawn notes and inside the neck, at the nut and at the far right
+        GEO = """() => { const svg = document.getElementById('fieldSvg'); const t = svg.querySelector('.fd-refusal'); if (!t) return null; const tb = t.getBBox(); const vb = svg.viewBox.baseVal;
+          const dots = [...svg.querySelectorAll('.fd-sel circle')].map(c => ({ x: +c.getAttribute('cx'), y: +c.getAttribute('cy'), r: +c.getAttribute('r') }));
+          return { seat: t.dataset.seat, inside: tb.x >= 0 && tb.x + tb.width <= vb.width && tb.y >= 0 && tb.y + tb.height <= vb.height,
+            overlaps: dots.filter(d => d.x + d.r > tb.x && d.x - d.r < tb.x + tb.width && d.y + d.r > tb.y && d.y - d.r < tb.y + tb.height).length }; }"""
+        g0 = page.evaluate(GEO)
+        check(g0 and g0["inside"] and g0["overlaps"] == 0 and g0["seat"] in ("above", "below"),
+              f"{tag} 1 (260923): with notes drawn the message sits clear of them and inside the neck, even at the nut: {g0}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { nearFret: 12 } }))"); page.wait_for_timeout(300); g1 = page.evaluate(GEO)
+        check(g1 and g1["inside"] and g1["overlaps"] == 0, f"{tag} 1 (260923): …and at the far right of the neck: {g1}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { nearFret: 0 } }))"); page.wait_for_timeout(250)
+        page.evaluate(CASE % ("'one'", 1)); page.wait_for_timeout(300); c1 = page.evaluate(READ)
+        check(c1["sel"] == "5@s3f0 R@s2f1 3@s1f0" and c1["staff"] == 3 and "no placement fits" in c1["overlay"] and "occur only on string 2" in c1["overlay"] and "Line takes both" in c1["overlay"],
+              f"{tag} 3 (260923): one-of-each draws the PARTIAL beside its refusal — three notes, the refusal sentence verbatim: {c1}")
+        page.evaluate(CASE % ("'one'", 3)); page.wait_for_timeout(300); cl = page.evaluate(READ)
+        check(cl["sel"] == "5@s3f0 7@s2f0 R@s2f1 3@s1f0" and cl["overlay"] == "" and cl["staff"] == 4,
+              f"{tag} (260923): under Line the 7 is present and nothing is red: {cl}")
+        page.evaluate(CASE % ("'all'", 1)); page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { startDeg: 4, nearFret: 3 } }))"); page.wait_for_timeout(300); cu = page.evaluate(READ)
+        check(cu["sel"] == "5@s4f5 R@s3f5 3@s2f5 7@s1f7" and cu["overlay"] == "",
+              f"{tag} (260923): an uncapped window is unchanged — an occurrence on every string, nothing red: {cu}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'Bb', source: 'cycle', custom: '', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, take: 'one', notesPer: 1 } }))"); page.wait_for_timeout(300)
         # the hint earns its space when something is refused: both reference strings in
         # the set, WITH a reference asked for (the gate arrives here with the bass elsewhere)
         bass_was = page.eval_on_selector("#fdBass2", "e => e.value")
@@ -3341,10 +3387,16 @@ console.log(JSON.stringify(out));
               refused: !!document.querySelector('#fieldSvg .fd-refusal'),
               nt: window.__nt.length, raw: window.__raw.length })"""))
         for aud_bar, st in enumerate(aud_states):
-            if st["refused"]:
+            if st["refused"] and st["drawn"] == 0:
                 check(st["nt"] == 0 and st["raw"] == 0,
-                      f"{tag} audition bar {aud_bar + 1}: a REFUSED bar stays silent on "
+                      f"{tag} audition bar {aud_bar + 1}: a REFUSED bar with nothing drawn stays silent on "
                       f"click — no back door (NOTEs {st['nt']}, raws {st['raw']})")
+            elif st["refused"]:
+                # REWRITTEN 260923 (night 30): a refused bar draws its PARTIAL and sounds exactly
+                # that — sound = sight; the missing role is never sounded through a back door
+                check(st["nt"] == st["drawn"] and st["raw"] == st["nt"],
+                      f"{tag} audition bar {aud_bar + 1}: a REFUSED bar sounds exactly its drawn partial "
+                      f"(drawn {st['drawn']}, NOTEs {st['nt']}, raws {st['raw']})")
             else:
                 check(st["drawn"] > 0 and st["nt"] == st["drawn"] and st["raw"] == st["nt"],
                       f"{tag} audition bar {aud_bar + 1}: sounded == drawn == raw starts "
@@ -3516,7 +3568,7 @@ console.log(JSON.stringify(out));
               const drawn = [...document.querySelectorAll('#fieldSvg .fd-sel')]
                 .map(g => +g.dataset.selmidi);
               const rf = document.querySelector('#fieldSvg .fd-ref');
-              window.__cf.bars.push({ i, t, drawn,
+              window.__cf.bars.push({ i, t, drawn, refused: !!document.querySelector('#fieldSvg .fd-refusal'),
                 ref: rf ? +rf.dataset.refmidi : null }); }); }); }""")
         page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
@@ -3527,7 +3579,7 @@ console.log(JSON.stringify(out));
               const drawn = [...document.querySelectorAll('#fieldSvg .fd-sel')]
                 .map(g => +g.dataset.selmidi);
               const rf = document.querySelector('#fieldSvg .fd-ref');
-              window.__cf.bars = [{ i: -1, t: performance.now(), drawn,
+              window.__cf.bars = [{ i: -1, t: performance.now(), drawn, refused: !!document.querySelector('#fieldSvg .fd-refusal'),
                 ref: rf ? +rf.dataset.refmidi : null }];
               window.__cf.notes = []; }""")
             page.click('#tlStripMini button[data-role="play"]')
@@ -3569,16 +3621,26 @@ console.log(JSON.stringify(out));
         # selection empty, ref ring present, and the NOTE stream for that
         # bar EMPTY.
         cf1 = page.evaluate("() => window.__cf")
-        refused = [(k, b) for k, b in enumerate(cf1["bars"][:-1]) if b["drawn"] == []]
+        # REWRITTEN 260923 (night 30, ruling 260922b/3): a refused bar is one the neck REFUSED
+        # (the overlay), no longer one that drew nothing — E♭maj7 at the old window now draws
+        # its partial beside the refusal. With nothing drawn it stays silent, reference and all
+        # (Daniel's 260904 ruling); with a partial it sounds exactly what it draws — sound = sight.
+        refused = [(k, b) for k, b in enumerate(cf1["bars"][:-1]) if b["refused"]]
         check(refused,
               f"{tag} the corpus must contain a refusing bar to prove the ruling on "
               f"(none refused — the corpus lost its teeth)")
         for k, b in refused:
             t0, t1 = b["t"] - 50, cf1["bars"][k + 1]["t"] - 50
             sounded = sorted({n["m"] for n in cf1["notes"] if t0 <= n["t"] < t1})
-            check(b["ref"] is not None and sounded == [],
-                  f"{tag} a refused bar (i={b['i']}) must be SILENT with the ref drawn: "
-                  f"ref {b['ref']}, sounded {sounded}")
+            if not b["drawn"]:
+                check(b["ref"] is not None and sounded == [],
+                      f"{tag} a refused bar with nothing drawn (i={b['i']}) must be SILENT with the ref drawn: "
+                      f"ref {b['ref']}, sounded {sounded}")
+            else:
+                shown = sorted(set(b["drawn"]) | ({b["ref"]} if b["ref"] is not None else set()))
+                check(sounded and all(m in shown for m in sounded) and all(m in sounded for m in b["drawn"]),
+                      f"{tag} a refused bar with a PARTIAL (i={b['i']}) sounds exactly its drawn notes — sound = sight: "
+                      f"drawn {b['drawn']}, ref {b['ref']}, sounded {sounded}")
         check("nothing sits on top" in page.inner_text("#fdHint")
               if page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length") == 0 else True,
               f"{tag} the refused bar's face must say why the reference stays silent: "
@@ -5306,8 +5368,9 @@ console.log(JSON.stringify(out));
             "multetudes": {"#meterSel", "#subSel", "#voiceSel", "#hcScale", "#hcObj", "#pgCycle", "#pgStart", "#psSel", "#fdVoice"},
             "tetradetudes": {"#meterSel", "#subSel", "#voiceSel", "#meterSel2", "#splitSel", "#keySel", "#scaleSel", "#progSel", "#startSel", "#bottomSel", "#extSel", "#figSel"},
             "scribe": {"#meterSel", "#subSel", "#voiceSel"}, "plain": {"#meterSel", "#subSel", "#voiceSel"}},
-        "color-contrast": {   # the neck's four captions in the annotation gray, 4.48:1 on white — a Spec §2.1 question
-            "multetudes": {".fd-cap:nth-child(2)", ".fd-cap:nth-child(4)", ".fd-cap:nth-child(6)", ".fd-cap:nth-child(8)"}},
+        # color-contrast: the neck's four captions were EXEMPT here 260923 (#B9B9BF, 1.87:1 on the
+        # card ground); fixed the same night to the ramp's --gray (4.51:1) — the exemption RETIRED,
+        # as the loud-both-ways check demands. axe now gates the captions at AA.
     }
     AXE_JS = Path(HUB / "tests" / "vendor" / "axe.min.js")
     check(AXE_JS.exists(), f"{tag} axe-core is not vendored at {AXE_JS} — the accessibility check cannot run")

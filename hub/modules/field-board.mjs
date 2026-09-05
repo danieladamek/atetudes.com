@@ -59,6 +59,8 @@ const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
  * the set squares AND the pattern-bracket gutter, as v0.9 draws them */
 const NFRETS = 15, FX0 = 46, FW = 71, SY0 = 34, SGAP = 34;
+/* the loss message's role word (260923): "root", else the ordinal of the role token */
+const roleWord = (r) => (r === "R" ? "root" : /^\d+$/.test(r) ? r + ({ 1: "st", 2: "nd", 3: "rd" }[r % 10 === 1 && r !== "11" ? 1 : r % 10 === 2 && r !== "12" ? 2 : r % 10 === 3 && r !== "13" ? 3 : 0] || "th") : r);
 const STR_X = FX0 + NFRETS * FW + 42;
 const BRK_X = FX0 + NFRETS * FW + 76;
 const fx = (f) => (f === 0 ? FX0 - 22 : FX0 + (f - 0.5) * FW);
@@ -248,7 +250,10 @@ export const fieldBoard = {
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .fd-alltones{font-size:12.5px;color:var(--ink);white-space:nowrap;cursor:pointer}
 .fd-alltones input{vertical-align:-1px}
-.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#B9B9BF;
+/* the caption ink is the ramp's annotation gray since 260923 (night 30 item 3): #B9B9BF
+ * was 1.87:1 on the card ground; --gray is 4.51:1 there and 4.71:1 on white — AA for
+ * small text, from the existing neutral ramp, no new grey */
+.fd-cap{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--gray);
   font-weight:bold;margin:9px 0 5px}
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
@@ -420,7 +425,7 @@ export const fieldBoard = {
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
       const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-      let sel = [], selMsg = "";
+      let sel = [], selMsg = "", lossMsg = "";   // lossMsg: the sentence that goes ON THE WINDOW when something is wrong with what was placed (260923)
       if (prog.err) selMsg = prog.err;
       const fdRefDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
@@ -439,7 +444,7 @@ export const fieldBoard = {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(fdFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
-        sel = r.notes || [];
+        sel = r.notes || r.partial || [];   // 260923: the PARTIAL draws beside the refusal (ruling 3)
         const parts = [];
         if (fdFit.dropped.length)
           parts.push(`the ${fdFit.dropped.join(", ")} dropped by the grip rule — `
@@ -449,9 +454,17 @@ export const fieldBoard = {
         if (cur.unnamed) parts.push(cur.unnamed);
         if (cur.absent.length) parts.push(`${cur.symbol} has no ${cur.absent.join(" or ")}`);
         if (r.capped && r.capped.length) {
+          /* THE CAPPED LOSS, LOUD (260922b ruling 1, built 260923): Daniel's own words
+           * for the shape — "missing 7th — both R and 7 on string 2 — Line takes both".
+           * The collide is DERIVED by asking one-of-each about the same tones and
+           * pool (the engine names it; nothing here tables it); the escape is
+           * resolvesAt, worded by this module's own control. */
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
-          parts.push(`the ${r.capped.join(" and ")} is in the box but the grip cannot carry it`
-            + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} shows it` : ""));
+          const clash = oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre }).collide;
+          lossMsg = `missing ${r.capped.map(roleWord).join(" and ")}`
+            + (clash ? ` — both ${clash.roles.join(" and ")} on string ${clash.string}` : " — the grip cannot carry it")
+            + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} takes ${clash ? "both" : "it"}` : "");
+          parts.push(lossMsg);
         }
         if (cur.offKey.length)
           parts.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
@@ -464,9 +477,14 @@ export const fieldBoard = {
           const esc = r.resolvesAt != null && r.resolvesAt <= 3
             ? ` — ${lineWord} takes ${r.collide ? "both" : "them"}`
             : " — and no per-string ceiling resolves it";
-          parts.push((r.collide
+          /* the refusal sentence stays VERBATIM (ruling 3: it is the best prose on the
+           * board and it says the true thing); what changed is that the partial is drawn
+           * beside it — sel above — and the loss goes on the window whether or not
+           * anything was placed */
+          lossMsg = (r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
-            : "no placement fits") + esc);
+            : "no placement fits") + esc;
+          parts.push(lossMsg);
         }
         if (parts.length) selMsg = (selMsg ? selMsg + " " : "") + parts.join(". ");
       }
@@ -476,11 +494,28 @@ export const fieldBoard = {
        * absence about the neck belongs on the neck, where the dots would
        * have been.) Drawn inside the window's own box, split at the em-dash
        * so the collide and the escape read as two lines. */
-      if (cfg.object !== "scale" && !sel.length && selMsg) {
-        const ry = (fy(Math.min(...run.strings)) + fy(Math.max(...run.strings))) / 2;
-        const rx = (fx(pos.fLo) + fx(pos.fHi)) / 2;
-        const linesTxt = selMsg.split(" — ");
-        const rt = el("text", { class: "fd-refusal", x: rx, y: ry - (linesTxt.length - 1) * 8,
+      /* THE GATE (260922b ruling 1, built 260923): "something is wrong with what was
+       * placed" — a capped loss or a partial — with nothing-placed as its extreme
+       * case, so the existing overlay is not lost (rule 7). The window carries the
+       * LOSS's own sentence; the hint beneath keeps everything. Status, in the one
+       * existing treatment — never a second one, never a degree colour. */
+      const wrong = !sel.length || !!lossMsg;
+      if (cfg.object !== "scale" && selMsg && wrong) {
+        const linesTxt = (sel.length && lossMsg ? lossMsg : selMsg).split(" — ");
+        /* WHERE THE MESSAGE SITS (260923): inside the window's own box when nothing was
+         * placed (as since 260908); when notes ARE drawn the message must not sit on
+         * them — Daniel: "a red message above the view" — so it goes just above the
+         * window, or below it when the window touches the top string. Either way its
+         * x is clamped so the longest line stays inside the neck (a window at the nut
+         * ran the text off the left edge). Width estimated at 0.58em per character. */
+        const half = Math.max(...linesTxt.map((l) => l.length + 2)) * 12.5 * 0.29 + 6;
+        const rx = Math.min(Math.max((fx(pos.fLo) + fx(pos.fHi)) / 2, half), 1280 - half);
+        const sTop = Math.min(...run.strings), sBot = Math.max(...run.strings);
+        let ry;
+        if (!sel.length) ry = (fy(sTop) + fy(sBot)) / 2 - (linesTxt.length - 1) * 8;
+        else if (fy(sTop) - 16 - (linesTxt.length - 1) * 16 > 12) ry = fy(sTop) - 18 - (linesTxt.length - 1) * 16;
+        else ry = fy(sBot) + 30;
+        const rt = el("text", { class: "fd-refusal", x: rx, y: ry, "data-seat": !sel.length ? "in" : (ry < fy(sTop) ? "above" : "below"),
           "text-anchor": "middle", "font-size": "12.5", "font-weight": "bold",
           fill: "#B82929" }, svg);
         linesTxt.forEach((ln, li) => {

@@ -130,7 +130,7 @@ export const etudeWalk = {
         const r = cfg.take === "all"
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
-        sel = r.notes || [];
+        sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       }
       /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
        * ruling, 260904). His own ratification is the reason: the reference
