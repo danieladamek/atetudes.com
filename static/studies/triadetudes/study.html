@@ -443,8 +443,8 @@
           </div></div>
         <div style="flex:0 1 auto"><label>Playback</label>
           <div class="seg" id="playbackSeg">
+            <button data-pb="strum" title="the harmony, strummed — the word was Block until the 260913 ruling; here since 260926">Strum</button>
             <button data-pb="arpeggiated" class="on">Arpeggiated</button>
-            <button data-pb="block">Block</button>
             <button data-pb="both">Both</button>
           </div></div>
       </div>
@@ -4708,17 +4708,18 @@ function patText(pattern){
   const s=st.setLowHigh;
   return pattern.map(sn=>"LMH"[s.indexOf(sn)]).join("-");
 }
-/* what the boards draw: the pattern unless playback is Block. Under Line
+/* what the boards draw: the pattern unless playback is Strum. Under Line
    the H-M-L shape field is out of play (a slot is no longer a bijection when
    two notes share a string — the named rule, said in the hint), so the
    placement's own ascending order is the sequence. */
+const playbackWord = (w) => (w === "block" ? "strum" : w);   // engine/figure.mjs:176, verbatim (260926)
 function displayPattern(){
-  if(st.playback==="block"||st.placement==="line")return null;
+  if(st.playback==="strum"||st.placement==="line")return null;
   return st.arpPattern;
 }
 function orderedNotes(v){
   if(!v)return null;
-  if(st.placement==="line")return st.playback==="block"?null:[...v.notes];
+  if(st.placement==="line")return st.playback==="strum"?null:[...v.notes];
   const dp=displayPattern(); if(!dp)return null;
   const byStr={}; v.notes.forEach(n=>byStr[n.string]=n);
   return dp.map(sn=>byStr[sn]);
@@ -4757,7 +4758,7 @@ function figureEntries(v,ch){
 function orderedEntries(v,ch){
   // THE playing order, role-tagged: figured motion when a figure is active,
   // else the legacy paths byte-for-byte (line placement order / shape pattern)
-  if(!v||st.playback==="block")return null;
+  if(!v||st.playback==="strum")return null;
   if(activeFigure())return figureEntries(v,ch);
   return orderedNotes(v);
 }
@@ -4797,15 +4798,15 @@ function subdivisionName(beats,L){
 function arpHintText(){
   if(st.placement==="line"){
     const per=[...new Set(pattern())].map(b=>b+" beats → "+subdivisionName(b,3)).join(" · ");
-    if(st.playback==="block")
-      return "Line + Block — the three tones are SOUNDED together (a line is not a grip; "+
+    if(st.playback==="strum")
+      return "Line + Strum — the three tones are SOUNDED together (a line is not a grip; "+
         "two notes may share a string).";
     return "Line plays its notes in placement order, low to high — "+per+
       ". The H-M-L shape field applies to Grip and Free; tones-mode patterns arrive "+
       "with the motion grammar.";
   }
-  if(st.playback==="block")
-    return"Block playback — the harmony sounds together at each change"+
+  if(st.playback==="strum")
+    return"Strum playback — the harmony sounds together at each change"+
       (st.arpPattern?"; the pattern is kept for when you switch back":"")+".";
   if(activeFigure()){
     const fig=parsedFigure();
@@ -5331,7 +5332,7 @@ function bassMidiFor(i){
 }
 function onsetsFor(i,durBeats){
   // THE one producer call per chord (v0.7 phase 2): playback composes here —
-  // Block sounds the harmony whatever the pattern says, Arpeggiated runs the
+  // Strum sounds the harmony whatever the pattern says, Arpeggiated runs the
   // sequence, Both strums the harmony under the line's downbeat — and every
   // consumer (audio, pulse, fretboard badges, score, keyboard) reads this
   // list. No renderer re-derives a note.
@@ -6579,7 +6580,7 @@ function cfgObj(){
       custom:st.prog==="custom"?st.custom:undefined,chords:SEQ.map(c=>c.label)},
     motion:{figure:motionSource()||"none",mode:st.motionMode,
       pattern:patText(st.arpPattern)||"none",placement:st.placement,playback:st.playback,
-      subdivision:displayPattern()?[...new Set(pattern())].map(b=>b+" beats: "+subdivisionName(b,displayPattern().length)).join("; "):"block"},
+      subdivision:displayPattern()?[...new Set(pattern())].map(b=>b+" beats: "+subdivisionName(b,displayPattern().length)).join("; "):"strum"},
     display:{roots:st.roots,extension:st.ext},
     transport:{bpm:st.bpm,meter:st.meter+"/4",barSplit:pattern().join("+"),
       levels:{triads:Math.round(st.triadVol*100),bass:Math.round(st.bassVol*100)},
@@ -6756,7 +6757,10 @@ function applyRaw(c){
     // linear → FREE (it was the unanchored grip), NEVER "line", which is new
     // and has no stored history. Unknown values land on grip.
     placement:({box:"grip",linear:"free",grip:"grip",free:"free",line:"line"})[c.placement]??"grip",
-    playback:c.playback??(c.arpPattern?"arpeggiated":"block"),
+    // a saved pre-260926 étude says playback "block": the alias map (engine/figure.mjs's
+    // playbackWord, tetradetudes' own migration shape) is the one place the old word is known —
+    // a bounded, knowing duplication of ONE line, guarded by engine/tests/host-conformance
+    playback:playbackWord(c.playback??(c.arpPattern?"arpeggiated":"strum")),
     // pre-grammar entries have no figure keys: the bare pattern IS the figure
     motionMode:c.motionMode??"shape",motionSrc:c.motionSrc??null,figureError:null,
     bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0,
@@ -7043,7 +7047,7 @@ function initControls(){
   document.querySelectorAll("#playbackSeg button").forEach(b=>{
     b.addEventListener("click",()=>{
       st.playback=b.dataset.pb;
-      if(st.playback!=="block"&&!st.arpPattern)defaultArpPattern(); // a line needs a pattern
+      if(st.playback!=="strum"&&!st.arpPattern)defaultArpPattern(); // a line needs a pattern
       syncShapeUI(); syncArpIn();
       renderScore(); renderActive();});
   });

@@ -81,10 +81,10 @@ test("box overflow widens the drawn zone — placement never silently changes", 
   assert.equal(e.st.placement, "grip", "no silent escape from grip");
 });
 
-test("displayPattern follows playback: block hides the line, arpeggiated shows it", () => {
+test("displayPattern follows playback: strum hides the line, arpeggiated shows it", () => {
   const e = loadTriadetudesEngine();
   e.st.arpPattern = [2, 3, 1];
-  e.st.playback = "block";
+  e.st.playback = "strum";   // 260926 (rule 7): the ruled word; "block" is an alias on restore now
   assert.equal(e.displayPattern(), null);
   e.st.playback = "arpeggiated";
   assert.deepEqual(unwrap(e.displayPattern()), [2, 3, 1]);

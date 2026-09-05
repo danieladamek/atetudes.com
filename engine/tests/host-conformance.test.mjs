@@ -265,6 +265,135 @@ test("§4.3 grammar: metronome cards are four row groups, transport cards five, 
   }
 });
 
+// ================= hub/lexicon.mjs: THE FOURTH HOST LIST — the words =================
+// 260926 (night 32). Multetudes is the reference for every word (Daniel, 260923).
+// Adding a host is ONE entry: it maps the lexicon's ROLES to its own ids (a segment
+// is [id, the data-attribute its buttons carry]); a role it does not offer is
+// omitted. Asserted on the ARTIFACT — the shipped page's <option>s and segment
+// <button>s; for the reference door, whose harmony card fills its selects at
+// mount, the words are read from the module source THE PAGE SHIPS. Never from
+// what a module registers.
+import { LEXICON } from "../../hub/lexicon.mjs";
+
+const LEXICON_HOSTS = [
+  { name: "metronome",
+    selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel" },
+    captions: ["bpm", "volume", "subdivision", "voice"] },
+  { name: "triadetudes",
+    selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel", scale: "scaleSel" },
+    segments: { placement: ["placeSeg", "place"], playback: ["playbackSeg", "pb"] },
+    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement"] },
+  { name: "tetradetudes",
+    selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel", scale: "scaleSel" },
+    shippedSource: { placement: "PLACE_LABEL" },   // shape-motion builds #placeSeg at mount from this literal, which the page ships
+    segments: { playback: ["playbackSeg", "pb"] },
+    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement"] },
+  { name: "multetudes",
+    selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel" },
+    shippedSource: { scale: "SCALES" },   // harmony-card fills #hcScale at mount from this literal, which the page ships
+    segments: { placement: ["fdNSeg", "nps"], playback: ["fdMoveSeg", "move"] },
+    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement"] },
+];
+// multetudes' placement segment stores the per-string ceiling, not the word: grip is 1, line is 3
+const PLACEMENT_VALUE = { fdNSeg: { grip: "1", line: "3" } };
+
+const optionsOf = (page, id) => {
+  const m = page.match(new RegExp(`<select id="${id}"[^>]*>([\\s\\S]*?)</select>`));
+  if (!m) return null;
+  return Object.fromEntries([...m[1].matchAll(/<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/g)].map((o) => [o[1], o[2].trim()]));
+};
+const segmentOf = (page, id, attr) => {
+  const m = page.match(new RegExp(`id="${id}"[^>]*>([\\s\\S]*?)</div>`));
+  if (!m) return null;
+  return Object.fromEntries([...m[1].matchAll(new RegExp(`<button[^>]*data-${attr}="([^"]*)"[^>]*>([^<]*)</button>`, "g"))].map((o) => [o[1], o[2].trim()]));
+};
+const sameWord = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+
+test("§4.3 lexicon: every shared control says the family's word on every host that offers it — the reference is multetudes", () => {
+  let checked = 0;
+  for (const host of LEXICON_HOSTS) {
+    const page = studyOf(host.name);
+    for (const [role, id] of Object.entries(host.selects || {})) {
+      const found = optionsOf(page, id);
+      assert.ok(found, `[${host.name}] ${role}: no <select id="${id}"> in the shipped page — the host list names a control the page does not carry`);
+      for (const [value, word] of Object.entries(LEXICON[role].options)) {
+        assert.ok(value in found, `[${host.name}] ${role} (#${id}): the family offers value "${value}" ("${word}") and this page does not`);
+        assert.ok(sameWord(found[value], word), `[${host.name}] ${role} (#${id}): for value "${value}" the family's word is "${word}", found "${found[value]}" — Multetudes is the reference (260923)`);
+        checked++;
+      }
+    }
+    for (const [role, literal] of Object.entries(host.shippedSource || {})) {
+      for (const [value, word] of Object.entries(LEXICON[role].options)) {
+        // the literal's shape is the module's: [["value", "word"], …] pairs, or { value: "word", … }
+        const re = new RegExp(`(?:\\["${value}",\\s*"([^"]*)"\\]|\\b${value}:\\s*"([^"]*)")`);
+        const m = page.match(new RegExp(`const ${literal} = [^;]*?` + re.source));
+        if (m) m[1] = m[1] ?? m[2];
+        assert.ok(m, `[${host.name}] ${role}: the shipped page's ${literal} literal offers no value "${value}"`);
+        assert.ok(sameWord(m[1], word), `[${host.name}] ${role} (${literal}): for value "${value}" the family's word is "${word}", found "${m[1]}" — Multetudes is the reference (260923)`);
+        checked++;
+      }
+    }
+    for (const [role, [id, attr]] of Object.entries(host.segments || {})) {
+      const found = segmentOf(page, id, attr);
+      assert.ok(found, `[${host.name}] ${role}: no segment #${id} with data-${attr} buttons in the shipped page`);
+      for (const [value, word] of Object.entries(LEXICON[role].options)) {
+        const v = (PLACEMENT_VALUE[id] || {})[value] ?? value;
+        assert.ok(v in found, `[${host.name}] ${role} (#${id}): the family offers value "${v}" ("${word}") and this segment does not — found ${JSON.stringify(found)}`);
+        assert.ok(sameWord(found[v], word), `[${host.name}] ${role} (#${id}): for value "${v}" the family's word is "${word}", found "${found[v]}" — Multetudes is the reference (260923)`);
+        checked++;
+      }
+    }
+    for (const role of host.captions || []) {
+      const cap = LEXICON[role].caption;
+      assert.ok(new RegExp(`>\\s*${cap}\\s*<`).test(page), `[${host.name}] ${role}: the caption "${cap}" is not on the shipped page`);
+      checked++;
+    }
+  }
+  assert.ok(checked >= 60, `the lexicon sweep must actually run: ${checked} words checked`);
+});
+
+// ================= restated literals: guarded, never imported =================
+// 260926 (night 32 item 3). notepad-card.mjs:201 restates the three string-set labels
+// engine/tetrad-sequence.mjs derives, and says why (the card is shared with non-tetrad
+// doors — scribe — and may not import the tetrad engine). The duplication is defensible;
+// the SILENCE was not: nothing asserted the literal still matched, which is how the
+// lowercase "e" survived in the notepad while the panel said something else (N4,
+// 260820). A test may import both; the shipping module may not. That is the whole
+// trick, and it costs nothing at runtime.
+import { STRING_SETS } from "../tetrad-sequence.mjs";
+
+test("§4.3 restated literal: notepad-card's SETS equals the labels STRING_SETS derives — update the literal, do NOT import", () => {
+  const src = readFileSync(join(here, "..", "..", "hub", "modules", "notepad-card.mjs"), "utf8");
+  const m = src.match(/const SETS = \[([^\]]*)\];/);
+  assert.ok(m, "notepad-card.mjs no longer carries the SETS literal — if it now imports STRING_SETS, scribe carries the tetrad engine; put the literal back");
+  const literal = [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]);
+  const derived = STRING_SETS.map((s) => s.label);
+  assert.deepEqual(literal, derived,
+    `hub/modules/notepad-card.mjs's SETS literal reads ${JSON.stringify(literal)} but engine/tetrad-sequence.mjs derives ${JSON.stringify(derived)} — ` +
+    `UPDATE THE LITERAL in notepad-card.mjs to match; do NOT import STRING_SETS there (the card is shared with non-tetrad doors: scribe)`);
+  assert.ok(!/from "\.\.\/\.\.\/engine\/tetrad-sequence\.mjs"/.test(src), "notepad-card.mjs must not import the tetrad engine (scribe)");
+});
+
+// shape-motion.mjs restates the dialect in a DOCSTRING (line 12). Asserted too, and
+// here is why: a comment that names the family's three labels is the reader's
+// specification of the panel, and the README inventory precedent (below) already
+// treats a document as an artifact worth pinning; the cost is one regex.
+test("§4.3 restated literal: shape-motion.mjs's docstring names the dialect STRING_SETS derives", () => {
+  const src = readFileSync(join(here, "..", "..", "hub", "modules", "shape-motion.mjs"), "utf8");
+  for (const s of STRING_SETS)
+    assert.ok(src.includes(s.label), `hub/modules/shape-motion.mjs's docstring no longer names "${s.label}" — update the comment to the derived dialect (${STRING_SETS.map((x) => x.label).join(", ")})`);
+});
+
+// triadetudes carries figure.mjs's playbackWord alias as ONE inlined line (it does not
+// carry figure.mjs) — guarded the same way: the page's line is the engine's, verbatim
+test("§4.3 restated literal: triadetudes' inlined playbackWord is engine/figure.mjs's line", () => {
+  const eng = readFileSync(join(here, "..", "figure.mjs"), "utf8").match(/export const playbackWord = (.*);/);
+  assert.ok(eng, "figure.mjs no longer exports playbackWord");
+  const page = studyOf("triadetudes");
+  assert.ok(page.includes(`const playbackWord = ${eng[1]};`),
+    `triadetudes/study.html's playbackWord differs from engine/figure.mjs's — update the page's one line to: const playbackWord = ${eng[1]};`);
+});
+
 // ================= the engine inventory: derived, not remembered =================
 // engine/README.md hand-typed its module list and was already missing three
 // modules — the exact defect §4.3 exists to prevent, in the document that

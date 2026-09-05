@@ -1,3 +1,31 @@
+## 2026-09-05 — night 32: the floor, declared and asserted — the family's words as a fourth host list; Block → Strum reaches triadetudes
+
+- **No door moved** (multetudes and tetradetudes builds byte-identical to the served copies);
+  **triadetudes moves** (hand-authored). The report in `notes/working/Multetudes build run
+  260926.md`.
+- **The lexicon (item 1):** `hub/lexicon.mjs` states the family's control vocabulary once — meter,
+  subdivision, voice, BPM, Vol, scale, placement (Grip/Line), playback (Strum) — Multetudes the
+  reference (Daniel, 260923); a helper with no engine import, so scribe can reach it.
+  `engine/tests/host-conformance.test.mjs` gains its fourth host list, asserting every word on the
+  four shipped studies' own `<option>`s and segment buttons (and, where a door fills a control at
+  mount, the literal the page ships). An unwired host fails naming the surface, the control, the
+  expected word and the found word. Excluded, each with its reason and each a ruling for Daniel:
+  arpeggiate/Arpeggiated, Both, the Playback/Movement caption, Key, Free, Build/Break, slots, the
+  extension select, the notepad nouns (already a host list).
+- **Block → Strum in triadetudes (item 2):** the segment's value and label, every branch on the
+  stored value, the two hints, the notebook summary, and the restore — which now applies
+  engine/figure.mjs's `playbackWord` alias (tetradetudes' own migration shape), inlined as one
+  guarded line, so a saved étude carrying "block" still loads. Two engine tests that pinned the old
+  word rewritten.
+- **The SETS literal's guard (item 3):** host-conformance imports STRING_SETS and reads
+  notepad-card's literal from source; unequal fails with "UPDATE THE LITERAL … do NOT import";
+  proven biting through redrun (a lowercase e); shape-motion's docstring asserted too, with the
+  reason. Reported, not fixed: notepad-card's CYCLE (the same pattern), FAMILY and SCALE (a
+  lowercase register).
+- **Gates from their logs:** engine 615/615 · doors 18,757/0 (`hub/tests/out/doors-0905-0655.log`; no
+  door moved, bite not re-run) · hugo 0 · check_site with the record verify (5 checked) · served ritual
+  on triadetudes, both widths.
+
 ## 2026-09-05 — DEPLOYED: v0.5.6 live — multetudes, tetradetudes, metronome and triadetudes moved; all six checked; written from the run
 
 - record: run 33955281681 · success · commit d04029e · fetched 2026-09-05T08:35Z · 6/6 studies byte-identical · digest 0025a6f524b6

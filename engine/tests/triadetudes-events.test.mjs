@@ -8,6 +8,8 @@
  * this same list, so this pin covers their onset and subdivision arithmetic;
  * the byte-level DOM diff ran in the build session on top of it.
  */
+// 260926 (night 32, rule 7): the golden configurations say "strum" — the 260913 word, reaching triadetudes
+// thirteen days late; the compositions are unchanged, because a strum IS what block always sounded.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -20,10 +22,10 @@ const GOLDEN = [[[[40, null, null, "bass", 0, 1], [64, 2, 5, "chord", 0, 0.66666
 
 const CONFIGS = [
   { placement: "grip", playback: "arpeggiated", pattern: [2, 3, 3, 1], durBeats: 2 },
-  { placement: "grip", playback: "block", pattern: [2, 3, 3, 1], durBeats: 2 },
+  { placement: "grip", playback: "strum", pattern: [2, 3, 3, 1], durBeats: 2 },
   { placement: "free", playback: "arpeggiated", pattern: [2, 3, 1], durBeats: 3 },
   { placement: "line", playback: "arpeggiated", pattern: null, durBeats: 2 },
-  { placement: "line", playback: "block", pattern: null, durBeats: 2 },
+  { placement: "line", playback: "strum", pattern: null, durBeats: 2 },
   { placement: "grip", playback: "arpeggiated", pattern: null, durBeats: 2 },
 ];
 
