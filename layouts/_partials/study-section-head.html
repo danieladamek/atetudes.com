@@ -1,0 +1,10 @@
+{{- /*
+A section's heading and its one-line standfirst — the same words and the same heading style on
+the landing page and on /studies/. Names and standfirsts live in data/study_sections.yaml.
+Takes the section key.
+*/ -}}
+{{- $key := . -}}
+{{- $sec := index hugo.Data.study_sections $key -}}
+{{- if not $sec }}{{ errorf "study-section-head: no section %q in data/study_sections.yaml" $key }}{{ end -}}
+<h2 id="{{ $key }}etudes" class="shelf-heading hx:text-2xl hx:font-semibold">{{ $sec.name }}</h2>
+<p class="study-standfirst">{{ $sec.standfirst }}</p>

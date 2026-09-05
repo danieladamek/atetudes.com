@@ -1,0 +1,15 @@
+# The two reader's-cut sections of the At-Etudes shelf — site chrome only (Daniel, 260929):
+# not the Spec, not the app-family taxonomy; nothing in hub/ or engine/ learns these words.
+# Membership is each study's own front matter (section / order); this file holds only what
+# a section says about itself — its name, its standfirst, and how many cards wide it is laid
+# out on the landing page. Both the landing page and /studies/ derive from the two.
+apt:
+  name: AptÉtudes
+  order: 1
+  cols: 2
+  standfirst: "Tools you shape: set the key, the position, the harmony and the motion, and the étude is whatever you built."
+sol:
+  name: SolÉtudes
+  order: 2
+  cols: 2
+  standfirst: "Studies that teach one thing: the shape is fixed, and you change the key, the hearing and the tempo."

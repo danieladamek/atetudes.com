@@ -1,0 +1,9 @@
+{{- /*
+The studies that belong to one section, in their declared order.
+Membership is each study's own front matter (`section`, `order`) — stated once, derived here for
+both the landing page (shortcode study-section) and the /studies/ index (layouts/studies/list.html).
+Takes the section key ("apt" | "sol"); returns a page collection.
+*/ -}}
+{{- $key := . -}}
+{{- $studies := (site.GetPage "/studies").RegularPages -}}
+{{- return sort (where $studies "Params.section" $key) "Params.order" "asc" -}}

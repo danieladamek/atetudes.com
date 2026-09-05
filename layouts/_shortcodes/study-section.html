@@ -1,0 +1,26 @@
+{{- /*
+One section of the shelf on the landing page: heading, standfirst, and its studies as Hextra cards —
+the same card partials Hextra's own {{< cards >}}/{{< card >}} shortcodes render through, so the
+markup is identical to a hand-listed block. Which cards, and in what order, is derived from the
+studies' front matter (section / order); the card copy is each study's `subtitle`; the column
+count is the section's `cols` in data/study_sections.yaml.
+
+@param {string} key The section key: "apt" or "sol".
+@example {{< study-section key="apt" >}}
+*/ -}}
+{{- $key := .Get "key" -}}
+{{- partial "study-section-head.html" $key -}}
+{{- $content := "" -}}
+{{- range partial "study-section-pages.html" $key -}}
+  {{- $card := partial "shortcodes/card" (dict
+        "page"     .
+        "link"     .RelPermalink
+        "title"    .Title
+        "subtitle" (.Params.subtitle | default .Summary)
+        "image"    (partial "study-card-image.html" .)
+        "alt"      .Title
+      ) -}}
+  {{- $content = print $content $card -}}
+{{- end -}}
+{{- $cols := (index hugo.Data.study_sections $key).cols | default 3 -}}
+{{- partial "shortcodes/cards" (dict "cols" $cols "content" (safeHTML $content)) -}}

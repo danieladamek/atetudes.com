@@ -36,3 +36,112 @@
   font-size: 0.85rem;
   margin-top: 0.5rem;
 }
+
+/* ---- The shelf's two sections (item: AptÉtudes and SolÉtudes, 260929) ----------------
+   The standfirst under each section heading (landing page and /studies/), and the /studies/
+   index's one-study-per-row layout. House neutrals only: ground #ECECEE, card #FFFFFF, ink
+   #212126, gray #73737A, hairline #D8D8DC, 10px card radius, the Helvetica stack — no degree
+   color in this chrome; the landing page's legend above is the one sanctioned use.
+   DEATH DATE: the .study-row rules go with layouts/studies/list.html when `Site shell - study
+   overview pages` lands. */
+/* Every heading on the shelf — AptÉtudes, SolÉtudes, Blog — carries the same top margin, stated
+   here once. (Hextra's compiled Tailwind ships hx:mt-8 but not hx:mt-10, so the Blog heading's
+   utility class was silently a no-op and Blog read as part of the section above it.) A heading
+   with a standfirst under it takes a small bottom margin; a plain one takes the standard gap. */
+.shelf-heading {
+  margin-top: 2.5rem;
+  margin-bottom: 0.25rem;
+}
+.shelf-heading-plain {
+  margin-bottom: 1rem;
+}
+.study-standfirst {
+  color: #73737A;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+  max-width: 46rem;
+}
+.study-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 1rem 0 2rem;
+}
+.study-row {
+  display: grid;
+  grid-template-columns: minmax(0, min(40%, 420px)) minmax(0, 1fr);
+  gap: 1rem 1.5rem;
+  align-items: start;
+  background: #FFFFFF;
+  border: 1px solid #D8D8DC;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 1px 5px rgba(33, 33, 38, 0.05);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.study-row-thumb {
+  display: block;
+  min-width: 0;
+}
+.study-row-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #D8D8DC;
+  border-radius: 6px;
+  background: #ECECEE;
+}
+.study-row-thumb-empty {
+  aspect-ratio: 16 / 10;
+  border: 1px dashed #D8D8DC;
+  border-radius: 6px;
+  background: #ECECEE;
+}
+.study-row-body {
+  min-width: 0;
+}
+.study-row-body h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #212126;
+}
+.study-row-body h3 a {
+  color: #212126;
+  text-decoration: none;
+}
+.study-row-body h3 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.study-row-blurb {
+  color: #212126;
+  font-size: 0.925rem;
+  line-height: 1.6;
+}
+.study-row-blurb p {
+  margin: 0 0 0.75rem;
+}
+.study-row-blurb code {
+  font-size: 0.85em;
+  color: #212126;
+  background: #ECECEE;
+  border: 0;
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+}
+.study-row-open {
+  display: inline-block;
+  color: #212126;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .study-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

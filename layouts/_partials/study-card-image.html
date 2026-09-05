@@ -1,0 +1,14 @@
+{{- /*
+The study's captured thumbnail, by slug — /assets/cards/<slug>.png, the file tools/capture_cards.py
+writes. Returns "" when no capture exists: a study whose frame cannot be reached gets NO thumbnail
+(the thumbnails item's golden-rule-1 position), never a stand-in.
+Takes the study page.
+*/ -}}
+{{- $slug := .File.ContentBaseName -}}
+{{- $rel := printf "assets/cards/%s.png" $slug -}}
+{{- if os.FileExists (printf "static/%s" $rel) -}}
+  {{- return (relURL $rel) -}}
+{{- else -}}
+  {{- warnf "study-card-image: no thumbnail static/%s — %s renders without one" $rel $slug -}}
+  {{- return "" -}}
+{{- end -}}

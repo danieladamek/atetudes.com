@@ -1,3 +1,96 @@
+## 2026-09-05 — the shelf reads ragged: four things the assertions could not catch (follow-up to the AptÉtudes/SolÉtudes shelf item)
+
+- **§1 The orphaned fourth card.** Both sections now lay out at `cols: 2` — 4 becomes a clean 2×2,
+  2 becomes one full row. The column count is a fact about the section, stated in
+  `data/study_sections.yaml` beside its name and standfirst; the `study-section` shortcode reads
+  it (default 3 if absent). Side effect checked: at 1280 **no** card subtitle clamps any more
+  (three of six did at `cols=3`); at 390, in the single column, five of six still clamp at
+  Hextra's three lines — Daniel's copy untouched, reported in the scrum.
+- **§2 The ragged thumbnails — a re-capture, not CSS.** `tools/capture_cards.py` gained two
+  ASSERTED rules and four of the frames were re-cut under them: **crop close** (the subject is
+  the content's own box with a 6 px hairline pad, and the 16:10 cover may add at most 1.25× the
+  subject's area, else the capture is refused) and a **1400 px long-edge floor** (the frame is
+  chosen in CSS px; the device scale factor is raised per capture — 3×, 4×, 5× — until the clip
+  clears it). Both are also asserted over every PNG on disk at the end of any run, so a card a
+  subset run did not touch cannot sit under the floor. Re-cut: **triadetudes** (660×412 →
+  1570×980; the readout and the neck under the window, to 16:10), **tetradetudes** (1046×654 →
+  1404×876; the neck region widened along the neck, shifted off the neck's edge), **modes**
+  (1340×838 → 1974×1233), **tetrad-voice-leading** (1408×880 → 2088×1305), each the same
+  Daniel-named subject with the page margin cut away. **multetudes** re-captured from the
+  v0.5.6 canon (2284×1426 → 2320×1450): its pinned readout was the v0.1.0 wording, updated to
+  the night-34 words for the same ratified boot, and its subject is now named honestly as the
+  strip's board and the ON THE NECK board. Six cards 345 kB total (was 274). Screenshots are
+  now `full_page`, since Playwright clamps a clip to the viewport otherwise.
+- **§2, not done — metronome.** The script REFUSES the metronome frame on this working tree:
+  the study here is the night-35 **v1.5.0** (another session's uncommitted work) and the frame
+  Daniel picked asserts v1.4.4. `metronome.png` is unchanged (1688×1054, fills its frame, clears
+  the floor); its frame is to be re-derived against v1.5.0 by whoever ships that study.
+- **§3 The cramped Blog heading — root cause.** Hextra's compiled Tailwind ships `hx:mt-8` but
+  **not** `hx:mt-10`, so the Blog `<h2>`'s top margin was silently a no-op. All three shelf
+  headings now carry one house class, `.shelf-heading`, whose margins are stated once in
+  `assets/css/custom.css` (2.5rem above; a heading with a standfirst under it takes a small
+  bottom margin, a plain one the standard gap). Measured after: SolÉtudes and Blog both sit
+  40 px below what precedes them.
+- **§4 The index standfirst measure — Daniel's call, not made here.** Shipped unchanged (option
+  B, `max-width: 46rem`, wraps mid-clause on the index). Option A (the standfirst at the row
+  width, index only) rendered by injecting one rule and screenshotted beside B; both handed to
+  Daniel. A is a two-line change (a class on the index's `<main>`, one CSS rule).
+- **Verified:** `hugo` clean; `check_site.py` 21 pages clean; the shelf item's §8 re-run
+  (Playwright + Chromium, served build, `/` and `/studies/` at 1280 and 390, zero console
+  errors, twelve study addresses 200, nav At-Etudes, Open and thumbnail links exercised) — and
+  the four pages rendered and looked at, which is the instrument that found these.
+- Out of scope, both filed: the Hextra sidebar; the "At-Etudes – At-Etudes" browser title.
+
+## 2026-09-05 — AptÉtudes and SolÉtudes: the landing page gets two sections, /studies/ becomes one study at a time, the nav says At-Etudes (URL unmoved)
+
+- **What:** the landing page's single *Studies* heading and its three cards become two named
+  sections with a one-line gray standfirst each — **AptÉtudes** (Metronome · Multetudes ·
+  Triadetudes · Tetradetudes) and **SolÉtudes** (Tetrad Voice Leading · Modes from Pentatonic
+  Boxes). Triadetudes and Tetradetudes are relisted (delisted 2026-09-01; the premise withdrawn by
+  Daniel's 260923 ruling) and Tetrad Voice Leading is on the front page for the first time — every
+  card that has ever been on this page is on it. `/studies/` is a real index now: one study per
+  row, thumbnail left, title + long blurb + Open right, grouped under the same two headings;
+  stacks to one column below 700px. The `main` menu label *Studies* → **At-Etudes**; `pageRef`
+  and weight unchanged. `content/studies/_index.md` title → At-Etudes; **the path, and so the
+  URL, does not move** — all six `/studies/<slug>/` and `/studies/<slug>/study.html` unchanged.
+- **Why:** Daniel, 260929 (item *AptEtudes and SolEtudes — the landing page gets two sections,
+  and the index becomes one study at a time*). His cut: AptÉtudes are highly flexible and
+  shapeable; SolÉtudes are more predefined. Site chrome only — not the Spec, not the app-family
+  taxonomy; `hub/` and `engine/` do not learn the words.
+- **How it is derived, not listed:** each study's front matter gained `section`, `order`,
+  `blurb` (the six §4 blurbs verbatim) and `subtitle` (the landing card's copy — the three
+  existing subtitles verbatim, the three new ones from §5). Section names and standfirsts live
+  once in `data/study_sections.yaml`. The landing page's two blocks are
+  `{{< study-section key="apt" >}}` / `key="sol"` — a thin shortcode that renders Hextra's own
+  card partials over the front matter, so the markup is what a hand-listed `{{< cards >}}` block
+  produces. `layouts/studies/list.html` reads the same three sources. Hextra's `cards`/`card`
+  shortcodes cannot iterate, which is why the shortcode wraps their partials rather than them.
+- **The sixth thumbnail:** `static/assets/cards/tetrad-voice-leading.png` (1408×880, 37 kB),
+  captured by `tools/capture_cards.py` — the study at Cycling 4ths, C major, step 2 of 8: Fmaj7
+  (IVmaj7, 2nd inversion) sounding on the neck and the keyboard together, the 5 and the 7 ringed
+  as the voices about to fall; asserted by the timeline readout, the narration line, the four
+  sounding labels on both staves, and the ringed pair. Frame is the build session's pick under
+  Daniel's 260929 ruling. The script takes slugs now (`capture_cards.py tetrad-voice-leading`)
+  so the five existing captures were not re-rasterised; the total-budget assertion is over the
+  directory. Cards on disk: 6, 274 kB total (was 5, 243 kB).
+- **Chrome:** new rules under a commented heading at the end of `assets/css/custom.css`; house
+  neutrals only (`#ECECEE` / `#FFFFFF` / `#212126` / `#73737A` / `#D8D8DC`, 10px radius); the
+  13 `--primary-*` lines untouched. The landing page's legend remains the one degree-color use.
+  Hextra's sidebar on `/studies/` still lists the content tree — out of scope, per the item.
+- **Verified:** `hugo` clean (one deprecation fixed: `hugo.Data`); `check_site.py` 21 pages, all
+  links resolve; Playwright + Chromium on a served build at 1280 and 390 for `/` and `/studies/`
+  — zero console errors, no horizontal overflow, all six thumbnails loaded, rows two-column at
+  1280 and one-column at 390, standfirst computed `rgb(115,115,122)`, navbar *At-Etudes* →
+  `/studies/`, both É headings in the built HTML; the twelve study addresses plus `/studies/`
+  all 200; Open and thumbnail links exercised → `/studies/metronome/` with its iframe. The
+  exercise step caught one defect before ship (thumbnails linked to `/studies/` — `$` vs the
+  study inside a `with`), fixed and re-verified.
+- **Death date:** `layouts/studies/list.html` and its CSS go with *Site shell — study overview
+  pages*; the front matter and `data/study_sections.yaml` survive it.
+- **Not committed by this session** — the working tree also carries the night-35 changes
+  (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
+  another session's; the two sets should land in separate commits.
+
 ## 2026-09-05 — DEPLOYED: night 34 live — tetradetudes and triadetudes moved (the canon's words), the other four unmoved; all six checked; written from the run
 
 - record: run 33982707799 · success · commit 5602ae9 · fetched 2026-09-05T18:08Z · 6/6 studies byte-identical · digest 6c8476647bda

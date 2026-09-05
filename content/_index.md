@@ -36,30 +36,11 @@ other.</p>
 
 </div>
 
-<h2 id="studies" class="hx:text-2xl hx:font-semibold hx:mt-8 hx:mb-4">Studies</h2>
+{{< study-section key="apt" >}}
 
-{{< cards >}}
-  {{< card
-    link="/studies/metronome/"
-    image="/assets/cards/metronome.png"
-    title="Metronome"
-    subtitle="The At-Etudes metronome, standing alone — three click voices, tap tempo, accents, subdivisions — with a notepad that saves every idea alongside the tempo it arrived at."
-  >}}
-  {{< card
-    link="/studies/multetudes/"
-    image="/assets/cards/multetudes.png"
-    title="Multetudes — the Étude Designer"
-    subtitle="Build an étude from the ground up: frame a position on the neck, pick what sits on it — scale, dyad, triad, tetrad or shell — write the figure in slots or chord tones, run it through a progression, and hear it on the neck, the staff and the keys."
-  >}}
-  {{< card
-    link="/studies/modes-from-pentatonic-boxes/"
-    image="/assets/cards/modes-from-pentatonic-boxes.png"
-    title="Modes from Pentatonic Boxes"
-    subtitle="Every mode is a guitar pentatonic box you already know, plus two notes. An interactive fretboard map in every key"
-  >}}
-{{< /cards >}}
+{{< study-section key="sol" >}}
 
-<h2 class="hx:text-2xl hx:font-semibold hx:mt-10 hx:mb-4">Blog</h2>
+<h2 class="shelf-heading shelf-heading-plain hx:text-2xl hx:font-semibold">Blog</h2>
 
 {{< cards >}}
   {{< card

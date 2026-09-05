@@ -1,0 +1,54 @@
+{{- /*
+/studies/ — the section index, one study at a time (item: AptÉtudes and SolÉtudes, 260929).
+Hextra's default list layout with the content replaced by two grouped runs of full-width rows:
+thumbnail on the left, title + `blurb` + Open on the right. Section membership and order come from
+each study's front matter; section names and standfirsts from data/study_sections.yaml — the same
+sources the landing page's study-section shortcode reads.
+
+The sidebar is Hextra's and out of scope here (it lists the content tree, not the cards).
+
+DEATH DATE: replaced, with its CSS in assets/css/custom.css, by `Site shell - study overview pages`
+in the same commit that lands. The front matter it reads does not die with it.
+*/ -}}
+{{ define "main" }}
+  <div class='hx:mx-auto hx:flex hextra-max-page-width'>
+    {{ partial "sidebar.html" (dict "context" .) }}
+    <article class="hx:w-full hx:break-words hx:flex hx:min-h-[calc(100vh-var(--navbar-height))] hx:min-w-0 hx:justify-center hx:pb-8 hx:pr-[calc(env(safe-area-inset-right)-1.5rem)]">
+      <main id="content" class="hx:w-full hx:min-w-0 hextra-max-content-width hx:px-6 hx:pt-4 hx:md:px-12">
+        {{ partial "breadcrumb.html" (dict "page" . "enable" false) }}
+        <div class="content">
+          {{ if .Title }}<h1>{{ .Title }}</h1>{{ end }}
+          {{ .Content }}
+        </div>
+        {{- $sections := sort (collections.Dictionary) "order" -}}
+        {{- range $key, $sec := hugo.Data.study_sections -}}
+          {{- $sections = $sections | append (dict "key" $key "order" $sec.order) -}}
+        {{- end -}}
+        {{- range sort $sections "order" -}}
+          {{- partial "study-section-head.html" .key -}}
+          <div class="study-rows">
+          {{- range partial "study-section-pages.html" .key -}}
+            {{- $study := . -}}
+            {{- $img := partial "study-card-image.html" . -}}
+            <div class="study-row">
+              {{- with $img -}}
+              <a class="study-row-thumb" href="{{ $study.RelPermalink }}" aria-hidden="true" tabindex="-1">
+                <img src="{{ . | safeURL }}" alt="" loading="lazy" decoding="async">
+              </a>
+              {{- else -}}
+              <div class="study-row-thumb study-row-thumb-empty"></div>
+              {{- end -}}
+              <div class="study-row-body">
+                <h3><a href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
+                <div class="study-row-blurb">{{ .Params.blurb | markdownify }}</div>
+                <a class="study-row-open" href="{{ .RelPermalink }}">Open&nbsp;→</a>
+              </div>
+            </div>
+          {{- end -}}
+          </div>
+        {{- end -}}
+        <div class="hx:mt-16"></div>
+      </main>
+    </article>
+  </div>
+{{ end }}
