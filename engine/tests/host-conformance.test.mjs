@@ -281,21 +281,22 @@ const LEXICON_HOSTS = [
     captions: ["bpm", "volume", "subdivision", "voice"] },
   { name: "triadetudes",
     selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel", scale: "scaleSel" },
-    segments: { placement: ["placeSeg", "place"], playback: ["playbackSeg", "pb"] },
-    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement"] },
+    segments: { placement: ["placeSeg", "place"], movement: ["playbackSeg", "pb"] },
+    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement", "centricity", "movement", "figureIs", "bass"] },
   { name: "tetradetudes",
     selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel", scale: "scaleSel" },
     shippedSource: { placement: "PLACE_LABEL" },   // shape-motion builds #placeSeg at mount from this literal, which the page ships
-    segments: { playback: ["playbackSeg", "pb"] },
-    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement"] },
+    segments: { movement: ["playbackSeg", "pb"] },
+    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement", "centricity", "movement", "figureIs", "bass"] },
   { name: "multetudes",
     selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel" },
     shippedSource: { scale: "SCALES" },   // harmony-card fills #hcScale at mount from this literal, which the page ships
-    segments: { placement: ["fdNSeg", "nps"], playback: ["fdMoveSeg", "move"] },
-    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement"] },
+    segments: { placement: ["fdNSeg", "nps"], movement: ["fdMoveSeg", "move"] },
+    captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement", "centricity", "movement", "figureIs", "bass"] },
 ];
-// multetudes' placement segment stores the per-string ceiling, not the word: grip is 1, line is 3
-const PLACEMENT_VALUE = { fdNSeg: { grip: "1", line: "3" } };
+// a host's STORED value for a lexicon value where they differ: multetudes' placement stores the
+// per-string ceiling (grip 1, line 3); the tetrad family stores "arpeggiated" for the word "arpeggiate"
+const HOST_VALUE = { fdNSeg: { grip: "1", line: "3" }, playbackSeg: { arpeggiate: "arpeggiated" } };
 
 const optionsOf = (page, id) => {
   const m = page.match(new RegExp(`<select id="${id}"[^>]*>([\\s\\S]*?)</select>`));
@@ -307,7 +308,8 @@ const segmentOf = (page, id, attr) => {
   if (!m) return null;
   return Object.fromEntries([...m[1].matchAll(new RegExp(`<button[^>]*data-${attr}="([^"]*)"[^>]*>([^<]*)</button>`, "g"))].map((o) => [o[1], o[2].trim()]));
 };
-const sameWord = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+// EXACT since 260928 (night 34): the canon's CASE is the canon's too — multetudes' segments read lowercase
+const sameWord = (a, b) => String(a).trim() === String(b).trim();
 
 test("§4.3 lexicon: every shared control says the family's word on every host that offers it — the reference is multetudes", () => {
   let checked = 0;
@@ -337,7 +339,7 @@ test("§4.3 lexicon: every shared control says the family's word on every host t
       const found = segmentOf(page, id, attr);
       assert.ok(found, `[${host.name}] ${role}: no segment #${id} with data-${attr} buttons in the shipped page`);
       for (const [value, word] of Object.entries(LEXICON[role].options)) {
-        const v = (PLACEMENT_VALUE[id] || {})[value] ?? value;
+        const v = (HOST_VALUE[id] || {})[value] ?? value;
         assert.ok(v in found, `[${host.name}] ${role} (#${id}): the family offers value "${v}" ("${word}") and this segment does not — found ${JSON.stringify(found)}`);
         assert.ok(sameWord(found[v], word), `[${host.name}] ${role} (#${id}): for value "${v}" the family's word is "${word}", found "${found[v]}" — Multetudes is the reference (260923)`);
         checked++;
@@ -345,7 +347,8 @@ test("§4.3 lexicon: every shared control says the family's word on every host t
     }
     for (const role of host.captions || []) {
       const cap = LEXICON[role].caption;
-      assert.ok(new RegExp(`>\\s*${cap}\\s*<`).test(page), `[${host.name}] ${role}: the caption "${cap}" is not on the shipped page`);
+      const esc = cap.replace(/[.*+?^$()|[\]\\/{}]/g, "\\$&");   // escaped outside the template (a `${` inside one is an interpolation)
+      assert.ok(new RegExp(`>\\s*${esc}\\s*<`).test(page), `[${host.name}] ${role}: the caption "${cap}" is not on the shipped page — Multetudes is the reference (260923)`);
       checked++;
     }
   }
@@ -360,7 +363,7 @@ test("§4.3 lexicon: every shared control says the family's word on every host t
 // lowercase "e" survived in the notepad while the panel said something else (N4,
 // 260820). A test may import both; the shipping module may not. That is the whole
 // trick, and it costs nothing at runtime.
-import { STRING_SETS } from "../tetrad-sequence.mjs";
+import { STRING_SETS, CYCLES } from "../tetrad-sequence.mjs";
 
 test("§4.3 restated literal: notepad-card's SETS equals the labels STRING_SETS derives — update the literal, do NOT import", () => {
   const src = readFileSync(join(here, "..", "..", "hub", "modules", "notepad-card.mjs"), "utf8");
@@ -371,6 +374,20 @@ test("§4.3 restated literal: notepad-card's SETS equals the labels STRING_SETS 
   assert.deepEqual(literal, derived,
     `hub/modules/notepad-card.mjs's SETS literal reads ${JSON.stringify(literal)} but engine/tetrad-sequence.mjs derives ${JSON.stringify(derived)} — ` +
     `UPDATE THE LITERAL in notepad-card.mjs to match; do NOT import STRING_SETS there (the card is shared with non-tetrad doors: scribe)`);
+  assert.ok(!/from "\.\.\/\.\.\/engine\/tetrad-sequence\.mjs"/.test(src), "notepad-card.mjs must not import the tetrad engine (scribe)");
+});
+
+// the rider (260928, night 34): notepad-card's CYCLE map restates CYCLES[k].name for exactly the
+// SETS reason — the same guard, the same instruction
+test("§4.3 restated literal: notepad-card's CYCLE equals the engine's cycle names — update the literal, do NOT import", () => {
+  const src = readFileSync(join(here, "..", "..", "hub", "modules", "notepad-card.mjs"), "utf8");
+  const m = src.match(/const CYCLE = \{([^}]*)\};/);
+  assert.ok(m, "notepad-card.mjs no longer carries the CYCLE literal — if it now imports CYCLES, scribe carries the tetrad engine; put the literal back");
+  const literal = Object.fromEntries([...m[1].matchAll(/(\w+):\s*"([^"]*)"/g)].map((x) => [x[1], x[2]]));
+  const derived = Object.fromEntries(Object.entries(CYCLES).map(([k, c]) => [k, c.name]));
+  assert.deepEqual(literal, derived,
+    `hub/modules/notepad-card.mjs's CYCLE literal reads ${JSON.stringify(literal)} but engine/tetrad-sequence.mjs derives ${JSON.stringify(derived)} — ` +
+    `UPDATE THE LITERAL in notepad-card.mjs to match; do NOT import CYCLES there (the card is shared with non-tetrad doors: scribe)`);
   assert.ok(!/from "\.\.\/\.\.\/engine\/tetrad-sequence\.mjs"/.test(src), "notepad-card.mjs must not import the tetrad engine (scribe)");
 });
 

@@ -60,7 +60,7 @@ export const harmonyPanel = {
   controls: ["keySel", "scaleSel", "modeSeg", "progSel", "startSel", "bottomSel", "extSel"],
 
   markup: `
-  <h2>Harmony</h2>
+  <h2>Centricity</h2>   <!-- was Harmony — ruled 260923: "Centricity for sure across all" (night 34) -->
   <div class="striprow">
     <div class="grp">
       <div class="row2">
@@ -90,7 +90,7 @@ export const harmonyPanel = {
           <select id="startSel" data-control="startSel"></select></div>
         <div class="hpTight"><label>Start bottom on</label>
           <select id="bottomSel" data-control="bottomSel"></select></div>
-        <div class="hpTight"><label>Hear the tetrads over a bass</label>
+        <div class="hpTight"><label>Bass / reference tone</label>
           <select id="extSel" data-control="extSel">
             <option value="root">the root — a pedal under the voicing</option>
             <option value="none">none — the voicing alone</option>

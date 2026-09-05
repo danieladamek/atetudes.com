@@ -334,7 +334,7 @@
      carry a BPM, adjacent so the "who owns the clock" question answers itself.
      Material strips stack beneath: what chords → what shapes → where am I. -->
 <div class="card strip" id="harmonyStrip">
-  <h2>Harmony</h2>
+  <h2>Centricity</h2>
   <div class="striprow">
     <div class="grp">
       <div class="row2">
@@ -371,7 +371,7 @@
           <div style="flex:0 1 auto"><label>Start on</label><select id="startSel"></select></div>
           <div id="lenWrap" style="display:none;flex:0 1 auto"><label>Steps</label>
             <select id="lenSel"><option>4</option><option selected>6</option><option>8</option><option>12</option></select></div>
-          <div style="flex:0 1 auto"><label>Hear the triads over a bass (extension)</label>
+          <div style="flex:0 1 auto"><label>Bass / reference tone</label>
             <select id="extSel">
               <option value="none">none — plain triad</option>
               <option value="root">the root — triad grounded on its own bass</option>
@@ -404,7 +404,7 @@
   <h2>Shape & Motion</h2>
   <div class="striprow">
     <div class="grp">
-      <label>String set (triads live here, high → low)</label>
+      <label>String set (named high → low, as the reference writes it)</label>
       <div class="seg" id="setSeg"></div>
       <details class="hint"><summary style="cursor:pointer">? pivots, placement, and the badges</summary>
       Pivots: click any scale note on a string of the set — that note and the next two scale
@@ -421,7 +421,7 @@
     </div>
     <div class="grp figgrp">
       <div class="row2 alignEnd">
-        <div style="flex:0 1 auto"><label>Motion follows</label>
+        <div style="flex:0 1 auto"><label>The figure is</label>
           <div class="seg" id="motionSeg">
             <button data-mm="shape" class="on" title="the figure fixes the contour — H·M·L slots; tones fall out of the voicing">the shape</button>
             <button data-mm="tones" title="the figure fixes the tones — [1]·[b3]·[5] degrees; contour varies with the inversion">the tones</button>
@@ -441,11 +441,11 @@
             <button data-place="line" title="notes placed freely along the set, up to three per string, preferring the pivot window — playable in sequence, not as a chord">Line</button>
             <button data-place="free" title="the grip chosen by smoothest voice-leading, pivot anchor released">Free</button>
           </div></div>
-        <div style="flex:0 1 auto"><label>Playback</label>
+        <div style="flex:0 1 auto"><label>Movement</label>
           <div class="seg" id="playbackSeg">
-            <button data-pb="strum" title="the harmony, strummed — the word was Block until the 260913 ruling; here since 260926">Strum</button>
-            <button data-pb="arpeggiated" class="on">Arpeggiated</button>
-            <button data-pb="both">Both</button>
+            <button data-pb="strum" title="the harmony, strummed — the word was Block until the 260913 ruling; here since 260926">strum</button>
+            <button data-pb="arpeggiated" class="on">arpeggiate</button>
+            <button data-pb="both">both</button>
           </div></div>
       </div>
       <label class="chk"><input type="checkbox" id="rootsChk"> Show root notes on lower strings</label>
@@ -4697,9 +4697,9 @@ function defaultArpPattern(){
   st.arpCustom=false;
 }
 /* the set's display name, derived from the tuning — never a typed label table
-   (golden rule 1): [1,2,3] → "E-B-G", read high → low exactly as the numbers were */
+   (golden rule 1): [1,2,3] → "E–B–G" (the family's en dash, 260928), read high → low exactly as the numbers were */
 function setLabel(set){
-  return set.map(sn=>SHARP_NAMES[OPEN[sn]%12]).join("-");
+  return set.map(sn=>SHARP_NAMES[OPEN[sn]%12]).join("–");   // the family's en dash (260928, night 34) — a display label; the stored set is the strings
 }
 /* the pattern in SLOT vocabulary: H = the highest-pitched string of the set,
    one convention, stated once, held everywhere the pattern is displayed */
@@ -4799,14 +4799,14 @@ function arpHintText(){
   if(st.placement==="line"){
     const per=[...new Set(pattern())].map(b=>b+" beats → "+subdivisionName(b,3)).join(" · ");
     if(st.playback==="strum")
-      return "Line + Strum — the three tones are SOUNDED together (a line is not a grip; "+
+      return "Line + strum — the three tones are SOUNDED together (a line is not a grip; "+
         "two notes may share a string).";
     return "Line plays its notes in placement order, low to high — "+per+
       ". The H-M-L shape field applies to Grip and Free; tones-mode patterns arrive "+
       "with the motion grammar.";
   }
   if(st.playback==="strum")
-    return"Strum playback — the harmony sounds together at each change"+
+    return"strum — the harmony sounds together at each change"+
       (st.arpPattern?"; the pattern is kept for when you switch back":"")+".";
   if(activeFigure()){
     const fig=parsedFigure();
@@ -7215,8 +7215,8 @@ function initControls(){
     [st.setLowHigh[2],st.setLowHigh[1],st.setLowHigh[0]].join(","),"letters parse by slot");
   eq(parseArp("hml").pattern.join(","),parseArp("H-M-L").pattern.join(","),"case-insensitive");
   eq(patText(parseArp("2-3-1").pattern),"M-L-H","digits normalise to slot vocabulary");
-  eq(setLabel([1,2,3]),"E-B-G","set label derived from the tuning");
-  eq(setLabel([4,5,6]),"D-A-E","low set label derived too");
+  eq(setLabel([1,2,3]),"E–B–G","set label derived from the tuning");
+  eq(setLabel([4,5,6]),"D–A–E","low set label derived too");
   // all twelve keys: spelling derived per scale, ties toward flats
   eq(keysFor("major").join(" "),"C Db D Eb E F Gb G Ab A Bb B","major keys chromatic");
   eq(keyFor(1,"harm"),"C#","harmonic minor prefers C# (Db needs Bbb)");

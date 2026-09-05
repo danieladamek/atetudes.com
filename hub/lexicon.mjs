@@ -40,5 +40,14 @@ export const LEXICON = {
   volume:      { caption: "Vol" },
   scale:       { caption: "Scale",       options: { major: "Major", harm: "Harmonic minor", mel: "Melodic minor" } },
   placement:   { caption: "Placement",   options: { grip: "Grip", line: "Line" } },
-  playback:    { options: { strum: "Strum" } },   // the 260913 ruling's word; the caption differs by surface (reported)
+  /* THE VOCABULARY SWEEP (260928, night 34 — Daniel 260923, "Centricity for sure across all"):
+   * the canon is multetudes for every word AND ITS CASE. Words are compared exactly now.
+   * Values stay each surface's own (tetradetudes and triadetudes store "arpeggiated"; the
+   * word is "arpeggiate"); the conformance test maps values per host. "Both", "Free",
+   * "Build up / Break down" are FEATURE differences and are not in here. */
+  centricity:  { caption: "Centricity" },                       // the key/scale card's name — was Harmony on two surfaces
+  movement:    { caption: "Movement",                             // how notes sound — was Playback on two surfaces
+                 options: { strum: "strum", arpeggiate: "arpeggiate" } },
+  figureIs:    { caption: "The figure is" },                    // the figure's alphabet — was "Figure addresses" / "Motion follows"
+  bass:        { caption: "Bass / reference tone" },            // was "Hear the tetrads over a bass" / "… triads … (extension)"
 };

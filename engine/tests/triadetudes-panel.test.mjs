@@ -16,10 +16,10 @@ test("set labels derive from OPEN — recomputed here from the tuning, not retyp
   const e = loadTriadetudesEngine();
   const NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
   for (const set of [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6]]) {
-    const want = set.map((sn) => NAMES[e.OPEN[sn] % 12]).join("-");
+    const want = set.map((sn) => NAMES[e.OPEN[sn] % 12]).join("–");   // the family's en dash (260928, night 34)
     assert.equal(e.setLabel(set), want, set.join("-"));
   }
-  assert.equal(e.setLabel([1, 2, 3]), "E-B-G", "reads high → low, as the numbers did");
+  assert.equal(e.setLabel([1, 2, 3]), "E–B–G", "reads high → low, as the numbers did — with the family's separator");
 });
 
 test("slot vocabulary: letters parse, digits parse, both normalise to H-M-L", () => {

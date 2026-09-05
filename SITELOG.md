@@ -1,3 +1,26 @@
+## 2026-09-06 — night 34: the vocabulary sweep — tetradetudes and triadetudes take multetudes' words
+
+- **Canon is Multetudes for every word** (Daniel, 260923; "Centricity for sure across all"). The
+  report in `notes/working/Multetudes build run 260928.md`. Multetudes itself is unchanged.
+- **Renamed on tetradetudes and triadetudes (labels only, no stored value):** the key/scale card
+  Harmony → **Centricity**; the caption Playback → **Movement** and its words Strum / Arpeggiated /
+  Both → **strum / arpeggiate / both** (the values `strum`, `arpeggiated`, `both` untouched); the
+  figure's alphabet caption Figure addresses / Motion follows → **The figure is**; the bass label
+  "Hear the tetrads over a bass" / "Hear the triads over a bass (extension)" → **Bass / reference
+  tone**; triadetudes' derived set label takes the family's en dash (E–B–G); the direction trap in
+  one card reworded so each statement names what it orders (the set's label reads highest first;
+  the slots count up from the low string) — no slot renumbered, no set reordered.
+- **Kept, deliberately:** Both, Free, Build up / Break down (feature differences); Grip / Line
+  (already the canon's case); the figure input alphabets (night 37); "Key" as a label on the two
+  (the unnamed-selects ruling).
+- **The lexicon** (`hub/lexicon.mjs`) gained the canon words and compares EXACTLY now — case is
+  the canon's too; host-conformance green over all four shipped studies. notepad-card's CYCLE
+  literal guarded like SETS (update the literal, do not import).
+- **Studies moved:** tetradetudes (rebuilt, cmp-identical) and triadetudes (the hand-authored page).
+- **Gates from their logs:** engine green · doors 18,756/0 (`hub/tests/out/doors-0905-0828.log`) · bite
+  53/53 (`bite-0905-0834.log`) · hugo 0 · check_site with the record verify · served ritual on both
+  renamed surfaces, both widths.
+
 ## 2026-09-05 — DEPLOYED: night 32 live — triadetudes moved (Strum), the other five unmoved; all six checked; written from the run
 
 - record: run 33964864646 · success · commit 405048a · fetched 2026-09-05T12:09Z · 6/6 studies byte-identical · digest fe892ef293a2

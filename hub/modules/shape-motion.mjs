@@ -7,7 +7,7 @@
  * "really only slightly" (Daniel): the panel's SHAPE is the reference's, and
  * only what four voices genuinely force is different. Each change, named:
  *
- *   String set        reference: E-B-G, B-G-D, G-D-A (three strings), listed
+ *   String set        reference: E–B–G, B–G–D, G–D–A (three strings), listed
  *                     high → low. Here: the four-string groups in the SAME
  *                     dialect — E–B–G–D, B–G–D–A, G–D–A–E, highest set first
  *                     (Shell 4 settled the family on high → low). Same segment;
@@ -66,14 +66,14 @@ export const shapeMotion = {
   <h2>Shape &amp; Motion</h2>
   <div class="striprow">
     <div class="grp">
-      <label>String set (tetrads live here, high → low)</label>
+      <label>String set (named high → low, as the reference writes it)</label>
       <div class="seg" id="setSeg" data-control="setSeg"></div>
       <label>Voicing family</label>
       <div class="seg" id="famSeg" data-control="famSeg"></div>
     </div>
     <div class="grp smFig">
       <div class="row2 alignEnd">
-        <div class="smTight"><label>Figure addresses</label>
+        <div class="smTight"><label>The figure is</label>
           <div class="seg" id="figAddrSeg" data-control="figAddrSeg">
             <button data-mm="slots" class="on" title="1-2-3-4, low → high: a figure repeats a SHAPE">slots</button>
             <button data-mm="tones" title="R-3-5-7, by role: a figure follows the HARMONY through the shape">tones</button>
@@ -81,7 +81,7 @@ export const shapeMotion = {
         <div class="smTight"><label>Figure</label>
           <select id="figSel" data-control="figSel"></select></div>
       </div>
-      <label id="arpLabel">Figure (slots 1–4 low → high)</label>
+      <label id="arpLabel">Figure (slots 1–4 count up from the low string)</label>
       <input type="text" id="arpIn" data-control="arpIn" spellcheck="false" placeholder="e.g. 1-2-3-4">
       <span id="arpErr" data-control="arpErr" class="smErr"></span>
     </div>
@@ -89,11 +89,11 @@ export const shapeMotion = {
       <div class="row2">
         <div class="smTight"><label>Placement</label>
           <div class="seg" id="placeSeg" data-control="placeSeg"></div></div>
-        <div class="smTight"><label>Playback</label>
+        <div class="smTight"><label>Movement</label>
           <div class="seg" id="playbackSeg" data-control="playbackSeg">
-            <button data-pb="strum" class="on" title="the harmony, strummed — the word was Block until the 260913 ruling">Strum</button>
-            <button data-pb="arpeggiated" title="the figure as a line — the figure IS the rhythm">Arpeggiated</button>
-            <button data-pb="both" title="the line over a short harmony bed">Both</button>
+            <button data-pb="strum" class="on" title="the harmony, strummed — the word was Block until the 260913 ruling">strum</button>
+            <button data-pb="arpeggiated" title="the figure as a line — the figure IS the rhythm">arpeggiate</button>
+            <button data-pb="both" title="the line over a short harmony bed">both</button>
           </div></div>
       </div>
       <label class="chk"><input type="checkbox" id="rootsChk" data-control="rootsChk"> Show root notes on lower strings</label>
@@ -181,7 +181,7 @@ export const shapeMotion = {
         b.classList.toggle("on", b.dataset.mm === cfg.address);
       byId("arpLabel").textContent = cfg.address === "tones"
         ? "Figure (tones R 3 5 7; approaches in parens: (-1,+2)3)"
-        : "Figure (slots 1–4 low → high)";
+        : "Figure (slots 1–4 count up from the low string)";
       byId("arpIn").placeholder = cfg.address === "tones" ? "e.g. R-3-7-5 or (-1,+2)3 7" : "e.g. 1-2-3-4";
       // the picker: presets derived from the address's stated letter order —
       // v0.7.7 gave the reference a picker because raw figure syntax was
@@ -241,12 +241,12 @@ export const shapeMotion = {
       // the sounding rule, and the two ways to reach the silent block chord
       if (cfg.playback === "strum")
         parts.push(hasFig
-          ? "Playback is Strum, so the figure is typed but not sounding — choose Arpeggiated or Both to hear it"
-          : "Strum chords");
+          ? "Movement is strum, so the figure is typed but not sounding — choose arpeggiate or both to hear it"
+          : "strum chords");
       else
         parts.push(hasFig
           ? `${cfg.playback}: ${figWords}`
-          : `${cfg.playback} has no figure to sound — Strum chords until one parses`);
+          : `${cfg.playback} has no figure to sound — strum chords until one parses`);
       // the address toggle only bites while a figure is actually sounding
       if (hasFig && cfg.playback !== "strum")
         parts.push(cfg.address === "tones" ? "spelled by tone role" : "spelled by slot");
@@ -257,7 +257,7 @@ export const shapeMotion = {
       // Arpeggiated/Both are gated on a figure (P1), and Line placement needs a
       // voicer the pass does not build. Each reason shows only while it applies.
       const why = [];
-      if (!hasFig) why.push("Arpeggiated and Both need a figure — type one to enable them.");
+      if (!hasFig) why.push("arpeggiate and both need a figure — type one to enable them.");
       why.push("“Line” placement is greyed because it needs the line voicer the pass doesn’t build yet.");
       byId("smWhy").textContent = why.join(" ");
     };
