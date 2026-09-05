@@ -1,3 +1,14 @@
+## 2026-09-05 — DEPLOYED: the new landing copy live — Interactive Fretboard Logic, the site description aligned; no study moved; all six checked; written from the run
+
+- record: run 33994613898 · success · commit beed84f · fetched 2026-09-05T22:07Z · 6/6 studies byte-identical · digest 46f30c1e36b1
+- Actions run 33994613898 green on `beed84f` — https://github.com/danieladamek/atetudes.com/actions/runs/33994613898 (created 2026-09-05T21:59:38Z, finished 2026-09-05T22:07:39Z).
+- metronome: repo 47cd79f8adb2 · live 47cd79f8adb2 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 6dc7eba5a198 · live 6dc7eba5a198 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 82dcfbadceac · live 82dcfbadceac — matches.
+- triadetudes: repo df4404bee0a4 · live df4404bee0a4 — matches.
+
 ## 2026-09-05 — the landing page's intro copy: "Interactive Fretboard Logic"
 
 - **What:** the hero subtitle *Interactive études* and the two intro paragraphs (the "living
