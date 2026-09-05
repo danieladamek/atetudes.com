@@ -9,19 +9,21 @@ layout: hextra-home
 
 <div class="hx:mb-6">
 {{< hextra/hero-subtitle >}}
-  Interactive études 
+  Interactive Fretboard Logic
 {{< /hextra/hero-subtitle >}}
 </div>
 
 <div class="hx:mb-8" style="max-width: 46rem;">
 
-<p style="margin:0 0 1rem;">Learn the shapes that make melody and harmony in music work — modes on the guitar neck, chords moving through a scale on neck and keyboard. Each study is a living chart: pick any key, flip between hearings, step through the motion, and tap any note to hear
-it.</p>
+<p class="home-lead">See the shapes. Hear the relationships. Understand the fretboard.</p>
 
-<p style="margin:0;">One convention ties it all together: <strong>color shows what a note
-does</strong> in the current key. The root is always red, the third always blue, the
-seventh always amber — so a shape you learn in one study is instantly readable in every
-other.</p>
+<p style="margin:0 0 1rem;">Explore the patterns that make melody and harmony work on the guitar — chords, scales, modes, intervals, and their relationships across the neck.</p>
+
+<p style="margin:0 0 1rem;">Each étude is a living, interactive fretboard study. Choose the harmony, shapes, and movement you want to explore, and the chart adapts to what you’re working on right now. This isn’t about memorizing more diagrams. It’s about seeing how the pieces connect and turning fretboard knowledge into musical instinct.</p>
+
+<h3 class="home-kicker">Study. Explore. Keep Track.</h3>
+
+<p style="margin:0;">Every étude includes its own Journal, with a notepad and practice log for capturing discoveries, recording what you worked on, and tracking your progress over time.</p>
 
 <div class="degree-legend" aria-label="Degree color code">
   <span class="deg" style="background:#B82929;color:#fff">R</span>

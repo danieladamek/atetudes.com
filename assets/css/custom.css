@@ -11,6 +11,22 @@
   --primary-lightness: 14%;
 }
 
+/* Landing-page intro copy (Daniel, 2026-09-05): the lead line under the hero subtitle and the
+   "Study. Explore. Keep Track." kicker. Neutral ink only. */
+.home-lead {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #212126;
+}
+.home-kicker {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #212126;
+}
+
 /* Degree-color legend on the landing page — the one sanctioned
    musical-function use of the palette in site chrome. */
 .degree-legend {

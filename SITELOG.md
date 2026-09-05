@@ -1,3 +1,25 @@
+## 2026-09-05 — the landing page's intro copy: "Interactive Fretboard Logic"
+
+- **What:** the hero subtitle *Interactive études* and the two intro paragraphs (the "living
+  chart" paragraph and the "one convention ties it all together" colour paragraph) are replaced
+  by Daniel's new copy: subtitle **Interactive Fretboard Logic**; lead line *See the shapes. Hear
+  the relationships. Understand the fretboard.*; two paragraphs (the patterns across the neck;
+  each étude a living, interactive fretboard study that adapts to what you're working on); the
+  kicker **Study. Explore. Keep Track.**; and the Journal paragraph (notepad and practice log).
+  Copy verbatim except the hyphen in "guitar - chords" set as the house em dash.
+- **Unchanged:** the logo, the degree legend and its caption (which now carry the colour
+  convention on their own, since the paragraph that introduced them is gone), both shelf
+  sections, Blog. Two neutral-ink classes added to `assets/css/custom.css` for the lead line
+  and the kicker (`.home-lead`, `.home-kicker`); nothing else styled.
+- **Verified:** `hugo` clean; rendered in Chromium at 1280 and 390 on a served build, zero
+  console errors, no overflow, and looked at.
+- **Aligned the same day at Daniel's word:** the site `description` in `hugo.yaml` (the home
+  page's meta description and Open Graph text) — "Interactive jazz études for guitar and
+  keyboard — modes, voicings, and voice leading in every key. See it, flip it, hear it." →
+  "Interactive Fretboard Logic — see the shapes, hear the relationships, understand the
+  fretboard. Living, interactive études for guitar: chords, scales, modes and intervals across
+  the neck." Verified in the built `<meta name=description>` and `og:description`.
+
 ## 2026-09-05 — DEPLOYED: the shelf live — two sections and six cards on the landing page, /studies/ one study at a time, nav At-Etudes; no study moved; all six checked; written from the run
 
 - record: run 33993302403 · success · commit b236e6c · fetched 2026-09-05T21:40Z · 6/6 studies byte-identical · digest 7e58088b7624

@@ -32,7 +32,7 @@ cascade:
     images: ["/assets/og.png"]
 
 params:
-  description: "Interactive jazz études for guitar and keyboard — modes, voicings, and voice leading in every key. See it, flip it, hear it."
+  description: "Interactive Fretboard Logic — see the shapes, hear the relationships, understand the fretboard. Living, interactive études for guitar: chords, scales, modes and intervals across the neck."
   theme:
     default: "light"
     displayToggle: false
