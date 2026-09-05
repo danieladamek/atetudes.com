@@ -188,7 +188,7 @@ export const neckReadout = {
          * hint; the readout never mentioned it): derived here through the same
          * orderBy the neck uses, never read from the neck */
         if (String(cfg.figure || "").trim()) {
-          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings });
+          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos });   // 260923: the window, for the approach reach
           if (fg.order && fg.order.length)
             bits.push(`figure <b>${fg.order.length} steps</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""})</span>`);
         }

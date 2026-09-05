@@ -1145,14 +1145,19 @@ def m45_a_second_tuning_is_declared():
 
 def m46_a_flat_key_spells_sharp():
     # the speller's direction inverted: F major spells G#; both doors' F pins bite.
+    # ANCHOR RE-SITED 260924 (night 31, rule 7): under rule C the key signature decides only
+    # the LAST tiebreak (F major's pc 1: D♭ vs C♯ tie on accidentals and distance; the
+    # parent's flat side picks D♭). Inverting the parent's side spells F major's chromatics
+    # sharp — the same meaning, the same F-major pins in both doors.
     p, original, mutated = patch("engine/chord.mjs",
-        '  const flatKey = scaleNotes(key, "major").some((n) => n.name.includes("b"));',
-        '  const flatKey = !scaleNotes(key, "major").some((n) => n.name.includes("b"));')
+        '  const parentFlat = scaleNotes(parentKey, "major").some((n) => n.name.includes("b"));',
+        '  const parentFlat = !scaleNotes(parentKey, "major").some((n) => n.name.includes("b"));')
     try:
         p.write_text(mutated)
         build()
         r = suite()
-        hit = r.stdout.count("from the key signature") >= 2
+        # grep re-sited 260925: the score's F-major pin was reworded for rule C ("no sharps, no doubles")
+        hit = "from the key signature" in r.stdout and ("no sharps, no doubles" in r.stdout or r.stdout.count("from the key signature") >= 2)
         record("a flat key spells sharp (the speller's direction inverted)",
                r.returncode != 0 and hit,
                "suite exit %d; the F-major pins bit in both doors: %s" % (r.returncode, hit))
@@ -1231,6 +1236,42 @@ def m50_the_loss_goes_quiet_again():
         record("the capped loss goes quiet again (gated on nothing placed)",
                r.returncode != 0 and hit,
                "suite exit %d; the loud-on-the-window pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutations 51–52
+# 260924 (night 31): the speller and the reach.
+def m51_the_reach_is_unbounded_again():
+    # the reach removed: an approach may land anywhere on the neck again; the refusal pin bites
+    p, original, mutated = patch("engine/selection.mjs",
+        "      const lo = ctx.pos.fLo - reach, hi = ctx.pos.fHi + reach;",
+        "      const lo = -Infinity, hi = Infinity;")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "the reach REFUSES by name on the face" in r.stdout
+        record("the reach is unbounded again (an approach anywhere on the neck)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the reach refusal pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m52_the_speller_keeps_the_letter_again():
+    # rule C's first tiebreak inverted: the MORE-accidental neighbour wins — the old law's doubles return
+    p, original, mutated = patch("engine/chord.mjs",
+        "      if (cost(below) !== cost(above)) name = cost(below) < cost(above) ? below : above;   // fewest accidentals",
+        "      if (cost(below) !== cost(above)) name = cost(below) > cost(above) ? below : above;   // MOST accidentals")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "spells D♭ on every bar of the staff" in r.stdout or "spell D♭ G♭ E B♭" in r.stdout
+        record("the speller prefers the more-accidental neighbour (the doubles return)",
+               r.returncode != 0 and hit,
+               "suite exit %d; a rule-C pin bit: %s" % (r.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -1341,7 +1382,8 @@ def main():
                m42_a_state_clause_returns_to_the_hint, m43_a_readout_copies_the_necks_box,
                m44_the_palettes_R_drifts_by_one, m45_a_second_tuning_is_declared, m46_a_flat_key_spells_sharp,
                m47_a_set_square_loses_its_name, m48_a_set_square_loses_its_role,
-               m49_the_leftover_pass_runs_under_a_cap, m50_the_loss_goes_quiet_again)
+               m49_the_leftover_pass_runs_under_a_cap, m50_the_loss_goes_quiet_again,
+               m51_the_reach_is_unbounded_again, m52_the_speller_keeps_the_letter_again)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

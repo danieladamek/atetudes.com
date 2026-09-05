@@ -549,7 +549,7 @@ export const fieldBoard = {
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
        * slur is drawn UNDER the dots (the under-draw convention) */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings });
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos });   // 260923: the window, for the approach reach
       const approaches = (fig.order || []).filter((n) => n.role === "approach");
       /* §2.6 "Connection. An approach figure joins its target with a slur in
        * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */

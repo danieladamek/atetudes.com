@@ -19,6 +19,9 @@
   rule reused, motion.mjs untouched.
 - **Studies moved:** multetudes and tetradetudes (rebuilt); metronome and triadetudes
   (hand-authored, chord.mjs re-inlined, +1,541 bytes each). Shell 18,040 unchanged.
+- **Gates from their logs:** engine green with the census · doors 18,757/0 (`hub/tests/out/doors-0904-2243.log`)
+  · bite 52/53 (`bite-0904-2248.log`; m51, m52 bite) + m46 re-sited and biting alone (`bite-m46-0905-0315.log`) · hugo 0 ·
+  check_site with the record verify · served ritual on all six studies, both widths.
 
 ## 2026-09-05 — DEPLOYED: v0.5.5 live — multetudes moved, the other five unmoved; written from the run
 

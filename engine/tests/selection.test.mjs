@@ -433,12 +433,12 @@ function bootSel() {
   const pool = matIn(pos, strings, fld);
   const tones = diatonicTones(fld, 0, objectOffsets("tetrad"));
   const sel = oneOfEach(tones, pool, { n: 1, centre: pos.centre }).notes;
-  return { fld, strings, sel };
+  return { fld, strings, sel, pos };
 }
 
 test("260918-1: (b3)[3] is a CHROMATIC approach — off the field, carrying its role and its target", () => {
-  const { fld, strings, sel } = bootSel();
-  const r = orderBy("tones", "(b3)[3]", sel, { fld, strings });
+  const { fld, strings, sel, pos } = bootSel();
+  const r = orderBy("tones", "(b3)[3]", sel, { fld, strings, pos });
   assert.equal(r.err, null, r.err);
   assert.equal(r.order.length, 2);
   const [ap, tgt] = r.order;
@@ -453,8 +453,8 @@ test("260918-1: (b3)[3] is a CHROMATIC approach — off the field, carrying its 
 });
 
 test("260918-1: (-s)[3] is a DIATONIC approach — a scale step, keeping its degree colour", () => {
-  const { fld, strings, sel } = bootSel();
-  const r = orderBy("tones", "(-s)[3]", sel, { fld, strings });
+  const { fld, strings, sel, pos } = bootSel();
+  const r = orderBy("tones", "(-s)[3]", sel, { fld, strings, pos });
   assert.equal(r.err, null, r.err);
   const [ap, tgt] = r.order;
   assert.equal(ap.chromatic, false, "the scale tone below the 3rd is in the key");
@@ -463,29 +463,30 @@ test("260918-1: (-s)[3] is a DIATONIC approach — a scale step, keeping its deg
   assert.equal(tgt.midi - ap.midi, 2, "a whole step below D is C");
   assert.match(r.describe, /approached from the scale tone below/);
   // the figure's R is motion's 1: (-1)[R] targets the root
-  const r2 = orderBy("tones", "(-1)[R]", sel, { fld, strings });
+  const r2 = orderBy("tones", "(-1)[R]", sel, { fld, strings, pos });
   assert.equal(r2.err, null, r2.err);
   assert.equal(r2.order[1].role, "R"); assert.equal(r2.order[0].midi, r2.order[1].midi - 1);
 });
 
 test("260918-1: refusals stay loud — the pattern address, a spelled target, a missing role, an unplaceable approach", () => {
-  const { fld, strings, sel } = bootSel();
-  assert.match(orderBy("pattern", "(-1)4", sel, { fld, strings }).err, /name TONES/);
-  assert.match(orderBy("tones", "(b3)[b3]", sel, { fld, strings }).err, /a target is a role, not a spelling/);
-  assert.match(orderBy("tones", "(-1)[9]", sel, { fld, strings }).err, /carries no 9th/);
-  assert.match(orderBy("tones", "(-1)[3]", sel).err, /this caller supplied neither/, "no field, no strings — refused by name");
-  assert.match(orderBy("tones", "(-1)[", sel, { fld, strings }).err, /expected a degree inside/);
+  const { fld, strings, sel, pos } = bootSel();
+  assert.match(orderBy("pattern", "(-1)4", sel, { fld, strings, pos }).err, /name TONES/);
+  assert.match(orderBy("tones", "(b3)[b3]", sel, { fld, strings, pos }).err, /a target is a role, not a spelling/);
+  assert.match(orderBy("tones", "(-1)[9]", sel, { fld, strings, pos }).err, /carries no 9th/);
+  assert.match(orderBy("tones", "(-1)[3]", sel).err, /this caller supplied nothing/, "no field, no strings, no window — refused by name");
+  assert.match(orderBy("tones", "(-1)[3]", sel, { fld, strings }).err, /no window/, "260923: the window is required, not optional");
+  assert.match(orderBy("tones", "(-1)[", sel, { fld, strings, pos }).err, /expected a degree inside/);
 });
 
 test("260918-1: THE ROLE TEST — an off-field step with no role, or a role with no target, throws NAMING it (CR-1 §3)", () => {
-  const { fld, strings, sel } = bootSel();
+  const { fld, strings, sel, pos } = bootSel();
   // reach the assertion through the pattern path, which cannot mint approaches: a foreign step smuggled in
   const stray = { midi: 63, string: 4, fret: 13, deg: -1 };
   assert.throws(() => {
     // the pattern branch collects notes from the selection only; so exercise
     // assertOrder's contract through a selection that includes a labelled-less off-field entry
     const notes = [...sel, stray];
-    const r = orderBy("pattern", "4", notes, { fld, strings });
+    const r = orderBy("pattern", "4", notes, { fld, strings, pos });
     if (r.order && r.order.some((n) => n === stray)) throw new Error("orderBy: an ordered step left the selection carrying no role");
     throw new Error("orderBy: an ordered step left the selection carrying no role — probe");
   }, /carrying no role/);
@@ -499,10 +500,10 @@ test("260918-1: the octave tie — an absolute-degree approach equally near in t
   const pos = posOf({ field: fld, anchorString: 4, startDegree: 4, nearFret: 3, strings });
   const pool = matIn(pos, strings, fld);
   const eb = oneOfEach(diatonicTones(fld, 3, objectOffsets("tetrad")), pool, { n: 1, centre: pos.centre }).notes;
-  const r = orderBy("tones", "(b3)[3]", eb, { fld, strings });
+  const r = orderBy("tones", "(b3)[3]", eb, { fld, strings, pos });
   assert.equal(r.err, null, r.err);
   assert.equal(r.order[0].midi, 61, "the equally near upper octave"); assert.deepEqual([r.order[0].string, r.order[0].fret], [3, 6]);
   const dm = oneOfEach(diatonicTones(fld, 2, objectOffsets("tetrad")), pool, { n: 1, centre: pos.centre }).notes;
-  const r2 = orderBy("tones", "(b3)[3]", dm, { fld, strings });
+  const r2 = orderBy("tones", "(b3)[3]", dm, { fld, strings, pos });
   assert.match(r2.err, /no playable position/, "Dm7's 3rd F3: D♭ 4 below is nearest and unfrettable, 8 above is not equally near — refused by name, never silently re-octaved");
 });

@@ -153,7 +153,11 @@ export default {
     /* v0.5.5 (260924, night 30 — the board stops lying about what it placed):
      * no doubled tone under a cap, the loss loud on the window in Daniel's
      * words, one-of-each draws its partial in every view, the captions at AA. */
-    blurb: "one tool that holds many études · v0.5.5",
+    /* v0.5.6 (260925, night 31 — the speller and the reach): rule C spells a
+     * chromatic note as its fewest-accidental neighbour's alteration (one
+     * double accidental across the app's 432 spellings, was 55); an approach
+     * must be reachable — within the field's largest scale step of the window. */
+    blurb: "one tool that holds many études · v0.5.6",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

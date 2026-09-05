@@ -35,16 +35,18 @@ test("F major spells its chromatics with flats — the special case falls out of
   assert.equal(chromaticSpeller("C", "major")(61).name, "C#", "C major spells sharp");
 });
 
-test("the law is resolveRoman's — keep the letter, move the accidental — where the copies were wrong", () => {
-  assert.equal(chromaticSpeller("Db", "major")(62).name, "Ebb", "Db major, pc 2: E♭ lowered — the copies said \"Eb\", a different pitch");
-  assert.equal(chromaticSpeller("Db", "major")(67).name, "Abb");
-  assert.equal(chromaticSpeller("E", "major")(62).name, "C##", "E major, pc 2: C♯ raised — the copies said \"C#\"");
-  // the augmented second, both ways: F harmonic minor (a flat key) lowers E twice for pc 2;
-  // C harmonic minor (a sharp-side key: C major carries no flat) RAISES A♭ for pc 9 — A natural
-  assert.equal(chromaticSpeller("F", "harm")(62).name, "Ebb", "F harm, pc 2: E lowered twice across the augmented second");
-  assert.equal(chromaticSpeller("C", "harm")(69).name, "A", "C harm, pc 9: A♭ raised — the natural, by the same law");
-  assert.equal(chromaticSpeller("Gb", "major")(71).oct, 5, "Cb sounds below its C: the written octave follows the letter");
+test("RULE C (260923): the fewest-accidental neighbour, then the nearer, then the parent collection's side — where the old law spelled doubles", () => {
+  assert.equal(chromaticSpeller("Db", "major")(62).name, "D", "Db major, pc 2: D♭ raised → D (was Ebb)");
+  assert.equal(chromaticSpeller("Db", "major")(67).name, "G", "Db major, pc 7 (was Abb)");
+  assert.equal(chromaticSpeller("E", "major")(62).name, "D", "E major, pc 2: D♯ lowered → D (was C##)");
+  assert.equal(chromaticSpeller("F", "harm")(62).name, "D", "F harm, pc 2: D♭ raised → D (was Ebb)");
+  assert.equal(chromaticSpeller("C", "harm")(69).name, "A", "C harm, pc 9: A♭ raised — unchanged");
+  assert.equal(chromaticSpeller("C", "harm")(66).name, "Gb", "C harm, pc 6: the known limit — F♯/G♭ tie on accidentals and distance; the relative major (E♭) is flat-side");
+  assert.equal(chromaticSpeller("Gb", "major")(71).oct, 5, "Cb sounds below its C: the written octave follows the letter — unchanged, diatonic");
   assert.equal(chromaticSpeller("C#", "major")(60).name, "B#"); assert.equal(chromaticSpeller("C#", "major")(60).oct, 3);
+  // the C harmonic minor row, twelve spellings (ruled 260923)
+  assert.deepEqual(Array.from({ length: 12 }, (_, pc) => chromaticSpeller("C", "harm")(60 + pc).name),
+    ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]);
 });
 
 test("PITCH HONESTY: in every key and scale, every chromatic pitch class is spelled as itself", () => {
@@ -64,10 +66,24 @@ test("PITCH HONESTY: in every key and scale, every chromatic pitch class is spel
   assert.ok(KEYS.length >= 12, "the app offers at least the twelve keys");
 });
 
-test("past ±2 the law REFUSES BY NAME rather than spelling a wrong pitch (resolveRoman's own line)", () => {
-  // C♭ harmonic minor (not a key the app offers): pc 8 sits in the augmented second between
-  // F♭ and A♭♭... and B♭ lowered three times is the only letter-keeping spelling — refused
-  assert.throws(() => chromaticSpeller("Cb", "harm")(56), /needs 3 accidentals/);
+test("the ±2 guard EXISTS, and no key the app offers reaches it under rule C (the guard stays anyway)", () => {
+  const src = readFileSync(join(here, "..", "chord.mjs"), "utf8");
+  assert.match(src, /needs \$\{Math\.abs\(acc\)\} accidentals/, "the guard is still written");
+  for (const key of KEYS) for (const scale of Object.keys(SCALE_STEPS)) {
+    const sp = chromaticSpeller(key, scale);
+    for (let midi = 48; midi < 72; midi++) assert.doesNotThrow(() => sp(midi), `${key} ${scale} ${midi}`);
+  }
+});
+
+test("THE CORPUS COUNT: across the app's 12 keys × 3 scales × 12 pitch classes, exactly ONE spelling carries a double accidental", () => {
+  const doubles = [];
+  for (const key of KEYS) for (const scale of Object.keys(SCALE_STEPS)) {
+    const sp = chromaticSpeller(key, scale);
+    for (let pc = 0; pc < 12; pc++) { const { name } = sp(60 + pc); if (/##|bb/.test(name)) doubles.push(`${key} ${scale} pc${pc} ${name}`); }
+  }
+  assert.equal(KEYS.length * 3 * 12, 432, "the corpus is the app's");
+  assert.equal(doubles.length, 1, `exactly one double accidental (Db harmonic minor): ${doubles}`);
+  assert.ok(doubles[0].startsWith("Db harm"), doubles[0]);
 });
 
 test("the rule has ONE home: no hub module derives a key's flatness or keeps the F special case", () => {

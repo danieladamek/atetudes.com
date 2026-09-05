@@ -177,7 +177,7 @@ export const staffBoard = {
        * figure resolves against EACH bar's own selection, exactly as the
        * walk will sound it when the bar arrives. A bar whose selection
        * cannot honour it prints the refusal in the bar. */
-      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings }));
+      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos }));   // 260923: the window, for the approach reach
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
       for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role));

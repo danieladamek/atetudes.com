@@ -367,39 +367,53 @@ function romanQualitySuffix(r) {
  * Eb major is Db, not C#).
  */
 /**
- * THE CHROMATIC SPELLER (260920, night 26 item 2 — standing rule 6). Until
- * tonight this rule lived twice, in score-board.mjs and staff-board.mjs, each
- * importing LETTER_PC from here and re-stating the law beside it — the tell
- * that the rule belonged beside its data. The law is resolveRoman's: KEEP THE
- * LETTER, MOVE THE ACCIDENTAL, throw past ±2.
+ * THE CHROMATIC SPELLER — RULE C (260923, night 31; ruled, replacing the binary
+ * this header posed on 260920 and 260921 — BOTH of its readings were wrong).
  *
  *   chromaticSpeller("F", "major") → (midi) => { name, oct }
  *
- * A diatonic pitch class takes the scale's own spelled name. A chromatic one
- * takes the nearest scale note ABOVE in a flat key, lowered by the distance,
- * or the nearest scale note BELOW in a sharp key, raised by it — letter kept,
- * accidental moved (Db major: pc 2 is E♭ lowered → Ebb, never "Eb", which is
- * a different pitch; C harmonic minor: pc 9 lies in the augmented second, so
- * B lowered twice → Bbb). The two retired copies did letter + one accidental
- * and were wrong whenever the neighbour already carried one (staff-board drew
- * a WRONG PITCH a semitone off; score-board fell back to "C").
+ * THE LAW. A chromatic pitch class is spelled as the alteration of whichever
+ * DIATONIC NEIGHBOUR requires the FEWEST accidentals. Ties go to the NEARER
+ * neighbour. Remaining ties go to the parent collection's direction — and the
+ * parent collection is the RELATIVE MAJOR for `harm` and `mel` (the scale's own
+ * degree index 2: scaleNotes(key, scaleType)[2] — C harm → E♭ → E♭ major) and
+ * the tonic's own for `major`. Derived, never tabled; no fourth SCALE_STEPS
+ * entry, which would put a fourth scale in the app's selector as a side effect.
  *
- * WHICH WAY IS "FLAT" IS READ FROM THE KEY SIGNATURE, NOT A TABLE: the tonic's
- * major collection carries a flat (F major's B♭ — the old `|| key === "F"`
- * special case falls out with nothing said). Measured before choosing
- * (260920): reading the scale's OWN collection disagrees with the old rule
- * for C/G harmonic and C melodic minor and is undecidable for C major, D
- * harmonic and G melodic (equal counts); reading the key signature agrees in
- * all 45 key × scale cases. The other reading is Daniel's to rule on.
+ * WHY THE OLD LAW WAS WRONG — read this before "restoring" it. The retired law
+ * was "keep the letter, move the accidental". That is resolveRoman's law, and
+ * it is correct THERE: a roman numeral names a DEGREE, and ♭II of D♭ is always
+ * the letter above the tonic — it has a letter because it has a degree.
+ * chromaticSpeller names a PITCH CLASS WITH NO DEGREE. CR-1, ratified: "a
+ * chromatic note is never a member of the field." No membership, no degree,
+ * no letter to keep. Importing resolveRoman's law into the speller was a
+ * category error, and it cost double accidentals in every minor key: measured
+ * 260923 over the app's 12 keys × 3 scales × 12 pitch classes (432 spellings),
+ * the parallel-major reading spelled 55 doubles, the relative-major reading
+ * 56, and rule C ONE (D♭ harmonic minor). resolveRoman itself is untouched.
  *
- * The written octave follows the LETTER (a Cb/Cbb sounds below its C; a
- * B#/B## above its B), which is why those two lines survive here verbatim.
+ * THIS IS NOT A RETURN TO THE RETIRED COPIES' BUG. Those drew a WRONG PITCH
+ * (D♭ major's pc 2 as "Eb", a semitone off). Rule C preserves the pitch by
+ * construction: every candidate is a neighbour plus or minus an exact semitone
+ * count, and PITCH HONESTY is pinned over every key and scale.
+ *
+ * THE ±2 GUARD STAYS even though rule C makes it unreachable for the app's
+ * twelve keys: a guard that never fires is cheap; removing it is how the next
+ * wrong pitch ships.
+ *
+ * KNOWN LIMIT: C harmonic minor's pc 6 comes out G♭ where ♯4 would be commoner.
+ * It is genuinely contextual — a raised fourth or a lowered fifth depends on the
+ * harmony — and the speller has no harmony to consult. Said, not papered over.
+ *
+ * The written octave follows the LETTER (a Cb/Cbb sounds below its C; a B#/B##
+ * above its B), which is why those two lines survive here verbatim.
  */
 export function chromaticSpeller(key, scaleType = "major") {
   const notes = scaleNotes(key, scaleType);
   const byPc = new Map(notes.map((n) => [n.pc, n.name]));
-  const flatKey = scaleNotes(key, "major").some((n) => n.name.includes("b"));
-  const dir = flatKey ? 1 : -1;
+  // the parent collection: the relative major for harm and mel (degree index 2), the tonic's own for major
+  const parentKey = scaleType === "major" ? key : notes[2].name;
+  const parentFlat = scaleNotes(parentKey, "major").some((n) => n.name.includes("b"));
   const respell = (name, delta) => {
     const acc = accOf(name) + delta;
     if (Math.abs(acc) > 2)
@@ -410,9 +424,13 @@ export function chromaticSpeller(key, scaleType = "major") {
     const pc = mod12(midi);
     let name = byPc.get(pc);
     if (!name) {
-      let d = 1;
-      while (!byPc.has(mod12(pc + dir * d))) d++;
-      name = respell(byPc.get(mod12(pc + dir * d)), -dir * d);
+      let dn = 1; while (!byPc.has(mod12(pc - dn))) dn++;   // the diatonic neighbour below, raised by dn
+      let up = 1; while (!byPc.has(mod12(pc + up))) up++;   // the diatonic neighbour above, lowered by up
+      const below = respell(byPc.get(mod12(pc - dn)), dn), above = respell(byPc.get(mod12(pc + up)), -up);
+      const cost = (nm) => Math.abs(accOf(nm));
+      if (cost(below) !== cost(above)) name = cost(below) < cost(above) ? below : above;   // fewest accidentals
+      else if (dn !== up) name = dn < up ? below : above;                                     // then the nearer neighbour
+      else name = parentFlat ? above : below;                                                 // then the parent's direction
     }
     let oct = Math.floor(midi / 12) - 1;
     if (name.startsWith("Cb")) oct += 1;

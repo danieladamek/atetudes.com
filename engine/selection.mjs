@@ -642,8 +642,9 @@ export function orderBy(address, text, notes, ctx) {
   if (/[()\[\]]/.test(raw)) {
     if (address !== "tones")
       return { order: null, err: "approaches — (…)[…] — name TONES: the address is set to pattern; switch it to tones" };
-    if (!ctx || !ctx.fld || !Array.isArray(ctx.strings))
-      return { order: null, err: "approaches need the field and the strings to place on — this caller supplied neither" };
+    if (!ctx || !ctx.fld || !Array.isArray(ctx.strings) || !ctx.pos)
+      return { order: null, err: "approaches need the field, the strings and the window to place on — this caller supplied "
+        + (!ctx ? "nothing" : [ctx.fld ? "" : "no field", Array.isArray(ctx.strings) ? "" : "no strings", ctx.pos ? "" : "no window"].filter(Boolean).join(", ") || "them all") };
     return orderWithApproaches(String(text || ""), notes, ctx);
   }
   /* THE MODE MISMATCH, noticed by the alphabet (260902 — Daniel typed
@@ -795,12 +796,35 @@ function orderWithApproaches(text, notes, ctx) {
        * top-four set cannot always fret. The arithmetic stands; the
        * placement tries the equally-near octave before it refuses, and a
        * genuinely nearer-but-unplayable note still refuses by name. */
-      const placing = { set: ctx.strings, open: OPEN_MIDI, nfrets: 15 };
+      /* THE REACH (260923, night 31 — the approach placement law, closing CR-1's
+       * gap): an approach is placed relative to its TARGET, not to the window —
+       * it is not material, so it may sit outside the window and is drawn there —
+       * but it must be REACHABLE: its fret within [fLo − k, fHi + k], where k is
+       * the largest step the field's own scale contains (major and melodic minor
+       * 2, harmonic minor 3 — DERIVED from the field's pitch classes, never a
+       * literal; a future scale type extends it for free). Among reachable
+       * positions the rule is unchanged and still placeNear's: nearest the
+       * target, the target's own string winning ties — reached by asking
+       * placeNear on the set with the out-of-reach strings removed, so the tie
+       * rule is never restated here. No reachable position → refuse BY NAME. */
+      const gaps = ctx.fld.pcs.map((pc, i, arr) => (((arr[(i + 1) % arr.length] - pc) % 12) + 12) % 12);
+      const reach = Math.max(...gaps);
+      const lo = ctx.pos.fLo - reach, hi = ctx.pos.fHi + reach;
       const dist = Math.abs(midi - target.midi);
       const octaves = [midi, ...[midi + 12, midi - 12].filter((m) => Math.abs(m - target.midi) === dist)];
-      let pos = null;
-      for (const m of octaves) { try { pos = placeNear(m, target.fret, target.string, placing); midi = m; break; } catch (e) { /* the next equally-near octave */ } }
-      if (!pos) return { order: null, err: `the approach ${midi - target.midi > 0 ? "+" : ""}${midi - target.midi} to the ${wordOf(t.deg)} has no playable position on these strings` };
+      let pos = null, nearestMiss = null;
+      for (const m of octaves) {
+        const within = ctx.strings.filter((sn) => { const f = m - OPEN_MIDI[sn]; return f >= lo && f <= hi; });
+        for (const sn of ctx.strings) { const f = m - OPEN_MIDI[sn]; if (f >= 0 && f <= 17) { const miss = f < lo ? lo - f : f > hi ? f - hi : 0; if (nearestMiss === null || miss < nearestMiss) nearestMiss = miss; } }
+        if (!within.length) continue;
+        try { pos = placeNear(m, target.fret, target.string, { set: within, open: OPEN_MIDI, nfrets: 15 }); midi = m; break; } catch (e) { /* the next equally-near octave */ }
+      }
+      if (!pos) {
+        const rel = `${midi - target.midi > 0 ? "+" : ""}${midi - target.midi}`;
+        return { order: null, err: nearestMiss === null
+          ? `the approach ${rel} to the ${wordOf(t.deg)} has no playable position on these strings`
+          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}, at the window's edge (frets ${ctx.pos.fLo}–${ctx.pos.fHi}), and the reach is ${reach}` };
+      }
       const keyDeg = fld.degOf(midi);
       const chromatic = keyDeg < 0;
       order.push({ midi, string: pos.string, fret: pos.fret, role: "approach", target,

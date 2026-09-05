@@ -2919,7 +2919,33 @@ console.log(JSON.stringify(out));
           .map(e => [e.dataset.stname, e.dataset.stapproach])""")
         check(f_heads and all(n == "Ab" and k == "chromatic" for n, k in f_heads),
               f"{tag} 2 (260920): in F major the ♭3 approach spells A♭ — a FLAT, from the key signature: {f_heads}")
-        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
+        # ---- 260924 (night 31 item 1, RULE C): C harmonic minor's ♭2 approach spells D♭ on the staff,
+        # not C♯ — the fewest-accidental neighbour, then the nearer, then the relative major's side
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "harm"); page.wait_for_timeout(200)
+        page.fill("#fdFigIn", "(b2)[R]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(300)
+        ch_heads = page.evaluate("""() => [...document.querySelectorAll('#stSvg [data-stapproach]')].map(e => e.dataset.stname)""")
+        check(len(ch_heads) == 8 and all(n == "Db" for n in ch_heads),
+              f"{tag} 1 (260924): in C harmonic minor the ♭2 spells D♭ on every bar of the staff (was C♯): {ch_heads}")
+        # ---- 260924 (night 31 item 2, THE REACH): an approach must lie within k frets of the window,
+        # k the field's largest scale step (harm 3, major 2), and may sit OUTSIDE the window. Each scene
+        # is stated in FULL — ref, tones, take, object, source — because the gate arrives here with the
+        # field re-rooted and another pick, and the target root then sits elsewhere (two runs' lesson).
+        FULL = "key: '%s', scale: '%s', ref: 0, object: 'tetrad', tones: [1, 3, 5, 7], source: 'cycle', custom: '', take: 'one', notesPer: 1, strings: [4, 3, 2, 1], startDeg: %d, nearFret: %d, address: 'tones', figure: '%s'"
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { " + FULL % ("C", "harm", 0, 5, "(-3)[R]") + " } }))")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(350)
+        rch = page.evaluate("""() => { const a = document.querySelector('#fieldSvg [data-role="approach"]'); const m = document.getElementById('roLine').textContent.match(/frets (\\d+)–(\\d+)/);
+          return { fret: a ? +a.dataset.selfret : null, fLo: m ? +m[1] : null, fHi: m ? +m[2] : null, note: document.getElementById('fdFigNote').textContent.slice(0, 60) }; }""")
+        check(rch["fret"] is not None and rch["fLo"] is not None and (rch["fret"] < rch["fLo"] or rch["fret"] > rch["fHi"])
+              and rch["fLo"] - 3 <= rch["fret"] <= rch["fHi"] + 3,
+              f"{tag} 2 (260924): the reach HOLDS — the approach is drawn OUTSIDE the window, within harmonic minor's reach of 3: {rch}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { " + FULL % ("Bb", "major", 4, 3, "(+9)[R]") + " } }))")
+        page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
+        page.wait_for_timeout(350)
+        rr = page.inner_text("#fdFigNote")
+        check("beyond the hand" in rr and "at the window's edge (frets 3–7)" in rr and "the reach is 2" in rr and page.query_selector("#fieldSvg [data-role='approach']") is None,
+              f"{tag} 2 (260924): the reach REFUSES by name on the face — the target, the distance, the hand: {rr!r}")
+        page.select_option("#hcScale", "major"); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(150)
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(100)
         page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(80)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
@@ -4452,9 +4478,21 @@ console.log(JSON.stringify(out));
         # (the −1 under a 3rd is chromatic only where the semitone below is off the key —
         # A♭ D♭ G♭ E♭ across F's cycle; under Em7b5, Am7 and Dm7 it is the diatonic B, E, A)
         chrom = [n for n, k in sc_heads if k == "chromatic"]
-        check(sc_heads and sc_heads[0][0] == "Ab" and len(chrom) >= 3 and all(n.endswith("b") for n in chrom),
-              f"{tag} 2 (260920): in F major every CHROMATIC −1 approach under a 3rd spells with a FLAT, from the key signature: {sc_heads}")
-        page.select_option("#keySel", key_was); page.wait_for_timeout(200)
+        # PIN REWRITTEN 260924 (night 31, rule 7): under rule C a chromatic note takes the
+        # fewest-accidental neighbour — A♭ D♭ G♭ where the neighbour above is a natural, and
+        # B (not C♭) for pitch class 11, whose neighbour below, B♭, raised is the natural.
+        # Never a sharp in F major; never a double.
+        check(sc_heads and sc_heads[0][0] == "Ab" and len(chrom) >= 3 and set(chrom) <= {"Ab", "Db", "Gb", "B", "Eb"} and not any("#" in n for n in chrom),
+              f"{tag} 2 (260920→260924): in F major the chromatic −1 approaches spell A♭ D♭ G♭ and B — flats where the neighbour above is natural, no sharps, no doubles: {sc_heads}")
+        # ---- 260924 (night 31 item 1, RULE C) in this door: C harmonic minor's chromatic approaches
+        # under (-1)3 spell D♭ G♭ E B♭ — flats and naturals, never C♯ F♯ A♯ (the C harm row is
+        # C Db D Eb E F Gb G Ab A Bb B)
+        page.select_option("#keySel", "C"); page.select_option("#scaleSel", "harm"); page.wait_for_timeout(200)
+        page.fill("#arpIn", "(-1)3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(300)
+        ch_sc = page.evaluate("""() => [...document.querySelectorAll('#score [data-scapproach="chromatic"]')].map(e => e.dataset.scname)""")
+        check(ch_sc and set(ch_sc) <= {"Db", "Gb", "E", "Bb"} and "Db" in ch_sc,
+              f"{tag} 1 (260924): C harmonic minor's chromatics on the score spell D♭ G♭ E B♭ under rule C: {ch_sc}")
+        page.select_option("#scaleSel", "major"); page.select_option("#keySel", key_was); page.wait_for_timeout(200)
         # restore exactly what this block moved: figure, address, playback
         page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input")
         page.wait_for_timeout(100)
