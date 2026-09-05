@@ -1,3 +1,14 @@
+## 2026-09-05 — DEPLOYED: night 34 live — tetradetudes and triadetudes moved (the canon's words), the other four unmoved; all six checked; written from the run
+
+- record: run 33982707799 · success · commit 5602ae9 · fetched 2026-09-05T18:08Z · 6/6 studies byte-identical · digest 6c8476647bda
+- Actions run 33982707799 green on `5602ae9` — https://github.com/danieladamek/atetudes.com/actions/runs/33982707799 (created 2026-09-05T18:00:38Z, finished 2026-09-05T18:07:21Z).
+- metronome: repo 47cd79f8adb2 · live 47cd79f8adb2 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 6dc7eba5a198 · live 6dc7eba5a198 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 82dcfbadceac · live 82dcfbadceac — matches.
+- triadetudes: repo df4404bee0a4 · live df4404bee0a4 — matches.
+
 ## 2026-09-06 — night 34: the vocabulary sweep — tetradetudes and triadetudes take multetudes' words
 
 - **Canon is Multetudes for every word** (Daniel, 260923; "Centricity for sure across all"). The
