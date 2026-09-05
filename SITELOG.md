@@ -1,3 +1,14 @@
+## 2026-09-05 — DEPLOYED: v0.5.6 live — multetudes, tetradetudes, metronome and triadetudes moved; all six checked; written from the run
+
+- record: run 33955281681 · success · commit d04029e · fetched 2026-09-05T08:35Z · 6/6 studies byte-identical · digest 0025a6f524b6
+- Actions run 33955281681 green on `d04029e` — https://github.com/danieladamek/atetudes.com/actions/runs/33955281681 (created 2026-09-05T08:26:52Z, finished 2026-09-05T08:33:52Z).
+- metronome: repo 47cd79f8adb2 · live 47cd79f8adb2 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 6dc7eba5a198 · live 6dc7eba5a198 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 39a85617acc0 · live 39a85617acc0 — matches.
+- triadetudes: repo 419c23b9b6f9 · live 419c23b9b6f9 — matches.
+
 ## 2026-09-05 — Multetudes v0.5.6: night 31, the speller and the reach
 
 - **Source edition v0.5.6** (night 31; the report in `notes/working/Multetudes build run
