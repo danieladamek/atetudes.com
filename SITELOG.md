@@ -1,3 +1,14 @@
+## 2026-09-05 — DEPLOYED: the shelf live — two sections and six cards on the landing page, /studies/ one study at a time, nav At-Etudes; no study moved; all six checked; written from the run
+
+- record: run 33993302403 · success · commit b236e6c · fetched 2026-09-05T21:40Z · 6/6 studies byte-identical · digest 7e58088b7624
+- Actions run 33993302403 green on `b236e6c` — https://github.com/danieladamek/atetudes.com/actions/runs/33993302403 (created 2026-09-05T21:31:40Z, finished 2026-09-05T21:38:42Z).
+- metronome: repo 47cd79f8adb2 · live 47cd79f8adb2 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 6dc7eba5a198 · live 6dc7eba5a198 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 82dcfbadceac · live 82dcfbadceac — matches.
+- triadetudes: repo df4404bee0a4 · live df4404bee0a4 — matches.
+
 ## 2026-09-05 — the shelf reads ragged: four things the assertions could not catch (follow-up to the AptÉtudes/SolÉtudes shelf item)
 
 - **§1 The orphaned fourth card.** Both sections now lay out at `cols: 2` — 4 becomes a clean 2×2,
