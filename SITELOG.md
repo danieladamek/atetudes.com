@@ -135,6 +135,17 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-05 — DEPLOYED: night 35 live — the metronome study (v1.5.0) and triadetudes (v0.8.14) re-housed onto the hub's cards, the other four unmoved; all six checked; written from the run
+
+- record: run 33998706664 · success · commit efb5e60 · fetched 2026-09-05T23:35Z · 6/6 studies byte-identical · digest b5bfa657439c
+- Actions run 33998706664 green on `efb5e60` — https://github.com/danieladamek/atetudes.com/actions/runs/33998706664 (created 2026-09-05T23:27:08Z, finished 2026-09-05T23:34:19Z).
+- metronome: repo 4793e1343a7b · live 4793e1343a7b — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 6dc7eba5a198 · live 6dc7eba5a198 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 82dcfbadceac · live 82dcfbadceac — matches.
+- triadetudes: repo bab572c45008 · live bab572c45008 — matches.
+
 ## 2026-09-05 — night 35: the metronome study and triadetudes re-housed onto the hub's cards (the pad/log split in all)
 
 - **What:** `static/studies/metronome/study.html` (v1.4.4 → **v1.5.0**) and
