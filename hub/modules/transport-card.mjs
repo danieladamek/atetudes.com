@@ -273,6 +273,7 @@ export const transportCard = {
 
     listen(d, BEAT, (ev) => {
       if (!ev || typeof ev.index !== "number") return;
+      if (ev.sub) return;   // a SUBDIVISION click (260929): the grid the étude walks is the beat's
       // JOIN AT THE NEXT BAR: hand start() the beat's place in its bar (ev.beat)
       // so it can find the next bar line rather than joining on this arming beat
       if (armed === "pending") { core.start(ev.index, { fromStep: armAt, beatInBar: ev.beat }); armed = true; }

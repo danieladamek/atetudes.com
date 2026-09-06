@@ -15,12 +15,25 @@
  */
 
 export function createMetroCore(opts={}){
-  const ms={bpm:opts.bpm??72,meter:opts.meter??4,running:false,anchor:0,nextIdx:0,
+  const ms={bpm:opts.bpm??72,meter:opts.meter??4,sub:opts.sub??1,running:false,anchor:0,nextIdx:0,
     meterStart:0,pendingMeter:null};
   const spb=()=>60/ms.bpm;
+  // SUBDIVISION LIVES HERE (260929, night 35b): the one home for the concept.
+  // Two hand-authored pages scheduled SUB_OFFSETS themselves and the door's
+  // card validated the value and discarded it — Subdivision did nothing on
+  // every door-built page. A subdivision the table does not define is
+  // refused BY NAME, so a meaningless one cannot be selected silently.
+  const subOffsets=()=>{const o=SUB_OFFSETS[ms.sub]; if(!o||typeof ms.sub!=="number")throw new Error("unknown subdivision: "+ms.sub); return o;};
   return {
     get running(){return ms.running;}, get bpm(){return ms.bpm;}, get meter(){return ms.meter;},
+    get sub(){return ms.sub;},
     get pendingMeter(){return ms.pendingMeter;},
+    setSub(n){
+      // takes effect from the next beat emitted: a beat's sub events are
+      // scheduled with the beat, never retroactively between two beats
+      if(typeof n!=="number"||!SUB_OFFSETS[n])throw new Error("unknown subdivision: "+n);
+      ms.sub=n;
+    },
     start(now){
       if(ms.pendingMeter!==null){ms.meter=ms.pendingMeter;ms.pendingMeter=null;}
       ms.running=true;ms.anchor=now;ms.nextIdx=0;ms.meterStart=0;
@@ -53,8 +66,12 @@ export function createMetroCore(opts={}){
         }
         ms.nextIdx++;
         const rel=i-ms.meterStart;
-        out.push({time:ms.anchor+i*spb(),index:i,
-          bar:Math.floor(rel/ms.meter),beat:rel%ms.meter});
+        const t=ms.anchor+i*spb(), bar=Math.floor(rel/ms.meter), beat=rel%ms.meter;
+        out.push({time:t,index:i,bar,beat,sub:0});
+        // the beat's sub events, at SUB_OFFSETS' fractions of THIS beat's
+        // length: they carry the beat's index/bar/beat (they are not beats —
+        // the index grid, joins and bar lines are untouched) and sub = 1..k
+        subOffsets().forEach((o,k)=>out.push({time:t+o*spb(),index:i,bar,beat,sub:k+1}));
       }
       return out;
     },

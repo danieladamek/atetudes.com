@@ -206,3 +206,51 @@ test("every app carrying the metronome matches the module verbatim (no drift)", 
     }
   }
 });
+
+// ---- 260929 (night 35b): SUBDIVISION LIVES IN THE CORE ----
+// Daniel, 260929: Subdivision did nothing on Multetudes and Tetradetudes. The
+// card validated the value and discarded it; the core had setBpm and setMeter
+// and no setSub; SUB_OFFSETS was read by that one check. Four implementations
+// were the defect (two hand pages scheduling their own offsets, the door
+// scheduling none) — one home is the fix: the core schedules the offsets
+// SUB_OFFSETS already defines, and every surface consumes its events.
+test("260929: the core has a subdivision — a setter beside setBpm and setMeter, refused by name when meaningless", () => {
+  const m = createMetroCore({ bpm: 60, meter: 4 });
+  assert.equal(m.sub, 1, "the default is beats — nothing between them");
+  m.setSub(3); assert.equal(m.sub, 3);
+  assert.throws(() => m.setSub(5), /unknown subdivision/, "a subdivision SUB_OFFSETS does not define is refused by name");
+  assert.throws(() => m.setSub("2"), /unknown subdivision/, "the setter takes a number, not a select's string");
+});
+
+test("260929: pump emits the sub events between the beats, at SUB_OFFSETS' times, without moving the beat grid", () => {
+  for (const [sub, offs] of Object.entries(SUB_OFFSETS)) {
+    const m = createMetroCore({ bpm: 60, meter: 4 });   // one beat per second
+    m.setSub(+sub); m.start(0);
+    const evs = m.pump(0, 3.99);                         // one bar: beats 0..3 and their subs (4.0 is the next bar's downbeat)
+    const beats = evs.filter((e) => !e.sub), subs = evs.filter((e) => e.sub);
+    assert.deepEqual(beats.map((e) => e.time), [0, 1, 2, 3], `sub ${sub}: the four beats are where they were`);
+    assert.deepEqual(beats.map((e) => e.beat), [0, 1, 2, 3]);
+    assert.equal(subs.length, 4 * offs.length, `sub ${sub}: ${offs.length} sub events per beat, ${4 * offs.length} per bar`);
+    for (const s of subs) {
+      assert.ok(close(s.time - Math.floor(s.time), offs[s.sub - 1]), `sub ${sub}: event ${s.sub} sits at offset ${offs[s.sub - 1]} into its beat`);
+      assert.equal(s.index, Math.floor(s.time), "a sub event carries its BEAT's index — it is not a beat");
+      assert.equal(s.beat, Math.floor(s.time) % 4);
+    }
+    // the index grid is untouched: the next bar starts at 4 whatever the subdivision
+    assert.equal(m.nextBarStartIndex(), 4, `sub ${sub}: nextBarStartIndex is still the beat grid's`);
+    assert.equal(m.pump(0, 3.99).length, 0, "nothing emitted twice");
+  }
+});
+
+test("260929: a subdivision change mid-run applies from the next beat; a tempo change moves the sub times with the beats", () => {
+  const m = createMetroCore({ bpm: 60, meter: 4 });
+  m.start(0);
+  assert.equal(m.pump(0, 1.5).filter((e) => e.sub).length, 0, "beats: no sub events");
+  m.setSub(2);
+  const next = m.pump(0, 2.5);
+  assert.deepEqual(next.map((e) => [e.time, e.sub || 0]), [[2, 0], [2.5, 1]], "from the next beat, its half sits at +0.5");
+  m.setBpm(120);                                         // the grid bends: next beat one new spb after the last
+  const bent = m.pump(0, 3.6);
+  assert.deepEqual(bent.map((e) => [e.time, e.sub || 0]), [[2.5, 0], [2.75, 1], [3, 0], [3.25, 1], [3.5, 0], [3.75, 1]],
+    "the sub events ride the NEW spb — half a beat is a quarter second now (a beat's sub is scheduled WITH the beat)");
+});

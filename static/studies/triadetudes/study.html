@@ -5470,12 +5470,25 @@ function ringPulse(layer,x,y,r0,color,ev){
    the clock; the étude transport below is a subscriber that joins the grid at
    bar boundaries. Hand-inlined until Phase B's build step inlines modules. */
 function createMetroCore(opts={}){
-  const ms={bpm:opts.bpm??72,meter:opts.meter??4,running:false,anchor:0,nextIdx:0,
+  const ms={bpm:opts.bpm??72,meter:opts.meter??4,sub:opts.sub??1,running:false,anchor:0,nextIdx:0,
     meterStart:0,pendingMeter:null};
   const spb=()=>60/ms.bpm;
+  // SUBDIVISION LIVES HERE (260929, night 35b): the one home for the concept.
+  // Two hand-authored pages scheduled SUB_OFFSETS themselves and the door's
+  // card validated the value and discarded it — Subdivision did nothing on
+  // every door-built page. A subdivision the table does not define is
+  // refused BY NAME, so a meaningless one cannot be selected silently.
+  const subOffsets=()=>{const o=SUB_OFFSETS[ms.sub]; if(!o||typeof ms.sub!=="number")throw new Error("unknown subdivision: "+ms.sub); return o;};
   return {
     get running(){return ms.running;}, get bpm(){return ms.bpm;}, get meter(){return ms.meter;},
+    get sub(){return ms.sub;},
     get pendingMeter(){return ms.pendingMeter;},
+    setSub(n){
+      // takes effect from the next beat emitted: a beat's sub events are
+      // scheduled with the beat, never retroactively between two beats
+      if(typeof n!=="number"||!SUB_OFFSETS[n])throw new Error("unknown subdivision: "+n);
+      ms.sub=n;
+    },
     start(now){
       if(ms.pendingMeter!==null){ms.meter=ms.pendingMeter;ms.pendingMeter=null;}
       ms.running=true;ms.anchor=now;ms.nextIdx=0;ms.meterStart=0;
@@ -5508,8 +5521,12 @@ function createMetroCore(opts={}){
         }
         ms.nextIdx++;
         const rel=i-ms.meterStart;
-        out.push({time:ms.anchor+i*spb(),index:i,
-          bar:Math.floor(rel/ms.meter),beat:rel%ms.meter});
+        const t=ms.anchor+i*spb(), bar=Math.floor(rel/ms.meter), beat=rel%ms.meter;
+        out.push({time:t,index:i,bar,beat,sub:0});
+        // the beat's sub events, at SUB_OFFSETS' fractions of THIS beat's
+        // length: they carry the beat's index/bar/beat (they are not beats —
+        // the index grid, joins and bar lines are untouched) and sub = 1..k
+        subOffsets().forEach((o,k)=>out.push({time:t+o*spb(),index:i,bar,beat,sub:k+1}));
       }
       return out;
     },
@@ -5573,6 +5590,9 @@ function pumpBeats(){
   const ac=ctx(); if(!ac)return;
   const spb=60/st.bpm;
   for(const ev of METRO.pump(ac.currentTime,0.12)){
+    // SUBDIVISION IS THE CORE'S (260929, night 35b): the core schedules the
+    // offsets; this page only voices them — level -1, as it always did
+    if(ev.sub){ if(st.clickOn)click(ev.time,-1); continue; }
     if(etude.on&&etude.countInBar&&ev.index<st.meter){
       // transport-started count-in bar: click always audible (that is its job)
       click(ev.time,ev.index===0?2:0); lamp(ev); continue;
@@ -5587,7 +5607,6 @@ function pumpBeats(){
       renderLamp();   // a deferred meter change just landed — the lamp turns with it
     if(st.clickOn){
       click(ev.time,level);
-      for(const o of SUB_OFFSETS[st.clickSub]) click(ev.time+o*spb,-1);
     }
     if(rel>=0){
       // cursor advance belongs to the transport, not the audio. The strum is
@@ -5635,7 +5654,7 @@ function resetLamp(){ document.querySelectorAll("#beatLamp span").forEach(d=>{
 function metroToggle(){
   const ac=ctx(); if(!ac)return;
   if(METRO.running){ stopAll(); return; }   // the metronome owns the clock: its Stop stops everything
-  METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
+  METRO.setBpm(st.bpm); METRO.setMeter(st.meter); METRO.setSub(st.clickSub);
   METRO.start(ac.currentTime+0.08); metroOwner="metro"; ensurePump(); syncPlayUI();
 }
 function etudeToggle(){
@@ -5649,7 +5668,7 @@ function etudeToggle(){
   if(METRO.running){
     etude.joinIdx=METRO.nextBarStartIndex();   // join the running grid at the next bar —
   }else{                                        // the click you already hear is the count-in
-    METRO.setBpm(st.bpm); METRO.setMeter(st.meter);
+    METRO.setBpm(st.bpm); METRO.setMeter(st.meter); METRO.setSub(st.clickSub);
     METRO.start(ac.currentTime+0.08); metroOwner="transport"; ensurePump();
     etude.joinIdx=st.countIn?st.meter:0; etude.countInBar=st.countIn;
   }
@@ -6891,7 +6910,7 @@ function applyRaw(c){
   syncBpmUI();
   syncMeterUI(); refreshSplitSel();
   document.getElementById("splitSel").value=st.splitIdx;
-  METRO.setBpm(st.bpm); METRO.setMeter(st.meter); renderLamp();
+  METRO.setBpm(st.bpm); METRO.setMeter(st.meter); METRO.setSub(st.clickSub); renderLamp();
   syncClickUI();
   rebuild();
 }
@@ -7197,7 +7216,7 @@ function initControls(){
     else st.clickVol=CLICK_STASH>0?CLICK_STASH:0.8;
     st.clickOn=st.clickVol>0; syncClickUI(); renderCfg();});
   document.getElementById("accChk").addEventListener("change",e=>{st.clickAccent=e.target.checked;renderCfg();});
-  document.getElementById("subSel").addEventListener("change",e=>{st.clickSub=+e.target.value;renderCfg();});
+  document.getElementById("subSel").addEventListener("change",e=>{st.clickSub=+e.target.value;METRO.setSub(st.clickSub);renderCfg();});
   document.getElementById("voiceSel").addEventListener("change",e=>{st.clickVoice=e.target.value;click();renderCfg();});
   document.getElementById("noteVoiceSel").addEventListener("change",e=>{st.noteVoice=e.target.value;playNote(57);renderCfg();});
   document.getElementById("countChk").addEventListener("change",e=>{st.countIn=e.target.checked;renderCfg();});

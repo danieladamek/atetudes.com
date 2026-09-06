@@ -5163,12 +5163,25 @@ const __m_engine_metronome_mjs = (() => {
  */
 
 function createMetroCore(opts={}){
-  const ms={bpm:opts.bpm??72,meter:opts.meter??4,running:false,anchor:0,nextIdx:0,
+  const ms={bpm:opts.bpm??72,meter:opts.meter??4,sub:opts.sub??1,running:false,anchor:0,nextIdx:0,
     meterStart:0,pendingMeter:null};
   const spb=()=>60/ms.bpm;
+  // SUBDIVISION LIVES HERE (260929, night 35b): the one home for the concept.
+  // Two hand-authored pages scheduled SUB_OFFSETS themselves and the door's
+  // card validated the value and discarded it — Subdivision did nothing on
+  // every door-built page. A subdivision the table does not define is
+  // refused BY NAME, so a meaningless one cannot be selected silently.
+  const subOffsets=()=>{const o=SUB_OFFSETS[ms.sub]; if(!o||typeof ms.sub!=="number")throw new Error("unknown subdivision: "+ms.sub); return o;};
   return {
     get running(){return ms.running;}, get bpm(){return ms.bpm;}, get meter(){return ms.meter;},
+    get sub(){return ms.sub;},
     get pendingMeter(){return ms.pendingMeter;},
+    setSub(n){
+      // takes effect from the next beat emitted: a beat's sub events are
+      // scheduled with the beat, never retroactively between two beats
+      if(typeof n!=="number"||!SUB_OFFSETS[n])throw new Error("unknown subdivision: "+n);
+      ms.sub=n;
+    },
     start(now){
       if(ms.pendingMeter!==null){ms.meter=ms.pendingMeter;ms.pendingMeter=null;}
       ms.running=true;ms.anchor=now;ms.nextIdx=0;ms.meterStart=0;
@@ -5201,8 +5214,12 @@ function createMetroCore(opts={}){
         }
         ms.nextIdx++;
         const rel=i-ms.meterStart;
-        out.push({time:ms.anchor+i*spb(),index:i,
-          bar:Math.floor(rel/ms.meter),beat:rel%ms.meter});
+        const t=ms.anchor+i*spb(), bar=Math.floor(rel/ms.meter), beat=rel%ms.meter;
+        out.push({time:t,index:i,bar,beat,sub:0});
+        // the beat's sub events, at SUB_OFFSETS' fractions of THIS beat's
+        // length: they carry the beat's index/bar/beat (they are not beats —
+        // the index grid, joins and bar lines are untouched) and sub = 1..k
+        subOffsets().forEach((o,k)=>out.push({time:t+o*spb(),index:i,bar,beat,sub:k+1}));
       }
       return out;
     },
@@ -5230,7 +5247,7 @@ return { createMetroCore, createTapTempo, SUB_OFFSETS };
 
 /* ===== hub/modules/metronome-card.mjs ===== */
 const __m_hub_modules_metronome_card_mjs = (() => {
-const { createMetroCore, createTapTempo, SUB_OFFSETS } = __m_engine_metronome_mjs;
+const { createMetroCore, createTapTempo } = __m_engine_metronome_mjs;
 const { BEAT, CLOCK, CLOCK_STATE, announce, listen } = __m_hub_bus_mjs;
 /* metronome-card.mjs — the family constant as a door contribution.
  *
@@ -5368,9 +5385,12 @@ const metronomeCard = {
     const pump = () => {
       const t = now();
       for (const ev of core.pump(t, 0.02)) {
-        light(ev.beat);
+        if (!ev.sub) light(ev.beat);             // the lamp counts BEATS; a sub click is not one
         announce(d, BEAT, {
-          level: ev.beat === 0 ? 2 : 0,          // 2 = bar, 0 = beat
+          // 2 = bar, 0 = beat, -1 = a SUBDIVISION click (the voice table's own
+          // level, as the hand-authored pages voice it); `sub` says which
+          level: ev.sub ? -1 : (ev.beat === 0 ? 2 : 0),
+          sub: ev.sub,
           lead: Math.max(0, ev.time - t),
           voice: byId("voiceSel").value,
           accents: byId("accChk").checked,
@@ -5420,7 +5440,7 @@ const metronomeCard = {
       publish();
     };
     const publish = () => { syncSound(); announce(d, CLOCK_STATE,
-      { running: core.running, bpm: core.bpm, meter: core.meter, owner, click: sound }); };
+      { running: core.running, bpm: core.bpm, meter: core.meter, sub: core.sub, owner, click: sound }); };
 
     const setRunning = (want, who) => {
       if (want === core.running) return;
@@ -5493,9 +5513,12 @@ const metronomeCard = {
       core.setMeter(+e.target.value); if (!core.running) lamps(); publish();
     });
     byId("subSel").addEventListener("change", (e) => {
-      // the offsets the audio layer would schedule against; asserted live so a
-      // meaningless subdivision cannot be selected silently
-      if (!SUB_OFFSETS[+e.target.value]) throw new Error("unknown subdivision");
+      // SUBDIVISION IS THE CORE'S (260929, night 35b — Daniel: "Subdivision does
+      // nothing on Multetudes and Tetradetudes"): this handler validated the
+      // value and DISCARDED it for as long as the door existed. Wired as
+      // bpmRange and meterSel are — set, then publish; the core refuses a
+      // meaningless value by name, so nothing is asserted twice here.
+      core.setSub(+e.target.value); publish();
     });
     byId("clickMute").addEventListener("click", () => {
       if (clickVol() > 0) { clickStash = clickVol(); setClickVol(0); }
@@ -8906,6 +8929,7 @@ const transportCard = {
 
     listen(d, BEAT, (ev) => {
       if (!ev || typeof ev.index !== "number") return;
+      if (ev.sub) return;   // a SUBDIVISION click (260929): the grid the étude walks is the beat's
       // JOIN AT THE NEXT BAR: hand start() the beat's place in its bar (ev.beat)
       // so it can find the next bar line rather than joining on this arming beat
       if (armed === "pending") { core.start(ev.index, { fromStep: armAt, beatInBar: ev.beat }); armed = true; }

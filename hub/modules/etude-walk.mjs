@@ -183,8 +183,9 @@ export const etudeWalk = {
       soundCurrent();                        // the cold play sounds NOW
       announce(d, CLOCK, { run: true, owner: "transport" });
     });
-    listen(d, BEAT, () => {
+    listen(d, BEAT, (ev) => {
       if (!armed) return;
+      if (ev && ev.sub) return;   // a subdivision click is not a beat (260929)
       /* a chord holds its derived beats WHOLE: its own downbeat is beat 1,
        * and the advance lands on the NEXT downbeat (260902 — the first fix
        * seated the count before the clock, then the trace showed the chord

@@ -16,7 +16,7 @@
  * why a door could not prune it. Ownership moved with the module, and the
  * resolver now enforces that it stays moved.
  */
-import { createMetroCore, createTapTempo, SUB_OFFSETS } from "../../engine/metronome.mjs";
+import { createMetroCore, createTapTempo } from "../../engine/metronome.mjs";
 import { BEAT, CLOCK, CLOCK_STATE, announce, listen } from "../bus.mjs";
 
 export const metronomeCard = {
@@ -135,9 +135,12 @@ export const metronomeCard = {
     const pump = () => {
       const t = now();
       for (const ev of core.pump(t, 0.02)) {
-        light(ev.beat);
+        if (!ev.sub) light(ev.beat);             // the lamp counts BEATS; a sub click is not one
         announce(d, BEAT, {
-          level: ev.beat === 0 ? 2 : 0,          // 2 = bar, 0 = beat
+          // 2 = bar, 0 = beat, -1 = a SUBDIVISION click (the voice table's own
+          // level, as the hand-authored pages voice it); `sub` says which
+          level: ev.sub ? -1 : (ev.beat === 0 ? 2 : 0),
+          sub: ev.sub,
           lead: Math.max(0, ev.time - t),
           voice: byId("voiceSel").value,
           accents: byId("accChk").checked,
@@ -187,7 +190,7 @@ export const metronomeCard = {
       publish();
     };
     const publish = () => { syncSound(); announce(d, CLOCK_STATE,
-      { running: core.running, bpm: core.bpm, meter: core.meter, owner, click: sound }); };
+      { running: core.running, bpm: core.bpm, meter: core.meter, sub: core.sub, owner, click: sound }); };
 
     const setRunning = (want, who) => {
       if (want === core.running) return;
@@ -260,9 +263,12 @@ export const metronomeCard = {
       core.setMeter(+e.target.value); if (!core.running) lamps(); publish();
     });
     byId("subSel").addEventListener("change", (e) => {
-      // the offsets the audio layer would schedule against; asserted live so a
-      // meaningless subdivision cannot be selected silently
-      if (!SUB_OFFSETS[+e.target.value]) throw new Error("unknown subdivision");
+      // SUBDIVISION IS THE CORE'S (260929, night 35b — Daniel: "Subdivision does
+      // nothing on Multetudes and Tetradetudes"): this handler validated the
+      // value and DISCARDED it for as long as the door existed. Wired as
+      // bpmRange and meterSel are — set, then publish; the core refuses a
+      // meaningless value by name, so nothing is asserted twice here.
+      core.setSub(+e.target.value); publish();
     });
     byId("clickMute").addEventListener("click", () => {
       if (clickVol() > 0) { clickStash = clickVol(); setClickVol(0); }

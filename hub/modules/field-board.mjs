@@ -1071,7 +1071,8 @@ export const fieldBoard = {
     mountMini(ctx, byId("fdMini"));
     mountReadout(ctx, byId("fdMode"));   // 260920: the shared readout, its own derivation
     let pulseT = null;
-    listen(d, BEAT, () => {
+    listen(d, BEAT, (ev) => {
+      if (ev && ev.sub) return;   // the pulse is the beat's, not the subdivision's (260929)
       const p = byId("fdPulse");
       p.style.background = "#B82929";
       if (pulseT) d.defaultView.clearTimeout(pulseT);

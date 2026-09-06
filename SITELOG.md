@@ -135,6 +135,27 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-05 — night 35b: subdivision lives in the metronome core — all four apps click their 8ths, triplets and 16ths
+
+- **What:** Daniel, 260929 — Subdivision did nothing on Multetudes and Tetradetudes. The door's
+  card validated the value and discarded it; `engine/metronome.mjs` had `setBpm` and `setMeter`
+  and no subdivision; the two hand-authored pages scheduled `SUB_OFFSETS` themselves. Now the
+  core has it — `sub`, `setSub(n)` (a meaningless value refused by name), and `pump` emitting the
+  sub events at SUB_OFFSETS' fractions of each beat (`sub: 1..k`; the beat grid, joins and bar
+  lines untouched). `hub/modules/metronome-card.mjs` wires `subSel` as `bpmRange` and `meterSel`
+  are wired, announces sub events on BEAT at the voice table's own level −1, and lights the lamp
+  on beats only; the transport, the étude walk and the neck's pulse ignore sub events. Both
+  hand-authored pages converged onto the core (their stored `clickSub` unchanged; the core
+  schedules, the page voices) — `createMetroCore` re-inlined per definition. Doors rebuilt.
+- **Proven by count, at the artifact:** 4/4 at 60 bpm, clicks per bar beats/8ths/triplets/16ths
+  = 4/8/12/16 on multetudes, tetradetudes, the metronome study and triadetudes, offsets on the
+  grid. Before: the doors clicked 4 whatever the select said.
+- **Held by:** three new core tests; `hub/tests/decorative.test.mjs` — a predicate for the
+  DECORATIVE control (a change/input handler that neither writes state nor calls anything),
+  seen red on the old handler (41 handlers, 1 decorative) and green after (0); no other found.
+- Not a stored-value change; no URL moved. Studies moved: all four apps; the two chart studies
+  unmoved.
+
 ## 2026-09-05 — DEPLOYED: night 35 live — the metronome study (v1.5.0) and triadetudes (v0.8.14) re-housed onto the hub's cards, the other four unmoved; all six checked; written from the run
 
 - record: run 33998706664 · success · commit efb5e60 · fetched 2026-09-05T23:35Z · 6/6 studies byte-identical · digest b5bfa657439c
