@@ -135,6 +135,17 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — DEPLOYED: night 38 live — one address family on tetradetudes and triadetudes, multetudes rebuilt; all six checked; written from the run
+
+- record: run 34060339857 · success · commit 174e60e · fetched 2026-09-06T21:19Z · 6/6 studies byte-identical · digest 5bea98588b4b
+- Actions run 34060339857 green on `174e60e` — https://github.com/danieladamek/atetudes.com/actions/runs/34060339857 (created 2026-09-06T21:12:17Z, finished 2026-09-06T21:19:14Z).
+- metronome: repo b7d02cedc3d0 · live b7d02cedc3d0 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 0c101aa7df29 · live 0c101aa7df29 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 465e4e5defdc · live 465e4e5defdc — matches.
+- triadetudes: repo 9ba42843b4d0 · live 9ba42843b4d0 — matches.
+
 ## 2026-09-06 — night 38: one address family — tetradetudes v0.6.0 and triadetudes v0.9.0 take multetudes' pattern (string numbers) and tones
 
 - **What:** Daniel, 260923 — "123, 234, 345, 456 and tones R-3-5". The figure's PATTERN address is
