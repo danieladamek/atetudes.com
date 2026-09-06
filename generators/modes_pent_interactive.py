@@ -19,6 +19,7 @@ shapes exactly (up to the octave placement of one pattern).
 import json
 
 import modes_pent as mp   # side effect: asserts everything + rebuilds the PDF
+import atetudes_bridge as bridge   # night 39: the engine and the hub cards, inlined byte-faithful
 
 # ---------------- spelling ----------------
 LETTERS = "CDEFGAB"
@@ -174,6 +175,11 @@ for si in range(3):
 DATA = {"keydata": KEYDATA, "keys": KEYS, "sets": sets_meta,
         "ink": "#212126", "gray": "#73737A", "light": "#CCCCCE"}
 
+# THE TEMPLATE IS THE PUBLISHED PAGE (261003, night 39): commit aac92a0 (2026-08-08) added the
+# drone, the tempo control, play-all and the clickable legend by editing the GENERATED page
+# directly — 157 lines this generator never learned, so for 29 days it did not reproduce what it
+# published. Absorbed here verbatim from static/studies/modes-from-pentatonic-boxes/study.html,
+# proven byte-identical by the ingest (CLAUDE.md: fixes go upstream; the page is an output).
 TEMPLATE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -191,6 +197,13 @@ TEMPLATE = r"""<!DOCTYPE html>
   header .tag { margin:7px 0 0; font-size:14.5px; font-style:italic; color:var(--gray); }
   header p { margin:8px auto 0; font-size:13px; color:var(--gray); max-width:900px; line-height:1.65; }
   .seg .cap { font:600 10px Helvetica; color:var(--gray); padding:11px 2px 0 10px; }
+  .seg.tempo { align-items:center; gap:7px; padding:0 12px 0 0; }
+  .seg.tempo .cap { padding:0 0 0 10px; }
+  .seg.tempo input[type=range] { width:120px; }
+  .seg.tempo .bpmv { font:600 12px Helvetica; color:var(--ink); width:24px; text-align:right; }
+  .boxtitle.touring { color:#B82929; }
+  .leg { cursor:pointer; font-weight:700; }
+  .leg.pin { text-decoration:underline; text-underline-offset:3px; }
   .controls { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; padding:16px 10px 6px; }
   .seg { display:flex; border:1px solid var(--light); border-radius:8px; overflow:hidden; }
   .seg button { border:0; background:#fff; color:var(--ink); font:600 12.5px inherit; font-family:inherit; padding:9px 15px; cursor:pointer; }
@@ -236,6 +249,18 @@ TEMPLATE = r"""<!DOCTYPE html>
   #hint { text-align:center; font-style:italic; font-size:11.5px; color:var(--gray); padding:4px 16px 0; max-width:980px; margin:0 auto; line-height:1.7; }
   footer { text-align:center; font-size:11.5px; color:var(--gray); padding:22px 12px 36px; line-height:1.8; }
   .boxfig svg { max-width:100%; height:auto; }
+  /* ===== the family's page grammar for a page without the shell (generators/atetudes_bridge.py) ===== */
+__GRAMMAR_CSS__
+  /* ===== hub/modules/notepad-card.mjs · styles, VERBATIM (the bridge) — host-conformance pins these bytes ===== */
+__NOTEPAD_CSS__
+  /* ===== hub/modules/metronome-card.mjs · styles, VERBATIM (the bridge) ===== */
+__METRONOME_CSS__
+  #notepadCard #noteCol{padding-left:0}
+  /* this page's name is long: the card's 215px title field clips it (a field that clips the value it
+     holds does not visibly hold it — 260916); wider here, and in flow under the heading on a phone */
+  #notepadCard #npTitle{width:330px}
+  .board p{font-size:12.5px;color:var(--gray);margin:4px 0}
+  @media (max-width: 760px){ #notepadCard>#npTitle{position:static!important;width:100%;margin:0 0 8px} }
   @media (max-width: 760px) {
     header h1 { font-size:23px; }
     header .tag { font-size:13px; }
@@ -261,24 +286,64 @@ TEMPLATE = r"""<!DOCTYPE html>
 </div>
 <div class="controls">
   <div class="seg" id="setSeg"></div>
+</div>
+<div id="caption"></div>
+<div id="hint">click the selected mode pair again to flip major ↔ relative minor · <b>mode tones</b> toggles the two added notes in and out — out leaves the bare pentatonic, and the play buttons follow · hover a note to light up its degree family · click a note to hear it · <b>drone</b> sustains a tonal center — the top button drones the caption's key; each box's own drone button drones <i>that box's</i> hearing and follows its flips (one drone at a time) · click a color in the legend below to pin its family across every box</div>
+<div class="controls" style="padding-top:16px">
   <div class="seg">
     <button id="meltBtn" class="on" title="Toggle the two mode tones on or off. Out = the bare pentatonic — the play buttons follow.">mode tones: in</button>
     <button id="soundBtn" class="on" title="Toggle audio on or off.">sound: on</button>
+    <button id="droneBtn" title="Sustain the caption’s tonal center under everything you play. Each box also has its own drone button that follows that box’s hearing.">drone: off</button>
+    <button id="tourBtn" title="Play all five boxes in order down the neck.">play all</button>
   </div>
 </div>
-<div id="caption"></div>
-<div id="hint">click the selected mode pair again to flip major ↔ relative minor · <b>mode tones</b> toggles the two added notes in and out — out leaves the bare pentatonic, and the play buttons follow · hover a note to light up its degree family · click a note to hear it</div>
+<!-- THE SHARED PARTS (night 39, 261003 — the first generator-emitted page to carry them; Daniel 260923:
+     "the same split notepad/log in all"): the family's metronome card, first block, and the notepad's
+     pad beside it (multetudes' seating); the practice log is a board below the map. The tempo the map
+     plays at (play all, the box buttons) IS the metronome's bpm now — one tempo, the card's slider. -->
+<div class="cards">
+  <div class="card metro">
+    <h2>Metronome</h2>
+    <!-- ===== hub/modules/metronome-card.mjs · the four row groups, VERBATIM (the bridge) ===== -->
+__METRONOME_ROWS__    <!-- ===== /hub/modules/metronome-card.mjs ===== -->
+    <div class="hint info">A full metronome on its own clock — play all and the box buttons run at its tempo. (Shared component:
+    __METRONOME_GUARANTEE__.)</div>
+  </div>
+  <div class="card" id="notepadCard">
+    <h2>Notepad</h2>
+    <!-- ===== hub/modules/notepad-card.mjs · the PAD part, VERBATIM — seated beside the metronome as the multetudes door seats it (the bridge) ===== -->
+    __NOTEPAD_PAD__
+    <!-- ===== /hub/modules/notepad-card.mjs#pad ===== -->
+    <div class="hint">Save note files the idea with this map's key, box set and tempo and clears the pad; Restore on any saved note brings the map back to that moment. Export writes one <b>.atchart.md</b> any At-Etudes app can open.</div>
+  </div>
+</div>
 <div id="boxes"></div>
+<div class="board">
+  <!-- ===== hub/modules/notepad-card.mjs · the markup without the pad part, VERBATIM (the build's own assembly) ===== -->__NOTEPAD_BOARD__
+  <!-- ===== /hub/modules/notepad-card.mjs ===== -->
+</div>
 <footer>
-  square = pentatonic core · circle + dashed loop = the two mode tones · one color per degree:
-  red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7<br>
+  square = pentatonic core · circle + dashed loop = the two mode tones · one color per degree (click to pin):
+  <span class="leg" data-fam="R" style="color:#B82929">red R</span> ·
+  <span class="leg" data-fam="2" style="color:#3D8C2E">green 2</span> ·
+  <span class="leg" data-fam="3" style="color:#2959A6">blue 3</span> ·
+  <span class="leg" data-fam="4" style="color:#8A8D96">silver 4</span> ·
+  <span class="leg" data-fam="5" style="color:#212126">black 5</span> ·
+  <span class="leg" data-fam="6" style="color:#149AAF">cyan 6</span> ·
+  <span class="leg" data-fam="7" style="color:#B8820B">amber 7</span><br>
   color = function vs. the current root, never absolute pitch — flipping major ↔ minor recolors the same physical notes<br>
   box numbers match the print edition: Box 1 is rooted on the relative minor root — numbering is fixed per key and never changes with the hearing
 </footer>
 <script>
+/* ===== engine/*.mjs, inlined by generators/atetudes_bridge.py in the hand-inline convention —
+   the carrier census (engine/tests/_carriers.mjs) detects these and pins them verbatim ===== */
+__ENGINE__
 const DATA = __DATA__;
 const FW = 52, SS = 26, PADT = 14, PADB = 42, SC = FW / 30;
-const state = { key: "A", set: 0, root: "C", melt: true, sound: true };
+const state = { key: "A", set: 0, root: "C", melt: true, sound: true, bpm: 140, drone: false };
+const NOTE_PC = { "C":0,"C#":1,"Db":1,"D":2,"D#":3,"Eb":3,"E":4,"F":5,"F#":6,"Gb":6,
+                  "G":7,"G#":8,"Ab":8,"A":9,"A#":10,"Bb":10,"B":11,"Cb":11,"B#":0 };
+function noteMs() { return 30000 / state.bpm; }   // eighth notes at the set tempo
 const SVGNS = "http://www.w3.org/2000/svg";
 let audio = null, boxState = {}, boxEls = {}, playTimers = {};
 
@@ -315,13 +380,101 @@ function playBox(num, dir) {
     .filter(g => bs.melt || g.__rec.kind === "pent")   // colors out = pentatonic only
     .sort((a, b) => a.__rec.midi - b.__rec.midi);
   if (dir < 0) seq.reverse();
+  const ms = noteMs(), dur = Math.min(0.65, ms / 1000 * 1.7);
   seq.forEach((g, i) => {
     playTimers[num].push(setTimeout(() => {
-      tone(g.__rec.midi, audio.currentTime, 0.45);
+      tone(g.__rec.midi, audio.currentTime, dur);
       g.classList.add("hot");
-      setTimeout(() => g.classList.remove("hot"), 190);
-    }, i * 210));
+      setTimeout(() => g.classList.remove("hot"), Math.min(190, ms * 0.9));
+    }, i * ms));
   });
+  return seq.length * ms;
+}
+
+/* ---- drone: the tonal center, sustained ----
+   One drone at a time. Its source is either "global" (the caption's tonal center)
+   or a box number (that box's own hearing — flipping the box moves the drone). */
+let droneNodes = null, droneSrc = null;   // droneSrc: null | "global" | box number
+function droneRootMidi() {
+  if (droneSrc === null) return null;
+  const r = droneSrc === "global" ? state.root : boxState[droneSrc].root;
+  const nm = r === "C" ? kd().maj : kd().min;
+  const pc = NOTE_PC[nm];
+  return 40 + ((pc - 4 + 12) % 12);              // low register, E2..D#3
+}
+function startDrone(m) {
+  audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+  if (droneNodes && droneNodes.m === m) return;   // already sounding the right root
+  stopDrone(true);
+  const t = audio.currentTime;
+  const g = audio.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.085, t + 0.6);
+  const mk = (midi, vol, type) => {
+    const o = audio.createOscillator(), og = audio.createGain();
+    o.type = type; o.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+    og.gain.value = vol; o.connect(og).connect(g); o.start(t);
+    return o;
+  };
+  const os = [mk(m, 0.62, "sine"), mk(m + 12, 0.22, "triangle"), mk(m + 19, 0.28, "sine")];
+  g.connect(audio.destination);
+  droneNodes = { g: g, os: os, m: m };
+}
+function stopDrone(hard) {
+  if (!droneNodes) return;
+  const d = droneNodes; droneNodes = null;
+  const t = audio.currentTime;
+  d.g.gain.cancelScheduledValues(t);
+  d.g.gain.setValueAtTime(d.g.gain.value, t);
+  d.g.gain.linearRampToValueAtTime(0.0001, t + (hard ? 0.03 : 0.4));
+  d.os.forEach(o => o.stop(t + (hard ? 0.06 : 0.5)));
+}
+function syncDrone() {
+  const m = droneRootMidi();
+  m === null ? stopDrone(false) : startDrone(m);
+}
+function syncDroneButtons() {
+  const b = document.getElementById("droneBtn");
+  b.textContent = "drone: " + (droneSrc === "global" ? "on" : "off");
+  b.classList.toggle("on", droneSrc === "global");
+  for (const num in boxEls) {
+    const pb = document.querySelector("#panel-" + num + ' [data-act="drone"]');
+    if (pb) {
+      pb.textContent = "drone: " + (droneSrc == num ? "on" : "off");
+      pb.classList.toggle("on", droneSrc == num);
+    }
+  }
+}
+function setDroneSrc(src) {
+  droneSrc = droneSrc === src ? null : src;
+  if (droneSrc !== null && !state.sound) droneSrc = null;
+  syncDrone(); syncDroneButtons();
+}
+
+/* ---- the tour: all five boxes, in order, down the neck ---- */
+let tourTimers = [];
+function stopTour() {
+  tourTimers.forEach(clearTimeout); tourTimers = [];
+  document.getElementById("tourBtn").textContent = "play all";
+  for (const num in boxEls) boxEls[num].title.classList.remove("touring");
+}
+function tour() {
+  if (tourTimers.length) { stopTour(); return; }
+  if (!state.sound) return;
+  audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+  const ms = noteMs(); let t = 0;
+  for (const num of kd().order) {
+    const n = boxEls[num].dots.filter(g => boxState[num].melt || g.__rec.kind === "pent").length;
+    tourTimers.push(setTimeout(() => {
+      playBox(num, 1);
+      boxEls[num].title.classList.add("touring");
+      boxEls[num].svg.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => boxEls[num].title.classList.remove("touring"), n * ms + 150);
+    }, t));
+    t += n * ms + 550;
+  }
+  tourTimers.push(setTimeout(stopTour, t));
+  document.getElementById("tourBtn").textContent = "stop";
 }
 
 function buildBoxes() {
@@ -411,14 +564,15 @@ function buildBoxes() {
 
 function allDots() { return Array.from(document.querySelectorAll(".dot")); }
 
-function hover(lab) {
-  const fam = lab ? family(lab) : null;
+let stickyFam = null;
+function applyFam(fam) {
   for (const g of allDots()) {
     const mine = family(g.__rec[boxState[g.__num].root].lab);
     g.classList.toggle("hot", fam !== null && mine === fam);
     g.classList.toggle("dim", fam !== null && mine !== fam);
   }
 }
+function hover(lab) { applyFam(lab ? family(lab) : stickyFam); }
 
 function heardName(root) {
   return root === "C" ? kd().maj + " major" : kd().min + " minor";
@@ -450,6 +604,7 @@ function updateBox(num, instant) {
   boxEls[num].svg.classList.toggle("nomelt", !bs.melt);
   boxEls[num].title.textContent = "Box " + dispNum(num);
   fillPanel(num);
+  if (droneSrc == num) syncDrone();   // this box's hearing flipped — the drone follows
 }
 
 function refreshAll(instant) {
@@ -477,6 +632,7 @@ function refreshAll(instant) {
   span("   (" + meta.tens + ")", "#73737A");
   cap.appendChild(sub);
   updateSetSeg();
+  syncDrone();
 }
 
 const ORDER = ["R", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"];
@@ -504,6 +660,7 @@ function fillPanel(num) {
   html += '<div class="pctl">' +
     '<button class="pb" data-act="root">hearing: ' + heardName(bs.root) + "</button>" +
     '<button class="pb' + (bs.melt ? " on" : "") + '" data-act="melt" title="Toggle the two mode tones on or off. Out = the bare pentatonic — the play buttons follow.">mode tones: ' + (bs.melt ? "in" : "out") + "</button>" +
+    '<button class="pb' + (droneSrc == num ? " on" : "") + '" data-act="drone" title="Sustain this box’s hearing root under everything — flip the hearing and the drone follows. One drone at a time.">drone: ' + (droneSrc == num ? "on" : "off") + "</button>" +
     '<button class="pb" data-act="up">play &#8593;</button>' +
     '<button class="pb" data-act="down">play &#8595;</button></div>';
   html += '<div><span class="muted">core</span>&nbsp; ' + chipsOf(uniq(pent), pent, "sq") +
@@ -530,6 +687,7 @@ function fillPanel(num) {
     bs.melt = !bs.melt;
     updateBox(num, true);
   });
+  panel.querySelector('[data-act="drone"]').addEventListener("click", () => setDroneSrc(num));
   panel.querySelector('[data-act="up"]').addEventListener("click", () => playBox(num, 1));
   panel.querySelector('[data-act="down"]').addEventListener("click", () => playBox(num, -1));
 }
@@ -580,14 +738,159 @@ document.getElementById("meltBtn").addEventListener("click", () => setAllMelt(!s
 document.getElementById("soundBtn").addEventListener("click", function () {
   state.sound = !state.sound;
   this.textContent = "sound: " + (state.sound ? "on" : "off");
-  this.classList.toggle("on", state.sound); });
+  this.classList.toggle("on", state.sound);
+  if (!state.sound) { stopTour(); if (droneSrc !== null) setDroneSrc(droneSrc); } });
+document.getElementById("droneBtn").addEventListener("click", () => {
+  if (!state.sound) return;
+  setDroneSrc("global"); });
+document.getElementById("tourBtn").addEventListener("click", tour);
+/* ===== the metronome (night 39): engine/metronome.mjs's core, voiced through engine/voices.mjs's
+   clickSpec — the appliance's own glue (static/studies/metronome/study.html), ported. The card's
+   bpmRange IS the map's tempo. ===== */
+const { createMetroCore, createTapTempo } = M_METRONOME;
+const { clickSpec } = M_VOICES;
+const METRO = createMetroCore({ bpm: state.bpm, meter: 4 });
+const tapTempo = createTapTempo();
+const met = { accent: true, voice: "beep", vol: 0.8, stash: 0.8 };
+let pumpTimer = null, NOISE_BUF = null;
+function ac() { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === "suspended") audio.resume(); return audio; }
+function noiseBuf(a) {
+  if (!NOISE_BUF) { NOISE_BUF = a.createBuffer(1, Math.floor(a.sampleRate * 0.06), a.sampleRate);
+    const d = NOISE_BUF.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  return NOISE_BUF;
+}
+function click(when, level) {
+  const a = ac(); if (!a || met.vol <= 0) return;
+  const t = when || a.currentTime;
+  const spec = clickSpec(met.voice, level, { accents: met.accent, vol: met.vol });
+  const g = a.createGain();
+  g.gain.setValueAtTime(spec.gain, t); g.gain.exponentialRampToValueAtTime(0.0005, t + spec.dur);
+  g.connect(a.destination);
+  if (spec.noise) { const s = a.createBufferSource(); s.buffer = noiseBuf(a); const f = a.createBiquadFilter();
+    f.type = "highpass"; f.frequency.value = spec.hp; s.connect(f).connect(g); s.start(t); s.stop(t + spec.dur + 0.01); }
+  else { const o = a.createOscillator(); o.type = spec.type; o.frequency.value = spec.freq; o.connect(g); o.start(t); o.stop(t + spec.dur + 0.01); }
+}
+function renderLamp() {
+  const w = document.getElementById("beatLamp"); w.textContent = "";
+  for (let i = 0; i < METRO.meter; i++) w.appendChild(document.createElement("span"));
+}
+function light(beat) {
+  const dots = document.getElementById("beatLamp").children;
+  for (let i = 0; i < dots.length; i++) dots[i].className = (i === 0 && met.accent ? "acc " : "") + (i === beat ? "on" : "");
+}
+function pumpBeats() {
+  const a = ac(); if (!a) return;
+  for (const ev of METRO.pump(a.currentTime, 0.12)) {
+    if (ev.sub) { click(ev.time, -1); continue; }         // the core schedules the subdivision; this page voices it
+    click(ev.time, ev.beat === 0 ? 2 : 0);
+    setTimeout(() => light(ev.beat), Math.max(0, (ev.time - a.currentTime) * 1000));
+  }
+}
+function metroToggle() {
+  const a = ac(); if (!a) return;
+  if (METRO.running) { METRO.stop(); clearInterval(pumpTimer); pumpTimer = null; light(-1); }
+  else { METRO.setBpm(state.bpm); METRO.start(a.currentTime + 0.08); pumpTimer = setInterval(pumpBeats, 25); }
+  document.getElementById("metroBtn").textContent = METRO.running ? "Stop" : "Start";
+  syncMetro();
+}
+function syncMetro() {
+  document.getElementById("bpmRange").value = state.bpm;
+  document.getElementById("bpmVal").textContent = state.bpm;
+  const b = document.getElementById("clickMute"), on = met.vol > 0;
+  b.textContent = on ? "🔊" : "🔇"; b.setAttribute("aria-pressed", String(!on));
+  b.title = on ? "mute the click — the slider to zero" : "unmute — restore the click level";
+  document.getElementById("clickVolR").value = Math.round(met.vol * 100);
+  document.getElementById("clickVolVal").textContent = Math.round(met.vol * 100);
+}
+document.getElementById("metroBtn").addEventListener("click", metroToggle);
+document.getElementById("tapBtn").addEventListener("click", () => {
+  const b = tapTempo(performance.now() / 1000);
+  if (b) { state.bpm = b; METRO.setBpm(b); syncMetro(); }
+});
+document.getElementById("bpmRange").addEventListener("input", function () {
+  state.bpm = +this.value; METRO.setBpm(state.bpm);
+  document.getElementById("bpmVal").textContent = this.value; });
+document.getElementById("meterSel").addEventListener("change", e => { METRO.setMeter(+e.target.value); if (!METRO.running) renderLamp(); });
+document.getElementById("subSel").addEventListener("change", e => METRO.setSub(+e.target.value));
+document.getElementById("voiceSel").addEventListener("change", e => { met.voice = e.target.value; click(); });
+document.getElementById("accChk").addEventListener("change", e => { met.accent = e.target.checked; light(-1); });
+document.getElementById("clickMute").addEventListener("click", () => {
+  if (met.vol > 0) { met.stash = met.vol; met.vol = 0; } else met.vol = met.stash > 0 ? met.stash : 0.8;
+  syncMetro(); });
+document.getElementById("clickVolR").addEventListener("input", e => { met.vol = +e.target.value / 100; if (met.vol > 0) met.stash = met.vol; syncMetro(); });
+renderLamp(); light(-1); syncMetro();
+
+/* ===== the notepad (night 39): engine/notepad-surface.mjs over hub/modules/notepad-card.mjs's markup.
+   This block is what is HOST — the adapter, the storage key, the file's name. The surface does the
+   rest and FAILS LOUDLY by capability name if a mount is missing. snapshot() carries what this map
+   actually has: the key, the box set (and its major/minor face), the tempo. ===== */
+const NP_KEY = "modes-from-pentatonic-boxes.v1.notepad";
+const npTyped = () => (document.getElementById("npTitle").value || "").trim();
+const npFallback = () => "modes-from-pentatonic-boxes journal — " + new Date().toISOString().slice(0, 10);
+const npSafeName = (t) => t.replace(/[\\/:*?"<>|]+/g, "").replace(/[\s—–-]+/g, "-").replace(/^-+|-+$/g, "");
+const HOST = { app: "modes-from-pentatonic-boxes", version: 1,
+  nouns: { item: "note", apply: "Restore map" },
+  snapshot: () => ({ key: state.key, set: state.set, root: state.root, bpm: state.bpm }),
+  apply: (data) => {
+    if (!data || typeof data !== "object") return;
+    if (DATA.keys.includes(data.key)) state.key = data.key;
+    if (Number.isInteger(data.set) && data.set >= 0 && data.set < DATA.sets.length) state.set = data.set;
+    if (data.root === "C" || data.root === "A") state.root = data.root;
+    if (typeof data.bpm === "number") { state.bpm = Math.max(15, Math.min(300, data.bpm)); METRO.setBpm(state.bpm); }
+    document.querySelectorAll("#keySeg button").forEach(x => x.classList.toggle("on", x.textContent === state.key));
+    buildBoxes(); syncMetro();
+  },
+  summarize: (d) => !d || typeof d !== "object" ? "no map attached"
+    : `${d.key} major · box set ${(d.set ?? 0) + 1}${d.root === "A" ? " (relative minor)" : ""} · ${d.bpm} bpm` };
+const NOTE = M_NOTEPAD_SURFACE.createNotepadSurface({
+  adapter: HOST,
+  storage: { load: () => localStorage.getItem(NP_KEY), save: (str) => localStorage.setItem(NP_KEY, str) },
+  migrate: () => null,
+  els: { pad: document.getElementById("journalIn"), title: document.getElementById("npTitle"),
+    saveBtn: document.getElementById("saveEntry"), clearBtn: document.getElementById("clearPad"),
+    confirmRoot: document.getElementById("clearConfirm"), confirmSave: document.getElementById("clearSave"),
+    confirmDiscard: document.getElementById("clearDiscard"), confirmCancel: document.getElementById("clearCancel"),
+    exportBtn: document.getElementById("exportLog"), copyBtn: document.getElementById("copyBtn"),
+    paletteBtn: document.getElementById("paletteBtn"), paletteRoot: document.getElementById("paletteRoot"),
+    importBtn: document.getElementById("importBtn"), importFile: document.getElementById("importFile"),
+    msg: document.getElementById("saveMsg"), importMsg: document.getElementById("importMsg"),
+    exportMsg: document.getElementById("exportMsg"), copyMsg: document.getElementById("copyMsg"),
+    list: document.getElementById("histList"), count: document.getElementById("histCount"),
+    storeNote: document.getElementById("storeNote"), controls: document.getElementById("journalControls"),
+    handoff: document.getElementById("handoffNote") },
+  file: { get title() { return npTyped() || npFallback(); },
+    name: (stem) => npSafeName(stem !== undefined ? String(stem).trim() || npFallback() : npTyped() || npFallback()) + ".atchart.md" },
+  emptyHint: "No notes yet. Pick a key and a box set, jot the idea, save it — the note keeps the map.",
+  onApplied: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+});
+{ const t = document.getElementById("npTitle"); t.placeholder = npFallback();   // the title's seat: the shell's rule, the host's placement
+  t.style.position = "absolute"; t.style.top = "8px"; t.style.right = "10px";
+  const card = document.getElementById("notepadCard"); card.insertBefore(t, card.firstChild); }   // first, so the phone rule's in-flow field sits above the pad
+document.querySelectorAll(".leg").forEach(s => {
+  s.addEventListener("click", () => {
+    const f = s.dataset.fam;
+    stickyFam = stickyFam === f ? null : f;
+    document.querySelectorAll(".leg").forEach(x =>
+      x.classList.toggle("pin", x.dataset.fam === stickyFam));
+    applyFam(stickyFam);
+  });
+});
 buildBoxes();
 </script>
 </body>
 </html>
 """
 
-html = TEMPLATE.replace("__DATA__", json.dumps(DATA))
+html = (TEMPLATE
+        .replace("__GRAMMAR_CSS__", bridge.FAMILY_GRAMMAR_CSS.strip("\n"))
+        .replace("__NOTEPAD_CSS__", bridge.card_styles("notepad-card").strip("\n"))
+        .replace("__METRONOME_CSS__", bridge.card_styles("metronome-card").strip("\n"))
+        .replace("__METRONOME_ROWS__", bridge.metronome_rows())
+        .replace("__METRONOME_GUARANTEE__", bridge.metronome_guarantee())
+        .replace("__NOTEPAD_PAD__", bridge.card_part("notepad-card", "pad"))
+        .replace("__NOTEPAD_BOARD__", bridge.card_markup("notepad-card", seated=("pad",)))
+        .replace("__ENGINE__", bridge.engine_inline(["notepad-surface", "metronome", "voices"]))
+        .replace("__DATA__", json.dumps(DATA)))
 out = "Modes_From_Pentatonics_Interactive.html"
 with open(out, "w") as f:
     f.write(html)

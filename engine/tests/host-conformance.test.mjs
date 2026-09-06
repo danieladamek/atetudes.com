@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createNotepadSurface, CAPABILITIES } from "../notepad-surface.mjs";
 import { makeDoc, memStorage, capsOf } from "./_dom-stub.mjs";
-import { carriersOf, CENSUS, STUDY_SLUGS } from "./_carriers.mjs";
+import { carriersOf, preHubCarriersOf, CENSUS, STUDY_SLUGS } from "./_carriers.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const studyOf = (slug) =>
@@ -70,6 +70,21 @@ const NOTEPAD_HOSTS = [
       msg: "saveMsg", importMsg: "importMsg", list: "histList",
       count: "histCount", storeNote: "storeNote", controls: "journalControls",
       handoff: "handoffNote" } },
+  /* THE FIRST TIER C PORT (261003, night 39): a GENERATOR-EMITTED page carrying the
+   * cards through generators/atetudes_bridge.py — the census detected it the moment the
+   * generator emitted notepad-surface, and this list refused it by name until the entry
+   * existed ("a study carrying notepad-surface.mjs has no host entry"). The mounts are the
+   * card's ids, every capability explicit, the title field seated by the host. */
+  { name: "modes-from-pentatonic-boxes",
+    nouns: { item: "note", apply: "Restore map" },
+    mounts: { pad: "journalIn", title: "npTitle", saveBtn: "saveEntry", clearBtn: "clearPad",
+      confirmRoot: "clearConfirm", confirmSave: "clearSave",
+      confirmDiscard: "clearDiscard", confirmCancel: "clearCancel",
+      exportBtn: "exportLog", copyBtn: "copyBtn", paletteBtn: "paletteBtn",
+      paletteRoot: "paletteRoot", importBtn: "importBtn", importFile: "importFile",
+      msg: "saveMsg", importMsg: "importMsg", exportMsg: "exportMsg", copyMsg: "copyMsg",
+      list: "histList", count: "histCount", storeNote: "storeNote",
+      controls: "journalControls", handoff: "handoffNote" } },
   { name: "multetudes",
     /* item 1 (260911): this host TOOK the placement — copyBtn and paletteRoot
      * are DECLARED mounts here, not auto-appends. The auto-append path was
@@ -134,7 +149,8 @@ test("§4.3 notepad: every declared mount exists in every host's shipped page, a
         `[${host.name}] #${id} exists but nothing passes it to the surface — ` +
         `wire els.${key} in the host's init`);
     }
-    if (preHub) assert.ok(page.includes('nouns:{item:"' + host.nouns.item + '"'),
+    // the declaration, in either spelling — the hand pages minify it, a generator-emitted page (261003) does not
+    if (preHub) assert.ok(new RegExp('nouns:\\s*\\{\\s*item:\\s*"' + host.nouns.item + '"').test(page),
       `[${host.name}] the adapter must declare nouns {item:"${host.nouns.item}"} — ` +
       `vocabulary is adapter-supplied, never hand-written in the page`);
   }
@@ -321,7 +337,9 @@ test("§4.3 card carriers: a hand-authored page that carries a hub card carries 
       pinned++;
     }
   }
-  assert.equal(pinned, 4, "two hand-authored studies × two cards: the pin must actually have run four times");
+  // the count is the census's: every detected carrier of notepad-surface carries both cards (261003: three pages, six pins)
+  const expected = preHubCarriersOf("notepad-surface").length * CARDS.length;
+  assert.ok(expected >= 4 && pinned === expected, `the pin must actually have run ${expected} times (detected carriers × cards), ran ${pinned}`);
 });
 
 // ================= metronome.mjs: widened to the same shape =================
@@ -342,6 +360,9 @@ const METRONOME_HOSTS = [
       "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
   { name: "multetudes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",
+      "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
+      "clickVolVal", "beatLamp"] },
+  { name: "modes-from-pentatonic-boxes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",   // 261003: through the bridge
       "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
 ];
@@ -377,7 +398,7 @@ test("§4.3 metronome: the control inventory and the family guarantee render in 
 // and lives in hub/tests/door_locks.py where one runs.
 
 const ROW_COUNTS = { Metronome: 4, Transport: 5 };
-const GRAMMAR_HOSTS = ["metronome", "triadetudes", "tetradetudes", "multetudes"];
+const GRAMMAR_HOSTS = ["metronome", "triadetudes", "tetradetudes", "multetudes", "modes-from-pentatonic-boxes"];   // 261003: the bridge's first page
 
 test("§4.3 grammar: metronome cards are four row groups, transport cards five, in every host", () => {
   for (const name of GRAMMAR_HOSTS) {
@@ -422,6 +443,9 @@ const LEXICON_HOSTS = [
     shippedSource: { placement: "PLACE_LABEL" },   // shape-motion builds #placeSeg at mount from this literal, which the page ships
     segments: { movement: ["playbackSeg", "pb"], figureIs: ["figAddrSeg", "mm"] },
     captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement", "centricity", "movement", "figureIs", "bass"] },
+  { name: "modes-from-pentatonic-boxes",   // 261003: the metronome card through the bridge — its selects and captions
+    selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel" },
+    captions: ["bpm", "volume", "subdivision", "voice"] },
   { name: "multetudes",
     selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel" },
     shippedSource: { scale: "SCALES" },   // harmony-card fills #hcScale at mount from this literal, which the page ships

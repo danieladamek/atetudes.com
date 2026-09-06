@@ -135,6 +135,20 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — night 39: the generator bridge — modes-from-pentatonic-boxes carries the metronome card and the split notepad/log, emitted by its generator
+
+- **What:** `generators/atetudes_bridge.py` reads engine/*.mjs and the hub cards and emits them
+  inline in the hand-inline convention (import lines removed, `export ` stripped, one IIFE per
+  module, byte-faithful), so a generator-emitted page is a carrier the census detects and every
+  existing drift pin covers. `generators/modes_pent_interactive.py` calls it: the page gains the
+  family's metronome card (first block; its slider is the map's tempo now, 15–300) beside the
+  notepad's pad, and the practice log as a board below the map — the subject and the URL are
+  untouched. The page joins NOTEPAD_HOSTS, METRONOME_HOSTS, GRAMMAR_HOSTS and the lexicon list.
+  Found first and fixed: the generator had not reproduced its published page since a hand edit on
+  2026-08-08 (`aac92a0`, 157 lines) — absorbed into the template and proven byte-identical before
+  the bridge was added. The emitted `study.html` is ingested byte-identical.
+- **Why:** Daniel, 260923 — "The generator inlines them"; the split notepad/log "in all".
+
 ## 2026-09-06 — DEPLOYED: night 38 live — one address family on tetradetudes and triadetudes, multetudes rebuilt; all six checked; written from the run
 
 - record: run 34060339857 · success · commit 174e60e · fetched 2026-09-06T21:19Z · 6/6 studies byte-identical · digest 5bea98588b4b
