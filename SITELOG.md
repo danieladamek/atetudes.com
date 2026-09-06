@@ -135,6 +135,17 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — DEPLOYED: night 36 live — Design Spec v1.4, the starburst on both doors, the hand-authored carriers re-inlined; all six checked; written from the run
+
+- record: run 34023951203 · success · commit 900cda7 · fetched 2026-09-06T09:18Z · 6/6 studies byte-identical · digest 5351f6206549
+- Actions run 34023951203 green on `900cda7` — https://github.com/danieladamek/atetudes.com/actions/runs/34023951203 (created 2026-09-06T09:11:38Z, finished 2026-09-06T09:18:53Z).
+- metronome: repo b7d02cedc3d0 · live b7d02cedc3d0 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 2b3d340430ec · live 2b3d340430ec — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 4933d7340aac · live 4933d7340aac — matches.
+- triadetudes: repo 17ea7c389b74 · live 17ea7c389b74 — matches.
+
 ## 2026-09-05 — night 36: the non-diatonic mark — Design Spec v1.4, the starburst, violet returns
 
 - **What:** `docs/design-language-and-engine-spec.md` → v1.4 (Update Log 260930.1): chromaticity
