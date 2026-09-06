@@ -891,6 +891,8 @@ html = (TEMPLATE
         .replace("__NOTEPAD_BOARD__", bridge.card_markup("notepad-card", seated=("pad",)))
         .replace("__ENGINE__", bridge.engine_inline(["notepad-surface", "metronome", "voices"]))
         .replace("__DATA__", json.dumps(DATA)))
+# where this output is PUBLISHED — tools/generator_identity.py asserts the page is byte-identical to what this emits
+PUBLISHED = "static/studies/modes-from-pentatonic-boxes/study.html"
 out = "Modes_From_Pentatonics_Interactive.html"
 with open(out, "w") as f:
     f.write(html)

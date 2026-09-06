@@ -16,6 +16,7 @@ of the print books' passes grip-for-grip (cycle6, cycle3, drop2_study are
 imported, re-running their own assertions and rebuilding their PDFs).
 """
 import json
+import atetudes_bridge as bridge   # night 40: the engine and the hub cards, inlined byte-faithful — night 39's bridge, reused unchanged
 
 import cycle6
 import cycle3
@@ -288,6 +289,17 @@ TEMPLATE = r"""<!DOCTYPE html>
   #timeline button.cur .rn { color:var(--light); }
   #narr { text-align:center; font-weight:600; font-size:12.5px; padding:10px 0 2px; min-height:18px; }
   footer { text-align:center; font-size:11.5px; color:var(--gray); padding:20px 12px 34px; line-height:1.8; }
+  /* ===== the family's page grammar for a page without the shell (generators/atetudes_bridge.py) ===== */
+__GRAMMAR_CSS__
+  /* ===== hub/modules/notepad-card.mjs · styles, VERBATIM (the bridge) — host-conformance pins these bytes ===== */
+__NOTEPAD_CSS__
+  /* ===== hub/modules/metronome-card.mjs · styles, VERBATIM (the bridge) ===== */
+__METRONOME_CSS__
+  .cards{width:min(1000px, 95vw)} .board{width:min(1000px, 95vw)}
+  #notepadCard #noteCol{padding-left:0}
+  #notepadCard #npTitle{width:300px}
+  .board p{font-size:12.5px;color:var(--gray);margin:4px 0}
+  @media (max-width: 760px){ #notepadCard>#npTitle{position:static!important;width:100%;margin:0 0 8px} }
   @media (max-width: 760px) {
     header h1 { font-size:22px; }
     header p { font-size:12.5px; padding:0 14px; }
@@ -324,6 +336,26 @@ TEMPLATE = r"""<!DOCTYPE html>
     <button id="soundBtn" class="on" title="Toggle audio on or off.">sound: on</button>
   </div>
 </div>
+<!-- THE SHARED PARTS (night 40, 261004 — Daniel 260923: "Yes — port it"; the same split notepad/log in all):
+     the family's metronome card, first block, on its own clock, and the notepad's pad beside it (multetudes'
+     seating); the practice log is a board below the stage. The study's own code above and below is untouched —
+     a port, not a refactor. -->
+<div class="cards">
+  <div class="card metro">
+    <h2>Metronome</h2>
+    <!-- ===== hub/modules/metronome-card.mjs · the four row groups, VERBATIM (the bridge) ===== -->
+__METRONOME_ROWS__    <!-- ===== /hub/modules/metronome-card.mjs ===== -->
+    <div class="hint info">A full metronome on its own clock, beside the study — play steps at its own pace. (Shared component:
+    __METRONOME_GUARANTEE__.)</div>
+  </div>
+  <div class="card" id="notepadCard">
+    <h2>Notepad</h2>
+    <!-- ===== hub/modules/notepad-card.mjs · the PAD part, VERBATIM — seated beside the metronome as the multetudes door seats it (the bridge) ===== -->
+    __NOTEPAD_PAD__
+    <!-- ===== /hub/modules/notepad-card.mjs#pad ===== -->
+    <div class="hint">Save note files the idea with this study's key, scale, cycle, string group, bottom tone and step, and clears the pad; Restore on any saved note brings the study back to that moment. Export writes one <b>.atchart.md</b> any At-Etudes app can open.</div>
+  </div>
+</div>
 <div id="rule"></div>
 <div id="stageCard">
   <div id="stage">
@@ -334,12 +366,19 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div id="timeline"></div>
   <div id="narr"></div>
 </div>
+<div class="board">
+  <!-- ===== hub/modules/notepad-card.mjs · the markup without the pad part, VERBATIM (the build's own assembly) ===== -->__NOTEPAD_BOARD__
+  <!-- ===== /hub/modules/notepad-card.mjs ===== -->
+</div>
 <footer>
   red = root · blue = 3rd · black = 5th · amber = 7th (altered tones share the family color) ·
   <b>ringed note = about to move</b> · held notes recolor as their function changes ·
   click any chord to jump there · click a note to hear it alone
 </footer>
 <script>
+/* ===== engine/*.mjs, inlined by generators/atetudes_bridge.py in the hand-inline convention —
+   the carrier census (engine/tests/_carriers.mjs) detects these and pins them verbatim ===== */
+__ENGINE__
 const DATA = __DATA__;
 const SVGNS = "http://www.w3.org/2000/svg";
 const FW = 46, SS = 26, PADT = 8, PADB = 20;
@@ -605,12 +644,141 @@ document.getElementById("soundBtn").addEventListener("click", function () {
   this.classList.toggle("on", state.sound); });
 syncBlock();
 buildStage();
+
+/* ===== the metronome (night 40): engine/metronome.mjs's core, voiced through engine/voices.mjs's
+   clickSpec — the appliance's glue as night 39 ported it. Its own clock: this study steps at its own
+   fixed pace, so the card's bpm drives nothing here but the click. ===== */
+const { createMetroCore, createTapTempo } = M_METRONOME;
+const { clickSpec } = M_VOICES;
+const met = { bpm: 72, accent: true, voice: "beep", vol: 0.8, stash: 0.8 };
+const METRO = createMetroCore({ bpm: met.bpm, meter: 4 });
+const tapTempo = createTapTempo();
+let pumpTimer = null, NOISE_BUF = null;
+function ac() { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === "suspended") audio.resume(); return audio; }
+function noiseBuf(a) {
+  if (!NOISE_BUF) { NOISE_BUF = a.createBuffer(1, Math.floor(a.sampleRate * 0.06), a.sampleRate);
+    const d = NOISE_BUF.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  return NOISE_BUF;
+}
+function click(when, level) {
+  const a = ac(); if (!a || met.vol <= 0) return;
+  const t = when || a.currentTime;
+  const spec = clickSpec(met.voice, level, { accents: met.accent, vol: met.vol });
+  const g = a.createGain();
+  g.gain.setValueAtTime(spec.gain, t); g.gain.exponentialRampToValueAtTime(0.0005, t + spec.dur);
+  g.connect(a.destination);
+  if (spec.noise) { const s = a.createBufferSource(); s.buffer = noiseBuf(a); const f = a.createBiquadFilter();
+    f.type = "highpass"; f.frequency.value = spec.hp; s.connect(f).connect(g); s.start(t); s.stop(t + spec.dur + 0.01); }
+  else { const o = a.createOscillator(); o.type = spec.type; o.frequency.value = spec.freq; o.connect(g); o.start(t); o.stop(t + spec.dur + 0.01); }
+}
+function renderLamp() {
+  const w = document.getElementById("beatLamp"); w.textContent = "";
+  for (let i = 0; i < METRO.meter; i++) w.appendChild(document.createElement("span"));
+}
+function light(beat) {
+  const dots = document.getElementById("beatLamp").children;
+  for (let i = 0; i < dots.length; i++) dots[i].className = (i === 0 && met.accent ? "acc " : "") + (i === beat ? "on" : "");
+}
+function pumpBeats() {
+  const a = ac(); if (!a) return;
+  for (const ev of METRO.pump(a.currentTime, 0.12)) {
+    if (ev.sub) { click(ev.time, -1); continue; }
+    click(ev.time, ev.beat === 0 ? 2 : 0);
+    setTimeout(() => light(ev.beat), Math.max(0, (ev.time - a.currentTime) * 1000));
+  }
+}
+function metroToggle() {
+  const a = ac(); if (!a) return;
+  if (METRO.running) { METRO.stop(); clearInterval(pumpTimer); pumpTimer = null; light(-1); }
+  else { METRO.setBpm(met.bpm); METRO.start(a.currentTime + 0.08); pumpTimer = setInterval(pumpBeats, 25); }
+  document.getElementById("metroBtn").textContent = METRO.running ? "Stop" : "Start";
+  syncMetro();
+}
+function syncMetro() {
+  document.getElementById("bpmRange").value = met.bpm;
+  document.getElementById("bpmVal").textContent = met.bpm;
+  const b = document.getElementById("clickMute"), on = met.vol > 0;
+  b.textContent = on ? "🔊" : "🔇"; b.setAttribute("aria-pressed", String(!on));
+  b.title = on ? "mute the click — the slider to zero" : "unmute — restore the click level";
+  document.getElementById("clickVolR").value = Math.round(met.vol * 100);
+  document.getElementById("clickVolVal").textContent = Math.round(met.vol * 100);
+}
+document.getElementById("metroBtn").addEventListener("click", metroToggle);
+document.getElementById("tapBtn").addEventListener("click", () => { const b = tapTempo(performance.now() / 1000); if (b) { met.bpm = b; METRO.setBpm(b); syncMetro(); } });
+document.getElementById("bpmRange").addEventListener("input", function () { met.bpm = +this.value; METRO.setBpm(met.bpm); document.getElementById("bpmVal").textContent = this.value; });
+document.getElementById("meterSel").addEventListener("change", e => { METRO.setMeter(+e.target.value); if (!METRO.running) renderLamp(); });
+document.getElementById("subSel").addEventListener("change", e => METRO.setSub(+e.target.value));
+document.getElementById("voiceSel").addEventListener("change", e => { met.voice = e.target.value; click(); });
+document.getElementById("accChk").addEventListener("change", e => { met.accent = e.target.checked; light(-1); });
+document.getElementById("clickMute").addEventListener("click", () => { if (met.vol > 0) { met.stash = met.vol; met.vol = 0; } else met.vol = met.stash > 0 ? met.stash : 0.8; syncMetro(); });
+document.getElementById("clickVolR").addEventListener("input", e => { met.vol = +e.target.value / 100; if (met.vol > 0) met.stash = met.vol; syncMetro(); });
+renderLamp(); light(-1); syncMetro();
+
+/* ===== the notepad (night 40): engine/notepad-surface.mjs over hub/modules/notepad-card.mjs's markup.
+   What is HOST: the adapter, the storage key, the file's name. snapshot() carries what this study
+   has — the key, the scale, the cycle, the string group, the bottom tone and the playback step. ===== */
+const NP_KEY = "tetrad-voice-leading.v1.notepad";
+const npTyped = () => (document.getElementById("npTitle").value || "").trim();
+const npFallback = () => "tetrad-voice-leading journal — " + new Date().toISOString().slice(0, 10);
+const npSafeName = (t) => t.replace(/[\\/:*?"<>|]+/g, "").replace(/[\s—–-]+/g, "-").replace(/^-+|-+$/g, "");
+const HOST = { app: "tetrad-voice-leading", version: 1,
+  nouns: { item: "note", apply: "Restore study" },
+  snapshot: () => ({ key: state.key, scale: state.scale, eng: state.eng, set: state.set, bot: state.bot, step: state.step }),
+  apply: (data) => {
+    if (!data || typeof data !== "object") return;
+    const idx = (v, n) => Number.isInteger(v) && v >= 0 && v < n;
+    if (idx(data.key, DATA.keys.length)) state.key = data.key;
+    if (idx(data.scale, DATA.scales.length)) state.scale = data.scale;
+    if (idx(data.eng, DATA.engines.length)) state.eng = data.eng;
+    if (idx(data.set, DATA.sets.length)) state.set = data.set;
+    if (idx(data.bot, DATA.bottoms.length)) state.bot = data.bot;
+    document.querySelectorAll("#engSeg button").forEach((x, j) => x.classList.toggle("on", j === state.eng));
+    refresh();                                                   // the study's own: stop, close, sync, rebuild (step 0)
+    if (Number.isInteger(data.step)) setStep(data.step, true);   // then the saved position
+  },
+  summarize: (d) => !d || typeof d !== "object" ? "no study attached"
+    : `${DATA.keys[d.key] ?? "?"} ${(DATA.scales[d.scale] || {}).name ?? ""} · ${(DATA.engines[d.eng] || {}).name ?? ""} · ${(DATA.sets[d.set] || {}).label ?? ""} · bottom ${DATA.bottoms[d.bot] ?? "?"} · step ${(d.step ?? 0) + 1}` };
+const NOTE = M_NOTEPAD_SURFACE.createNotepadSurface({
+  adapter: HOST,
+  storage: { load: () => localStorage.getItem(NP_KEY), save: (str) => localStorage.setItem(NP_KEY, str) },
+  migrate: () => null,
+  els: { pad: document.getElementById("journalIn"), title: document.getElementById("npTitle"),
+    saveBtn: document.getElementById("saveEntry"), clearBtn: document.getElementById("clearPad"),
+    confirmRoot: document.getElementById("clearConfirm"), confirmSave: document.getElementById("clearSave"),
+    confirmDiscard: document.getElementById("clearDiscard"), confirmCancel: document.getElementById("clearCancel"),
+    exportBtn: document.getElementById("exportLog"), copyBtn: document.getElementById("copyBtn"),
+    paletteBtn: document.getElementById("paletteBtn"), paletteRoot: document.getElementById("paletteRoot"),
+    importBtn: document.getElementById("importBtn"), importFile: document.getElementById("importFile"),
+    msg: document.getElementById("saveMsg"), importMsg: document.getElementById("importMsg"),
+    exportMsg: document.getElementById("exportMsg"), copyMsg: document.getElementById("copyMsg"),
+    list: document.getElementById("histList"), count: document.getElementById("histCount"),
+    storeNote: document.getElementById("storeNote"), controls: document.getElementById("journalControls"),
+    handoff: document.getElementById("handoffNote") },
+  file: { get title() { return npTyped() || npFallback(); },
+    name: (stem) => npSafeName(stem !== undefined ? String(stem).trim() || npFallback() : npTyped() || npFallback()) + ".atchart.md" },
+  emptyHint: "No notes yet. Set a key and a cycle, jot the idea, save it — the note keeps the study.",
+  onApplied: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+});
+{ const t = document.getElementById("npTitle"); t.placeholder = npFallback();   // the title's seat: the shell's rule, the host's placement
+  t.style.position = "absolute"; t.style.top = "8px"; t.style.right = "10px";
+  const card = document.getElementById("notepadCard"); card.insertBefore(t, card.firstChild); }
 </script>
 </body>
 </html>
 """
 
-html = TEMPLATE.replace("__DATA__", json.dumps(DATA))
+html = (TEMPLATE
+        .replace("__GRAMMAR_CSS__", bridge.FAMILY_GRAMMAR_CSS.strip("\n"))
+        .replace("__NOTEPAD_CSS__", bridge.card_styles("notepad-card").strip("\n"))
+        .replace("__METRONOME_CSS__", bridge.card_styles("metronome-card").strip("\n"))
+        .replace("__METRONOME_ROWS__", bridge.metronome_rows())
+        .replace("__METRONOME_GUARANTEE__", bridge.metronome_guarantee())
+        .replace("__NOTEPAD_PAD__", bridge.card_part("notepad-card", "pad"))
+        .replace("__NOTEPAD_BOARD__", bridge.card_markup("notepad-card", seated=("pad",)))
+        .replace("__ENGINE__", bridge.engine_inline(["notepad-surface", "metronome", "voices"]))
+        .replace("__DATA__", json.dumps(DATA)))
+# where this output is PUBLISHED — tools/generator_identity.py asserts the page is byte-identical to what this emits
+PUBLISHED = "static/studies/tetrad-voice-leading/study.html"
 out = "Voicing_Cycles_Interactive.html"
 with open(out, "w") as f:
     f.write(html)

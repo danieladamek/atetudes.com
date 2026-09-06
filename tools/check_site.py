@@ -90,6 +90,11 @@ def main():
     print(v.stdout.strip())
     if v.returncode != 0:
         problems.append("deploy records: " + (v.stderr.strip() or v.stdout.strip() or "verify failed")[:300])
+    # THE GENERATOR PIN (261004, night 40): every generated study is byte-identical to what its
+    # generator emits — the check that would have caught aac92a0 (a generated page edited by hand)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import generator_identity
+    problems += generator_identity.check()
     if problems:
         for p in problems:
             print(f"PROBLEM: {p}")

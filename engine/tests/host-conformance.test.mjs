@@ -85,6 +85,17 @@ const NOTEPAD_HOSTS = [
       msg: "saveMsg", importMsg: "importMsg", exportMsg: "exportMsg", copyMsg: "copyMsg",
       list: "histList", count: "histCount", storeNote: "storeNote",
       controls: "journalControls", handoff: "handoffNote" } },
+  /* THE SECOND TIER C PORT (261004, night 40) — the same bridge, the same shape */
+  { name: "tetrad-voice-leading",
+    nouns: { item: "note", apply: "Restore study" },
+    mounts: { pad: "journalIn", title: "npTitle", saveBtn: "saveEntry", clearBtn: "clearPad",
+      confirmRoot: "clearConfirm", confirmSave: "clearSave",
+      confirmDiscard: "clearDiscard", confirmCancel: "clearCancel",
+      exportBtn: "exportLog", copyBtn: "copyBtn", paletteBtn: "paletteBtn",
+      paletteRoot: "paletteRoot", importBtn: "importBtn", importFile: "importFile",
+      msg: "saveMsg", importMsg: "importMsg", exportMsg: "exportMsg", copyMsg: "copyMsg",
+      list: "histList", count: "histCount", storeNote: "storeNote",
+      controls: "journalControls", handoff: "handoffNote" } },
   { name: "multetudes",
     /* item 1 (260911): this host TOOK the placement — copyBtn and paletteRoot
      * are DECLARED mounts here, not auto-appends. The auto-append path was
@@ -365,6 +376,9 @@ const METRONOME_HOSTS = [
   { name: "modes-from-pentatonic-boxes", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",   // 261003: through the bridge
       "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
       "clickVolVal", "beatLamp"] },
+  { name: "tetrad-voice-leading", controls: ["metroBtn", "tapBtn", "bpmRange", "bpmVal",   // 261004: through the bridge
+      "meterSel", "subSel", "voiceSel", "clickMute", "accChk", "clickVolR",
+      "clickVolVal", "beatLamp"] },
 ];
 const METRONOME_GUARANTEE = "every At-Etudes app carries this metronome, first block, this look";
 
@@ -398,7 +412,7 @@ test("§4.3 metronome: the control inventory and the family guarantee render in 
 // and lives in hub/tests/door_locks.py where one runs.
 
 const ROW_COUNTS = { Metronome: 4, Transport: 5 };
-const GRAMMAR_HOSTS = ["metronome", "triadetudes", "tetradetudes", "multetudes", "modes-from-pentatonic-boxes"];   // 261003: the bridge's first page
+const GRAMMAR_HOSTS = ["metronome", "triadetudes", "tetradetudes", "multetudes", "modes-from-pentatonic-boxes", "tetrad-voice-leading"];   // 261003/261004: the bridge's two pages
 
 test("§4.3 grammar: metronome cards are four row groups, transport cards five, in every host", () => {
   for (const name of GRAMMAR_HOSTS) {
@@ -444,6 +458,9 @@ const LEXICON_HOSTS = [
     segments: { movement: ["playbackSeg", "pb"], figureIs: ["figAddrSeg", "mm"] },
     captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement", "centricity", "movement", "figureIs", "bass"] },
   { name: "modes-from-pentatonic-boxes",   // 261003: the metronome card through the bridge — its selects and captions
+    selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel" },
+    captions: ["bpm", "volume", "subdivision", "voice"] },
+  { name: "tetrad-voice-leading",   // 261004: the same card through the same bridge
     selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel" },
     captions: ["bpm", "volume", "subdivision", "voice"] },
   { name: "multetudes",

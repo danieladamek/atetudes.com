@@ -135,6 +135,21 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — night 40: tetrad-voice-leading joins the family through the generator bridge; the generator-identity pin
+
+- **What:** `generators/cycles_interactive.py` calls night 39's bridge (unchanged): the page gains
+  the family's metronome card (its own clock) beside the notepad's pad and the practice log as a
+  board below the stage; an adapter snapshots the key, scale, cycle, string group, bottom tone
+  and step; the study's own code, subject and URL are untouched; the iframe wrapper verified in
+  a browser after the change. Measured first: the generator already reproduced its page byte for
+  byte. **The rider:** `tools/generator_identity.py` — each generator declares where its output is
+  published, and check_site (locally and in CI, reportlab installed) runs every declared
+  generator to scratch and asserts the published page is byte-identical, naming the remedy (fix
+  upstream, re-ingest, never edit the page); proven to bite on one changed byte. The emitted
+  `study.html` is ingested byte-identical.
+- **Why:** Daniel, 260923 — "Yes — port it"; and the drift aac92a0 hid for two months because
+  nothing asserted a generator still reproduces its page.
+
 ## 2026-09-06 — DEPLOYED: night 39 live — modes-from-pentatonic-boxes carries the cards, emitted by its generator; the other five unmoved; all six checked; written from the run
 
 - record: run 34060785966 · success · commit d02787a · fetched 2026-09-06T21:27Z · 6/6 studies byte-identical · digest b6985bebe4e4

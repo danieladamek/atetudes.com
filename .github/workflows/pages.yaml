@@ -57,7 +57,7 @@ jobs:
         # developed against, so a browser bump is a deliberate act with a log
         # entry rather than a silent change in what "green" means.
         run: |
-          pip install playwright==1.55.0
+          pip install playwright==1.55.0 reportlab   # reportlab: tools/generator_identity.py runs the generators (261004)
           playwright install --with-deps chromium
           node hub/tools/build.mjs
           python3 hub/tests/door_locks.py
