@@ -17,7 +17,9 @@
  *                     the tetrad app's is a FAMILY, so it needs a control. This
  *                     is the second consumer of `families` — the lock key the
  *                     resolver refused yesterday because nothing required it.
- *   Figure addresses  how a FIGURE is spelled: SLOTS 1-2-3-4 repeat a shape;
+ *   The figure is     how a FIGURE is spelled (ONE ADDRESS FAMILY, 261002 — multetudes'):
+ *                     PATTERN = real string numbers, the instrument's own address
+ *                     (6-5-4-3 on the low set; slots 1-2-3-4 retired to a saved-étude alias);
  *                     TONES R-3-5-7 follow the harmony through the shape (Daniel,
  *                     2026-08-18). Control id `figAddrSeg` — renamed off the
  *                     reference's `motionSeg` (P3, 260818.x): the reference's
@@ -47,7 +49,8 @@
 import { STRING_SETS } from "../../engine/tetrad-sequence.mjs";
 import { FAMILIES } from "../../engine/tetrad-voicings.mjs";
 import { PLACEMENTS } from "../../engine/isolation.mjs";
-import { parseFigure, describeFigure, SLOT_ORDER, TONE_ORDER } from "../../engine/figure.mjs";
+import { parseFigure, describeFigure, TONE_ORDER, legacySlotsToPattern, shiftFigure } from "../../engine/figure.mjs";
+import { lowToHigh } from "../../engine/string-sets.mjs";
 import { CONFIG_CHANGED, announce, listen } from "../bus.mjs";
 import { playbackWord } from "../../engine/figure.mjs";
 
@@ -60,7 +63,7 @@ export const shapeMotion = {
   requires: { material: "tetrad" },
   mount_point: "strips",
   order: 12,
-  controls: ["setSeg", "famSeg", "figAddrSeg", "figSel", "arpIn", "arpErr", "placeSeg", "playbackSeg", "rootsChk", "guideChk"],
+  controls: ["setSeg", "famSeg", "figAddrSeg", "figSel", "arpIn", "arpErr", "figShift", "placeSeg", "playbackSeg", "rootsChk", "guideChk"],
 
   markup: `
   <h2>Shape &amp; Motion</h2>
@@ -75,15 +78,20 @@ export const shapeMotion = {
       <div class="row2 alignEnd">
         <div class="smTight"><label>The figure is</label>
           <div class="seg" id="figAddrSeg" data-control="figAddrSeg">
-            <button data-mm="slots" class="on" title="1-2-3-4, low → high: a figure repeats a SHAPE">slots</button>
+            <button data-mm="pattern" class="on" title="real string numbers, as the set lists them low → high — the instrument's own address">pattern</button>
             <button data-mm="tones" title="R-3-5-7, by role: a figure follows the HARMONY through the shape">tones</button>
           </div></div>
         <div class="smTight"><label>Figure</label>
           <select id="figSel" data-control="figSel"></select></div>
       </div>
-      <label id="arpLabel">Figure (slots 1–4 count up from the low string)</label>
-      <input type="text" id="arpIn" data-control="arpIn" spellcheck="false" placeholder="e.g. 1-2-3-4">
+      <label id="arpLabel">Figure (string numbers — the set's strings, low to high)</label>
+      <input type="text" id="arpIn" data-control="arpIn" spellcheck="false" placeholder="e.g. 6-5-4-3">
       <span id="arpErr" data-control="arpErr" class="smErr"></span>
+      <!-- THE SHIFT OFFER (261002): a pattern figure names absolute strings, so a set
+           change leaves it naming strings the new set lacks. The refusal above names the
+           mismatch; this button OFFERS the same figure slot for slot on the new set — a
+           click, never a surprise (a figure is the user's sentence). Hidden until offered. -->
+      <button id="figShift" data-control="figShift" class="smShift" hidden></button>
     </div>
     <div class="grp">
       <div class="row2">
@@ -111,6 +119,8 @@ export const shapeMotion = {
 .striprow .grp.smFig{flex:1 1 320px;max-width:560px}
 .striprow .smTight{flex:0 1 auto}
 .striprow #arpIn{width:100%;box-sizing:border-box}
+.smShift{font:inherit;font-size:11.5px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer;margin-left:6px}
+.smShift:hover{border-color:var(--ink)}
 #smHint{margin-top:8px}
 .smNote{font-size:11px;color:var(--gray);font-style:italic;margin-top:3px}`,
 
@@ -132,12 +142,13 @@ export const shapeMotion = {
        * default, and the oracle corpus and the default-zone pin were measured
        * under it; moving it would move pinned output. */
       placement: "grip", roots: false,
-      /* THE FIGURE CHAIN. `address` is the vocabulary toggle (slots | tones);
+      /* THE FIGURE CHAIN. `address` is the vocabulary toggle (pattern | tones — ONE ADDRESS
+       * FAMILY since 261002; a saved "slots" is migrated on intake, below);
        * `figure` is the user's text, verbatim — parsed by every consumer through
        * engine/figure.mjs, never pre-digested here, so the pass stays the only
        * derived thing and the text stays the stored fact. `playback` is the
        * reference's segment. `guide` is the guide-tone reduction view. */
-      address: "slots", figure: "", playback: "strum", guide: false,
+      address: "pattern", figure: "", playback: "strum", guide: false,
       /* THE ZONE (audit 260818 §A2) is a SHAPE fact — where on the neck — so it
        * is owned here. `null` means "the pass's own default"; the stage's Box
        * mode announces a value the moment the user moves it, and this owner
@@ -161,12 +172,25 @@ export const shapeMotion = {
       });
     };
 
+    /* the set's strings, low → high — the pattern address's own alphabet */
+    const setStrings = () => lowToHigh(STRING_SETS[cfg.setIndex].strings);
+    /* THE SHIFT OFFER (261002): set at the moment the set changes under a pattern figure
+     * the new set cannot hold; cleared when the figure changes. Local — never stored. */
+    let offer = null;
     const render = () => {
       /* display HIGHEST set first (the reference lists high → low), but each
        * button's value stays the real STRING_SETS index — the stored identity a
        * saved étude restores by. Presentation reversed; the fact is not. */
       seg(byId("setSeg"), STRING_SETS.map((s, i) => ({ value: i, label: s.label })).reverse(),
-        cfg.setIndex, (v) => { cfg.setIndex = v; push(); });
+        cfg.setIndex, (v) => {
+          /* a pattern figure names ABSOLUTE strings and does not survive a set change — the
+           * trade Daniel made knowingly (260923). Name the mismatch (the parse refuses it) and
+           * OFFER the shift, slot for slot; never translate silently, never drop. */
+          const from = lowToHigh(STRING_SETS[cfg.setIndex].strings), to = lowToHigh(STRING_SETS[v].strings);
+          const wasFine = cfg.address === "pattern" && cfg.figure && !parseFigure(cfg.figure, "pattern", { set: from }).err;
+          const shifted = wasFine ? shiftFigure(cfg.figure, from, to) : null;
+          offer = shifted && parseFigure(cfg.figure, "pattern", { set: to }).err ? { figure: cfg.figure, to: shifted } : null;
+          cfg.setIndex = v; push(); });
       seg(byId("famSeg"), allowed.map((f) => ({ value: f, label: FAMILY_LABEL[f] || f })),
         cfg.families[0], (v) => { cfg.families = [v]; push(); });
       seg(byId("placeSeg"), Object.keys(PLACEMENTS).map((p) => ({ value: p, label: PLACE_LABEL[p] || p,
@@ -181,12 +205,12 @@ export const shapeMotion = {
         b.classList.toggle("on", b.dataset.mm === cfg.address);
       byId("arpLabel").textContent = cfg.address === "tones"
         ? "Figure (tones R 3 5 7; approaches in parens: (-1,+2)3)"
-        : "Figure (slots 1–4 count up from the low string)";
-      byId("arpIn").placeholder = cfg.address === "tones" ? "e.g. R-3-7-5 or (-1,+2)3 7" : "e.g. 1-2-3-4";
+        : `Figure (string numbers — this set's strings, low to high: ${setStrings().join("-")})`;
+      byId("arpIn").placeholder = cfg.address === "tones" ? "e.g. R-3-7-5 or (-1,+2)3 7" : `e.g. ${setStrings().join("-")}`;
       // the picker: presets derived from the address's stated letter order —
       // v0.7.7 gave the reference a picker because raw figure syntax was
       // hostile; the door keeps both, the picker writing into the field
-      const letters = cfg.address === "tones" ? TONE_ORDER : SLOT_ORDER;
+      const letters = cfg.address === "tones" ? TONE_ORDER : setStrings().map(String);
       const presets = [
         ["", "— strum —"],   // was "— block —" until the 260913 word ruling
         [letters.join("-"), "up " + letters.join("-")],
@@ -206,8 +230,16 @@ export const shapeMotion = {
       if (byId("arpIn").value !== cfg.figure) byId("arpIn").value = cfg.figure;
       // THE ERROR SURFACE (audit A3): a bad figure says why, loudly, and the
       // segment reflects that no figure is in force
-      const parsed = parseFigure(cfg.figure, cfg.address);
-      byId("arpErr").textContent = parsed.err || "";
+      const parsed = parseFigure(cfg.figure, cfg.address, { set: setStrings() });
+      byId("arpErr").textContent = (cfg.figureUnresolved && cfg.figure
+        ? "this figure was saved as slots without its set, so it cannot be translated — retype it as string numbers. "
+        : "") + (parsed.err || "");
+      // the shift offer stands while the refused figure is the one it was made for
+      const shift = byId("figShift");
+      if (offer && offer.figure === cfg.figure && parsed.err) {
+        shift.hidden = false; shift.textContent = `shift the figure to ${offer.to}`;
+        shift.title = `the same figure, slot for slot, on ${STRING_SETS[cfg.setIndex].label}`;
+      } else shift.hidden = true;
       const hasFig = !!parsed.pattern;
       for (const b of byId("playbackSeg").querySelectorAll("button")) {
         b.classList.toggle("on", b.dataset.pb === cfg.playback);
@@ -228,7 +260,7 @@ export const shapeMotion = {
        * SAME silent result, and the panel used to say neither. Every clause below
        * is stated only when it is true, so an inert control announces itself. */
       const figWords = hasFig
-        ? describeFigure(parsed.pattern, cfg.address) + (parsed.source === "motion" ? "" : (cfg.address === "tones" ? " by role" : " by slot"))
+        ? describeFigure(parsed.pattern, cfg.address, { set: setStrings() }) + (parsed.source === "motion" ? "" : (cfg.address === "tones" ? " by role" : " by string"))
         : "";
       const parts = [`${FAMILY_LABEL[cfg.families[0]]} voicings on ${STRING_SETS[cfg.setIndex].label}`];
       parts.push(`${PLACE_LABEL[cfg.placement]}: ${cfg.placement === "grip"
@@ -249,7 +281,7 @@ export const shapeMotion = {
           : `${cfg.playback} has no figure to sound — strum chords until one parses`);
       // the address toggle only bites while a figure is actually sounding
       if (hasFig && cfg.playback !== "strum")
-        parts.push(cfg.address === "tones" ? "spelled by tone role" : "spelled by slot");
+        parts.push(cfg.address === "tones" ? "spelled by tone role" : "spelled by string number");
       if (cfg.guide) parts.push("guide tones lit — a neck view that dims R and 5");
       byId("smHint").textContent = parts.join(" · ");
 
@@ -269,6 +301,23 @@ export const shapeMotion = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
+      /* THE SAVED-SLOTS MIGRATION (261002, night 38 — the night-32 alias precedent, one
+       * layer up): a pre-261002 étude says address "slots" and a figure of slot digits.
+       * Resolve it against the set it was SAVED with (setIndex rides every entry — the
+       * stored identity, notepad-card.mjs) and re-announce once, so every consumer
+       * converges on the migrated text. A message with no set at all (nothing shipped
+       * ever wrote one) keeps the figure VERBATIM, flagged unresolved, and the face says
+       * so — an old note that cannot be translated is still the user's note. */
+      if (m.address === "slots") {
+        const idx = Number.isInteger(m.setIndex) ? m.setIndex : cfg.setIndex;
+        const set = STRING_SETS[idx] && STRING_SETS[idx].strings;
+        const migrated = { ...m, address: "pattern" };
+        if (set) { migrated.figure = legacySlotsToPattern(m.figure ?? cfg.figure, set); migrated.figureUnresolved = false; }
+        else migrated.figureUnresolved = true;
+        cfg.figureUnresolved = migrated.figureUnresolved;
+        m = migrated;
+        d.defaultView.setTimeout(() => announce(d, CONFIG_CHANGED, { address: cfg.address, figure: cfg.figure }), 0);
+      } else if ("figure" in m || "address" in m) cfg.figureUnresolved = false;
       for (const k of MINE) if (k in m && JSON.stringify(m[k]) !== JSON.stringify(cfg[k])) {
         /* a restored pre-260913 étude says playback "block" — the alias map
          * is the one place the old word is known */
@@ -288,8 +337,10 @@ export const shapeMotion = {
     // the field is the truth; the picker writes into it. A bad figure is kept
     // in the field (so the user can fix it) and refused loudly by arpErr; the
     // pass falls back to block until it parses.
-    byId("arpIn").addEventListener("input", (e) => { cfg.figure = e.target.value; push(); });
-    byId("figSel").addEventListener("change", (e) => { cfg.figure = e.target.value; push(); });
+    byId("arpIn").addEventListener("input", (e) => { cfg.figure = e.target.value; cfg.figureUnresolved = false; offer = null; push(); });
+    byId("figSel").addEventListener("change", (e) => { cfg.figure = e.target.value; cfg.figureUnresolved = false; offer = null; push(); });
+    // the offer, taken: the shifted figure becomes the user's — a click, and it is theirs
+    byId("figShift").addEventListener("click", () => { if (offer) { cfg.figure = offer.to; offer = null; push(); } });
     push();
   },
 };

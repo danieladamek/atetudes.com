@@ -148,9 +148,9 @@ export const audioCard = {
       /* THE FIGURE CHAIN: one event list per chord from engine/figure.mjs —
        * whole-harmony strum, the figure as a line, or both — then voice-scheduled. The
        * same list the stage pulses and the score draws; nothing re-derived. */
-      const parsed = parseFigure(cfg && cfg.figure, (cfg && cfg.address) || "slots");
+      const parsed = parseFigure(cfg && cfg.figure, (cfg && cfg.address) || "pattern", { set: pass.set.strings });   // 261002: the pattern address needs the set
       const events = figureEvents(step, {
-        parsed: parsed.err ? null : parsed.pattern, address: (cfg && cfg.address) || "slots",
+        parsed: parsed.err ? null : parsed.pattern, address: (cfg && cfg.address) || "pattern",
         playback: playbackWord(cfg && cfg.playback) || "strum", bassMidi: bass, durBeats, bpm,
         ctx: { scalePcs: scaleNotes(cfg.key || "C", cfg.scale || "major").map((n) => n.pc),
           tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,

@@ -40,6 +40,34 @@ test("the two materials go through drill.material() — the parser is not forked
   assert.deepEqual(parseFigure("4-3-2-1", "slots").pattern, parsePattern("4-3-2-1", SLOT_MATERIAL).pattern);
 });
 
+/* ================= 261002 (night 38): ONE ADDRESS FAMILY — pattern is the set's own string numbers ================= */
+import { patternMaterial, legacySlotsToPattern, shiftFigure } from "../figure.mjs";
+test("261002: the pattern address is REAL STRING NUMBERS, low → high as the set lists them; slots are the legacy alias", () => {
+  const low = [6, 5, 4, 3], mid = [5, 4, 3, 2];
+  assert.deepEqual(parseFigure("6-5-4-3", "pattern", { set: low }).pattern, [0, 1, 2, 3], "6-5-4-3 on the low set is the voicing low → high");
+  assert.deepEqual(parseFigure("3-6", "pattern", { set: low }).pattern, [3, 0]);
+  assert.deepEqual(parseFigure("5-3-4-2", "pattern", { set: mid }).pattern, [0, 2, 1, 3]);
+  assert.deepEqual(new Set(patternMaterial(low).keys), new Set(["6", "5", "4", "3"]));
+  // the legacy alias keeps the old meaning, so a raw restored message still parses
+  assert.deepEqual(parseFigure("1-2-3-4", "slots").pattern, [0, 1, 2, 3]);
+  assert.throws(() => parseFigure("1-2", "pattern"), /needs the set/, "pattern without the set is a caller's error, loud");
+});
+test("261002: the refusals are the house sentences — a string off the set, and the other address's alphabet", () => {
+  const low = [6, 5, 4, 3];
+  assert.equal(parseFigure("1-2", "pattern", { set: low }).err, "string 1 carries nothing in this set (strings 6-5-4-3)");
+  assert.match(parseFigure("R-3-5-7", "pattern", { set: low }).err, /reads as a TONES figure[\s\S]*the address is set to pattern; switch it to tones/);
+  assert.match(parseFigure("(-1,+2)3", "pattern", { set: low }).err, /the address is set to slots|address a TONE/, "parens under pattern are refused by name");
+});
+test("261002: the migration resolves a saved slot figure against the set it was saved with; the shift is OFFERED slot for slot", () => {
+  assert.equal(legacySlotsToPattern("1-3-2-4", [5, 4, 3, 2]), "5-3-4-2", "the real saved étude's figure, on strings 2–5");
+  assert.equal(legacySlotsToPattern("", [6, 5, 4, 3]), "");
+  assert.equal(legacySlotsToPattern("(-1,+2)3 7", [6, 5, 4, 3]), "(-1,+2)3 7", "motion's grammar is not a slot figure — verbatim");
+  assert.equal(shiftFigure("6-5-4-3", [6, 5, 4, 3], [5, 4, 3, 2]), "5-4-3-2");
+  assert.equal(shiftFigure("6-3-6", [6, 5, 4, 3], [4, 3, 2, 1]), "4-1-4");
+  assert.equal(shiftFigure("1-2", [6, 5, 4, 3], [5, 4, 3, 2]), null, "a figure that does not name this set's strings has nothing honest to offer");
+  assert.equal(shiftFigure("R-3", [6, 5, 4, 3], [5, 4, 3, 2]), null);
+});
+
 test("toneIndexOf reads the ROLE from the chord's own intervals, never from note order", () => {
   // drop-2 root position is R-5-7-3 by pitch: the tone index must say so
   const roles = step0.voicing.notes.map((n) => toneIndexOf(n, step0.chord));
@@ -53,10 +81,10 @@ test("toneIndexOf reads the ROLE from the chord's own intervals, never from note
 
 /* ================= slots repeat a SHAPE, tones follow the HARMONY ================= */
 
-test("SLOTS: 1-2-3-4 is the voicing's own notes low→high, on every step", () => {
-  const p = parseFigure("1-2-3-4", "slots").pattern;
+test("PATTERN: 6-5-4-3 is the voicing's own notes low→high, on every step (was SLOTS 1-2-3-4 until 261002)", () => {
+  const p = parseFigure("6-5-4-3", "pattern", { set: [6, 5, 4, 3] }).pattern;   // 261002: the pattern address, the low set's strings
   for (const s of pass.steps) {
-    const order = orderFigure(p, s, "slots");
+    const order = orderFigure(p, s, "pattern");
     assert.deepEqual(order.map((n) => n.midi), s.voicing.notes.map((n) => n.midi));
   }
 });
@@ -102,7 +130,7 @@ test("ENCLOSURES route through motion.mjs and come back role-tagged: (-1,+2)3 la
 test("a bare tone figure never touches motion; an enclosure never touches drill — the router is asserted", () => {
   assert.equal(parseFigure("3-7", "tones").source, "drill");
   assert.equal(parseFigure("(-1,+2)3", "tones").source, "motion");
-  assert.equal(parseFigure("1-2", "slots").source, "drill");
+  assert.equal(parseFigure("6-5", "pattern", { set: [6, 5, 4, 3] }).source, "drill");
   // slots + parens is not a thing: motion's shape mode is three-slot and pinned;
   // the figure is treated as drill text and drill refuses the parens loudly
   const r = parseFigure("(-1,+2)1-2", "slots");
@@ -116,10 +144,10 @@ test("a bare tone figure never touches motion; an enclosure never touches drill 
  * the strum word went to the movement). Same assertions, same numbers;
  * only the ruled words moved. */
 test("figureEvents composes noteEvents: strum ignores the figure, arpeggiated is the line, both is line over the bed", () => {
-  const p = parseFigure("1-2-3-4", "slots").pattern;
-  const block = figureEvents(step0, { parsed: p, address: "slots", playback: "strum", durBeats: 2, bpm: 72 });
+  const p = parseFigure("6-5-4-3", "pattern", { set: [6, 5, 4, 3] }).pattern;
+  const block = figureEvents(step0, { parsed: p, address: "pattern", playback: "strum", durBeats: 2, bpm: 72 });
   assert.deepEqual(block, noteEvents(step0.voicing, null, null, 2, 72), "strum must be the plain whole-harmony attack");
-  const arp = figureEvents(step0, { parsed: p, address: "slots", playback: "arpeggiated", durBeats: 2, bpm: 72 });
+  const arp = figureEvents(step0, { parsed: p, address: "pattern", playback: "arpeggiated", durBeats: 2, bpm: 72 });
   assert.equal(arp.length, 4);
   const onsets = arp.map((e) => e.onset);
   assert.ok(onsets.every((o, i) => i === 0 || o > onsets[i - 1]), "a line's onsets ascend");
@@ -149,14 +177,15 @@ test("the bass pedal rides along in every playback mode", () => {
 
 test("mistakes fail with a MESSAGE, never a throw and never silence", () => {
   const cases = [
-    ["1-2-9", "slots", /slot 9 isn't in/],
-    ["R-3-6", "tones", /tone 6 isn't in/],
+    ["1-2-9", "slots", /slot 9 carries nothing in/],              // the house sentence (261002)
+    ["R-3-6", "tones", /tone 6 carries nothing in/],
+    ["6-5-1", "pattern", /string 1 carries nothing in this set \(strings 6-5-4-3\)/, [6, 5, 4, 3]],
     ["1-2-3-4-1-2-3-4-1-2-3-4-1-2-3-4-1", "slots", /max 16 notes/],
     ["(-1,+2)", "tones", /./],                       // an enclosure with no target
     ["(-1,+2)3", "slots", /./],                      // parens in slot mode
   ];
-  for (const [text, address, re] of cases) {
-    const r = parseFigure(text, address);
+  for (const [text, address, re, set] of cases) {
+    const r = parseFigure(text, address, { set });
     assert.ok(r.err && re.test(r.err), `${text} (${address}) → ${JSON.stringify(r)}`);
     assert.equal(r.pattern, null);
   }

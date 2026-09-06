@@ -16,7 +16,8 @@ test("every preset parses in its own mode; tones presets are chord-tone-only", (
   for (const mode of ["tones", "shape"])
     P[mode].forEach((p, i) => {
       const src = e.presetSrc(mode, i);
-      const q = e.MOTION.parse(src, mode);
+      // 261002: the face speaks string numbers; motion's shape grammar speaks H/M/L — the page's boundary translates
+      const q = e.MOTION.parse(mode === "shape" ? e.toShapeLetters(src) : src, mode);
       assert.ok(!q.error, `${p[0]} must parse: ${src}`);
       if (mode === "tones")
         for (const f of unwrap(q.figures))
@@ -30,17 +31,16 @@ test("Pivot first DERIVES from the current pivot and follows it when it moves", 
   const e = loadTriadetudesEngine();
   assert.equal(unwrap(e.FIG_PRESETS).shape[0][1], null, "no stored literal");
   const before = e.pivotFirstSrc();
-  assert.ok(!e.MOTION.parse(before, "shape").error, "the derivation parses");
+  assert.ok(!e.MOTION.parse(e.toShapeLetters(before), "shape").error, "the derivation parses (through the page's boundary)");
   const slots = before.split("-");
   assert.equal(slots.length, 3);
-  assert.equal(new Set(slots).size, 3, "each slot once — a permutation of L,M,H");
-  assert.equal(slots[0], "LMH"[e.st.setLowHigh.indexOf(e.st.pivotString)],
-    "the pivot's slot leads");
+  assert.equal(new Set(slots).size, 3, "each string once — a permutation of the set's strings");
+  assert.equal(slots[0], String(e.st.pivotString), "the pivot's STRING leads (261002: string numbers, not slot letters)");
   // move the pivot: the preset follows without any stored string changing
   const other = e.st.setLowHigh.find((s) => s !== e.st.pivotString);
   const old = e.st.pivotString;
   e.st.pivotString = other;
-  assert.equal(e.pivotFirstSrc().split("-")[0], "LMH"[e.st.setLowHigh.indexOf(other)]);
+  assert.equal(e.pivotFirstSrc().split("-")[0], String(other), "the moved pivot leads, as its string number (261002)");
   assert.equal(e.presetSrc("shape", 0), e.pivotFirstSrc());
   e.st.pivotString = old;
 });

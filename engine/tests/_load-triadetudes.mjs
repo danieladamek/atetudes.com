@@ -29,6 +29,7 @@ const HARVEST = [
   "setLabel", "patText", "displayPattern", "orderedNotes",
   "MOTION", "motionSource", "parsedFigure", "activeFigure", "figureEntries", "orderedEntries",
   "classifyClick", "FIG_PRESETS", "pivotFirstSrc", "presetSrc", "canonFig",
+  "toShapeLetters", "fromShapeLetters", "motionModeOf", "takeShiftOffer", "patternStale", "staleMsg",
   "voiceSchedule", "NOTE_VOICE_NAMES", "SUSTAIN_HOLD",
   "summarizeCfg", "ATCHART", "MD", "NOTEPAD",
   "voiceLeadCost", "placementCost", "meanFret", "movementTotal",

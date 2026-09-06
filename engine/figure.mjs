@@ -12,12 +12,27 @@
  *                                                  →  the ONE event list per chord
  *
  * THE VOCABULARY DECISION (Daniel, 2026-08-18): figures address BOTH slots and
- * tones, behind one toggle — mirroring the existing "Motion follows: the shape /
- * the tones". `drill.material()`'s letters are consumer-ordered by design, so the
- * second material is a handful of lines, not a second parser:
+ * tones, behind one toggle. SUPERSEDED 260923 (Daniel: "Retire … it should be
+ * 123, 234, 345, 456 and tones R-3-5 etc."), built night 38 (261002): ONE
+ * ADDRESS FAMILY, multetudes' own —
  *
- *   slots   1 2 3 4 (low → high)     a figure repeats a SHAPE
- *   tones   R 3 5 7 (by role)        a figure follows the HARMONY through the shape
+ *   pattern  real STRING NUMBERS, the instrument's own address (6-5-4-3 on
+ *            the low set; a figure names the strings it plays, in order)
+ *   tones    R 3 5 7 by ROLE          a figure follows the HARMONY through the shape
+ *
+ * SLOTS (1–4, low → high) are RETIRED as a typed address and kept only as a
+ * legacy alias so a saved étude still loads: `parseFigure(text, "slots")`
+ * keeps the old meaning, and `legacySlotsToPattern` resolves such a figure
+ * against the set it was saved with (the night-32 alias precedent, one layer
+ * up). THE COST, said here because it must not ship silently: a pattern
+ * figure names absolute strings, so it does not survive a set change — "6-5-
+ * 4-3" on the low set is refused on the middle one. Slots survived that; the
+ * trade is Daniel's, made knowingly. The mitigation is the house idiom: the
+ * refusal NAMES the mismatch and `shiftFigure` OFFERS the same figure on the
+ * new set (slot for slot) — offered by the host as a click, never applied.
+ * `drill.material()`'s letters are consumer-ordered by design, so the
+ * pattern material is derived from the set at parse time — a handful of
+ * lines, not a second parser.
  *
  * WHY TWO ENGINES FOR TONES: motion.mjs's shape mode is the reference's H/M/L
  * — three slots, hard-coded, and byte-pinned into two shipped studies — so it
@@ -29,14 +44,48 @@
  * Pure: no DOM, no audio, no globals.
  */
 import { material, parsePattern, orderFor } from "./drill.mjs";
+import { lowToHigh, stringsOf, translatePattern } from "./string-sets.mjs";
 import { parse as motionParse, resolve as motionResolve, describe as motionDescribe } from "./motion.mjs";
 import { noteEvents } from "./note-events.mjs";
 
-/** the two materials, built by the consumer as drill.mjs intends */
+/** the LEGACY slot material — a saved pre-261002 étude's alphabet, never typed now */
 export const SLOT_MATERIAL = material({
   letters: { 1: 0, 2: 1, 3: 2, 4: 3 }, values: [0, 1, 2, 3],
-  noun: "slot", of: "this four-string set (1 low … 4 high)",
+  noun: "slot", of: "this four-string set (slots 1 low … 4 high)",
 });
+/** the PATTERN material: the set's own string numbers, low → high, each a slot —
+ * derived from the set every time (a set is data, never a table here) */
+export function patternMaterial(set) {
+  if (!Array.isArray(set) || !set.length) throw new Error("figure: the pattern address needs the set — its strings, low to high");
+  const order = lowToHigh(set);
+  const letters = {}; order.forEach((s, k) => { letters[String(s)] = k; });
+  return material({ letters, values: order.map((_, k) => k), noun: "string", of: `this set (strings ${order.join("-")})` });
+}
+/** a legacy slot figure (1–4, low → high) resolved against the set it was saved with:
+ * "1-3-2-4" on strings 5-4-3-2 → "5-3-4-2". The night-32 alias precedent, one layer up. */
+export function legacySlotsToPattern(text, set) {
+  const t = String(text ?? "").trim();
+  if (!t || /[()\[\]]/.test(t)) return t;                     // empty, or motion's grammar — not a slot figure
+  const order = lowToHigh(set);
+  const out = [];
+  for (const ch of t.toUpperCase()) {
+    if (/[,\-\s.·]/.test(ch)) continue;
+    const k = "1234".indexOf(ch);
+    if (k < 0 || k >= order.length) return t;                  // not a slot figure after all — keep it verbatim
+    out.push(order[k]);
+  }
+  return out.join("-");
+}
+/** THE SHIFT OFFER: the same figure, slot for slot, on another set — "6-5-4-3" on
+ * the low set is "5-4-3-2" on the middle one. Null when the figure does not name
+ * this set's strings (nothing honest to offer). Offered, never applied. */
+export function shiftFigure(text, fromSet, toSet) {
+  const t = String(text ?? "").trim();
+  if (!t || /[()\[\]]/.test(t) || /R|7|9/i.test(t)) return null;
+  const digits = [...t].filter((c) => "123456".includes(c)).map(Number);
+  if (!digits.length || !digits.every((d) => fromSet.includes(d))) return null;
+  try { return translatePattern(digits, fromSet, toSet).join("-"); } catch { return null; }
+}
 /* JS orders integer-like keys before others, so `{R,3,5,7}` would iterate as
  * 3,5,7,R. The letters are a lookup for the parser, but their ORDER is what a
  * picker lists and describeFigure prints — so it is stated, not left to the
@@ -48,7 +97,9 @@ export const TONE_MATERIAL = material({
 });
 export const TONE_ORDER = ["R", "3", "5", "7"];        // the stated order, for pickers and prose
 export const SLOT_ORDER = ["1", "2", "3", "4"];
-export const ADDRESS = { slots: SLOT_MATERIAL, tones: TONE_MATERIAL };
+export const ADDRESS = { slots: SLOT_MATERIAL, tones: TONE_MATERIAL };   // "pattern" is derived per set: patternMaterial(set)
+/** the material for an address — pattern needs the set; slots is the legacy alias */
+const materialFor = (address, set) => address === "pattern" ? patternMaterial(set) : ADDRESS[address];
 
 /** a voicing note's TONE index (0 R · 1 third · 2 fifth · 3 seventh) against
  * its chord — derived from the chord's own intervals, never assumed from order */
@@ -66,7 +117,7 @@ const hasApproaches = (text) => /\(/.test(String(text));
  * bad input is data). Returns { pattern, err, source } where `source` names
  * which engine parsed it — a fact the UI states rather than hides.
  */
-export function parseFigure(text, address = "slots") {
+export function parseFigure(text, address = "pattern", { set = null } = {}) {
   const t = String(text ?? "").trim();
   if (!t) return { pattern: null, err: null, source: "none" };
   if (address === "tones" && hasApproaches(t)) {
@@ -81,14 +132,33 @@ export function parseFigure(text, address = "slots") {
     if (p.error) return { pattern: null, err: p.error.message + " (at " + p.error.pos + ")", source: "motion" };
     return { pattern: p, err: null, source: "motion" };
   }
-  const mat = ADDRESS[address];
-  if (!mat) return { pattern: null, err: `unknown address "${address}" — slots or tones`, source: "drill" };
+  if (address !== "pattern" && address !== "tones" && address !== "slots")
+    return { pattern: null, err: `unknown address "${address}" — pattern or tones`, source: "drill" };
+  /* THE MODE MISMATCH, noticed by the alphabet — multetudes' own manners
+   * (selection.mjs orderBy, 260902): R, 7 and the extensions are roles, not
+   * strings; the figure is named as the OTHER address's and the switch offered */
+  if (address === "pattern" && /R|7|9/.test(t.toUpperCase()))
+    return { pattern: null, err: "this reads as a TONES figure (R, 7 and the extensions are roles, not strings) — " +
+      "the address is set to pattern; switch it to tones", source: "drill" };
+  const mat = materialFor(address, set);
   /* drill's parser harvests every digit and ignores what it does not know, so
    * "(-1,+2)3" in SLOT mode would silently read as 1-2-3 — the exact silent
    * misread audit A3 is about. Approaches are a tone-figure idea (a degree is
    * enclosed; a slot is not), so parens in slot mode are refused by name. */
   if (hasApproaches(t))
-    return { pattern: null, err: "approaches in parens address a TONE (enclose the 3rd, land the 7th) — the address is set to slots; switch it to tones", source: "drill" };   // rule 14 (261001): the mode and the value, never the caption
+    return { pattern: null, err: "approaches in parens address a TONE (enclose the 3rd, land the 7th) — the address is set to pattern; switch it to tones", source: "drill" };   // rule 14 (261001): the mode and the value, never the caption
+  /* THE PATTERN ALPHABET, every character read (multetudes' manners): drill's parser
+   * harvests digits and reads an unknown one as a slot index — "1" on the low set would
+   * silently mean slot 1 — so under pattern each character is a separator, a string of
+   * this set, or refused BY NAME before drill ever sees the text */
+  if (address === "pattern") {
+    const order = lowToHigh(set);
+    for (const ch of t) {
+      if (/[,\-\s.·]/.test(ch)) continue;
+      if (!"123456".includes(ch)) return { pattern: null, err: `"${ch}" is not a string — strings are 1–6`, source: "drill" };
+      if (!order.includes(+ch)) return { pattern: null, err: `string ${ch} carries nothing in this set (strings ${order.join("-")})`, source: "drill" };
+    }
+  }
   const r = parsePattern(t, mat);
   if (r.err) return { pattern: null, err: r.err, source: "drill" };
   return { pattern: r.pattern, err: null, source: "drill" };
@@ -133,7 +203,7 @@ function roleSpelledForChord(parsed, chord) {
     ...f, target: respell(f.target), approaches: f.approaches.map(respell) })) };
 }
 
-export function orderFigure(parsed, step, address = "slots", ctx = null) {
+export function orderFigure(parsed, step, address = "pattern", ctx = null) {
   if (!parsed) return null;
   if (parsed.figures) {                                    // motion's parse — tones + approaches
     if (!ctx) throw new Error("figure: approaches need a placement context");
@@ -160,7 +230,7 @@ export function orderFigure(parsed, step, address = "slots", ctx = null) {
  * line over a short harmony BED, the reference's onsetsFor — the bed was
  * called `strum` before the movement took that word; renamed with the
  * ruling so one word means one thing). */
-export function figureEvents(step, { parsed = null, address = "slots", playback = "strum",
+export function figureEvents(step, { parsed = null, address = "pattern", playback = "strum",
   bassMidi = null, durBeats = 2, bpm = 72, ctx = null } = {}) {
   const order = playback === "strum" ? null : orderFigure(parsed, step, address, ctx);
   if (!order) return noteEvents(step.voicing, null, bassMidi, durBeats, bpm);
@@ -175,18 +245,22 @@ export function figureEvents(step, { parsed = null, address = "slots", playback 
  * playback "block"; the map is the one place the old word is known. */
 export const playbackWord = (w) => (w === "block" ? "strum" : w);
 
-/** the figure back in its own words — drill's for slots/tones, motion's for enclosures */
-export function describeFigure(parsed, address = "slots") {
+/** the figure back in its own words — drill's for pattern/tones, motion's for enclosures */
+export function describeFigure(parsed, address = "pattern", { set = null } = {}) {
   if (!parsed) return "";
   if (parsed.figures) return motionDescribe(parsed);
-  const mat = ADDRESS[address];
+  const mat = materialFor(address, set);
   const back = new Map(Object.entries(mat.letters).map(([k, v]) => [v, k]));
   return parsed.map((v) => back.get(v) ?? String(v)).join("-");
 }
 
 /* ---------------- load-time assertions ---------------- */
 {
-  const s = parseFigure("1-2-3-4", "slots"); if (s.err || !s.pattern || s.pattern.join() !== "0,1,2,3") throw new Error("figure: slot parse broke");
+  const s = parseFigure("1-2-3-4", "slots"); if (s.err || !s.pattern || s.pattern.join() !== "0,1,2,3") throw new Error("figure: the legacy slot parse broke");
+  const pt = parseFigure("6-5-4-3", "pattern", { set: [6, 5, 4, 3] }); if (pt.err || !pt.pattern || pt.pattern.join() !== "0,1,2,3") throw new Error("figure: pattern parse broke: " + pt.err);
+  const off = parseFigure("1-2", "pattern", { set: [6, 5, 4, 3] }); if (!/string 1 carries nothing in this set \(strings 6-5-4-3\)/.test(off.err || "")) throw new Error("figure: a string off the set must refuse in the house words: " + off.err);
+  if (legacySlotsToPattern("1-3-2-4", [5, 4, 3, 2]) !== "5-3-4-2") throw new Error("figure: the legacy slot migration broke");
+  if (shiftFigure("6-5-4-3", [6, 5, 4, 3], [5, 4, 3, 2]) !== "5-4-3-2" || shiftFigure("1-2", [6, 5, 4, 3], [5, 4, 3, 2]) !== null) throw new Error("figure: the shift offer broke");
   const t = parseFigure("R-3-7-5", "tones"); if (t.err || !t.pattern || t.pattern.join() !== "0,1,3,2") throw new Error("figure: tone parse broke");
   const bad = parseFigure("1-2-9", "slots"); if (!bad.err) throw new Error("figure: a bad slot must fail loudly");
   const enc = parseFigure("(-1,+2)3 7", "tones"); if (enc.err || enc.source !== "motion") throw new Error("figure: enclosure routing broke: " + enc.err);

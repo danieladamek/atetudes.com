@@ -148,7 +148,7 @@ export const scoreBoard = {
          * onset, written at the value the subdivision implies — beamed for 8ths
          * and 16ths, bracketed with a number when not dyadic. Approaches are
          * cue-size, hollow, degree-coloured when diatonic and violet when not. */
-        const parsedFig = parseFigure(cfg.figure, cfg.address || "slots");
+        const parsedFig = parseFigure(cfg.figure, cfg.address || "pattern", { set: pass.set.strings });   // 261002
         let events;
         /* THE REASON IS CARRIED (260911, item 3; register 22): the engine
          * fails loudly and BY NAME ("naming it at source protects every
@@ -159,7 +159,7 @@ export const scoreBoard = {
         let figErr = null;
         try {
           events = figureEvents(s, { parsed: parsedFig.err ? null : parsedFig.pattern,
-            address: cfg.address || "slots", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: 72,
+            address: cfg.address || "pattern", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: 72,
             ctx: { scalePcs: scaleNotes(cfg.key, cfg.scale).map((n) => n.pc), tonicPc: scaleNotes(cfg.key, cfg.scale)[0].pc,
               open: OPEN_MIDI, nfrets: 15, set: pass.set.strings } });
         } catch (e) { events = null; figErr = e && e.message ? e.message : String(e); }

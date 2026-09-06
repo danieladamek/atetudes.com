@@ -22,22 +22,22 @@ test("set labels derive from OPEN — recomputed here from the tuning, not retyp
   assert.equal(e.setLabel([1, 2, 3]), "E–B–G", "reads high → low, as the numbers did — with the family's separator");
 });
 
-test("slot vocabulary: letters parse, digits parse, both normalise to H-M-L", () => {
+test("the pattern alphabet (261002): digits are string numbers, H/M/L is a typed alias, both normalise to STRING NUMBERS", () => {
   const e = loadTriadetudesEngine();
   const s = unwrap(e.st.setLowHigh); // [3,2,1] for the default set
   assert.deepEqual(unwrap(e.parseArp("H-M-L").pattern), [s[2], s[1], s[0]]);
   assert.deepEqual(unwrap(e.parseArp("hml").pattern), [s[2], s[1], s[0]], "case-insensitive");
   assert.deepEqual(unwrap(e.parseArp("2-3-3-1").pattern), [2, 3, 3, 1], "digit dialect lives");
   assert.deepEqual(unwrap(e.parseArp("M-3-H").pattern), [2, 3, 1], "dialects may mix");
-  assert.equal(e.patText(e.parseArp("2-3-1").pattern), "M-L-H", "normalisation");
-  assert.equal(e.patText(e.parseArp("M-L-H").pattern), "M-L-H", "idempotent");
+  assert.equal(e.patText(e.parseArp("2-3-1").pattern), "2-3-1", "normalisation — the field speaks string numbers");
+  assert.equal(e.patText(e.parseArp("M-L-H").pattern), "2-3-1", "the alias resolves against the set and prints as numbers");
   assert.equal(e.parseArp("").pattern, null, "empty means empty");
   assert.ok(e.parseArp("2-4").err, "digits outside the set still refused by name");
   assert.ok(e.parseArp("H".repeat(17)).err, "16-note ceiling holds for letters");
-  // the same letters land on different strings per set — slots, not aliases
+  // the alias letters land on different strings per set; the DISPLAY is the set's own string numbers (261002)
   e.st.set = [4, 5, 6];
   assert.deepEqual(unwrap(e.parseArp("H-M-L").pattern), [4, 5, 6]);
-  assert.equal(e.patText([4, 5, 6]), "H-M-L", "display is set-independent");
+  assert.equal(e.patText([4, 5, 6]), "4-5-6", "display is the instrument's own address — set-dependent by design");
 });
 
 test("placement is a real constraint: grip and free disagree somewhere, grip is default", () => {

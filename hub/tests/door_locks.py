@@ -4529,7 +4529,7 @@ console.log(JSON.stringify(out));
         page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input")
         page.wait_for_timeout(100)
         page.evaluate("""() => { [...document.querySelectorAll('#figAddrSeg button')]
-          .find(b => b.dataset.mm === 'slots').click(); }""")
+          .find(b => b.dataset.mm === 'pattern').click(); }""")
         page.evaluate("""() => { [...document.querySelectorAll('#playbackSeg button')]
           .find(b => b.dataset.pb === 'strum').click(); }""")
         page.wait_for_timeout(200)
@@ -4554,23 +4554,43 @@ console.log(JSON.stringify(out));
               f"{tag} Block must stay enabled — it is the only thing that sounds without a figure")
         check("figure" in page.inner_text("#smWhy").lower(),
               f"{tag} the panel does not state why Arpeggiated/Both are disabled")
-        page.select_option("#figSel", "1-2-3-4"); page.wait_for_timeout(60)
+        page.select_option("#figSel", "6-5-4-3"); page.wait_for_timeout(60)
         check(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.length") == 0,
               f"{tag} a valid figure did not enable Arpeggiated and Both (the enable is not live)")
         page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
         check(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.length") == 2,
               f"{tag} clearing the figure did not re-disable Arpeggiated/Both — the gate is not live")
-        # 2. arpErr — figures fail LOUDLY (audit A3): a bad slot, and parens in slot mode
-        page.click("#figAddrSeg button[data-mm=\"slots\"]")
-        page.fill("#arpIn", "1-2-9"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        # 2. arpErr — figures fail LOUDLY (audit A3): a string the set lacks, and parens under pattern.
+        # PIN REWRITTEN 261002 (night 38, ONE ADDRESS FAMILY): the alphabet is real string numbers — the
+        # boot set is strings 6-5-4-3, so "1" carries nothing there, and "9" is not a string at all.
+        page.click("#figAddrSeg button[data-mm=\"pattern\"]")
+        page.fill("#arpIn", "6-5-1"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
         err = page.inner_text("#arpErr")
-        check("9" in err and "slot" in err, f"{tag} a bad slot did not fail loudly: {err!r}")
+        check("string 1 carries nothing in this set (strings 6-5-4-3)" in err, f"{tag} a string the set lacks did not refuse in the house words: {err!r}")
+        # "9" is a tones extension, so it draws the cross-alphabet notice (as orderBy's does); "8" is in neither alphabet
+        page.fill("#arpIn", "6-5-9"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        check("reads as a TONES figure" in page.inner_text("#arpErr") and "switch it to tones" in page.inner_text("#arpErr"),
+              f"{tag} a tones token under pattern must draw the cross-alphabet notice: {page.inner_text('#arpErr')!r}")
+        page.fill("#arpIn", "6-5-8"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        check('"8" is not a string — strings are 1–6' in page.inner_text("#arpErr"), f"{tag} a non-string did not fail loudly by name: {page.inner_text('#arpErr')!r}")
+        # THE SET CHANGE (261002): a pattern figure names absolute strings; on the middle set it is
+        # refused BY NAME and the shift is OFFERED, not applied — the field keeps the user's text
+        page.fill("#arpIn", "6-5-4-3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        page.click("#setSeg button[data-v=\"1\"]"); page.wait_for_timeout(120)
+        err = page.inner_text("#arpErr"); shift_vis = page.is_visible("#figShift")
+        check(page.input_value("#arpIn") == "6-5-4-3" and "string 6 carries nothing in this set (strings 5-4-3-2)" in err and shift_vis
+              and page.inner_text("#figShift") == "shift the figure to 5-4-3-2",
+              f"{tag} the set change must keep the figure, refuse it by name and OFFER the shift: field {page.input_value('#arpIn')!r} err {err!r} shift {shift_vis}")
+        page.click("#figShift"); page.wait_for_timeout(80)
+        check(page.input_value("#arpIn") == "5-4-3-2" and page.inner_text("#arpErr") == "" and not page.is_visible("#figShift"),
+              f"{tag} taking the offer writes the shifted figure and clears the refusal: {page.input_value('#arpIn')!r} {page.inner_text('#arpErr')!r}")
+        page.click("#setSeg button[data-v=\"0\"]"); page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
         page.fill("#arpIn", "(-1,+2)3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
         check("tone" in page.inner_text("#arpErr").lower(),
               f"{tag} parens in slot mode must be refused by name (drill would silently read 1-2-3): {page.inner_text('#arpErr')!r}")
         # 3. a good slot figure clears the error; the picker writes into the field
-        page.select_option("#figSel", "1-2-3-4"); page.wait_for_timeout(60)
-        check(page.input_value("#arpIn") == "1-2-3-4", f"{tag} the picker did not write into the field")
+        page.select_option("#figSel", "6-5-4-3"); page.wait_for_timeout(60)
+        check(page.input_value("#arpIn") == "6-5-4-3", f"{tag} the picker did not write into the field")
         check(page.inner_text("#arpErr") == "", f"{tag} a good figure left an error standing")
         # 4. TONES: switching address re-lists the picker in tone letters and
         #    the guide-tone preset exists — the pedagogy in one control
@@ -4636,8 +4656,8 @@ console.log(JSON.stringify(out));
         page.uncheck("#guideChk")
         # 9. FOLLOW-THE-LINE: in Follow, with a line playing, the window's viewBox
         #    x moves as the sounding note moves (a camera move over the same drawing)
-        page.click("#winSeg button[data-win=\"follow\"]"); page.click("#figAddrSeg button[data-mm=\"slots\"]")
-        page.select_option("#figSel", "1-2-3-4"); page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(120)
+        page.click("#winSeg button[data-win=\"follow\"]"); page.click("#figAddrSeg button[data-mm=\"pattern\"]")
+        page.select_option("#figSel", "6-5-4-3"); page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(120)
         page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.wait_for_timeout(80)
         vbs = [page.get_attribute("#fretSvg", "viewBox")]
         page.click("#nextBtn")
@@ -4646,7 +4666,7 @@ console.log(JSON.stringify(out));
             vbs.append(page.get_attribute("#fretSvg", "viewBox"))
         xs = {float(v.split()[0]) for v in vbs}
         check(len(xs) >= 2,
-              f"{tag} follow-the-line: the window never moved while a 1-2-3-4 line played — {sorted(xs)}")
+              f"{tag} follow-the-line: the window never moved while a 6-5-4-3 line played — {sorted(xs)}")
         check(all(float(v.split()[2]) < 1160 for v in vbs),
               f"{tag} follow-the-line widened to the whole neck — it must stay a crop while tracking")
         page.click("#winSeg button[data-win=\"full\"]"); page.click("#placeSeg button[data-v=\"grip\"]")
@@ -4661,12 +4681,12 @@ console.log(JSON.stringify(out));
         #     but the selection stays; the hint says it sounds as Strum until a
         #     figure parses. (Arpeggiated can no longer be CLICKED with no figure,
         #     so reach the state by selecting it with a figure, then clearing.)
-        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.wait_for_timeout(60)
+        page.select_option("#figSel", "6-5-4-3"); page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.wait_for_timeout(60)
         page.select_option("#figSel", ""); page.wait_for_timeout(80)
         check("no figure" in hint() and "strum" in hint(),
               f"{tag} Arpeggiated with no figure does not say it sounds as Strum: {page.inner_text('#smHint')!r}")
         # (b) a figure typed but Playback = Strum — the figure is ignored, silently
-        page.select_option("#figSel", "1-2-3-4"); page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(80)
+        page.select_option("#figSel", "6-5-4-3"); page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(80)
         check("not sounding" in hint(),
               f"{tag} Block with a figure does not say the figure is ignored: {page.inner_text('#smHint')!r}")
         # (c) Placement = Free makes the Box inert — stated from this panel too

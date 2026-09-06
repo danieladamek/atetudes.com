@@ -96,7 +96,10 @@ export default {
      * chip strip's selection on outline + fill, motion.mjs's exported names. */
     /* v0.4.2 (260917, night 22): carried along — the shell moved (row collapse,
      * the chevron naming its row) and the notepad surface again (item 0). */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.5.0",
+    /* v0.6.0 (261002, night 38): ONE ADDRESS FAMILY — the figure's pattern address is
+     * real string numbers (multetudes' own), slots retired to a saved-étude alias; a set
+     * change refuses a stale figure by name and OFFERS the shift. Multetudes unmoved. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.0",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

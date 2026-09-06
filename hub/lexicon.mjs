@@ -48,6 +48,7 @@ export const LEXICON = {
   centricity:  { caption: "Centricity" },                       // the key/scale card's name — was Harmony on two surfaces
   movement:    { caption: "Movement",                             // how notes sound — was Playback on two surfaces
                  options: { strum: "strum", arpeggiate: "arpeggiate" } },
-  figureIs:    { caption: "The figure is" },                    // the figure's alphabet — was "Figure addresses" / "Motion follows"
+  figureIs:    { caption: "The figure is",                      // the figure's alphabet — was "Figure addresses" / "Motion follows"
+                 options: { pattern: "pattern", tones: "tones" } },   // ONE ADDRESS FAMILY (261002): pattern = string numbers, tones = roles
   bass:        { caption: "Bass / reference tone" },            // was "Hear the tetrads over a bass" / "… triads … (extension)"
 };

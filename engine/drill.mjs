@@ -84,7 +84,8 @@ export function parsePattern(text, mat) {
     if (t in mat.letters) out.push(mat.letters[t]);
     else {
       const d = +t;
-      if (!mat.values.includes(d)) return { err: mat.noun + " " + d + " isn't in " + mat.of };
+      // the house sentence (261002, ONE ADDRESS FAMILY): "string 9 carries nothing in this set (strings 3-2-1)"
+      if (!mat.values.includes(d)) return { err: mat.noun + " " + d + " carries nothing in " + mat.of };
       out.push(d);
     }
   }

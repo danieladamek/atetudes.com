@@ -415,17 +415,17 @@ const LEXICON_HOSTS = [
     captions: ["bpm", "volume", "subdivision", "voice"] },
   { name: "triadetudes",
     selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel", scale: "scaleSel" },
-    segments: { placement: ["placeSeg", "place"], movement: ["playbackSeg", "pb"] },
+    segments: { placement: ["placeSeg", "place"], movement: ["playbackSeg", "pb"], figureIs: ["motionSeg", "mm"] },
     captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement", "centricity", "movement", "figureIs", "bass"] },
   { name: "tetradetudes",
     selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel", scale: "scaleSel" },
     shippedSource: { placement: "PLACE_LABEL" },   // shape-motion builds #placeSeg at mount from this literal, which the page ships
-    segments: { movement: ["playbackSeg", "pb"] },
+    segments: { movement: ["playbackSeg", "pb"], figureIs: ["figAddrSeg", "mm"] },
     captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement", "centricity", "movement", "figureIs", "bass"] },
   { name: "multetudes",
     selects: { meter: "meterSel", subdivision: "subSel", voice: "voiceSel" },
     shippedSource: { scale: "SCALES" },   // harmony-card fills #hcScale at mount from this literal, which the page ships
-    segments: { placement: ["fdNSeg", "nps"], movement: ["fdMoveSeg", "move"] },
+    segments: { placement: ["fdNSeg", "nps"], movement: ["fdMoveSeg", "move"], figureIs: ["fdAddrSeg", "addr"] },
     captions: ["bpm", "volume", "subdivision", "voice", "scale", "placement", "centricity", "movement", "figureIs", "bass"] },
 ];
 // a host's STORED value for a lexicon value where they differ: multetudes' placement stores the

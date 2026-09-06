@@ -32,6 +32,8 @@
   /* the inverted card's own rules ship with metronome-card.mjs (below); this one is the
      page's — face prose on the dark card, which the module keeps in a popout */
   .card.metro .hint{color:#85858D}
+  .figShift{font:inherit;font-size:11.5px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer;margin-top:4px}
+  .figShift:hover{border-color:var(--ink)}
   .row2{display:flex;gap:10px;flex-wrap:wrap}
   .row2>div{flex:1 1 90px}
   .row2.alignEnd{align-items:flex-end}   /* selects share a baseline when a label wraps */
@@ -274,7 +276,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.8.14</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.9.0</div>
 </header>
 
 <div class="cards">
@@ -462,14 +464,15 @@
       <div class="row2 alignEnd">
         <div style="flex:0 1 auto"><label>The figure is</label>
           <div class="seg" id="motionSeg">
-            <button data-mm="shape" class="on" title="the figure fixes the contour — H·M·L slots; tones fall out of the voicing">the shape</button>
-            <button data-mm="tones" title="the figure fixes the tones — [1]·[b3]·[5] degrees; contour varies with the inversion">the tones</button>
+            <button data-mm="pattern" class="on" title="real string numbers, as the set lists them — the instrument's own address; tones fall out of the voicing">pattern</button>
+            <button data-mm="tones" title="the figure fixes the tones — [1]·[b3]·[5] degrees; contour varies with the inversion">tones</button>
           </div></div>
         <div style="flex:0 1 auto"><label>Figure</label>
           <select id="figSel"></select></div>
       </div>
-      <label id="arpLabel">Figure (H·M·L slots; approaches in parens: (-1,+2)H)</label>
-      <input type="text" id="arpIn" spellcheck="false" placeholder="e.g. M-L-H">
+      <label id="arpLabel">Figure (string numbers — this set's strings; approaches in parens: (-1,+2)1)</label>
+      <input type="text" id="arpIn" spellcheck="false" placeholder="e.g. 2-3-1">
+      <button id="figShift" class="figShift" hidden></button>
       <span id="arpErr" style="color:var(--red);font-size:11.5px"></span>
     </div>
     <div class="grp">
@@ -592,7 +595,7 @@
   logs and bare étude configs (.json) still open.</div>
 </div>
 
-<footer>Triadetudes v0.8.14 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.9.0 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -4713,7 +4716,7 @@ const st={
   // figure fixes — the shape (slots) or the tones (degrees). motionSrc is the
   // figure source when it carries approaches or tones; null means the figure
   // is the bare shape pattern already stored in arpPattern (legacy-identical).
-  motionMode:"shape", motionSrc:null,
+  motionMode:"pattern", motionSrc:null,   // ONE ADDRESS FAMILY (261002): "pattern" (was "shape" — the restore alias below knows the old word)
   roots:false, ext:"none",
   bpm:72, meter:4, splitIdx:1,
   clickOn:true, clickVol:0.8, clickAccent:true, clickSub:1, clickVoice:"beep", countIn:false,
@@ -4792,9 +4795,9 @@ function setLabel(set){
 /* the pattern in SLOT vocabulary: H = the highest-pitched string of the set,
    one convention, stated once, held everywhere the pattern is displayed */
 function patText(pattern){
+  // 261002: the field speaks STRING NUMBERS — the instrument's own address (Daniel 260923)
   if(!pattern)return"";
-  const s=st.setLowHigh;
-  return pattern.map(sn=>"LMH"[s.indexOf(sn)]).join("-");
+  return pattern.map(String).join("-");
 }
 /* what the boards draw: the pattern unless playback is Strum. Under Line
    the H-M-L shape field is out of play (a slot is no longer a bijection when
@@ -4803,6 +4806,7 @@ function patText(pattern){
 const playbackWord = (w) => (w === "block" ? "strum" : w);   // engine/figure.mjs:176, verbatim (260926)
 function displayPattern(){
   if(st.playback==="strum"||st.placement==="line")return null;
+  if(patternStale())return null;   // 261002: a stale pattern is refused on the face, not half-played
   return st.arpPattern;
 }
 function orderedNotes(v){
@@ -4820,10 +4824,25 @@ function motionSource(){
   if(st.motionSrc!==null)return st.motionSrc;
   return patText(st.arpPattern);
 }
+/* THE BOUNDARY (261002): the face speaks STRING NUMBERS; motion.mjs's shape mode speaks
+   H/M/L slots and is byte-pinned across four studies. Digits become the set's letters
+   going in, letters become the set's digits coming out — one alias each way. */
+const motionModeOf=()=>st.motionMode==="tones"?"tones":"shape";   // "shape" is the pinned grammar's word; the face's is "pattern"
+function toShapeLetters(src){
+  if(st.motionMode==="tones")return src;
+  const s=st.setLowHigh;
+  // digits OUTSIDE parentheses are strings; inside them "(-1,+2)" are distances, untouched
+  return String(src).split(/(\([^)]*\))/g).map((chunk,i)=>i%2?chunk
+    :chunk.replace(/\d/g,d=>{const k=s.indexOf(+d);return k<0?d:"LMH"[k];})).join("");
+}
+function fromShapeLetters(text){
+  const s=st.setLowHigh;
+  return String(text).replace(/[HML]/g,ch=>String(s["LMH".indexOf(ch)]));
+}
 function parsedFigure(){
   const src=motionSource();
   if(!src)return null;
-  return MOTION.parse(src,st.motionMode);
+  return MOTION.parse(toShapeLetters(src),motionModeOf());
 }
 function activeFigure(){
   return st.motionSrc!==null;
@@ -4851,9 +4870,10 @@ function orderedEntries(v,ch){
   return orderedNotes(v);
 }
 function parseArp(text){
-  // "H-M-L", "hml", and the pre-v0.6.13 "2-3-1"/"231" all parse; letters are
-  // slots against the CURRENT set, digits must belong to it. Old muscle memory
-  // and pasted configs are not punished; the field normalises to H-M-L on sync.
+  // 261002 (ONE ADDRESS FAMILY, Daniel 260923): the pattern address is STRING NUMBERS —
+  // "2-3-1"/"231" on B-G-D — the instrument's own address. H/M/L RETIRED from the face; a
+  // typed or saved "H-M-L" still parses as an ALIAS against the current set (old muscle
+  // memory and old notes are not punished), and the field normalises to string numbers.
   const s=st.setLowHigh;
   const toks=(text.toUpperCase().match(/[HML]|\d/g)||[]);
   if(!toks.length)return {pattern:null};                    // empty means empty
@@ -4865,7 +4885,7 @@ function parseArp(text){
     else if(t==="H")out.push(s[2]);
     else{
       const d=+t;
-      if(!st.set.includes(d))return {err:"string "+d+" isn't in the "+st.set.join("-")+" set"};
+      if(!st.set.includes(d))return {err:"string "+d+" carries nothing in this set (strings "+st.setLowHigh.join("-")+")"};
       out.push(d);
     }
   }
@@ -4890,7 +4910,7 @@ function arpHintText(){
       return "Line + strum — the three tones are SOUNDED together (a line is not a grip; "+
         "two notes may share a string).";
     return "Line plays its notes in placement order, low to high — "+per+
-      ". The H-M-L shape field applies to Grip and Free; tones-mode patterns arrive "+
+      ". The string-number pattern field applies to Grip and Free; tones-mode patterns arrive "+
       "with the motion grammar.";
   }
   if(st.playback==="strum")
@@ -4901,7 +4921,7 @@ function arpHintText(){
     if(fig&&!fig.error){
       const per=[...new Set(pattern())].map(b=>fig.n+" over "+b+" beats → "+
         subdivisionName(b,fig.n)).join(" · ");
-      return MOTION.describe(fig)+" "+per+"."+
+      return (st.motionMode==="pattern"?fromShapeLetters(MOTION.describe(fig)):MOTION.describe(fig))+" "+per+"."+
         (st.playback==="both"?" Both: the harmony strums under the line's downbeat.":"");
     }
   }
@@ -4914,11 +4934,20 @@ function arpHintText(){
 function escapeHtml(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function syncArpIn(){
   const inp=document.getElementById("arpIn");
+  const shift=document.getElementById("figShift");
+  if(shift){
+    const o=st.shiftOffer;
+    const live=o&&patternStale()&&st.arpPattern&&o.figure.join()===st.arpPattern.join();
+    shift.hidden=!live;
+    if(live){ shift.textContent="shift the figure to "+o.to.join("-"); shift.title="the same figure, slot for slot, on "+st.setLowHigh.join("-"); }
+  }
+  const errEl=document.getElementById("arpErr");
+  if(errEl&&patternStale()&&!st.figureError)errEl.textContent=staleMsg();
   if(inp){
     inp.value=st.figureError?st.figureError.src:motionSource();
     // shape mode is out of play under Line (a slot is not a bijection there);
     // tones-mode figures work under Line since the grammar landed
-    inp.disabled=st.placement==="line"&&st.motionMode==="shape";
+    inp.disabled=st.placement==="line"&&st.motionMode==="pattern";
   }
   const h=document.getElementById("arpHint");
   if(h){
@@ -4941,7 +4970,7 @@ function figSelSync(){
   // control wrote last (golden rule 1 in its interface form, v0.7.7). Every
   // writer funnels through syncArpIn, so every writer lands here.
   const sel=document.getElementById("figSel"); if(!sel)return;
-  const mode=st.motionMode;
+  const mode=motionModeOf();   // the grammar's word keys the presets ("shape"); the face says "pattern" (261002)
   if(sel.dataset.mode!==mode){
     sel.innerHTML="";
     FIG_PRESETS[mode].forEach((p,i)=>{const o=document.createElement("option");
@@ -4995,9 +5024,27 @@ function rebuild(){
   renderAll();
 }
 function defaultArpIfStale(){
-  if(st.arpPattern&&(!st.arpCustom||!st.arpPattern.every(x=>st.set.includes(x)))){
+  // the DEFAULT pattern is derived and re-derives; a user's pattern is kept, even stale (261002)
+  if(st.arpPattern&&!st.arpCustom){
     defaultArpPattern(); syncArpIn();
   }
+}
+/* a stale pattern (strings the set no longer holds) sounds NOTHING of the figure: the boards
+   fall back to strum and the face says why, with the shift offered */
+/* the offer, TAKEN: the shifted figure becomes the user's — by a click, never by a set change */
+function takeShiftOffer(){
+  const o=st.shiftOffer; if(!o)return false;
+  st.arpPattern=[...o.to]; st.shiftOffer=null; st.arpCustom=true;
+  const errEl=(typeof document!=="undefined")&&document.getElementById("arpErr"); if(errEl)errEl.textContent="";
+  return true;
+}
+function patternStale(){
+  return !!(st.arpPattern&&!st.arpPattern.every(x=>st.set.includes(x)));
+}
+function staleMsg(){
+  if(!patternStale())return "";
+  const missing=[...new Set(st.arpPattern.filter(x=>!st.set.includes(x)))];
+  return "string "+missing[0]+" carries nothing in this set (strings "+st.setLowHigh.join("-")+")";
 }
 
 /* ---- context changes translate the design instead of destroying it (v0.6.6) ----
@@ -5022,7 +5069,13 @@ function reseatPivot(cap){
 }
 function changeSet(newSet){
   const cap=pivotContext();
-  st.arpPattern=STRSETS.translatePattern(st.arpPattern,st.set,newSet);
+  /* 261002 (ONE ADDRESS FAMILY): a pattern names ABSOLUTE strings and does not survive a set
+     change — the trade Daniel made knowingly (260923). The figure is the user's sentence, so it
+     is KEPT verbatim; the face names the mismatch, and the same figure slot for slot on the new
+     set is OFFERED as a click (st.shiftOffer), never applied. The derived default pattern (not
+     the user's) re-derives as before. */
+  const stale=st.arpPattern&&st.arpCustom&&!st.arpPattern.every(x=>newSet.includes(x));
+  st.shiftOffer=stale?{figure:[...st.arpPattern],to:STRSETS.translatePattern(st.arpPattern,st.set,newSet)}:null;
   st.set=newSet;
   reseatPivot(cap);
 }
@@ -5164,27 +5217,27 @@ const FIG_PRESETS={
     ["Every tone enclosed","(-1,+2)[1] - (+2,-1)[3] - (-s,+s)[5]"],
     ["Chromatic from below","(-1)[1] - (-1)[3] - (-1)[5]"],
   ],
-  shape:[
+  shape:[   // string numbers, DERIVED from the current set (261002): null = a derivation, resolved by presetSrc
     ["Pivot first",null],           // derived: pivotFirstSrc()
-    ["Low to high","L-M-H"],
-    ["High to low","H-M-L"],
-    ["Up and back","L-M-H-M"],
+    ["Low to high",()=>st.setLowHigh.map(String).join("-")],
+    ["High to low",()=>[...st.setLowHigh].reverse().map(String).join("-")],
+    ["Up and back",()=>[...st.setLowHigh,st.setLowHigh[1]].map(String).join("-")],
   ],
 };
 function pivotFirstSrc(){
   const pat=[st.pivotString,...st.setLowHigh.filter(x=>x!==st.pivotString)];
-  return pat.map(sn=>"LMH"[st.setLowHigh.indexOf(sn)]).join("-");
+  return pat.map(String).join("-");
 }
-function presetSrc(mode,i){ const p=FIG_PRESETS[mode][i]; return p[1]??pivotFirstSrc(); }
+function presetSrc(mode,i){ const p=FIG_PRESETS[mode][i]; return typeof p[1]==="function"?p[1]():(p[1]??pivotFirstSrc()); }
 function canonFig(src,mode){
   if(!src)return null;
-  const p=MOTION.parse(src,mode);
-  return p.error?null:MOTION.serialize(p);
+  const p=MOTION.parse(mode==="shape"?toShapeLetters(src):src,mode);
+  return p.error?null:(mode==="shape"?fromShapeLetters(MOTION.serialize(p)):MOTION.serialize(p));
 }
 { // load assertions: a typo in a preset must be impossible to ship
   for(const mode of ["tones","shape"])
     FIG_PRESETS[mode].forEach((p,i)=>{
-      const q=MOTION.parse(presetSrc(mode,i),mode);
+      const q=MOTION.parse(mode==="shape"?toShapeLetters(presetSrc(mode,i)):presetSrc(mode,i),mode);
       if(q.error)throw new Error("figure preset does not parse: "+p[0]);
       if(mode==="tones")
         for(const f of q.figures)
@@ -5863,13 +5916,13 @@ function slotOfClick(note){
   // and shape emission will hold the click out by name rather than guess.
   if(note.string!=null){
     const k=st.setLowHigh.indexOf(note.string);
-    return k<0?null:"LMH"[k];
+    return k<0?null:String(note.string);
   }
   const v=VOIC[st.cur];
   const hit=v&&v.notes.find(n=>n.midi===note.midi);
   if(!hit)return null;
   const k2=st.setLowHigh.indexOf(hit.string);
-  return k2<0?null:"LMH"[k2];
+  return k2<0?null:String(hit.string);
 }
 function sketchHelp(on){
   const e=document.getElementById("sketchHelp");
@@ -5926,7 +5979,7 @@ function sketchSync(){
     const reasons=[...new Set(held.map(h=>h.reason))].join("; ");
     return names+" held out — "+reasons+"; double-tap to remove. ";
   };
-  if(st.motionMode==="shape"){
+  if(st.motionMode==="pattern"){
     const r=sketchEmit(clicks,0,"shape");
     const said=heldMsg(r.held);
     if(r.src){
@@ -6308,7 +6361,7 @@ function renderActive(){
         fe.forEach((en,k)=>sketchHit(layer,fx(en.fret),fy(en.string),emitted[k]));
       for(let i=0;i<ECHO.length;i++){
         const committed=i<=lastT&&!ECHO[i].heldOut;
-        if(committed&&st.motionMode!=="shape")continue;  // tones: the figure draws it
+        if(committed&&st.motionMode!=="pattern")continue;  // tones: the figure draws it
         const n=ECHO[i];
         if(n.string===null)continue;   // keyboard clicks appear on the keyboard
         if(committed){ sketchHit(layer,fx(n.fret),fy(n.string),i); continue; }
@@ -6440,7 +6493,7 @@ function renderKbd(){
     for(let i=0;i<ECHO.length;i++){
       const n=ECHO[i]; if(n.string!==null)continue;
       const committed=i<=lastT&&!n.heldOut;
-      if(committed&&st.motionMode!=="shape")continue;  // tones: the figure draws it
+      if(committed&&st.motionMode!=="pattern")continue;  // tones: the figure draws it
       const g=kbdGeom(n.midi); if(!g)continue;
       if(committed){ sketchHit(svg,g.x,g.y,i,10); continue; }
       const chrom=!scaleData().pcs.includes(((n.midi%12)+12)%12);
@@ -6898,7 +6951,8 @@ function applyRaw(c){
     // a bounded, knowing duplication of ONE line, guarded by engine/tests/host-conformance
     playback:playbackWord(c.playback??(c.arpPattern?"arpeggiated":"strum")),
     // pre-grammar entries have no figure keys: the bare pattern IS the figure
-    motionMode:c.motionMode??"shape",motionSrc:c.motionSrc??null,figureError:null,
+    // a pre-261002 étude says motionMode "shape": the alias is the one place the old word is known
+    motionMode:({shape:"pattern"})[c.motionMode]??c.motionMode??"pattern",motionSrc:c.motionSrc??null,figureError:null,
     bpm:c.bpm,meter:c.meter,splitIdx:c.splitIdx,cur:0,
     // pre-v0.6 entries carry no harmony panel — they were all build-up études
     harmonyMode:c.harmonyMode??"build",
@@ -6995,7 +7049,7 @@ function applyMotionInput(text,opts){
   }
   // the legacy dialect: shape mode without grammar punctuation is the
   // pre-grammar pattern language (digits and letters), unchanged
-  if(st.motionMode==="shape"&&!/[([]/.test(t)){
+  if(st.motionMode==="pattern"&&!/[([]/.test(t)){
     const r=parseArp(t);
     if(r.err){if(errEl)errEl.textContent=r.err;return;}
     if(errEl)errEl.textContent="";
@@ -7006,11 +7060,11 @@ function applyMotionInput(text,opts){
       STRSETS.slotsOf(r.pattern,st.set).join()!==STRSETS.slotsOf(def,st.set).join();
     syncArpIn(); renderScore(); renderActive(); return;
   }
-  const fig=MOTION.parse(t,st.motionMode);
+  const fig=MOTION.parse(toShapeLetters(t),motionModeOf());
   if(fig.error){
     // the sentence refuses to finish; the caret marks where (no color)
     st.figureError={src:t,pos:fig.error.pos,message:fig.error.message,
-      partial:fig.figures.length?MOTION.describe({figures:fig.figures}):""};
+      partial:fig.figures.length?(st.motionMode==="pattern"?fromShapeLetters(MOTION.describe({figures:fig.figures})):MOTION.describe({figures:fig.figures})):""};
     if(errEl)errEl.textContent=fig.error.message;
     syncArpIn(); return;
   }
@@ -7035,7 +7089,7 @@ function applyMotionInput(text,opts){
     }
   }
   if(errEl)errEl.textContent="";
-  const bare=st.motionMode==="shape"&&fig.figures.every(f=>!f.approaches.length);
+  const bare=st.motionMode==="pattern"&&fig.figures.every(f=>!f.approaches.length);
   if(bare){
     // a bare shape figure IS the pattern — store it there, byte-identical legacy
     const r=parseArp(fig.figures.map(f=>f.target.slot).join("-"));
@@ -7044,24 +7098,24 @@ function applyMotionInput(text,opts){
     st.arpCustom=!!r.pattern&&
       STRSETS.slotsOf(r.pattern,st.set).join()!==STRSETS.slotsOf(def,st.set).join();
   }else{
-    st.motionSrc=MOTION.serialize(fig);
+    st.motionSrc=st.motionMode==="pattern"?fromShapeLetters(MOTION.serialize(fig)):MOTION.serialize(fig);
   }
   syncArpIn(); renderScore(); renderActive();
 }
 function syncMotionUI(){
   document.querySelectorAll("#motionSeg button").forEach(b=>{
     b.className=b.dataset.mm===st.motionMode?"on":"";
-    if(b.dataset.mm==="shape"){
+    if(b.dataset.mm==="pattern"){
       b.disabled=st.placement==="line";   // a slot is not a bijection under Line
       b.title=st.placement==="line"
-        ?"shape mode is unavailable under Line — a slot stops being one note per string"
-        :"the figure fixes the contour — H·M·L slots; tones fall out of the voicing";
+        ?"pattern mode is unavailable under Line — a string stops being one note"
+        :"real string numbers, as the set lists them — the instrument's own address; tones fall out of the voicing";
     }
   });
   const lbl=document.getElementById("arpLabel");
   if(lbl)lbl.textContent=st.motionMode==="tones"
     ?"Figure ([1]·[b3]·[5] degrees; approaches in parens: (-1,+2)[1])"
-    :"Figure (H·M·L slots; approaches in parens: (-1,+2)H)";
+    :"Figure (string numbers — this set's strings; approaches in parens: (-1,+2)"+st.setLowHigh[2]+")";
 }
 function syncShapeUI(){
   document.querySelectorAll("#placeSeg button").forEach(b=>{
@@ -7154,6 +7208,7 @@ function initControls(){
   document.getElementById("customIn").addEventListener("change",e=>{st.custom=e.target.value;st.cur=0;rebuild();});
 
   document.getElementById("arpIn").addEventListener("change",e=>applyMotionInput(e.target.value));
+  document.getElementById("figShift").addEventListener("click",()=>{ if(takeShiftOffer()){ syncArpIn(); renderScore(); renderActive(); } });
   document.querySelectorAll("#motionSeg button").forEach(b=>{
     b.addEventListener("click",()=>{
       if(b.disabled||b.dataset.mm===st.motionMode)return;
@@ -7165,7 +7220,7 @@ function initControls(){
       // switching mode selects that mode's FIRST PRESET (v0.7.7): the field
       // is populated by a selection, never carried across the switch — text
       // can no longer reach the other mode's parser, by construction
-      applyMotionInput(presetSrc(st.motionMode,0));
+      applyMotionInput(presetSrc(motionModeOf(),0));
       syncMotionUI();
     });
   });
@@ -7173,7 +7228,7 @@ function initControls(){
   document.querySelectorAll("#placeSeg button").forEach(b=>{
     b.addEventListener("click",()=>{
       st.placement=b.dataset.place;
-      if(st.placement==="line"&&st.motionMode==="shape"){
+      if(st.placement==="line"&&st.motionMode==="pattern"){
         st.motionMode="tones";   // a line is defined by its tones — named rule,
         syncMotionUI();          // stated in the hint; shape mode disables.
         applyMotionInput(presetSrc("tones",0));  // tones' first preset (v0.7.7)
@@ -7265,7 +7320,7 @@ function initControls(){
     // choosing a preset WRITES ITS GRAMMAR STRING into the visible field —
     // the picker is how the language gets learned (v0.7.7)
     if(e.target.value==="custom"){ figSelSync(); document.getElementById("arpIn").focus(); return; }
-    applyMotionInput(presetSrc(st.motionMode,+e.target.value));
+    applyMotionInput(presetSrc(motionModeOf(),+e.target.value));
   });
   // journal buttons + pad + import/export: wired by the shared surface
   // the pad: wired by the shared surface (autosave, persistence, clearing)
@@ -7321,7 +7376,7 @@ function initControls(){
   eq(parseArp("2-3-3-1").pattern.join(","),"2,3,3,1","arp parse dashes");
   eq(parseArp("2331").pattern.join(","),"2,3,3,1","arp parse bare digits");
   eq(parseArp("").pattern,null,"empty arp = block");
-  if(!parseArp("2-4").err)console.error("TEST: arp should reject string 4 for set 1-2-3");
+  if(!/string 4 carries nothing in this set/.test(parseArp("2-4").err||""))console.error("TEST: arp should refuse string 4 for set 1-2-3 in the house words");
   eq(subdivisionName(2,4),"8ths","4 notes over 2 beats = 8ths");
   eq(subdivisionName(4,4),"quarters","4 over 4 = quarters");
   eq(subdivisionName(2,3),"quarter-note triplet (3 over 2 beats)","quarter triplet");
@@ -7352,7 +7407,7 @@ function initControls(){
   eq(parseArp("H-M-L").pattern.join(","),
     [st.setLowHigh[2],st.setLowHigh[1],st.setLowHigh[0]].join(","),"letters parse by slot");
   eq(parseArp("hml").pattern.join(","),parseArp("H-M-L").pattern.join(","),"case-insensitive");
-  eq(patText(parseArp("2-3-1").pattern),"M-L-H","digits normalise to slot vocabulary");
+  eq(patText(parseArp("2-3-1").pattern),"2-3-1","the field speaks string numbers (261002)");
   eq(setLabel([1,2,3]),"E–B–G","set label derived from the tuning");
   eq(setLabel([4,5,6]),"D–A–E","low set label derived too");
   // all twelve keys: spelling derived per scale, ties toward flats

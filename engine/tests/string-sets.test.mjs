@@ -130,7 +130,17 @@ test("no-reset: set, key and scale changes translate the design instead of destr
   e.st.arpPattern = [3, 4, 2, 2]; e.st.arpCustom = true;
   const cap0 = unwrap(e.pivotContext());
   e.changeSet([3, 4, 5]);
-  assert.deepEqual(unwrap(e.st.arpPattern), [4, 5, 3, 3], "the item's worked case, live");
+  /* PIN REWRITTEN 261002 (night 38, ONE ADDRESS FAMILY — Daniel 260923): a pattern names
+   * ABSOLUTE strings and does not survive a set change. The figure is KEPT verbatim (the user's
+   * sentence), refused by name on the face, and the same figure slot for slot is OFFERED — the
+   * item's worked case lands by a click, never by the set change itself. The PIVOT still
+   * translates: the design is relative, the figure is the instrument's. */
+  assert.deepEqual(unwrap(e.st.arpPattern), [3, 4, 2, 2], "the figure is kept verbatim across the set change");
+  assert.equal(e.patternStale(), true, "…and is stale on the new set, said on the face");
+  assert.match(e.staleMsg(), /string 2 carries nothing in this set \(strings 5-4-3\)/);
+  assert.deepEqual(unwrap(e.st.shiftOffer.to), [4, 5, 3, 3], "the item's worked case, OFFERED");
+  assert.equal(e.takeShiftOffer(), true);
+  assert.deepEqual(unwrap(e.st.arpPattern), [4, 5, 3, 3], "the item's worked case, taken by a click");
   assert.equal(e.st.arpCustom, true, "custom flag survives");
   let cap = unwrap(e.pivotContext());
   assert.equal(cap.slot, cap0.slot, "pivot slot survives the set change");
@@ -156,7 +166,8 @@ test("no-reset: cycling all four sets and returning home restores the original d
   e.st.arpPattern = [3, 4, 2, 2]; e.st.arpCustom = true;
   const before = { pat: unwrap(e.st.arpPattern), piv: unwrap(e.st.pivotFrets),
     str: e.st.pivotString };
-  for (const set of [[3, 4, 5], [4, 5, 6], [1, 2, 3], [2, 3, 4]]) e.changeSet(set);
+  // 261002: each set change OFFERS the shift; taking it at every step is the old silent path, made a click
+  for (const set of [[3, 4, 5], [4, 5, 6], [1, 2, 3], [2, 3, 4]]) { e.changeSet(set); assert.equal(e.takeShiftOffer(), true, `an offer stands on ${set.join("-")}`); }
   assert.deepEqual(unwrap(e.st.arpPattern), before.pat, "pattern returns home exactly");
   assert.equal(e.st.pivotString, before.str, "pivot string returns home");
   assert.deepEqual(unwrap(e.st.pivotFrets), before.piv, "pivot frets return home");

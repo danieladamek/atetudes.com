@@ -49,8 +49,8 @@ test("the spec's enclosure figure resolves per chord: 9 events, roles and distan
 
 test("shape-mode figures with approaches work in grip; chromatic pcs identified", () => {
   const e = loadTriadetudesEngine();
-  e.st.motionMode = "shape";
-  e.st.motionSrc = "(-1)H - M - L";
+  e.st.motionMode = "pattern";              // 261002: the face's word; the grammar's "shape" is behind the page's boundary
+  e.st.motionSrc = "(-1)1 - 2 - 3";         // string numbers on the E-B-G set (H-M-L was the retired alphabet)
   const seq = e.buildSequence();
   const voic = e.chooseVoicings(seq);
   const entries = unwrap(e.orderedEntries(voic[0], seq[0]));

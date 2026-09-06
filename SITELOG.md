@@ -135,6 +135,21 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — night 38: one address family — tetradetudes v0.6.0 and triadetudes v0.9.0 take multetudes' pattern (string numbers) and tones
+
+- **What:** Daniel, 260923 — "123, 234, 345, 456 and tones R-3-5". The figure's PATTERN address is
+  real string numbers on both surfaces (6-5-4-3 on tetradetudes' low set; 1-2-3 on E–B–G);
+  H·M·L and "slots 1–4" retire from the faces. `engine/figure.mjs` derives the pattern material
+  from the set; "slots" stays a saved-étude alias and a saved slot figure is migrated against its
+  stored setIndex; triadetudes keeps H/M/L as a typed alias only and translates at its boundary
+  to motion.mjs's pinned shape grammar. THE COST, not silent: a pattern names absolute strings, so
+  a set change refuses a stale figure BY NAME ("string 6 carries nothing in this set (strings
+  5-4-3-2)") and OFFERS the shift as a button, never applied by the change and never dropped —
+  triadetudes' silent translation is gone. `engine/selection.mjs` orderBy is unchanged;
+  multetudes is unchanged. drill.mjs's refusal sentence is the house one now. Proven on two real
+  saved études from the shipped pages.
+- **Why:** one address family, the instrument's own; Daniel's trade, made knowingly.
+
 ## 2026-09-06 — DEPLOYED: night 37 live — the unfretted reference offered on multetudes, both doors moved for rule 14; all six checked; written from the run
 
 - record: run 34044195517 · success · commit 5a079da · fetched 2026-09-06T16:09Z · 6/6 studies byte-identical · digest 5add5d6f0570

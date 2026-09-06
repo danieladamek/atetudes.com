@@ -402,13 +402,13 @@ export const fretboardStage = {
       for (const t of pulseTimers) d.defaultView.clearTimeout(t);
       pulseTimers = [];
       pulseLayer.textContent = "";
-      const parsed = parseFigure(cfg.figure, cfg.address || "slots");
+      const parsed = parseFigure(cfg.figure, cfg.address || "pattern", { set: pass.set.strings });   // 261002
       const scale = scaleNotes(cfg.key, cfg.scale);
       const altered = alteredDegree(cfg.key, cfg.scale);   // v1.4 (260930): the pulse wears the note's OWN colour — the altered degree's when chromatic
       let events;
       try {
         events = figureEvents(cur, {
-          parsed: parsed.err ? null : parsed.pattern, address: cfg.address || "slots",
+          parsed: parsed.err ? null : parsed.pattern, address: cfg.address || "pattern",
           playback: playbackWord(cfg.playback) || "strum", durBeats, bpm,
           ctx: { scalePcs: scale.map((n) => n.pc), tonicPc: scale[0].pc, open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
         });

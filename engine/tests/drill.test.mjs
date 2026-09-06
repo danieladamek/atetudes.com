@@ -20,11 +20,16 @@ const st = eng.st;
 
 /** Triadetudes' material, declared by the consumer — this mapping IS the whole
  * of what the drill layer needs to know about guitar string sets */
+/* 261002 (night 38, ONE ADDRESS FAMILY): the reference's pattern alphabet is STRING NUMBERS —
+ * each string is its own letter; H/M/L is the page's typed ALIAS (kept for old muscle memory),
+ * resolved against the set BEFORE the text reaches drill, exactly as the page resolves it */
 const stringSet = (set) => {
   const s = [...set].sort((a, b) => b - a);         // low → high, as the app does
-  return material({ letters: { L: s[0], M: s[1], H: s[2] }, values: set,
-    noun: "string", of: "the " + set.join("-") + " set" });
+  const letters = {}; for (const sn of s) letters[String(sn)] = sn;
+  return material({ letters, values: set, noun: "string", of: "this set (strings " + s.join("-") + ")" });
 };
+const aliasHML = (text, set) => { const s = [...set].sort((a, b) => b - a);
+  return String(text).toUpperCase().replace(/[LMH]/g, (ch) => String(s["LMH".indexOf(ch)])); };
 
 const SETS = [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6]];
 const TEXTS = ["H-M-L", "hml", "2-3-1", "231", "L-M-H-M", "", "   ", "H", "1",
@@ -36,7 +41,7 @@ test("stage 2 drill: parsePattern reproduces the shipped parseArp, corpus-wide",
     st.set = [...set];
     const mat = stringSet(set);
     for (const text of TEXTS) {
-      assert.deepEqual(unwrap(parsePattern(text, mat)), unwrap(eng.parseArp(text)),
+      assert.deepEqual(unwrap(parsePattern(aliasHML(text, set), mat)), unwrap(eng.parseArp(text)),
         `parse drift on ${JSON.stringify(text)} with set ${set.join("-")}`);
       cases++;
     }
@@ -47,10 +52,10 @@ test("stage 2 drill: parsePattern reproduces the shipped parseArp, corpus-wide",
 test("stage 2 drill: the rejection PROSE is the shipped prose, not a paraphrase", () => {
   st.set = [1, 2, 3];
   const mat = stringSet([1, 2, 3]);
-  assert.deepEqual(parsePattern("9", mat), { err: "string 9 isn't in the 1-2-3 set" });
+  assert.deepEqual(parsePattern("9", mat), { err: "string 9 carries nothing in this set (strings 3-2-1)" });   // the house sentence (261002)
   assert.deepEqual(parsePattern("9", mat), unwrap(eng.parseArp("9")));
   const long = "H".repeat(MAX_STEPS + 1);
-  assert.deepEqual(parsePattern(long, mat), unwrap(eng.parseArp(long)));
+  assert.deepEqual(parsePattern(aliasHML(long, [1, 2, 3]), mat), unwrap(eng.parseArp(long)));
   assert.equal(MAX_STEPS, 16, "the family's figure ceiling, shared with motion.mjs");
 });
 
@@ -117,7 +122,7 @@ test("stage 2 drill: a NON-STRING material drills identically — the second con
   });
   assert.deepEqual(parsePattern("R-T-F", box), { pattern: [0, 2, 4] });
   assert.deepEqual(parsePattern("R-T-9-R", box), { pattern: [0, 2, 9, 0] });
-  assert.deepEqual(parsePattern("5", box), { err: "degree 5 isn't in this box" });
+  assert.deepEqual(parsePattern("5", box), { err: "degree 5 carries nothing in this box" });
   assert.equal(patternText([0, 2, 9], box), "R-T-9");
   assert.deepEqual(defaultPattern(box, 4), [4, 0, 2, 7, 9]);
   // the subdivision half is material-blind already: five degrees over 4 beats
