@@ -135,6 +135,17 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — DEPLOYED: night 39 live — modes-from-pentatonic-boxes carries the cards, emitted by its generator; the other five unmoved; all six checked; written from the run
+
+- record: run 34060785966 · success · commit d02787a · fetched 2026-09-06T21:27Z · 6/6 studies byte-identical · digest b6985bebe4e4
+- Actions run 34060785966 green on `d02787a` — https://github.com/danieladamek/atetudes.com/actions/runs/34060785966 (created 2026-09-06T21:20:48Z, finished 2026-09-06T21:27:45Z).
+- metronome: repo b7d02cedc3d0 · live b7d02cedc3d0 — matches.
+- modes-from-pentatonic-boxes: repo 805c4365aac7 · live 805c4365aac7 — matches.
+- multetudes: repo 0c101aa7df29 · live 0c101aa7df29 — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 465e4e5defdc · live 465e4e5defdc — matches.
+- triadetudes: repo 9ba42843b4d0 · live 9ba42843b4d0 — matches.
+
 ## 2026-09-06 — night 39: the generator bridge — modes-from-pentatonic-boxes carries the metronome card and the split notepad/log, emitted by its generator
 
 - **What:** `generators/atetudes_bridge.py` reads engine/*.mjs and the hub cards and emits them
