@@ -135,6 +135,17 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — DEPLOYED: night 35b live — subdivision in the core, all four apps moved (the two chart studies unmoved); all six checked; written from the run
+
+- record: run 34010631539 · success · commit ad7e5b9 · fetched 2026-09-06T08:47Z · 6/6 studies byte-identical · digest a44632bfea43
+- Actions run 34010631539 green on `ad7e5b9` — https://github.com/danieladamek/atetudes.com/actions/runs/34010631539 (created 2026-09-06T04:05:46Z, finished 2026-09-06T04:12:48Z).
+- metronome: repo c9afa5eb3a8f · live c9afa5eb3a8f — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo 7f305093e0ab · live 7f305093e0ab — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo 10ca81c78ea1 · live 10ca81c78ea1 — matches.
+- triadetudes: repo 72ba53ef2071 · live 72ba53ef2071 — matches.
+
 ## 2026-09-05 — night 35b: subdivision lives in the metronome core — all four apps click their 8ths, triplets and 16ths
 
 - **What:** Daniel, 260929 — Subdivision did nothing on Multetudes and Tetradetudes. The door's
