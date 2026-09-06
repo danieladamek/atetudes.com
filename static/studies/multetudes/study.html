@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, hub/palette.mjs, hub/readout.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/string-sets.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -1501,6 +1501,38 @@ function chromaticSpeller(key, scaleType = "major") {
   };
 }
 
+/** THE ALTERED DEGREE (Design Spec v1.4 §2.6, 260930): a non-diatonic note
+ * wears the colour of the degree it ALTERS, and its interior is that degree
+ * with its accidental — both read off the LETTER of the speller's answer.
+ * Every chromatic pitch sits in a whole-tone gap and so neighbours TWO
+ * degrees; rule C (night 31) already chose one, and the letter names it:
+ * in C harmonic minor D♭ → D → the 2nd, G♭ → G → the 5th, B♭ → B → the 7th
+ * (verified against the live speller, 260928). Derived, never tabled.
+ * Returns { name, deg (0..6, the §2.1 family index), acc (the alteration
+ * against the scale's OWN spelling of that degree), label ("b7", "#4", or
+ * the plain degree when diatonic), chromatic }. */
+function alteredDegree(key, scaleType = "major") {
+  const spell = chromaticSpeller(key, scaleType);
+  const notes = scaleNotes(key, scaleType);
+  const major = scaleNotes(notes[0].name, "major");   // the accidental is read against the MAJOR degree — how a player names it (b7, #4, b2)
+  const keyIdx = SCALE_LETTERS.indexOf(notes[0].name[0]);
+  const scalePcs = new Set(notes.map((n) => n.pc));
+  const DEG = ["R", "2", "3", "4", "5", "6", "7"];
+  return (midi) => {
+    const { name } = spell(midi);
+    const deg = (SCALE_LETTERS.indexOf(name[0]) - keyIdx + 7) % 7;
+    const acc = accOf(name) - accOf(major[deg].name);
+    const chromatic = !scalePcs.has(mod12(midi));
+    if (chromatic && accOf(name) === accOf(notes[deg].name))
+      throw new Error(`alteredDegree: ${name} in ${key} ${scaleType} spells a scale degree yet is off the scale — the speller and the scale disagree`);
+    // a diatonic interior is the family label the dots already wear; a chromatic one is the
+    // altered degree with its accidental against major (E in C harmonic minor is "3": the major
+    // third, a player's name for it; D♭ is "b2", G♭ "b5", B natural in F "#4")
+    const label = chromatic ? (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc)) + String(deg + 1) : DEG[deg];
+    return { name, deg, acc, label, chromatic };
+  };
+}
+
 function resolveRoman(tok, key, scaleType = "major") {
   const r = parseRoman(tok);
   if (!r) return null;
@@ -1515,7 +1547,7 @@ function resolveRoman(tok, key, scaleType = "major") {
   const symbol = name + romanQualitySuffix(r);
   return { symbol, parsed: parseChord(symbol) };
 }
-return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, chromaticSpeller, resolveRoman };
+return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, chromaticSpeller, alteredDegree, resolveRoman };
 })();
 
 /* ===== engine/tetrad-voicings.mjs ===== */
@@ -7204,9 +7236,44 @@ function mountReadout(ctx, host) {
 return { mountReadout };
 })();
 
+/* ===== hub/marks.mjs ===== */
+const __m_hub_marks_mjs = (() => {
+/* marks.mjs — the shapes the family draws, stated once (night 36, 260930).
+ *
+ * Design Spec v1.4 §2.6: SHAPE CARRIES CHROMATICITY. A non-diatonic note
+ * draws as a STARBURST, a diatonic note stays a circle; colour tracks the
+ * degree the note alters (palette.mjs supplies it — this module supplies no
+ * colour). The geometry is the render's finding, not a taste: eight points
+ * with the inner radius at 0.70 kept the silhouette open at 0.6 of r 10.5 in
+ * silver and in ink, where ten and twelve points closed into a rough ring
+ * (notes/working/shots-260930). A helper like bus.mjs or palette.mjs — no
+ * markup, no styles, no control — so the resolver treats it as reached code.
+ */
+const STARBURST = Object.freeze({ points: 8, inner: 0.70 });
+
+/** the polygon points of a starburst centred at (cx, cy) with outer radius r —
+ * the same silhouette at every size, a point straight up */
+function starburst(cx, cy, r, { points = STARBURST.points, inner = STARBURST.inner } = {}) {
+  const pts = [];
+  for (let i = 0; i < 2 * points; i++) {
+    const rr = i % 2 ? r * inner : r, a = (Math.PI * i) / points - Math.PI / 2;
+    pts.push((cx + rr * Math.cos(a)).toFixed(2) + "," + (cy + rr * Math.sin(a)).toFixed(2));
+  }
+  return pts.join(" ");
+}
+{
+  // the ruling's geometry, asserted at load: a starburst is never a circle in disguise
+  if (!(STARBURST.points >= 6 && STARBURST.inner < 0.85 && STARBURST.inner > 0.5))
+    throw new Error("marks: the starburst must keep an open silhouette (points ≥ 6, inner radius 0.5–0.85)");
+  if (starburst(0, 0, 10).split(" ").length !== 2 * STARBURST.points) throw new Error("marks: starburst emits one vertex per point and valley");
+}
+return { STARBURST, starburst };
+})();
+
 /* ===== hub/modules/field-board.mjs ===== */
 const __m_hub_modules_field_board_mjs = (() => {
 const { field, notesOn } = __m_engine_field_mjs;
+const { alteredDegree } = __m_engine_chord_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit } = __m_engine_selection_mjs;
@@ -7220,7 +7287,8 @@ const { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, lis
 const { mountMini } = __m_hub_mini_mjs;
 const { mountReadout } = __m_hub_readout_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
-const { FAM_COLOR, FAM_TEXT, FAM, VIOLET, ANNOTATION_GRAY } = __m_hub_palette_mjs;
+const { FAM_COLOR, FAM_TEXT, FAM, ANNOTATION_GRAY } = __m_hub_palette_mjs;
+const { starburst } = __m_hub_marks_mjs;
 /* field-board.mjs — ON THE NECK: Multetudes' neck, v0.9's card (children 0,
  * 2, 3a; the surface rework of 2026-08-29 under the identical-to-v0.9
  * ruling).
@@ -7264,6 +7332,7 @@ const { FAM_COLOR, FAM_TEXT, FAM, VIOLET, ANNOTATION_GRAY } = __m_hub_palette_mj
 
 
 
+
 // 260917 item 5: the mode names, the one table
 
 
@@ -7276,6 +7345,7 @@ const { FAM_COLOR, FAM_TEXT, FAM, VIOLET, ANNOTATION_GRAY } = __m_hub_palette_mj
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -7802,23 +7872,43 @@ const fieldBoard = {
        *      → r 13 × 0.6 = 7.8, fill none, the colour as the stroke; the host
        *        dot's stroke is 2, scaled 0.6 → 1.2 … tuned to 1.6 at render
        *        inspection ("the ratio is law; the exact value may be tuned").
-       *   "Function is still color. A diatonic approach tone is a scale
-       *    degree and keeps its §2.1 color. A chromatic approach tone — pitch
-       *    class outside the current scale — takes violet #7847A8."
-       *      → chromatic ? VIOLET : FAM_COLOR[its degree], from the one palette.
+       *   "Function is still color — and chromaticity is SHAPE (v1.4). A
+       *    diatonic note is a scale degree and keeps its §2.1 color, drawn as
+       *    a circle. A non-diatonic note … draws as a starburst … and wears the
+       *    §2.1 color of the degree it alters: the degree named by the LETTER
+       *    of its spelled name."
+       *      → the starburst (marks.mjs) in the ALTERED degree's colour when
+       *        chromatic (chord.mjs alteredDegree), the circle in its own degree
+       *        colour when diatonic — from the one palette. The v1.3 violet
+       *        clause is struck (260930); nothing here spends it.
        *   "No new ring." → none; the sounding pulse is not a role mark.
        *   "No interval label." → no text on the mark.
        *   "Role marks derive from the note event's role" → from the order's
        *    entries, which carry role/target/chromatic — never assigned here.
        * WHEN (CR-1 §2): persistently while the figure is live; data-selmidi
        * lets the ordinary sounding pulse ring it when it sounds. */
+      /* v1.4 (260930, night 36): SHAPE carries chromaticity — a chromatic approach
+       * is a STARBURST (marks.mjs, the one shape) and wears the §2.1 colour of
+       * the degree it ALTERS, named by the letter of its spelling (chord.mjs
+       * alteredDegree — the speller's answer, never a table); a diatonic one
+       * stays a circle in its own degree colour. Weight is unchanged: 0.6 of
+       * the host, hollow, no label. Violet is retired. */
+      const altered = alteredDegree(cfg.key, cfg.scale);
       for (const ap of approaches) {
-        const stroke = ap.chromatic ? VIOLET : FAM_COLOR[FAM[ap.deg]];
+        const famOfAp = ap.chromatic ? FAM[altered(ap.midi).deg] : FAM[ap.deg];
+        const stroke = FAM_COLOR[famOfAp];
         const g = el("g", { class: "fd-sel fd-appr", "data-selmidi": ap.midi, "data-role": "approach",
           "data-selstr": ap.string, "data-selfret": ap.fret,
-          "data-chromatic": String(ap.chromatic), "data-deg": ap.chromatic ? "" : FAM[ap.deg] }, svg);
-        el("circle", { cx: fx(ap.fret), cy: fy(ap.string), r: 13 * 0.6, fill: "none",
-          stroke, "stroke-width": 1.6 }, g);
+          "data-chromatic": String(ap.chromatic), "data-deg": famOfAp, "data-alters": ap.chromatic ? altered(ap.midi).label : "" }, svg);
+        if (ap.chromatic)
+          el("polygon", { points: starburst(fx(ap.fret), fy(ap.string), 13 * 0.6), fill: "none",
+            stroke, "stroke-width": 1.6, "stroke-linejoin": "round",
+            // the mark's centre, stated on the mark: the ordinary sounding pulse (ringFor)
+            // rings a mark by its centre, and a polygon has no cx/cy of its own
+            "data-cx": fx(ap.fret), "data-cy": fy(ap.string) }, g);
+        else
+          el("circle", { cx: fx(ap.fret), cy: fy(ap.string), r: 13 * 0.6, fill: "none",
+            stroke, "stroke-width": 1.6 }, g);
       }
       /* THE FIGURE'S ORDER (child 3b): parsed against the selection itself,
        * drawn as v0.9 draws it — a dashed line through the ordered notes —
@@ -8031,7 +8121,7 @@ const fieldBoard = {
         const origin = cfg.ref ? "the centre's" : "the key's";
         const named = fig.describe ? fig.describe.replace(/\bthe ([♭♯]?\d+)(?![a-z0-9])/g, `${origin} $1`) : null;
         noteEl.textContent = named
-          ? named + (approaches.some((a2) => a2.chromatic) ? " Chromatic approaches wear violet — outside the key; diatonic ones keep their degree colour." : "")
+          ? named + (approaches.some((a2) => a2.chromatic) ? " A chromatic approach is a starburst in the colour of the degree it alters; a diatonic one keeps its degree colour." : "")
           : cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
           : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
@@ -8174,12 +8264,13 @@ const fieldBoard = {
       const layer = svg && svg.querySelector(".fd-pulselayer");
       if (!layer) return 0;
       const hits = [
-        ...svg.querySelectorAll(`.fd-sel[data-selmidi="${midi}"] circle`),
+        ...svg.querySelectorAll(`.fd-sel[data-selmidi="${midi}"] circle, .fd-sel[data-selmidi="${midi}"] polygon`),
         ...[...svg.querySelectorAll(`.fd-ref[data-refmidi="${midi}"] circle`)],
       ];
       for (const c of hits) {
-        const ring = el("circle", { class: "fd-pulse", cx: c.getAttribute("cx"),
-          cy: c.getAttribute("cy"), r: 19, fill: "none", stroke: "#212126",
+        // a circle carries its centre; a starburst (v1.4's chromatic mark) states it in data-cx/cy
+        const ring = el("circle", { class: "fd-pulse", cx: c.getAttribute("cx") ?? c.dataset.cx,
+          cy: c.getAttribute("cy") ?? c.dataset.cy, r: 19, fill: "none", stroke: "#212126",
           "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
         pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), ttl));
       }
@@ -11842,7 +11933,8 @@ return { progressionCard };
 /* ===== hub/modules/staff-board.mjs ===== */
 const __m_hub_modules_staff_board_mjs = (() => {
 const { field } = __m_engine_field_mjs;
-const { chromaticSpeller } = __m_engine_chord_mjs;
+const { chromaticSpeller, alteredDegree } = __m_engine_chord_mjs;
+const { starburst } = __m_hub_marks_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } = __m_engine_selection_mjs;
@@ -11853,7 +11945,7 @@ const { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } = __
 const { mountMini } = __m_hub_mini_mjs;
 const { mountReadout } = __m_hub_readout_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
-const { FAM_COLOR, FAM_TEXT, FAM, VIOLET } = __m_hub_palette_mjs;
+const { FAM_COLOR, FAM_TEXT, FAM } = __m_hub_palette_mjs;
 /* staff-board.mjs — v0.9's ÉTUDE STAFF for Multetudes (surface, 2026-08-29).
  *
  * "The étude — end to end": the grand staff, treble carrying the material
@@ -11875,6 +11967,7 @@ const { FAM_COLOR, FAM_TEXT, FAM, VIOLET } = __m_hub_palette_mjs;
  * spelling (the letter index arithmetic v0.9 uses), asserted before drawing —
  * never copied from the prototype's stored markup.
  */
+
 
 
 
@@ -12011,6 +12104,7 @@ const staffBoard = {
        * PITCH whenever the neighbour already carried an accidental (Db major,
        * pc 2: "Eb"). One speller, the law resolveRoman's; the role test stays. */
       const spell = chromaticSpeller(cfg.key, cfg.scale);
+      const altered = alteredDegree(cfg.key, cfg.scale);   // v1.4: the degree a chromatic note alters, from the same speller
       const stepOf = (m0, role) => {
         const m2 = m0 + WRITTEN, pc = mod(m2, 12);
         if (!fld.notes.some((n) => n.pc === pc) && role !== "approach")
@@ -12137,16 +12231,21 @@ const staffBoard = {
           if (nt.role === "approach") {
             /* §2.6 "Engraved notation. Approach tones render as cue-size
              * noteheads under the same color rules." — score-board's own
-             * sizes (rx 4.5, ry 3.4); violet when chromatic, the degree
+             * sizes (rx 4.5, ry 3.4); v1.4 (260930): a STARBURST in the colour
+             * of the degree it alters when chromatic, an ellipse in the degree
              * colour when diatonic; hollow when the value is open; NO label
              * (§2.6's one stated exception). Derived from the entry's role. */
-            const col = nt.chromatic ? VIOLET : FAM_COLOR[FAM[nt.deg]];
-            const head = { cx: x, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : col, stroke: col,
-              "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${x} ${y})`, "data-stmidi": nt.midi,
+            const col = nt.chromatic ? FAM_COLOR[FAM[altered(nt.midi).deg]] : FAM_COLOR[FAM[nt.deg]];
+            const head = { fill: open ? "#fff" : col, stroke: col,
+              "stroke-width": open ? 1.6 : 0, "data-stmidi": nt.midi,
               "data-stbar": ci, "data-stapproach": nt.chromatic ? "chromatic" : "diatonic",
               "data-stname": spell(nt.midi + WRITTEN).name };   // the spelled name, addressable (260920: the one speller's answer, on the artifact)
             if (figHere) head["data-stfig"] = k;
-            el("ellipse", head, svg);
+            if (nt.chromatic)
+              el("polygon", { ...head, points: starburst(0, 0, 1), "data-stalters": altered(nt.midi).label,
+                transform: `translate(${x} ${y}) rotate(-14) scale(4.5 3.4)`, "vector-effect": "non-scaling-stroke" }, svg);
+            else
+              el("ellipse", { ...head, cx: x, cy: y, rx: 4.5, ry: 3.4, transform: `rotate(-14 ${x} ${y})` }, svg);
           } else {
           const fam = FAM[nt.deg];
           const head = open

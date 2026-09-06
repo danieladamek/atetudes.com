@@ -7,7 +7,7 @@ date: 2026-08-05
 type: spec
 status: active
 reviewed: true
-doc_version: v1.3
+doc_version: v1.4
 tags: [Etudes, knowledge-base, specification, design-language, canonical]
 ---
 
@@ -69,6 +69,11 @@ See Update Log 260809.8.)*
 reserved violet is spent on chromatic approach tones. Degree colors themselves unchanged.
 See Update Log 260810.4.)*
 
+*(v1.4, 2026-09-30: §2.6 amended — chromaticity moves from colour to SHAPE (the starburst);
+a non-diatonic note wears the colour of the degree it alters; the v1.3 violet spend is
+retired and §2.1's reservation returns. Degree colors themselves unchanged. See Update Log
+260930.1.)*
+
 Rules:
 - Flats and sharps share their family's color (b3 = blue, #11 = silver, b9 = green, o7/bb7 = amber).
 - Amber was chosen over yellow for visibility on white paper and white piano keys.
@@ -76,7 +81,7 @@ Rules:
 - The 5th is the deliberate "neutral" — black — because it carries the least harmonic information.
 - The 4th extends that principle: **the perfect intervals are the achromatic family** — the 5th its black pillar, the 4th (its inversion) the light silver shade. The 4th's frequent avoid-tone role is the connotation: it wears no color, and a sus4 resolving to 3 visibly *gains* color. Accepted leakage: #11 inherits silver despite being a Lydian color tone — the same trade already accepted for b5/#5 sharing the 5th's black.
 - Silver 4/11 sits between the annotation gray (0.45) and the bar-line light gray (0.80); keep it in that band so it neither collides with dashed loops/annotations below nor washes into bar furniture above.
-- Violet #7847A8 is outside the degree palette. **Spent at v1.3** on chromatic approach tones (§2.6); it is an annotation channel and never denotes a degree.
+- Violet #7847A8 is outside the degree palette. Spent at v1.3 on chromatic approach tones and **returned at v1.4** (§2.6: chromaticity is carried by shape, not colour); it is a reserved annotation channel, unspent, and never denotes a degree.
 - Supporting grays: ink #212126 (lines, names), gray (0.45,0.45,0.48) (annotations), light (0.80,0.80,0.82) (bar lines, tags).
 
 ### 2.2 Shape code (scale/mode charts)
@@ -173,10 +178,22 @@ separate facts and are drawn in separate channels.
   "emphasis is weight and neutral ink" applied to the ornament/target distinction. The
   **ratio** is law; the exact value may be tuned within 0.55–0.7 at render inspection, since
   the same treatment hosts on r-14 fretboard dots and r-6/7.5 keyboard circles.
-- **Function is still color.** A **diatonic** approach tone is a scale degree and keeps its
-  §2.1 color. A **chromatic** approach tone — pitch class outside the current scale — takes
-  **violet #7847A8**, spending the annotation channel §2.1 reserved for this case. Violet
-  never denotes a degree and never enters the degree palette.
+- **Function is still color — and chromaticity is SHAPE (v1.4).** A **diatonic** note is a
+  scale degree and keeps its §2.1 color, drawn as a circle. A **non-diatonic** note — pitch
+  class outside the current scale — draws as a **starburst** (eight points, inner radius 0.70
+  of the outer; the same silhouette at every size, so an approach's 0.6 hollow starburst is
+  the chord tone's starburst scaled) and wears **the §2.1 color of the degree it alters**:
+  the degree named by the LETTER of its spelled name (night 31's speller, rule C, already
+  chose it — every chromatic pitch sits in a whole-tone gap between two degrees, and the
+  spelling is the tie-break: in C harmonic minor D♭ is the altered 2nd, green; G♭ the altered
+  5th, ink; B♭ the altered 7th, amber). Derived from the spelling, never tabled. Where the
+  mark carries an interior (a full-size chord tone), the interior is **the altered degree with
+  its accidental** — ♭7, ♯4, ♭2 — from the same spelling.
+  *The v1.3 clause "a chromatic approach tone takes violet #7847A8" is struck (2026-09-30).*
+  *Why: measured, not aesthetic — violet against degree 3 is 1.06:1 and against R 1.04:1 in
+  normal vision; a hue-only channel is separable for no one who cannot read hue and barely
+  for anyone who can, where a silhouette survives greyscale (rendered at true size,
+  notes/working/shots-260930). Violet returns to §2.1's reservation.*
 - **No new ring.** Rings are fully allocated: dashed = pivot and isolation zone; neutral
   dark = the moving voice (§2.3). Approach tones add none.
 - **No interval label.** §2.3's "interval label inside every dot" does not apply to approach

@@ -1050,6 +1050,38 @@ function chromaticSpeller(key, scaleType = "major") {
   };
 }
 
+/** THE ALTERED DEGREE (Design Spec v1.4 §2.6, 260930): a non-diatonic note
+ * wears the colour of the degree it ALTERS, and its interior is that degree
+ * with its accidental — both read off the LETTER of the speller's answer.
+ * Every chromatic pitch sits in a whole-tone gap and so neighbours TWO
+ * degrees; rule C (night 31) already chose one, and the letter names it:
+ * in C harmonic minor D♭ → D → the 2nd, G♭ → G → the 5th, B♭ → B → the 7th
+ * (verified against the live speller, 260928). Derived, never tabled.
+ * Returns { name, deg (0..6, the §2.1 family index), acc (the alteration
+ * against the scale's OWN spelling of that degree), label ("b7", "#4", or
+ * the plain degree when diatonic), chromatic }. */
+function alteredDegree(key, scaleType = "major") {
+  const spell = chromaticSpeller(key, scaleType);
+  const notes = scaleNotes(key, scaleType);
+  const major = scaleNotes(notes[0].name, "major");   // the accidental is read against the MAJOR degree — how a player names it (b7, #4, b2)
+  const keyIdx = SCALE_LETTERS.indexOf(notes[0].name[0]);
+  const scalePcs = new Set(notes.map((n) => n.pc));
+  const DEG = ["R", "2", "3", "4", "5", "6", "7"];
+  return (midi) => {
+    const { name } = spell(midi);
+    const deg = (SCALE_LETTERS.indexOf(name[0]) - keyIdx + 7) % 7;
+    const acc = accOf(name) - accOf(major[deg].name);
+    const chromatic = !scalePcs.has(mod12(midi));
+    if (chromatic && accOf(name) === accOf(notes[deg].name))
+      throw new Error(`alteredDegree: ${name} in ${key} ${scaleType} spells a scale degree yet is off the scale — the speller and the scale disagree`);
+    // a diatonic interior is the family label the dots already wear; a chromatic one is the
+    // altered degree with its accidental against major (E in C harmonic minor is "3": the major
+    // third, a player's name for it; D♭ is "b2", G♭ "b5", B natural in F "#4")
+    const label = chromatic ? (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc)) + String(deg + 1) : DEG[deg];
+    return { name, deg, acc, label, chromatic };
+  };
+}
+
 function resolveRoman(tok, key, scaleType = "major") {
   const r = parseRoman(tok);
   if (!r) return null;

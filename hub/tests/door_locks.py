@@ -2594,25 +2594,34 @@ console.log(JSON.stringify(out));
         # ---- 260918 (night 24, item 1): THE APPROACH NOTE — Design Spec §2.6, implemented ----
         # Every assertion below is a §2.6 clause read off the ARTIFACT: weight
         # (0.6 of the host radius, hollow, no text), colour by FUNCTION
-        # (violet when chromatic, the degree colour when diatonic), no new
+        # (v1.4, 260930: a STARBURST in the ALTERED degree's colour when chromatic,
+        # a circle in the degree colour when diatonic — violet retired), no new
         # ring, the slur UNDER the dots in annotation gray at 1.2, derived
         # from the order's role — and CR-1 §2's WHEN: drawn before play, the
         # ordinary pulse on play.
         page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(80)
         ap_read = """() => { const svg = document.getElementById('fieldSvg'); const kids = [...svg.children];
           const host = svg.querySelector('.fd-sel:not(.fd-appr) circle');
-          const aps = [...svg.querySelectorAll('.fd-appr')].map(g => { const c = g.querySelector('circle'); return {
-            chrom: g.dataset.chromatic, deg: g.dataset.deg, r: +c.getAttribute('r'), stroke: c.getAttribute('stroke'),
+          const aps = [...svg.querySelectorAll('.fd-appr')].map(g => { const c = g.querySelector('circle, polygon');
+            // a starburst's radius is half its vertical extent (a point straight up and one straight down)
+            const ys = c.tagName === 'polygon' ? c.getAttribute('points').split(' ').map(p => +p.split(',')[1]) : null;
+            return { chrom: g.dataset.chromatic, deg: g.dataset.deg, alters: g.dataset.alters, shape: c.tagName,
+            r: ys ? (Math.max(...ys) - Math.min(...ys)) / 2 : +c.getAttribute('r'), stroke: c.getAttribute('stroke'),
             fill: c.getAttribute('fill'), text: !!g.querySelector('text'), hostR: +host.getAttribute('r') }; });
           const slurs = [...svg.querySelectorAll('.fd-slur')];
           const firstDot = kids.indexOf(svg.querySelector('.fd-sel'));
           return { aps, slurs: slurs.map(sl => ({ under: kids.indexOf(sl) < firstDot, stroke: sl.getAttribute('stroke'), w: sl.getAttribute('stroke-width') })),
             note: document.getElementById('fdFigNote').textContent }; }"""
-        # (b3)[3] — chromatic: violet, hollow, 0.6 of the host, no label, drawn BEFORE play
+        # (b3)[3] — chromatic: a STARBURST (v1.4), hollow, 0.6 of the host, no label, drawn BEFORE play.
+        # PIN REWRITTEN 260930 (night 36, rule 7): the key is B♭ major, so the key's ♭3 is D♭ — the
+        # speller's letter is D, which in B♭ IS the 3rd degree: the altered degree is the 3rd, the
+        # colour blue #2959A6, the interior ♭3 (the accidental read against major, a player's name).
         page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
         apc = page.evaluate(ap_read)
-        check(len(apc["aps"]) == 1 and apc["aps"][0]["chrom"] == "true" and apc["aps"][0]["stroke"] == "#7847A8",
-              f"{tag} §2.6 colour: a CHROMATIC approach takes violet #7847A8: {apc['aps']}")
+        check(len(apc["aps"]) == 1 and apc["aps"][0]["chrom"] == "true" and apc["aps"][0]["shape"] == "polygon",
+              f"{tag} §2.6 shape (v1.4): a CHROMATIC approach is a STARBURST: {apc['aps']}")
+        check(apc["aps"] and apc["aps"][0]["stroke"] == "#2959A6" and apc["aps"][0]["deg"] == "3" and apc["aps"][0]["alters"] == "b3",
+              f"{tag} §2.6 colour (v1.4): a CHROMATIC approach wears the ALTERED degree's colour — D♭ alters B♭'s 3rd, blue, interior ♭3: {apc['aps']}")
         check(apc["aps"] and abs(apc["aps"][0]["r"] / apc["aps"][0]["hostR"] - 0.6) < 0.01 and apc["aps"][0]["fill"] == "none",
               f"{tag} §2.6 weight: 0.6 of the host radius, hollow: {apc['aps']}")
         check(apc["aps"] and not apc["aps"][0]["text"],
@@ -2627,31 +2636,40 @@ console.log(JSON.stringify(out));
         check("approached from the key's ♭3" in apc["note"],
               f"{tag} CR-1 §5: motion's own phrasing reaches the face, its centre named: {apc['note']!r}")
         # no new RING meaning approach: no ring element exists outside the pulse layer
-        check(page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-appr circle').length === 1 && document.querySelectorAll('#fieldSvg .fd-appr *').length === 1"),
-              f"{tag} §2.6: no new ring — the approach group holds exactly its one hollow circle")
+        check(page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-appr polygon, #fieldSvg .fd-appr circle').length === 1 && document.querySelectorAll('#fieldSvg .fd-appr *').length === 1"),
+              f"{tag} §2.6: no new ring — the approach group holds exactly its one hollow mark")
         # (-s)[3] — diatonic: the scale tone below the 3rd is the 2nd — green, its §2.1 colour
         page.fill("#fdFigIn", "(-s)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
         apd = page.evaluate(ap_read)
         check(len(apd["aps"]) == 1 and apd["aps"][0]["chrom"] == "false" and apd["aps"][0]["deg"] == "2" and apd["aps"][0]["stroke"] == "#3C8B2F",
               f"{tag} §2.6 colour: a DIATONIC approach keeps its degree colour — the 2nd, green: {apd['aps']}")
+        check(apd["aps"] and apd["aps"][0]["shape"] == "circle",
+              f"{tag} §2.6 shape (v1.4): a DIATONIC approach stays a CIRCLE: {apd['aps']}")
         check("approached from the scale tone below" in apd["note"], f"{tag} the diatonic sentence: {apd['note']!r}")
         # CR-1 §2 WHEN: the ordinary sounding pulse rings the approach on play — the
         # mark carries data-selmidi and ringFor finds it like any dot
         page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
         page.evaluate("""() => { window.__apRings = []; const svg = document.getElementById('fieldSvg');
           new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.classList && n.classList.contains('fd-pulse'))
-            window.__apRings.push(n.getAttribute('cx') + ',' + n.getAttribute('cy')); }))).observe(svg, { childList: true, subtree: true }); }""")
+            window.__apRings.push([+n.getAttribute('cx'), +n.getAttribute('cy')]); }))).observe(svg, { childList: true, subtree: true }); }""")
         page.uncheck("#fdMetChk"); page.wait_for_timeout(80)
         page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(2600)
         page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(300)
-        rung = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-appr circle')]
-          .some(c => window.__apRings.includes(c.getAttribute('cx') + ',' + c.getAttribute('cy')))""")
+        # the mark is a polygon now: its centre is the mean of its top and bottom points — compared
+        # as NUMBERS (the polygon's points carry two decimals, the ring's cx/cy do not; the first
+        # draft compared the strings and the pin failed on "352.50" vs "352.5", 260930)
+        rung = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-appr polygon, #fieldSvg .fd-appr circle')]
+          .some(c => { let cx, cy; if (c.tagName === 'circle') { cx = +c.getAttribute('cx'); cy = +c.getAttribute('cy'); }
+            else { const pts = c.getAttribute('points').split(' ').map(p => p.split(',').map(Number)); cx = pts[0][0]; cy = ((pts[0][1] + pts[pts.length / 2][1]) / 2); }
+            return window.__apRings.some(([x, y]) => Math.abs(x - cx) < 0.02 && Math.abs(y - cy) < 0.02); })""")
         check(rung, f"{tag} CR-1 §2: the approach takes the ORDINARY sounding pulse when it sounds")
         page.check("#fdMetChk"); page.wait_for_timeout(80)
         # the staff engraves it (§2.6 "cue-size noteheads under the same color rules")
-        st_ap = page.evaluate("""() => [...document.querySelectorAll('#stSvg [data-stapproach]')].map(e => ({ chrom: e.dataset.stapproach, fill: e.getAttribute('fill'), stroke: e.getAttribute('stroke'), rx: +e.getAttribute('rx') }))""")
-        check(len(st_ap) >= 1 and st_ap[0]["chrom"] == "chromatic" and "#7847A8" in (st_ap[0]["fill"] + st_ap[0]["stroke"]) and st_ap[0]["rx"] < 6.4,
-              f"{tag} §2.6 engraved: the staff draws the approach as a cue-size head in violet: {st_ap[:2]}")
+        st_ap = page.evaluate("""() => [...document.querySelectorAll('#stSvg [data-stapproach]')].map(e => ({ chrom: e.dataset.stapproach, shape: e.tagName, alters: e.dataset.stalters, fill: e.getAttribute('fill'), stroke: e.getAttribute('stroke'),
+          cue: e.tagName === 'polygon' ? /scale\(4\.5 3\.4\)/.test(e.getAttribute('transform')) : +e.getAttribute('rx') < 6.4 }))""")
+        # PIN REWRITTEN 260930 (v1.4): the cue-size head is a STARBURST in the altered degree's colour (D♭ → B♭'s 3rd, blue)
+        check(len(st_ap) >= 1 and st_ap[0]["chrom"] == "chromatic" and st_ap[0]["shape"] == "polygon" and "#2959A6" in (st_ap[0]["fill"] + st_ap[0]["stroke"]) and st_ap[0]["cue"] and st_ap[0]["alters"] == "b3",
+              f"{tag} §2.6 engraved (v1.4): the staff draws the chromatic approach as a cue-size STARBURST in the altered degree's colour: {st_ap[:2]}")
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
         page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(80)
         # back to the boot state

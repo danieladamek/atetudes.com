@@ -37,6 +37,7 @@
  * keep their mutation proofs (bite 10–15).
  */
 import { field, notesOn } from "../../engine/field.mjs";
+import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit } from "../../engine/selection.mjs";
@@ -53,7 +54,8 @@ import { mountReadout } from "../readout.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
-import { FAM_COLOR, FAM_TEXT, FAM, VIOLET, ANNOTATION_GRAY } from "../palette.mjs";
+import { FAM_COLOR, FAM_TEXT, FAM, ANNOTATION_GRAY } from "../palette.mjs";
+import { starburst } from "../marks.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -580,23 +582,43 @@ export const fieldBoard = {
        *      → r 13 × 0.6 = 7.8, fill none, the colour as the stroke; the host
        *        dot's stroke is 2, scaled 0.6 → 1.2 … tuned to 1.6 at render
        *        inspection ("the ratio is law; the exact value may be tuned").
-       *   "Function is still color. A diatonic approach tone is a scale
-       *    degree and keeps its §2.1 color. A chromatic approach tone — pitch
-       *    class outside the current scale — takes violet #7847A8."
-       *      → chromatic ? VIOLET : FAM_COLOR[its degree], from the one palette.
+       *   "Function is still color — and chromaticity is SHAPE (v1.4). A
+       *    diatonic note is a scale degree and keeps its §2.1 color, drawn as
+       *    a circle. A non-diatonic note … draws as a starburst … and wears the
+       *    §2.1 color of the degree it alters: the degree named by the LETTER
+       *    of its spelled name."
+       *      → the starburst (marks.mjs) in the ALTERED degree's colour when
+       *        chromatic (chord.mjs alteredDegree), the circle in its own degree
+       *        colour when diatonic — from the one palette. The v1.3 violet
+       *        clause is struck (260930); nothing here spends it.
        *   "No new ring." → none; the sounding pulse is not a role mark.
        *   "No interval label." → no text on the mark.
        *   "Role marks derive from the note event's role" → from the order's
        *    entries, which carry role/target/chromatic — never assigned here.
        * WHEN (CR-1 §2): persistently while the figure is live; data-selmidi
        * lets the ordinary sounding pulse ring it when it sounds. */
+      /* v1.4 (260930, night 36): SHAPE carries chromaticity — a chromatic approach
+       * is a STARBURST (marks.mjs, the one shape) and wears the §2.1 colour of
+       * the degree it ALTERS, named by the letter of its spelling (chord.mjs
+       * alteredDegree — the speller's answer, never a table); a diatonic one
+       * stays a circle in its own degree colour. Weight is unchanged: 0.6 of
+       * the host, hollow, no label. Violet is retired. */
+      const altered = alteredDegree(cfg.key, cfg.scale);
       for (const ap of approaches) {
-        const stroke = ap.chromatic ? VIOLET : FAM_COLOR[FAM[ap.deg]];
+        const famOfAp = ap.chromatic ? FAM[altered(ap.midi).deg] : FAM[ap.deg];
+        const stroke = FAM_COLOR[famOfAp];
         const g = el("g", { class: "fd-sel fd-appr", "data-selmidi": ap.midi, "data-role": "approach",
           "data-selstr": ap.string, "data-selfret": ap.fret,
-          "data-chromatic": String(ap.chromatic), "data-deg": ap.chromatic ? "" : FAM[ap.deg] }, svg);
-        el("circle", { cx: fx(ap.fret), cy: fy(ap.string), r: 13 * 0.6, fill: "none",
-          stroke, "stroke-width": 1.6 }, g);
+          "data-chromatic": String(ap.chromatic), "data-deg": famOfAp, "data-alters": ap.chromatic ? altered(ap.midi).label : "" }, svg);
+        if (ap.chromatic)
+          el("polygon", { points: starburst(fx(ap.fret), fy(ap.string), 13 * 0.6), fill: "none",
+            stroke, "stroke-width": 1.6, "stroke-linejoin": "round",
+            // the mark's centre, stated on the mark: the ordinary sounding pulse (ringFor)
+            // rings a mark by its centre, and a polygon has no cx/cy of its own
+            "data-cx": fx(ap.fret), "data-cy": fy(ap.string) }, g);
+        else
+          el("circle", { cx: fx(ap.fret), cy: fy(ap.string), r: 13 * 0.6, fill: "none",
+            stroke, "stroke-width": 1.6 }, g);
       }
       /* THE FIGURE'S ORDER (child 3b): parsed against the selection itself,
        * drawn as v0.9 draws it — a dashed line through the ordered notes —
@@ -809,7 +831,7 @@ export const fieldBoard = {
         const origin = cfg.ref ? "the centre's" : "the key's";
         const named = fig.describe ? fig.describe.replace(/\bthe ([♭♯]?\d+)(?![a-z0-9])/g, `${origin} $1`) : null;
         noteEl.textContent = named
-          ? named + (approaches.some((a2) => a2.chromatic) ? " Chromatic approaches wear violet — outside the key; diatonic ones keep their degree colour." : "")
+          ? named + (approaches.some((a2) => a2.chromatic) ? " A chromatic approach is a starburst in the colour of the degree it alters; a diatonic one keeps its degree colour." : "")
           : cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
           : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
@@ -952,12 +974,13 @@ export const fieldBoard = {
       const layer = svg && svg.querySelector(".fd-pulselayer");
       if (!layer) return 0;
       const hits = [
-        ...svg.querySelectorAll(`.fd-sel[data-selmidi="${midi}"] circle`),
+        ...svg.querySelectorAll(`.fd-sel[data-selmidi="${midi}"] circle, .fd-sel[data-selmidi="${midi}"] polygon`),
         ...[...svg.querySelectorAll(`.fd-ref[data-refmidi="${midi}"] circle`)],
       ];
       for (const c of hits) {
-        const ring = el("circle", { class: "fd-pulse", cx: c.getAttribute("cx"),
-          cy: c.getAttribute("cy"), r: 19, fill: "none", stroke: "#212126",
+        // a circle carries its centre; a starburst (v1.4's chromatic mark) states it in data-cx/cy
+        const ring = el("circle", { class: "fd-pulse", cx: c.getAttribute("cx") ?? c.dataset.cx,
+          cy: c.getAttribute("cy") ?? c.dataset.cy, r: 19, fill: "none", stroke: "#212126",
           "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
         pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), ttl));
       }

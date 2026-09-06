@@ -56,7 +56,16 @@ export const DEFERRALS = [
      * entry would have fired DUE the moment it was written. The precondition
      * that is genuinely unmet is DANIEL'S: the v1.4 Spec amendment extending
      * §2.6's colour rule to chromatic CHORD tones, observable as the Spec's
-     * own frontmatter version. */
+     * own frontmatter version.
+     * PROBE RE-KEYED 260930 (night 36, rule 7): v1.4 LANDED — but as the
+     * non-diatonic MARK (shape carries chromaticity, colour tracks the
+     * altered degree, the interior; Update Log 260930.1), which governs
+     * every derived note event's DRAWING. Role A's own sentence — a
+     * chord-supplied chromatic tone is MATERIAL, a member of the harmony
+     * rather than of the field (CR-1 §4's fieldPartition) — is a doctrine
+     * the Spec still does not state, and the pass lands whole with it.
+     * The version number was the wrong observable (it fired on a night
+     * that ruled the mark, not the material); the clause is the right one. */
     name: "chromatic-chord-alterations",
     deferred: "CR-1 role A — a chord-supplied chromatic tone is MATERIAL (a "
       + "member of the harmony) rather than a member of the field; drawn "
@@ -65,10 +74,12 @@ export const DEFERRALS = [
       + "violet to chromatic CHORD tones needs a v1.4 amendment with an Update "
       + "Log entry — Daniel's, not a build session's. Multetudes CAN already "
       + "select such a chord (custom changes), so nothing but the ruling waits",
-    until: "Design Spec v1.4 — the amendment that extends §2.6's colour rule "
-      + "to every derived note event. Observable: the Spec's frontmatter "
-      + "reads doc_version: v1.4 (or later)",
-    due: () => /^doc_version: v1\.([4-9]|\d{2,})/m.test(read("docs/design-language-and-engine-spec.md")),
+    until: "the Spec states role A's MATERIAL clause — a chord-supplied "
+      + "chromatic tone is a member of the harmony, drawn full-size and solid "
+      + "with v1.4's non-diatonic mark (Update Log 260930.1 ruled the mark; "
+      + "the material doctrine is Daniel's next amendment, with the pass). "
+      + "Observable: §2.6 carries the words 'chord-supplied' and 'material'",
+    due: () => /chord-supplied[\s\S]{0,200}material/i.test(read("docs/design-language-and-engine-spec.md")),
     built: () => /fieldPartition[\s\S]{0,400}material/.test(read("engine/tests/selection.test.mjs")),
     then: "build role A WITH the CR-1 §4 fieldPartition amendment in the same "
       + "pass — the doctrine sentence and the behaviour must not land apart — "

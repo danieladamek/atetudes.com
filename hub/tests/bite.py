@@ -1057,14 +1057,17 @@ def m41_no_approach_goes_violet():
     # 260918 item 1: the other way — a chromatic approach painted in a degree
     # colour it does not have; the chromatic colour pin bites.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        "        const stroke = ap.chromatic ? VIOLET : FAM_COLOR[FAM[ap.deg]];",
-        "        const stroke = FAM_COLOR[FAM[Math.max(0, ap.deg)]];   // never violet")
+        # ANCHOR RE-AIMED 260930 (night 36, v1.4): violet is retired; the chromatic
+        # colour is the ALTERED degree's. The mutation paints it with the degree
+        # the note is NOT (its diatonic neighbour index clamped) — the colour pin bites.
+        "        const famOfAp = ap.chromatic ? FAM[altered(ap.midi).deg] : FAM[ap.deg];",
+        "        const famOfAp = FAM[Math.max(0, ap.deg)];   // a chromatic one wears a degree colour it does not have")
     try:
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "a CHROMATIC approach takes violet" in r.stdout
-        record("no approach painted violet (a chromatic one wears a degree colour)",
+        hit = "a CHROMATIC approach wears the ALTERED degree's colour" in r.stdout
+        record("a chromatic approach wears a degree colour it does not have (the altered-degree pin)",
                r.returncode != 0 and hit,
                "suite exit %d; the chromatic colour pin bit: %s" % (r.returncode, hit))
     finally:
@@ -1303,6 +1306,25 @@ def m53_a_carried_card_drifts_in_a_hand_page():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 54
+# 260930 (night 36, v1.4): SHAPE carries chromaticity. The chromatic approach
+# reverts to a circle — colour intact, silhouette gone — and the shape pin bites.
+def m54_the_chromatic_approach_loses_its_shape():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "        if (ap.chromatic)\n          el(\"polygon\", { points: starburst(fx(ap.fret), fy(ap.string), 13 * 0.6), fill: \"none\",",
+        "        if (false)\n          el(\"polygon\", { points: starburst(fx(ap.fret), fy(ap.string), 13 * 0.6), fill: \"none\",")
+    try:
+        p.write_text(mutated)
+        build()
+        r = suite()
+        hit = "a CHROMATIC approach is a STARBURST" in r.stdout
+        record("the chromatic approach loses its shape (a circle in the right colour)",
+               r.returncode != 0 and hit,
+               "suite exit %d; the shape pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1411,7 +1433,7 @@ def main():
                m47_a_set_square_loses_its_name, m48_a_set_square_loses_its_role,
                m49_the_leftover_pass_runs_under_a_cap, m50_the_loss_goes_quiet_again,
                m51_the_reach_is_unbounded_again, m52_the_speller_keeps_the_letter_again,
-               m53_a_carried_card_drifts_in_a_hand_page)
+               m53_a_carried_card_drifts_in_a_hand_page, m54_the_chromatic_approach_loses_its_shape)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

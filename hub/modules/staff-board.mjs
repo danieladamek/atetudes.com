@@ -20,7 +20,8 @@
  * never copied from the prototype's stored markup.
  */
 import { field } from "../../engine/field.mjs";
-import { chromaticSpeller } from "../../engine/chord.mjs";
+import { chromaticSpeller, alteredDegree } from "../../engine/chord.mjs";
+import { starburst } from "../marks.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } from "../../engine/selection.mjs";
@@ -33,7 +34,7 @@ import { mountReadout } from "../readout.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
-import { FAM_COLOR, FAM_TEXT, FAM, VIOLET } from "../palette.mjs";
+import { FAM_COLOR, FAM_TEXT, FAM } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
@@ -156,6 +157,7 @@ export const staffBoard = {
        * PITCH whenever the neighbour already carried an accidental (Db major,
        * pc 2: "Eb"). One speller, the law resolveRoman's; the role test stays. */
       const spell = chromaticSpeller(cfg.key, cfg.scale);
+      const altered = alteredDegree(cfg.key, cfg.scale);   // v1.4: the degree a chromatic note alters, from the same speller
       const stepOf = (m0, role) => {
         const m2 = m0 + WRITTEN, pc = mod(m2, 12);
         if (!fld.notes.some((n) => n.pc === pc) && role !== "approach")
@@ -282,16 +284,21 @@ export const staffBoard = {
           if (nt.role === "approach") {
             /* §2.6 "Engraved notation. Approach tones render as cue-size
              * noteheads under the same color rules." — score-board's own
-             * sizes (rx 4.5, ry 3.4); violet when chromatic, the degree
+             * sizes (rx 4.5, ry 3.4); v1.4 (260930): a STARBURST in the colour
+             * of the degree it alters when chromatic, an ellipse in the degree
              * colour when diatonic; hollow when the value is open; NO label
              * (§2.6's one stated exception). Derived from the entry's role. */
-            const col = nt.chromatic ? VIOLET : FAM_COLOR[FAM[nt.deg]];
-            const head = { cx: x, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : col, stroke: col,
-              "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${x} ${y})`, "data-stmidi": nt.midi,
+            const col = nt.chromatic ? FAM_COLOR[FAM[altered(nt.midi).deg]] : FAM_COLOR[FAM[nt.deg]];
+            const head = { fill: open ? "#fff" : col, stroke: col,
+              "stroke-width": open ? 1.6 : 0, "data-stmidi": nt.midi,
               "data-stbar": ci, "data-stapproach": nt.chromatic ? "chromatic" : "diatonic",
               "data-stname": spell(nt.midi + WRITTEN).name };   // the spelled name, addressable (260920: the one speller's answer, on the artifact)
             if (figHere) head["data-stfig"] = k;
-            el("ellipse", head, svg);
+            if (nt.chromatic)
+              el("polygon", { ...head, points: starburst(0, 0, 1), "data-stalters": altered(nt.midi).label,
+                transform: `translate(${x} ${y}) rotate(-14) scale(4.5 3.4)`, "vector-effect": "non-scaling-stroke" }, svg);
+            else
+              el("ellipse", { ...head, cx: x, cy: y, rx: 4.5, ry: 3.4, transform: `rotate(-14 ${x} ${y})` }, svg);
           } else {
           const fam = FAM[nt.deg];
           const head = open

@@ -20,14 +20,15 @@
  */
 import { tetradPass, degreeLabel } from "../../engine/tetrad-sequence.mjs";
 import { OPEN_MIDI } from "../../engine/field.mjs";
-import { scaleNotes, LETTER_PC, chromaticSpeller } from "../../engine/chord.mjs";
+import { scaleNotes, LETTER_PC, chromaticSpeller, alteredDegree } from "../../engine/chord.mjs";
+import { starburst } from "../marks.mjs";
 import { patternOf } from "../../engine/transport.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
 import { parseFigure, figureEvents, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
-import { FAM_COLOR, FAM_TEXT, VIOLET } from "../palette.mjs";
+import { FAM_COLOR, FAM_TEXT } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
@@ -75,6 +76,7 @@ export const scoreBoard = {
       const svg = byId("score"); svg.textContent = ""; xs = [];
       const pass = tetradPass({ families, ...cfg });
       const spell = chromaticSpeller(cfg.key, cfg.scale);
+      const altered = alteredDegree(cfg.key, cfg.scale);   // v1.4: the degree a chromatic note alters
       const HS = 5.5, yF5 = 44;
       const stepOf = (name, oct) => oct * 7 + LETTERS.indexOf(name[0]);
       const yOf = (name, oct) => yF5 + (stepOf("F", 5) - stepOf(name, oct)) * HS;
@@ -203,10 +205,17 @@ export const scoreBoard = {
               if (acc) { const a = el("text", { x: xk - 11, y: y + 3.4, "text-anchor": "middle", "font-size": "10", fill: "#212126" }, svg);
                 a.textContent = acc.replace(/#/g, "♯").replace(/b/g, "♭"); }
               const chrom = !scalePcs.includes(((ev.midi % 12) + 12) % 12);
-              const fam = famOf(labOf(ev.midi));
-              el("ellipse", { cx: xk, cy: y, rx: 4.5, ry: 3.4, fill: open ? "#fff" : (chrom ? VIOLET : FAM_COLOR[fam]),
-                stroke: chrom ? VIOLET : FAM_COLOR[fam], "stroke-width": open ? 1.6 : 0, transform: `rotate(-14 ${xk} ${y})`,
-                "data-scname": sp.name, "data-scapproach": chrom ? "chromatic" : "diatonic" }, svg);   // the one speller's answer, on the artifact (260920)
+              // v1.4 (260930): a chromatic approach is a STARBURST (marks.mjs) in the colour of the
+              // degree it alters (chord.mjs alteredDegree — the speller's letter); diatonic stays an
+              // ellipse in its own degree colour. Sizes unchanged (rx 4.5, ry 3.4); no label.
+              const col = chrom ? FAM_COLOR[["R", "2", "3", "4", "5", "6", "7"][altered(ev.midi).deg]] : FAM_COLOR[famOf(labOf(ev.midi))];
+              const head = { fill: open ? "#fff" : col, stroke: col, "stroke-width": open ? 1.6 : 0,
+                "data-scname": sp.name, "data-scapproach": chrom ? "chromatic" : "diatonic" };   // the one speller's answer, on the artifact (260920)
+              if (chrom)
+                el("polygon", { ...head, points: starburst(0, 0, 1), "data-scalters": altered(ev.midi).label,
+                  transform: `translate(${xk} ${y}) rotate(-14) scale(4.5 3.4)`, "vector-effect": "non-scaling-stroke" }, svg);
+              else
+                el("ellipse", { ...head, cx: xk, cy: y, rx: 4.5, ry: 3.4, transform: `rotate(-14 ${xk} ${y})` }, svg);
             } else {
               const lab = labOf(ev.midi);
               y = head(xk, sp.name, sp.oct, famOf(lab), lab, open);

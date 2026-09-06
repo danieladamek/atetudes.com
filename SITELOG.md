@@ -135,6 +135,22 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-05 — night 36: the non-diatonic mark — Design Spec v1.4, the starburst, violet returns
+
+- **What:** `docs/design-language-and-engine-spec.md` → v1.4 (Update Log 260930.1): chromaticity
+  is SHAPE — a non-diatonic note draws as a starburst (eight points, inner radius 0.70), a
+  diatonic note a circle; colour is the §2.1 colour of the degree the note alters, named by the
+  letter of its spelling; the interior is the altered degree with its accidental; the v1.3 violet
+  clause struck with its measurement. Rendered first at true size in all seven colours, filled
+  and hollow, greyscale, the stacked case, the staff head (`notes/working/shots-260930/`); the
+  two stop conditions (silver hollow vanishing, ink closing to a blob) did not fire at eight
+  points. Code: `hub/marks.mjs` (the shape once), `engine/chord.mjs` `alteredDegree` (from the
+  speller's letter), the neck's approach mark, the staff's and the score's cue heads, the
+  sounding pulse's stroke — five violet sites retired; `VIOLET` stays exported, unused. The
+  door-built studies (multetudes, tetradetudes) move; the hand-authored studies carry no
+  approach mark and are untouched.
+- **Why:** Daniel's ruling 260927–28 — hue alone is separable for no one who cannot read it.
+
 ## 2026-09-06 — DEPLOYED: night 35b live — subdivision in the core, all four apps moved (the two chart studies unmoved); all six checked; written from the run
 
 - record: run 34010631539 · success · commit ad7e5b9 · fetched 2026-09-06T08:47Z · 6/6 studies byte-identical · digest a44632bfea43

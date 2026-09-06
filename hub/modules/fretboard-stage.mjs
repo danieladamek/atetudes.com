@@ -22,12 +22,12 @@
  */
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
 import { OPEN_MIDI } from "../../engine/field.mjs";
-import { scaleNotes } from "../../engine/chord.mjs";
+import { scaleNotes, alteredDegree } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
 import { parseFigure, figureEvents, toneIndexOf, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } from "../bus.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
-import { FAM_COLOR, FAM_TEXT, VIOLET } from "../palette.mjs";
+import { FAM_COLOR, FAM_TEXT, FAM } from "../palette.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
@@ -404,6 +404,7 @@ export const fretboardStage = {
       pulseLayer.textContent = "";
       const parsed = parseFigure(cfg.figure, cfg.address || "slots");
       const scale = scaleNotes(cfg.key, cfg.scale);
+      const altered = alteredDegree(cfg.key, cfg.scale);   // v1.4 (260930): the pulse wears the note's OWN colour — the altered degree's when chromatic
       let events;
       try {
         events = figureEvents(cur, {
@@ -418,7 +419,12 @@ export const fretboardStage = {
         const t = d.defaultView.setTimeout(() => {
           if (ev.string == null || ev.fret == null) return;
           const r = el("circle", { cx: fx(ev.fret), cy: fy(ev.string), r: ev.role === "approach" ? 9 : 19,
-            fill: "none", stroke: ev.role === "approach" ? VIOLET : FAM_COLOR["5"],   // 260920: the palette's, not a literal
+            /* the pulse is not a role mark (§2.6 does not reach it) and says "approach" by
+             * SIZE (r 9 vs 19, stroke 1.6 vs 2.4) — unchanged. 260930: the last violet in
+             * the app retired; the approach's flash takes the note's own colour, which
+             * under v1.4 is the altered degree's for a non-diatonic note. The chord tone's
+             * flash stays the neutral ink it was. */
+            fill: "none", stroke: ev.role === "approach" ? FAM_COLOR[FAM[altered(ev.midi).deg]] : FAM_COLOR["5"],
             "stroke-width": ev.role === "approach" ? 1.6 : 2.4, opacity: 0.9, "pointer-events": "none" }, pulseLayer);
           const fade = d.defaultView.setTimeout(() => r.remove(), 320);
           pulseTimers.push(fade);
