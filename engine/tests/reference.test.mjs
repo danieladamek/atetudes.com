@@ -52,6 +52,14 @@ test("string 5 serves when 6 is taken; both taken refuses BY NAME", () => {
   assert.equal(refused.note, null);
   assert.match(refused.reason, /strings 5 and 6 are both in the set/,
     "the refusal must name itself — an empty board is not an answer");
+  // 261001 (night 37, item 2 — ruled): the refusal is a NAMED OFFER: the reference exists
+  // as a degree with nowhere to sit, offered unfretted; `note` stays null for every caller
+  assert.deepEqual(refused.offer, { keyDeg: 0, deg: 0, name: "Bb", unfretted: true },
+    "both reference strings taken → the root is offered unfretted, named, claiming no string");
+  assert.match(refused.reason, /Bb has nowhere to sit, so it is offered unfretted$/, "the face's sentence names the note and the offer");
+  const third = placeReference("third", 0, fld, [6, 5, 4, 3], BOOT);
+  assert.deepEqual([third.offer.keyDeg, third.offer.name], [5, "G"], "a 3rd below B♭ is G — the offer is the relative rule's degree, not a pedal");
+  assert.equal(placeReference("root", 0, fld, [6, 4, 3], BOOT).offer, undefined, "a free reference string frets the note — no offer");
 });
 
 test("a reach past the box is a stretch — flagged, still a real fretted note", () => {

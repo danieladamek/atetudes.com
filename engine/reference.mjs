@@ -4,8 +4,20 @@
  * 08-23 ruling enforced structurally: THE REFERENCE IS A REAL FRETTED NOTE —
  * string, fret, midi — chosen against the frame, never a silent pedal. The
  * carried note-events.mjs still EXEMPTS its bass from the real-string
- * assertion (G11, priced with the release republish); this module is the
- * Route-B answer — its reference cannot exist unfretted.
+ * assertion (G11, priced with the release republish; a register entry
+ * watches it since 261001); this module is the Route-B answer — its
+ * reference is a real fretted note WHEREVER A REFERENCE STRING IS FREE.
+ * AMENDED 261001 (night 37; ruled by Daniel 260929 and 261001 on night
+ * 36's render): when strings 5 and 6 are both in the set the reference is
+ * OFFERED UNFRETTED — a named offer, not a refusal and not a chosen pedal
+ * (a fixed reference is centreDegreeOf's `fixed` source, 260914, and is
+ * not built twice here). The offer carries the degree the relative rule
+ * derives and the name the field spells; it claims no string and so
+ * asserts no fret. The neck draws it with the reference's OWN mark,
+ * unchanged, moved into the gutter below the strings left of the nut —
+ * above the nut it reads as §2.3's open-string glyph. It is drawn and
+ * named; whether it SOUNDS is the register entry's business (the
+ * stringless bass is exactly G11's exemption).
  *
  * THE THREE RELATIVE OPTIONS ONLY (ruled for 260831): the root, a 3rd below,
  * a 5th below — offsets in SCALE STEPS from the chord degree (a 3rd below is
@@ -40,7 +52,7 @@
  *
  * Pure: no DOM, no globals, load-time structural assertions.
  */
-import { field, notesOn, OPEN_MIDI } from "./field.mjs";
+import { field, notesOn, OPEN_MIDI, degAgainst } from "./field.mjs";
 import { parseChord } from "./chord.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
@@ -140,10 +152,18 @@ export function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   if (!Number.isInteger(chordDeg) || chordDeg < 0 || chordDeg > 6)
     throw new Error(`placeReference: chordDeg 0..6, not ${chordDeg}`);
   const free = [6, 5].filter((s) => !strings.includes(s));
-  if (!free.length)
-    return { note: null, stretch: false,
-      reason: "strings 5 and 6 are both in the set — the reference is refused: it has nowhere to sit" };
   const keyDeg = mod7(chordDeg + off);
+  if (!free.length) {
+    /* THE UNFRETTED OFFER (261001): both reference strings in the set is a
+     * fact the face says BY NAME — and the reference still exists as a
+     * degree, so it is offered unfretted rather than refused. `note` stays
+     * null: nothing here is a fretted note, and every caller that draws or
+     * sounds a fretted note keeps reading `note`. */
+    const name = fld.notes[keyDeg].name;
+    return { note: null, stretch: false,
+      offer: { keyDeg, deg: degAgainst(keyDeg, fld.ref ?? 0), name, unfretted: true },
+      reason: `strings 5 and 6 are both in the set — ${name} has nowhere to sit, so it is offered unfretted` };
+  }
   /* NEARNESS GOVERNS (260918): every occurrence on every free string, the
    * nearest to the window's centre first; string 6 breaks a tie */
   const cands = free.flatMap((bs) => notesOn(bs, fld).filter((n) => n.keyDeg === keyDeg));

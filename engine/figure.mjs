@@ -88,7 +88,7 @@ export function parseFigure(text, address = "slots") {
    * misread audit A3 is about. Approaches are a tone-figure idea (a degree is
    * enclosed; a slot is not), so parens in slot mode are refused by name. */
   if (hasApproaches(t))
-    return { pattern: null, err: "approaches in parens address a TONE (enclose the 3rd, land the 7th) — switch Figure addresses to tones", source: "drill" };
+    return { pattern: null, err: "approaches in parens address a TONE (enclose the 3rd, land the 7th) — the address is set to slots; switch it to tones", source: "drill" };   // rule 14 (261001): the mode and the value, never the caption
   const r = parsePattern(t, mat);
   if (r.err) return { pattern: null, err: r.err, source: "drill" };
   return { pattern: r.pattern, err: null, source: "drill" };

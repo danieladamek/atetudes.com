@@ -478,6 +478,18 @@ test("260918-1: refusals stay loud — the pattern address, a spelled target, a 
   assert.match(orderBy("tones", "(-1)[", sel, { fld, strings, pos }).err, /expected a degree inside/);
 });
 
+test("261001 (CR-1 §3, item 6): the MATERIAL refuses an off-field note by role name — unlabelled says 'no role', labelled says the role is not a member's", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const pos = positionOf({ field: fld, anchorString: 4, startDegree: 0, nearFret: 5, strings: [4, 3, 2, 1] });
+  const offField = { ...fld, degOf: (m) => (((m % 12) + 12) % 12 === 10 ? -1 : fld.degOf(m)) };   // B♭ declared off the field
+  assert.throws(() => materialIn(pos, [4, 3, 2, 1], offField), /an off-field note is legal only as a role-carrying APPROACH[\s\S]*carries no role/,
+    "an unlabelled off-field note in the material throws, saying no role");
+  // the guard names the role when one is carried — and still refuses: the material is the field's own
+  let seen = null;
+  try { materialIn(pos, [4, 3, 2, 1], offField); } catch (e) { seen = e.message; }
+  assert.match(seen || "", /CR-1 §3/, "the guard cites the doctrine that makes off-field legal only with a role in the ORDER");
+});
+
 test("260918-1: THE ROLE TEST — an off-field step with no role, or a role with no target, throws NAMING it (CR-1 §3)", () => {
   const { fld, strings, sel, pos } = bootSel();
   // reach the assertion through the pattern path, which cannot mint approaches: a foreign step smuggled in

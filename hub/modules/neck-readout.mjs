@@ -201,10 +201,10 @@ export const neckReadout = {
             `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
         } else if (cfg.bass !== "none" && roRefDeg != null) {
           const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos, pickOf(cfg));
-          check("the reference is a real fretted note or refused by name", () =>
+          check("the reference is a real fretted note, offered unfretted by name, or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
-              : typeof rp.reason === "string" && rp.reason.length > 0);
+              : typeof rp.reason === "string" && rp.reason.length > 0 && (!rp.offer || rp.offer.unfretted === true));
           if (rp.note && cfg.object === "scale") {
             /* a scale has no stack to read back over the bass — the note is
              * named plainly (the .map-on-null this line replaces was the
@@ -217,6 +217,12 @@ export const neckReadout = {
             bits.push(`over <b>${comp.bassName}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
               + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : "")
               + (comp.name ? `: the stack is <b>${comp.name}</b>` : ' <span class="ro-dim">(an unnamed stack — no honest symbol reads back)</span>'));
+          } else if (rp.offer) {
+            /* 261001: offered unfretted — named, the stack read back over its degree, and
+             * honest about sound: nothing sits under the strings, so nothing sounds */
+            const comp = compositeOver(fld, rp.offer.keyDeg, cur.tones.map((t) => t.pc));
+            bits.push(`over <b>${rp.offer.name}</b> — <span class="ro-dim">unfretted: strings 5 and 6 are in the set; drawn below the strings, sounding nothing</span>`
+              + (comp.name ? `: the stack is <b>${comp.name}</b>` : ""));
           } else {
             bits.push(`<span style="color:#B82929">reference refused: ${rp.reason}</span>`);
           }

@@ -547,6 +547,26 @@ export const fieldBoard = {
           const t = el("text", { x: fx(refP.note.fret), y: fy(refP.note.string) + 3.4,
             "text-anchor": "middle", "font-size": "9", fill: "#73737A", class: "fd-lab" }, g);
           t.textContent = rf;
+        } else if (refP.offer) {
+          /* THE UNFRETTED OFFER (261001, night 37 — ruled by Daniel on night 36's
+           * render): both reference strings in the set, so the reference is
+           * offered unfretted. THE MARK IS THE REFERENCE'S OWN, UNCHANGED —
+           * r 12, hollow, dashed 3 2.5, its degree colour, the degree inside —
+           * only its PLACE changes: the gutter BELOW the strings, LEFT OF THE
+           * NUT, clear of both (string 6's row at fy(6), the nut's foot at
+           * fy(6) + 14; the mark's top sits 18 below the row). Above the nut it
+           * would read as §2.3's open-string glyph. It claims no string and so
+           * asserts no fret; the word beside it says what it is. */
+          const rf = FAM[refP.offer.deg];
+          const ux = fx(0), uy = fy(6) + 30;
+          const g = el("g", { class: "fd-ref fd-ref-unfretted", "data-refunfretted": "true",
+            "data-refkeydeg": refP.offer.keyDeg, "data-refname": refP.offer.name }, svg);
+          el("circle", { cx: ux, cy: uy, r: 12, fill: "none",
+            stroke: FAM_COLOR[rf], "stroke-width": 2.4, "stroke-dasharray": "3 2.5" }, g);
+          const t = el("text", { x: ux, y: uy + 3.4, "text-anchor": "middle", "font-size": "9", fill: "#73737A", class: "fd-lab" }, g);
+          t.textContent = rf;
+          const w = el("text", { x: ux + 17, y: uy + 3.4, "font-size": "9", fill: "#73737A", class: "fd-lab" }, g);
+          w.textContent = "unfretted";
         }
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
@@ -858,6 +878,7 @@ export const fieldBoard = {
           ? `${followMsg.text}. ` : "") +
         (refP.note
           ? (!isScale && !sel.length ? "The reference is drawn but stays silent — nothing sits on top of it. " : "")
+          : refP.offer ? `Reference offered unfretted: ${refP.reason} — drawn below the strings, sounding nothing. `
           : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +
         "Click the numbers to choose strings; ← → step the window.";
       byId("fdLegend").innerHTML = FAM.map((f2) =>

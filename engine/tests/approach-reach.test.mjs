@@ -44,8 +44,27 @@ test("the reach REFUSES, as an error value naming the target, the distance and t
   assert.doesNotThrow(() => { out = orderBy("tones", "(+9)[R]", sc.sel, { fld: sc.fld, strings: sc.strings, pos: sc.pos }); });
   assert.equal(out.order, null);
   assert.match(out.err, /the approach \+9 to the root sits \d+ frets? beyond the hand/, out.err);
-  assert.match(out.err, /the root is at fret \d+, at the window's edge \(frets 3–7\)/, out.err);
+  /* PIN REWRITTEN 261001 (rule 3 — a test can pin a bug): this pin asserted "at the window's
+   * edge" for the root AT FRET 6 in a window of 3–7, which is not an edge; the clause was
+   * unconditional template text (Daniel, 260928). It is said only at fret 3 or 7 now. */
+  assert.match(out.err, /the root is at fret 6 \(frets 3–7\)/, out.err);
+  assert.doesNotMatch(out.err, /window's edge/, "fret 6 is inside a 3–7 window: no edge clause");
   assert.match(out.err, new RegExp(`the reach is ${reachOf("major")}$`), "the reach named is the field's own");
+});
+
+test("261001: 'at the window's edge' is said only AT the edge — a target inside the window states its fret and the window, nothing more", () => {
+  // Daniel, 260928 (rule 14's sibling): C major, window 3–7, root at FRET 5 read "at the window's edge" — template text
+  const sc = scene("C", "major", [4, 3, 2, 1], 4, 3);
+  const root = sc.sel.find((n) => n.role === "R") || sc.sel[0];
+  let out;
+  assert.doesNotThrow(() => { out = orderBy("tones", "(+9)[R]", sc.sel, { fld: sc.fld, strings: sc.strings, pos: sc.pos }); });
+  assert.equal(out.order, null);
+  assert.match(out.err, /beyond the hand/, out.err);
+  const at = /is at fret (\d+)/.exec(out.err); assert.ok(at, out.err);
+  const fret = +at[1], edge = fret === sc.pos.fLo || fret === sc.pos.fHi;
+  assert.equal(/at the window's edge/.test(out.err), edge,
+    `the clause appears iff the target sits at the edge — fret ${fret}, window ${sc.pos.fLo}–${sc.pos.fHi}: ${out.err}`);
+  assert.match(out.err, /\(frets \d+–\d+\), and the reach is \d+$/, "the numbers still carry the meaning");
 });
 
 test("k IS DERIVED: harmonic minor admits a reach that major refuses — the numbers come from SCALE_STEPS, never from this file", () => {

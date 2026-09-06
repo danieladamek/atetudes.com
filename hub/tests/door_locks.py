@@ -2961,7 +2961,9 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(350)
         rr = page.inner_text("#fdFigNote")
-        check("beyond the hand" in rr and "at the window's edge (frets 3–7)" in rr and "the reach is 2" in rr and page.query_selector("#fieldSvg [data-role='approach']") is None,
+        # PIN REWRITTEN 261001 (rule 3/7): the root sits at fret 6 in a 3–7 window — NOT at the edge; the old
+        # pin asserted the unconditional clause Daniel reported. The numbers carry the meaning.
+        check("beyond the hand" in rr and "is at fret 6 (frets 3–7)" in rr and "window's edge" not in rr and "the reach is 2" in rr and page.query_selector("#fieldSvg [data-role='approach']") is None,
               f"{tag} 2 (260924): the reach REFUSES by name on the face — the target, the distance, the hand: {rr!r}")
         page.select_option("#hcScale", "major"); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(150)
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(100)
@@ -3006,8 +3008,9 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [6, 5, 4, 3] } }))""")
         page.wait_for_timeout(300)
         hint1 = page.inner_text("#fdHint")
-        check("Reference refused: strings 5 and 6 are both in the set" in hint1,
-              f"{tag} 3 (260919): the hint says WHY NOT when the reference is refused: {hint1!r}")
+        # PIN REWRITTEN 261001 (night 37, item 2 — ruled): both strings taken is a named OFFER, not a refusal
+        check("Reference offered unfretted: strings 5 and 6 are both in the set" in hint1 and "offered unfretted" in hint1,
+              f"{tag} 3 (260919/261001): the hint says WHY and WHAT when the reference is offered unfretted: {hint1!r}")
         page.select_option("#fdBass2", bass_was); page.wait_for_timeout(120)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [4, 3, 2, 1] } }))""")
         page.wait_for_timeout(250)
@@ -3162,10 +3165,21 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [6, 5, 4, 3], startDeg: 4, nearFret: 3 } }))""")
         page.wait_for_timeout(200)
-        check(ref_el() is None
-              and "strings 5 and 6 are both in the set" in page.inner_text("#fdHint"),
-              f"{tag} a full set must refuse the reference BY NAME on the face: "
-              f"{page.inner_text('#fdHint')!r}")
+        # PIN REWRITTEN 261001 (night 37, item 2): a full set OFFERS the reference unfretted — the
+        # reference's OWN mark (r 12, dashed 3 2.5, its degree colour), moved into the gutter BELOW
+        # the strings and LEFT OF THE NUT, clear of both; it claims no string and asserts no fret.
+        unf = page.evaluate("""() => { const g = document.querySelector('#fieldSvg .fd-ref-unfretted'); if (!g) return null;
+          const c = g.querySelector('circle'); const lab = [...g.querySelectorAll('text')].map(t => t.textContent);
+          const row6 = 34 + 5 * 34, nutX = 46;
+          return { name: g.dataset.refname, keyDeg: g.dataset.refkeydeg, cx: +c.getAttribute('cx'), cy: +c.getAttribute('cy'), r: +c.getAttribute('r'),
+            dash: c.getAttribute('stroke-dasharray'), sw: c.getAttribute('stroke-width'), fill: c.getAttribute('fill'), stroke: c.getAttribute('stroke'),
+            belowRow6: +c.getAttribute('cy') - +c.getAttribute('r') - row6, leftOfNut: nutX - (+c.getAttribute('cx') + +c.getAttribute('r')), lab,
+            fretted: !!document.querySelector('#fieldSvg .fd-ref[data-refstr]') }; }""")
+        check(unf is not None and not unf["fretted"] and unf["name"] == "Bb" and unf["r"] == 12 and unf["dash"] == "3 2.5" and unf["sw"] == "2.4"
+              and unf["fill"] == "none" and unf["stroke"] == "#B82929" and "unfretted" in unf["lab"] and unf["belowRow6"] >= 8 and unf["leftOfNut"] >= 8
+              and "Reference offered unfretted: strings 5 and 6 are both in the set" in page.inner_text("#fdHint"),
+              f"{tag} a full set must OFFER the reference unfretted BY NAME on the face — the reference's own mark, below the strings, left of the nut: "
+              f"{unf} {page.inner_text('#fdHint')!r}")
         # R19 as a preset seeds the whole sentence in one gesture
         page.select_option("#psSel", label="R19 · a tetrad over a third below")
         page.wait_for_timeout(250)

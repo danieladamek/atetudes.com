@@ -823,7 +823,7 @@ function orderWithApproaches(text, notes, ctx) {
         const rel = `${midi - target.midi > 0 ? "+" : ""}${midi - target.midi}`;
         return { order: null, err: nearestMiss === null
           ? `the approach ${rel} to the ${wordOf(t.deg)} has no playable position on these strings`
-          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}, at the window's edge (frets ${ctx.pos.fLo}–${ctx.pos.fHi}), and the reach is ${reach}` };
+          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}${target.fret === ctx.pos.fLo || target.fret === ctx.pos.fHi ? ", at the window's edge" : ""} (frets ${ctx.pos.fLo}–${ctx.pos.fHi}), and the reach is ${reach}` };   // 261001: the edge clause only AT the edge (rule 14's sibling — template text that is said whatever the fret is a caption of nothing)
       }
       const keyDeg = fld.degOf(midi);
       const chromatic = keyDeg < 0;
@@ -869,7 +869,7 @@ export function bracketOf(order) {
   if (!line.notes || line.notes.length !== 4)
     throw new Error("selection: the probe tetrad did not place");
   if (Object.values(perString(line.notes)).some((c) => c !== 1))
-    throw new Error("selection: raising the ceiling CAUSED a second note on a string — Take and Placement have collapsed");
+    throw new Error("selection: raising the ceiling CAUSED a second note on a string — the take and the per-string ceiling have collapsed into one");   // rule 14 (261001): the thing, not the caption
 
   // THE CEILING CONSTRAINS THE RESULT, NOT THE POOL: on two strings a triad
   // must fold 2+1 (the geometry forces the line), which is only findable if

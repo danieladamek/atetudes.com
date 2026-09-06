@@ -588,14 +588,16 @@ def m20_reference_refusal_goes_silent():
     # Silence the hint's refusal clause and the by-name pin must bite.
     # ANCHOR REWRITTEN 260919 (night 25 item 3, rule 7): the hint was trimmed to
     # reason and affordance; the refusal clause now leads its line, no leading space.
+    # ANCHOR RE-AIMED 261001 (night 37, item 2): both strings taken is an OFFER now, said by
+    # name in its own clause; silence THAT clause and the by-name pin must bite.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        '          : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +',
-        '          : "") +')
+        '          : refP.offer ? `Reference offered unfretted: ${refP.reason} — drawn below the strings, sounding nothing. `',
+        '          : refP.offer ? ""')
     try:
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "must refuse the reference BY NAME on the face" in r.stdout
+        hit = "must OFFER the reference unfretted BY NAME on the face" in r.stdout
         record("the reference refusal goes silent",
                r.returncode != 0 and hit,
                "suite exit %d; the by-name refusal pin bit: %s" % (r.returncode, hit))

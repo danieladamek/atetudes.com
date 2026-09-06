@@ -201,6 +201,70 @@ test("§4.3 notepad: an unwired host fails NAMING what is missing (the spec for 
     "the failure names the capability and both ways to satisfy it");
 });
 
+// ================= RULE 14 (ratified 260928; asserted 261001, night 37): no error string quotes a CAPTION =================
+// "A user-facing string never quotes a control's CAPTION. Name the mode, the
+// value, or the thing itself. The caption is the part that changes, and a
+// sentence quoting it goes stale the day it is renamed."
+// THE SPLIT THAT MAKES IT PRECISE: CAPTION words (Centricity · Movement · The
+// figure is · Bass / reference tone · Placement · Subdivision …) name a
+// CONTROL and are banned in an error string; OPTION words (strum, arpeggiate,
+// tones, pattern, Grip, Line …) name a VALUE the user chose or typed and are
+// LEGAL — selection.mjs's own refusal "the address is set to pattern; switch
+// it to tones" is the sentence held up as correct. A blanket ban would break
+// it. The captions come from the lexicon, never a list here; the population
+// is every string or template literal that is an argument of `new Error(`
+// or the value of an `err:` / `reason:` property, in engine/ and
+// hub/modules/ — the strings a player reads when something is refused.
+const CAPTIONS = Object.values(LEXICON).map((e) => e.caption).filter(Boolean);
+const OPTION_WORDS = Object.values(LEXICON).flatMap((e) => Object.values(e.options || {}));
+function errorStringsOf(src) {
+  const out = [];
+  const grab = (start) => {   // the balanced expression from `start` to the closing paren / the next `,` or `}` at depth 0
+    let depth = 0, i = start, inStr = null;
+    for (; i < src.length; i++) {
+      const c = src[i], p = src[i - 1];
+      if (inStr) { if (c === inStr && p !== "\\") inStr = null; continue; }
+      if (c === '"' || c === "'" || c === "`") { inStr = c; continue; }
+      if (c === "(" || c === "{" || c === "[") depth++;
+      else if (c === ")" || c === "}" || c === "]") { if (depth === 0) break; depth--; }
+      else if ((c === "," || c === ";") && depth === 0) break;
+    }
+    return src.slice(start, i);
+  };
+  for (const m of src.matchAll(/new Error\(|\b(?:err|reason)\s*:\s*/g)) {
+    const expr = grab(m.index + m[0].length);
+    for (const lit of expr.matchAll(/`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g))
+      out.push({ line: src.slice(0, m.index).split("\n").length, text: lit[0].slice(1, -1) });
+  }
+  return out;
+}
+const RULE14_FILES = [
+  ...readdirSync(join(here, "..")).filter((f) => f.endsWith(".mjs")).map((f) => "engine/" + f),
+  ...readdirSync(join(here, "..", "..", "hub", "modules")).filter((f) => f.endsWith(".mjs")).map((f) => "hub/modules/" + f),
+];
+test("rule 14: no error string in engine/ or hub/modules/ quotes a caption the lexicon owns — option words stay legal", () => {
+  assert.ok(CAPTIONS.length >= 10 && OPTION_WORDS.length >= 10, "the lexicon supplies the words");
+  const hits = [];
+  let strings = 0;
+  for (const rel of RULE14_FILES) {
+    const src = readFileSync(join(here, "..", "..", rel), "utf8");
+    for (const s of errorStringsOf(src)) {
+      strings++;
+      for (const cap of CAPTIONS) {
+        const re = new RegExp("(^|[^\\w])" + cap.replace(/[.*+?^$()|[\]\\/{}]/g, "\\$&") + "($|[^\\w])");
+        if (re.test(s.text)) hits.push(`${rel}:${s.line} quotes the caption "${cap}": ${JSON.stringify(s.text.slice(0, 90))}`);
+      }
+    }
+  }
+  assert.ok(strings >= 200, `the sweep must actually read the refusals (found ${strings})`);
+  assert.deepEqual(hits, [], "rule 14 — name the mode, the value or the thing; a quoted caption goes stale the day it is renamed");
+  // the sentence held up as correct still passes: option words are legal
+  const sel = readFileSync(join(here, "..", "selection.mjs"), "utf8");
+  const held = errorStringsOf(sel).find((s) => /the address is set to pattern; switch it to tones/.test(s.text));
+  assert.ok(held, "selection.mjs's address refusal is in the population");
+  assert.ok(OPTION_WORDS.includes("tones") || CAPTIONS.every((c) => !held.text.includes(c)), "…and it quotes option words only");
+});
+
 // ================= the CARD CARRIERS (night 35, 260929): a hub card's bytes in a hand-authored page =================
 // The two hand-authored studies were RE-HOUSED onto notepad-card.mjs and
 // metronome-card.mjs — Daniel, 260923: "the same split notepad/log in all

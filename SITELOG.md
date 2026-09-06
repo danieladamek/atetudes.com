@@ -135,6 +135,20 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — night 37: the unfretted reference offered (U4), rule 14's two strings, the approach half verified under v1.4
+
+- **What:** `engine/reference.mjs` — both reference strings in the set is a named OFFER now, not
+  a refusal: the reference exists as a degree with nowhere to sit, and the neck draws its own mark
+  (hollow dashed circle, degree colour) in the gutter below the strings, left of the nut, with the
+  word "unfretted" beside it (Daniel's ruling on night 36's render); it claims no string, asserts
+  no fret, and does not sound (the stringless bass is G11's exemption — a register entry watches
+  it). `engine/figure.mjs` and `engine/selection.mjs` — two refusals reworded under rule 14 (name
+  the mode and the value, never the caption; the reach's "at the window's edge" said only at the
+  edge) plus a load assertion the new assertion caught. The approach half of CR-1 verified clause
+  by clause on the artifact; the material's role guard pinned by name. multetudes and
+  tetradetudes rebuilt; the hand-authored studies untouched.
+- **Why:** Daniel's rulings 260928 (rule 14) and 261001 (U4).
+
 ## 2026-09-06 — DEPLOYED: night 36 live — Design Spec v1.4, the starburst on both doors, the hand-authored carriers re-inlined; all six checked; written from the run
 
 - record: run 34023951203 · success · commit 900cda7 · fetched 2026-09-06T09:18Z · 6/6 studies byte-identical · digest 5351f6206549

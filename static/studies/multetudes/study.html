@@ -3585,7 +3585,7 @@ function parseFigure(text, address = "slots") {
    * misread audit A3 is about. Approaches are a tone-figure idea (a degree is
    * enclosed; a slot is not), so parens in slot mode are refused by name. */
   if (hasApproaches(t))
-    return { pattern: null, err: "approaches in parens address a TONE (enclose the 3rd, land the 7th) — switch Figure addresses to tones", source: "drill" };
+    return { pattern: null, err: "approaches in parens address a TONE (enclose the 3rd, land the 7th) — the address is set to slots; switch it to tones", source: "drill" };   // rule 14 (261001): the mode and the value, never the caption
   const r = parsePattern(t, mat);
   if (r.err) return { pattern: null, err: r.err, source: "drill" };
   return { pattern: r.pattern, err: null, source: "drill" };
@@ -5449,7 +5449,7 @@ function orderWithApproaches(text, notes, ctx) {
         const rel = `${midi - target.midi > 0 ? "+" : ""}${midi - target.midi}`;
         return { order: null, err: nearestMiss === null
           ? `the approach ${rel} to the ${wordOf(t.deg)} has no playable position on these strings`
-          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}, at the window's edge (frets ${ctx.pos.fLo}–${ctx.pos.fHi}), and the reach is ${reach}` };
+          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}${target.fret === ctx.pos.fLo || target.fret === ctx.pos.fHi ? ", at the window's edge" : ""} (frets ${ctx.pos.fLo}–${ctx.pos.fHi}), and the reach is ${reach}` };   // 261001: the edge clause only AT the edge (rule 14's sibling — template text that is said whatever the fret is a caption of nothing)
       }
       const keyDeg = fld.degOf(midi);
       const chromatic = keyDeg < 0;
@@ -5495,7 +5495,7 @@ function bracketOf(order) {
   if (!line.notes || line.notes.length !== 4)
     throw new Error("selection: the probe tetrad did not place");
   if (Object.values(perString(line.notes)).some((c) => c !== 1))
-    throw new Error("selection: raising the ceiling CAUSED a second note on a string — Take and Placement have collapsed");
+    throw new Error("selection: raising the ceiling CAUSED a second note on a string — the take and the per-string ceiling have collapsed into one");   // rule 14 (261001): the thing, not the caption
 
   // THE CEILING CONSTRAINS THE RESULT, NOT THE POOL: on two strings a triad
   // must fold 2+1 (the geometry forces the line), which is only findable if
@@ -6150,7 +6150,7 @@ return { STRUCTURES, CHORD_ROOTS, CHORD_QUALITIES, GLYPHS, resolveStructure, cha
 
 /* ===== engine/reference.mjs ===== */
 const __m_engine_reference_mjs = (() => {
-const { field, notesOn, OPEN_MIDI } = __m_engine_field_mjs;
+const { field, notesOn, OPEN_MIDI, degAgainst } = __m_engine_field_mjs;
 const { parseChord } = __m_engine_chord_mjs;
 /* reference.mjs — THE REFERENCE TONE, fretted and named (Multetudes child 5).
  *
@@ -6158,8 +6158,20 @@ const { parseChord } = __m_engine_chord_mjs;
  * 08-23 ruling enforced structurally: THE REFERENCE IS A REAL FRETTED NOTE —
  * string, fret, midi — chosen against the frame, never a silent pedal. The
  * carried note-events.mjs still EXEMPTS its bass from the real-string
- * assertion (G11, priced with the release republish); this module is the
- * Route-B answer — its reference cannot exist unfretted.
+ * assertion (G11, priced with the release republish; a register entry
+ * watches it since 261001); this module is the Route-B answer — its
+ * reference is a real fretted note WHEREVER A REFERENCE STRING IS FREE.
+ * AMENDED 261001 (night 37; ruled by Daniel 260929 and 261001 on night
+ * 36's render): when strings 5 and 6 are both in the set the reference is
+ * OFFERED UNFRETTED — a named offer, not a refusal and not a chosen pedal
+ * (a fixed reference is centreDegreeOf's `fixed` source, 260914, and is
+ * not built twice here). The offer carries the degree the relative rule
+ * derives and the name the field spells; it claims no string and so
+ * asserts no fret. The neck draws it with the reference's OWN mark,
+ * unchanged, moved into the gutter below the strings left of the nut —
+ * above the nut it reads as §2.3's open-string glyph. It is drawn and
+ * named; whether it SOUNDS is the register entry's business (the
+ * stringless bass is exactly G11's exemption).
  *
  * THE THREE RELATIVE OPTIONS ONLY (ruled for 260831): the root, a 3rd below,
  * a 5th below — offsets in SCALE STEPS from the chord degree (a 3rd below is
@@ -6293,10 +6305,18 @@ function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   if (!Number.isInteger(chordDeg) || chordDeg < 0 || chordDeg > 6)
     throw new Error(`placeReference: chordDeg 0..6, not ${chordDeg}`);
   const free = [6, 5].filter((s) => !strings.includes(s));
-  if (!free.length)
-    return { note: null, stretch: false,
-      reason: "strings 5 and 6 are both in the set — the reference is refused: it has nowhere to sit" };
   const keyDeg = mod7(chordDeg + off);
+  if (!free.length) {
+    /* THE UNFRETTED OFFER (261001): both reference strings in the set is a
+     * fact the face says BY NAME — and the reference still exists as a
+     * degree, so it is offered unfretted rather than refused. `note` stays
+     * null: nothing here is a fretted note, and every caller that draws or
+     * sounds a fretted note keeps reading `note`. */
+    const name = fld.notes[keyDeg].name;
+    return { note: null, stretch: false,
+      offer: { keyDeg, deg: degAgainst(keyDeg, fld.ref ?? 0), name, unfretted: true },
+      reason: `strings 5 and 6 are both in the set — ${name} has nowhere to sit, so it is offered unfretted` };
+  }
   /* NEARNESS GOVERNS (260918): every occurrence on every free string, the
    * nearest to the window's centre first; string 6 breaks a tie */
   const cands = free.flatMap((bs) => notesOn(bs, fld).filter((n) => n.keyDeg === keyDeg));
@@ -7837,6 +7857,26 @@ const fieldBoard = {
           const t = el("text", { x: fx(refP.note.fret), y: fy(refP.note.string) + 3.4,
             "text-anchor": "middle", "font-size": "9", fill: "#73737A", class: "fd-lab" }, g);
           t.textContent = rf;
+        } else if (refP.offer) {
+          /* THE UNFRETTED OFFER (261001, night 37 — ruled by Daniel on night 36's
+           * render): both reference strings in the set, so the reference is
+           * offered unfretted. THE MARK IS THE REFERENCE'S OWN, UNCHANGED —
+           * r 12, hollow, dashed 3 2.5, its degree colour, the degree inside —
+           * only its PLACE changes: the gutter BELOW the strings, LEFT OF THE
+           * NUT, clear of both (string 6's row at fy(6), the nut's foot at
+           * fy(6) + 14; the mark's top sits 18 below the row). Above the nut it
+           * would read as §2.3's open-string glyph. It claims no string and so
+           * asserts no fret; the word beside it says what it is. */
+          const rf = FAM[refP.offer.deg];
+          const ux = fx(0), uy = fy(6) + 30;
+          const g = el("g", { class: "fd-ref fd-ref-unfretted", "data-refunfretted": "true",
+            "data-refkeydeg": refP.offer.keyDeg, "data-refname": refP.offer.name }, svg);
+          el("circle", { cx: ux, cy: uy, r: 12, fill: "none",
+            stroke: FAM_COLOR[rf], "stroke-width": 2.4, "stroke-dasharray": "3 2.5" }, g);
+          const t = el("text", { x: ux, y: uy + 3.4, "text-anchor": "middle", "font-size": "9", fill: "#73737A", class: "fd-lab" }, g);
+          t.textContent = rf;
+          const w = el("text", { x: ux + 17, y: uy + 3.4, "font-size": "9", fill: "#73737A", class: "fd-lab" }, g);
+          w.textContent = "unfretted";
         }
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
@@ -8148,6 +8188,7 @@ const fieldBoard = {
           ? `${followMsg.text}. ` : "") +
         (refP.note
           ? (!isScale && !sel.length ? "The reference is drawn but stays silent — nothing sits on top of it. " : "")
+          : refP.offer ? `Reference offered unfretted: ${refP.reason} — drawn below the strings, sounding nothing. `
           : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +
         "Click the numbers to choose strings; ← → step the window.";
       byId("fdLegend").innerHTML = FAM.map((f2) =>
@@ -9652,10 +9693,10 @@ const neckReadout = {
             `chord's degree, and ${cur.symbol}'s root is not in the key</span>`);
         } else if (cfg.bass !== "none" && roRefDeg != null) {
           const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos, pickOf(cfg));
-          check("the reference is a real fretted note or refused by name", () =>
+          check("the reference is a real fretted note, offered unfretted by name, or refused by name", () =>
             rp.note
               ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
-              : typeof rp.reason === "string" && rp.reason.length > 0);
+              : typeof rp.reason === "string" && rp.reason.length > 0 && (!rp.offer || rp.offer.unfretted === true));
           if (rp.note && cfg.object === "scale") {
             /* a scale has no stack to read back over the bass — the note is
              * named plainly (the .map-on-null this line replaces was the
@@ -9668,6 +9709,12 @@ const neckReadout = {
             bits.push(`over <b>${comp.bassName}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
               + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : "")
               + (comp.name ? `: the stack is <b>${comp.name}</b>` : ' <span class="ro-dim">(an unnamed stack — no honest symbol reads back)</span>'));
+          } else if (rp.offer) {
+            /* 261001: offered unfretted — named, the stack read back over its degree, and
+             * honest about sound: nothing sits under the strings, so nothing sounds */
+            const comp = compositeOver(fld, rp.offer.keyDeg, cur.tones.map((t) => t.pc));
+            bits.push(`over <b>${rp.offer.name}</b> — <span class="ro-dim">unfretted: strings 5 and 6 are in the set; drawn below the strings, sounding nothing</span>`
+              + (comp.name ? `: the stack is <b>${comp.name}</b>` : ""));
           } else {
             bits.push(`<span style="color:#B82929">reference refused: ${rp.reason}</span>`);
           }
