@@ -135,6 +135,17 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-06 — DEPLOYED: night 37 live — the unfretted reference offered on multetudes, both doors moved for rule 14; all six checked; written from the run
+
+- record: run 34044195517 · success · commit 5a079da · fetched 2026-09-06T16:09Z · 6/6 studies byte-identical · digest 5add5d6f0570
+- Actions run 34044195517 green on `5a079da` — https://github.com/danieladamek/atetudes.com/actions/runs/34044195517 (created 2026-09-06T16:02:53Z, finished 2026-09-06T16:09:44Z).
+- metronome: repo b7d02cedc3d0 · live b7d02cedc3d0 — matches.
+- modes-from-pentatonic-boxes: repo 59f73b76f87b · live 59f73b76f87b — matches.
+- multetudes: repo d5ea1939909f · live d5ea1939909f — matches.
+- tetrad-voice-leading: repo ce9df25cd930 · live ce9df25cd930 — matches.
+- tetradetudes: repo e8ee9cb8d244 · live e8ee9cb8d244 — matches.
+- triadetudes: repo 17ea7c389b74 · live 17ea7c389b74 — matches.
+
 ## 2026-09-06 — night 37: the unfretted reference offered (U4), rule 14's two strings, the approach half verified under v1.4
 
 - **What:** `engine/reference.mjs` — both reference strings in the set is a named OFFER now, not
