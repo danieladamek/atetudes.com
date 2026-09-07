@@ -1,3 +1,35 @@
+## 2026-09-07 — Night 42: Tetradetudes v0.6.2 — the Shape & Motion panel says what a family costs, and stops lying about Grip and Free while bound
+
+- **Why (ruling 260907):** close voicings on four adjacent strings are unreachable in most bars
+  — and that is not a regression and not a defect. Close packs four pitches inside an octave
+  onto strings that span a tenth, so the frets must spread (measured at 148fda6, majors,
+  fourths, twelve keys × three sets × bound and unbound: close spans more than four frets in
+  349 of 576 bars, drop-3 in 462, drop-2 in none). The box's width comes from the scale; the
+  voicing's width from the string geometry; they were never going to agree. The voicings, the
+  box and its hint stay exactly as they were. What changes is words.
+- **Item 1 — the family says what it costs.** Under close the panel now reads "close voicings
+  reach past a hand position — that is the shape, not a fit to find"; drop-3 likewise; drop-2
+  says nothing. The clause is a fact about the family, derived from the family key and nothing
+  else — it reads no pass, no voicing, no fret, no zone — and is pinned as such: byte-identical
+  over a corpus of keys, scales, sets, zones, both bind states, placements and figures, and on
+  the artifact across a set change, a zone move and a bind release. The 2026-08-21 retraction
+  (the box hint never reports a reach) stands untouched.
+- **Item 2 — Grip and Free stop lying while bound.** Bound is the default, and bound the anchor
+  voice is already pinned to a zone fret, so Grip's pull toward it costs nothing and Grip and
+  Free reach the same grip (identical passes in 92 of 108 configurations, 831 of 864 bars).
+  The panel used to say the opposite. Now, bound: "the anchor voice is held to the zone, so
+  Grip and Free reach the same grip (a bar with no candidate on the zone excepted) — releasing
+  the anchor on the neck is what makes them differ"; unbound, the old sentence stays. The
+  placement's three sites — the button's title, the narration, the dependency clause — are one
+  source. Nothing about placement behaviour changed; a saved étude restores as before.
+- **Unmoved:** `engine/` (zero diff), the fretboard stage, multetudes, triadetudes, the
+  metronome and both generator pages.
+- **Verified:** engine 650/650 (five new), hub 11/11, the door gate with the rewritten narration
+  block and a new family block, bite with five new mutations (one positive), hugo clean,
+  check_site clean; rendered in Chromium at 1280 and 390 on a served build, zero console
+  errors, and looked at (`notes/working/shots-261006/`).
+- Report: `notes/working/Tetradetudes build run 261006.md`.
+
 ## 2026-09-07 — DEPLOYED: night 41 live — every note carries the family's shared config, a foreign note is offered and applied by a click; all six studies moved; written from the run
 
 - record: run 34096799999 · success · commit 148fda6 · fetched 2026-09-07T07:49Z · 6/6 studies byte-identical · digest a4a7abbeb035

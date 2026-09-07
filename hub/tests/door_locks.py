@@ -4689,10 +4689,69 @@ console.log(JSON.stringify(out));
         page.select_option("#figSel", "6-5-4-3"); page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(80)
         check("not sounding" in hint(),
               f"{tag} Block with a figure does not say the figure is ignored: {page.inner_text('#smHint')!r}")
-        # (c) Placement = Free makes the Box inert — stated from this panel too
+        # (c) THE GRIP/FREE DEPENDENCY, CONDITIONAL ON BIND (night 42, 261006 — ruling
+        #     260907 §5). Bound — the default — bindFilter has pinned the anchor voice to
+        #     a zone fret, so Grip's pivot term is zero and Grip and Free reach the same
+        #     grip; the panel used to say the opposite ("Free releases the zone"). This
+        #     pin asserted the false sentence until tonight (a test can pin a bug).
+        #     Bound: the same-grip sentence, under Free AND under Grip; nothing about a
+        #     pull. Unbound: the old sentence, under Free only. Rule 10: the Free button's
+        #     title and the narration agree in both states — one source.
+        free_title = lambda: page.get_attribute("#placeSeg button[data-v=\"free\"]", "title") or ""
+        check(page.is_checked("#bindChk"), f"{tag} the narration block expects the shipped default: bound")
+        check("same grip" in hint() and "won't pull" not in hint(),
+              f"{tag} bound Grip does not say Grip and Free reach the same grip: {page.inner_text('#smHint')!r}")
         page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(80)
-        check("box" in hint() and "pull" in hint(),
-              f"{tag} Free does not warn that the Box won't pull: {page.inner_text('#smHint')!r}")
+        check("same grip" in hint() and "won't pull" not in hint() and "releas" in hint() and "neck" in hint(),
+              f"{tag} bound Free still claims a release, or fails to say what makes them differ: {page.inner_text('#smHint')!r}")
+        check("bind" not in hint(), f"{tag} rule 14: the narration quotes the bind control's caption: {page.inner_text('#smHint')!r}")
+        check(free_title() and (free_title() in page.inner_text("#smHint")),
+              f"{tag} bound: the Free button's title is not the narration's Free words: {free_title()!r} vs {page.inner_text('#smHint')!r}")
+        page.uncheck("#bindChk"); page.wait_for_timeout(200)
+        check("box" in hint() and "pull" in hint() and "same grip" not in hint(),
+              f"{tag} unbound Free does not warn that the Box won't pull: {page.inner_text('#smHint')!r}")
+        check("anchor released" in free_title() and free_title() in page.inner_text("#smHint"),
+              f"{tag} unbound: the Free button's title is not the narration's Free words: {free_title()!r}")
+        page.click("#placeSeg button[data-v=\"grip\"]"); page.wait_for_timeout(80)
+        check("won't pull" not in hint() and "same grip" not in hint(),
+              f"{tag} unbound Grip states a dependency that is not its own: {page.inner_text('#smHint')!r}")
+        page.check("#bindChk"); page.wait_for_timeout(200)
+        page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(80)
+        # (c2) THE FAMILY SAYS WHAT IT COSTS (night 42, item 1 — ruling 260907 §4). Close and
+        #      drop-3 cannot fit a hand position; drop-2 can and says nothing. The clause is a
+        #      fact about the FAMILY: byte-identical on the artifact across a set change, a
+        #      zone move and a bind toggle — it reads no voicing (the 08-21 retraction stands:
+        #      #fsBoxHint is not read here and never says "reached").
+        fam_clause = lambda: [p for p in page.inner_text("#smHint").split(" · ") if "hand position" in p]
+        page.click("#famSeg button[data-v=\"drop2\"]"); page.wait_for_timeout(80)
+        check(fam_clause() == [], f"{tag} drop-2 fits a position yet the panel states a cost: {fam_clause()}")
+        seen = {}
+        for fam in ("close", "drop3"):
+            page.click(f"#famSeg button[data-v=\"{fam}\"]"); page.wait_for_timeout(80)
+            c0 = fam_clause()
+            check(len(c0) == 1 and fam.replace("drop3", "drop-3") in c0[0] and "fit to find" in c0[0],
+                  f"{tag} {fam} does not say what it costs: {page.inner_text('#smHint')!r}")
+            check(not re.search(r"\d", c0[0].replace("drop-3", "")), f"{tag} the family clause carries a number — a fret or a span smuggled in: {c0}")
+            variants = {tuple(c0)}
+            for si in ("1", "2", "0"):
+                page.click(f"#setSeg button[data-v=\"{si}\"]"); page.wait_for_timeout(80); variants.add(tuple(fam_clause()))
+            if "winSeg" in r["controlsPresent"]:
+                page.click("#winSeg button[data-win=\"box\"]"); page.wait_for_timeout(60); page.focus("#fretSvg")
+                for _ in range(3):
+                    page.keyboard.press("ArrowRight")
+                page.wait_for_timeout(150); variants.add(tuple(fam_clause()))
+                page.uncheck("#bindChk"); page.wait_for_timeout(150); variants.add(tuple(fam_clause()))
+                page.check("#bindChk"); page.wait_for_timeout(150)
+                for _ in range(3):
+                    page.keyboard.press("ArrowLeft")
+                page.wait_for_timeout(150)
+                page.click("#winSeg button[data-win=\"full\"]"); page.wait_for_timeout(60)
+            check(len(variants) == 1, f"{tag} {fam}'s clause VARIED with the set, the zone or the bind — it read something that is not the family: {variants}")
+            seen[fam] = c0[0]
+        check(seen["close"] != seen["drop3"], f"{tag} close and drop-3 share one sentence — the family is not named")
+        page.click("#famSeg button[data-v=\"drop2\"]"); page.wait_for_timeout(80)
+        check("reached" not in page.inner_text("#fsBoxHint") if page.query_selector("#fsBoxHint") else True,
+              f"{tag} the box hint reports — 08-21 stands, this night does not touch it")
         # (d) every disabled control states WHY in the panel, not only in a tooltip
         check("line" in page.inner_text("#smWhy").lower(),
               f"{tag} the disabled Line placement has no stated reason in the panel")

@@ -105,7 +105,11 @@ export default {
     /* v0.6.1 (261005, night 41): SHARE WHAT YOU MAKE — a note carries the family's shared
      * config (key · scale · progression · start-on · string set · bpm · meter) beside its own
      * settings; a foreign note is OFFERED here (four-string sets only — a partial is named). */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.1",
+    /* v0.6.2 (261006, night 42 — ruling 260907): WORDS. Close and drop-3 say in the panel
+     * that they reach past a hand position (a fact about the family, never a measurement of
+     * the pass); bound, Grip and Free are said to reach the same grip. The voicings, the
+     * box and #fsBoxHint are exactly as they were. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.2",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

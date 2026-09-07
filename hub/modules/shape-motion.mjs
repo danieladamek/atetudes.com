@@ -55,7 +55,94 @@ import { CONFIG_CHANGED, announce, listen } from "../bus.mjs";
 import { playbackWord } from "../../engine/figure.mjs";
 
 const FAMILY_LABEL = { close: "Close", drop2: "Drop-2", drop3: "Drop-3" };
-const PLACE_LABEL = { grip: "Grip", line: "Line", free: "Free" };
+/* THE FAMILY SAYS WHAT IT COSTS (night 42, 261006 — ruling 260907). Close and drop-3
+ * cannot fit a hand position: close packs four pitches inside an octave onto four
+ * adjacent strings that span a tenth, so the frets must spread (measured at 148fda6,
+ * majors, fourths, 12 keys x 3 sets x bound/unbound: close spans > 4 frets in 349 of
+ * 576 bars, drop-3 in 462, drop-2 in 0 — that is why drop-2 exists). The box's width
+ * comes from the SCALE (three consecutive scale notes: 4 or 5 frets); the voicing's
+ * width comes from the STRING GEOMETRY. They were never going to agree, in any key.
+ * Nothing is broken; something was never said — so the panel says it, for the
+ * families where it is true, and drop-2 says nothing (an inert fact stays silent).
+ *
+ * THE LICENCE, AND WHY IT IS THIN: this is a fact about the FAMILY, derived from the
+ * family key and nothing else. It may not read a pass, a voicing, a fret, a span or
+ * the zone. What 2026-08-21 retracted was measurement of the chosen pass (the
+ * overhang tint, the soft wall, the reach counter — all of which looked at the
+ * voicings and confessed); a sentence true before a single chord is picked is not a
+ * reporter. The slide from "close reaches past a position" to "this bar reached
+ * three frets out" is one well-meaning night away, so shape-motion-words.test.mjs
+ * pins the clause as a PURE FUNCTION OF THE FAMILY KEY: byte-identical over a corpus
+ * of keys, scales, sets, zones, both bind states, placements and figures. */
+const FAMILY_COST = {
+  close: "close voicings reach past a hand position — that is the shape, not a fit to find",
+  drop3: "drop-3 voicings reach past a hand position — that is the shape, not a fit to find",
+};
+export const familyCostClause = (family) => FAMILY_COST[family] || "";
+export const PLACE_LABEL = { grip: "Grip", line: "Line", free: "Free" };
+/* PLACEMENT, IN WORDS — ONE source (rule 6) for the three sites rule 10 names: the
+ * segment button's title, the narration's placement clause and the dependency
+ * clause below. Night 42 (261006), item 2: bound — the shipped default, `zone: null`
+ * — bindFilter (tetrad-sequence.mjs) has already forced the anchor voice onto a zone
+ * fret before chooseVoicings runs, so placementCost's pivotW * zone.cost(pf) is
+ * 4 * 0 for Grip on every surviving candidate: Grip's whole differentiator is priced
+ * out by the default, and Grip and Free reach the same grip (identical passes in 92
+ * of 108 configurations, 831 of 864 bars, measured at 148fda6; the rest are bars with
+ * no anchored candidate, where the documented empty-pool fallback lets the pivot term
+ * bite). Unbound (the legacy path, `bind: false`, pinned byte-for-byte by the oracle
+ * comparisons) Free really does release the pull. The panel used to state the
+ * unbound sentence in both states — false whenever bound. Words, not behaviour: Free
+ * is NOT coupled to bind, which would change what a saved étude restores to. */
+export const placementWords = (placement, bound) => ({
+  grip: "one note per string, anchored to the zone",
+  free: bound
+    ? "the grip chosen by smoothest voice-leading — the anchor voice is still held to the zone, so there is no pull left to release"
+    : "the grip chosen by smoothest voice-leading, anchor released",
+  line: "free placement along the set — needs the line voicer, not wired yet",
+})[placement];
+export const placementDependency = (bound) => bound
+  ? `the anchor voice is held to the zone, so ${PLACE_LABEL.grip} and ${PLACE_LABEL.free} reach the same grip (a bar with no candidate on the zone excepted) — releasing the anchor on the neck is what makes them differ`
+  : "Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it";
+
+/* THE PANEL'S NARRATION, AS A PURE FUNCTION OF ITS CONFIG (night 42) — every clause is
+ * stated only when it is true (the rule at render's comment), and the whole sentence
+ * is derived from cfg alone, so a corpus test can render it headless: no DOM, no pass,
+ * no voicing in scope. render() joins the parts with " · ". */
+export function narrate(cfg) {
+  const setStrings = lowToHigh(STRING_SETS[cfg.setIndex].strings);
+  const parsed = parseFigure(cfg.figure, cfg.address, { set: setStrings });   // render's own read: "" parses to no pattern
+  const hasFig = !!parsed.pattern;
+  const figWords = hasFig
+    ? describeFigure(parsed.pattern, cfg.address, { set: setStrings }) + (parsed.source === "motion" ? "" : (cfg.address === "tones" ? " by role" : " by string"))
+    : "";
+  const bound = !(cfg.zone && cfg.zone.bind === false);
+  const parts = [`${FAMILY_LABEL[cfg.families[0]]} voicings on ${STRING_SETS[cfg.setIndex].label}`];
+  // item 1: the family's cost — a function of the family key and nothing else
+  const cost = familyCostClause(cfg.families[0]);
+  if (cost) parts.push(cost);
+  parts.push(`${PLACE_LABEL[cfg.placement]}: ${placementWords(cfg.placement, bound)}`);
+  // item 2: the Grip/Free dependency, conditional on bind. Bound (the default) the two
+  // placements reach the same grip, so the fact is stated under either; unbound, the
+  // release is real and the sentence about it is Free's (the pre-night-42 sentence, kept).
+  if (bound && (cfg.placement === "grip" || cfg.placement === "free"))
+    parts.push(placementDependency(true));
+  else if (!bound && cfg.placement === "free")
+    parts.push(placementDependency(false));
+  // the sounding rule, and the two ways to reach the silent block chord
+  if (cfg.playback === "strum")
+    parts.push(hasFig
+      ? "Movement is strum, so the figure is typed but not sounding — choose arpeggiate or both to hear it"
+      : "strum chords");
+  else
+    parts.push(hasFig
+      ? `${cfg.playback}: ${figWords}`
+      : `${cfg.playback} has no figure to sound — strum chords until one parses`);
+  // the address toggle only bites while a figure is actually sounding
+  if (hasFig && cfg.playback !== "strum")
+    parts.push(cfg.address === "tones" ? "spelled by tone role" : "spelled by string number");
+  if (cfg.guide) parts.push("guide tones lit — a neck view that dims R and 5");
+  return parts;
+}
 
 export const shapeMotion = {
   id: "shape-motion",
@@ -193,10 +280,10 @@ export const shapeMotion = {
           cfg.setIndex = v; push(); });
       seg(byId("famSeg"), allowed.map((f) => ({ value: f, label: FAMILY_LABEL[f] || f })),
         cfg.families[0], (v) => { cfg.families = [v]; push(); });
+      // rule 10: the button's title, the narration and the dependency clause are one source
+      const bound = !(cfg.zone && cfg.zone.bind === false);
       seg(byId("placeSeg"), Object.keys(PLACEMENTS).map((p) => ({ value: p, label: PLACE_LABEL[p] || p,
-        title: p === "grip" ? "one note per string, anchored to the zone"
-             : p === "free" ? "the grip chosen by smoothest voice-leading, anchor released"
-             : "free placement along the set — needs the line voicer, not wired yet" })),
+        title: placementWords(p, bound) })),
         cfg.placement, (v) => { cfg.placement = v; push(); }, (v) => v === "line");
       byId("rootsChk").checked = cfg.roots;
       byId("guideChk").checked = cfg.guide;
@@ -259,31 +346,7 @@ export const shapeMotion = {
        * plain block chord plays. Two different control states therefore reach the
        * SAME silent result, and the panel used to say neither. Every clause below
        * is stated only when it is true, so an inert control announces itself. */
-      const figWords = hasFig
-        ? describeFigure(parsed.pattern, cfg.address, { set: setStrings() }) + (parsed.source === "motion" ? "" : (cfg.address === "tones" ? " by role" : " by string"))
-        : "";
-      const parts = [`${FAMILY_LABEL[cfg.families[0]]} voicings on ${STRING_SETS[cfg.setIndex].label}`];
-      parts.push(`${PLACE_LABEL[cfg.placement]}: ${cfg.placement === "grip"
-        ? "one note per string, anchored to the zone"
-        : "the grip chosen by smoothest voice-leading, anchor released"}`);
-      // Placement = Free makes the stage's Box inert (isolation.mjs pivotW:0) —
-      // the same dependency the Box hint states, said from this side too
-      if (cfg.placement === "free")
-        parts.push("Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it");
-      // the sounding rule, and the two ways to reach the silent block chord
-      if (cfg.playback === "strum")
-        parts.push(hasFig
-          ? "Movement is strum, so the figure is typed but not sounding — choose arpeggiate or both to hear it"
-          : "strum chords");
-      else
-        parts.push(hasFig
-          ? `${cfg.playback}: ${figWords}`
-          : `${cfg.playback} has no figure to sound — strum chords until one parses`);
-      // the address toggle only bites while a figure is actually sounding
-      if (hasFig && cfg.playback !== "strum")
-        parts.push(cfg.address === "tones" ? "spelled by tone role" : "spelled by string number");
-      if (cfg.guide) parts.push("guide tones lit — a neck view that dims R and 5");
-      byId("smHint").textContent = parts.join(" · ");
+      byId("smHint").textContent = narrate(cfg).join(" · ");
 
       // every DISABLED control states why, in the panel, not only in a tooltip:
       // Arpeggiated/Both are gated on a figure (P1), and Line placement needs a

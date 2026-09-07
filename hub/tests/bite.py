@@ -117,6 +117,13 @@ def conformance():
     return sh("node", "--test", "engine/tests/host-conformance.test.mjs")
 
 
+def words():
+    """the Shape & Motion panel's WORDS suite (night 42) — the corpus pin that the family
+    clause is a pure function of the family key, and the one-source pin for the placement
+    strings; headless, seconds, the gate for a mutation of shape-motion.mjs's sentences"""
+    return sh("node", "--test", "engine/tests/shape-motion-words.test.mjs")
+
+
 def record(name, ok, detail):
     results.append((ok, name, detail))
     log_line(("  BITES    " if ok else "  NO BITE  ") + name + " — " + detail)
@@ -1327,6 +1334,98 @@ def m54_the_chromatic_approach_loses_its_shape():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutations 55–59
+# 261006 (night 42, ruling 260907): WORDS. The family says what it costs; Grip and Free
+# stop lying while bound. The licence for item 1 is thin — the clause must be a pure
+# function of the family key — so the first mutation is the slide the ruling names:
+# a fret smuggled into the sentence. The suite must fail AND name the sentence.
+def m55_the_family_clause_reads_a_fret():
+    p, original, mutated = patch("hub/modules/shape-motion.mjs",
+        "  const cost = familyCostClause(cfg.families[0]);",
+        "  const cost = familyCostClause(cfg.families[0]) && familyCostClause(cfg.families[0]) + (cfg.zone && cfg.zone.frets ? ` — this bar reached fret ${cfg.zone.frets[0]}` : \"\");")
+    try:
+        p.write_text(mutated)
+        r = words()
+        out = r.stdout + r.stderr
+        hit = "VARIED across the corpus" in out and "this bar reached fret" in out
+        record("the family clause reads a fret (the 08-21 slide) — a reporter returns",
+               r.returncode != 0 and hit,
+               "words exit %d; the corpus pin named the varying sentence: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m56_the_cost_clause_reaches_drop2():
+    p, original, mutated = patch("hub/modules/shape-motion.mjs",
+        "const FAMILY_COST = {\n  close:",
+        "const FAMILY_COST = {\n  drop2: \"drop-2 voicings reach past a hand position — that is the shape, not a fit to find\",\n  close:")
+    try:
+        p.write_text(mutated)
+        r = words()
+        hit = "drop-2 fits a position" in (r.stdout + r.stderr) or "drop-2 says nothing" in (r.stdout + r.stderr)
+        record("the cost clause is emitted for drop-2, which fits",
+               r.returncode != 0 and hit,
+               "words exit %d; the stated-only-when-true pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m57_the_bound_and_unbound_sentences_swap():
+    p, original, mutated = patch("hub/modules/shape-motion.mjs",
+        "export const placementDependency = (bound) => bound\n",
+        "export const placementDependency = (bound) => !bound\n")
+    try:
+        p.write_text(mutated)
+        r = words()
+        hit_w = "the false sentence is gone" in (r.stdout + r.stderr) or "the dependency is stated" in (r.stdout + r.stderr)
+        build()
+        g = suite()
+        hit_g = "does not say Grip and Free reach the same grip" in g.stdout or "still claims a release" in g.stdout
+        record("the bound and unbound dependency sentences swap — the panel lies again, the other way",
+               r.returncode != 0 and hit_w and g.returncode != 0 and hit_g,
+               "words exit %d (%s); suite exit %d, the artifact's narration pin bit: %s" % (r.returncode, hit_w, g.returncode, hit_g))
+    finally:
+        p.write_text(original)
+
+
+def m58_a_placement_site_drifts_from_the_source():
+    p, original, mutated = patch("hub/modules/shape-motion.mjs",
+        "        title: placementWords(p, bound) })),",
+        "        title: p === \"free\" ? \"the grip chosen by smoothest voice-leading, anchor released\" : placementWords(p, bound) })),")
+    try:
+        p.write_text(mutated)
+        r = words()
+        out = r.stdout + r.stderr
+        hit_w = "reads placementWords(p, bound)" in out or "is written ONCE" in out
+        build()
+        g = suite()
+        hit_g = "the Free button's title is not the narration's Free words" in g.stdout
+        record("the Free button's title is written by hand again — three sites, two sources",
+               r.returncode != 0 and hit_w and g.returncode != 0 and hit_g,
+               "words exit %d (%s); suite exit %d, rule-10 pin on the artifact: %s" % (r.returncode, hit_w, g.returncode, hit_g))
+    finally:
+        p.write_text(original)
+
+
+def m59_the_set_and_zone_move_and_the_clause_does_not():
+    """a POSITIVE mutation: it bites by staying GREEN. The panel's own defaults move to the
+    high set and a placed, moved zone — nothing about the family changed, so the clause
+    must not; the corpus pin must pass exactly as before."""
+    p, original, mutated = patch("hub/modules/shape-motion.mjs",
+        "    const cfg = { setIndex: 0, families:",
+        "    const cfg = { setIndex: 2, families:")
+    mutated = mutated.replace("      zone: null };", "      zone: { string: 4, frets: [6, 8, 9], bind: false } };", 1)
+    assert mutated != original and "zone: { string: 4, frets: [6, 8, 9], bind: false } };" in mutated or PREFLIGHT["on"]
+    try:
+        p.write_text(mutated)
+        r = words()
+        record("a set change, a zone move and a bind release leave the family clause byte-identical (positive: green is the bite)",
+               r.returncode == 0,
+               "words exit %d — the clause did not move with the set, the zone or the bind" % r.returncode)
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1435,7 +1534,10 @@ def main():
                m47_a_set_square_loses_its_name, m48_a_set_square_loses_its_role,
                m49_the_leftover_pass_runs_under_a_cap, m50_the_loss_goes_quiet_again,
                m51_the_reach_is_unbounded_again, m52_the_speller_keeps_the_letter_again,
-               m53_a_carried_card_drifts_in_a_hand_page, m54_the_chromatic_approach_loses_its_shape)
+               m53_a_carried_card_drifts_in_a_hand_page, m54_the_chromatic_approach_loses_its_shape,
+               m55_the_family_clause_reads_a_fret, m56_the_cost_clause_reaches_drop2,
+               m57_the_bound_and_unbound_sentences_swap, m58_a_placement_site_drifts_from_the_source,
+               m59_the_set_and_zone_move_and_the_clause_does_not)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__
