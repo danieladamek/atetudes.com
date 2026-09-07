@@ -135,6 +135,17 @@
   (`engine/`, `hub/`, the metronome and triadetudes studies, the SITELOG entry below), which are
   another session's; the two sets should land in separate commits.
 
+## 2026-09-07 — DEPLOYED: night 40 live — tetrad-voice-leading carries the cards, emitted by its generator; the generator pin in the deploy; all six checked; written from the run
+
+- record: run 34068301307 · success · commit 80ed7f9 · fetched 2026-09-07T00:04Z · 6/6 studies byte-identical · digest 126662f490ee
+- Actions run 34068301307 green on `80ed7f9` — https://github.com/danieladamek/atetudes.com/actions/runs/34068301307 (created 2026-09-06T23:57:16Z, finished 2026-09-07T00:04:00Z).
+- metronome: repo b7d02cedc3d0 · live b7d02cedc3d0 — matches.
+- modes-from-pentatonic-boxes: repo 805c4365aac7 · live 805c4365aac7 — matches.
+- multetudes: repo 0c101aa7df29 · live 0c101aa7df29 — matches.
+- tetrad-voice-leading: repo 4bf7690e75d6 · live 4bf7690e75d6 — matches.
+- tetradetudes: repo 465e4e5defdc · live 465e4e5defdc — matches.
+- triadetudes: repo 9ba42843b4d0 · live 9ba42843b4d0 — matches.
+
 ## 2026-09-06 — night 40: tetrad-voice-leading joins the family through the generator bridge; the generator-identity pin
 
 - **What:** `generators/cycles_interactive.py` calls night 39's bridge (unchanged): the page gains
