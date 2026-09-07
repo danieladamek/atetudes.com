@@ -1,3 +1,14 @@
+## 2026-09-07 — DEPLOYED: night 42 live — Tetradetudes v0.6.2 says what a family costs, and the truth about Grip and Free while bound; only tetradetudes moved; written from the run
+
+- record: run 34145341548 · success · commit f0f184f · fetched 2026-09-07T17:02Z · 6/6 studies byte-identical · digest 79a431b927e4
+- Actions run 34145341548 green on `f0f184f` — https://github.com/danieladamek/atetudes.com/actions/runs/34145341548 (created 2026-09-07T16:54:18Z, finished 2026-09-07T17:01:35Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo d8e06f4c7b19 · live d8e06f4c7b19 — matches.
+- tetrad-voice-leading: repo 160d44296961 · live 160d44296961 — matches.
+- tetradetudes: repo 800961f2b06c · live 800961f2b06c — matches.
+- triadetudes: repo 22a193c3de36 · live 22a193c3de36 — matches.
+
 ## 2026-09-07 — Night 42: Tetradetudes v0.6.2 — the Shape & Motion panel says what a family costs, and stops lying about Grip and Free while bound
 
 - **Why (ruling 260907):** close voicings on four adjacent strings are unreachable in most bars
