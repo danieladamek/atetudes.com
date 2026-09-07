@@ -222,8 +222,11 @@ export function toAtchart(doc, meta) {
       if (e.payload) {
         body.push("");
         body.push("```json");
+        // `shared` (261005): the writer's shared config vocabulary, beside its opaque data —
+        // written only when the payload carries it, so a pre-vocabulary entry serialises as it always did
         body.push(JSON.stringify({ app: e.payload.app, v: e.payload.v,
-          id: e.id, savedAt: e.savedAt, data: e.payload.data }));
+          id: e.id, savedAt: e.savedAt, data: e.payload.data,
+          ...(e.payload.shared && typeof e.payload.shared === "object" ? { shared: e.payload.shared } : {}) }));
         body.push("```");
       }
     }
@@ -307,7 +310,8 @@ export function fromAtchart(src) {
       if (env) entries.push(makeEntry({
         id: env.id, savedAt: env.savedAt ?? null,
         heading: heading === (env.savedAt || "note") ? null : heading,
-        text, payload: { app: env.app, v: env.v, data: env.data } }));
+        text, payload: { app: env.app, v: env.v, data: env.data,
+          ...(env.shared && typeof env.shared === "object" ? { shared: env.shared } : {}) } }));
       else entries.push(makeEntry({
         id: "x-" + hashStr(tail.slice(h, end).join("\n")),
         savedAt: null, heading, text, payload: null }));

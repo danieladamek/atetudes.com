@@ -540,3 +540,68 @@ for (const host of HOSTS) {
     void s;
   });
 }
+
+// ---- 261005 (night 41): SHARE WHAT YOU MAKE — the setting travels with the note ----
+import { readShared } from "../shared-config.mjs";
+const walk = (n, f) => { f(n); (n.childNodes || []).forEach((c) => walk(c, f)); };
+const findCap = (root, cap) => { let hit = null; walk(root, (n) => { if (!hit && n.attributes && n.attributes["data-cap"] === cap) hit = n; }); return hit; };
+const allText = (root) => { const out = []; walk(root, (n) => { if (n.data !== undefined) out.push(n.data); }); return out.join(" "); };
+function sharedHost(app, opts = {}) {
+  const els = makeEls(); const applied = [];
+  const surface = createNotepadSurface({
+    adapter: { app, version: 1, nouns: { item: "note", apply: "Restore" },
+      snapshot: () => opts.snapshot || { own: 1 }, apply: () => {}, summarize: () => "own summary",
+      shared: opts.shared === null ? undefined : (opts.shared || {
+        to: (d) => ({ key: "Bb", scale: "harm", bpm: 72 }),
+        canTake: (c, v) => (c === "bpm" ? true : `${app} has no ${c}`),
+        apply: (take) => applied.push(take) }) },
+    storage: memStorage(false), els, file: { title: "t", name: () => "t.atchart.md" } });
+  return { els, surface, applied };
+}
+import { emptyDoc, addEntry, toAtchart } from "../notepad.mjs";
+// a foreign file exactly as the other app's surface would have written it — through the format's own writer
+const foreignFile = (payload) => toAtchart(addEntry(emptyDoc(), { savedAt: payload.savedAt, text: "the note", heading: "a note from elsewhere",
+  payload: { app: payload.app, v: payload.v, data: payload.data, ...(payload.shared ? { shared: payload.shared } : {}) } }), { title: "t" });
+test("261005: a host that declares `shared` writes its shared form INTO the entry it saves — beside its opaque data, never inside it", () => {
+  const { els, surface } = sharedHost("writer");
+  els.pad.value = "a take"; els.pad.dispatch("input"); els.saveBtn.click();
+  const e = surface.getDoc().entries.at(-1);
+  assert.deepEqual(e.payload.data, { own: 1 }, "the opaque data is what it always was");
+  assert.deepEqual(e.payload.shared, { key: "Bb", scale: "harm", bpm: 72 });
+  assert.deepEqual(readShared(e.payload), { key: "Bb", scale: "harm", bpm: 72 });
+});
+test("261005: a host WITHOUT `shared` writes exactly what it always wrote — additive", () => {
+  const { els, surface } = sharedHost("plain", { shared: null });
+  els.pad.value = "a take"; els.pad.dispatch("input"); els.saveBtn.click();
+  assert.deepEqual(Object.keys(surface.getDoc().entries.at(-1).payload).sort(), ["app", "data", "v"], "no `shared` key at all");
+});
+test("261005: a foreign entry carrying shared settings is DESCRIBED and OFFERED — the offer names what it takes and what it withholds, and applies only on the click", () => {
+  const { els, surface, applied } = sharedHost("reader");
+  surface.importText(foreignFile({ app: "writer", v: 1, id: "w1", savedAt: "2026-10-05T00:00:00.000Z", data: { own: 9 }, shared: { key: "Eb", scale: "mel", progression: "sixths", bpm: 96, meter: 3 } }));
+  surface.renderRows();
+  const row = els.list.childNodes[0];
+  assert.match(allText(row), /writer · v1 — Eb melodic minor · Cycling 6ths · 96 bpm · 3\/4 \(its own settings carried untouched\)/, "the foreign row reads the family's sentence");
+  const offer = findCap(row, "apply-shared");
+  assert.ok(offer, "an offer button");
+  assert.equal(offer.textContent, "apply the bpm from this note");
+  assert.equal(findCap(row, "withheld").textContent,
+    "not offered: key — reader has no key; scale — reader has no scale; progression — reader has no progression; meter — reader has no meter");
+  assert.deepEqual(applied, [], "opening the note applied NOTHING");
+  offer.click();
+  assert.deepEqual(applied, [{ bpm: 96 }], "the click applied exactly what was offered");
+  assert.deepEqual(surface.getDoc().entries.at(-1).payload.data, { own: 9 }, "the foreign data is untouched");
+});
+test("261005: a foreign entry from BEFORE the vocabulary is inert exactly as it was — no offer, the standing line", () => {
+  const { els, surface } = sharedHost("reader");
+  surface.importText(foreignFile({ app: "writer", v: 1, id: "w0", savedAt: "2026-08-01T00:00:00.000Z", data: { key: "C" } }));
+  surface.renderRows();
+  const row = els.list.childNodes[0];
+  assert.ok(!findCap(row, "apply-shared"), "nothing to offer");
+  assert.match(allText(row), /writer · v1 \(another app's settings — carried untouched\)/);
+});
+test("261005: an own-app entry keeps Restore and gains nothing — the shared form is for OTHER readers", () => {
+  const { els, surface } = sharedHost("writer");
+  els.pad.value = "mine"; els.pad.dispatch("input"); els.saveBtn.click(); surface.renderRows();
+  const row = els.list.childNodes[0];
+  assert.ok(findCap(row, "apply") && !findCap(row, "apply-shared"));
+});

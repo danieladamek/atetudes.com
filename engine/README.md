@@ -136,6 +136,10 @@ engine/
 ├── notepad-surface.mjs  the notepad's shared SURFACE: declared capabilities,
 │                        canonical save/clear semantics, import/export/clipboard,
 │                        storage-denied, row rendering — hosts place, never choose
+├── shared-config.mjs    the family's SHARED CONFIG vocabulary (key · scale · progression ·
+│                        start-on · string-set · bpm · meter): what a note carries beside its
+│                        host's own settings and what another host may take from it — read,
+│                        check, describe, offer; additive, derived, never restated (pure)
 ├── structures.mjs       the palette's structure catalog: degree patterns resolved
 │                        per key through resolveRoman, chart bodies canonicalized
 │                        through atchart.mjs — greped for literal progressions (pure)

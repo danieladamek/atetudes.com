@@ -107,6 +107,25 @@ test("hub: every door builds, and the artifact carries exactly its reach-set", a
   }
 });
 
+test("hub: a door's shared-config declaration reaches the artifact — the notepad card reads it from DOOR at runtime", async () => {
+  // 261005 (night 41): the card's canTake reads ctx.door.shared. The declaration lives on the
+  // door file; if the DOOR literal the build writes does not carry it, every concept is
+  // refused as "<door> has no key" and nothing travels — found by the served round trip,
+  // not by a suite, because the card's unit test handed it a door object directly.
+  for (const d of listDoors()) {
+    const door = (await import(`../doors/${d}.door.mjs`)).default;
+    if (door.lock.notepad) assert.ok(door.shared && Array.isArray(door.shared.carries) && door.shared.carries.length,
+      `[${d}] a door whose lock reaches the notepad declares shared: { carries, stringSet? } — its notes' settings do not travel otherwise`);
+    else assert.equal(door.shared, undefined, `[${d}] a door without the notepad has nothing to share`);
+    const html = readFileSync(join(HUB, "build", d + ".html"), "utf8");
+    const m = html.match(/^const DOOR = (\{.*\});$/m);
+    assert.ok(m, `[${d}] the built file carries the DOOR literal`);
+    const lit = JSON.parse(m[1]);
+    assert.deepEqual(lit.shared, door.shared || null, `[${d}] DOOR.shared in the artifact is the door's declaration`);
+    assert.deepEqual(Object.keys(lit).sort(), ["id", "lock", "present", "shared"]);
+  }
+});
+
 test("hub: the doors differ — a gate where both doors ship the same thing proves nothing", async () => {
   const sizes = [];
   for (const d of listDoors()) {

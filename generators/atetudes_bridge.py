@@ -157,6 +157,19 @@ def metronome_guarantee():
 # the family's page grammar for a page WITHOUT the shell — the card styles above name only their
 # own tokens; these are the rules the cards sit in (.card/.transport/.bpmrow/.row2/.chk/…), taken
 # from the appliance page (static/studies/metronome/study.html), the family's own metronome look
+def shell_css():
+    """the door SHELL's tokens and the one shell rule the carried cards rely on — sliced from
+    hub/shell.mjs, never restated. 261005: the cards' styles say var(--line), var(--red),
+    var(--card), var(--edge) and size their messages through the shell's `.hint`; a page that
+    carries the cards without these renders borderless buttons, a black Delete and a 16px
+    import message (seen in the night-41 renders). host-conformance computes the token list
+    from the carried styles and asserts each resolves on the page."""
+    src = (HUB / "shell.mjs").read_text()
+    root = re.search(r"^:root\{[\s\S]*?^\}", src, re.M).group(0)
+    hint = re.search(r"^\.hint\{[^}]*\}$", src, re.M).group(0)
+    return root + "\n" + hint
+
+
 FAMILY_GRAMMAR_CSS = """
   .cards{display:flex;flex-wrap:wrap;gap:12px;margin:14px auto 12px;width:min(1040px, 94vw)}
   .card{background:#fff;border:1px solid #D8D8DC;border-radius:10px;padding:12px 14px;flex:1 1 300px;min-width:280px;position:relative;text-align:left}

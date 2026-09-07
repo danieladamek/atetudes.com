@@ -353,6 +353,55 @@ test("§4.3 card carriers: a hand-authored page that carries a hub card carries 
   assert.ok(expected >= 4 && pinned === expected, `the pin must actually have run ${expected} times (detected carriers × cards), ran ${pinned}`);
 });
 
+// ================= the tokens a carried style refers to must RESOLVE on the carrier (261005) =================
+// Seen in the night-41 renders: the two bridge pages carry notepad-card's styles verbatim, but
+// `border:1px solid var(--line)` and `color:var(--red)` resolved to nothing there — the door
+// gets those tokens from hub/shell.mjs's :root, which the bridge had not carried. The list of
+// tokens is COMPUTED from the styles each page carries (rule 6), never maintained by hand.
+// The same for the shell's `.hint` rule: the card's import message is class "hint", which the
+// shell sizes at 11.5px and the bridge pages left at the body's 16px.
+test("§4.3 card carriers: every var(--token) the carried card styles reference is defined on the page, and the shell's .hint rule is carried", () => {
+  const shell = readFileSync(join(here, "..", "..", "hub", "shell.mjs"), "utf8");
+  const hintRule = shell.match(/^\.hint\{[^}]*\}$/m)[0];
+  let checked = 0;
+  for (const name of GRAMMAR_HOSTS) {
+    const page = studyOf(name);
+    const styles = [notepadCard.styles, metronomeCard.styles].join("\n");
+    const tokens = [...new Set([...styles.matchAll(/var\((--[\w-]+)\)/g)].map((m) => m[1]))].sort();
+    assert.ok(tokens.length >= 4, `the card styles reference tokens (${tokens.length})`);
+    for (const t of tokens) {
+      assert.ok(new RegExp(`${t}\\s*:`).test(page), `[${name}] ${t} is referenced by a carried card style but never defined on the page`);
+      checked++;
+    }
+    assert.ok(page.includes(hintRule), `[${name}] carries the shell's .hint rule verbatim: ${hintRule}`);
+  }
+  assert.ok(checked >= 4 * GRAMMAR_HOSTS.length, `not vacuous: ${checked} token checks`);
+});
+
+// ================= SHARE WHAT YOU MAKE (261005, night 41): every host maps to the ONE vocabulary =================
+// engine/shared-config.mjs is the family's shared config vocabulary — one definition. Each
+// host declares `shared: { to, canTake, apply }` on its adapter; the surface writes the
+// writer's form into every entry and offers a foreign entry's form to the reader. This
+// asserts, on the ARTIFACT, that every notepad host declares the map: the hand-authored
+// and generator-emitted pages in their adapter literal, the doors in the card they share.
+// A host without the declaration would still work (additive) — it would simply send notes
+// whose settings never travel, which is the gap the item closes; so it is asserted.
+import { CONCEPTS, describeShared, offerOf, readShared } from "../shared-config.mjs";
+test("§4.3 shared: every notepad host declares its map to the family's shared vocabulary — on the artifact", () => {
+  for (const host of NOTEPAD_HOSTS) {
+    const preHub = CENSUS.get(host.name).source === "detected";
+    const src = preHub ? studyOf(host.name) : readFileSync(join(here, "..", "..", "hub", "modules", "notepad-card.mjs"), "utf8");
+    assert.ok(/shared:\s*\{[\s\S]{0,400}?to:/.test(src) && /canTake/.test(src) && /apply/.test(src),
+      `[${host.name}] the adapter must declare shared: { to, canTake, apply } — its notes' settings do not travel otherwise`);
+    if (preHub) assert.ok(src.includes("/* shared-config.mjs"), `[${host.name}] must carry engine/shared-config.mjs inline (the census detects it)`);
+  }
+  assert.deepEqual(carriersOf("shared-config"), carriersOf("notepad-surface"), "every carrier of the surface carries the vocabulary it reads");
+  // the vocabulary is one: no host restates a concept's label or values
+  const labels = CONCEPTS.map((c) => describeShared({ [c]: c === "stringSet" ? [6, 5, 4, 3] : c === "startOn" ? 0 : c === "bpm" ? 72 : c === "meter" ? 4 : c === "scale" ? "major" : c === "progression" ? "fourths" : "C" }));
+  assert.equal(labels.length, 7);
+  assert.equal(offerOf(readShared({ shared: { bpm: 72 } }), { canTake: () => true }).wording, "apply the bpm from this note");
+});
+
 // ================= metronome.mjs: widened to the same shape =================
 // The anti-drift pin (metronome.test.mjs) already asserts CODE identity per
 // carrier; this asserts the RENDERED control inventory and the shared-

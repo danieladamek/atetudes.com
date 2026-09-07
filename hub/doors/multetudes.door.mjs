@@ -43,6 +43,9 @@
  */
 export default {
   id: "multetudes",
+  /* SHARED SETTINGS (261005): what this door can take from another app's note — the card
+   * derives the offer from this and the vocabulary; a set of any size 1–6 is a real set here */
+  shared: { carries: ["key", "scale", "progression", "startOn", "stringSet", "bpm", "meter"], stringSet: { min: 1 } },
   lock: {
     field: true,
     notepad: true,
@@ -157,7 +160,10 @@ export default {
      * chromatic note as its fewest-accidental neighbour's alteration (one
      * double accidental across the app's 432 spellings, was 55); an approach
      * must be reachable — within the field's largest scale step of the window. */
-    blurb: "one tool that holds many études · v0.5.6",
+    /* v0.5.7 (261005, night 41): SHARE WHAT YOU MAKE — a note carries the family's shared
+     * config beside its own settings; a foreign note is OFFERED here (any set of one or more
+     * strings), applied only by the click. */
+    blurb: "one tool that holds many études · v0.5.7",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

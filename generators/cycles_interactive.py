@@ -234,6 +234,8 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta property="og:description" content="Four-note chords connected by the smallest possible moves. See it on the neck and the keyboard, in any key and scale — and hear it.">
 <style>
   :root { --ink:#212126; --gray:#73737A; --light:#CCCCCE; }
+  /* ===== hub/shell.mjs · the door shell's tokens and its .hint rule, VERBATIM (the bridge) ===== */
+__SHELL_CSS__
   body { margin:0; background:#F6F6F8; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); }
   header { text-align:center; padding:34px 12px 2px; }
   header h1 { margin:0; font-size:30px; letter-spacing:-0.4px; }
@@ -737,7 +739,35 @@ const HOST = { app: "tetrad-voice-leading", version: 1,
     if (Number.isInteger(data.step)) setStep(data.step, true);   // then the saved position
   },
   summarize: (d) => !d || typeof d !== "object" ? "no study attached"
-    : `${DATA.keys[d.key] ?? "?"} ${(DATA.scales[d.scale] || {}).name ?? ""} · ${(DATA.engines[d.eng] || {}).name ?? ""} · ${(DATA.sets[d.set] || {}).label ?? ""} · bottom ${DATA.bottoms[d.bot] ?? "?"} · step ${(d.step ?? 0) + 1}` };
+    : `${DATA.keys[d.key] ?? "?"} ${(DATA.scales[d.scale] || {}).name ?? ""} · ${(DATA.engines[d.eng] || {}).name ?? ""} · ${(DATA.sets[d.set] || {}).label ?? ""} · bottom ${DATA.bottoms[d.bot] ?? "?"} · step ${(d.step ?? 0) + 1}`,
+  /* SHARE WHAT YOU MAKE (261005, night 41): this study's shared form — its key by name, its
+     scale and cycle in the family's words, its four-string set as real string numbers. It steps
+     at its own pace (no tempo, no meter) and starts from its own first chord (no start-on). */
+  shared: {
+    to: (d) => {
+      const SC = { M: "major", HM: "harm", MM: "mel" }, EN = { S: "scale", "4": "fourths", "5": "fifths", "6": "sixths", "3": "thirds" };
+      const off = (DATA.sets[d.set] || {}).offset;
+      return { key: DATA.keys[d.key], scale: SC[(DATA.scales[d.scale] || {}).key], progression: EN[(DATA.engines[d.eng] || {}).key],
+        ...(Number.isInteger(off) ? { stringSet: [6 - off, 5 - off, 4 - off, 3 - off] } : {}) };
+    },
+    canTake: (concept, value) => {
+      const { SHARED, pcOfKey } = M_SHARED_CONFIG;
+      if (concept === "key") return DATA.keys.some(k => ((pcOfKey(k) % 12) + 12) % 12 === ((pcOfKey(value) % 12) + 12) % 12) ? true : "no pass is derived in that key";
+      if (concept === "scale" || concept === "progression") return true;
+      if (concept === "stringSet") return value.length === 4 && DATA.sets.some(s => [6 - s.offset, 5 - s.offset, 4 - s.offset, 3 - s.offset].sort().join() === [...value].sort().join()) ? true : "this study's groups are four adjacent strings; this set has " + value.length;
+      if (concept === "startOn") return "this study starts from its own first chord";
+      return "this study steps at its own pace — the metronome's " + SHARED[concept].label + " is not saved here";
+    },
+    apply: (take) => {
+      const { pcOfKey } = M_SHARED_CONFIG;
+      const SC = { major: "M", harm: "HM", mel: "MM" }, EN = { scale: "S", fourths: "4", fifths: "5", sixths: "6", thirds: "3" };
+      if ("key" in take) { const i = DATA.keys.findIndex(k => ((pcOfKey(k) % 12) + 12) % 12 === ((pcOfKey(take.key) % 12) + 12) % 12); if (i >= 0) state.key = i; }
+      if ("scale" in take) { const i = DATA.scales.findIndex(s => s.key === SC[take.scale]); if (i >= 0) state.scale = i; }
+      if ("progression" in take) { const i = DATA.engines.findIndex(e => e.key === EN[take.progression]); if (i >= 0) state.eng = i; }
+      if ("stringSet" in take) { const i = DATA.sets.findIndex(s => [6 - s.offset, 5 - s.offset, 4 - s.offset, 3 - s.offset].sort().join() === [...take.stringSet].sort().join()); if (i >= 0) state.set = i; }
+      document.querySelectorAll("#engSeg button").forEach((x, j) => x.classList.toggle("on", j === state.eng));
+      refresh();
+    } } };
 const NOTE = M_NOTEPAD_SURFACE.createNotepadSurface({
   adapter: HOST,
   storage: { load: () => localStorage.getItem(NP_KEY), save: (str) => localStorage.setItem(NP_KEY, str) },
@@ -769,6 +799,7 @@ const NOTE = M_NOTEPAD_SURFACE.createNotepadSurface({
 
 html = (TEMPLATE
         .replace("__GRAMMAR_CSS__", bridge.FAMILY_GRAMMAR_CSS.strip("\n"))
+        .replace("__SHELL_CSS__", bridge.shell_css())
         .replace("__NOTEPAD_CSS__", bridge.card_styles("notepad-card").strip("\n"))
         .replace("__METRONOME_CSS__", bridge.card_styles("metronome-card").strip("\n"))
         .replace("__METRONOME_ROWS__", bridge.metronome_rows())

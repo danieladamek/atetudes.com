@@ -5484,6 +5484,57 @@ console.log(JSON.stringify(out));
         n_ex_rules = len({r for r in seen})
         print(f"  {tag} axe @{aw}: {res['passes']} rule(s) pass · {n_ex_rules} rule(s) EXEMPT ({exempt_hits} node(s), named 260923) · {len(failed)} failed")
     page.set_viewport_size({"width": 1280, "height": 900})
+
+    # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
+    # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
+    # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.
+    # The door must OFFER what it can take, NAME what it withholds with the reason, and apply
+    # only on the click — the board changing to the note's key. Keyed on the door, not on a
+    # control id; the door's own declaration (DOOR.shared) is what the card reads at runtime,
+    # the very seam that had been dropped by the build (found by the served round trip).
+    # LAST in the exercise: applying a note moves the door's state (multetudes' progression
+    # source becomes the cycle) and every block above assumes the boot state — the first
+    # placement, before the orphan check, hid #pgCustom from a later fill and unmatched #pgNote.pg-err.
+    if door_id in ("multetudes", "tetradetudes"):
+        check("histList" in r["controlsPresent"],
+              f"{tag} the {door_id} door has no notepad — histList is not in the partition")
+        key_sel = "#hcKey" if door_id == "multetudes" else "#keySel"
+        key_before = page.input_value(key_sel)
+        foreign_note = (REPO / "hub/tests/oracles/triadetudes-night41.atchart.md").read_text()
+        page.evaluate("""(txt) => {
+          const inp = document.querySelector('#importFile');
+          const f = new File([txt], 'triadetudes-night41.atchart.md', { type: 'text/markdown' });
+          const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files;
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+        }""", foreign_note)
+        page.wait_for_timeout(400)
+        offer_btn = page.query_selector('#histList .hist [data-cap="apply-shared"]')
+        check(offer_btn is not None, f"{tag} a foreign note carrying shared settings raised no offer (data-cap=apply-shared)")
+        offer_text = offer_btn.inner_text() if offer_btn else ""
+        check(offer_text.startswith("apply the ") and "from this note" in offer_text and "key" in offer_text,
+              f"{tag} the offer does not name what it takes: {offer_text!r}")
+        withheld = page.query_selector('#histList .hist [data-cap="withheld"]')
+        withheld_text = withheld.inner_text() if withheld is not None else None   # (an f-string evaluates eagerly — the gate's own first run crashed here on None)
+        if door_id == "tetradetudes":
+            # a 3-string set offered to a 4-string door: the PARTIAL is named, with the reason
+            check(withheld_text is not None and "string set" in withheld_text and "sets of 4 strings" in withheld_text,
+                  f"{tag} the partial is not named: {withheld_text!r}")
+            check("string set" not in offer_text, f"{tag} the withheld concept is still in the offer: {offer_text!r}")
+        else:
+            check(withheld_text is None, f"{tag} multetudes takes every concept, yet something is withheld: {withheld_text!r}")
+            check("string set" in offer_text, f"{tag} multetudes (min 1 string) should take the 3-string set: {offer_text!r}")
+        # nothing applied yet — APPLYING IS A CLICK
+        check(page.input_value(key_sel) == key_before,
+              f"{tag} importing alone changed the key ({key_before} -> {page.input_value(key_sel)}) — the offer must wait for the click")
+        if offer_btn is None:
+            raise AssertionError(f"{tag} no offer to click — the block cannot continue")
+        offer_btn.click(); page.wait_for_timeout(500)
+        key_after = page.input_value(key_sel)
+        check(key_after == "Eb", f"{tag} the click did not bring the note's key: {key_before} -> {key_after}")
+        check(page.inner_text("#bpmVal").strip() == "84", f"{tag} the click did not bring the note's bpm: {page.inner_text('#bpmVal')!r}")
+        check(not errors, f"{tag} the offer raised page errors: {errors[:2]}")
+        page.set_viewport_size({"width": 1280, "height": 900})
+
     ctx.close()
     print(f"  {tag} {len(r['controlsPresent'])}/{len(r['controlsAbsent'])} controls "
           f"present/locked · {len(r['filesOut'])} file(s) pruned · "

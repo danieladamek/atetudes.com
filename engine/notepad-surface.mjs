@@ -51,7 +51,18 @@
  * runs headless against a stub (the both-hosts save-clears test lives there).
  *
  * createNotepadSurface({
- *   adapter:  {app, version, snapshot(), apply(data), summarize(data)}
+ *   adapter:  {app, version, snapshot(), apply(data), summarize(data),
+ *              shared?: { to(data) → the family's shared form of this data,
+ *                         canTake(concept, value) → true | "why not",
+ *                         apply(take) }}
+ *   SHARED SETTINGS (261005, night 41 — "share what you make"): the vocabulary
+ *   is engine/shared-config.mjs's, ONE definition. A host that declares
+ *   `shared` has its shared form WRITTEN INTO every entry it saves
+ *   (payload.shared, beside its opaque data), so any reader can describe and
+ *   OFFER a foreign entry's settings without knowing the writer. The offer is
+ *   a click, never automatic; a partial one names what it takes and why the
+ *   rest is withheld; a host without `shared` reads and writes exactly as
+ *   before; a foreign payload's data stays carried untouched.
  *   storage:  {load():string|null, save(string):void}   // thin; MAY THROW —
  *             denial is handled (and messaged) here, not in the host
  *   migrate:  () => doc|null      // host's v1 shape → model, once, no v2 yet
@@ -76,6 +87,7 @@
  */
 
 import { emptyDoc, makeEntry, addEntry, deleteEntry, toAtchart, fromAtchart } from "./notepad.mjs";
+import { readShared, checkShared, describeShared, offerOf } from "./shared-config.mjs";
 import { parseMarkdown, renderTo } from "./markdown.mjs";
 import { createPalette } from "./palette.mjs";
 
@@ -188,8 +200,13 @@ export function createNotepadSurface(opts) {
   function save() {
     clearConfirmShow(false);
     const text = String(els.pad.value ?? "").trim();
+    const data = adapter.snapshot();
+    // the writer's shared form rides the entry (261005) — checked at the vocabulary, loud on a bad mapping
+    const shared = adapter.shared && typeof adapter.shared.to === "function"
+      ? checkShared(adapter.shared.to(data) || {}, adapter.app) : null;
     doc = addEntry(doc, { savedAt: new Date().toISOString(), text, heading: nameNow(),
-      payload: { app: adapter.app, v: adapter.version, data: adapter.snapshot() } });
+      payload: { app: adapter.app, v: adapter.version, data,
+        ...(shared && Object.keys(shared).length ? { shared } : {}) } });
     doc = { ...doc, pad: "", base: "", title: "" };   // the pad empties: the title returns to the default
     els.pad.value = "";
     paintTitle();
@@ -387,9 +404,16 @@ export function createNotepadSurface(opts) {
       const hd = docm.createElement("div"); hd.className = "hd";
       const b = docm.createElement("b");
       const p = en.payload;
+      /* a FOREIGN entry (261005): its shared settings, when it carries them, read in the
+       * family's own sentence; an entry from before the vocabulary reads as it always did */
+      const foreign = p && p.app !== adapter.app;
+      const sharedOf = foreign ? readShared(p) : {};
+      const sharedSummary = describeShared(sharedOf);
       const summary = !p ? "note" :
         p.app === adapter.app ? adapter.summarize(p.data)
-        : p.app + " · v" + p.v + " (another app's settings — carried untouched)";
+        : p.app + " · v" + p.v + (sharedSummary
+          ? " — " + sharedSummary + " (its own settings carried untouched)"
+          : " (another app's settings — carried untouched)");
       /* v0.9's own row shape for a NAMED entry (260916, item 2b): the name
        * leads in bold, the derived summary follows on its own line — an
        * unnamed entry reads exactly as it always has */
@@ -408,6 +432,27 @@ export function createNotepadSurface(opts) {
         div.appendChild(tx);
       }
       const acts = docm.createElement("div"); acts.className = "acts";
+      let withheld = null;
+      /* THE OFFER (261005): a foreign entry that carries shared settings is OFFERED to this
+       * host — what it can take, named; what it cannot, named with the reason — and applied
+       * only by the click. adapter.shared.canTake decides per concept AND value. */
+      if (foreign && Object.keys(sharedOf).length) {
+        const offer = offerOf(sharedOf, adapter.shared && typeof adapter.shared.canTake === "function" ? adapter.shared : null);
+        if (offer.wording && adapter.shared && typeof adapter.shared.apply === "function") {
+          const ob = docm.createElement("button"); ob.textContent = offer.wording;
+          ob.setAttribute("data-cap", "apply-shared");
+          ob.title = offer.withheldWording || "every setting this note carries applies here";
+          ob.addEventListener("click", () => { adapter.shared.apply({ ...offer.take }); onChange(); onApplied(); });
+          acts.appendChild(ob);
+        }
+        /* the withheld line sits UNDER the actions, not in them: seen in the served render
+         * (261005) — as an inline span in the flex row it squeezed the offer button to a
+         * one-word-per-line column beside the reasons. It is the summary's register (.sum). */
+        if (offer.withheldWording) {
+          withheld = docm.createElement("div"); withheld.className = "sum"; withheld.setAttribute("data-cap", "withheld");
+          withheld.textContent = offer.withheldWording;
+        }
+      }
       /* the row's controls carry data-cap ROLES (rule 12): a harness that
        * reads "Restore étude" or "Delete" off a button is reading a word
        * the adapter or a redesign may change tomorrow */
@@ -451,6 +496,7 @@ export function createNotepadSurface(opts) {
       acts.appendChild(db);
       acts.appendChild(emsg);
       div.appendChild(acts);
+      if (withheld) div.appendChild(withheld);
       wrap.appendChild(div);
     });
   }

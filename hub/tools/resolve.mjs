@@ -483,6 +483,7 @@ export async function resolveDoor(doorId) {
     door: doorId,
     lock: door.lock,
     present: door.present,
+    shared: door.shared || null,   // 261005: the shared-config declaration — travels to the DOOR literal, the card reads it at runtime
     rows,
     seats,
     modulesIn: roots.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,

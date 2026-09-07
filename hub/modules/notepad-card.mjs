@@ -31,6 +31,7 @@
 import { createNotepadSurface } from "../../engine/notepad-surface.mjs";
 import { fromTriadetudesV1 } from "../../engine/notepad.mjs";
 import { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } from "../bus.mjs";
+import { SHARED, pcOfKey } from "../../engine/shared-config.mjs";
 
 export const notepadCard = {
   id: "notepad-card",
@@ -173,9 +174,9 @@ export const notepadCard = {
      * harmony panel, Shape & Motion, and the clock's tempo. This is what an
      * entry snapshots. Nothing here is read from another module. */
     let cfg = {};
-    let bpm = null;
+    let bpm = null, meter = null;
     listen(d, CONFIG_CHANGED, (m) => { if (m) cfg = { ...cfg, ...m }; });
-    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; });
+    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; if (m && typeof m.meter === "number") meter = m.meter; });
 
     const view = d.defaultView;
     const storage = {
@@ -244,7 +245,7 @@ export const notepadCard = {
         /* v0.9's wording, adopted 260911 (item 1 / D12): "Save note", not
          * "Save entry" — the label derives from this noun, never hand-set */
         nouns: { item: "note", apply: "Restore étude" },
-        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}) }),
+        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {
@@ -252,8 +253,53 @@ export const notepadCard = {
           const { bpm: savedBpm, ...rest } = data;
           announce(d, CONFIG_CHANGED, rest);
           if (typeof savedBpm === "number") announce(d, CLOCK, { bpm: savedBpm });
+          if (typeof data.meter === "number") announce(d, CLOCK, { meter: data.meter });
         },
         summarize,
+        /* SHARE WHAT YOU MAKE (261005, night 41): this door's map of its own state to the
+         * family's shared vocabulary (engine/shared-config.mjs — the one definition), and what
+         * it can take back. The door DECLARES what it carries (door.shared); the card derives
+         * the rest: nothing is typed here that the door and the vocabulary do not state.
+         *   to       the announced configuration → the shared form (progression only when the
+         *            source is a cycle; strings as the set's real string numbers)
+         *   canTake  per concept AND value, against the door's declaration
+         *   apply    ANNOUNCE the taken concepts — the owners re-render from the message,
+         *            exactly as Restore does; the tempo and meter go to the clock owner */
+        shared: {
+          to: (c) => {
+            const out = {};
+            if (typeof c.key === "string") out.key = c.key;
+            if (c.scale in SHARED.scale.values) out.scale = c.scale;
+            if ((c.source === undefined || c.source === "cycle") && c.cycle in SHARED.progression.values) out.progression = c.cycle;
+            const st = Number.isInteger(c.start) ? c.start : c.startDegree;
+            if (Number.isInteger(st)) out.startOn = st;
+            if (Array.isArray(c.strings) && c.strings.length) out.stringSet = [...c.strings];
+            if (typeof c.bpm === "number") out.bpm = c.bpm;
+            if (typeof c.meter === "number") out.meter = c.meter;
+            return out;
+          },
+          canTake: (concept, value) => {
+            const decl = (ctx.door.shared || {});
+            if (!decl.carries || !decl.carries.includes(concept)) return `${doorId} has no ${SHARED[concept].label}`;
+            if (concept === "stringSet" && decl.stringSet) {
+              const n = value.length;
+              if (decl.stringSet.size && n !== decl.stringSet.size) return `${doorId} works in sets of ${decl.stringSet.size} strings; this set has ${n}`;
+              if (decl.stringSet.min && n < decl.stringSet.min) return `${doorId} needs at least ${decl.stringSet.min} string${decl.stringSet.min === 1 ? "" : "s"}; this set has ${n}`;
+            }
+            return true;
+          },
+          apply: (take) => {
+            const m = {};
+            if ("key" in take) m.key = take.key;
+            if ("scale" in take) m.scale = take.scale;
+            if ("progression" in take) { m.source = "cycle"; m.cycle = take.progression; }
+            if ("startOn" in take) { m.start = take.startOn; m.startDegree = take.startOn; }
+            if ("stringSet" in take) m.strings = [...take.stringSet];
+            if (Object.keys(m).length) announce(d, CONFIG_CHANGED, m);
+            if ("bpm" in take) announce(d, CLOCK, { bpm: take.bpm });
+            if ("meter" in take) announce(d, CLOCK, { meter: take.meter });
+          },
+        },
       },
       storage,
       /* the shared schema is a fact: a Triadetudes v1 log imports through the

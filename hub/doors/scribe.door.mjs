@@ -2,6 +2,9 @@
 export default {
   id: "scribe",
   lock: { notepad: true },
+  /* 261005 (night 41): what a note written here carries beside its own settings, and what
+   * this door may take from a foreign note — the clock's two concepts, as the metronome. */
+  shared: { carries: ["bpm", "meter"] },
   present: {
     title: "Scribe",
     /* v0.4.1 (260916, night 21): carried along — the notepad surface moved

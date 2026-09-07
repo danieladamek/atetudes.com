@@ -1,3 +1,32 @@
+## 2026-09-06 — Night 41: SHARE WHAT YOU MAKE — every note carries the family's shared config; a foreign note is offered, and applied by a click
+
+- **What:** `engine/shared-config.mjs` is the one definition of the seven concepts every study
+  genuinely has — key · scale · progression · start-on · string set · bpm · meter. A note saved
+  in any of the six studies now carries the writer's shared form beside its own settings
+  (`shared` next to `data` in the entry's JSON line; `engine/notepad.mjs`). Opened in another
+  study, the row reads the shared summary ("triadetudes · v1 — Eb harmonic minor · Cycling 6ths ·
+  start on III · strings 4-3-2 · 84 bpm · 4/4 — its own settings carried untouched") and raises an
+  OFFER naming what this study takes ("apply the key, scale, progression, start-on, bpm and meter
+  from this note"); what it cannot take is named under the row with the reason ("not offered:
+  string set — tetradetudes works in sets of 4 strings; this set has 3"). Nothing applies until
+  the click. Files from before tonight load, summarise and restore exactly as before.
+- **Each study's map:** multetudes takes all seven (any set of one or more strings);
+  tetradetudes all seven (four-string sets); triadetudes all seven (4ths/6ths/3rds, three
+  adjacent strings); the metronome bpm and meter; modes-from-pentatonic-boxes key and bpm (major
+  keys only — the modes are the boxes); tetrad-voice-leading key, scale, progression and
+  four-adjacent string sets (it steps at its own pace — bpm and meter are not its).
+- **Found by the served round trip, pinned:** the door build had not carried the door's
+  declaration into the artifact (`DOOR.shared`; `hub/tests/door_build.test.mjs`); the two
+  generator pages had carried the notepad card's styles without the shell's tokens since nights
+  39/40 — borderless buttons, a black Delete, a 16px import message — now carried through the
+  bridge (`bridge.shell_css()`), re-emitted byte-identical, asserted by host-conformance.
+- **Versions:** metronome v1.5.1 · triadetudes v0.9.1 · tetradetudes v0.6.1 · multetudes v0.5.7;
+  the two generator pages re-emitted from their generators (generator identity green).
+- **Verified:** engine 645/645, hub 11/11, the door gate with a new offer block on both doors,
+  the bite chain, hugo clean, check_site clean; rendered in Chromium at 1280 and 390 on a served
+  build, all six pages, zero console errors, and looked at (`notes/working/shots-261005/`).
+- Report: `notes/working/Multetudes build run 261005.md`.
+
 ## 2026-09-05 — DEPLOYED: the new landing copy live — Interactive Fretboard Logic, the site description aligned; no study moved; all six checked; written from the run
 
 - record: run 33994613898 · success · commit beed84f · fetched 2026-09-05T22:07Z · 6/6 studies byte-identical · digest 46f30c1e36b1

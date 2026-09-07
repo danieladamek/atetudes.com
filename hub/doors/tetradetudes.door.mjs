@@ -31,6 +31,9 @@
  */
 export default {
   id: "tetradetudes",
+  /* SHARED SETTINGS (261005): this door's sets are four strings (STRING_SETS) — a
+   * three-string set from triadetudes is named as withheld, never guessed at */
+  shared: { carries: ["key", "scale", "progression", "startOn", "stringSet", "bpm", "meter"], stringSet: { size: 4 } },
   lock: {
     material: "tetrad",
     notepad: true,
@@ -99,7 +102,10 @@ export default {
     /* v0.6.0 (261002, night 38): ONE ADDRESS FAMILY — the figure's pattern address is
      * real string numbers (multetudes' own), slots retired to a saved-étude alias; a set
      * change refuses a stale figure by name and OFFERS the shift. Multetudes unmoved. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.0",
+    /* v0.6.1 (261005, night 41): SHARE WHAT YOU MAKE — a note carries the family's shared
+     * config (key · scale · progression · start-on · string set · bpm · meter) beside its own
+     * settings; a foreign note is OFFERED here (four-string sets only — a partial is named). */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.1",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

@@ -293,7 +293,9 @@ export const shapeMotion = {
       why.push("“Line” placement is greyed because it needs the line voicer the pass doesn’t build yet.");
       byId("smWhy").textContent = why.join(" ");
     };
-    const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
+    /* the set's STRINGS ride every announcement (261005) — derived from setIndex, so a reader
+     * that speaks strings (the shared vocabulary, multetudes' notes) sees the real set */
+    const push = () => { render(); announce(d, CONFIG_CHANGED, { ...cfg, strings: [...STRING_SETS[cfg.setIndex].strings] }); };
 
     /* adopt this panel's own fields from any announcement (a restore carries
      * them), without re-announcing — see the harmony panel's note */
@@ -318,6 +320,13 @@ export const shapeMotion = {
         m = migrated;
         d.defaultView.setTimeout(() => announce(d, CONFIG_CHANGED, { address: cfg.address, figure: cfg.figure }), 0);
       } else if ("figure" in m || "address" in m) cfg.figureUnresolved = false;
+      /* a message naming STRINGS (a shared apply, or multetudes' own key) lands on the set
+       * that holds exactly those strings — derived, never guessed; no match, no change */
+      if (Array.isArray(m.strings) && !("setIndex" in m)) {
+        const want = [...m.strings].sort().join();
+        const idx = STRING_SETS.findIndex((s) => [...s.strings].sort().join() === want);
+        if (idx >= 0 && idx !== cfg.setIndex) { m = { ...m, setIndex: idx }; }
+      }
       for (const k of MINE) if (k in m && JSON.stringify(m[k]) !== JSON.stringify(cfg[k])) {
         /* a restored pre-260913 étude says playback "block" — the alias map
          * is the one place the old word is known */

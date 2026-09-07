@@ -191,6 +191,8 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta property="og:description" content="Every mode is a guitar pentatonic box plus two notes. An interactive fretboard map in every key — see it, flip it, hear it.">
 <style>
   :root { --ink:#212126; --gray:#73737A; --light:#CCCCCE; }
+  /* ===== hub/shell.mjs · the door shell's tokens and its .hint rule, VERBATIM (the bridge) ===== */
+__SHELL_CSS__
   body { margin:0; background:#F6F6F8; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); }
   header { text-align:center; padding:34px 12px 2px; }
   header h1 { margin:0; font-size:30px; letter-spacing:-0.4px; }
@@ -841,7 +843,26 @@ const HOST = { app: "modes-from-pentatonic-boxes", version: 1,
     buildBoxes(); syncMetro();
   },
   summarize: (d) => !d || typeof d !== "object" ? "no map attached"
-    : `${d.key} major · box set ${(d.set ?? 0) + 1}${d.root === "A" ? " (relative minor)" : ""} · ${d.bpm} bpm` };
+    : `${d.key} major · box set ${(d.set ?? 0) + 1}${d.root === "A" ? " (relative minor)" : ""} · ${d.bpm} bpm`,
+  /* SHARE WHAT YOU MAKE (261005, night 41): this map's shared form — a major key and a tempo;
+     it takes a key in any spelling (by pitch class, into its own list) and a tempo; a scale is
+     major by nature here, a box set is not a string set */
+  shared: {
+    to: (d) => ({ key: d.key, scale: "major", bpm: d.bpm }),
+    canTake: (concept, value) => {
+      const { SHARED, pcOfKey } = M_SHARED_CONFIG;
+      if (concept === "key") return DATA.keys.some(k => ((pcOfKey(k) % 12) + 12) % 12 === ((pcOfKey(value) % 12) + 12) % 12) ? true : "no box set is drawn in that key";
+      if (concept === "bpm") return true;
+      if (concept === "scale") return "this map is major keys only — the modes are the boxes";
+      return "this map has no " + SHARED[concept].label;
+    },
+    apply: (take) => {
+      const { pcOfKey } = M_SHARED_CONFIG;
+      if ("key" in take) { const k = DATA.keys.find(k => ((pcOfKey(k) % 12) + 12) % 12 === ((pcOfKey(take.key) % 12) + 12) % 12); if (k) state.key = k; }
+      if ("bpm" in take) { state.bpm = Math.max(15, Math.min(300, take.bpm)); METRO.setBpm(state.bpm); }
+      document.querySelectorAll("#keySeg button").forEach(x => x.classList.toggle("on", x.textContent === state.key));
+      buildBoxes(); syncMetro();
+    } } };
 const NOTE = M_NOTEPAD_SURFACE.createNotepadSurface({
   adapter: HOST,
   storage: { load: () => localStorage.getItem(NP_KEY), save: (str) => localStorage.setItem(NP_KEY, str) },
@@ -883,6 +904,7 @@ buildBoxes();
 
 html = (TEMPLATE
         .replace("__GRAMMAR_CSS__", bridge.FAMILY_GRAMMAR_CSS.strip("\n"))
+        .replace("__SHELL_CSS__", bridge.shell_css())
         .replace("__NOTEPAD_CSS__", bridge.card_styles("notepad-card").strip("\n"))
         .replace("__METRONOME_CSS__", bridge.card_styles("metronome-card").strip("\n"))
         .replace("__METRONOME_ROWS__", bridge.metronome_rows())

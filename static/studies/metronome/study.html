@@ -174,7 +174,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.5.0</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.5.1</div>
 </header>
 
 <div class="cards">
@@ -283,7 +283,7 @@
   <!-- ===== /hub/modules/notepad-card.mjs ===== -->
 </div>
 
-<footer>Metronome v1.5.0 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.5.1 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app
@@ -2037,8 +2037,11 @@ function toAtchart(doc, meta) {
       if (e.payload) {
         body.push("");
         body.push("```json");
+        // `shared` (261005): the writer's shared config vocabulary, beside its opaque data —
+        // written only when the payload carries it, so a pre-vocabulary entry serialises as it always did
         body.push(JSON.stringify({ app: e.payload.app, v: e.payload.v,
-          id: e.id, savedAt: e.savedAt, data: e.payload.data }));
+          id: e.id, savedAt: e.savedAt, data: e.payload.data,
+          ...(e.payload.shared && typeof e.payload.shared === "object" ? { shared: e.payload.shared } : {}) }));
         body.push("```");
       }
     }
@@ -2122,7 +2125,8 @@ function fromAtchart(src) {
       if (env) entries.push(makeEntry({
         id: env.id, savedAt: env.savedAt ?? null,
         heading: heading === (env.savedAt || "note") ? null : heading,
-        text, payload: { app: env.app, v: env.v, data: env.data } }));
+        text, payload: { app: env.app, v: env.v, data: env.data,
+          ...(env.shared && typeof env.shared === "object" ? { shared: env.shared } : {}) } }));
       else entries.push(makeEntry({
         id: "x-" + hashStr(tail.slice(h, end).join("\n")),
         savedAt: null, heading, text, payload: null }));
@@ -2968,7 +2972,142 @@ function createPalette(opts) {
 }
 return { FIGURES, SLOT_PATTERNS, padInsert, createPalette };
 })();
+const SHARED_CONFIG = (() => {
+/* shared-config.mjs — THE FAMILY'S SHARED CONFIG VOCABULARY (night 41, 261005).
+ *
+ * "Share what you make — the file is the channel" (approved 2026-08-14). The
+ * export file was already the transport: a foreign app's payload is named,
+ * inert and carried untouched (notepad-surface.mjs), so a note written in
+ * one app already opens in another. What did not travel was the SETTING —
+ * summarize() is per-app, so a foreign entry rendered as an inert blob.
+ *
+ * This module is the ONE definition of the concepts every surface genuinely
+ * has: key · scale · progression · start-on · string set · bpm · meter. It
+ * SUPPLIES nothing to any host and reads no host's state; each host maps its
+ * own state to it (adapter.shared.to) and declares what it can take back
+ * (adapter.shared.host), and the notepad surface writes the writer's shared
+ * form INTO the entry (payload.shared) so any reader reads it without
+ * knowing the writer. The rules it obeys, from the dispatch:
+ *   1. ADDITIVE — an entry without `shared` loads, summarises and applies as
+ *      it always did; nothing here changes an existing file's meaning.
+ *   2. a concept a surface does not have stays CARRIED AND INERT — the
+ *      foreign `data` is never read here, never dropped.
+ *   3. a PARTIAL apply is NAMED — offerOf says which concepts a host takes
+ *      and why each other one is withheld; never a silent subset.
+ *   4. applying is a CLICK — this module builds an offer; the surface applies
+ *      only when the reader presses it.
+ *   5. DERIVED, not restated — the labels, the value vocabularies and the
+ *      wording live here once; a host that spells "key" is naming a concept
+ *      it maps, never re-describing it.
+ */
+
+/** the concepts, in the order a summary reads them */
+const SHARED = Object.freeze({
+  key:         { label: "key",         describe: (v) => String(v) },
+  scale:       { label: "scale",       values: { major: "major", harm: "harmonic minor", mel: "melodic minor" },
+                 describe: (v) => SHARED.scale.values[v] },
+  progression: { label: "progression", values: { scale: "Scaler", thirds: "Cycling 3rds", fourths: "Cycling 4ths",
+                                                  fifths: "Cycling 5ths", sixths: "Cycling 6ths" },
+                 describe: (v) => SHARED.progression.values[v] },
+  startOn:     { label: "start-on",    describe: (v) => "start on " + ROMAN[v] },
+  stringSet:   { label: "string set",  describe: (v) => "strings " + [...v].sort((a, b) => b - a).join("-") },
+  bpm:         { label: "bpm",         describe: (v) => v + " bpm" },
+  meter:       { label: "meter",       describe: (v) => v + "/4" },
+});
+const CONCEPTS = Object.freeze(Object.keys(SHARED));
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];   // degree numerals, quality-blind on purpose: a start-on names a degree, not a chord
+const NOTE_RE = /^[A-G](b|#)?$/;
+
+/** is `v` a legal value of `concept`? — the vocabulary's own check, one place */
+function isValid(concept, v) {
+  switch (concept) {
+    case "key": return typeof v === "string" && NOTE_RE.test(v);
+    case "scale": return typeof v === "string" && v in SHARED.scale.values;
+    case "progression": return typeof v === "string" && v in SHARED.progression.values;
+    case "startOn": return Number.isInteger(v) && v >= 0 && v <= 6;
+    case "stringSet": return Array.isArray(v) && v.length >= 1 && v.length <= 6
+      && v.every((s) => Number.isInteger(s) && s >= 1 && s <= 6) && new Set(v).size === v.length;
+    case "bpm": return typeof v === "number" && v >= 15 && v <= 300;
+    case "meter": return Number.isInteger(v) && v >= 1 && v <= 12;
+    default: return false;
+  }
+}
+
+/** the shared form read off a payload: only known concepts with legal values; an
+ * entry from before the vocabulary (no `shared`) reads as {} — additive by construction */
+function readShared(payload) {
+  const out = {};
+  const src = payload && payload.shared;
+  if (!src || typeof src !== "object") return out;
+  for (const c of CONCEPTS) if (c in src && isValid(c, src[c])) out[c] = src[c];
+  return out;
+}
+
+/** a host's shared form, checked: a host that maps a concept badly fails HERE, loudly, at write time */
+function checkShared(shared, app = "a host") {
+  if (!shared || typeof shared !== "object") throw new Error(`shared-config: ${app} mapped no object`);
+  for (const [c, v] of Object.entries(shared)) {
+    if (!(c in SHARED)) throw new Error(`shared-config: ${app} mapped "${c}", which is not a shared concept (${CONCEPTS.join(", ")})`);
+    if (!isValid(c, v)) throw new Error(`shared-config: ${app} mapped ${c} to ${JSON.stringify(v)}, not a legal value`);
+  }
+  return shared;
+}
+
+/** the summary a foreign entry's shared settings read as — "Bb harmonic minor · Cycling 4ths · start on I · strings 6-5-4-3 · 72 bpm · 4/4" */
+function describeShared(shared) {
+  const parts = [];
+  const s = shared || {};
+  if ("key" in s || "scale" in s) parts.push([s.key, s.scale && SHARED.scale.describe(s.scale)].filter(Boolean).join(" "));
+  for (const c of CONCEPTS) if (c !== "key" && c !== "scale" && c in s) parts.push(SHARED[c].describe(s[c]));
+  return parts.join(" · ");
+}
+
+/** the English list "key, scale and progression" */
+const listOf = (labels) => labels.length <= 1 ? labels.join("")
+  : labels.slice(0, -1).join(", ") + " and " + labels[labels.length - 1];
+
+/**
+ * THE OFFER. `shared` is the entry's (readShared); `host` is what this surface
+ * declares: { canTake(concept, value) → true | "why not" }. Returns
+ *   { take: {concept: value}, withheld: [{concept, reason}], wording, withheldWording }
+ * wording: "apply the key, scale and progression from this note" (empty when nothing
+ * applies); withheldWording: "not offered: string set — this page has no string set;
+ * meter — …" (empty when everything applies). Nothing is applied here.
+ */
+function offerOf(shared, host) {
+  const take = {}, withheld = [];
+  for (const c of CONCEPTS) {
+    if (!(c in shared)) continue;
+    const ok = host && typeof host.canTake === "function" ? host.canTake(c, shared[c]) : "this page carries no shared settings";
+    if (ok === true) take[c] = shared[c];
+    else withheld.push({ concept: c, reason: typeof ok === "string" && ok ? ok : "not carried here" });
+  }
+  const taken = Object.keys(take);
+  const wording = taken.length ? `apply the ${listOf(taken.map((c) => SHARED[c].label))} from this note` : "";
+  const withheldWording = withheld.length
+    ? "not offered: " + withheld.map((w) => `${SHARED[w.concept].label} — ${w.reason}`).join("; ")
+    : "";
+  return { take, withheld, wording, withheldWording };
+}
+
+/** the enharmonic reach a host may use to take a key it spells differently: "Gb" → 6 */
+const pcOfKey = (k) => ({ C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 })[k[0]] + (k[1] === "#" ? 1 : k[1] === "b" ? -1 : 0);
+
+/* ---------------- load-time assertions ---------------- */
+{
+  const s = checkShared({ key: "Bb", scale: "harm", progression: "fourths", startOn: 0, stringSet: [6, 5, 4, 3], bpm: 72, meter: 4 });
+  if (describeShared(s) !== "Bb harmonic minor · Cycling 4ths · start on I · strings 6-5-4-3 · 72 bpm · 4/4")
+    throw new Error("shared-config: the summary sentence broke: " + describeShared(s));
+  const o = offerOf(s, { canTake: (c) => (c === "bpm" || c === "meter") ? true : "the metronome has no " + SHARED[c].label });
+  if (o.wording !== "apply the bpm and meter from this note" || !/^not offered: key — the metronome has no key; scale/.test(o.withheldWording))
+    throw new Error("shared-config: the offer wording broke: " + o.wording + " | " + o.withheldWording);
+  if (Object.keys(readShared({ app: "old", v: 1, data: { key: "C" } })).length) throw new Error("shared-config: an entry without `shared` must read as nothing shared");
+  if (readShared({ shared: { key: "H", bpm: 72 } }).key !== undefined) throw new Error("shared-config: an illegal value must not read");
+}
+return { SHARED, CONCEPTS, isValid, readShared, checkShared, describeShared, listOf, offerOf, pcOfKey };
+})();
 const NPSURF = (() => {
+const { readShared, checkShared, describeShared, offerOf } = SHARED_CONFIG;
 const { emptyDoc, makeEntry, addEntry, deleteEntry, toAtchart, fromAtchart } = NOTEPAD;
 const { parseMarkdown, renderTo } = MD;
 const { createPalette } = PALETTE;
@@ -3025,7 +3164,18 @@ const { createPalette } = PALETTE;
  * runs headless against a stub (the both-hosts save-clears test lives there).
  *
  * createNotepadSurface({
- *   adapter:  {app, version, snapshot(), apply(data), summarize(data)}
+ *   adapter:  {app, version, snapshot(), apply(data), summarize(data),
+ *              shared?: { to(data) → the family's shared form of this data,
+ *                         canTake(concept, value) → true | "why not",
+ *                         apply(take) }}
+ *   SHARED SETTINGS (261005, night 41 — "share what you make"): the vocabulary
+ *   is engine/shared-config.mjs's, ONE definition. A host that declares
+ *   `shared` has its shared form WRITTEN INTO every entry it saves
+ *   (payload.shared, beside its opaque data), so any reader can describe and
+ *   OFFER a foreign entry's settings without knowing the writer. The offer is
+ *   a click, never automatic; a partial one names what it takes and why the
+ *   rest is withheld; a host without `shared` reads and writes exactly as
+ *   before; a foreign payload's data stays carried untouched.
  *   storage:  {load():string|null, save(string):void}   // thin; MAY THROW —
  *             denial is handled (and messaged) here, not in the host
  *   migrate:  () => doc|null      // host's v1 shape → model, once, no v2 yet
@@ -3159,8 +3309,13 @@ function createNotepadSurface(opts) {
   function save() {
     clearConfirmShow(false);
     const text = String(els.pad.value ?? "").trim();
+    const data = adapter.snapshot();
+    // the writer's shared form rides the entry (261005) — checked at the vocabulary, loud on a bad mapping
+    const shared = adapter.shared && typeof adapter.shared.to === "function"
+      ? checkShared(adapter.shared.to(data) || {}, adapter.app) : null;
     doc = addEntry(doc, { savedAt: new Date().toISOString(), text, heading: nameNow(),
-      payload: { app: adapter.app, v: adapter.version, data: adapter.snapshot() } });
+      payload: { app: adapter.app, v: adapter.version, data,
+        ...(shared && Object.keys(shared).length ? { shared } : {}) } });
     doc = { ...doc, pad: "", base: "", title: "" };   // the pad empties: the title returns to the default
     els.pad.value = "";
     paintTitle();
@@ -3358,9 +3513,16 @@ function createNotepadSurface(opts) {
       const hd = docm.createElement("div"); hd.className = "hd";
       const b = docm.createElement("b");
       const p = en.payload;
+      /* a FOREIGN entry (261005): its shared settings, when it carries them, read in the
+       * family's own sentence; an entry from before the vocabulary reads as it always did */
+      const foreign = p && p.app !== adapter.app;
+      const sharedOf = foreign ? readShared(p) : {};
+      const sharedSummary = describeShared(sharedOf);
       const summary = !p ? "note" :
         p.app === adapter.app ? adapter.summarize(p.data)
-        : p.app + " · v" + p.v + " (another app's settings — carried untouched)";
+        : p.app + " · v" + p.v + (sharedSummary
+          ? " — " + sharedSummary + " (its own settings carried untouched)"
+          : " (another app's settings — carried untouched)");
       /* v0.9's own row shape for a NAMED entry (260916, item 2b): the name
        * leads in bold, the derived summary follows on its own line — an
        * unnamed entry reads exactly as it always has */
@@ -3379,6 +3541,27 @@ function createNotepadSurface(opts) {
         div.appendChild(tx);
       }
       const acts = docm.createElement("div"); acts.className = "acts";
+      let withheld = null;
+      /* THE OFFER (261005): a foreign entry that carries shared settings is OFFERED to this
+       * host — what it can take, named; what it cannot, named with the reason — and applied
+       * only by the click. adapter.shared.canTake decides per concept AND value. */
+      if (foreign && Object.keys(sharedOf).length) {
+        const offer = offerOf(sharedOf, adapter.shared && typeof adapter.shared.canTake === "function" ? adapter.shared : null);
+        if (offer.wording && adapter.shared && typeof adapter.shared.apply === "function") {
+          const ob = docm.createElement("button"); ob.textContent = offer.wording;
+          ob.setAttribute("data-cap", "apply-shared");
+          ob.title = offer.withheldWording || "every setting this note carries applies here";
+          ob.addEventListener("click", () => { adapter.shared.apply({ ...offer.take }); onChange(); onApplied(); });
+          acts.appendChild(ob);
+        }
+        /* the withheld line sits UNDER the actions, not in them: seen in the served render
+         * (261005) — as an inline span in the flex row it squeezed the offer button to a
+         * one-word-per-line column beside the reasons. It is the summary's register (.sum). */
+        if (offer.withheldWording) {
+          withheld = docm.createElement("div"); withheld.className = "sum"; withheld.setAttribute("data-cap", "withheld");
+          withheld.textContent = offer.withheldWording;
+        }
+      }
       /* the row's controls carry data-cap ROLES (rule 12): a harness that
        * reads "Restore étude" or "Delete" off a button is reading a word
        * the adapter or a redesign may change tomorrow */
@@ -3422,6 +3605,7 @@ function createNotepadSurface(opts) {
       acts.appendChild(db);
       acts.appendChild(emsg);
       div.appendChild(acts);
+      if (withheld) div.appendChild(withheld);
       wrap.appendChild(div);
     });
   }
@@ -3700,7 +3884,13 @@ const HOST={app:"metronome",version:1,
   nouns:{item:"note",apply:"Apply settings"},   // the host's vocabulary — the
   snapshot:()=>cfgSnapshot(),                   // surface composes the labels
   apply:(data)=>applyCfg(data||{}),
-  summarize:(data)=>cfgLine(data||{})};   // DERIVED at render, never stored
+  summarize:(data)=>cfgLine(data||{}),   // DERIVED at render, never stored
+  /* SHARE WHAT YOU MAKE (261005, night 41): this appliance's map to the family's shared
+     vocabulary (engine/shared-config.mjs, inlined below) — it HAS a tempo and a meter, nothing else */
+  shared:{
+    to:(c)=>({bpm:c.bpm,meter:c.meter}),
+    canTake:(concept)=>(concept==="bpm"||concept==="meter")?true:"the metronome has no "+SHARED_CONFIG.SHARED[concept].label,
+    apply:(take)=>{ applyCfg({...(take.bpm!==undefined?{bpm:take.bpm}:{}),...(take.meter!==undefined?{meter:take.meter}:{})}); }}};
 // the title field's naming rule (night 35 — the door's, verbatim in spirit: notepad-card.mjs)
 const npTyped=()=>(document.getElementById("npTitle").value||"").trim();
 const npFallback=()=>"metronome journal — "+new Date().toISOString().slice(0,10);
