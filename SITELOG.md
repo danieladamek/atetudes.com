@@ -1,3 +1,14 @@
+## 2026-09-07 — DEPLOYED: night 41 live — every note carries the family's shared config, a foreign note is offered and applied by a click; all six studies moved; written from the run
+
+- record: run 34096799999 · success · commit 148fda6 · fetched 2026-09-07T07:49Z · 6/6 studies byte-identical · digest a4a7abbeb035
+- Actions run 34096799999 green on `148fda6` — https://github.com/danieladamek/atetudes.com/actions/runs/34096799999 (created 2026-09-07T07:42:35Z, finished 2026-09-07T07:49:39Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo d8e06f4c7b19 · live d8e06f4c7b19 — matches.
+- tetrad-voice-leading: repo 160d44296961 · live 160d44296961 — matches.
+- tetradetudes: repo 32427f455a0c · live 32427f455a0c — matches.
+- triadetudes: repo 22a193c3de36 · live 22a193c3de36 — matches.
+
 ## 2026-09-06 — Night 41: SHARE WHAT YOU MAKE — every note carries the family's shared config; a foreign note is offered, and applied by a click
 
 - **What:** `engine/shared-config.mjs` is the one definition of the seven concepts every study
