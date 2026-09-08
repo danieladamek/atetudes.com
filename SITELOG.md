@@ -1,3 +1,14 @@
+## 2026-09-08 — DEPLOYED: night 44 live — the tuning is the field's fact, no study changes what it shows; multetudes and tetradetudes republished with the repointed modules; written from the run
+
+- record: run 34198460724 · success · commit 72b90e2 · fetched 2026-09-08T07:23Z · 6/6 studies byte-identical · digest 79d2c0fd82cf
+- Actions run 34198460724 green on `72b90e2` — https://github.com/danieladamek/atetudes.com/actions/runs/34198460724 (created 2026-09-08T07:15:45Z, finished 2026-09-08T07:23:10Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo 8eb99d4e5d11 · live 8eb99d4e5d11 — matches.
+- tetrad-voice-leading: repo d19ccd358b64 · live d19ccd358b64 — matches.
+- tetradetudes: repo b3019a97ae58 · live b3019a97ae58 — matches.
+- triadetudes: repo 12bb30d3d5d4 · live 12bb30d3d5d4 — matches.
+
 ## 2026-09-08 — Night 44: alternate tunings, item 1 of four — the tuning becomes the field's fact; no visible change on any study
 
 - **What:** plumbing only, on purpose. `engine/field.mjs`'s `field()` takes an optional `tuning`
