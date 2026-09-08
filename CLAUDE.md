@@ -20,7 +20,14 @@
 Your work queue is every item in `notes/Backlog/` with `state: inwork` (the board is
 `notes/Backlog.md`). `approved` items are greenlit but not dispatched — don't start them
 unless asked. On finishing an item, set its frontmatter to `state: inreview` and record it in
-your scrum note; closing is Daniel's call. Leave a scrum note at `notes/Scrums/YYMMDD.md` in
+your scrum note. **You never set `closed` yourself.** `inreview` is not a resting
+state: the PO's acceptance ruling on a night closes every item that night finished,
+by filename, in the same note that accepts the night — ratified by Daniel 261008,
+after 55 items silently accumulated at `inreview` because the last hop was named as
+"Daniel's call" and so had no owner who was ever prompted to make it. The
+`approved → inreview` hop already worked; only the consumer was missing.
+
+Leave a scrum note at `notes/Scrums/YYMMDD.md` in
 the exact format the root `CLAUDE.md` fixes — its frontmatter keys and `🚧 Blockers` heading
 are parsed by the scrum-of-scrums.
 
