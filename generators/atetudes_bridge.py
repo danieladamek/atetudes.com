@@ -170,6 +170,17 @@ def shell_css():
     return root + "\n" + hint
 
 
+def chart_line_styles(scope, subline=False):
+    """engine/chart-line.mjs's rules, scoped under the page's strip — the same substitution
+    chartLineStyles(scope, { subline }) performs, on the same two template literals, so a
+    generated page carries byte-for-byte what host-conformance computes from the module.
+    261007 (night 43): the family's chart line reaches tetrad-voice-leading through this."""
+    src = module_source("chart-line")
+    css = re.search(r"^export const CHART_LINE_CSS = `([\s\S]*?)`;$", src, re.M).group(1)
+    sub = re.search(r"^export const CHART_LINE_SUBLINE_CSS = `([\s\S]*?)`;$", src, re.M).group(1)
+    return (css + ("\n" + sub if subline else "")).replace("SCOPE", scope)
+
+
 FAMILY_GRAMMAR_CSS = """
   .cards{display:flex;flex-wrap:wrap;gap:12px;margin:14px auto 12px;width:min(1040px, 94vw)}
   .card{background:#fff;border:1px solid #D8D8DC;border-radius:10px;padding:12px 14px;flex:1 1 300px;min-width:280px;position:relative;text-align:left}

@@ -17,6 +17,14 @@
  * stack becomes over it — compositeOver's read-back name and the slash —
  * v0.9's upperStructureOf line, derived per bar through the same module
  * child 5 landed.
+ *
+ * THE DRAWING IS THE FAMILY'S (night 43, 261007 — Daniel, 260907: "can we get
+ * this standard across the etudes"): engine/chart-line.mjs renders the strip
+ * this module used to draw, from DATA this host derives — the chips, their
+ * degrees, romans, beats and, because Multetudes HAS a chosen reference, the
+ * sub-line. Every other chart line in the family draws through the same
+ * module; only the data differs. The position stays HERE: a chip click comes
+ * back through onPick and is announced as the same request every board makes.
  */
 import { mountMini } from "../mini.mjs";
 import { field } from "../../engine/field.mjs";
@@ -27,7 +35,7 @@ import { diatonicTones, objectOffsets } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
-import { FAM, FAM_COLOR } from "../palette.mjs";
+import { renderChartLine, chartLineStyles } from "../../engine/chart-line.mjs";
 
 export const timelineStrip = {
   id: "timeline-strip",
@@ -40,36 +48,15 @@ export const timelineStrip = {
   markup: `
   <span class="mini" id="tlStripMini" data-control="tlStripMini"></span>
   <span class="clpsum">the chart line</span>
-  <div class="tl-scroll" id="tlScroll" data-control="tlScroll"></div>`,
+  <div id="tlScroll" data-control="tlScroll"></div>`,
 
-  styles: `
-.tl-scroll{display:flex;flex:1 1 auto;overflow-x:auto;align-items:stretch;padding:2px 0;
-  padding-right:130px}
-.tl-bar{display:flex;flex:1 0 auto;align-items:stretch;gap:4px;border-left:2px solid #B9B9BF;
-  padding:3px 8px;min-width:88px;border-radius:2px}
-.tl-bar:last-child{border-right:2px solid #B9B9BF}
-.tl-bar.tl-curbar{background:#E9E9EC}
-.tl-bar button{font:inherit;font-size:12.5px;padding:2px 6px;border:1.4px solid transparent;
-  border-radius:999px;background:transparent;cursor:pointer;color:var(--ink);min-width:0;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex;
-  flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
-.tl-bar button:hover{border-color:var(--line);background:#fff}
-/* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own
- * remedy): the current chip keeps its outline and fill; its text is ink. The
- * red text it wore said "root" about chords that were not one. */
-.tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
-/* the chord's ROOT DEGREE dot — the legend's mark, the one palette (item 2) */
-.tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
-.tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
-.tl-bar button .tl-slash{display:block;font-size:10px;color:var(--gray);line-height:1.2}
-.tl-bar button.tl-cur .tl-rn{color:var(--gray)}
-.tl-bar button .tl-us{font-size:10.5px;font-weight:600;color:var(--ink)}
-.tl-bar button.tl-cur .tl-us{color:var(--ink)}
+  /* the strip's rules are the family's, scoped under this strip; the sub-line rules
+   * because this host derives a sub-line. The mini's rules are this module's own. */
+  styles: chartLineStyles("#tlScroll", { subline: true }) + `
 #tlStripMini{position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5}
 #tlStripMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 #tlStripMini button:hover{border-color:var(--ink)}`,
-
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     mountMini(ctx, byId("tlStripMini"));
@@ -84,71 +71,49 @@ export const timelineStrip = {
 
     const render = () => {
       const host = byId("tlScroll");
-      host.textContent = "";
       const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       const beats = beatsOf(prog.bars, meter, cfg.split);
       if (index >= prog.chords.length) index = 0;
-      host.setAttribute("data-tlline", prog.chords.map((_, i) =>
-        chordAt(prog, i, fld, cfg.object, pickOf(cfg)).symbol).join(" "));
-      host.setAttribute("data-tlbars", String(prog.bars.length));
-      prog.bars.forEach((bar, bi) => {
-        const el = d.createElement("div");
-        el.className = "tl-bar" + (bar.includes(index) ? " tl-curbar" : "");
-        bar.forEach((ci, k) => {
-          const c = chordAt(prog, ci, fld, cfg.object, pickOf(cfg));
-          const b = d.createElement("button");
-          b.className = ci === index ? "tl-cur" : "";
-          b.style.flex = `${beats[bi][k]} 1 0`;
-          b.title = `bar ${bi + 1}, ${beats[bi][k]} beat${beats[bi][k] > 1 ? "s" : ""}`;
-          b.setAttribute("data-tlchip", c.symbol);
-          const top = d.createElement("span"); top.textContent = c.symbol; b.appendChild(top);
-          /* BOTH LINES (260913, item 5 — the ruling): the roman ALWAYS —
-           * it is the only thing on the chip naming function against the
-           * key, which is what the whole colour system encodes — and the
-           * slash spelling ONLY when a reference is set AND it changes the
-           * spelling (a root reference under its own chord adds nothing).
-           * Everything derived: the root's name from the field at the
-           * chord's own degree, the bass from the same placeReference /
-           * compositeOver derivation child 5 landed — never parsed from
-           * the symbol, never tabled. */
-          /* the degree dot (260918, item 2): derived from chordAt.degree — an
-           * off-key root wears none, honestly */
-          if (c.degree >= 0) {
-            const dot = d.createElement("i"); dot.className = "tl-dot";
-            dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[c.degree]);
-            dot.style.background = FAM_COLOR[FAM[c.degree]]; b.insertBefore(dot, b.firstChild);
+      const flat = prog.bars.flat();   // the chord index at each chip position
+      const bars = prog.bars.map((bar, bi) => bar.map((ci, k) => {
+        const c = chordAt(prog, ci, fld, cfg.object, pickOf(cfg));
+        /* BOTH LINES (260913, item 5 — the ruling): the roman ALWAYS —
+         * it is the only thing on the chip naming function against the
+         * key, which is what the whole colour system encodes — and the
+         * slash spelling ONLY when a reference is set AND it changes the
+         * spelling (a root reference under its own chord adds nothing).
+         * Everything derived: the root's name from the field at the
+         * chord's own degree, the bass from the same placeReference /
+         * compositeOver derivation child 5 landed — never parsed from
+         * the symbol, never tabled. The DOT (260918, item 2) is drawn by
+         * chart-line.mjs from the degree handed here — an off-key root
+         * wears none, honestly. */
+        const chip = { symbol: c.symbol, degree: c.degree, roman: c.roman, beats: beats[bi][k] };
+        if (cfg.bass !== "none" && cfg.object !== "scale" && c.degree >= 0 && c.tones) {
+          const pos = positionOf({ field: fld, anchorString: Math.max(...cfg.strings),
+            startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: cfg.strings });
+          const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos, pickOf(cfg));
+          if (rp.note) {
+            const comp = compositeOver(fld, rp.note.keyDeg, c.tones.map((t) => t.pc));
+            /* the UPPER-STRUCTURE name under the same principle as the slash
+             * (night 43, item 3 — confirmed on the face: the boot étude read
+             * "Bbmaj7 / I / Bbmaj7" on every bar, the chord printed twice,
+             * because the root reference's composite IS the chord): a name
+             * that repeats the chord's own symbol adds nothing. */
+            if (comp.name && comp.name !== c.symbol) chip.us = comp.name;
+            const rootName = fld.notes[c.degree].name;
+            if (comp.bassName !== rootName) chip.slash = `${c.symbol}/${comp.bassName}`;
           }
-          const rn = d.createElement("span"); rn.className = "tl-rn";
-          rn.textContent = c.roman; b.appendChild(rn);
-          if (cfg.bass !== "none" && cfg.object !== "scale" && c.degree >= 0 && c.tones) {
-            const pos = positionOf({ field: fld, anchorString: Math.max(...cfg.strings),
-              startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: cfg.strings });
-            const rp = placeReference(cfg.bass, c.degree, fld, cfg.strings, pos, pickOf(cfg));
-            if (rp.note) {
-              const comp = compositeOver(fld, rp.note.keyDeg, c.tones.map((t) => t.pc));
-              if (comp.name) {
-                const us = d.createElement("span"); us.className = "tl-us";
-                us.textContent = comp.name; b.appendChild(us);
-              }
-              const rootName = fld.notes[c.degree].name;
-              if (comp.bassName !== rootName) {
-                const sl = d.createElement("span"); sl.className = "tl-slash";
-                sl.textContent = `${c.symbol}/${comp.bassName}`; b.appendChild(sl);
-              }
-            }
-          }
-          /* the owner's own chips ASK like every other surface (260910,
-           * item 1): a click is a request, answered by the same listener
-           * that answers the boards'. One grammar — and the walk's audition
-           * can tell a click's echo from a config consequence's. */
-          b.addEventListener("click", () => {
-            announce(d, STEP_CHANGED, { index: ci, request: true });
-          });
-          el.appendChild(b);
-        });
-        host.appendChild(el);
-      });
+        }
+        return chip;
+      }));
+      /* the owner's own chips ASK like every other surface (260910,
+       * item 1): a click is a request, answered by the same listener
+       * that answers the boards'. One grammar — and the walk's audition
+       * can tell a click's echo from a config consequence's. */
+      renderChartLine(host, { doc: d, bars, index: flat.indexOf(index),
+        onPick: (i) => announce(d, STEP_CHANGED, { index: flat[i], request: true }) });
     };
 
     /* the position: clamp-and-wrap into the DERIVED length, echo the truth */

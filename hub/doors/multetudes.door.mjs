@@ -163,7 +163,9 @@ export default {
     /* v0.5.7 (261005, night 41): SHARE WHAT YOU MAKE — a note carries the family's shared
      * config beside its own settings; a foreign note is OFFERED here (any set of one or more
      * strings), applied only by the click. */
-    blurb: "one tool that holds many études · v0.5.7",
+    /* v0.5.8 (261007, night 43): the chart line's drawing moved into engine/chart-line.mjs, the
+     * family's; the sub-line no longer repeats the chord under a root reference (item 3). */
+    blurb: "one tool that holds many études · v0.5.8",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

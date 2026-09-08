@@ -1,3 +1,31 @@
+## 2026-09-07 — Night 43: one chart line across the family — the root-degree dot on every chip that has a degree, in four studies
+
+- **Why (Daniel, 260907, ruling 260907b):** "can we get this standard across the etudes please?" —
+  Multetudes' chart line (bars of chips, widths from beats, the current chip ringed, the
+  ROOT-DEGREE DOT in the one palette, the roman under the symbol) is now the family's:
+  `engine/chart-line.mjs` draws every strip from data the host supplies. Multetudes v0.5.8,
+  tetradetudes v0.6.3, triadetudes v0.9.2 and tetrad-voice-leading (re-emitted from its generator)
+  carry it. modes-from-pentatonic-boxes and the metronome do not: the map has no ordered chord
+  sequence and the metronome has no chords — a chart line there would chart nothing.
+- **The dot:** derived from each chip's degree, coloured by `engine/degree-palette.mjs` (the seven
+  hexes, stated once; the hub's palette binds to it). An off-key root wears no dot — not grey,
+  not the nearest degree: `Db7` in B♭ major shows the dash and nothing else.
+- **The roman is data:** each app keeps its own spelling (`vii°` in Multetudes, `viiø7` in the
+  tetrad apps) — the spelling gate was built for KEEP; ONE is a one-line change at the caller.
+- **One set of names:** `.tl-bar .tl-cur .tl-dot .tl-rn …` everywhere; the near-miss twins the
+  tetradetudes and triadetudes strips carried (`.tlbar .tlrn .cur`) are gone.
+- **Fixed on Multetudes (item 3, confirmed on the face first):** under a root reference every chip
+  read the chord twice — `Bbmaj7 / I / Bbmaj7` — because the composite's name had no "adds
+  nothing" guard while the slash had one. It has it now; under the third as reference the
+  sub-line lives (`Gm9 · Bbmaj7/G`). No other study has a bass reference and none gets a sub-line.
+- **Position ownership unchanged and pinned:** Multetudes' strip answers step requests; the
+  tetradetudes strip asks the transport; the hand page and the generated page keep their own.
+- **Verified:** engine 659/659, hub 11/11, the door gate with a chart-line block on both doors,
+  bite with six new mutations (one positive), hugo clean, check_site clean with both generated
+  pages byte-identical; rendered in Chromium at 1280 and 390 on a served build, all four strips
+  before and after, zero console errors, and looked at (`notes/working/shots-261007/`).
+- Report: `notes/working/Multetudes build run 261007.md`.
+
 ## 2026-09-07 — DEPLOYED: night 42 live — Tetradetudes v0.6.2 says what a family costs, and the truth about Grip and Free while bound; only tetradetudes moved; written from the run
 
 - record: run 34145341548 · success · commit f0f184f · fetched 2026-09-07T17:02Z · 6/6 studies byte-identical · digest 79a431b927e4

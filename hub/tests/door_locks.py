@@ -3966,7 +3966,7 @@ console.log(JSON.stringify(out));
         # PLAY. The transport does not own a clock: it asks for the metronome's.
         tl_index = lambda: page.evaluate("""() => {
           const bs = [...document.querySelectorAll('#tlBars button')];
-          return bs.findIndex(b => b.classList.contains('cur'));
+          return bs.findIndex(b => b.classList.contains('tl-cur'));
         }""")
         tl_before = tl_index()
         page.click("#playBtn")
@@ -3980,7 +3980,7 @@ console.log(JSON.stringify(out));
         # ~2 s and one chord a beat the current chord must move and stay unique —
         # a transport whose position never advances is worse than none.
         page.wait_for_timeout(2200)
-        curChord = page.eval_on_selector_all("#tlBars button.cur", "e => e.length")
+        curChord = page.eval_on_selector_all("#tlBars button.tl-cur", "e => e.length")
         tlIdx = tl_index()
         check(curChord == 1, f"{tag} the timeline lost (or duplicated) its current chord while playing: {curChord}")
         check(tlIdx != tl_before, f"{tag} the pass never advanced — current chord parked at {tlIdx}")
@@ -4091,7 +4091,7 @@ console.log(JSON.stringify(out));
           document.addEventListener('atetudes:step', window.__mo); }""")
         tl_cur = lambda: page.evaluate("""() => {
           const bs = [...document.querySelectorAll('#tlBars button')];
-          return bs.findIndex(b => b.classList.contains('cur')); }""")
+          return bs.findIndex(b => b.classList.contains('tl-cur')); }""")
 
         def play_and_first_burst(label):
             """Play from a cold clock; return (bursts, clicks) once chord 1 has had time to sound."""
@@ -4812,7 +4812,7 @@ console.log(JSON.stringify(out));
         # the timeline is navigation: clicking a chord moves the stage
         page.click("#tlBars >> button >> nth=2")
         page.wait_for_timeout(120)
-        check(page.eval_on_selector_all("#tlBars button.cur", "e => e.length") == 1,
+        check(page.eval_on_selector_all("#tlBars button.tl-cur", "e => e.length") == 1,
               f"{tag} the timeline lost its current-chord mark")
         # and the dots are the SAME NODES after a step — that is what glides
         ids = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
@@ -5214,7 +5214,7 @@ console.log(JSON.stringify(out));
         # the timeline is navigation: clicking a chord moves the stage
         page.click("#tlBars >> button >> nth=2")
         page.wait_for_timeout(120)
-        check(page.eval_on_selector_all("#tlBars button.cur", "e => e.length") == 1,
+        check(page.eval_on_selector_all("#tlBars button.tl-cur", "e => e.length") == 1,
               f"{tag} the timeline lost its current-chord mark")
         # and the dots are the SAME NODES after a step — that is what glides
         ids = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
@@ -5346,7 +5346,7 @@ console.log(JSON.stringify(out));
     if page.query_selector("#tlMini"):
         tl_at = lambda: page.evaluate("""() => {
           const bs = [...document.querySelectorAll('#tlBars button')];
-          return bs.findIndex(b => b.classList.contains('cur')); }""")
+          return bs.findIndex(b => b.classList.contains('tl-cur')); }""")
         if page.inner_text("#metroBtn") == "Stop":       # start from a stopped clock
             page.click("#metroBtn"); page.wait_for_timeout(80)
         # every strip carries the full cluster
@@ -5543,6 +5543,66 @@ console.log(JSON.stringify(out));
         n_ex_rules = len({r for r in seen})
         print(f"  {tag} axe @{aw}: {res['passes']} rule(s) pass · {n_ex_rules} rule(s) EXEMPT ({exempt_hits} node(s), named 260923) · {len(failed)} failed")
     page.set_viewport_size({"width": 1280, "height": 900})
+
+    # ---------------- THE FAMILY'S CHART LINE (night 43, 261007) ----------------
+    # One module (engine/chart-line.mjs) draws every strip from the host's DATA. On
+    # the artifact: the ROOT-DEGREE DOT on every chip that has a degree, its colour
+    # the palette's for that family (read off engine/degree-palette.mjs, never
+    # retyped here); an OFF-KEY root wears NO dot — not grey, not the nearest
+    # degree; the sub-line only where the host has a reference, and never a name
+    # that repeats the chord's own symbol (item 3, confirmed on the face: the boot
+    # étude read "Bbmaj7 / I / Bbmaj7"); and no near-miss twin class anywhere.
+    if door_id in ("multetudes", "tetradetudes"):
+        strip = "#tlScroll" if door_id == "multetudes" else "#tlBars"
+        pal = dict(re.findall(r'"?([R2-7])"?: "(#[0-9A-F]{6})"', (REPO / "engine/degree-palette.mjs").read_text()))
+        check(len(pal) == 7, f"{tag} could not read the seven palette hexes off engine/degree-palette.mjs: {pal}")
+        chips = lambda: page.evaluate("""(sel) => [...document.querySelectorAll(sel + ' .tl-bar button')].map(b => ({
+          sym: b.getAttribute('data-tlchip'), rn: (b.querySelector('.tl-rn') || {}).textContent || null,
+          dot: (b.querySelector('[data-role="degree-dot"]') || null) && { deg: b.querySelector('[data-role="degree-dot"]').getAttribute('data-deg'),
+            bg: getComputedStyle(b.querySelector('[data-role="degree-dot"]')).backgroundColor },
+          us: (b.querySelector('.tl-us') || {}).textContent || null, slash: (b.querySelector('.tl-slash') || {}).textContent || null }))""", strip)
+        hex2rgb = lambda h: f"rgb({int(h[1:3], 16)}, {int(h[3:5], 16)}, {int(h[5:7], 16)})"
+        twins = page.evaluate("() => document.querySelectorAll('.tlbar, .tlrn, .curbar, button.cur, .tlscroll, .tl-scroll').length")
+        check(twins == 0, f"{tag} a near-miss twin class survives in the DOM ({twins} node(s)) — one set of names")
+        if door_id == "multetudes":
+            page.click('#pgSrcSeg button[data-src="custom"]'); page.wait_for_timeout(80)
+            page.fill("#pgCustom", "Bbmaj7 Db7 Cm7 F7"); page.dispatch_event("#pgCustom", "input"); page.wait_for_timeout(250)
+            cs = chips()
+            check([c["sym"] for c in cs] == ["Bbmaj7", "Db7", "Cm7", "F7"], f"{tag} the custom chart did not land on the strip: {cs}")
+            db7 = cs[1]
+            check(db7["dot"] is None, f"{tag} Db7 in Bb major is OFF-KEY and must wear NO dot — it wears {db7['dot']}")
+            check(db7["rn"] == "—", f"{tag} the off-key chip's roman reads the dash: {db7['rn']!r}")
+            for c in (cs[0], cs[2], cs[3]):
+                check(c["dot"] is not None and c["dot"]["bg"] == hex2rgb(pal[c["dot"]["deg"]]),
+                      f"{tag} {c['sym']}'s dot is not the palette's {c['dot'] and c['dot']['deg']} colour: {c['dot']}")
+            check([c["dot"]["deg"] for c in (cs[0], cs[2], cs[3])] == ["R", "2", "5"], f"{tag} the dots' families: {[c['dot'] for c in cs]}")
+            page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(200)
+            cs = chips()
+            check(all(c["dot"] is not None for c in cs) and len(cs) >= 8, f"{tag} every cycle chip is on-key and wears a dot: {cs}")
+            # item 3: a root reference under its own chord adds nothing — the sub-line never repeats the symbol
+            page.select_option("#fdBass2", "root"); page.wait_for_timeout(200)
+            cs = chips()
+            check(all(c["us"] is None and c["slash"] is None for c in cs),
+                  f"{tag} with the root reference the sub-line must be EMPTY (the composite IS the chord): {[(c['sym'], c['us'], c['slash']) for c in cs]}")
+            page.select_option("#fdBass2", "third"); page.wait_for_timeout(250)
+            cs = chips()
+            check(any(c["us"] or c["slash"] for c in cs), f"{tag} with the third as reference the sub-line appears: {cs}")
+            check(all(c["us"] != c["sym"] for c in cs), f"{tag} a sub-line name repeats its chip's symbol: {[(c['sym'], c['us']) for c in cs]}")
+            page.select_option("#fdBass2", "root"); page.wait_for_timeout(150)
+        else:
+            cs = chips()
+            check(len(cs) == 8 and all(c["dot"] is not None for c in cs), f"{tag} eight diatonic chips, eight dots: {cs}")
+            # the dot's family follows the chip's own roman (whatever cycle the exercise left the
+            # door on) — read off the artifact, never a hand list: I→R, ii→2, … vii→7
+            ROMAN_FAM = {"i": "R", "ii": "2", "iii": "3", "iv": "4", "v": "5", "vi": "6", "vii": "7"}
+            fam_of = lambda rn: ROMAN_FAM.get(re.match(r"[ivIV]+", rn or "").group(0).lower() if re.match(r"[ivIV]+", rn or "") else "", None)
+            check(all(c["dot"]["deg"] == fam_of(c["rn"]) for c in cs),
+                  f"{tag} a dot's family disagrees with its chip's roman: {[(c['rn'], c['dot']['deg']) for c in cs]}")
+            for c in cs:
+                check(c["dot"]["bg"] == hex2rgb(pal[c["dot"]["deg"]]), f"{tag} {c['sym']}'s dot is not the palette's colour: {c['dot']}")
+            check(all(c["us"] is None and c["slash"] is None for c in cs), f"{tag} tetradetudes has no bass reference — no sub-line, not an empty one: {cs}")
+            check(page.evaluate("() => document.querySelectorAll('#tlBars .tl-us, #tlBars .tl-slash').length") == 0, f"{tag} no sub-line element at all")
+            check(all(re.search(r"7$", c["rn"] or "") for c in cs), f"{tag} the roman is this app's own spelling (KEEP — the seventh named on every chip): {[c['rn'] for c in cs]}")
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

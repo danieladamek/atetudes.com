@@ -13,11 +13,21 @@
  * position owner to move by announcing a request (§4.2.3). Bar length follows
  * the transport's meter and split, which it learns from CLOCK_STATE and the
  * transport's own announcements — never by reaching for the transport.
+ *
+ * THE DRAWING IS THE FAMILY'S (night 43, 261007): engine/chart-line.mjs draws
+ * the strip Multetudes' timeline strip drew — the root-degree dot from the
+ * pass step's degree, the roman as data (this app's own spelling, viiø7 — the
+ * spelling gate was built for KEEP), beats from the transport's pattern. No
+ * sub-line: this host has no bass reference, so it supplies none and asks for
+ * no sub-line rules. The near-miss twins (.tlbar/.tlrn/.cur) are gone with it.
+ * This strip is NOT the position owner: a chip click is announced as a request
+ * and the strip adopts the transport's echo, exactly as before.
  */
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
 import { patternOf } from "../../engine/transport.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+import { renderChartLine, chartLineStyles } from "../../engine/chart-line.mjs";
 
 export const chordTimeline = {
   id: "chord-timeline",
@@ -31,31 +41,18 @@ export const chordTimeline = {
   <h2>Timeline</h2>
   <div class="clpsum">The chords in order — click a bar to jump, or step with the transport.</div>
   <div class="tlrow">
-    <div class="tlscroll" id="tlBars" data-control="tlBars"></div>
+    <div id="tlBars" data-control="tlBars"></div>
     <span id="tlMini" data-control="tlMini"></span>
   </div>`,
 
   /* the reference's timeline rules, verbatim values; the strip's own padding
    * replaces the card's so the row sits tight, as the study's `#timeline` does */
+  /* the strip's rules are the family's, scoped under this strip (no sub-line rules:
+   * no reference here); the row, the wrap and the mini are this module's own */
   styles: `
 .tl-strip{padding:8px 12px}
 .tlrow{display:flex;align-items:center;gap:12px}
-.tlscroll{display:flex;flex:1 1 auto;overflow-x:auto;align-items:stretch;
-          scrollbar-width:thin;padding:2px 0}
-.tlbar{display:flex;flex:1 0 auto;align-items:center;gap:4px;
-       border-left:2px solid #B9B9BF;padding:3px 8px;min-width:88px;border-radius:2px}
-.tlbar:last-child{border-right:2px solid #B9B9BF}
-.tlbar.curbar{background:#E9E9EC}
-.tlbar button{font:inherit;font-size:12.5px;padding:2px 6px;border:1.4px solid transparent;
-       border-radius:999px;background:transparent;cursor:pointer;color:var(--ink);
-       min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-       display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
-.tlbar button:hover{border-color:var(--line);background:#fff}
-/* SELECTION IS WEIGHT AND NEUTRAL INK (260918 — golden rule 8): outline + fill,
- * the text ink; --red means the key, nowhere else */
-.tlbar button.cur{border-color:var(--red);font-weight:bold;background:#fff}
-.tlbar button .tlrn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
-.tlbar button.cur .tlrn{color:var(--gray)}
+` + chartLineStyles("#tlBars") + `
 #tlMini{display:flex;gap:4px;flex:0 0 auto}
 #tlMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -73,34 +70,14 @@ export const chordTimeline = {
     const render = () => {
       const pass = tetradPass({ families, ...cfg });
       total = pass.steps.length;
-      const host = byId("tlBars");
-      host.textContent = "";
       const pat = patternOf(meter, splitIdx);
       const L = pat.length;
-      let curBar = null;
-      for (let i0 = 0; i0 < pass.steps.length; i0 += L) {
-        const bd = d.createElement("div");
-        bd.className = "tlbar";
-        for (let k = 0; k < L && i0 + k < pass.steps.length; k++) {
-          const i = i0 + k, s = pass.steps[i];
-          const b = d.createElement("button");
-          b.textContent = s.symbol;
-          const rn = d.createElement("span"); rn.className = "tlrn"; rn.textContent = s.roman;
-          b.appendChild(rn);
-          b.style.flexGrow = String(pat[k]);
-          b.title = pat[k] + (pat[k] === 1 ? " beat" : " beats");
-          if (i === step) { b.className = "cur"; bd.classList.add("curbar"); curBar = bd; }
-          b.addEventListener("click", () => announce(d, STEP_CHANGED, { index: i, request: true }));
-          bd.appendChild(b);
-        }
-        host.appendChild(bd);
-      }
-      if (curBar) {   // keep the sounding bar in view — scroll the strip, never the page
-        const dr = host.getBoundingClientRect(), cr = curBar.getBoundingClientRect();
-        const r = cr.left - dr.left + host.scrollLeft, w = cr.width;
-        if (r < host.scrollLeft) host.scrollLeft = r - 8;
-        else if (r + w > host.scrollLeft + host.clientWidth) host.scrollLeft = r + w - host.clientWidth + 8;
-      }
+      const bars = [];
+      for (let i0 = 0; i0 < pass.steps.length; i0 += L)
+        bars.push(pass.steps.slice(i0, i0 + L).map((s, k) =>
+          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k] })));
+      renderChartLine(byId("tlBars"), { doc: d, bars, index: step,
+        onPick: (i) => announce(d, STEP_CHANGED, { index: i, request: true }) });
     };
 
     mountMini(ctx, byId("tlMini"));   // ⏮ ▶ ⏹ ⏭, driving the one clock via the bus

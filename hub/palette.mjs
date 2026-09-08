@@ -16,9 +16,13 @@
  * A helper module like bus.mjs or mini.mjs — it contributes no markup, no
  * styles, no control, so the resolver treats it as reached code only.
  */
-export const FAM = ["R", "2", "3", "4", "5", "6", "7"];
-export const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4",
-  "5": "#212126", "6": "#1CB8D1", "7": "#D99A08" };
+/* NIGHT 43 (261007): the seven hexes and the family list moved ONE step further, into
+ * engine/degree-palette.mjs, because the family's chart line paints the root-degree dot
+ * on studies that are not doors and cannot import this file. The hub's consumers still
+ * import FAM and FAM_COLOR from here — bound, not restated. */
+import { FAM as DEGREE_FAM, FAM_COLOR as DEGREE_COLOR } from "../engine/degree-palette.mjs";
+export const FAM = DEGREE_FAM;
+export const FAM_COLOR = DEGREE_COLOR;
 export const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
   "5": "#fff", "6": "#212126", "7": "#212126" };
 /** §2.6's chromatic-approach colour — an annotation channel, never a degree */

@@ -124,6 +124,12 @@ def words():
     return sh("node", "--test", "engine/tests/shape-motion-words.test.mjs")
 
 
+def chartline():
+    """the family's chart line suite (night 43) — engine/tests/chart-line.test.mjs over the
+    DOM stub, plus host-conformance's chart-line host list and ownership pins; headless"""
+    return sh("node", "--test", "engine/tests/chart-line.test.mjs", "engine/tests/host-conformance.test.mjs")
+
+
 def record(name, ok, detail):
     results.append((ok, name, detail))
     log_line(("  BITES    " if ok else "  NO BITE  ") + name + " — " + detail)
@@ -1128,7 +1134,9 @@ def m43_a_readout_copies_the_necks_box():
 def m44_the_palettes_R_drifts_by_one():
     # the one palette drifts by a single hex digit: nothing visible to the eye,
     # and until tonight no pin read R's hex off anything rendered.
-    p, original, mutated = patch("hub/palette.mjs",
+    # re-aimed 261007 (night 43): the seven hexes moved into engine/degree-palette.mjs
+    # so the family's chart line can paint the dot on every carrier; hub/palette.mjs binds
+    p, original, mutated = patch("engine/degree-palette.mjs",
         'R: "#B82929"',
         'R: "#B82928"')
     try:
@@ -1426,6 +1434,123 @@ def m59_the_set_and_zone_move_and_the_clause_does_not():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutations 60–65
+# 261007 (night 43): THE FAMILY'S CHART LINE — one module, data in. The dot is derived
+# from the degree and painted from the one palette; an off-key root wears none; the
+# sub-line exists only where the host has a reference and never repeats the chord's own
+# symbol; the position owner is the host's, unchanged. The positive one: a spelling
+# change must not change which chips get a dot.
+def m60_the_off_key_root_wears_a_dot():
+    p, original, mutated = patch("engine/chart-line.mjs",
+        "      if (Number.isInteger(c.degree) && c.degree >= 0 && c.degree < FAM.length) {",
+        "      if (true) {")
+    try:
+        p.write_text(mutated)
+        r = chartline()
+        hit_u = "off-key, no dot" in (r.stdout + r.stderr) or "three chips have a degree" in (r.stdout + r.stderr)
+        build()
+        g = suite()
+        hit_g = "OFF-KEY and must wear NO dot" in g.stdout
+        record("an off-key root wears a dot (the nearest degree's colour, or a lie)",
+               r.returncode != 0 and hit_u and g.returncode != 0 and hit_g,
+               "chart-line exit %d (%s); suite exit %d, the artifact's off-key pin bit: %s" % (r.returncode, hit_u, g.returncode, hit_g))
+    finally:
+        p.write_text(original)
+
+
+def m61_the_dots_colour_comes_from_elsewhere():
+    p, original, mutated = patch("engine/chart-line.mjs",
+        "        dot.style.background = FAM_COLOR[FAM[c.degree]]; b.appendChild(dot);",
+        "        dot.style.background = [\"#B82929\", \"#3C8B2F\", \"#2959A6\", \"#A9ABB4\", \"#212126\", \"#1CB8D1\", \"#D99A08\"][(c.degree + 1) % 7]; b.appendChild(dot);")
+    try:
+        p.write_text(mutated)
+        r = chartline()
+        hit_u = "the dot's colour IS the palette's" in (r.stdout + r.stderr)
+        build()
+        g = suite()
+        hit_g = "is not the palette's" in g.stdout
+        record("the dot's colour is taken from anywhere but FAM_COLOR[FAM[degree]] (a restated map, off by one)",
+               r.returncode != 0 and hit_u and g.returncode != 0 and hit_g,
+               "chart-line exit %d (%s); suite exit %d, the artifact's colour pin bit: %s" % (r.returncode, hit_u, g.returncode, hit_g))
+    finally:
+        p.write_text(original)
+
+
+def m62_the_sub_line_repeats_the_chord():
+    # item 3 undone: the composite's name is written even when it IS the chord's symbol —
+    # "Bbmaj7 / I / Bbmaj7" on every bar of the boot étude, as Daniel's screenshot showed
+    p, original, mutated = patch("hub/modules/timeline-strip.mjs",
+        "            if (comp.name && comp.name !== c.symbol) chip.us = comp.name;",
+        "            if (comp.name) chip.us = comp.name;")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the sub-line must be EMPTY (the composite IS the chord)" in g.stdout or "a sub-line name repeats its chip's symbol" in g.stdout
+        record("the sub-line repeats the chord's own symbol again (item 3 undone)",
+               g.returncode != 0 and hit,
+               "suite exit %d; the root-reference pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m63_a_host_with_no_reference_gets_a_sub_line():
+    p, original, mutated = patch("hub/modules/chord-timeline.mjs",
+        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k] })));",
+        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k], us: s.rootName + \" over nothing\" })));")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "has no bass reference — no sub-line" in g.stdout or "no sub-line element at all" in g.stdout
+        record("a host with no bass reference is given a sub-line (a reference invented to fill it)",
+               g.returncode != 0 and hit,
+               "suite exit %d; the no-reference pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m64_the_asking_strip_becomes_a_second_owner():
+    # a §4.4 divergence with a timer on it: the tetradetudes strip quietly answers requests
+    # itself on a page whose transport already owns the position
+    p, original, mutated = patch("hub/modules/chord-timeline.mjs",
+        "      if (m.request !== true && typeof m.index === \"number\") { step = m.index; render(); }",
+        "      if (typeof m.index === \"number\") { step = m.index; render(); }   // answers requests too\n      if (m.request === true && typeof m.index === \"number\") { step = m.index; render(); }")
+    try:
+        p.write_text(mutated)
+        r = chartline()
+        hit = "ASKS — it must never answer or adopt a request" in (r.stdout + r.stderr)
+        record("the position owner changed on a page that already has one (the asking strip answers)",
+               r.returncode != 0 and hit,
+               "chart-line/host exit %d; the ownership pin named the second owner: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m65_the_spelling_changes_and_the_dots_do_not():
+    """a POSITIVE mutation: it bites by staying GREEN. The tetradetudes strip hands the
+    module Multetudes' spelling of the roman instead of its own; the dots — derived from
+    the degree, never the spelling — must not change, and the suite says so by passing
+    every dot pin. (The gate's own KEEP pin on the spelling is the one line expected to
+    move, so it is the one line excluded from the verdict.)"""
+    p, original, mutated = patch("hub/modules/chord-timeline.mjs",
+        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k] })));",
+        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman.replace(/ø7$/, \"°\").replace(/(maj7|-7|7)$/, \"\"), beats: pat[k] })));")
+    try:
+        p.write_text(mutated)
+        r = chartline()
+        build()
+        g = suite()
+        fails = [l for l in g.stdout.splitlines() if l.startswith("FAIL")]
+        only_spelling = all("this app's own spelling (KEEP" in l for l in fails)
+        dots_ok = "eight diatonic chips, eight dots" not in g.stdout and "is not the palette's colour" not in g.stdout
+        record("the roman's spelling changes and the dots do not (positive: green on every dot pin is the bite)",
+               r.returncode == 0 and only_spelling and dots_ok,
+               "chart-line exit %d; suite fails: %s — only the spelling pin moved: %s" % (r.returncode, [l[:80] for l in fails], only_spelling))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1537,7 +1662,10 @@ def main():
                m53_a_carried_card_drifts_in_a_hand_page, m54_the_chromatic_approach_loses_its_shape,
                m55_the_family_clause_reads_a_fret, m56_the_cost_clause_reaches_drop2,
                m57_the_bound_and_unbound_sentences_swap, m58_a_placement_site_drifts_from_the_source,
-               m59_the_set_and_zone_move_and_the_clause_does_not)
+               m59_the_set_and_zone_move_and_the_clause_does_not,
+               m60_the_off_key_root_wears_a_dot, m61_the_dots_colour_comes_from_elsewhere,
+               m62_the_sub_line_repeats_the_chord, m63_a_host_with_no_reference_gets_a_sub_line,
+               m64_the_asking_strip_becomes_a_second_owner, m65_the_spelling_changes_and_the_dots_do_not)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

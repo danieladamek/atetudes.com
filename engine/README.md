@@ -127,6 +127,13 @@ engine/
 │                        a chord context; the sketchpad's emitter (pure)
 ├── atchart.mjs          .atchart.md v1.1 parser + serializer + the apps accessor
 │                        (pure)                                        [spec: docs/atchart-format.md]
+├── chart-line.mjs       THE FAMILY'S CHART LINE (night 43): bars of chips from DATA the host
+│                        supplies — symbol, degree (the root-degree dot, the one palette; an
+│                        off-key root wears none), roman (data, never spelled here), beats, and
+│                        a sub-line only where the host has a reference; one set of class
+│                        names, styles scoped under the host's strip; owns no position
+├── degree-palette.mjs   Design Spec §2.1's seven degree hexes and family list, stated once
+│                        where every carrier can reach it; hub/palette.mjs binds to it (pure)
 ├── markdown.mjs         the notepad's markdown engine: CommonMark subset that
 │                        builds DOM nodes (no HTML-string sinks — greped), refuses
 │                        raw HTML, sanitizes links by allow-list; parseMarkdown /

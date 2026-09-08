@@ -73,6 +73,7 @@ def diatonic_tetrad(key, scale, deg):
     numeral = NUMERAL[i].lower() if qual in MINORISH else NUMERAL[i]
     return {"sym": names[i] + qual, "qual": qual,
             "roman": numeral + ROMAN_SUFFIX[qual],
+            "deg": i,   # the scale degree, 0-based — the chart line's root-degree dot (night 43)
             "pc": {d: p for d, p in zip((1, 3, 5, 7), tone_pcs)}}
 
 # ---------------- engines ----------------
@@ -143,7 +144,7 @@ def walk(mode, key, scale, bottom, opens, order=None):
         assert all(a < b for a, b in zip(pitches, pitches[1:])), \
             f'not ascending: {ch["sym"]} {frets}'
         labs = [IVALS[ch["qual"]][d] for d in degs]
-        steps.append([ch["sym"], ch["roman"], INV_NAME[degs[0]], list(frets), labs])
+        steps.append([ch["sym"], ch["roman"], INV_NAME[degs[0]], list(frets), labs, ch["deg"]])
         if idx == len(chords) - 1:
             break
         nxt = chords[idx + 1]
@@ -283,12 +284,9 @@ __SHELL_CSS__
   .dotg .ring { fill:none; stroke:#212126; stroke-width:2; opacity:0; transition:opacity .2s; }
   .dotg.armed .ring { opacity:1; }
   #strhint { text-align:center; font-size:10.5px; color:var(--gray); padding:2px 0 6px; }
-  #timeline { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; padding:12px 8px 0; }
-  #timeline button { border:1px solid var(--light); border-radius:7px; background:#fff; cursor:pointer;
-                     font:600 11px inherit; font-family:inherit; color:var(--ink); padding:5px 9px; text-align:center; }
-  #timeline button .rn { display:block; font-style:italic; font-size:9px; font-weight:400; color:var(--gray); }
-  #timeline button.cur { background:var(--ink); color:#fff; }
-  #timeline button.cur .rn { color:var(--light); }
+  /* ===== engine/chart-line.mjs · the family's chart line, scoped under #timeline, VERBATIM (the bridge) — no sub-line: this study has no bass reference ===== */
+__CHART_LINE_CSS__
+  #timeline { margin:12px 8px 0; }
   #narr { text-align:center; font-weight:600; font-size:12.5px; padding:10px 0 2px; min-height:18px; }
   footer { text-align:center; font-size:11.5px; color:var(--gray); padding:20px 12px 34px; line-height:1.8; }
   /* ===== the family's page grammar for a page without the shell (generators/atetudes_bridge.py) ===== */
@@ -506,15 +504,16 @@ function buildKeyboard(fullW) {
   }
 }
 
+/* THE FAMILY'S CHART LINE (night 43): engine/chart-line.mjs draws the strip from this
+ * study's DATA — the symbol, the scale degree (the root-degree dot, the one palette), the
+ * roman with the inversion word as this study has always shown it (the roman is data —
+ * the spelling gate was built for KEEP), one chord per bar as the pass steps. No sub-line:
+ * no bass reference here. The position stays this page's own (state.step). */
 function buildTimeline() {
-  const tl = document.getElementById("timeline");
-  tl.innerHTML = "";
-  cur().forEach((s, i) => {
-    const b = document.createElement("button");
-    b.innerHTML = s[0] + '<span class="rn">' + s[1] + " · " + s[2] + "</span>";
-    b.addEventListener("click", () => setStep(i, false));
-    tl.appendChild(b);
-  });
+  const steps = cur();
+  M_CHART_LINE.renderChartLine(document.getElementById("timeline"), {
+    bars: steps.map((s) => [{ symbol: s[0], degree: s[5], roman: s[1] + " · " + s[2], beats: 1 }]),
+    index: state.step, onPick: (i) => setStep(i, false) });
 }
 
 function setStep(i, instant) {
@@ -545,8 +544,7 @@ function setStep(i, instant) {
     instant ? kswap() : setTimeout(kswap, 260);
     if (instant) { void kg.getBoundingClientRect(); kg.style.transition = ""; }
   }
-  document.querySelectorAll("#timeline button").forEach((b, j) =>
-    b.classList.toggle("cur", j === state.step));
+  buildTimeline();   // the strip re-draws with the position: the current chip ringed, its bar shaded
   narrate();
   strum(st[3].map((f, k) => midiOf(k, f)));
 }
@@ -806,7 +804,8 @@ html = (TEMPLATE
         .replace("__METRONOME_GUARANTEE__", bridge.metronome_guarantee())
         .replace("__NOTEPAD_PAD__", bridge.card_part("notepad-card", "pad"))
         .replace("__NOTEPAD_BOARD__", bridge.card_markup("notepad-card", seated=("pad",)))
-        .replace("__ENGINE__", bridge.engine_inline(["notepad-surface", "metronome", "voices"]))
+        .replace("__CHART_LINE_CSS__", bridge.chart_line_styles("#timeline"))
+        .replace("__ENGINE__", bridge.engine_inline(["notepad-surface", "metronome", "voices", "chart-line"]))
         .replace("__DATA__", json.dumps(DATA)))
 # where this output is PUBLISHED — tools/generator_identity.py asserts the page is byte-identical to what this emits
 PUBLISHED = "static/studies/tetrad-voice-leading/study.html"

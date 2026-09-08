@@ -402,6 +402,59 @@ test("§4.3 shared: every notepad host declares its map to the family's shared v
   assert.equal(offerOf(readShared({ shared: { bpm: 72 } }), { canTake: () => true }).wording, "apply the bpm from this note");
 });
 
+// ================= chart-line.mjs: THE FAMILY'S CHART LINE (night 43, 261007) =================
+// Daniel, 260907: "and can we get this standard across the etudes please?" — Multetudes'
+// chart line (timeline-strip.mjs) became engine/chart-line.mjs, one module rendering from
+// DATA: chips with a symbol, a degree (the dot), a roman (data — the spelling gate, built
+// for KEEP), beats, and a sub-line only where the host has a reference. THE STANDARD
+// REACHES FOUR STUDIES, NOT SIX: modes-from-pentatonic-boxes is a fretboard map (boxes,
+// keySeg, droneBtn — no ordered chord sequence) and the metronome has no chords; a chart
+// line on either would be a strip with nothing to chart. The census is the list: a study
+// carrying chart-line.mjs must have an entry here, and no entry may name a non-carrier.
+// Position ownership is the host's, named per host and asserted on the SOURCE — a strip
+// that quietly became a second owner on a page that has one is a §4.4 divergence.
+import { chartLineStyles } from "../chart-line.mjs";
+const CHART_LINE_HOSTS = [
+  { name: "multetudes", strip: "tlScroll", subline: true,
+    owner: "answers", source: "hub/modules/timeline-strip.mjs" },        // THE POSITION OWNER: answers requests, echoes the truth
+  { name: "tetradetudes", strip: "tlBars", subline: false,
+    owner: "asks", source: "hub/modules/chord-timeline.mjs" },           // asks the transport by announcing a request; adopts echoes
+  { name: "triadetudes", strip: "tlBars", subline: false,
+    owner: "own", source: null },                                        // hand-authored: st.cur is the page's own position
+  { name: "tetrad-voice-leading", strip: "timeline", subline: false,
+    owner: "own", source: null },                                        // generated: state.step is the page's own position
+];
+test("§4.3 hosts: the chart-line host list IS the census's carrier list for chart-line — four studies, not six", () => {
+  assert.deepEqual(CHART_LINE_HOSTS.map((h) => h.name).sort(), carriersOf("chart-line"),
+    "a study carrying chart-line.mjs has no host entry (or an entry names a non-carrier) — wire it here");
+  for (const none of ["modes-from-pentatonic-boxes", "metronome"])
+    assert.ok(!carriersOf("chart-line").includes(none), `${none} has no ordered chord sequence — a chart line there would chart nothing`);
+  assert.deepEqual(carriersOf("degree-palette"), carriersOf("chart-line"), "every chart-line carrier carries the one palette the dot reads");
+});
+
+test("§4.3 chart line: every host mounts its strip, carries the scoped styles verbatim, and keeps its own position grammar", () => {
+  for (const host of CHART_LINE_HOSTS) {
+    const page = studyOf(host.name);
+    assert.ok(page.includes(`id="${host.strip}"`), `[${host.name}] the strip #${host.strip} is in the page`);
+    const css = chartLineStyles("#" + host.strip, { subline: host.subline });
+    assert.ok(page.includes(css), `[${host.name}] carries chartLineStyles("#${host.strip}", { subline: ${host.subline} }) verbatim — the one set of names, scoped under its own strip`);
+    if (!host.subline) assert.ok(!page.includes(`#${host.strip} .tl-us`), `[${host.name}] has no bass reference and gets no sub-line rules`);
+    for (const twin of [".tlbar", ".tlrn", ".curbar", ".tlscroll", ".tl-scroll", "#" + host.strip + " button.cur"])
+      assert.ok(!page.includes(twin + "{") && !page.includes(twin + " ") && !page.includes(twin + "."), `[${host.name}] the near-miss twin "${twin}" survives in the page`);
+    const preHub = CENSUS.get(host.name).source === "detected";
+    if (preHub) assert.ok(/renderChartLine\(/.test(page), `[${host.name}] renders its strip through renderChartLine — nothing else draws chips`);
+    // ownership on the source (doors) — the grammar each host already had, unchanged
+    if (host.source) {
+      const src = readFileSync(join(here, "..", "..", host.source), "utf8");
+      const answers = /m\.request === true[^\n]*\n?[^\n]*setIndex\(m\.index\)/.test(src) || /request === true\) \{ setIndex\(m\.index\)/.test(src);
+      const adoptsOnRequest = /request === true[^\n]*\b(step|index) = m\.index/.test(src);
+      if (host.owner === "answers") assert.ok(answers, `[${host.name}] ${host.source} is the position owner — it answers STEP requests`);
+      else { assert.ok(!answers && !adoptsOnRequest, `[${host.name}] ${host.source} ASKS — it must never answer or adopt a request (a second owner is a divergence with a timer on it)`);
+             assert.ok(/announce\(d, STEP_CHANGED, \{ index: i, request: true \}\)/.test(src), `[${host.name}] the chip click is a request to the owner`); }
+    }
+  }
+});
+
 // ================= metronome.mjs: widened to the same shape =================
 // The anti-drift pin (metronome.test.mjs) already asserts CODE identity per
 // carrier; this asserts the RENDERED control inventory and the shared-

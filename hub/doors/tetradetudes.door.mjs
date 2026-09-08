@@ -109,7 +109,9 @@ export default {
      * that they reach past a hand position (a fact about the family, never a measurement of
      * the pass); bound, Grip and Free are said to reach the same grip. The voicings, the
      * box and #fsBoxHint are exactly as they were. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.2",
+    /* v0.6.3 (261007, night 43): the chart line is the family's — engine/chart-line.mjs draws
+     * it; the root-degree dot on every chip; the near-miss twin class names retired. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.3",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };
