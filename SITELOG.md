@@ -1,3 +1,14 @@
+## 2026-09-08 — DEPLOYED: night 43 live — one chart line across the family, the root-degree dot on four studies; the metronome and the modes map unmoved; written from the run
+
+- record: run 34172487337 · success · commit 54a17ef · fetched 2026-09-08T00:18Z · 6/6 studies byte-identical · digest 199bfa028820
+- Actions run 34172487337 green on `54a17ef` — https://github.com/danieladamek/atetudes.com/actions/runs/34172487337 (created 2026-09-08T00:10:59Z, finished 2026-09-08T00:18:07Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo a2704c1dfdf9 · live a2704c1dfdf9 — matches.
+- tetrad-voice-leading: repo d19ccd358b64 · live d19ccd358b64 — matches.
+- tetradetudes: repo 46be1f712cfb · live 46be1f712cfb — matches.
+- triadetudes: repo 12bb30d3d5d4 · live 12bb30d3d5d4 — matches.
+
 ## 2026-09-07 — Night 43: one chart line across the family — the root-degree dot on every chip that has a degree, in four studies
 
 - **Why (Daniel, 260907, ruling 260907b):** "can we get this standard across the etudes please?" —
