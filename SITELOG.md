@@ -1,3 +1,14 @@
+## 2026-09-08 — DEPLOYED: the 261006 injection live — Tetradetudes v0.6.4 and tetrad-voice-leading moved (the chip's roman, the panel sentence, the bind title); four studies unmoved; written from the run
+
+- record: run 34231086838 · success · commit bb76499 · fetched 2026-09-08T13:26Z · 6/6 studies byte-identical · digest 26854bc82efc
+- Actions run 34231086838 green on `bb76499` — https://github.com/danieladamek/atetudes.com/actions/runs/34231086838 (created 2026-09-08T13:17:47Z, finished 2026-09-08T13:25:28Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo 8eb99d4e5d11 · live 8eb99d4e5d11 — matches.
+- tetrad-voice-leading: repo 6afbe5149739 · live 6afbe5149739 — matches.
+- tetradetudes: repo 406d964f2fdc · live 406d964f2fdc — matches.
+- triadetudes: repo 12bb30d3d5d4 · live 12bb30d3d5d4 — matches.
+
 ## 2026-09-08 — The 261006 injection: Tetradetudes v0.6.4 — the Grip/Free sentence names the mechanism that measures, the bind control's title stops reporting, and the chart line spells the roman as function on every study
 
 - **Night 42's parenthetical (PO ruling 261006):** the shipped sentence blamed the bars where Grip
