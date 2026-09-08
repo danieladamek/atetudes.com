@@ -67,7 +67,7 @@ export const fretboardStage = {
       <button data-win="follow" title="the frozen study's auto-cropping window — the neck framed to the pass">Follow</button>
       <button data-win="box" title="the isolation zone as a movable box the optimizer honours (Grip placement)">Box</button>
     </div>
-    <label class="chk fsBind" title="bind: the anchor voice must land on one of the three zone notes — a bar that cannot reaches outside and the box says so. Off, the zone only pulls (today's behaviour).">
+    <label class="chk fsBind" title="hold the anchor voice to one of the three zone notes; a bar with no such candidate takes the nearest grip it can, and nothing reports it. Released, the zone is a pull under Grip and no pull at all under Free, which chooses by voice-leading alone.">
       <input type="checkbox" id="bindChk" data-control="bindChk"> bind</label>
   </div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>

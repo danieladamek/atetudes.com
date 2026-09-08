@@ -506,13 +506,16 @@ function buildKeyboard(fullW) {
 
 /* THE FAMILY'S CHART LINE (night 43): engine/chart-line.mjs draws the strip from this
  * study's DATA — the symbol, the scale degree (the root-degree dot, the one palette), the
- * roman with the inversion word as this study has always shown it (the roman is data —
- * the spelling gate was built for KEEP), one chord per bar as the pass steps. No sub-line:
- * no bass reference here. The position stays this page's own (state.step). */
+ * roman with the inversion word as this study has always shown it, one chord per bar as the
+ * pass steps. No sub-line: no bass reference here. The position stays this page's own.
+ * ONE ROMAN SPELLING (Daniel's ruling 261006, built 261008): the chip's roman is the full one
+ * this generator emits, reduced at the chip through the ONE named function — engine/roman.mjs,
+ * inlined by the bridge — never a reduction of the generator's own (no fourth table). The
+ * inversion word is not a quality tag and stays. */
 function buildTimeline() {
   const steps = cur();
   M_CHART_LINE.renderChartLine(document.getElementById("timeline"), {
-    bars: steps.map((s) => [{ symbol: s[0], degree: s[5], roman: s[1] + " · " + s[2], beats: 1 }]),
+    bars: steps.map((s) => [{ symbol: s[0], degree: s[5], roman: M_ROMAN.functionRoman(s[1]) + " · " + s[2], beats: 1 }]),
     index: state.step, onPick: (i) => setStep(i, false) });
 }
 
@@ -805,7 +808,7 @@ html = (TEMPLATE
         .replace("__NOTEPAD_PAD__", bridge.card_part("notepad-card", "pad"))
         .replace("__NOTEPAD_BOARD__", bridge.card_markup("notepad-card", seated=("pad",)))
         .replace("__CHART_LINE_CSS__", bridge.chart_line_styles("#timeline"))
-        .replace("__ENGINE__", bridge.engine_inline(["notepad-surface", "metronome", "voices", "chart-line"]))
+        .replace("__ENGINE__", bridge.engine_inline(["notepad-surface", "metronome", "voices", "chart-line", "roman"]))
         .replace("__DATA__", json.dumps(DATA)))
 # where this output is PUBLISHED — tools/generator_identity.py asserts the page is byte-identical to what this emits
 PUBLISHED = "static/studies/tetrad-voice-leading/study.html"

@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { narrate, familyCostClause, placementWords, placementDependency, PLACE_LABEL } from "../../hub/modules/shape-motion.mjs";
 import { FAMILIES } from "../tetrad-voicings.mjs";
-import { STRING_SETS } from "../tetrad-sequence.mjs";
+import { STRING_SETS, tetradPass } from "../tetrad-sequence.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = readFileSync(join(here, "..", "..", "hub", "modules", "shape-motion.mjs"), "utf8");
@@ -131,4 +131,44 @@ test("item 2, rule 10 / rule 6: the placement's three sites are ONE source", () 
     assert.equal((SRC.match(new RegExp(lit.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1,
       `"${lit}" is written ONCE in shape-motion.mjs — the single source`);
   assert.ok(/const PLACE_LABEL = [\s\S]{0,3000}placementWords = /.test(SRC), "placementWords sits by PLACE_LABEL");
+});
+
+/* THE EXCEPTION MUST BE TRUE OF THE CORPUS (injection 261006, item 1). Night 42's sentence named
+ * "a bar with no candidate on the zone" — the empty-pool fallback — as where Grip and Free part
+ * while bound. Measured independently (the PO at f0f184f, this run at 1aea211): majors, fourths,
+ * 12 keys × 3 sets × 3 families, 864 bars — 33 differing bars, and in NONE of them is the anchor
+ * off the zone. The mechanism is the TIE RULES (isolation.mjs: grip ties by candidate order,
+ * free by lower position with the ladder wrapping), which the bind does not touch; Free's
+ * lower-position tie reaches the OPEN position, fret 0 passing the bind as positionless. A
+ * sentence asserting a cause with zero instances must fail here, whichever cause it names. */
+const KEYS12 = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+function boundCorpus() {
+  let bars = 0, same = 0, offZone = 0, onZone = 0, freeOpen = 0; const byFam = { close: 0, drop2: 0, drop3: 0 };
+  for (const key of KEYS12) for (let setIndex = 0; setIndex < 3; setIndex++) for (const family of ["close", "drop2", "drop3"]) {
+    const args = { key, scale: "major", cycle: "fourths", bottom: 0, setIndex, families: [family] };
+    const g = tetradPass({ ...args, placement: "grip" }), f = tetradPass({ ...args, placement: "free" });
+    const zi = g.set.strings.indexOf(g.zone.string), zf = g.zone.frets, on = (fr) => fr === 0 || zf.includes(fr);
+    g.steps.forEach((s, i) => {
+      bars++; const a = s.voicing.notes.map((x) => x.fret), b = f.steps[i].voicing.notes.map((x) => x.fret);
+      if (a.join() === b.join()) { same++; return; }
+      byFam[family]++; if (on(a[zi]) && on(b[zi])) onZone++; else offZone++; if (b[zi] === 0) freeOpen++;
+    });
+  }
+  return { bars, same, differing: bars - same, offZone, onZone, freeOpen, byFam };
+}
+
+test("item 2's exception names a mechanism that MEASURES: whatever the bound sentence excepts must have instances in the corpus", () => {
+  const c = boundCorpus();
+  assert.equal(c.bars, 864); assert.ok(c.same >= 800, `bound Grip == Free in ${c.same} of ${c.bars}`);
+  const sentence = placementDependency(true);
+  const namesFallback = /no candidate on the zone|empty pool|fallback/i.test(sentence);
+  const namesTie = /tie/i.test(sentence);
+  assert.ok(namesFallback || namesTie || !/\(|except/i.test(sentence), "the sentence either names its mechanism or excepts nothing");
+  if (namesFallback) assert.ok(c.offZone > 0, `the sentence names the empty-pool fallback, but in ${c.differing} differing bars the anchor is off the zone in ${c.offZone} — a cause with zero instances`);
+  if (namesTie) {
+    assert.equal(c.offZone, 0, "the sentence names the tie rules: every differing bar must be tie-resolved (both anchors on the zone)");
+    assert.ok(c.onZone === c.differing && c.differing > 0, `tie-resolved: ${c.onZone} of ${c.differing}`);
+    if (/drop-3/i.test(sentence)) assert.ok(c.byFam.drop3 > c.differing / 2, `"mostly drop-3": ${c.byFam.drop3} of ${c.differing}`);
+    if (/open/i.test(sentence)) assert.ok(c.freeOpen > c.differing / 2, `"mostly Free reaching an open position": ${c.freeOpen} of ${c.differing}`);
+  }
 });

@@ -16,8 +16,9 @@
  *
  * THE DRAWING IS THE FAMILY'S (night 43, 261007): engine/chart-line.mjs draws
  * the strip Multetudes' timeline strip drew — the root-degree dot from the
- * pass step's degree, the roman as data (this app's own spelling, viiø7 — the
- * spelling gate was built for KEEP), beats from the transport's pattern. No
+ * pass step's degree, the roman as data — REDUCED to the function-only spelling
+ * through engine/roman.mjs (the 261006 ruling; night 43's KEEP was the fallback for
+ * a ruling that had not reached it), beats from the transport's pattern. No
  * sub-line: this host has no bass reference, so it supplies none and asks for
  * no sub-line rules. The near-miss twins (.tlbar/.tlrn/.cur) are gone with it.
  * This strip is NOT the position owner: a chip click is announced as a request
@@ -28,6 +29,7 @@ import { patternOf } from "../../engine/transport.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 import { renderChartLine, chartLineStyles } from "../../engine/chart-line.mjs";
+import { functionRoman } from "../../engine/roman.mjs";
 
 export const chordTimeline = {
   id: "chord-timeline",
@@ -73,9 +75,15 @@ export const chordTimeline = {
       const pat = patternOf(meter, splitIdx);
       const L = pat.length;
       const bars = [];
+      /* ONE ROMAN SPELLING (Daniel's ruling 261006, built 261008): the roman names FUNCTION;
+       * quality is the symbol's job wherever the symbol is present — and a chip always carries
+       * its symbol — so the chip's roman is the full one reduced through the ONE named
+       * function (engine/roman.mjs: viiø7 → vii°, Imaj7 → I). Where the roman stands alone it
+       * keeps its quality: the "Start on" selector (harmony-panel.mjs) still reads viiø7. That
+       * is the difference a user sees in this app, and it is the rule, not a disagreement. */
       for (let i0 = 0; i0 < pass.steps.length; i0 += L)
         bars.push(pass.steps.slice(i0, i0 + L).map((s, k) =>
-          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k] })));
+          ({ symbol: s.symbol, degree: s.degree, roman: functionRoman(s.roman), beats: pat[k] })));
       renderChartLine(byId("tlBars"), { doc: d, bars, index: step,
         onPick: (i) => announce(d, STEP_CHANGED, { index: i, request: true }) });
     };

@@ -1,3 +1,29 @@
+## 2026-09-08 — The 261006 injection: Tetradetudes v0.6.4 — the Grip/Free sentence names the mechanism that measures, the bind control's title stops reporting, and the chart line spells the roman as function on every study
+
+- **Night 42's parenthetical (PO ruling 261006):** the shipped sentence blamed the bars where Grip
+  and Free differ while bound on "a bar with no candidate on the zone" — measured again (864
+  bars, majors, fourths), that cause fires in none of the 33 differing bars; the mechanism is the
+  two placements' tie rules, with Free reaching an open position on most of them. The sentence
+  now says so, and a corpus test fails any exception the sentence names that the corpus cannot
+  show.
+- **The bind control's title:** "the box says so" struck (the box never reports — the 2026-08-21
+  retraction stands, untouched) and "Off, the zone only pulls (today's behaviour)" replaced by
+  what release actually does: a pull under Grip, none under Free.
+- **One roman spelling (PO ruling 261006, which night 43 never received):** the roman names
+  function; quality is the symbol's job wherever the symbol is present. The chart line's chip
+  always carries the symbol, so its roman is reduced through one named function
+  (`engine/roman.mjs`: viiø7 → vii°, Imaj7 → I) on tetradetudes and, upstream in its generator,
+  on tetrad-voice-leading (the inversion word stays). The "Start on" selector shows the roman
+  alone and keeps its tags. Multetudes was already function-only; triadetudes' triad romans are
+  function-only already and were left alone. The reduction is asserted equal to Multetudes'
+  spelling on every diatonic tetrad of every key and scale.
+- **Verified:** engine 673/673, hub 11/11, the door gate with the ruling pinned and the selector
+  proved unchanged, the bite chain with two new mutations (the parenthetical returning, the
+  reporter returning), hugo clean, check_site clean with both generated pages byte-identical;
+  rendered in Chromium at 1280 and 390 on a served build, before and after, zero console errors,
+  and looked at (`notes/working/shots-261008-inj/`).
+- Report: `notes/working/Tetradetudes build run 261008b — the injection.md`.
+
 ## 2026-09-08 — DEPLOYED: night 44 live — the tuning is the field's fact, no study changes what it shows; multetudes and tetradetudes republished with the repointed modules; written from the run
 
 - record: run 34198460724 · success · commit 72b90e2 · fetched 2026-09-08T07:23Z · 6/6 studies byte-identical · digest 79d2c0fd82cf

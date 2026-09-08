@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tetradetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "tetradetudes", lock {"material":"tetrad","notepad":true,"audio":true,"transport":true}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs tetradetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -485,7 +485,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       <button data-win="follow" title="the frozen study's auto-cropping window — the neck framed to the pass">Follow</button>
       <button data-win="box" title="the isolation zone as a movable box the optimizer honours (Grip placement)">Box</button>
     </div>
-    <label class="chk fsBind" title="bind: the anchor voice must land on one of the three zone notes — a bar that cannot reaches outside and the box says so. Off, the zone only pulls (today's behaviour).">
+    <label class="chk fsBind" title="hold the anchor voice to one of the three zone notes; a bar with no such candidate takes the nearest grip it can, and nothing reports it. Released, the zone is a pull under Grip and no pull at all under Free, which chooses by voice-leading alone.">
       <input type="checkbox" id="bindChk" data-control="bindChk"> bind</label>
   </div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
@@ -4712,6 +4712,53 @@ function renderChartLine(host, { doc, bars, index, onPick, keepInView = true }) 
 return { CHART_LINE_CSS, CHART_LINE_SUBLINE_CSS, chartLineStyles, renderChartLine };
 })();
 
+/* ===== engine/roman.mjs ===== */
+const __m_engine_roman_mjs = (() => {
+/* roman.mjs — ONE ROMAN SPELLING, ONE NAMED REDUCTION (Daniel's ruling 261006; built 261008).
+ *
+ *   The roman names FUNCTION. Quality is the symbol's job wherever the symbol is present.
+ *   Where the roman stands alone, it carries the quality itself.
+ *
+ * Three spellers exist for one concept — progression.mjs's chordAt (vii°: the triad's reading,
+ * lower case for a minor third, ° for a diminished fifth under it), tetrad-sequence.mjs's
+ * romanOf (viiø7: the seventh named) and the cycles generator's ROMAN_SUFFIX in Python. Each
+ * has readers that need the tags: the "Start on" selector shows the roman ALONE and keeps
+ * them. The CHART LINE never shows a roman without its symbol, so on every study the chip
+ * takes the function-only spelling — derived from the full roman through THIS function and
+ * no other, so that a fourth table never appears (the generated page reaches it through the
+ * bridge's inline; the generator emits its full roman as data and does not reduce).
+ *
+ * THE DIFFERENCE, STATED: in the tetrad apps a user sees `viiø7` in Start-on and `vii°` on
+ * the chip of the same chord. That is the rule above, not a disagreement — the chip's symbol
+ * (`Bm7b5`) already names the quality the tag would repeat; the selector has no symbol beside
+ * it, so its roman carries the quality. roman.test.mjs asserts the reduction equals
+ * progression.mjs's spelling on every diatonic tetrad of every key and scale.
+ *
+ * NOT A TABLE: the tags are read by their shape — a leading ø, ° or o means the triad under
+ * the seventh is diminished and keeps the °; every other tag (maj7, -7, 7, +7, mΔ7, -Δ7, +Δ7)
+ * is quality the symbol carries and goes, the augmented + included, because the triad's
+ * reading in progression.mjs marks no augmented (the part they share, asserted).
+ */
+const NUMERAL = /^(?:VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)(?![IViv])/;
+
+/** the function-only spelling of a roman: the numeral in its case, ° kept for a diminished
+ * triad, every seventh tag dropped; a dash (an off-key root) passes through */
+function functionRoman(roman) {
+  if (typeof roman !== "string") throw new Error("roman: a roman is a string");
+  if (roman === "—") return roman;
+  const m = roman.match(NUMERAL);
+  if (!m) throw new Error(`roman: "${roman}" does not begin with a roman numeral`);
+  const tag = roman.slice(m[0].length);
+  return m[0] + (/^[ø°o]/.test(tag) ? "°" : "");
+}
+
+{
+  if (functionRoman("viiø7") !== "vii°" || functionRoman("Imaj7") !== "I" || functionRoman("III+7") !== "III" || functionRoman("viio7") !== "vii°")
+    throw new Error("roman: the reduction does not hold — viiø7 → vii°, Imaj7 → I, III+7 → III");
+}
+return { functionRoman };
+})();
+
 /* ===== hub/modules/chord-timeline.mjs ===== */
 const __m_hub_modules_chord_timeline_mjs = (() => {
 const { tetradPass } = __m_engine_tetrad_sequence_mjs;
@@ -4719,6 +4766,7 @@ const { patternOf } = __m_engine_transport_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 const { renderChartLine, chartLineStyles } = __m_engine_chart_line_mjs;
+const { functionRoman } = __m_engine_roman_mjs;
 /* chord-timeline.mjs — the reference's chord timeline strip.
  *
  * `#timeline` in static/studies/triadetudes/study.html: a scrollable row of
@@ -4737,13 +4785,15 @@ const { renderChartLine, chartLineStyles } = __m_engine_chart_line_mjs;
  *
  * THE DRAWING IS THE FAMILY'S (night 43, 261007): engine/chart-line.mjs draws
  * the strip Multetudes' timeline strip drew — the root-degree dot from the
- * pass step's degree, the roman as data (this app's own spelling, viiø7 — the
- * spelling gate was built for KEEP), beats from the transport's pattern. No
+ * pass step's degree, the roman as data — REDUCED to the function-only spelling
+ * through engine/roman.mjs (the 261006 ruling; night 43's KEEP was the fallback for
+ * a ruling that had not reached it), beats from the transport's pattern. No
  * sub-line: this host has no bass reference, so it supplies none and asks for
  * no sub-line rules. The near-miss twins (.tlbar/.tlrn/.cur) are gone with it.
  * This strip is NOT the position owner: a chip click is announced as a request
  * and the strip adopts the transport's echo, exactly as before.
  */
+
 
 
 
@@ -4793,9 +4843,15 @@ const chordTimeline = {
       const pat = patternOf(meter, splitIdx);
       const L = pat.length;
       const bars = [];
+      /* ONE ROMAN SPELLING (Daniel's ruling 261006, built 261008): the roman names FUNCTION;
+       * quality is the symbol's job wherever the symbol is present — and a chip always carries
+       * its symbol — so the chip's roman is the full one reduced through the ONE named
+       * function (engine/roman.mjs: viiø7 → vii°, Imaj7 → I). Where the roman stands alone it
+       * keeps its quality: the "Start on" selector (harmony-panel.mjs) still reads viiø7. That
+       * is the difference a user sees in this app, and it is the rule, not a disagreement. */
       for (let i0 = 0; i0 < pass.steps.length; i0 += L)
         bars.push(pass.steps.slice(i0, i0 + L).map((s, k) =>
-          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k] })));
+          ({ symbol: s.symbol, degree: s.degree, roman: functionRoman(s.roman), beats: pat[k] })));
       renderChartLine(byId("tlBars"), { doc: d, bars, index: step,
         onPick: (i) => announce(d, STEP_CHANGED, { index: i, request: true }) });
     };
@@ -4941,7 +4997,7 @@ const fretboardStage = {
       <button data-win="follow" title="the frozen study's auto-cropping window — the neck framed to the pass">Follow</button>
       <button data-win="box" title="the isolation zone as a movable box the optimizer honours (Grip placement)">Box</button>
     </div>
-    <label class="chk fsBind" title="bind: the anchor voice must land on one of the three zone notes — a bar that cannot reaches outside and the box says so. Off, the zone only pulls (today's behaviour).">
+    <label class="chk fsBind" title="hold the anchor voice to one of the three zone notes; a bar with no such candidate takes the nearest grip it can, and nothing reports it. Released, the zone is a pull under Grip and no pull at all under Free, which chooses by voice-leading alone.">
       <input type="checkbox" id="bindChk" data-control="bindChk"> bind</label>
   </div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
@@ -9252,9 +9308,16 @@ const PLACE_LABEL = { grip: "Grip", line: "Line", free: "Free" };
  * fret before chooseVoicings runs, so placementCost's pivotW * zone.cost(pf) is
  * 4 * 0 for Grip on every surviving candidate: Grip's whole differentiator is priced
  * out by the default, and Grip and Free reach the same grip (identical passes in 92
- * of 108 configurations, 831 of 864 bars, measured at 148fda6; the rest are bars with
- * no anchored candidate, where the documented empty-pool fallback lets the pivot term
- * bite). Unbound (the legacy path, `bind: false`, pinned byte-for-byte by the oracle
+ * of 108 configurations, 831 of 864 bars, measured at 148fda6). THE EXCEPTION, CORRECTED
+ * (injection 261006, item 1): night 42 blamed the 33 differing bars on the empty-pool
+ * fallback — measured again at f0f184f and at 1aea211, the fallback fires in NONE of
+ * them; every differing bar has both anchors on the zone. The mechanism is the TIE
+ * RULES (isolation.mjs: grip ties by candidate order, free by lower position with the
+ * ladder wrapping), which the bind does not touch — Free's lower-position tie reaches
+ * the open position, fret 0 passing the bind as positionless, which is why 25 of the
+ * 32 drop-3 cases put Free on an open anchor (close 0, drop-2 1). The sentence names
+ * the tie, and shape-motion-words.test.mjs asserts that whatever it excepts has
+ * instances in the corpus. Unbound (the legacy path, `bind: false`, pinned byte-for-byte by the oracle
  * comparisons) Free really does release the pull. The panel used to state the
  * unbound sentence in both states — false whenever bound. Words, not behaviour: Free
  * is NOT coupled to bind, which would change what a saved étude restores to. */
@@ -9266,7 +9329,7 @@ const placementWords = (placement, bound) => ({
   line: "free placement along the set — needs the line voicer, not wired yet",
 })[placement];
 const placementDependency = (bound) => bound
-  ? `the anchor voice is held to the zone, so ${PLACE_LABEL.grip} and ${PLACE_LABEL.free} reach the same grip (a bar with no candidate on the zone excepted) — releasing the anchor on the neck is what makes them differ`
+  ? `the anchor voice is held to the zone, so ${PLACE_LABEL.grip} and ${PLACE_LABEL.free} reach the same grip — they part only where their two tie rules pick different anchored candidates, mostly drop-3 and mostly ${PLACE_LABEL.free} reaching an open position — releasing the anchor on the neck is what makes them differ`
   : "Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it";
 
 /* THE PANEL'S NARRATION, AS A PURE FUNCTION OF ITS CONFIG (night 42) — every clause is
@@ -10225,7 +10288,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.3","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.4","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

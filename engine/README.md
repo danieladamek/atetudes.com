@@ -154,6 +154,9 @@ engine/
 │                        from standard — down flat, up sharp, unmoved natural; the twelve names
 │                        the only table; a leaf, so a card can take a set's label without the
 │                        tetrad tree (pure)
+├── roman.mjs            ONE ROMAN SPELLING, one named reduction (261006 ruling): functionRoman —
+│                        the chip's function-only spelling from the full roman (viiø7 → vii°),
+│                        asserted equal to progression.mjs's on every diatonic tetrad (pure)
 ├── palette.mjs          the music palette: glyphs, the chord chooser, structure
 │                        inserts, figure/slot-pattern snippets canonical through the
 │                        motion grammar; padInsert = the caret-preserving seam

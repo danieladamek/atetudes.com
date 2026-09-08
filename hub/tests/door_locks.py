@@ -5602,7 +5602,22 @@ console.log(JSON.stringify(out));
                 check(c["dot"]["bg"] == hex2rgb(pal[c["dot"]["deg"]]), f"{tag} {c['sym']}'s dot is not the palette's colour: {c['dot']}")
             check(all(c["us"] is None and c["slash"] is None for c in cs), f"{tag} tetradetudes has no bass reference — no sub-line, not an empty one: {cs}")
             check(page.evaluate("() => document.querySelectorAll('#tlBars .tl-us, #tlBars .tl-slash').length") == 0, f"{tag} no sub-line element at all")
-            check(all(re.search(r"7$", c["rn"] or "") for c in cs), f"{tag} the roman is this app's own spelling (KEEP — the seventh named on every chip): {[c['rn'] for c in cs]}")
+            # ONE ROMAN SPELLING (ruled 261006, built 261008): the chip pairs the roman with its symbol,
+            # so the roman names function only — no seventh tag on any chip; the Start-on selector
+            # shows the roman ALONE and keeps its tags. Night 43's KEEP pin stood here until the ruling reached it.
+            check(all(c["rn"] and not re.search(r"(maj7|-7|7|ø7|°7|Δ7)$", c["rn"]) for c in cs),
+                  f"{tag} a chip's roman still carries a quality tag (ONE spelling — the symbol names the quality): {[c['rn'] for c in cs]}")
+            check(any(c["rn"] == "vii°" for c in cs) or any("°" in (c["rn"] or "") for c in cs),
+                  f"{tag} the diminished triad keeps its ° on the chip: {[c['rn'] for c in cs]}")
+            starts = page.eval_on_selector_all("#startSel option", "e => e.map(x => x.textContent)")
+            check(len(starts) == 7 and all(re.search(r"7$", o) for o in starts),
+                  f"{tag} the Start-on selector stands alone and keeps its quality tags: {starts}")
+            # the bind control's title (injection item 2): no retracted reporter, no "today's", the release said per placement
+            title = page.get_attribute(".fsBind", "title") or ""
+            check("box says so" not in title and "today" not in title and not title.lower().startswith("bind"),
+                  f"{tag} the bind title reports, dates itself, or quotes its caption: {title!r}")
+            check("Grip" in title and "Free" in title and "pull" in title and "voice-leading" in title,
+                  f"{tag} the bind title does not say what release does per placement: {title!r}")
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

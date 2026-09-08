@@ -1496,9 +1496,10 @@ def m62_the_sub_line_repeats_the_chord():
 
 
 def m63_a_host_with_no_reference_gets_a_sub_line():
+    # re-aimed 261008 (the 261006 ruling): the chip line reduces the roman now
     p, original, mutated = patch("hub/modules/chord-timeline.mjs",
-        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k] })));",
-        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k], us: s.rootName + \" over nothing\" })));")
+        "          ({ symbol: s.symbol, degree: s.degree, roman: functionRoman(s.roman), beats: pat[k] })));",
+        "          ({ symbol: s.symbol, degree: s.degree, roman: functionRoman(s.roman), beats: pat[k], us: s.rootName + \" over nothing\" })));")
     try:
         p.write_text(mutated)
         build()
@@ -1534,20 +1535,56 @@ def m65_the_spelling_changes_and_the_dots_do_not():
     the degree, never the spelling — must not change, and the suite says so by passing
     every dot pin. (The gate's own KEEP pin on the spelling is the one line expected to
     move, so it is the one line excluded from the verdict.)"""
+    # re-aimed 261008 (the 261006 ruling): the chip reduces through functionRoman now; the positive
+    # mutation hands it the FULL roman back — the tags return, the dots must not move
     p, original, mutated = patch("hub/modules/chord-timeline.mjs",
-        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k] })));",
-        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman.replace(/ø7$/, \"°\").replace(/(maj7|-7|7)$/, \"\"), beats: pat[k] })));")
+        "          ({ symbol: s.symbol, degree: s.degree, roman: functionRoman(s.roman), beats: pat[k] })));",
+        "          ({ symbol: s.symbol, degree: s.degree, roman: s.roman, beats: pat[k] })));")
     try:
         p.write_text(mutated)
         r = chartline()
         build()
         g = suite()
         fails = [l for l in g.stdout.splitlines() if l.startswith("FAIL")]
-        only_spelling = all("this app's own spelling (KEEP" in l for l in fails)
+        only_spelling = all("still carries a quality tag" in l for l in fails)
         dots_ok = "eight diatonic chips, eight dots" not in g.stdout and "is not the palette's colour" not in g.stdout
         record("the roman's spelling changes and the dots do not (positive: green on every dot pin is the bite)",
                r.returncode == 0 and only_spelling and dots_ok,
                "chart-line exit %d; suite fails: %s — only the spelling pin moved: %s" % (r.returncode, [l[:80] for l in fails], only_spelling))
+    finally:
+        p.write_text(original)
+
+
+# ---------------------------------------------------------------- mutations 66–67
+# 261008 (injection 261006): a sentence that names a cause with zero instances must fail;
+# the retracted reporter must not return to the bind control's title.
+def m66_the_fallback_clause_returns():
+    p, original, mutated = patch("hub/modules/shape-motion.mjs",
+        "reach the same grip — they part only where their two tie rules pick different anchored candidates, mostly drop-3 and mostly ${PLACE_LABEL.free} reaching an open position — releasing",
+        "reach the same grip (a bar with no candidate on the zone excepted) — releasing")
+    try:
+        p.write_text(mutated)
+        r = words()
+        hit = "a cause with zero instances" in (r.stdout + r.stderr)
+        record("the parenthetical names the empty-pool fallback again — a cause that measures zero",
+               r.returncode != 0 and hit,
+               "words exit %d; the corpus pin named the zero-instance cause: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m67_the_box_says_so_again():
+    p, original, mutated = patch("hub/modules/fretboard-stage.mjs",
+        "takes the nearest grip it can, and nothing reports it. Released,",
+        "reaches outside and the box says so. Released,")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the bind title reports, dates itself, or quotes its caption" in g.stdout
+        record("the bind title claims the box reports (the 2026-08-21 retraction, contradicted by a tooltip)",
+               g.returncode != 0 and hit,
+               "suite exit %d; the title pin bit: %s" % (g.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -1666,7 +1703,8 @@ def main():
                m59_the_set_and_zone_move_and_the_clause_does_not,
                m60_the_off_key_root_wears_a_dot, m61_the_dots_colour_comes_from_elsewhere,
                m62_the_sub_line_repeats_the_chord, m63_a_host_with_no_reference_gets_a_sub_line,
-               m64_the_asking_strip_becomes_a_second_owner, m65_the_spelling_changes_and_the_dots_do_not)
+               m64_the_asking_strip_becomes_a_second_owner, m65_the_spelling_changes_and_the_dots_do_not,
+               m66_the_fallback_clause_returns, m67_the_box_says_so_again)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

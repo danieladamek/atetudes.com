@@ -91,9 +91,16 @@ export const PLACE_LABEL = { grip: "Grip", line: "Line", free: "Free" };
  * fret before chooseVoicings runs, so placementCost's pivotW * zone.cost(pf) is
  * 4 * 0 for Grip on every surviving candidate: Grip's whole differentiator is priced
  * out by the default, and Grip and Free reach the same grip (identical passes in 92
- * of 108 configurations, 831 of 864 bars, measured at 148fda6; the rest are bars with
- * no anchored candidate, where the documented empty-pool fallback lets the pivot term
- * bite). Unbound (the legacy path, `bind: false`, pinned byte-for-byte by the oracle
+ * of 108 configurations, 831 of 864 bars, measured at 148fda6). THE EXCEPTION, CORRECTED
+ * (injection 261006, item 1): night 42 blamed the 33 differing bars on the empty-pool
+ * fallback — measured again at f0f184f and at 1aea211, the fallback fires in NONE of
+ * them; every differing bar has both anchors on the zone. The mechanism is the TIE
+ * RULES (isolation.mjs: grip ties by candidate order, free by lower position with the
+ * ladder wrapping), which the bind does not touch — Free's lower-position tie reaches
+ * the open position, fret 0 passing the bind as positionless, which is why 25 of the
+ * 32 drop-3 cases put Free on an open anchor (close 0, drop-2 1). The sentence names
+ * the tie, and shape-motion-words.test.mjs asserts that whatever it excepts has
+ * instances in the corpus. Unbound (the legacy path, `bind: false`, pinned byte-for-byte by the oracle
  * comparisons) Free really does release the pull. The panel used to state the
  * unbound sentence in both states — false whenever bound. Words, not behaviour: Free
  * is NOT coupled to bind, which would change what a saved étude restores to. */
@@ -105,7 +112,7 @@ export const placementWords = (placement, bound) => ({
   line: "free placement along the set — needs the line voicer, not wired yet",
 })[placement];
 export const placementDependency = (bound) => bound
-  ? `the anchor voice is held to the zone, so ${PLACE_LABEL.grip} and ${PLACE_LABEL.free} reach the same grip (a bar with no candidate on the zone excepted) — releasing the anchor on the neck is what makes them differ`
+  ? `the anchor voice is held to the zone, so ${PLACE_LABEL.grip} and ${PLACE_LABEL.free} reach the same grip — they part only where their two tie rules pick different anchored candidates, mostly drop-3 and mostly ${PLACE_LABEL.free} reaching an open position — releasing the anchor on the neck is what makes them differ`
   : "Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it";
 
 /* THE PANEL'S NARRATION, AS A PURE FUNCTION OF ITS CONFIG (night 42) — every clause is

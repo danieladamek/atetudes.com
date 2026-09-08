@@ -111,7 +111,10 @@ export default {
      * box and #fsBoxHint are exactly as they were. */
     /* v0.6.3 (261007, night 43): the chart line is the family's — engine/chart-line.mjs draws
      * it; the root-degree dot on every chip; the near-miss twin class names retired. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.3",
+    /* v0.6.4 (261008, injection 261006): the chip's roman reads function only (vii°, the
+     * Start-on selector keeps viiø7); the Grip/Free sentence names the tie rules; the bind
+     * control's title says what release does per placement, and no longer says the box reports. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.4",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };
