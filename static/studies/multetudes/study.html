@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -2372,7 +2372,7 @@ const { scaleNotes, SCALE_STEPS } = __m_engine_chord_mjs;
  * scaleNotes() — the letters climb one per degree, accidentals derived — and
  * are NOT re-derived here. The tuning is derived below from its named rule
  * and this is ITS ONE DECLARATION SITE (260920, night 26 item 1): until
- * tonight engine/tetrad-sequence.mjs stated the same six numbers as a literal
+ * tonight the tetrad sequence module stated the same six numbers as a literal
  * and the tests pinned the two equal — a pin that two copies agree keeps both
  * alive and turns a divergence into a test failure rather than an
  * impossibility. Now tetrad-sequence and every hub consumer import from here;
@@ -2384,12 +2384,58 @@ const { scaleNotes, SCALE_STEPS } = __m_engine_chord_mjs;
 
 /** Standard tuning, DERIVED from the named rule rather than typed: string 6 is
  * E2 (midi 40), and each higher string sits a perfect fourth above the one
- * below it except string 2, which sits a major third above string 3 (G→B). */
+ * below it except string 2, which sits a major third above string 3 (G→B).
+ *
+ * THE DEFAULT, NOT THE TUNING (night 44, 261008 — alternate tunings, item 1).
+ * The tuning is state on the field object: `fld.opens`, derived by opensOf()
+ * from an optional `tuning` and asserted WELL-FORMED. This constant is what
+ * an absent tuning means, and the reference the ±6 window is measured
+ * against; nothing may read it as THE tuning (tuning.test.mjs greps for it). */
 const OPEN_MIDI = (() => {
   const open = { 6: 40 };
   for (let s = 6; s > 1; s--) open[s - 1] = open[s] + (s === 3 ? 4 : 5);
   return open;
 })();
+
+const STRINGS = [6, 5, 4, 3, 2, 1];   // low → high, the six strings there are (§9: six, only)
+const TUNING_RANGE = 6;                // ±6 semitones per string — Daniel's figure, three whole tones
+
+/** WELL-FORMEDNESS, not identity (design note §6): six strings numbered 1..6
+ * each present once; each open within ±6 semitones of its standard value;
+ * strictly ascending in pitch 6 → 1 — no crossing, because slots are
+ * pitch-ordered and a crossed tuning would change what every stored figure
+ * means, silently (§4). DADGAD is legal; a swapped pair, a missing string
+ * and a transposed digit are not — tuning.test.mjs proves all three. */
+function assertOpens(opens) {
+  if (!opens || typeof opens !== "object") throw new Error("field: a tuning is six open midis, one per string 1..6");
+  const keys = Object.keys(opens).map(Number).sort((a, b) => a - b);
+  if (keys.join() !== "1,2,3,4,5,6")
+    throw new Error(`field: a tuning names six strings 1..6, each once — got ${keys.join(",") || "nothing"}`);
+  for (const s of STRINGS) {
+    if (!Number.isInteger(opens[s])) throw new Error(`field: string ${s}'s open midi is not an integer`);
+    if (Math.abs(opens[s] - OPEN_MIDI[s]) > TUNING_RANGE)
+      throw new Error(`field: string ${s} at midi ${opens[s]} is outside the ±${TUNING_RANGE} semitone window around standard (${OPEN_MIDI[s]})`);
+  }
+  for (let i = 1; i < STRINGS.length; i++)
+    if (opens[STRINGS[i]] <= opens[STRINGS[i - 1]])
+      throw new Error(`field: string ${STRINGS[i]} (midi ${opens[STRINGS[i]]}) does not ascend above string ${STRINGS[i - 1]} (midi ${opens[STRINGS[i - 1]]}) — a crossed tuning is refused`);
+  return opens;
+}
+
+/** the opens a tuning names: `tuning` is a map from string number to a
+ * semitone OFFSET from standard (§7's shape — `{6: -2}` reads "drop the
+ * sixth"); absent strings are at standard; no tuning at all is standard. */
+function opensOf(tuning) {
+  const opens = {};
+  for (const s of STRINGS) {
+    const off = tuning && s in tuning ? tuning[s] : 0;
+    if (!Number.isInteger(off)) throw new Error(`field: string ${s}'s tuning offset must be an integer number of semitones`);
+    opens[s] = OPEN_MIDI[s] + off;
+  }
+  if (tuning) for (const k of Object.keys(tuning))
+    if (!STRINGS.includes(Number(k))) throw new Error(`field: string ${k} is not a real string — a tuning names strings 1..6`);
+  return assertOpens(opens);
+}
 
 /** The mode names, one per degree per scale — the brief §2.1's table, verbatim.
  * One name each where several are current; aliases are a decision, not a build
@@ -2418,15 +2464,21 @@ const degAgainst = (keyDeg, ref) => mod7(keyDeg - ref);
  *   modeName  what that reading is called (MODES[scale][ref])
  *   degOf(pc) the degree a pitch class wears against the reference, or -1
  */
-function field({ key, scale = "major", ref = 0 } = {}) {
+function field({ key, scale = "major", ref = 0, tuning = null } = {}) {
   if (!SCALE_STEPS[scale])
     throw new Error(`field: unknown scale "${scale}" — chord.mjs knows ${Object.keys(SCALE_STEPS).join(", ")}`);
   if (!Number.isInteger(ref) || ref < 0 || ref > 6)
     throw new Error(`field: the reference is a degree 0..6, not ${ref}`);
   const notes = scaleNotes(key, scale);
   const pcs = notes.map((n) => n.pc);
+  /* THE TUNING IS THE FIELD'S FACT (night 44): the opens are derived from the
+   * optional offsets and asserted well-formed here, once; `tuning` is restated
+   * total (every string's offset, zeros included) so a reader never guesses. */
+  const opens = opensOf(tuning);
+  const tuningTotal = {};
+  for (const s of STRINGS) tuningTotal[s] = opens[s] - OPEN_MIDI[s];
   return {
-    key, scale, ref, notes, pcs,
+    key, scale, ref, notes, pcs, opens, tuning: tuningTotal,
     refNote: notes[ref],
     modeName: MODES[scale][ref],
     degOf: (pc) => {
@@ -2443,7 +2495,7 @@ function notesOn(string, fld, nfrets = 15) {
     throw new Error(`notesOn: string ${string} is not a real string`);
   const out = [];
   for (let f = 0; f <= nfrets; f++) {
-    const midi = OPEN_MIDI[string] + f;
+    const midi = fld.opens[string] + f;   // the FIELD's opens — the tuning is its fact
     const keyDeg = fld.pcs.indexOf(mod12(midi));
     if (keyDeg >= 0)
       out.push({ string, fret: f, midi, deg: degAgainst(keyDeg, fld.ref), keyDeg });
@@ -2454,15 +2506,21 @@ function notesOn(string, fld, nfrets = 15) {
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */
 
 {
-  // the derived tuning obeys its own named rule, stated independently: six
-  // strings, lowest E2, neighbouring gaps all fourths except G→B
-  const order = [6, 5, 4, 3, 2, 1];
-  if (OPEN_MIDI[6] !== 40) throw new Error("field: string 6 must be E2 (midi 40)");
-  for (let i = 1; i < order.length; i++) {
-    const gap = OPEN_MIDI[order[i]] - OPEN_MIDI[order[i - 1]];
-    if (gap !== (order[i - 1] === 3 ? 4 : 5))
-      throw new Error(`field: string ${order[i]} is ${gap} semitones above ${order[i - 1]}`);
-  }
+  /* IDENTITY BECAME WELL-FORMEDNESS (night 44, 261008 — design note §6, the
+   * register's entry). The block that stood here asserted "string 6 is E2 and
+   * the gaps are fourths except G→B" — an identity check wearing structural
+   * clothes, true only of standard tuning. A tuning is now asserted WELL-FORMED
+   * (assertOpens, above) wherever one is built. ONE identity check is kept, on
+   * purpose and on the DEFAULT only: the constant is the reference the ±6
+   * window is measured against, so its own named rule must hold or the window
+   * is measured against a typo — the transposed-digit case the old block
+   * caught (`{6: 40}` → `{6: 4}`) is caught HERE, not by well-formedness, which
+   * would pass a shifted standard against itself. */
+  if (OPEN_MIDI[6] !== 40) throw new Error("field: the default's rule — string 6 is E2 (midi 40)");
+  for (let i = 1; i < STRINGS.length; i++)
+    if (OPEN_MIDI[STRINGS[i]] - OPEN_MIDI[STRINGS[i - 1]] !== (STRINGS[i - 1] === 3 ? 4 : 5))
+      throw new Error(`field: the default's rule — string ${STRINGS[i]} sits a fourth (a third over G) above string ${STRINGS[i - 1]}`);
+  assertOpens(OPEN_MIDI);   // and the default is itself a well-formed tuning
   // the mode-name table is total and unambiguous per scale
   for (const [sc, names] of Object.entries(MODES)) {
     if (names.length !== 7 || new Set(names).size !== 7)
@@ -2494,7 +2552,58 @@ function notesOn(string, fld, nfrets = 15) {
       }
     }
 }
-return { OPEN_MIDI, MODES, degAgainst, field, notesOn };
+return { OPEN_MIDI, STRINGS, TUNING_RANGE, assertOpens, opensOf, MODES, degAgainst, field, notesOn };
+})();
+
+/* ===== engine/open-string.mjs ===== */
+const __m_engine_open_string_mjs = (() => {
+/* open-string.mjs — THE OPEN STRING'S NAME (night 44, 261008 — Daniel's ruling, 261008).
+ *
+ * An open string is spelled BY THE DIRECTION OF THE MOVE from standard: down is flat, up is
+ * sharp, unmoved is natural. Drop D reads D; a string down one reads E♭; up one reads F♯.
+ * Derived; the only table permitted is the twelve names.
+ *
+ * THE STRING LABEL NAMES THE INSTRUMENT, NOT THE FIELD. This is a deliberate divergence from
+ * chromaticSpeller's jurisdiction (engine/chord.mjs — the codebase's law for spelling a
+ * chromatic pitch class against a key), and §4.4 requires the reason written down, never a
+ * silent departure: under the speller the six labels would re-spell on every key change —
+ * the nut flickering between E♭ and D♯ while nothing about the guitar has moved — which is
+ * a worse answer to "what am I in?" and breaks the one-thing-moves rule. The key is not an
+ * input here. Recorded in notes/specs/multetudes-divergence-register.md.
+ *
+ * A leaf module — it imports nothing — so a card that needs a set's label can take the
+ * label without the tetrad engine's tree (rule 6 for notepad-card's SETS, the absorbed chore).
+ * Pure; load-time assertions.
+ */
+
+/** the twelve names, each pitch class spelled both ways — [sharp, flat]; a natural is both */
+const NAMES = [["C", "C"], ["C♯", "D♭"], ["D", "D"], ["D♯", "E♭"], ["E", "E"], ["F", "F"],
+  ["F♯", "G♭"], ["G", "G"], ["G♯", "A♭"], ["A", "A"], ["A♯", "B♭"], ["B", "B"]];
+
+const mod12 = (n) => ((n % 12) + 12) % 12;
+
+/** the open string's name from its sounding midi and its STANDARD midi: the direction of the
+ * move chooses the accidental; a natural is a natural whichever way it was reached */
+function openStringName(midi, standardMidi) {
+  if (!Number.isInteger(midi) || !Number.isInteger(standardMidi))
+    throw new Error("open-string: a name needs the string's midi and its standard midi, both integers");
+  const [sharp, flat] = NAMES[mod12(midi)];
+  return midi < standardMidi ? flat : sharp;   // unmoved (midi === standard) is a natural, spelled either way the same
+}
+
+/** a set's label, HIGH → LOW (Shell 4's reading, N4's uppercase from the names themselves),
+ * en-dashed — string-run's label rule and the notepad card's, one derivation */
+function setLabel(strings, opens, standard) {
+  return [...strings].sort((a, b) => a - b).map((s) => openStringName(opens[s], standard[s])).join("–");
+}
+
+{
+  if (NAMES.length !== 12) throw new Error("open-string: twelve names");
+  for (const [s, f] of NAMES) if (typeof s !== "string" || typeof f !== "string") throw new Error("open-string: every pitch class has two spellings");
+  if (openStringName(38, 40) !== "D" || openStringName(39, 40) !== "E♭" || openStringName(42, 40) !== "F♯")
+    throw new Error("open-string: the direction rule does not hold — drop D reads D, down one E♭, up two F♯");
+}
+return { openStringName, setLabel };
 })();
 
 /* ===== engine/tetrad-sequence.mjs ===== */
@@ -2503,7 +2612,8 @@ const { parseChord, scaleNotes, SCALE_STEPS } = __m_engine_chord_mjs;
 const { tetradCandidates } = __m_engine_tetrad_voicings_mjs;
 const { chooseVoicings, makeZone } = __m_engine_isolation_mjs;
 const { keysOf } = __m_engine_voice_identity_mjs;
-const { OPEN_MIDI } = __m_engine_field_mjs;
+const { OPEN_MIDI, opensOf } = __m_engine_field_mjs;
+const { setLabel } = __m_engine_open_string_mjs;
 /* tetrad-sequence.mjs — THE DERIVED PASS: a scale, a cycle, and the voiced
  * chords that walk it.
  *
@@ -2539,23 +2649,25 @@ const { OPEN_MIDI } = __m_engine_field_mjs;
  * re-exported (the door build reads exports by declaration, so a re-export
  * would be silently dropped) — every consumer imports from field.mjs. */
 
+
 /* ---------------- the instrument ---------------- */
 
 /** the three four-string groups the frozen study offers, derived by sliding a
  * window of four down the six strings rather than listed */
 const STRING_SETS = [0, 1, 2].map((offset) => {
   const strings = [6, 5, 4, 3].map((s) => s - offset);
-  const letter = (s) => ["", "E", "B", "G", "D", "A", "E"][s];   // uppercase high E (N4, 260820.1)
   return {
     offset, strings,
-    opens: strings.map((s) => OPEN_MIDI[s]),
+    /* the ENUMERATION's opens are the default's — the sets are named against standard; a
+     * pass built with a tuning carries the tuned opens on its own `set` (tetradPass) */
+    opens: strings.map((s) => OPEN_MIDI[s]),   // the DEFAULT's — the enumeration is named against standard
     /* THE LABEL READS HIGH → LOW, the reference's dialect (Shell 4). `strings`
      * is the data and stays untouched — string 1 is the highest (string-sets.mjs
      * law) — so the label is derived by sorting ASCENDING by string number
      * (= descending pitch): offset 0 → G–D–A–E, not E–A–D–G. Presentation only;
      * `offset`/`opens`/`strings` are the stored identity a saved étude restores
      * by, and none of them move. */
-    label: [...strings].sort((a, b) => a - b).map(letter).join("–"),
+    label: setLabel(strings, OPEN_MIDI, OPEN_MIDI),   // derived by the one rule (night 44) — N4's uppercase is the names'
   };
 });
 
@@ -2643,10 +2755,10 @@ function romanOf({ chord, degree }) {
  * which is what pre-ruling saved études restore through. `zone` is
  * `{ frets }` and optionally `{ string, bind }` — the string defaults to the
  * set's lowest, where the pivot lives in every voicing on that set. */
-function defaultZoneFrets(key, scaleType, string) {
+function defaultZoneFrets(key, scaleType, string, opens = OPEN_MIDI) {
   const pcs = scaleNotes(key, scaleType).map((n) => n.pc);
   const sf = [];
-  for (let f = 0; f <= 22; f++) if (pcs.includes((OPEN_MIDI[string] + f) % 12)) sf.push(f);
+  for (let f = 0; f <= 22; f++) if (pcs.includes((opens[string] + f) % 12)) sf.push(f);
   let i = sf.findIndex((f) => f >= 5);
   if (i < 0 || i > sf.length - 3) i = sf.length - 3;
   return [sf[i], sf[i + 1], sf[i + 2]];
@@ -2655,11 +2767,17 @@ function defaultZoneFrets(key, scaleType, string) {
 function tetradPass({
   key = "C", scale = "major", cycle = "fourths", bottom = 0, setIndex = 0,
   nfrets = 15, families = ["drop2"], startDegree = 0, placement = "free",
-  zone = null,
+  zone = null, tuning = null,
 } = {}) {
   if (!SCALE_STEPS[scale]) throw new Error(`unknown scale "${scale}" — chord.mjs knows ${Object.keys(SCALE_STEPS).join(", ")}`);
-  const set = STRING_SETS[setIndex];
-  if (!set) throw new Error(`unknown string set ${setIndex} — there are ${STRING_SETS.length}`);
+  const named = STRING_SETS[setIndex];
+  if (!named) throw new Error(`unknown string set ${setIndex} — there are ${STRING_SETS.length}`);
+  /* THE TUNING IS THE FIELD'S FACT (night 44): `tuning` is the same optional offsets map
+   * field() takes; the opens are derived and asserted well-formed by the one function, and
+   * the pass's set carries THEM — its label re-derived by the direction rule. No tuning is
+   * standard, and standard is byte-for-byte what it was. */
+  const opens = opensOf(tuning);
+  const set = { ...named, opens: named.strings.map((s) => opens[s]), label: setLabel(named.strings, opens, OPEN_MIDI) };
   if (!Number.isInteger(bottom) || bottom < 0 || bottom > 3)
     throw new Error(`bottom tone ${bottom} is not one of 0..3 (R, 3, 5, 7)`);
 
@@ -2687,7 +2805,7 @@ function tetradPass({
   const zoneString = zone && Number.isInteger(zone.string) && set.strings.includes(zone.string)
     ? zone.string : set.strings[0];
   const zoneFrets = zone && Array.isArray(zone.frets) && zone.frets.length
-    ? zone.frets.map(Number) : defaultZoneFrets(key, scale, zoneString);
+    ? zone.frets.map(Number) : defaultZoneFrets(key, scale, zoneString, opens);
   const theZone = makeZone({ string: zoneString, frets: zoneFrets });
 
   /* BINDING IS THE DEFAULT (ratified 2026-08-21: "a position you do not stay
@@ -2728,7 +2846,7 @@ function tetradPass({
     if (!v) throw new Error(`no voicing for ${chords[i].symbol} on ${set.label} within ${nfrets} frets`);
 
   return {
-    key, scale, cycle, bottom, setIndex, set, families, placement,
+    key, scale, cycle, bottom, setIndex, set, families, placement, opens,
     zone: { string: zoneString, frets: [...zoneFrets], ...(bind ? {} : { bind: false }) },
     box,
     rule: CYCLES[cycle].rule,
@@ -2753,14 +2871,13 @@ function degreeLabel(chord, midi) {
 /* ---------------- load-time assertions (golden rule 1, site form) ---------------- */
 
 {
-  // standard tuning, checked against its named rule rather than trusted
-  const order = [6, 5, 4, 3, 2, 1];
-  for (let i = 1; i < order.length; i++) {
-    const gap = OPEN_MIDI[order[i]] - OPEN_MIDI[order[i - 1]];
-    const expect = order[i - 1] === 3 ? 4 : 5;         // G→B is a major third
-    if (gap !== expect)
-      throw new Error(`tetrad-sequence: string ${order[i]} is ${gap} semitones above ${order[i - 1]}, expected ${expect}`);
-  }
+  /* the gap rule that stood here was the DEFAULT's identity, re-derived (night 44 —
+   * design note §6): field.mjs asserts its own default's rule once, and every tuning is
+   * asserted well-formed where it is built. What this module owns is its enumeration:
+   * each named set's opens ascend low → high with its strings (no crossing) */
+  for (const s of STRING_SETS)
+    for (let i = 1; i < s.opens.length; i++)
+      if (s.opens[i] <= s.opens[i - 1]) throw new Error(`tetrad-sequence: set ${s.label}'s opens do not ascend with its strings`);
   // every cycle visits all seven degrees and comes home
   for (const c of Object.keys(CYCLES)) {
     const d = cycleDegrees(c);
@@ -4060,7 +4177,6 @@ return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, 
 const __m_hub_modules_audio_card_mjs = (() => {
 const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES } = __m_engine_voices_mjs;
 const { tetradPass } = __m_engine_tetrad_sequence_mjs;
-const { OPEN_MIDI } = __m_engine_field_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } = __m_hub_bus_mjs;
@@ -4094,7 +4210,6 @@ const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, li
  * be the empty box the reference has none of. The click's own level stays in
  * the metronome card, because the shared component owns its own sound.
  */
-
 
 
 
@@ -4216,7 +4331,7 @@ const audioCard = {
         playback: playbackWord(cfg && cfg.playback) || "strum", bassMidi: bass, durBeats, bpm,
         ctx: { scalePcs: scaleNotes(cfg.key || "C", cfg.scale || "major").map((n) => n.pc),
           tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,
-          open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
+          open: pass.opens, nfrets: 15, set: pass.set.strings },   // the pass's opens — the tuning is the field's fact (night 44)
       });
       for (const ev of voiceSchedule(events, voice, durBeats, bpm)) {
         // a voice at level ZERO schedules nothing (260820.3): the mute icons
@@ -4553,7 +4668,8 @@ return { positionOf, step, regionOf, materialIn, reanchor };
 /* ===== engine/string-run.mjs ===== */
 const __m_engine_string_run_mjs = (() => {
 const { lowToHigh, slotsOf, stringsOf, translatePattern } = __m_engine_string_sets_mjs;
-const { OPEN_MIDI } = __m_engine_field_mjs;
+const { OPEN_MIDI, opensOf } = __m_engine_field_mjs;
+const { setLabel } = __m_engine_open_string_mjs;
 /* string-run.mjs — THE FREE STRING SET: any set of strings, contiguous or
  * skipped, with a stored identity and a derived label (Multetudes child 2;
  * multetudes-prd.md §2.3 — closes G6 and G16 at one note per string).
@@ -4595,33 +4711,32 @@ const { OPEN_MIDI } = __m_engine_field_mjs;
  */
 
 
-/* an open string's letter, derived from its pitch class — every open string
- * of the derived tuning is a natural, which the load assertions prove */
-const NATURAL = { 0: "C", 2: "D", 4: "E", 5: "F", 7: "G", 9: "A", 11: "B" };
-const letterOf = (s) => {
-  const name = NATURAL[((OPEN_MIDI[s] % 12) + 12) % 12];
-  if (!name) throw new Error(`string-run: open string ${s} is not a natural — the label rule needs a decision`);
-  return name;
-};
+
+/* THE LABEL RULE, DECIDED (night 44, 261008 — Daniel): an open string is
+ * spelled by the direction of its move from standard — down flat, up sharp,
+ * unmoved natural (open-string.mjs, one derivation, the reason beside it).
+ * Until tonight this module threw on a non-natural open string by design:
+ * "the label rule needs a decision". The opens are the FIELD's now, handed
+ * in; OPEN_MIDI here is the default a caller without a field gets. */
 
 /** makeRun([6,4,3,1]) → { strings, label, contiguous, opens }
  * `strings` stored low pitch → high pitch (descending numbers — the family's
  * storage order); `opens` parallel open-string midis (placeOnSet's `set`);
  * `label` high → low (Shell 4's reading), derived. */
-function makeRun(strings) {
+function makeRun(strings, opens = OPEN_MIDI) {
   if (!Array.isArray(strings) || !strings.length)
     throw new Error("string-run: a run is a non-empty array of strings");
+  if (!opens || typeof opens !== "object") throw new Error("string-run: a run needs the field's opens (fld.opens)");
   const set = [...new Set(strings)];
   if (set.length !== strings.length) throw new Error("string-run: a run repeats a string");
   for (const s of set)
     if (!Number.isInteger(s) || s < 1 || s > 6)
       throw new Error(`string-run: string ${s} is not a real string`);
   const lh = lowToHigh(set);                       // descending numbers = ascending pitch
-  const highToLow = [...set].sort((a, b) => a - b); // ascending numbers = descending pitch
   const run = {
     strings: lh,
-    opens: lh.map((s) => OPEN_MIDI[s]),
-    label: highToLow.map(letterOf).join("–"),
+    opens: lh.map((s) => opens[s]),
+    label: setLabel(set, opens, OPEN_MIDI),
     contiguous: lh.every((s, i) => i === 0 || s === lh[i - 1] - 1),
   };
   for (let i = 1; i < run.opens.length; i++)
@@ -4633,10 +4748,10 @@ function makeRun(strings) {
 /** THE MIGRATION ALIAS: an old config's `setIndex`, read against the
  * enumeration it indexed (the caller passes it — engine/tetrad-sequence.mjs's
  * STRING_SETS). Load-time only; nothing writes setIndex back. */
-function fromSetIndex(i, sets) {
+function fromSetIndex(i, sets, opens = OPEN_MIDI) {
   if (!Array.isArray(sets) || !sets[i])
     throw new Error(`string-run: setIndex ${i} does not name a set in the given enumeration`);
-  return makeRun(sets[i].strings);
+  return makeRun(sets[i].strings, opens);
 }
 
 /** translateFigure(pattern, fromRun, toRun) → { pattern, clamped }
@@ -4670,8 +4785,11 @@ function translateFigure(pattern, fromRun, toRun) {
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */
 
 {
-  // every open string is a natural, so the label rule is total for this tuning
-  for (let s = 1; s <= 6; s++) letterOf(s);
+  // the label rule is total (night 44): every open of the default names, and a moved one
+  // names by its direction — G–D–A–D for the low set in drop D
+  const moved = setLabel([6, 5, 4, 3], opensOf({ 6: -2 }), OPEN_MIDI).split("–");
+  if (moved.length !== 4 || moved[3] !== "D" || moved[0] !== "G")
+    throw new Error("string-run: the label rule does not follow a moved string (drop D's low set ends on D)");
   // the label reads high → low: four contiguous runs, spot arithmetic
   const r = makeRun([6, 5, 4, 3]);
   if (r.label.split("–").length !== 4 || !r.contiguous)
@@ -4698,7 +4816,6 @@ const { parseChord } = __m_engine_chord_mjs;
 const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { parseMotion, describeMotion, approachMidi, placeNear } = __m_engine_motion_mjs;
-const { OPEN_MIDI } = __m_engine_field_mjs;
 /* selection.mjs — THE SELECTION: what is taken from the field's pool
  * (Multetudes child 3a — Route B, ratified 2026-08-28).
  *
@@ -4778,7 +4895,6 @@ const { OPEN_MIDI } = __m_engine_field_mjs;
 
 
 // 260918 (CR-1): the approach grammar and arithmetic, owned by motion.mjs — imported by their exported names (the door build blanks imports; an alias would name nothing)
-
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
 
@@ -5514,10 +5630,10 @@ function orderWithApproaches(text, notes, ctx) {
       const octaves = [midi, ...[midi + 12, midi - 12].filter((m) => Math.abs(m - target.midi) === dist)];
       let pos = null, nearestMiss = null;
       for (const m of octaves) {
-        const within = ctx.strings.filter((sn) => { const f = m - OPEN_MIDI[sn]; return f >= lo && f <= hi; });
-        for (const sn of ctx.strings) { const f = m - OPEN_MIDI[sn]; if (f >= 0 && f <= 17) { const miss = f < lo ? lo - f : f > hi ? f - hi : 0; if (nearestMiss === null || miss < nearestMiss) nearestMiss = miss; } }
+        const within = ctx.strings.filter((sn) => { const f = m - ctx.fld.opens[sn]; return f >= lo && f <= hi; });   // the field's opens (night 44)
+        for (const sn of ctx.strings) { const f = m - ctx.fld.opens[sn]; if (f >= 0 && f <= 17) { const miss = f < lo ? lo - f : f > hi ? f - hi : 0; if (nearestMiss === null || miss < nearestMiss) nearestMiss = miss; } }
         if (!within.length) continue;
-        try { pos = placeNear(m, target.fret, target.string, { set: within, open: OPEN_MIDI, nfrets: 15 }); midi = m; break; } catch (e) { /* the next equally-near octave */ }
+        try { pos = placeNear(m, target.fret, target.string, { set: within, open: ctx.fld.opens, nfrets: 15 }); midi = m; break; } catch (e) { /* the next equally-near octave */ }
       }
       if (!pos) {
         const rel = `${midi - target.midi > 0 ? "+" : ""}${midi - target.midi}`;
@@ -5535,7 +5651,7 @@ function orderWithApproaches(text, notes, ctx) {
   // derived, then asserted: every approach is its written relation to its target, and is placed honestly
   for (const n of order) {
     if (n.role !== "approach") continue;
-    if (OPEN_MIDI[n.string] + n.fret !== n.midi) throw new Error("orderBy: an approach's placement is dishonest");
+    if (fld.opens[n.string] + n.fret !== n.midi) throw new Error("orderBy: an approach's placement is dishonest");
     if (n.chromatic !== (fld.degOf(n.midi) < 0)) throw new Error("orderBy: an approach's function disagrees with the field");
   }
   assertOrder(order, notes);
@@ -6224,7 +6340,7 @@ return { STRUCTURES, CHORD_ROOTS, CHORD_QUALITIES, GLYPHS, resolveStructure, cha
 
 /* ===== engine/reference.mjs ===== */
 const __m_engine_reference_mjs = (() => {
-const { field, notesOn, OPEN_MIDI, degAgainst } = __m_engine_field_mjs;
+const { field, notesOn, degAgainst } = __m_engine_field_mjs;
 const { parseChord } = __m_engine_chord_mjs;
 /* reference.mjs — THE REFERENCE TONE, fretted and named (Multetudes child 5).
  *
@@ -6401,7 +6517,7 @@ function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   const note = { ...cands[0] };
   // A REAL FRETTED NOTE, asserted — the exemption this module refuses to inherit
   if (!free.includes(note.string) || !Number.isInteger(note.fret) || note.fret < 0
-      || note.midi !== OPEN_MIDI[note.string] + note.fret)
+      || note.midi !== fld.opens[note.string] + note.fret)   // the field's opens (night 44)
     throw new Error("placeReference: the reference must be a real fretted note — string, fret, midi agreeing");
   if (note.keyDeg !== keyDeg)
     throw new Error("placeReference: the placed degree disagrees with the asked one");
@@ -6982,7 +7098,7 @@ const etudeWalk = {
     const soundCurrent = () => {
       const { fld, prog } = derive();
       const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-      const run = makeRun(cfg.strings);
+      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const pool = materialIn(pos, run.strings, fld);
@@ -7789,7 +7905,7 @@ const fieldBoard = {
       const fld = field({ key: cfg.key, scale: cfg.scale,
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const dots = deriveField(fld);
-      const run = makeRun(cfg.strings);
+      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
@@ -8628,7 +8744,7 @@ const fieldBoard = {
          * never write setIndex back. A live shape-half message (setIndex
          * without key) deliberately does not migrate — the guard's history
          * is bite mutation 13. */
-        const run = fromSetIndex(m.setIndex, STRING_SETS);
+        const run = fromSetIndex(m.setIndex, STRING_SETS, curB.fld.opens);
         if (run.strings.join() !== cfg.strings.join()) {
           const moved = reanchor(curB.pos, run.strings, curB.fld);
           cfg = { ...cfg, strings: run.strings, startDeg: moved.startDeg, nearFret: moved.fLo };
@@ -9074,7 +9190,7 @@ const keysBoard = {
        * window never jumps per bar; the reading shifts per bar */
       const fld = field({ key: cfg.key, scale: cfg.scale,
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
-      const run = makeRun(cfg.strings);
+      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
@@ -9589,7 +9705,7 @@ return { metronomeCard };
 
 /* ===== hub/modules/neck-readout.mjs ===== */
 const __m_hub_modules_neck_readout_mjs = (() => {
-const { field, OPEN_MIDI, notesOn } = __m_engine_field_mjs;
+const { field, notesOn } = __m_engine_field_mjs;
 const { positionOf, materialIn, regionOf } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy } = __m_engine_selection_mjs;
@@ -9665,7 +9781,7 @@ const neckReadout = {
         /* the centre's SOURCE (260914): material stable, reading per bar */
         const fld = field({ key: cfg.key, scale: cfg.scale,
           ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
-        const run = makeRun(cfg.strings);
+        const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
         const anchor = Math.max(...run.strings);
         const pos = positionOf({ field: fld, anchorString: anchor,
           startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
@@ -9801,7 +9917,7 @@ const neckReadout = {
           const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos, pickOf(cfg));
           check("the reference is a real fretted note, offered unfretted by name, or refused by name", () =>
             rp.note
-              ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
+              ? rp.note.midi === fld.opens[rp.note.string] + rp.note.fret
               : typeof rp.reason === "string" && rp.reason.length > 0 && (!rp.offer || rp.offer.unfretted === true));
           if (rp.note && cfg.object === "scale") {
             /* a scale has no stack to read back over the bass — the note is
@@ -11651,6 +11767,8 @@ return { CAPABILITIES, createNotepadSurface };
 /* ===== hub/modules/notepad-card.mjs ===== */
 const __m_hub_modules_notepad_card_mjs = (() => {
 const { createNotepadSurface } = __m_engine_notepad_surface_mjs;
+const { OPEN_MIDI } = __m_engine_field_mjs;
+const { setLabel } = __m_engine_open_string_mjs;
 const { fromTriadetudesV1 } = __m_engine_notepad_mjs;
 const { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
@@ -11687,6 +11805,12 @@ const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
 
 
 
+
+
+
+/** the three four-string groups' labels under standard tuning — derived from the opens by the
+ * one rule, in the enumeration's index order (a sliding window of four down the six strings) */
+const SET_LABELS = [0, 1, 2].map((offset) => setLabel([6, 5, 4, 3].map((n) => n - offset), OPEN_MIDI, OPEN_MIDI));
 
 const notepadCard = {
   id: "notepad-card",
@@ -11847,14 +11971,16 @@ const notepadCard = {
     const CYCLE = { scale: "Scaler", thirds: "Cycling 3rds", fourths: "Cycling 4ths",
       fifths: "Cycling 5ths", sixths: "Cycling 6ths" };
     /* setIndex is the STORED IDENTITY (its position in engine STRING_SETS); the
-     * label is presentation. These read high → low to match the panel (Shell 4),
-     * in the SAME index order — index i is the same physical set it always was,
-     * so a saved étude restores unchanged. Kept a local list rather than
-     * importing STRING_SETS: this card is shared with non-tetrad doors (scribe),
-     * and importing the tetrad engine would drag its whole tree into a door that
-     * has no string sets. A bounded, knowing duplication of THREE presentation
-     * strings — not the musical fact, which stays the setIndex. */
-    const SETS = ["G–D–A–E", "B–G–D–A", "E–B–G–D"];
+     * label is presentation, DERIVED (night 44, 261008 — the absorbed chore
+     * "notepad-card restates the string-set labels, deliberately and
+     * unasserted"): the same rule string-run and tetrad-sequence use, from the
+     * standard opens, index for index — index i is the same physical set it
+     * always was, so a saved étude restores unchanged. The reason the card kept
+     * a local list is honoured: it takes the LABELS, not the tree — open-string
+     * is a leaf and field.mjs is not the tetrad engine (scribe reaches neither
+     * tetrad-sequence nor tetrad-voicings). Under a movable tuning a literal
+     * here would have been WRONG, not merely unasserted. */
+    const SETS = SET_LABELS;
     const summarize = (c) => {
       if (!c || typeof c !== "object") return "no configuration attached";
       const parts = [];
@@ -12007,7 +12133,7 @@ const notepadCard = {
     byId("npTitle").placeholder = fallback();
   },
 };
-return { notepadCard };
+return { SET_LABELS, notepadCard };
 })();
 
 /* ===== hub/modules/presets-card.mjs ===== */
@@ -12427,7 +12553,7 @@ const staffBoard = {
        * window never jumps per bar; the reading shifts per bar */
       const fld = field({ key: cfg.key, scale: cfg.scale,
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
-      const run = makeRun(cfg.strings);
+      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });

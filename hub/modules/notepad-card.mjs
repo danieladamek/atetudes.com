@@ -29,9 +29,15 @@
  * This card reaches into nothing.
  */
 import { createNotepadSurface } from "../../engine/notepad-surface.mjs";
+import { OPEN_MIDI } from "../../engine/field.mjs";
+import { setLabel } from "../../engine/open-string.mjs";
 import { fromTriadetudesV1 } from "../../engine/notepad.mjs";
 import { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } from "../bus.mjs";
 import { SHARED, pcOfKey } from "../../engine/shared-config.mjs";
+
+/** the three four-string groups' labels under standard tuning — derived from the opens by the
+ * one rule, in the enumeration's index order (a sliding window of four down the six strings) */
+export const SET_LABELS = [0, 1, 2].map((offset) => setLabel([6, 5, 4, 3].map((n) => n - offset), OPEN_MIDI, OPEN_MIDI));
 
 export const notepadCard = {
   id: "notepad-card",
@@ -192,14 +198,16 @@ export const notepadCard = {
     const CYCLE = { scale: "Scaler", thirds: "Cycling 3rds", fourths: "Cycling 4ths",
       fifths: "Cycling 5ths", sixths: "Cycling 6ths" };
     /* setIndex is the STORED IDENTITY (its position in engine STRING_SETS); the
-     * label is presentation. These read high → low to match the panel (Shell 4),
-     * in the SAME index order — index i is the same physical set it always was,
-     * so a saved étude restores unchanged. Kept a local list rather than
-     * importing STRING_SETS: this card is shared with non-tetrad doors (scribe),
-     * and importing the tetrad engine would drag its whole tree into a door that
-     * has no string sets. A bounded, knowing duplication of THREE presentation
-     * strings — not the musical fact, which stays the setIndex. */
-    const SETS = ["G–D–A–E", "B–G–D–A", "E–B–G–D"];
+     * label is presentation, DERIVED (night 44, 261008 — the absorbed chore
+     * "notepad-card restates the string-set labels, deliberately and
+     * unasserted"): the same rule string-run and tetrad-sequence use, from the
+     * standard opens, index for index — index i is the same physical set it
+     * always was, so a saved étude restores unchanged. The reason the card kept
+     * a local list is honoured: it takes the LABELS, not the tree — open-string
+     * is a leaf and field.mjs is not the tetrad engine (scribe reaches neither
+     * tetrad-sequence nor tetrad-voicings). Under a movable tuning a literal
+     * here would have been WRONG, not merely unasserted. */
+    const SETS = SET_LABELS;
     const summarize = (c) => {
       if (!c || typeof c !== "object") return "no configuration attached";
       const parts = [];

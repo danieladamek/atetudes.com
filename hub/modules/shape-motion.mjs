@@ -11,7 +11,11 @@
  *                     high → low. Here: the four-string groups in the SAME
  *                     dialect — E–B–G–D, B–G–D–A, G–D–A–E, highest set first
  *                     (Shell 4 settled the family on high → low). Same segment;
- *                     the label is derived, the stored setIndex is the fact.
+ *                     the label is derived, the stored setIndex is the fact —
+ *                     and since night 44 derived by ONE rule (engine/open-string.mjs:
+ *                     an open string is spelled by the direction of its move
+ *                     from standard), so under a tuning the letters follow
+ *                     the instrument: drop D's low set reads G–D–A–D.
  *   Voicing family    NEW group in the shape column: close / drop-2 / drop-3.
  *                     The triad app's "inversion" is a property of the voicing;
  *                     the tetrad app's is a FAMILY, so it needs a control. This

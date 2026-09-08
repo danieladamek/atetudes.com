@@ -34,9 +34,19 @@ test("THE TUNING HAS ONE DECLARATION SITE — field.mjs; nothing else in the eng
     .filter((f) => /OPEN_MIDI\s*=\s*\{/.test(readFileSync(join(ENGINE, f), "utf8")));
   assert.deepEqual(literal, [], "no module states the six numbers as a literal");
   assert.equal(SEQ.OPEN_MIDI, undefined, "tetrad-sequence.mjs no longer exports a tuning");
-  assert.match(readFileSync(join(ENGINE, "tetrad-sequence.mjs"), "utf8"), /import \{ OPEN_MIDI \} from "\.\/field\.mjs"/,
-    "…it imports the one");
+  assert.match(readFileSync(join(ENGINE, "tetrad-sequence.mjs"), "utf8"), /import \{[^}]*\bOPEN_MIDI\b[^}]*\} from "\.\/field\.mjs"/,
+    "…it imports the one (night 44: beside opensOf, the one derivation of a tuning's opens)");
   assert.equal(OPEN_MIDI[6], 40); assert.equal(OPEN_MIDI[1], 64);
+  /* RESTATED 261008 (night 44 — the tuning becomes the field's fact): the constant is
+   * the DEFAULT; the tuning lives on the field as `opens`, derived by ONE function,
+   * opensOf, in the same module. The class of defect the pin guards against — the
+   * six numbers stated twice — has a second face now: a second derivation of opens
+   * from offsets, or a module that computes an open midi from OPEN_MIDI on its own.
+   * tuning.test.mjs greps every indexed read; this pin holds the declaration. */
+  const derivers = readdirSync(ENGINE).filter((f) => f.endsWith(".mjs"))
+    .filter((f) => /^export\s+function\s+opensOf\b/m.test(readFileSync(join(ENGINE, f), "utf8")));
+  assert.deepEqual(derivers, ["field.mjs"], "exactly one module derives a tuning's opens (opensOf)");
+  assert.deepEqual(field({ key: "C" }).opens, OPEN_MIDI, "no tuning means the default, exactly");
 });
 
 test("the field is seven distinct spelled degrees in every key and scale", () => {

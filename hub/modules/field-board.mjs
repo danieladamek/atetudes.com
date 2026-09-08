@@ -373,7 +373,7 @@ export const fieldBoard = {
       const fld = field({ key: cfg.key, scale: cfg.scale,
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const dots = deriveField(fld);
-      const run = makeRun(cfg.strings);
+      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
@@ -1212,7 +1212,7 @@ export const fieldBoard = {
          * never write setIndex back. A live shape-half message (setIndex
          * without key) deliberately does not migrate — the guard's history
          * is bite mutation 13. */
-        const run = fromSetIndex(m.setIndex, STRING_SETS);
+        const run = fromSetIndex(m.setIndex, STRING_SETS, curB.fld.opens);
         if (run.strings.join() !== cfg.strings.join()) {
           const moved = reanchor(curB.pos, run.strings, curB.fld);
           cfg = { ...cfg, strings: run.strings, startDeg: moved.startDeg, nearFret: moved.fLo };

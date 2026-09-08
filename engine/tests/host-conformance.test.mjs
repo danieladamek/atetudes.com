@@ -641,17 +641,24 @@ test("§4.3 lexicon: every shared control says the family's word on every host t
 // 260820). A test may import both; the shipping module may not. That is the whole
 // trick, and it costs nothing at runtime.
 import { STRING_SETS, CYCLES } from "../tetrad-sequence.mjs";
+import { SET_LABELS } from "../../hub/modules/notepad-card.mjs";
 
-test("§4.3 restated literal: notepad-card's SETS equals the labels STRING_SETS derives — update the literal, do NOT import", () => {
+test("§4.3 the card's set labels are DERIVED (night 44) — equal to the engine's, and the card still imports no tetrad engine", () => {
+  /* REWRITTEN 261008 (night 44, alternate tunings item 1 — the absorbed chore closed). Until
+   * tonight this pin guarded a LITERAL: `const SETS = ["G–D–A–E", …]` had to equal the labels
+   * tetrad-sequence derives, and the message said "update the literal, do NOT import". Under a
+   * movable tuning a literal is not merely unasserted, it is wrong — so the card derives its
+   * labels from the standard opens through engine/open-string.mjs's one rule (SET_LABELS), and
+   * the reason it kept a literal is honoured a better way: it takes the LABELS, not the tree.
+   * open-string is a leaf; field.mjs is not the tetrad engine. This pin now asserts both. */
+  assert.deepEqual(SET_LABELS, STRING_SETS.map((s) => s.label),
+    `hub/modules/notepad-card.mjs derives ${JSON.stringify(SET_LABELS)} but engine/tetrad-sequence.mjs derives ${JSON.stringify(STRING_SETS.map((s) => s.label))} — one rule, two readers, and they disagree`);
   const src = readFileSync(join(here, "..", "..", "hub", "modules", "notepad-card.mjs"), "utf8");
-  const m = src.match(/const SETS = \[([^\]]*)\];/);
-  assert.ok(m, "notepad-card.mjs no longer carries the SETS literal — if it now imports STRING_SETS, scribe carries the tetrad engine; put the literal back");
-  const literal = [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]);
-  const derived = STRING_SETS.map((s) => s.label);
-  assert.deepEqual(literal, derived,
-    `hub/modules/notepad-card.mjs's SETS literal reads ${JSON.stringify(literal)} but engine/tetrad-sequence.mjs derives ${JSON.stringify(derived)} — ` +
-    `UPDATE THE LITERAL in notepad-card.mjs to match; do NOT import STRING_SETS there (the card is shared with non-tetrad doors: scribe)`);
-  assert.ok(!/from "\.\.\/\.\.\/engine\/tetrad-sequence\.mjs"/.test(src), "notepad-card.mjs must not import the tetrad engine (scribe)");
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  assert.ok(!/const SETS = \[/.test(code), "no SETS literal survives in the card");
+  assert.ok(!/tetrad-sequence\.mjs|tetrad-voicings\.mjs|isolation\.mjs|drill\.mjs/.test(code),
+    "the card imports no tetrad engine — take the labels, not the tree (the card is shared with scribe)");
+  assert.ok(/from "\.\.\/\.\.\/engine\/open-string\.mjs"/.test(code), "…the labels come through open-string.mjs, the leaf");
 });
 
 // the rider (260928, night 34): notepad-card's CYCLE map restates CYCLES[k].name for exactly the

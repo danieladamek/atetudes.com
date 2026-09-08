@@ -23,7 +23,7 @@
  * scaleNotes() — the letters climb one per degree, accidentals derived — and
  * are NOT re-derived here. The tuning is derived below from its named rule
  * and this is ITS ONE DECLARATION SITE (260920, night 26 item 1): until
- * tonight engine/tetrad-sequence.mjs stated the same six numbers as a literal
+ * tonight the tetrad sequence module stated the same six numbers as a literal
  * and the tests pinned the two equal — a pin that two copies agree keeps both
  * alive and turns a divergence into a test failure rather than an
  * impossibility. Now tetrad-sequence and every hub consumer import from here;
@@ -36,12 +36,58 @@ import { scaleNotes, SCALE_STEPS } from "./chord.mjs";
 
 /** Standard tuning, DERIVED from the named rule rather than typed: string 6 is
  * E2 (midi 40), and each higher string sits a perfect fourth above the one
- * below it except string 2, which sits a major third above string 3 (G→B). */
+ * below it except string 2, which sits a major third above string 3 (G→B).
+ *
+ * THE DEFAULT, NOT THE TUNING (night 44, 261008 — alternate tunings, item 1).
+ * The tuning is state on the field object: `fld.opens`, derived by opensOf()
+ * from an optional `tuning` and asserted WELL-FORMED. This constant is what
+ * an absent tuning means, and the reference the ±6 window is measured
+ * against; nothing may read it as THE tuning (tuning.test.mjs greps for it). */
 export const OPEN_MIDI = (() => {
   const open = { 6: 40 };
   for (let s = 6; s > 1; s--) open[s - 1] = open[s] + (s === 3 ? 4 : 5);
   return open;
 })();
+
+export const STRINGS = [6, 5, 4, 3, 2, 1];   // low → high, the six strings there are (§9: six, only)
+export const TUNING_RANGE = 6;                // ±6 semitones per string — Daniel's figure, three whole tones
+
+/** WELL-FORMEDNESS, not identity (design note §6): six strings numbered 1..6
+ * each present once; each open within ±6 semitones of its standard value;
+ * strictly ascending in pitch 6 → 1 — no crossing, because slots are
+ * pitch-ordered and a crossed tuning would change what every stored figure
+ * means, silently (§4). DADGAD is legal; a swapped pair, a missing string
+ * and a transposed digit are not — tuning.test.mjs proves all three. */
+export function assertOpens(opens) {
+  if (!opens || typeof opens !== "object") throw new Error("field: a tuning is six open midis, one per string 1..6");
+  const keys = Object.keys(opens).map(Number).sort((a, b) => a - b);
+  if (keys.join() !== "1,2,3,4,5,6")
+    throw new Error(`field: a tuning names six strings 1..6, each once — got ${keys.join(",") || "nothing"}`);
+  for (const s of STRINGS) {
+    if (!Number.isInteger(opens[s])) throw new Error(`field: string ${s}'s open midi is not an integer`);
+    if (Math.abs(opens[s] - OPEN_MIDI[s]) > TUNING_RANGE)
+      throw new Error(`field: string ${s} at midi ${opens[s]} is outside the ±${TUNING_RANGE} semitone window around standard (${OPEN_MIDI[s]})`);
+  }
+  for (let i = 1; i < STRINGS.length; i++)
+    if (opens[STRINGS[i]] <= opens[STRINGS[i - 1]])
+      throw new Error(`field: string ${STRINGS[i]} (midi ${opens[STRINGS[i]]}) does not ascend above string ${STRINGS[i - 1]} (midi ${opens[STRINGS[i - 1]]}) — a crossed tuning is refused`);
+  return opens;
+}
+
+/** the opens a tuning names: `tuning` is a map from string number to a
+ * semitone OFFSET from standard (§7's shape — `{6: -2}` reads "drop the
+ * sixth"); absent strings are at standard; no tuning at all is standard. */
+export function opensOf(tuning) {
+  const opens = {};
+  for (const s of STRINGS) {
+    const off = tuning && s in tuning ? tuning[s] : 0;
+    if (!Number.isInteger(off)) throw new Error(`field: string ${s}'s tuning offset must be an integer number of semitones`);
+    opens[s] = OPEN_MIDI[s] + off;
+  }
+  if (tuning) for (const k of Object.keys(tuning))
+    if (!STRINGS.includes(Number(k))) throw new Error(`field: string ${k} is not a real string — a tuning names strings 1..6`);
+  return assertOpens(opens);
+}
 
 /** The mode names, one per degree per scale — the brief §2.1's table, verbatim.
  * One name each where several are current; aliases are a decision, not a build
@@ -70,15 +116,21 @@ export const degAgainst = (keyDeg, ref) => mod7(keyDeg - ref);
  *   modeName  what that reading is called (MODES[scale][ref])
  *   degOf(pc) the degree a pitch class wears against the reference, or -1
  */
-export function field({ key, scale = "major", ref = 0 } = {}) {
+export function field({ key, scale = "major", ref = 0, tuning = null } = {}) {
   if (!SCALE_STEPS[scale])
     throw new Error(`field: unknown scale "${scale}" — chord.mjs knows ${Object.keys(SCALE_STEPS).join(", ")}`);
   if (!Number.isInteger(ref) || ref < 0 || ref > 6)
     throw new Error(`field: the reference is a degree 0..6, not ${ref}`);
   const notes = scaleNotes(key, scale);
   const pcs = notes.map((n) => n.pc);
+  /* THE TUNING IS THE FIELD'S FACT (night 44): the opens are derived from the
+   * optional offsets and asserted well-formed here, once; `tuning` is restated
+   * total (every string's offset, zeros included) so a reader never guesses. */
+  const opens = opensOf(tuning);
+  const tuningTotal = {};
+  for (const s of STRINGS) tuningTotal[s] = opens[s] - OPEN_MIDI[s];
   return {
-    key, scale, ref, notes, pcs,
+    key, scale, ref, notes, pcs, opens, tuning: tuningTotal,
     refNote: notes[ref],
     modeName: MODES[scale][ref],
     degOf: (pc) => {
@@ -95,7 +147,7 @@ export function notesOn(string, fld, nfrets = 15) {
     throw new Error(`notesOn: string ${string} is not a real string`);
   const out = [];
   for (let f = 0; f <= nfrets; f++) {
-    const midi = OPEN_MIDI[string] + f;
+    const midi = fld.opens[string] + f;   // the FIELD's opens — the tuning is its fact
     const keyDeg = fld.pcs.indexOf(mod12(midi));
     if (keyDeg >= 0)
       out.push({ string, fret: f, midi, deg: degAgainst(keyDeg, fld.ref), keyDeg });
@@ -106,15 +158,21 @@ export function notesOn(string, fld, nfrets = 15) {
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */
 
 {
-  // the derived tuning obeys its own named rule, stated independently: six
-  // strings, lowest E2, neighbouring gaps all fourths except G→B
-  const order = [6, 5, 4, 3, 2, 1];
-  if (OPEN_MIDI[6] !== 40) throw new Error("field: string 6 must be E2 (midi 40)");
-  for (let i = 1; i < order.length; i++) {
-    const gap = OPEN_MIDI[order[i]] - OPEN_MIDI[order[i - 1]];
-    if (gap !== (order[i - 1] === 3 ? 4 : 5))
-      throw new Error(`field: string ${order[i]} is ${gap} semitones above ${order[i - 1]}`);
-  }
+  /* IDENTITY BECAME WELL-FORMEDNESS (night 44, 261008 — design note §6, the
+   * register's entry). The block that stood here asserted "string 6 is E2 and
+   * the gaps are fourths except G→B" — an identity check wearing structural
+   * clothes, true only of standard tuning. A tuning is now asserted WELL-FORMED
+   * (assertOpens, above) wherever one is built. ONE identity check is kept, on
+   * purpose and on the DEFAULT only: the constant is the reference the ±6
+   * window is measured against, so its own named rule must hold or the window
+   * is measured against a typo — the transposed-digit case the old block
+   * caught (`{6: 40}` → `{6: 4}`) is caught HERE, not by well-formedness, which
+   * would pass a shifted standard against itself. */
+  if (OPEN_MIDI[6] !== 40) throw new Error("field: the default's rule — string 6 is E2 (midi 40)");
+  for (let i = 1; i < STRINGS.length; i++)
+    if (OPEN_MIDI[STRINGS[i]] - OPEN_MIDI[STRINGS[i - 1]] !== (STRINGS[i - 1] === 3 ? 4 : 5))
+      throw new Error(`field: the default's rule — string ${STRINGS[i]} sits a fourth (a third over G) above string ${STRINGS[i - 1]}`);
+  assertOpens(OPEN_MIDI);   // and the default is itself a well-formed tuning
   // the mode-name table is total and unambiguous per scale
   for (const [sc, names] of Object.entries(MODES)) {
     if (names.length !== 7 || new Set(names).size !== 7)

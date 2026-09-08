@@ -78,7 +78,6 @@ import { field } from "./field.mjs";
 import { positionOf, materialIn } from "./position.mjs";
 // 260918 (CR-1): the approach grammar and arithmetic, owned by motion.mjs — imported by their exported names (the door build blanks imports; an alias would name nothing)
 import { parseMotion, describeMotion, approachMidi, placeNear } from "./motion.mjs";
-import { OPEN_MIDI } from "./field.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
 
@@ -814,10 +813,10 @@ function orderWithApproaches(text, notes, ctx) {
       const octaves = [midi, ...[midi + 12, midi - 12].filter((m) => Math.abs(m - target.midi) === dist)];
       let pos = null, nearestMiss = null;
       for (const m of octaves) {
-        const within = ctx.strings.filter((sn) => { const f = m - OPEN_MIDI[sn]; return f >= lo && f <= hi; });
-        for (const sn of ctx.strings) { const f = m - OPEN_MIDI[sn]; if (f >= 0 && f <= 17) { const miss = f < lo ? lo - f : f > hi ? f - hi : 0; if (nearestMiss === null || miss < nearestMiss) nearestMiss = miss; } }
+        const within = ctx.strings.filter((sn) => { const f = m - ctx.fld.opens[sn]; return f >= lo && f <= hi; });   // the field's opens (night 44)
+        for (const sn of ctx.strings) { const f = m - ctx.fld.opens[sn]; if (f >= 0 && f <= 17) { const miss = f < lo ? lo - f : f > hi ? f - hi : 0; if (nearestMiss === null || miss < nearestMiss) nearestMiss = miss; } }
         if (!within.length) continue;
-        try { pos = placeNear(m, target.fret, target.string, { set: within, open: OPEN_MIDI, nfrets: 15 }); midi = m; break; } catch (e) { /* the next equally-near octave */ }
+        try { pos = placeNear(m, target.fret, target.string, { set: within, open: ctx.fld.opens, nfrets: 15 }); midi = m; break; } catch (e) { /* the next equally-near octave */ }
       }
       if (!pos) {
         const rel = `${midi - target.midi > 0 ? "+" : ""}${midi - target.midi}`;
@@ -835,7 +834,7 @@ function orderWithApproaches(text, notes, ctx) {
   // derived, then asserted: every approach is its written relation to its target, and is placed honestly
   for (const n of order) {
     if (n.role !== "approach") continue;
-    if (OPEN_MIDI[n.string] + n.fret !== n.midi) throw new Error("orderBy: an approach's placement is dishonest");
+    if (fld.opens[n.string] + n.fret !== n.midi) throw new Error("orderBy: an approach's placement is dishonest");
     if (n.chromatic !== (fld.degOf(n.midi) < 0)) throw new Error("orderBy: an approach's function disagrees with the field");
   }
   assertOrder(order, notes);

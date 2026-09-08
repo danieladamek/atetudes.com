@@ -21,7 +21,7 @@
  * frozen study does: the neck is drawn to the music, not the music to the neck.
  */
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
-import { OPEN_MIDI } from "../../engine/field.mjs";
+/* the opens are the PASS's (night 44 — the tuning is the field's fact); nothing here reads a module constant */
 import { scaleNotes, alteredDegree } from "../../engine/chord.mjs";
 import { keysOf } from "../../engine/voice-identity.mjs";
 import { parseFigure, figureEvents, toneIndexOf, playbackWord } from "../../engine/figure.mjs";
@@ -156,10 +156,10 @@ export const fretboardStage = {
       /* the whole scale, ghosted at 0.28 — the study's density comes from this */
       for (let s2 = 1; s2 <= 6; s2++)
         for (let f = 0; f <= NFRETS; f++) {
-          const pc = (OPEN_MIDI[s2] + f) % 12, di = keyPcs.indexOf(pc);
+          const pc = (pass.opens[s2] + f) % 12, di = keyPcs.indexOf(pc);
           if (di < 0) continue;
           const fam = ["R", "2", "3", "4", "5", "6", "7"][di];
-          const g = el("g", { opacity: 0.28, "data-midi": OPEN_MIDI[s2] + f, cursor: "pointer" }, svg);
+          const g = el("g", { opacity: 0.28, "data-midi": pass.opens[s2] + f, cursor: "pointer" }, svg);
           el("circle", { cx: fx(f), cy: fy(s2), r: 10.5, fill: FAM_COLOR[fam] }, g);
           const t = el("text", { x: fx(f), y: fy(s2) + 3.4, "text-anchor": "middle", "font-size": "9.5",
             fill: FAM_TEXT[fam], class: "dot-label" }, g);
@@ -235,8 +235,9 @@ export const fretboardStage = {
     const scaleFretsOnAnchor = () => {
       const pcs = scaleNotes(cfg.key, cfg.scale).map((n) => n.pc);
       const zs = pass ? pass.zone.string : 6;
+      const opens = pass ? pass.opens : tetradPass({ families, ...cfg }).opens;   // no pass yet: derive one, never read a constant as the tuning
       const out = [];
-      for (let f = 0; f <= NFRETS; f++) if (pcs.includes((OPEN_MIDI[zs] + f) % 12)) out.push(f);
+      for (let f = 0; f <= NFRETS; f++) if (pcs.includes((opens[zs] + f) % 12)) out.push(f);
       return out;
     };
     const tripleAt = (lo) => {
@@ -368,7 +369,7 @@ export const fretboardStage = {
         const maxStr = Math.max(...pass.set.strings);
         for (let s2 = maxStr + 1; s2 <= 6; s2++)
           for (let f = 0; f <= NFRETS; f++)
-            if ((OPEN_MIDI[s2] + f) % 12 === cur.chord.root.pc)
+            if ((pass.opens[s2] + f) % 12 === cur.chord.root.pc)
               el("circle", { cx: fx(f), cy: fy(s2), r: 11, fill: "none", stroke: "#B82929", "stroke-width": 2.6 }, ctxLayer);
       }
 
@@ -410,7 +411,7 @@ export const fretboardStage = {
         events = figureEvents(cur, {
           parsed: parsed.err ? null : parsed.pattern, address: cfg.address || "pattern",
           playback: playbackWord(cfg.playback) || "strum", durBeats, bpm,
-          ctx: { scalePcs: scale.map((n) => n.pc), tonicPc: scale[0].pc, open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
+          ctx: { scalePcs: scale.map((n) => n.pc), tonicPc: scale[0].pc, open: pass.opens, nfrets: 15, set: pass.set.strings },
         });
       } catch { return; }
       const line = events.filter((e) => e.role !== "bass" && !e.bed);

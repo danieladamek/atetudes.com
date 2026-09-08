@@ -19,7 +19,6 @@
  * position from the letter and octave. Nothing here is hand-placed.
  */
 import { tetradPass, degreeLabel } from "../../engine/tetrad-sequence.mjs";
-import { OPEN_MIDI } from "../../engine/field.mjs";
 import { scaleNotes, LETTER_PC, chromaticSpeller, alteredDegree } from "../../engine/chord.mjs";
 import { starburst } from "../marks.mjs";
 import { patternOf } from "../../engine/transport.mjs";
@@ -161,7 +160,7 @@ export const scoreBoard = {
           events = figureEvents(s, { parsed: parsedFig.err ? null : parsedFig.pattern,
             address: cfg.address || "pattern", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: 72,
             ctx: { scalePcs: scaleNotes(cfg.key, cfg.scale).map((n) => n.pc), tonicPc: scaleNotes(cfg.key, cfg.scale)[0].pc,
-              open: OPEN_MIDI, nfrets: 15, set: pass.set.strings } });
+              open: pass.opens, nfrets: 15, set: pass.set.strings } });   // the pass's opens (night 44)
         } catch (e) { events = null; figErr = e && e.message ? e.message : String(e); }
         if (figErr && parsedFig.pattern && (playbackWord(cfg.playback) || "strum") !== "strum") {
           const fe = el("text", { x: x + 3, y: 40, "font-size": "8", fill: "#B82929",

@@ -32,7 +32,8 @@ import { keysOf } from "./voice-identity.mjs";
  * derived in field.mjs from its named rule and imported here; nothing is
  * re-exported (the door build reads exports by declaration, so a re-export
  * would be silently dropped) — every consumer imports from field.mjs. */
-import { OPEN_MIDI } from "./field.mjs";
+import { OPEN_MIDI, opensOf } from "./field.mjs";
+import { setLabel } from "./open-string.mjs";
 
 /* ---------------- the instrument ---------------- */
 
@@ -40,17 +41,18 @@ import { OPEN_MIDI } from "./field.mjs";
  * window of four down the six strings rather than listed */
 export const STRING_SETS = [0, 1, 2].map((offset) => {
   const strings = [6, 5, 4, 3].map((s) => s - offset);
-  const letter = (s) => ["", "E", "B", "G", "D", "A", "E"][s];   // uppercase high E (N4, 260820.1)
   return {
     offset, strings,
-    opens: strings.map((s) => OPEN_MIDI[s]),
+    /* the ENUMERATION's opens are the default's — the sets are named against standard; a
+     * pass built with a tuning carries the tuned opens on its own `set` (tetradPass) */
+    opens: strings.map((s) => OPEN_MIDI[s]),   // the DEFAULT's — the enumeration is named against standard
     /* THE LABEL READS HIGH → LOW, the reference's dialect (Shell 4). `strings`
      * is the data and stays untouched — string 1 is the highest (string-sets.mjs
      * law) — so the label is derived by sorting ASCENDING by string number
      * (= descending pitch): offset 0 → G–D–A–E, not E–A–D–G. Presentation only;
      * `offset`/`opens`/`strings` are the stored identity a saved étude restores
      * by, and none of them move. */
-    label: [...strings].sort((a, b) => a - b).map(letter).join("–"),
+    label: setLabel(strings, OPEN_MIDI, OPEN_MIDI),   // derived by the one rule (night 44) — N4's uppercase is the names'
   };
 });
 
@@ -138,10 +140,10 @@ export function romanOf({ chord, degree }) {
  * which is what pre-ruling saved études restore through. `zone` is
  * `{ frets }` and optionally `{ string, bind }` — the string defaults to the
  * set's lowest, where the pivot lives in every voicing on that set. */
-export function defaultZoneFrets(key, scaleType, string) {
+export function defaultZoneFrets(key, scaleType, string, opens = OPEN_MIDI) {
   const pcs = scaleNotes(key, scaleType).map((n) => n.pc);
   const sf = [];
-  for (let f = 0; f <= 22; f++) if (pcs.includes((OPEN_MIDI[string] + f) % 12)) sf.push(f);
+  for (let f = 0; f <= 22; f++) if (pcs.includes((opens[string] + f) % 12)) sf.push(f);
   let i = sf.findIndex((f) => f >= 5);
   if (i < 0 || i > sf.length - 3) i = sf.length - 3;
   return [sf[i], sf[i + 1], sf[i + 2]];
@@ -150,11 +152,17 @@ export function defaultZoneFrets(key, scaleType, string) {
 export function tetradPass({
   key = "C", scale = "major", cycle = "fourths", bottom = 0, setIndex = 0,
   nfrets = 15, families = ["drop2"], startDegree = 0, placement = "free",
-  zone = null,
+  zone = null, tuning = null,
 } = {}) {
   if (!SCALE_STEPS[scale]) throw new Error(`unknown scale "${scale}" — chord.mjs knows ${Object.keys(SCALE_STEPS).join(", ")}`);
-  const set = STRING_SETS[setIndex];
-  if (!set) throw new Error(`unknown string set ${setIndex} — there are ${STRING_SETS.length}`);
+  const named = STRING_SETS[setIndex];
+  if (!named) throw new Error(`unknown string set ${setIndex} — there are ${STRING_SETS.length}`);
+  /* THE TUNING IS THE FIELD'S FACT (night 44): `tuning` is the same optional offsets map
+   * field() takes; the opens are derived and asserted well-formed by the one function, and
+   * the pass's set carries THEM — its label re-derived by the direction rule. No tuning is
+   * standard, and standard is byte-for-byte what it was. */
+  const opens = opensOf(tuning);
+  const set = { ...named, opens: named.strings.map((s) => opens[s]), label: setLabel(named.strings, opens, OPEN_MIDI) };
   if (!Number.isInteger(bottom) || bottom < 0 || bottom > 3)
     throw new Error(`bottom tone ${bottom} is not one of 0..3 (R, 3, 5, 7)`);
 
@@ -182,7 +190,7 @@ export function tetradPass({
   const zoneString = zone && Number.isInteger(zone.string) && set.strings.includes(zone.string)
     ? zone.string : set.strings[0];
   const zoneFrets = zone && Array.isArray(zone.frets) && zone.frets.length
-    ? zone.frets.map(Number) : defaultZoneFrets(key, scale, zoneString);
+    ? zone.frets.map(Number) : defaultZoneFrets(key, scale, zoneString, opens);
   const theZone = makeZone({ string: zoneString, frets: zoneFrets });
 
   /* BINDING IS THE DEFAULT (ratified 2026-08-21: "a position you do not stay
@@ -223,7 +231,7 @@ export function tetradPass({
     if (!v) throw new Error(`no voicing for ${chords[i].symbol} on ${set.label} within ${nfrets} frets`);
 
   return {
-    key, scale, cycle, bottom, setIndex, set, families, placement,
+    key, scale, cycle, bottom, setIndex, set, families, placement, opens,
     zone: { string: zoneString, frets: [...zoneFrets], ...(bind ? {} : { bind: false }) },
     box,
     rule: CYCLES[cycle].rule,
@@ -248,14 +256,13 @@ export function degreeLabel(chord, midi) {
 /* ---------------- load-time assertions (golden rule 1, site form) ---------------- */
 
 {
-  // standard tuning, checked against its named rule rather than trusted
-  const order = [6, 5, 4, 3, 2, 1];
-  for (let i = 1; i < order.length; i++) {
-    const gap = OPEN_MIDI[order[i]] - OPEN_MIDI[order[i - 1]];
-    const expect = order[i - 1] === 3 ? 4 : 5;         // G→B is a major third
-    if (gap !== expect)
-      throw new Error(`tetrad-sequence: string ${order[i]} is ${gap} semitones above ${order[i - 1]}, expected ${expect}`);
-  }
+  /* the gap rule that stood here was the DEFAULT's identity, re-derived (night 44 —
+   * design note §6): field.mjs asserts its own default's rule once, and every tuning is
+   * asserted well-formed where it is built. What this module owns is its enumeration:
+   * each named set's opens ascend low → high with its strings (no crossing) */
+  for (const s of STRING_SETS)
+    for (let i = 1; i < s.opens.length; i++)
+      if (s.opens[i] <= s.opens[i - 1]) throw new Error(`tetrad-sequence: set ${s.label}'s opens do not ascend with its strings`);
   // every cycle visits all seven degrees and comes home
   for (const c of Object.keys(CYCLES)) {
     const d = cycleDegrees(c);

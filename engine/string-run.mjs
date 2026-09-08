@@ -38,35 +38,34 @@
  * Pure: no DOM, no globals, load-time structural assertions.
  */
 import { lowToHigh, slotsOf, stringsOf, translatePattern } from "./string-sets.mjs";
-import { OPEN_MIDI } from "./field.mjs";
+import { OPEN_MIDI, opensOf } from "./field.mjs";
+import { setLabel } from "./open-string.mjs";
 
-/* an open string's letter, derived from its pitch class — every open string
- * of the derived tuning is a natural, which the load assertions prove */
-const NATURAL = { 0: "C", 2: "D", 4: "E", 5: "F", 7: "G", 9: "A", 11: "B" };
-const letterOf = (s) => {
-  const name = NATURAL[((OPEN_MIDI[s] % 12) + 12) % 12];
-  if (!name) throw new Error(`string-run: open string ${s} is not a natural — the label rule needs a decision`);
-  return name;
-};
+/* THE LABEL RULE, DECIDED (night 44, 261008 — Daniel): an open string is
+ * spelled by the direction of its move from standard — down flat, up sharp,
+ * unmoved natural (open-string.mjs, one derivation, the reason beside it).
+ * Until tonight this module threw on a non-natural open string by design:
+ * "the label rule needs a decision". The opens are the FIELD's now, handed
+ * in; OPEN_MIDI here is the default a caller without a field gets. */
 
 /** makeRun([6,4,3,1]) → { strings, label, contiguous, opens }
  * `strings` stored low pitch → high pitch (descending numbers — the family's
  * storage order); `opens` parallel open-string midis (placeOnSet's `set`);
  * `label` high → low (Shell 4's reading), derived. */
-export function makeRun(strings) {
+export function makeRun(strings, opens = OPEN_MIDI) {
   if (!Array.isArray(strings) || !strings.length)
     throw new Error("string-run: a run is a non-empty array of strings");
+  if (!opens || typeof opens !== "object") throw new Error("string-run: a run needs the field's opens (fld.opens)");
   const set = [...new Set(strings)];
   if (set.length !== strings.length) throw new Error("string-run: a run repeats a string");
   for (const s of set)
     if (!Number.isInteger(s) || s < 1 || s > 6)
       throw new Error(`string-run: string ${s} is not a real string`);
   const lh = lowToHigh(set);                       // descending numbers = ascending pitch
-  const highToLow = [...set].sort((a, b) => a - b); // ascending numbers = descending pitch
   const run = {
     strings: lh,
-    opens: lh.map((s) => OPEN_MIDI[s]),
-    label: highToLow.map(letterOf).join("–"),
+    opens: lh.map((s) => opens[s]),
+    label: setLabel(set, opens, OPEN_MIDI),
     contiguous: lh.every((s, i) => i === 0 || s === lh[i - 1] - 1),
   };
   for (let i = 1; i < run.opens.length; i++)
@@ -78,10 +77,10 @@ export function makeRun(strings) {
 /** THE MIGRATION ALIAS: an old config's `setIndex`, read against the
  * enumeration it indexed (the caller passes it — engine/tetrad-sequence.mjs's
  * STRING_SETS). Load-time only; nothing writes setIndex back. */
-export function fromSetIndex(i, sets) {
+export function fromSetIndex(i, sets, opens = OPEN_MIDI) {
   if (!Array.isArray(sets) || !sets[i])
     throw new Error(`string-run: setIndex ${i} does not name a set in the given enumeration`);
-  return makeRun(sets[i].strings);
+  return makeRun(sets[i].strings, opens);
 }
 
 /** translateFigure(pattern, fromRun, toRun) → { pattern, clamped }
@@ -115,8 +114,11 @@ export function translateFigure(pattern, fromRun, toRun) {
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */
 
 {
-  // every open string is a natural, so the label rule is total for this tuning
-  for (let s = 1; s <= 6; s++) letterOf(s);
+  // the label rule is total (night 44): every open of the default names, and a moved one
+  // names by its direction — G–D–A–D for the low set in drop D
+  const moved = setLabel([6, 5, 4, 3], opensOf({ 6: -2 }), OPEN_MIDI).split("–");
+  if (moved.length !== 4 || moved[3] !== "D" || moved[0] !== "G")
+    throw new Error("string-run: the label rule does not follow a moved string (drop D's low set ends on D)");
   // the label reads high → low: four contiguous runs, spot arithmetic
   const r = makeRun([6, 5, 4, 3]);
   if (r.label.split("–").length !== 4 || !r.contiguous)

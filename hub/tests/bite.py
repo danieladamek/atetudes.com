@@ -1154,9 +1154,10 @@ def m44_the_palettes_R_drifts_by_one():
 def m45_a_second_tuning_is_declared():
     # tetrad-sequence states the six numbers again — the night-26 defect returning;
     # the built-page pin ("states the tuning as a literal") must bite.
+    # re-aimed 261008 (night 44): the import line carries opensOf beside the default now
     p, original, mutated = patch("engine/tetrad-sequence.mjs",
-        'import { OPEN_MIDI } from "./field.mjs";',
-        'export const OPEN_MIDI = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };')
+        'import { OPEN_MIDI, opensOf } from "./field.mjs";',
+        'import { opensOf } from "./field.mjs";\nexport const OPEN_MIDI = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };')
     try:
         p.write_text(mutated)
         build()

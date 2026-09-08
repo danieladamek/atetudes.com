@@ -52,7 +52,7 @@
  *
  * Pure: no DOM, no globals, load-time structural assertions.
  */
-import { field, notesOn, OPEN_MIDI, degAgainst } from "./field.mjs";
+import { field, notesOn, degAgainst } from "./field.mjs";
 import { parseChord } from "./chord.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
@@ -174,7 +174,7 @@ export function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   const note = { ...cands[0] };
   // A REAL FRETTED NOTE, asserted — the exemption this module refuses to inherit
   if (!free.includes(note.string) || !Number.isInteger(note.fret) || note.fret < 0
-      || note.midi !== OPEN_MIDI[note.string] + note.fret)
+      || note.midi !== fld.opens[note.string] + note.fret)   // the field's opens (night 44)
     throw new Error("placeReference: the reference must be a real fretted note — string, fret, midi agreeing");
   if (note.keyDeg !== keyDeg)
     throw new Error("placeReference: the placed degree disagrees with the asked one");

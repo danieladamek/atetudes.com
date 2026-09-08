@@ -150,6 +150,10 @@ engine/
 ├── structures.mjs       the palette's structure catalog: degree patterns resolved
 │                        per key through resolveRoman, chart bodies canonicalized
 │                        through atchart.mjs — greped for literal progressions (pure)
+├── open-string.mjs      THE OPEN STRING'S NAME (night 44): spelled by the direction of its move
+│                        from standard — down flat, up sharp, unmoved natural; the twelve names
+│                        the only table; a leaf, so a card can take a set's label without the
+│                        tetrad tree (pure)
 ├── palette.mjs          the music palette: glyphs, the chord chooser, structure
 │                        inserts, figure/slot-pattern snippets canonical through the
 │                        motion grammar; padInsert = the caret-preserving seam

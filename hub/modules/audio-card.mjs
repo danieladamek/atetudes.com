@@ -33,7 +33,6 @@ import {
   pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES,
 } from "../../engine/voices.mjs";
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
-import { OPEN_MIDI } from "../../engine/field.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { parseFigure, figureEvents, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } from "../bus.mjs";
@@ -154,7 +153,7 @@ export const audioCard = {
         playback: playbackWord(cfg && cfg.playback) || "strum", bassMidi: bass, durBeats, bpm,
         ctx: { scalePcs: scaleNotes(cfg.key || "C", cfg.scale || "major").map((n) => n.pc),
           tonicPc: scaleNotes(cfg.key || "C", cfg.scale || "major")[0].pc,
-          open: OPEN_MIDI, nfrets: 15, set: pass.set.strings },
+          open: pass.opens, nfrets: 15, set: pass.set.strings },   // the pass's opens — the tuning is the field's fact (night 44)
       });
       for (const ev of voiceSchedule(events, voice, durBeats, bpm)) {
         // a voice at level ZERO schedules nothing (260820.3): the mute icons

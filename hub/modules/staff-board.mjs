@@ -93,7 +93,7 @@ export const staffBoard = {
        * window never jumps per bar; the reading shifts per bar */
       const fld = field({ key: cfg.key, scale: cfg.scale,
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
-      const run = makeRun(cfg.strings);
+      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });

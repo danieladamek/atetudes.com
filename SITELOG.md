@@ -1,3 +1,30 @@
+## 2026-09-08 — Night 44: alternate tunings, item 1 of four — the tuning becomes the field's fact; no visible change on any study
+
+- **What:** plumbing only, on purpose. `engine/field.mjs`'s `field()` takes an optional `tuning`
+  (a map from string number to a semitone offset from standard, `{6: -2}` reading "drop the
+  sixth") and carries `opens`, derived and asserted well-formed — six strings 1..6 each once,
+  each within ±6 semitones of standard, strictly ascending from string 6 to 1 (a crossed tuning
+  is refused, because a stored figure means pitch-ordered slots). Every consumer of the open
+  strings — the selection, the reference, the string run, the tetrad pass, and every hub site
+  that passed the opens along — now takes them from the field it is handed; the module constant
+  is the default and nothing reads it as the tuning. The open string's name is spelled by the
+  direction of its move (Daniel, 261008): down flat, up sharp, unmoved natural — drop D reads D,
+  down one E♭ — derived in `engine/open-string.mjs` from the twelve names, and the reason for
+  departing from the key's speller is written down (divergence register 36: the label names the
+  instrument, not the field). The notepad card's string-set labels are derived by the same rule
+  instead of restated.
+- **The gate, met:** every door renders byte-identically in standard tuning — every SVG's markup,
+  the settled DOM outside the inlined scripts and the pixels, before and after, on all four doors;
+  the plain door's built file is identical byte for byte. No control, no preset, no format key,
+  no door exposes a tuning; those are items 2, 3 and 4.
+- **Pinned:** a DADGAD field builds and a crossed one throws; the old assertions' three cases
+  (a swapped pair, a missing string, a transposed digit) are still caught; in drop D the sixth
+  string sounds a D everywhere a midi is derived; the one-declaration-site pin restated and green.
+- **Verified:** engine 667/667 (eight new), hub 11/11, the door gate, the bite chain, hugo clean,
+  check_site clean; multetudes and tetradetudes republished with the repointed modules, no other
+  study moved.
+- Report: `notes/working/Multetudes build run 261008.md`.
+
 ## 2026-09-08 — DEPLOYED: night 43 live — one chart line across the family, the root-degree dot on four studies; the metronome and the modes map unmoved; written from the run
 
 - record: run 34172487337 · success · commit 54a17ef · fetched 2026-09-08T00:18Z · 6/6 studies byte-identical · digest 199bfa028820

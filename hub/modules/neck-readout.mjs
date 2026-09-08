@@ -11,7 +11,7 @@
  * that derivation, and paints the count. A failing check paints RED — the
  * prototype's honesty, kept.
  */
-import { field, OPEN_MIDI, notesOn } from "../../engine/field.mjs";
+import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy } from "../../engine/selection.mjs";
@@ -67,7 +67,7 @@ export const neckReadout = {
         /* the centre's SOURCE (260914): material stable, reading per bar */
         const fld = field({ key: cfg.key, scale: cfg.scale,
           ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
-        const run = makeRun(cfg.strings);
+        const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
         const anchor = Math.max(...run.strings);
         const pos = positionOf({ field: fld, anchorString: anchor,
           startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
@@ -203,7 +203,7 @@ export const neckReadout = {
           const rp = placeReference(cfg.bass, roRefDeg, fld, run.strings, pos, pickOf(cfg));
           check("the reference is a real fretted note, offered unfretted by name, or refused by name", () =>
             rp.note
-              ? rp.note.midi === OPEN_MIDI[rp.note.string] + rp.note.fret
+              ? rp.note.midi === fld.opens[rp.note.string] + rp.note.fret
               : typeof rp.reason === "string" && rp.reason.length > 0 && (!rp.offer || rp.offer.unfretted === true));
           if (rp.note && cfg.object === "scale") {
             /* a scale has no stack to read back over the bass — the note is

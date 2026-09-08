@@ -107,7 +107,7 @@ export const etudeWalk = {
     const soundCurrent = () => {
       const { fld, prog } = derive();
       const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-      const run = makeRun(cfg.strings);
+      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const pool = materialIn(pos, run.strings, fld);
