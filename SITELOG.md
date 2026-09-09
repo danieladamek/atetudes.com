@@ -1,3 +1,14 @@
+## 2026-09-09 — DEPLOYED: night 45 live — violet gone for good; Triadetudes v0.9.3, multetudes and tetradetudes moved; written from the run
+
+- record: run 34321147427 · success · commit f6622a6 · fetched 2026-09-09T07:01Z · 6/6 studies byte-identical · digest 66cc49a57330
+- Actions run 34321147427 green on `f6622a6` — https://github.com/danieladamek/atetudes.com/actions/runs/34321147427 (created 2026-09-09T06:53:31Z, finished 2026-09-09T07:01:06Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo 71be919dd433 · live 71be919dd433 — matches.
+- tetrad-voice-leading: repo 01403fdc0117 · live 01403fdc0117 — matches.
+- tetradetudes: repo 7bb68d8f80bb · live 7bb68d8f80bb — matches.
+- triadetudes: repo dcf77288ba41 · live dcf77288ba41 — matches.
+
 ## 2026-09-09 — Night 45: violet, for good — Triadetudes v0.9.3 takes v1.4's mark; the violet constant leaves the palette; a by-value pin on every study
 
 - **Why (Daniel, 261008: "remove the violet colour function for good"):** Design Spec v1.4 struck
