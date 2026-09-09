@@ -1,3 +1,27 @@
+## 2026-09-09 — Night 45: violet, for good — Triadetudes v0.9.3 takes v1.4's mark; the violet constant leaves the palette; a by-value pin on every study
+
+- **Why (Daniel, 261008: "remove the violet colour function for good"):** Design Spec v1.4 struck
+  the v1.3 rule that painted a chromatic approach violet (Update Log 260930.1) — chromaticity is
+  carried by SHAPE and colour tracks the degree the note alters. Night 36 retired every hub
+  consumer, but the hand-authored Triadetudes page inlines the raw hex and kept painting by the
+  struck rule at seven sites for eight nights on a published study; a sweep by identifier could
+  not see it. The sweep is now by value.
+- **What changed:** Triadetudes' seven sites draw v1.4's mark — a non-diatonic approach is a
+  hollow starburst (the family's one geometry, carried verbatim from the hub) in the colour of the
+  degree it alters, derived from the letter of its chromatic spelling; a diatonic one stays a
+  circle; radii unchanged. The palette's violet constant is gone (and with it the inlined copies in
+  multetudes and tetradetudes, rebuilt); its guard now asserts the class — exactly seven degree
+  colours, distinct, well-formed — and a test asserts the seven by value against the Spec's own
+  §2.1 table, parsed from `docs/`. A pin asserts the struck hex appears in no published study and
+  no built door, proven to bite.
+- **Not touched:** `docs/`. §2.1 still reserves the hue as an annotation channel; whether it should
+  stop reserving it is Daniel's, with an Update Log entry if so.
+- **Verified:** engine 677/677, hub 12/12, the door gate, the bite chain with one new mutation,
+  hugo clean, check_site clean; rendered in Chromium at 1280 and 390 on a served build, a chromatic
+  approach on the neck, the staff and the keyboard, before (eight violet marks) and after (eight
+  starbursts), zero console errors, and looked at (`notes/working/shots-261009/`).
+- Report: `notes/working/AtEtudes build run 261009 — violet, for good.md`.
+
 ## 2026-09-09 — DEPLOYED: the 261008c injection live — Ebmaj7#5 reads III+ on every chart line; multetudes, tetradetudes and tetrad-voice-leading moved; written from the run
 
 - record: run 34296870363 · success · commit 1c3a3cb · fetched 2026-09-09T01:00Z · 6/6 studies byte-identical · digest 3f4b0a22a0a1

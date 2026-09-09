@@ -25,13 +25,27 @@ export const FAM = DEGREE_FAM;
 export const FAM_COLOR = DEGREE_COLOR;
 export const FAM_TEXT = { R: "#fff", "2": "#fff", "3": "#fff", "4": "#212126",
   "5": "#fff", "6": "#212126", "7": "#212126" };
-/** §2.6's chromatic-approach colour — an annotation channel, never a degree */
-export const VIOLET = "#7847A8";
+/* The violet constant is gone FROM THE CODE (night 45, 261009 — Daniel: "remove the violet colour function
+ * for good"). v1.4 struck the v1.3 clause that spent it (Update Log 260930.1); night 36 retired
+ * every hub consumer but left the constant, and the hand-authored triadetudes page kept painting
+ * by the raw hex for eight nights — a sweep by IDENTIFIER cannot see a literal. §2.1's
+ * reservation of the hue is the Spec's to keep or release (docs/), not a constant's. The guard
+ * that watched for violet entering the palette now watches the CLASS, below. */
 /** §2.2/§2.6's annotation gray (0.45, 0.45, 0.48) — the slur's colour */
 export const ANNOTATION_GRAY = "#73737A";
 {
   // §2.1's own text rule, asserted: light marks (4, 6, 7) take dark text
   for (const f of ["4", "6", "7"]) if (FAM_TEXT[f] !== "#212126") throw new Error("palette: light mark " + f + " must take dark text");
   for (const f of ["R", "2", "3", "5"]) if (FAM_TEXT[f] !== "#fff") throw new Error("palette: dark mark " + f + " must take white text");
-  if (Object.values(FAM_COLOR).includes(VIOLET)) throw new Error("palette: violet must never enter the degree palette");
+  /* THE DEGREE PALETTE HOLDS EXACTLY THE SEVEN §2.1 COLOURS AND NOTHING CREEPS IN (night 45,
+   * generalising the violet-only check — the instance was never the subject, the class is):
+   * seven families, seven distinct well-formed hexes, none of them an annotation colour. The
+   * VALUES are asserted against the Spec's own table by engine/tests/degree-palette.test.mjs,
+   * which parses docs/ — the one way to check by value without restating the seven (rule 6). */
+  const hexes = Object.values(FAM_COLOR);
+  if (Object.keys(FAM_COLOR).length !== 7 || FAM.length !== 7) throw new Error("palette: the degree palette is exactly seven families");
+  if (new Set(hexes).size !== 7) throw new Error("palette: seven distinct degree colours — two families share one");
+  for (const h of hexes) if (!/^#[0-9A-F]{6}$/.test(h)) throw new Error("palette: a degree colour is not a six-digit hex: " + h);
+  if (hexes.includes(ANNOTATION_GRAY)) throw new Error("palette: the annotation gray is not a degree colour");
+  for (const f of FAM) if (!(f in FAM_COLOR)) throw new Error("palette: family " + f + " has no colour");
 }

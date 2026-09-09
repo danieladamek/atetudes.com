@@ -378,6 +378,31 @@ test("§4.3 card carriers: every var(--token) the carried card styles reference 
   assert.ok(checked >= 4 * GRAMMAR_HOSTS.length, `not vacuous: ${checked} token checks`);
 });
 
+// ================= v1.4's mark, on the artifacts (night 45, 261009 — "remove the violet colour function for good") =================
+// Design Spec v1.4 (Update Log 260930.1) struck the v1.3 clause "a chromatic approach tone
+// takes violet the struck hex": chromaticity is SHAPE (the starburst) and colour tracks the degree the
+// note alters. Night 36 swept violet by the IDENTIFIER and found every hub module; triadetudes
+// is hand-authored and inlines the raw hex, so it kept painting by the struck rule for eight
+// nights on a published study. THE SWEEP IS BY VALUE: the literal, either case, in no published
+// study — a doctrine that moves in docs/ must move on the face, and prose is not asserted.
+const STRUCK_HEX = ["78", "47", "a8"].join("");   // built at runtime: a sweep BY VALUE over the repo must read zero
+test("§2.6 v1.4: no published study paints by the struck violet rule — the literal the struck hex appears in none", () => {
+  for (const slug of STUDY_SLUGS) {
+    const page = studyOf(slug);
+    const hits = (page.match(new RegExp(STRUCK_HEX, "gi")) || []).length;
+    assert.equal(hits, 0, `[${slug}] paints by the struck v1.3 rule (${hits} × the struck hex) — v1.4 §2.6: draw a non-diatonic note as a STARBURST in the colour of the degree it alters (chromaticSpeller's letter; hub/modules/field-board.mjs and score-board.mjs are the reference); a hand page re-ports, a door rebuilds`);
+  }
+});
+// the hand page carries the hub's marks helper the way it carries a card: VERBATIM, pinned
+import { readFileSync as _rf } from "node:fs";
+test("§4.3 the starburst is one geometry: triadetudes carries hub/marks.mjs's inline form verbatim", () => {
+  const marks = _rf(join(here, "..", "..", "hub", "marks.mjs"), "utf8");
+  const inline = marks.replace(/^import [^\n]*\n/gm, "").replace(/^export /gm, "").replace(/^\n+/, "").replace(/\n+$/, "\n");
+  const page = studyOf("triadetudes");
+  assert.ok(page.includes(inline), "[triadetudes] carries hub/marks.mjs (STARBURST, starburst) byte for byte — re-copy the inline form; the geometry is the family's finding, not a taste");
+  assert.ok(/starburst\(/.test(page.replace(inline, "")), "[triadetudes] …and draws with it");
+});
+
 // ================= SHARE WHAT YOU MAKE (261005, night 41): every host maps to the ONE vocabulary =================
 // engine/shared-config.mjs is the family's shared config vocabulary — one definition. Each
 // host declares `shared: { to, canTake, apply }` on its adapter; the surface writes the

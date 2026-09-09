@@ -284,7 +284,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.9.2</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.9.3</div>
 </header>
 
 <div class="cards">
@@ -603,7 +603,7 @@
   logs and bare étude configs (.json) still open.</div>
 </div>
 
-<footer>Triadetudes v0.9.2 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
+<footer>Triadetudes v0.9.3 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.1
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -1107,7 +1107,7 @@ function resolveRoman(tok, key, scaleType = "major") {
   const symbol = name + romanQualitySuffix(r);
   return { symbol, parsed: parseChord(symbol) };
 }
-return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, resolveRoman };
+return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, resolveRoman, chromaticSpeller, alteredDegree };
 })();
 /* ============ string-set engine — shared component v1 ============
    Canonical source: engine/string-sets.mjs (pure, CI-tested; an anti-drift
@@ -3517,6 +3517,38 @@ const FAM_COLOR = { R: "#B82929", "2": "#3C8B2F", "3": "#2959A6", "4": "#A9ABB4"
 }
 return { FAM, FAM_COLOR };
 })();
+const MARKS = (() => {
+/* marks.mjs — the shapes the family draws, stated once (night 36, 260930).
+ *
+ * Design Spec v1.4 §2.6: SHAPE CARRIES CHROMATICITY. A non-diatonic note
+ * draws as a STARBURST, a diatonic note stays a circle; colour tracks the
+ * degree the note alters (palette.mjs supplies it — this module supplies no
+ * colour). The geometry is the render's finding, not a taste: eight points
+ * with the inner radius at 0.70 kept the silhouette open at 0.6 of r 10.5 in
+ * silver and in ink, where ten and twelve points closed into a rough ring
+ * (notes/working/shots-260930). A helper like bus.mjs or palette.mjs — no
+ * markup, no styles, no control — so the resolver treats it as reached code.
+ */
+const STARBURST = Object.freeze({ points: 8, inner: 0.70 });
+
+/** the polygon points of a starburst centred at (cx, cy) with outer radius r —
+ * the same silhouette at every size, a point straight up */
+function starburst(cx, cy, r, { points = STARBURST.points, inner = STARBURST.inner } = {}) {
+  const pts = [];
+  for (let i = 0; i < 2 * points; i++) {
+    const rr = i % 2 ? r * inner : r, a = (Math.PI * i) / points - Math.PI / 2;
+    pts.push((cx + rr * Math.cos(a)).toFixed(2) + "," + (cy + rr * Math.sin(a)).toFixed(2));
+  }
+  return pts.join(" ");
+}
+{
+  // the ruling's geometry, asserted at load: a starburst is never a circle in disguise
+  if (!(STARBURST.points >= 6 && STARBURST.inner < 0.85 && STARBURST.inner > 0.5))
+    throw new Error("marks: the starburst must keep an open silhouette (points ≥ 6, inner radius 0.5–0.85)");
+  if (starburst(0, 0, 10).split(" ").length !== 2 * STARBURST.points) throw new Error("marks: starburst emits one vertex per point and valley");
+}
+return { STARBURST, starburst };
+})();
 const CHART_LINE = (() => {
 const { FAM, FAM_COLOR } = DEGREE_PALETTE;
 /* chart-line.mjs — THE FAMILY'S CHART LINE (night 43, 261007 — Daniel, 260907, with a
@@ -4730,7 +4762,17 @@ const SPLITS = {
 };
 const IVL_LABEL = {0:"R",1:"b2",2:"2",3:"b3",4:"3",5:"4",6:"b5",7:"5",8:"b6",9:"6",10:"b7",11:"7"};
 const IVL_FAMILY = {0:"R",1:"2",2:"2",3:"3",4:"3",5:"4",6:"5",7:"5",8:"6",9:"6",10:"7",11:"7"};
-const { FAM_COLOR } = DEGREE_PALETTE;   // the one palette (engine/degree-palette.mjs), bound — night 43 retired the literal
+const { FAM, FAM_COLOR } = DEGREE_PALETTE;   // the one palette (engine/degree-palette.mjs), bound — night 43 retired the literal
+const { starburst } = MARKS;                 // the family's one starburst geometry (hub/marks.mjs), carried verbatim — night 45
+const { alteredDegree } = CHORD;             // v1.4: the degree a chromatic note alters, from the speller's letter — night 45
+/* V1.4's MARK (night 45, 261009 — Daniel: "remove the violet colour function for good"). Until
+ * tonight this page painted a chromatic approach VIOLET (the struck hex) at seven sites — Design Spec
+ * v1.3's colour function, live eight nights after v1.4 struck it (Update Log 260930.1). The law
+ * now: chromaticity is SHAPE — a non-diatonic note draws as a STARBURST (eight points, inner
+ * 0.70), a diatonic one a circle — and colour tracks the degree the note alters, derived from
+ * the letter of its chromatic spelling; weight is unchanged (chord tone full and solid, approach
+ * 0.6 and hollow). Ported from hub/modules/field-board.mjs and score-board.mjs, never reinvented. */
+const chromaticColour=(midi)=>FAM_COLOR[FAM[alteredDegree(st.key,st.scaleType)(midi).deg]];
 const FAM_TEXT  = {R:"#fff","2":"#fff","3":"#fff","4":"#212126","5":"#fff","6":"#212126","7":"#212126"};
 
 function accOf(name){ let a=0; for(const ch of name.slice(1)){ a += ch==="#"?1:ch==="b"?-1:0; } return a; }
@@ -6506,8 +6548,9 @@ function renderScore(){
           const xk=x+(k+0.5)*(w/L);
           let y;
           if(ev.role==="approach"){
-            // §2.6 engraved: cue-size heads, same color rules — degree color
-            // when diatonic, violet when chromatic; never a label
+            // §2.6 engraved: cue-size heads, same colour rules — v1.4: a chromatic
+            // head is a STARBURST in the altered degree's colour, a diatonic one an
+            // ellipse in its own (sizes unchanged, rx 4.5 ry 3.4); never a label
             ledger(xk,n.name,n.oct);
             y=yOf(n.name,n.oct);
             const acc=n.name.slice(1);
@@ -6515,10 +6558,11 @@ function renderScore(){
               "font-size":"10",fill:"#212126"},svg);
               a.textContent=acc.replace(/#/g,"♯").replace(/b/g,"♭");}
             const chrom=!sdPcs.includes(((ev.midi%12)+12)%12);
-            el("ellipse",{cx:xk,cy:y,rx:4.5,ry:3.4,
-              fill:open?"#fff":(chrom?"#7847A8":FAM_COLOR[n.fam]),
-              stroke:chrom?"#7847A8":FAM_COLOR[n.fam],"stroke-width":open?1.6:0,
-              transform:`rotate(-14 ${xk} ${y})`},svg);
+            const col=chrom?chromaticColour(ev.midi):FAM_COLOR[n.fam];
+            const head={fill:open?"#fff":col,stroke:col,"stroke-width":open?1.6:0,"data-approach":chrom?"chromatic":"diatonic"};
+            if(chrom) el("polygon",{...head,points:starburst(0,0,1),"data-alters":alteredDegree(st.key,st.scaleType)(ev.midi).label,
+                transform:`translate(${xk} ${y}) rotate(-14) scale(4.5 3.4)`,"vector-effect":"non-scaling-stroke"},svg);
+            else el("ellipse",{...head,cx:xk,cy:y,rx:4.5,ry:3.4,transform:`rotate(-14 ${xk} ${y})`},svg);
           }else{
             y=head(xk,n.name,n.oct,n.fam,n.lab,open);
           }
@@ -6668,9 +6712,10 @@ function renderActive(){
     ?allEvents.filter(ev=>ev.role==="chord"&&!ev.strum)
     :null;
   // §2.6 role marks: approach tones at 0.6 of the host radius, hollow — the
-  // color becomes the stroke (degree color when diatonic, violet #7847A8 when
-  // chromatic); no ring, no interval label; slur to the target in annotation
-  // gray, drawn UNDER the dots. All derived from role + pc vs the scale.
+  // colour becomes the stroke; v1.4: a chromatic approach is a STARBURST in
+  // the colour of the degree it alters, a diatonic one a circle in its own;
+  // no ring, no interval label; slur to the target in annotation gray, drawn
+  // UNDER the dots. All derived from role + pc vs the scale.
   {
     const sdPcs=scaleData().pcs;
     const seq2=allEvents.filter(ev=>ev.role!=="bass"&&!ev.strum);
@@ -6687,9 +6732,11 @@ function renderActive(){
     seq2.forEach(ev=>{
       if(ev.role!=="approach")return;
       const chrom=!sdPcs.includes(((ev.midi%12)+12)%12);
-      const col=chrom?"#7847A8":FAM_COLOR[ivlOf(((ev.midi%12)+12)%12,ref,ch.q).fam];
-      el("circle",{cx:fx(ev.fret),cy:fy(ev.string),r:14*0.6,fill:"#fff",
-        stroke:col,"stroke-width":1.6},layer);
+      const col=chrom?chromaticColour(ev.midi):FAM_COLOR[ivlOf(((ev.midi%12)+12)%12,ref,ch.q).fam];
+      if(chrom) el("polygon",{points:starburst(fx(ev.fret),fy(ev.string),14*0.6),fill:"#fff",
+        stroke:col,"stroke-width":1.6,"data-approach":"chromatic"},layer);
+      else el("circle",{cx:fx(ev.fret),cy:fy(ev.string),r:14*0.6,fill:"#fff",
+        stroke:col,"stroke-width":1.6,"data-approach":"diatonic"},layer);
     });
     // ---- the sketch on the neck (v0.7.8) ----
     // the EMITTED part of the sketch is the figure drawn just above — the
@@ -6715,10 +6762,10 @@ function renderActive(){
         if(committed){ sketchHit(layer,fx(n.fret),fy(n.string),i); continue; }
         // shape: the grip dot IS the mark — only the tap/remove surface is added
         const chrom=!sdPcs.includes(((n.midi%12)+12)%12);
-        const col=chrom?"#7847A8":FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref,ch.q).fam];
-        el("circle",{cx:fx(n.fret),cy:fy(n.string),r:14*0.6,fill:"#fff",
-          stroke:col,"stroke-width":1.6,
-          ...(n.heldOut?{"stroke-dasharray":"2.5 2.5",opacity:0.55}:{})},layer);
+        const col=chrom?chromaticColour(n.midi):FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref,ch.q).fam];
+        const held=n.heldOut?{"stroke-dasharray":"2.5 2.5",opacity:0.55}:{};
+        if(chrom) el("polygon",{points:starburst(fx(n.fret),fy(n.string),14*0.6),fill:"#fff",stroke:col,"stroke-width":1.6,...held},layer);
+        else el("circle",{cx:fx(n.fret),cy:fy(n.string),r:14*0.6,fill:"#fff",stroke:col,"stroke-width":1.6,...held},layer);
         sketchHit(layer,fx(n.fret),fy(n.string),i);
       }
     }
@@ -6807,9 +6854,9 @@ function renderKbd(){
       "font-size":"7.5",fill:"#B9B9BF","pointer-events":"none"},svg);t.textContent="C"+(Math.floor(m/12)-1);}
     if(act.has(m)){const a=act.get(m), g=kbdGeom(m);
       if(a.appr){
-        el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:"#fff",
-          stroke:a.chrom?"#7847A8":FAM_COLOR[a.fam],"stroke-width":1.1,
-          "pointer-events":"none"},svg);
+        const col=a.chrom?chromaticColour(m):FAM_COLOR[a.fam];
+        if(a.chrom) el("polygon",{points:starburst(g.x,g.y,g.r*0.6),fill:"#fff",stroke:col,"stroke-width":1.1,"pointer-events":"none"},svg);
+        else el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:"#fff",stroke:col,"stroke-width":1.1,"pointer-events":"none"},svg);
       }else{
       el("circle",{cx:g.x,cy:g.y,r:g.r,fill:FAM_COLOR[a.fam],"pointer-events":"none"},svg);
       const t=el("text",{x:g.x,y:g.y+3,"text-anchor":"middle","font-size":"7",
@@ -6823,9 +6870,9 @@ function renderKbd(){
       r.addEventListener("click",()=>{playNote(nb);sketchClick({midi:nb});});
       if(act.has(nb)){const a=act.get(nb), g=kbdGeom(nb);
         if(a.appr){
-          el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:"#212126",
-            stroke:a.chrom?"#7847A8":FAM_COLOR[a.fam],"stroke-width":1.1,
-            "pointer-events":"none"},svg);
+          const col=a.chrom?chromaticColour(nb):FAM_COLOR[a.fam];
+          if(a.chrom) el("polygon",{points:starburst(g.x,g.y,g.r*0.6),fill:"#212126",stroke:col,"stroke-width":1.1,"pointer-events":"none"},svg);
+          else el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:"#212126",stroke:col,"stroke-width":1.1,"pointer-events":"none"},svg);
         }else{
         el("circle",{cx:g.x,cy:g.y,r:g.r,fill:FAM_COLOR[a.fam],stroke:"#fff",
           "stroke-width":1.2,"pointer-events":"none"},svg);
@@ -6845,10 +6892,10 @@ function renderKbd(){
       const g=kbdGeom(n.midi); if(!g)continue;
       if(committed){ sketchHit(svg,g.x,g.y,i,10); continue; }
       const chrom=!scaleData().pcs.includes(((n.midi%12)+12)%12);
-      const col=chrom?"#7847A8":(ch?FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref2,ch.q).fam]:"#73737A");
-      el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:g.black?"#212126":"#fff",
-        stroke:col,"stroke-width":1.1,"pointer-events":"none",
-        ...(n.heldOut?{"stroke-dasharray":"2.5 2.5",opacity:0.55}:{})},svg);
+      const col=chrom?chromaticColour(n.midi):(ch?FAM_COLOR[ivlOf(((n.midi%12)+12)%12,ref2,ch.q).fam]:"#73737A");
+      const held=n.heldOut?{"stroke-dasharray":"2.5 2.5",opacity:0.55}:{};
+      if(chrom) el("polygon",{points:starburst(g.x,g.y,g.r*0.6),fill:g.black?"#212126":"#fff",stroke:col,"stroke-width":1.1,"pointer-events":"none",...held},svg);
+      else el("circle",{cx:g.x,cy:g.y,r:g.r*0.6,fill:g.black?"#212126":"#fff",stroke:col,"stroke-width":1.1,"pointer-events":"none",...held},svg);
       sketchHit(svg,g.x,g.y,i,10);
     }
   }

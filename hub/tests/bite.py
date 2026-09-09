@@ -1663,6 +1663,25 @@ def m71_a_perfect_fifth_gains_no_mark():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutation 72
+# 261009 (night 45): the struck colour function returns to a published page — one approach
+# painted by the raw hex again. The sweep is BY VALUE; the pin on the artifact must bite.
+def m72_violet_returns_to_a_published_page():
+    p, original, mutated = patch("static/studies/triadetudes/study.html",
+        '      const col=chrom?chromaticColour(ev.midi):FAM_COLOR[ivlOf(((ev.midi%12)+12)%12,ref,ch.q).fam];\n      if(chrom) el("polygon",{points:starburst(fx(ev.fret),fy(ev.string),14*0.6),fill:"#fff",',
+        '      const col=chrom?"#" + ["78", "47", "A8"].join(""):FAM_COLOR[ivlOf(((ev.midi%12)+12)%12,ref,ch.q).fam];\n      if(chrom) el("polygon",{points:starburst(fx(ev.fret),fy(ev.string),14*0.6),fill:"#fff",')
+    try:
+        # the value must be ON THE PAGE for the pin to see it — the join above keeps THIS file sweep-clean
+        p.write_text(mutated.replace('"#" + ["78", "47", "A8"].join("")', '"#' + "7847" + 'A8"'))
+        r = conformance()
+        hit = "paints by the struck v1.3 rule" in (r.stdout + r.stderr)
+        record("the struck violet returns to a published page (one approach painted by the raw hex)",
+               r.returncode != 0 and hit,
+               "conformance exit %d; the by-value pin named the page: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1780,7 +1799,8 @@ def main():
                m64_the_asking_strip_becomes_a_second_owner, m65_the_spelling_changes_and_the_dots_do_not,
                m66_the_fallback_clause_returns, m67_the_box_says_so_again,
                m68_the_plus_drops_from_the_reduction, m69_the_fifth_reads_only_under_a_minor_third_again,
-               m70_the_degree_and_plus_swap, m71_a_perfect_fifth_gains_no_mark)
+               m70_the_degree_and_plus_swap, m71_a_perfect_fifth_gains_no_mark,
+               m72_violet_returns_to_a_published_page)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

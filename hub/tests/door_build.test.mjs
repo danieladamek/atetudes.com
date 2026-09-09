@@ -126,6 +126,14 @@ test("hub: a door's shared-config declaration reaches the artifact — the notep
   }
 });
 
+test("hub: no built door paints by the struck violet rule — the literal the struck hex appears in none (night 45)", async () => {
+  for (const d of listDoors()) {
+    const html = readFileSync(join(HUB, "build", d + ".html"), "utf8");
+    const hits = (html.match(new RegExp(["78", "47", "a8"].join(""), "gi")) || []).length;
+    assert.equal(hits, 0, `[${d}] the built door carries the struck violet hex ${hits}× — v1.4 struck the violet colour function; a constant that reaches the artifact is a colour function in waiting. Remove the source and rebuild`);
+  }
+});
+
 test("hub: the doors differ — a gate where both doors ship the same thing proves nothing", async () => {
   const sizes = [];
   for (const d of listDoors()) {
