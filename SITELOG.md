@@ -1,3 +1,14 @@
+## 2026-09-09 — DEPLOYED: night 47 live — the tuning editor under Multetudes' neck (v0.6.0); multetudes and tetradetudes moved; written from the run
+
+- record: run 34379297935 · success · commit bca312f · fetched 2026-09-09T17:01Z · 6/6 studies byte-identical · digest f440408a0625
+- Actions run 34379297935 green on `bca312f` — https://github.com/danieladamek/atetudes.com/actions/runs/34379297935 (created 2026-09-09T16:51:05Z, finished 2026-09-09T16:59:29Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo b658afa15d66 · live b658afa15d66 — matches.
+- tetrad-voice-leading: repo 01403fdc0117 · live 01403fdc0117 — matches.
+- tetradetudes: repo b35337dcd0f0 · live b35337dcd0f0 — matches.
+- triadetudes: repo dcf77288ba41 · live dcf77288ba41 — matches.
+
 ## 2026-09-09 — Night 47: the string labels are the editor — Multetudes v0.6.0 gains the tuning editor under the neck; the neck and the ear agree in every tuning
 
 - **Why (dispatch 261008d, alternate tunings item 2; multetudes only):** night 44 made the tuning
