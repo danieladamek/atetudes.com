@@ -4330,27 +4330,32 @@ const M_ROMAN = (() => {
  * it, so its roman carries the quality. roman.test.mjs asserts the reduction equals
  * progression.mjs's spelling on every diatonic tetrad of every key and scale.
  *
- * NOT A TABLE: the tags are read by their shape — a leading ø, ° or o means the triad under
- * the seventh is diminished and keeps the °; every other tag (maj7, -7, 7, +7, mΔ7, -Δ7, +Δ7)
- * is quality the symbol carries and goes, the augmented + included, because the triad's
- * reading in progression.mjs marks no augmented (the part they share, asserted).
+ * THE ROMAN NAMES THE TRIAD (Daniel's ruling 261008c, sharpening 261006 — the earlier
+ * "quality is the symbol's job" read literally would have stripped the ° too, and nobody did,
+ * because an altered fifth is function-bearing): case for the third, ° or + for the fifth,
+ * and the SEVENTH is the symbol's job wherever the symbol is present. NOT A TABLE: the tags
+ * are read by their shape — a leading ø, ° or o means a diminished fifth under the seventh
+ * and keeps the °; a leading + means an augmented fifth and keeps the +; what remains
+ * (maj7, -7, 7, Δ7, mΔ7, -Δ7) is the seventh and goes. Until 261008c the + went too, on the
+ * reason that progression.mjs marked no augmented; progression.mjs reads the fifth on its own
+ * now, and the two spellings agree over a part that includes the altered fifth both ways.
  */
 const NUMERAL = /^(?:VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)(?![IViv])/;
 
-/** the function-only spelling of a roman: the numeral in its case, ° kept for a diminished
- * triad, every seventh tag dropped; a dash (an off-key root) passes through */
+/** the triad's spelling of a roman: the numeral in its case, ° or + kept for an altered fifth,
+ * every seventh tag dropped; a dash (an off-key root) passes through */
 function functionRoman(roman) {
   if (typeof roman !== "string") throw new Error("roman: a roman is a string");
   if (roman === "—") return roman;
   const m = roman.match(NUMERAL);
   if (!m) throw new Error(`roman: "${roman}" does not begin with a roman numeral`);
   const tag = roman.slice(m[0].length);
-  return m[0] + (/^[ø°o]/.test(tag) ? "°" : "");
+  return m[0] + (/^[ø°o]/.test(tag) ? "°" : /^\+/.test(tag) ? "+" : "");
 }
 
 {
-  if (functionRoman("viiø7") !== "vii°" || functionRoman("Imaj7") !== "I" || functionRoman("III+7") !== "III" || functionRoman("viio7") !== "vii°")
-    throw new Error("roman: the reduction does not hold — viiø7 → vii°, Imaj7 → I, III+7 → III");
+  if (functionRoman("viiø7") !== "vii°" || functionRoman("Imaj7") !== "I" || functionRoman("III+7") !== "III+" || functionRoman("viio7") !== "vii°" || functionRoman("V7") !== "V")
+    throw new Error("roman: the reduction does not hold — viiø7 → vii°, Imaj7 → I, III+7 → III+, V7 → V");
 }
 return { functionRoman };
 })();

@@ -113,6 +113,20 @@ test("THE CHIP LINE, identified not counted: cycling 4ths in B\u266d, every symb
   assert.equal(line,
     "Bbmaj7:I Ebmaj7:IV Am7b5:vii\u00b0 Dm7:iii Gm7:vi Cm7:ii F7:V Bbmaj7:I",
     "eight bars, each named and analysed — a count-only pin let a wrong chord boot for two nights");
+  /* THE FIFTH HAS ITS OWN READING (261008c): ° for a diminished fifth, + for an augmented one,
+   * independent of the third. Until tonight the ° came only under a minor third and the + never —
+   * so C harmonic minor's Ebmaj7#5 read "III", a major triad, on the live face (reproduced
+   * before the fix, shots-261008c). Measured: a major third over a diminished fifth arises on no
+   * degree of the three scales, so that half is latent; the augmented is live on degree 3 of both
+   * minors, one chord in seven. */
+  const fh = field({ key: "C", scale: "harm" });
+  const ph = progressionOf({ source: "cycle", cycle: "fourths", start: 0 }, "C", "harm");
+  assert.equal(ph.chords.map((_, i) => { const c = chordAt(ph, i, fh, "tetrad"); return c.symbol + ":" + c.roman; }).join(" "),
+    "CmMaj7:i Fm7:iv Bdim7:vii\u00b0 Ebmaj7#5:III+ Abmaj7:VI Dm7b5:ii\u00b0 G7:V CmMaj7:i",
+    "C harmonic minor, chip for chip — the augmented third degree spelled III+");
+  const fm = field({ key: "C", scale: "mel" });
+  const pm = progressionOf({ source: "cycle", cycle: "fourths", start: 0 }, "C", "mel");
+  assert.equal(chordAt(pm, 3, fm, "tetrad").roman, "III+", "C melodic minor's third degree too");
   // an off-key-rooted typed chord analyses as em-dash, never a wrong numeral
   const e7 = progressionOf({ source: "custom", custom: "E7" }, "Bb");
   assert.equal(chordAt(e7, 0, fld, "tetrad").roman, "\u2014");

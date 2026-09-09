@@ -27,7 +27,11 @@ const KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 test("the reduction: the seventh's tag goes, the triad's reading stays — case, and ° for the diminished", () => {
   assert.equal(functionRoman("viiø7"), "vii°"); assert.equal(functionRoman("vii°7"), "vii°"); assert.equal(functionRoman("viio7"), "vii°");
   assert.equal(functionRoman("Imaj7"), "I"); assert.equal(functionRoman("ii-7"), "ii"); assert.equal(functionRoman("V7"), "V");
-  assert.equal(functionRoman("i-Δ7"), "i"); assert.equal(functionRoman("imΔ7"), "i"); assert.equal(functionRoman("III+7"), "III"); assert.equal(functionRoman("III+Δ7"), "III");
+  assert.equal(functionRoman("i-Δ7"), "i"); assert.equal(functionRoman("imΔ7"), "i");
+  /* THE ROMAN NAMES THE TRIAD (ruling 261008c, sharpening 261006): case for the third, ° or + for
+   * the fifth — the same fact, an altered fifth — and the seventh is the symbol's job. */
+  assert.equal(functionRoman("III+7"), "III+", "the augmented fifth keeps its +"); assert.equal(functionRoman("III+Δ7"), "III+");
+  assert.equal(functionRoman("vii°7"), "vii°"); assert.equal(functionRoman("V+"), "V+", "already function-only: unchanged");
   assert.equal(functionRoman("vii°"), "vii°", "already function-only: unchanged"); assert.equal(functionRoman("IV"), "IV"); assert.equal(functionRoman("—"), "—", "an off-key root's dash passes through");
   assert.throws(() => functionRoman("Bm7b5"), /roman/i, "a symbol is not a roman");
   assert.equal(functionRoman.length, 1);
@@ -49,6 +53,12 @@ test("AGREEMENT on the part they share: the reduced tetrad roman IS progression.
     }
   }
   assert.equal(n, 12 * Object.keys(SCALE_STEPS).length * 7, "not vacuous");
+  // THE WIDER SHARED PART (261008c): the altered fifth in BOTH directions is inside it — the
+  // diminished (major vii, harm ii and vii, mel vi and vii) and the augmented (harm and mel III)
+  const romanIn = (key, scale, deg) => functionRoman(romanOf({ ...tetradOnDegree(key, scale, deg), degree: deg }));
+  assert.equal(romanIn("C", "harm", 2), "III+", "C harmonic minor's third degree is Ebmaj7#5 — an augmented triad, spelled III+");
+  assert.equal(romanIn("C", "mel", 2), "III+"); assert.equal(romanIn("C", "harm", 1), "ii°"); assert.equal(romanIn("C", "mel", 5), "vi°"); assert.equal(romanIn("C", "major", 6), "vii°");
+  assert.equal(romanIn("C", "harm", 5), "VI", "a perfect fifth gains no mark");
 });
 
 test("the generator's spellings reduce through the same function — no fourth table: every ROMAN_SUFFIX value is one the reduction reads", () => {
@@ -59,7 +69,7 @@ test("the generator's spellings reduce through the same function — no fourth t
   assert.ok(suffixes.length >= 7, `the Python table's ${suffixes.length} suffixes were read`);
   for (const s of suffixes) {
     const reduced = functionRoman("vii" + s);
-    assert.ok(reduced === "vii" || reduced === "vii°", `"vii${s}" reduces to a function spelling, got ${JSON.stringify(reduced)}`);
+    assert.ok(reduced === "vii" || reduced === "vii°" || reduced === "vii+", `"vii${s}" reduces to a function spelling, got ${JSON.stringify(reduced)}`);
   }
   assert.equal(functionRoman("viiø7"), "vii°"); assert.equal(functionRoman("viio7"), "vii°", "the Python's o7 is the diminished seventh");
   assert.ok(!/def function_roman|ROMAN_FUNCTION|FUNCTION_ROMAN/.test(py), "the generator holds no reduction of its own — the page reduces through the inlined engine function");

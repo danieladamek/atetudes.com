@@ -273,7 +273,10 @@ export function chordAt(prog, index, fld, object, pick) {   // pick: tonePick(cf
     if (degree < 0) return "—";
     const third = mod12(pcs[1] - pcs[0]), fifth = pcs.length > 2 ? mod12(pcs[2] - pcs[0]) : 7;
     const base = ROMAN[degree];
-    return (third === 3 ? base.toLowerCase() : base) + (third === 3 && fifth === 6 ? "°" : "");
+    /* THE ROMAN NAMES THE TRIAD (261008c): case for the third, and the FIFTH read on its own —
+     * ° diminished, + augmented, nothing perfect. Until tonight the ° came only under a minor
+     * third and the + never, so harmonic and melodic minor's third degree (Ebmaj7#5) read "III". */
+    return (third === 3 ? base.toLowerCase() : base) + (fifth === 6 ? "°" : fifth === 8 ? "+" : "");
   };
   if (c.kind === "diatonic") {
     const degree = c.degree, rootPc = fld.pcs[degree];

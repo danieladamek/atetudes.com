@@ -130,6 +130,13 @@ def chartline():
     return sh("node", "--test", "engine/tests/chart-line.test.mjs", "engine/tests/host-conformance.test.mjs")
 
 
+def romans():
+    """the roman spellings' suites (261008c) — roman.test.mjs (the reduction and its agreement with
+    progression.mjs over every diatonic tetrad) and progression.test.mjs (the chip line pins);
+    headless, seconds"""
+    return sh("node", "--test", "engine/tests/roman.test.mjs", "engine/tests/progression.test.mjs")
+
+
 def record(name, ok, detail):
     results.append((ok, name, detail))
     log_line(("  BITES    " if ok else "  NO BITE  ") + name + " — " + detail)
@@ -1589,6 +1596,73 @@ def m67_the_box_says_so_again():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutations 68–71
+# 261008c: the roman names the TRIAD — case for the third, ° or + for the fifth.
+def m68_the_plus_drops_from_the_reduction():
+    p, original, mutated = patch("engine/roman.mjs",
+        '  return m[0] + (/^[ø°o]/.test(tag) ? "°" : /^\\+/.test(tag) ? "+" : "");',
+        '  return m[0] + (/^[ø°o]/.test(tag) ? "°" : "");')
+    try:
+        p.write_text(mutated)
+        r = romans()
+        out = r.stdout + r.stderr
+        # the module's own load-time self-check refuses first ("III+7 → III+"), before any test sentence prints
+        hit = "the augmented fifth keeps its +" in out or "Ebmaj7#5" in out or "III+7 → III+" in out
+        record("the + drops from the reduction — Ebmaj7#5 reads III, a major triad, again",
+               r.returncode != 0 and hit,
+               "romans exit %d; the pin named the augmented chord: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m69_the_fifth_reads_only_under_a_minor_third_again():
+    p, original, mutated = patch("engine/progression.mjs",
+        '    return (third === 3 ? base.toLowerCase() : base) + (fifth === 6 ? "°" : fifth === 8 ? "+" : "");',
+        '    return (third === 3 ? base.toLowerCase() : base) + (third === 3 && fifth === 6 ? "°" : "");')
+    try:
+        p.write_text(mutated)
+        r = romans()
+        out = r.stdout + r.stderr
+        hit = "III+" in out
+        record("the fifth's reading is conditional on the third again (progression.mjs's old line)",
+               r.returncode != 0 and hit,
+               "romans exit %d; the agreement or the chip-line pin named III+: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m70_the_degree_and_plus_swap():
+    p, original, mutated = patch("engine/progression.mjs",
+        '(fifth === 6 ? "°" : fifth === 8 ? "+" : "")',
+        '(fifth === 6 ? "+" : fifth === 8 ? "°" : "")')
+    try:
+        p.write_text(mutated)
+        r = romans()
+        out = r.stdout + r.stderr
+        hit = "vii" in out and ("III+" in out or "°" in out)
+        record("° and + swapped — the diminished wears the augmented's mark",
+               r.returncode != 0 and hit,
+               "romans exit %d; the pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m71_a_perfect_fifth_gains_no_mark():
+    """POSITIVE: the two fifth checks change places — semantically the same line; a perfect
+    fifth gains no mark, and every roman pin stays green. Green is the bite."""
+    p, original, mutated = patch("engine/progression.mjs",
+        '(fifth === 6 ? "°" : fifth === 8 ? "+" : "")',
+        '(fifth === 8 ? "+" : fifth === 6 ? "°" : "")')
+    try:
+        p.write_text(mutated)
+        r = romans()
+        record("a chord with a perfect fifth gains no mark (positive: the checks reordered, every roman pin green)",
+               r.returncode == 0,
+               "romans exit %d" % r.returncode)
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1704,7 +1778,9 @@ def main():
                m60_the_off_key_root_wears_a_dot, m61_the_dots_colour_comes_from_elsewhere,
                m62_the_sub_line_repeats_the_chord, m63_a_host_with_no_reference_gets_a_sub_line,
                m64_the_asking_strip_becomes_a_second_owner, m65_the_spelling_changes_and_the_dots_do_not,
-               m66_the_fallback_clause_returns, m67_the_box_says_so_again)
+               m66_the_fallback_clause_returns, m67_the_box_says_so_again,
+               m68_the_plus_drops_from_the_reduction, m69_the_fifth_reads_only_under_a_minor_third_again,
+               m70_the_degree_and_plus_swap, m71_a_perfect_fifth_gains_no_mark)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

@@ -1,3 +1,25 @@
+## 2026-09-08 — The 261008c injection: the roman names the triad — Ebmaj7#5 reads III+ on every chart line, not III
+
+- **Why (PO ruling 261008c, sharpening 261006):** the roman names the TRIAD — case for the third,
+  ° or + for the fifth; the seventh is the symbol's job wherever the symbol is present. Measured
+  and reproduced on the live face first: degree 3 of both harmonic and melodic minor is an
+  augmented chord (Ebmaj7#5 in C) in every key, and every chart line read `III` for it — a major
+  triad — while the Start-on selector read `III+7` beside it. The root was Multetudes' own roman,
+  which marked a diminished fifth only under a minor third and an augmented fifth never.
+- **What changed:** `engine/progression.mjs` reads the fifth on its own (° diminished, + augmented,
+  nothing perfect); `engine/roman.mjs` keeps the + as it keeps the °. The two spellings are asserted
+  equal over every diatonic tetrad of every key and scale, a part that now includes the altered
+  fifth in both directions. A major third over a diminished fifth arises on no degree of the three
+  scales, measured, so that half is latent. Multetudes, tetradetudes and tetrad-voice-leading
+  republished; nothing else moved.
+- **Also, first and alone:** the PO's `CLAUDE.md` process ruling (ratified 261008) committed as its
+  own commit, `50387e5`, so it is attributable.
+- **Verified:** engine 673/673, hub 11/11, the door gate, the bite chain with four new mutations
+  (one positive), hugo clean, check_site clean with both generated pages byte-identical; rendered in
+  Chromium at 1280 and 390 on a served build, before and after, in both minors, zero console
+  errors, and looked at (`notes/working/shots-261008c/`).
+- Report: `notes/working/AtEtudes build run 261008c — the augmented triad.md`.
+
 ## 2026-09-08 — DEPLOYED: the 261006 injection live — Tetradetudes v0.6.4 and tetrad-voice-leading moved (the chip's roman, the panel sentence, the bind title); four studies unmoved; written from the run
 
 - record: run 34231086838 · success · commit bb76499 · fetched 2026-09-08T13:26Z · 6/6 studies byte-identical · digest 26854bc82efc
