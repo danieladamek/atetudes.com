@@ -45,7 +45,7 @@ export const neckReadout = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7],
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
@@ -65,7 +65,7 @@ export const neckReadout = {
       let bits = [];
       try {
         /* the centre's SOURCE (260914): material stable, reading per bar */
-        const fld = field({ key: cfg.key, scale: cfg.scale,
+        const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // night 47
           ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
         const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
         const anchor = Math.max(...run.strings);

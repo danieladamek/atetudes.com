@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, hub/mini.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, hub/mini.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -182,6 +182,18 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
   border:1px solid var(--line);border-radius:6px;color:var(--ink)}
 .fd-lab2{font-size:12px;color:var(--gray)}
+.fd-tuning{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:flex-start}
+.fd-tune{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+.fd-tune .fd-tunectl{display:inline-flex;align-items:center;gap:2px}
+.fd-tune button{font:inherit;font-size:14px;line-height:1;min-width:30px;min-height:30px;padding:0;border:1px solid var(--line);
+  border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+.fd-tune button:hover{border-color:var(--ink)}
+.fd-tune button[aria-disabled="true"]{color:var(--gray);border-color:var(--edge);cursor:not-allowed}
+.fd-tune .fd-open{min-width:34px;text-align:center;font-size:14px;font-weight:600;color:var(--ink)}
+.fd-tune .fd-open[data-moved="true"]{text-decoration:underline;text-underline-offset:3px}
+.fd-tune .fd-tunestr{font-size:10.5px;color:var(--gray)}
+.fd-tune .fd-tunewhy{font-size:11px;color:var(--gray);max-width:150px;text-align:center;min-height:0}
+.fd-tunename{font-size:12.5px;font-weight:600;color:var(--ink)}
 /* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
  * Repeat, sharing the mixer's column (margin-left:auto, the same 380px
  * basis) so it sits ABOVE the harmony and bass sliders. Card edge, not
@@ -206,10 +218,13 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * door's lock never mounts — so the .on state was applied and invisible.
  * Same facts, this module's own selectors (the minis' idiom); the shell
  * stays untouched. */
-#fdNSeg,#fdMoveSeg,#fdAddrSeg{display:flex;flex-wrap:wrap;gap:6px}
-#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button{font:inherit;font-size:12.5px;padding:5px 9px;
+/* the named-tunings row (night 47) is a seg of this rail like the three above — the same
+ * rules, not a restatement: its lit member is one name or none (an unnamed tuning lights
+ * nothing), which is why it takes the segs' grouped .on rule rather than a rule of its own */
+#fdNSeg,#fdMoveSeg,#fdAddrSeg,#fdTuneNames{display:flex;flex-wrap:wrap;gap:6px}
+#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button,#fdTuneNames button{font:inherit;font-size:12.5px;padding:5px 9px;
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on,#fdTuneNames button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 #fdNSeg button:disabled,#fdMoveSeg button:disabled,#fdAddrSeg button:disabled{opacity:.45;cursor:not-allowed}
 .fd-dot{cursor:pointer}
 .fd-sel{cursor:pointer}
@@ -679,6 +694,24 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
         <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
         <span class="fd-val" id="fdBassVal">100</span>
       </div>
+    </div>
+    <!-- THE STRING LABELS ARE THE EDITOR (night 47, alternate tunings item 2 — Daniel's
+         wireframe). ITS OWN SURFACE, layout (a): measured first (rule 4), at 390 px the whole
+         neck SVG renders 150 px wide and a set square 2.8 × 2.6 px — nothing drawn inside that
+         SVG is a touch control there, so the six steppers live in this HTML row, which keeps
+         full-size targets at every width; the set squares stay exactly as they are (their
+         390 px defect is filed, not made worse). Each label reads the open string by the
+         direction of its move (open-string.mjs); a move that would cross a neighbour is inert
+         at the point of the move and says why, there (tunings.mjs canStep) — never a toast,
+         never a silent clamp, never the throw. -->
+    <div class="fd-railrow fd-tunerow">
+      <span class="fd-lab2">tuning</span>
+      <div class="fd-tuning" id="fdTuning" data-control="fdTuning"></div>
+      <span class="fd-tunename" id="fdTuneName" data-control="fdTuneName"></span>
+    </div>
+    <div class="fd-railrow fd-tunerow">
+      <span class="fd-lab2">named</span>
+      <div id="fdTuneNames" data-control="fdTuneNames"></div>
     </div>
   </div>
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
@@ -7057,7 +7090,7 @@ const etudeWalk = {
 
   mount(ctx) {
     const d = ctx.doc;
-    let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
       tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
@@ -7086,7 +7119,7 @@ const etudeWalk = {
       /* the centre's SOURCE (260914): the material anchors on
        * centreMaterialRef so the window never jumps per bar; the READING
        * (degrees, colours, figure addressing, the bass) shifts per bar */
-      const fld = field({ key: cfg.key, scale: cfg.scale,
+      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // the tuning is the field's fact (night 47)
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;
@@ -7246,6 +7279,109 @@ const etudeWalk = {
   },
 };
 return { etudeWalk };
+})();
+
+/* ===== engine/tunings.mjs ===== */
+const __m_engine_tunings_mjs = (() => {
+const { OPEN_MIDI, STRINGS, TUNING_RANGE, opensOf } = __m_engine_field_mjs;
+const { openStringName } = __m_engine_open_string_mjs;
+/* tunings.mjs — THE NAMED TUNINGS, AND THE STEP (alternate tunings item 2, night 47, 261009).
+ *
+ * Item 1 made the tuning the field's fact (field.mjs: opensOf, assertOpens — well-formedness,
+ * the ±6 window against the standard rule) and spelled an open string by the direction of its
+ * move (open-string.mjs). This module is what an EDITOR reads:
+ *
+ *   THE NAMED TABLE — the eight names below. A vocabulary, not a computable fact, so it is DATA, stated ONCE
+ *   (Daniel's ruling 3, 261008: "presets are a named table, read both ways"). Applying a name
+ *   is reading the table forward; the row NAMING ITSELF when the six steppers spell one is
+ *   reading it backward — nameOf compares total offsets against the same table, never a
+ *   second list (rule 6). Offsets are semitones from standard per string number, §7's shape.
+ *
+ *   THE STEP — canStep(tuning, string, dir) answers "may this string move one semitone this
+ *   way?" BEFORE the move, with the reason when not: a move that would carry a string past a
+ *   neighbour (§4: slots are pitch-ordered; a crossed tuning would change what every stored
+ *   figure means, silently) or out of the ±6 window. This is the user-facing "no" — inert at
+ *   the point of the move, said there; assertOpens's throw is the wrong layer for it and is
+ *   never reached from an editor that asks first. The neighbour is named by what it is and
+ *   what it sounds (rule 14): "string 4, which sounds D".
+ *
+ * Pure; load-time assertions.
+ */
+
+
+const STANDARD_NAME = "standard";
+
+/** THE ONE TABLE. Offsets from standard by string number; absent strings unmoved. */
+const NAMED_TUNINGS = Object.freeze([
+  { name: "drop D",          offsets: { 6: -2 } },
+  { name: "DADGAD",          offsets: { 6: -2, 2: -2, 1: -2 } },
+  { name: "open G",          offsets: { 6: -2, 5: -2, 1: -2 } },
+  { name: "open D",          offsets: { 6: -2, 3: -1, 2: -2, 1: -2 } },
+  { name: "open E",          offsets: { 5: 2, 4: 2, 3: 1 } },
+  { name: "half-step down",  offsets: { 6: -1, 5: -1, 4: -1, 3: -1, 2: -1, 1: -1 } },
+  { name: "whole-step down", offsets: { 6: -2, 5: -2, 4: -2, 3: -2, 2: -2, 1: -2 } },
+  { name: "drop C",          offsets: { 6: -4, 5: -2, 4: -2, 3: -2, 2: -2, 1: -2 } },
+].map((t) => Object.freeze({ name: t.name, offsets: Object.freeze({ ...t.offsets }) })));
+
+/** every string's offset, zeros included — the one shape two tunings are compared in */
+function totalOffsets(tuning) {
+  const out = {};
+  for (const s of STRINGS) out[s] = tuning && Number.isInteger(tuning[s]) ? tuning[s] : 0;
+  return out;
+}
+
+const sameTuning = (a, b) => STRINGS.every((s) => totalOffsets(a)[s] === totalOffsets(b)[s]);
+
+/** the table read backward: the name the six offsets spell, "standard" for none moved, null
+ * for a tuning no name spells — the row ceases to name itself the moment one string moves */
+function nameOf(tuning) {
+  const t = totalOffsets(tuning);
+  if (STRINGS.every((s) => t[s] === 0)) return STANDARD_NAME;
+  const hit = NAMED_TUNINGS.find((n) => sameTuning(n.offsets, t));
+  return hit ? hit.name : null;
+}
+
+/** may `string` move one semitone in `dir` (+1 up, −1 down)? { ok } or { ok:false, reason } */
+function canStep(tuning, string, dir) {
+  if (!STRINGS.includes(string)) throw new Error(`tunings: string ${string} is not a real string`);
+  if (dir !== 1 && dir !== -1) throw new Error("tunings: a step is one semitone, up or down");
+  const t = totalOffsets(tuning);
+  const next = t[string] + dir;
+  if (Math.abs(next) > TUNING_RANGE)
+    return { ok: false, reason: `six semitones is the window — this string is at its ${dir > 0 ? "highest" : "lowest"}` };
+  const opens = opensOf(t);
+  const midi = opens[string] + dir;
+  const neighbour = dir > 0 ? string - 1 : string + 1;   // string 1 is the highest: up meets the next-lower number
+  if (STRINGS.includes(neighbour)) {
+    const nm = opens[neighbour];
+    if (dir > 0 ? midi >= nm : midi <= nm)
+      return { ok: false, reason: `would pass string ${neighbour}, which sounds ${openStringName(nm, OPEN_MIDI[neighbour])}` };   // the default is the spelling's reference
+  }
+  return { ok: true };
+}
+
+/** the tuning after one legal step — a refused step throws, so nothing silently clamps */
+function stepped(tuning, string, dir) {
+  if (Math.abs(dir) !== 1) {
+    // a multi-semitone move is walked one step at a time, so every refusal is the step's own
+    let t = totalOffsets(tuning);
+    for (let i = 0; i < Math.abs(dir); i++) t = stepped(t, string, Math.sign(dir));
+    return t;
+  }
+  const r = canStep(tuning, string, dir);
+  if (!r.ok) throw new Error(`tunings: refused — ${r.reason}`);
+  const t = totalOffsets(tuning); t[string] += dir;
+  return t;
+}
+
+{
+  // the table is well-formed and its names are its own
+  for (const n of NAMED_TUNINGS) { opensOf(n.offsets); if (nameOf(n.offsets) !== n.name) throw new Error(`tunings: ${n.name} does not name itself`); }
+  if (new Set(NAMED_TUNINGS.map((n) => n.name)).size !== NAMED_TUNINGS.length) throw new Error("tunings: a name is stated twice");
+  if (nameOf({}) !== STANDARD_NAME) throw new Error("tunings: no move is standard");
+  if (canStep({}, 5, 1).ok !== true || canStep(stepped({}, 5, 4), 5, 1).ok !== false) throw new Error("tunings: the crossing refusal does not hold — A up five meets D");
+}
+return { STANDARD_NAME, NAMED_TUNINGS, totalOffsets, nameOf, canStep, stepped };
 })();
 
 /* ===== hub/mini.mjs ===== */
@@ -7531,7 +7667,9 @@ return { STARBURST, starburst };
 
 /* ===== hub/modules/field-board.mjs ===== */
 const __m_hub_modules_field_board_mjs = (() => {
-const { field, notesOn } = __m_engine_field_mjs;
+const { field, notesOn, OPEN_MIDI, STRINGS } = __m_engine_field_mjs;
+const { openStringName } = __m_engine_open_string_mjs;
+const { NAMED_TUNINGS, nameOf, canStep, stepped, totalOffsets, STANDARD_NAME } = __m_engine_tunings_mjs;
 const { alteredDegree } = __m_engine_chord_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
@@ -7586,6 +7724,8 @@ const { starburst } = __m_hub_marks_mjs;
  * and the design-translating set change are unchanged from children 2–3a and
  * keep their mutation proofs (bite 10–15).
  */
+
+
 
 
 
@@ -7656,7 +7796,8 @@ const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode"],
+    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode",
+    "fdTuning", "fdTuneNames", "fdTuneName"],
 
   markup: `
   <!-- THE HEADER (260919, night 25 item 1 — ruled): the harmonic readout is
@@ -7771,6 +7912,24 @@ const fieldBoard = {
         <span class="fd-val" id="fdBassVal">100</span>
       </div>
     </div>
+    <!-- THE STRING LABELS ARE THE EDITOR (night 47, alternate tunings item 2 — Daniel's
+         wireframe). ITS OWN SURFACE, layout (a): measured first (rule 4), at 390 px the whole
+         neck SVG renders 150 px wide and a set square 2.8 × 2.6 px — nothing drawn inside that
+         SVG is a touch control there, so the six steppers live in this HTML row, which keeps
+         full-size targets at every width; the set squares stay exactly as they are (their
+         390 px defect is filed, not made worse). Each label reads the open string by the
+         direction of its move (open-string.mjs); a move that would cross a neighbour is inert
+         at the point of the move and says why, there (tunings.mjs canStep) — never a toast,
+         never a silent clamp, never the throw. -->
+    <div class="fd-railrow fd-tunerow">
+      <span class="fd-lab2">tuning</span>
+      <div class="fd-tuning" id="fdTuning" data-control="fdTuning"></div>
+      <span class="fd-tunename" id="fdTuneName" data-control="fdTuneName"></span>
+    </div>
+    <div class="fd-railrow fd-tunerow">
+      <span class="fd-lab2">named</span>
+      <div id="fdTuneNames" data-control="fdTuneNames"></div>
+    </div>
   </div>
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
@@ -7827,6 +7986,18 @@ const fieldBoard = {
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
   border:1px solid var(--line);border-radius:6px;color:var(--ink)}
 .fd-lab2{font-size:12px;color:var(--gray)}
+.fd-tuning{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:flex-start}
+.fd-tune{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+.fd-tune .fd-tunectl{display:inline-flex;align-items:center;gap:2px}
+.fd-tune button{font:inherit;font-size:14px;line-height:1;min-width:30px;min-height:30px;padding:0;border:1px solid var(--line);
+  border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+.fd-tune button:hover{border-color:var(--ink)}
+.fd-tune button[aria-disabled="true"]{color:var(--gray);border-color:var(--edge);cursor:not-allowed}
+.fd-tune .fd-open{min-width:34px;text-align:center;font-size:14px;font-weight:600;color:var(--ink)}
+.fd-tune .fd-open[data-moved="true"]{text-decoration:underline;text-underline-offset:3px}
+.fd-tune .fd-tunestr{font-size:10.5px;color:var(--gray)}
+.fd-tune .fd-tunewhy{font-size:11px;color:var(--gray);max-width:150px;text-align:center;min-height:0}
+.fd-tunename{font-size:12.5px;font-weight:600;color:var(--ink)}
 /* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
  * Repeat, sharing the mixer's column (margin-left:auto, the same 380px
  * basis) so it sits ABOVE the harmony and bass sliders. Card edge, not
@@ -7851,10 +8022,13 @@ const fieldBoard = {
  * door's lock never mounts — so the .on state was applied and invisible.
  * Same facts, this module's own selectors (the minis' idiom); the shell
  * stays untouched. */
-#fdNSeg,#fdMoveSeg,#fdAddrSeg{display:flex;flex-wrap:wrap;gap:6px}
-#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button{font:inherit;font-size:12.5px;padding:5px 9px;
+/* the named-tunings row (night 47) is a seg of this rail like the three above — the same
+ * rules, not a restatement: its lit member is one name or none (an unnamed tuning lights
+ * nothing), which is why it takes the segs' grouped .on rule rather than a rule of its own */
+#fdNSeg,#fdMoveSeg,#fdAddrSeg,#fdTuneNames{display:flex;flex-wrap:wrap;gap:6px}
+#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button,#fdTuneNames button{font:inherit;font-size:12.5px;padding:5px 9px;
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on,#fdTuneNames button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 #fdNSeg button:disabled,#fdMoveSeg button:disabled,#fdAddrSeg button:disabled{opacity:.45;cursor:not-allowed}
 .fd-dot{cursor:pointer}
 .fd-sel{cursor:pointer}
@@ -7882,6 +8056,10 @@ const fieldBoard = {
        * refused E-flat maj7 at bar 2, teaching refusal first. Chosen by the
        * boot-placement pin's search, not by taste. */
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+      /* THE TUNING (night 47): offsets from standard by string, null = standard — the field's
+       * fact, owned here because the neck is where the instrument is; every other board
+       * builds its field with it. Item 1 made it state; tonight it gets a face. */
+      tuning: null,
       object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
        * Harmony is doing movement (partial) duty here which it shouldn't
@@ -7916,10 +8094,69 @@ const fieldBoard = {
       return e;
     };
 
+    /* THE EDITOR (night 47). Six cells, one per string 6 → 1: a down step, the open
+     * string's name (spelled by the direction of its move — item 1's rule), an up step;
+     * a moved string wears ONE cue, the underline, and its offset beside the string number.
+     * A step that would cross a neighbour or leave the window is inert (aria-disabled, the
+     * reason in its title) and, when attempted, says why under the cell — there, not in a
+     * toast. The named row is tunings.mjs's table, read forward by a click and backward by
+     * nameOf, which also lights the matching name. `standard` is one click from anywhere. */
+    let tuneWhy = {};   // string → the reason shown under its cell after an attempt
+    const he = (t, a, parent) => { const e = d.createElement(t); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };   // an HTML element (the board's `el` is SVG)
+    const setTuning = (next) => {
+      const t = next && !STRINGS.every((s) => totalOffsets(next)[s] === 0) ? totalOffsets(next) : null;
+      if (JSON.stringify(totalOffsets(t)) === JSON.stringify(totalOffsets(cfg.tuning))) return;
+      cfg = { ...cfg, tuning: t }; tuneWhy = {};
+      push();
+    };
+    const paintTuning = () => {
+      const host = byId("fdTuning"), names = byId("fdTuneNames"), nameEl = byId("fdTuneName");
+      if (!host) return;
+      host.textContent = ""; names.textContent = "";
+      const t = totalOffsets(cfg.tuning), opens = curB.fld.opens;
+      for (const s of STRINGS) {
+        const cell = he("span", { class: "fd-tune", "data-string": s }, host);
+        const ctl = he("span", { class: "fd-tunectl" }, cell);
+        for (const dir of [-1, 1]) {
+          const r = canStep(cfg.tuning, s, dir);
+          const b = he("button", { type: "button", "data-string": s, "data-step": dir > 0 ? "up" : "down",
+            "aria-label": `string ${s} ${dir > 0 ? "up" : "down"} a semitone`, "aria-disabled": r.ok ? "false" : "true",
+            title: r.ok ? `string ${s} ${dir > 0 ? "up" : "down"} a semitone` : r.reason }, ctl);
+          b.textContent = dir > 0 ? "+" : "−";
+          b.addEventListener("click", () => {
+            const rr = canStep(cfg.tuning, s, dir);
+            if (!rr.ok) { tuneWhy = { [s]: rr.reason }; paintTuning(); return; }   // inert, and says why, there
+            setTuning(stepped(cfg.tuning, s, dir));
+          });
+          if (dir < 0) {
+            const name = he("span", { class: "fd-open", "data-string": s, "data-moved": t[s] !== 0 ? "true" : "false",
+              "data-offset": t[s] }, ctl);
+            name.textContent = openStringName(opens[s], OPEN_MIDI[s]);
+          }
+        }
+        const under = he("span", { class: "fd-tunestr" }, cell);
+        under.textContent = `string ${s}` + (t[s] ? ` ${t[s] > 0 ? "+" : ""}${t[s]}` : "");
+        if (tuneWhy[s]) { const why = he("span", { class: "fd-tunewhy", "data-role": "refusal", "data-string": s }, cell); why.textContent = tuneWhy[s]; }
+      }
+      const current = nameOf(cfg.tuning);
+      nameEl.textContent = current || "";
+      nameEl.setAttribute("data-named", current ? "true" : "false");
+      const std = he("button", { type: "button", "data-tuning": STANDARD_NAME, class: current === STANDARD_NAME ? "on" : "",
+        title: "every string back to standard" }, names);
+      std.textContent = STANDARD_NAME;
+      std.addEventListener("click", () => setTuning(null));
+      for (const n of NAMED_TUNINGS) {
+        const b = he("button", { type: "button", "data-tuning": n.name, class: current === n.name ? "on" : "",
+          title: `retune to ${n.name}: ${STRINGS.map((s) => openStringName(OPEN_MIDI[s] + (n.offsets[s] || 0), OPEN_MIDI[s])).join(" ")}` }, names);
+        b.textContent = n.name;
+        b.addEventListener("click", () => setTuning(n.offsets));
+      }
+    };
+
     const build = () => {
       /* the centre's SOURCE (260914): material on centreMaterialRef — the
        * window never jumps per bar; the reading shifts per bar */
-      const fld = field({ key: cfg.key, scale: cfg.scale,
+      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // the tuning is the field's fact (night 47)
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const dots = deriveField(fld);
       const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
@@ -8282,6 +8519,7 @@ const fieldBoard = {
         }
       }
 
+      paintTuning();
       /* the rail paints from the same build */
       for (const b of byId("fdNSeg").querySelectorAll("button")) {
         b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
@@ -8445,7 +8683,7 @@ const fieldBoard = {
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
         startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer,
         address: cfg.address, figure: cfg.figure, movement: cfg.movement,
-        take: cfg.take, repeat: cfg.repeat });
+        take: cfg.take, repeat: cfg.repeat, tuning: cfg.tuning ? { ...cfg.tuning } : null });
     };
 
     let followMsg = null;   // the named forced follow (260911, item 6) — one build's worth
@@ -8734,6 +8972,9 @@ const fieldBoard = {
       {
         const pk = tonePick(m);
         if (pk && pk.join() !== (cfg.tones || []).join()) { cfg = { ...cfg, tones: [...pk] }; changed = true; }
+      }
+      if ("tuning" in m && JSON.stringify(totalOffsets(m.tuning)) !== JSON.stringify(totalOffsets(cfg.tuning))) {
+        cfg = { ...cfg, tuning: m.tuning ? totalOffsets(m.tuning) : null }; changed = true;
       }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {
@@ -9154,7 +9395,7 @@ const keysBoard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, centreSrc: "fixed" };
     let index = 0;
@@ -9205,7 +9446,7 @@ const keysBoard = {
 
       /* the centre's SOURCE (260914): material on centreMaterialRef — the
        * window never jumps per bar; the reading shifts per bar */
-      const fld = field({ key: cfg.key, scale: cfg.scale,
+      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // night 47
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const anchor = Math.max(...run.strings);
@@ -9776,7 +10017,7 @@ const neckReadout = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7],
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
@@ -9796,7 +10037,7 @@ const neckReadout = {
       let bits = [];
       try {
         /* the centre's SOURCE (260914): material stable, reading per bar */
-        const fld = field({ key: cfg.key, scale: cfg.scale,
+        const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // night 47
           ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
         const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
         const anchor = Math.max(...run.strings);
@@ -12043,7 +12284,11 @@ const notepadCard = {
         /* v0.9's wording, adopted 260911 (item 1 / D12): "Save note", not
          * "Save entry" — the label derives from this noun, never hand-set */
         nouns: { item: "note", apply: "Restore étude" },
-        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),
+        /* THE TUNING IS NOT SNAPSHOTTED YET (night 47, alternate tunings item 2): a saved étude
+         * carrying its tuning is item 3 — the .atchart.md `tuning` key, ratified as offsets from
+         * standard, lands with its Update Log entry that night. Until then an entry stores the
+         * étude as if in standard, and a restore leaves the live tuning where it is. */
+        snapshot: () => { const { tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {
@@ -12544,7 +12789,7 @@ const staffBoard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       movement: "strum",
       address: "pattern", figure: "",
@@ -12568,7 +12813,7 @@ const staffBoard = {
 
       /* the centre's SOURCE (260914): material on centreMaterialRef — the
        * window never jumps per bar; the reading shifts per bar */
-      const fld = field({ key: cfg.key, scale: cfg.scale,
+      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // night 47
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const anchor = Math.max(...run.strings);
@@ -13117,7 +13362,7 @@ const timelineStrip = {
     mountMini(ctx, byId("tlStripMini"));
 
     /* mirrors of the owners' halves; `index` is MINE (the position) */
-    let cfg = { key: "Bb", scale: "major", ref: 0,
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       object: "tetrad", tones: [1, 3, 5, 7], bass: "root",
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, split: null };
@@ -13126,7 +13371,7 @@ const timelineStrip = {
 
     const render = () => {
       const host = byId("tlScroll");
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref, tuning: cfg.tuning });   // night 47
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       const beats = beatsOf(prog.bars, meter, cfg.split);
       if (index >= prog.chords.length) index = 0;
@@ -13561,7 +13806,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.5.8","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.0","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

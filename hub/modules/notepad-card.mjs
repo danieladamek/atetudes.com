@@ -253,7 +253,11 @@ export const notepadCard = {
         /* v0.9's wording, adopted 260911 (item 1 / D12): "Save note", not
          * "Save entry" — the label derives from this noun, never hand-set */
         nouns: { item: "note", apply: "Restore étude" },
-        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),
+        /* THE TUNING IS NOT SNAPSHOTTED YET (night 47, alternate tunings item 2): a saved étude
+         * carrying its tuning is item 3 — the .atchart.md `tuning` key, ratified as offsets from
+         * standard, lands with its Update Log entry that night. Until then an entry stores the
+         * étude as if in standard, and a restore leaves the live tuning where it is. */
+        snapshot: () => { const { tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {

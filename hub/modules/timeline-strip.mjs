@@ -62,7 +62,7 @@ export const timelineStrip = {
     mountMini(ctx, byId("tlStripMini"));
 
     /* mirrors of the owners' halves; `index` is MINE (the position) */
-    let cfg = { key: "Bb", scale: "major", ref: 0,
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       object: "tetrad", tones: [1, 3, 5, 7], bass: "root",
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, split: null };
@@ -71,7 +71,7 @@ export const timelineStrip = {
 
     const render = () => {
       const host = byId("tlScroll");
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref, tuning: cfg.tuning });   // night 47
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       const beats = beatsOf(prog.bars, meter, cfg.split);
       if (index >= prog.chords.length) index = 0;

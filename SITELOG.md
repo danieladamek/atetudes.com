@@ -1,3 +1,39 @@
+## 2026-09-09 — Night 47: the string labels are the editor — Multetudes v0.6.0 gains the tuning editor under the neck; the neck and the ear agree in every tuning
+
+- **Why (dispatch 261008d, alternate tunings item 2; multetudes only):** night 44 made the tuning
+  the field's fact (`field({…, tuning})` → `fld.opens`); nothing yet let a player set one. The six
+  string labels become the control. Measured first (rule 4): at 390 px the whole neck SVG renders
+  150 px wide and a set square 2.8 × 2.6 px, so a stepper drawn inside it would be 4.7 px — refused
+  by the dispatch. Layout (a): the editor is its own HTML surface under the neck; the set squares
+  are left as they are, still filed.
+- **What changed:** `engine/tunings.mjs` — THE NAMED TABLE stated once (drop D · DADGAD · open G ·
+  open D · open E · half-step down · whole-step down · drop C) and read both ways: a name applies
+  its offsets, and the row names itself by comparing total offsets against the same table (a
+  comment-blind one-table pin over engine/ and hub/modules/); `canStep`/`stepped` refuse a crossing
+  or a move out of the ±6 window AT THE POINT OF THE MOVE, before `assertOpens`'s throw, naming the
+  neighbour by number and by what it sounds. `hub/modules/field-board.mjs` — six steppers with the
+  open string's name, a moved string underlined with its offset, an inert stepper that says why
+  under its cell when pressed, the named row with `standard` first; `cfg.tuning` announced on push,
+  adopted on intake; every multetudes board that builds a field (etude-walk, keys-board,
+  staff-board, neck-readout, timeline-strip) builds it with the tuning. The notepad's snapshot
+  leaves `tuning` out (item 3's key). Tetradetudes republished only because the engine's new
+  module is inlined and pruned by its build; nothing else moves.
+- **The retune pin:** standard → DADGAD moves `tuning` and nothing else in the config (slots and
+  degrees stay), while the drawn frets change; nothing announces the retune. **The ear gate:** in
+  drop D with string 6 in the set, what the walk sounds (the NOTE stream `audio-card` plays, on
+  the walk's own audition) is the set the neck draws, string 6 at 38 + fret; shown failing first
+  against the pre-item-1 call site (the walk's field without the tuning sounded 45 where the neck
+  drew 43), then green. An earlier probe that clicked a field dot heard the neck echo its own
+  midi and could not bite — replaced.
+- **Found and reported, not settled:** the direction rule spells open D's third string G♭ (down
+  one from G) where players say F♯ — a consequence of the 261008 ruling.
+- **Verified:** engine 682/682, hub node 12/12, the door gate 19,648/0 with three state rules
+  entered before the orphan sweep, the bite chain 76/76 with three new mutations (m73 the crossing refusal removed, m74 a second name list, m75 the walk's field without the tuning), hugo clean,
+  check_site clean; rendered in Chromium at 1280 and 390 on a served build — standard, DADGAD by
+  six clicks and by one click of its name, the refusal at string 5 — zero console errors, and
+  looked at (`notes/working/shots-261009b/`).
+- Report: `notes/working/Multetudes build run 261009b — the string labels are the editor.md`.
+
 ## 2026-09-09 — DEPLOYED: night 45 live — violet gone for good; Triadetudes v0.9.3, multetudes and tetradetudes moved; written from the run
 
 - record: run 34321147427 · success · commit f6622a6 · fetched 2026-09-09T07:01Z · 6/6 studies byte-identical · digest 66cc49a57330

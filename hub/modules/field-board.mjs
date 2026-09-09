@@ -36,7 +36,9 @@
  * and the design-translating set change are unchanged from children 2–3a and
  * keep their mutation proofs (bite 10–15).
  */
-import { field, notesOn } from "../../engine/field.mjs";
+import { field, notesOn, OPEN_MIDI, STRINGS } from "../../engine/field.mjs";
+import { openStringName } from "../../engine/open-string.mjs";
+import { NAMED_TUNINGS, nameOf, canStep, stepped, totalOffsets, STANDARD_NAME } from "../../engine/tunings.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
@@ -107,7 +109,8 @@ export const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode"],
+    "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode",
+    "fdTuning", "fdTuneNames", "fdTuneName"],
 
   markup: `
   <!-- THE HEADER (260919, night 25 item 1 — ruled): the harmonic readout is
@@ -222,6 +225,24 @@ export const fieldBoard = {
         <span class="fd-val" id="fdBassVal">100</span>
       </div>
     </div>
+    <!-- THE STRING LABELS ARE THE EDITOR (night 47, alternate tunings item 2 — Daniel's
+         wireframe). ITS OWN SURFACE, layout (a): measured first (rule 4), at 390 px the whole
+         neck SVG renders 150 px wide and a set square 2.8 × 2.6 px — nothing drawn inside that
+         SVG is a touch control there, so the six steppers live in this HTML row, which keeps
+         full-size targets at every width; the set squares stay exactly as they are (their
+         390 px defect is filed, not made worse). Each label reads the open string by the
+         direction of its move (open-string.mjs); a move that would cross a neighbour is inert
+         at the point of the move and says why, there (tunings.mjs canStep) — never a toast,
+         never a silent clamp, never the throw. -->
+    <div class="fd-railrow fd-tunerow">
+      <span class="fd-lab2">tuning</span>
+      <div class="fd-tuning" id="fdTuning" data-control="fdTuning"></div>
+      <span class="fd-tunename" id="fdTuneName" data-control="fdTuneName"></span>
+    </div>
+    <div class="fd-railrow fd-tunerow">
+      <span class="fd-lab2">named</span>
+      <div id="fdTuneNames" data-control="fdTuneNames"></div>
+    </div>
   </div>
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
@@ -278,6 +299,18 @@ export const fieldBoard = {
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
   border:1px solid var(--line);border-radius:6px;color:var(--ink)}
 .fd-lab2{font-size:12px;color:var(--gray)}
+.fd-tuning{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:flex-start}
+.fd-tune{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+.fd-tune .fd-tunectl{display:inline-flex;align-items:center;gap:2px}
+.fd-tune button{font:inherit;font-size:14px;line-height:1;min-width:30px;min-height:30px;padding:0;border:1px solid var(--line);
+  border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+.fd-tune button:hover{border-color:var(--ink)}
+.fd-tune button[aria-disabled="true"]{color:var(--gray);border-color:var(--edge);cursor:not-allowed}
+.fd-tune .fd-open{min-width:34px;text-align:center;font-size:14px;font-weight:600;color:var(--ink)}
+.fd-tune .fd-open[data-moved="true"]{text-decoration:underline;text-underline-offset:3px}
+.fd-tune .fd-tunestr{font-size:10.5px;color:var(--gray)}
+.fd-tune .fd-tunewhy{font-size:11px;color:var(--gray);max-width:150px;text-align:center;min-height:0}
+.fd-tunename{font-size:12.5px;font-weight:600;color:var(--ink)}
 /* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
  * Repeat, sharing the mixer's column (margin-left:auto, the same 380px
  * basis) so it sits ABOVE the harmony and bass sliders. Card edge, not
@@ -302,10 +335,13 @@ export const fieldBoard = {
  * door's lock never mounts — so the .on state was applied and invisible.
  * Same facts, this module's own selectors (the minis' idiom); the shell
  * stays untouched. */
-#fdNSeg,#fdMoveSeg,#fdAddrSeg{display:flex;flex-wrap:wrap;gap:6px}
-#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button{font:inherit;font-size:12.5px;padding:5px 9px;
+/* the named-tunings row (night 47) is a seg of this rail like the three above — the same
+ * rules, not a restatement: its lit member is one name or none (an unnamed tuning lights
+ * nothing), which is why it takes the segs' grouped .on rule rather than a rule of its own */
+#fdNSeg,#fdMoveSeg,#fdAddrSeg,#fdTuneNames{display:flex;flex-wrap:wrap;gap:6px}
+#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button,#fdTuneNames button{font:inherit;font-size:12.5px;padding:5px 9px;
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on,#fdTuneNames button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 #fdNSeg button:disabled,#fdMoveSeg button:disabled,#fdAddrSeg button:disabled{opacity:.45;cursor:not-allowed}
 .fd-dot{cursor:pointer}
 .fd-sel{cursor:pointer}
@@ -333,6 +369,10 @@ export const fieldBoard = {
        * refused E-flat maj7 at bar 2, teaching refusal first. Chosen by the
        * boot-placement pin's search, not by taste. */
       strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
+      /* THE TUNING (night 47): offsets from standard by string, null = standard — the field's
+       * fact, owned here because the neck is where the instrument is; every other board
+       * builds its field with it. Item 1 made it state; tonight it gets a face. */
+      tuning: null,
       object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
        * Harmony is doing movement (partial) duty here which it shouldn't
@@ -367,10 +407,69 @@ export const fieldBoard = {
       return e;
     };
 
+    /* THE EDITOR (night 47). Six cells, one per string 6 → 1: a down step, the open
+     * string's name (spelled by the direction of its move — item 1's rule), an up step;
+     * a moved string wears ONE cue, the underline, and its offset beside the string number.
+     * A step that would cross a neighbour or leave the window is inert (aria-disabled, the
+     * reason in its title) and, when attempted, says why under the cell — there, not in a
+     * toast. The named row is tunings.mjs's table, read forward by a click and backward by
+     * nameOf, which also lights the matching name. `standard` is one click from anywhere. */
+    let tuneWhy = {};   // string → the reason shown under its cell after an attempt
+    const he = (t, a, parent) => { const e = d.createElement(t); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };   // an HTML element (the board's `el` is SVG)
+    const setTuning = (next) => {
+      const t = next && !STRINGS.every((s) => totalOffsets(next)[s] === 0) ? totalOffsets(next) : null;
+      if (JSON.stringify(totalOffsets(t)) === JSON.stringify(totalOffsets(cfg.tuning))) return;
+      cfg = { ...cfg, tuning: t }; tuneWhy = {};
+      push();
+    };
+    const paintTuning = () => {
+      const host = byId("fdTuning"), names = byId("fdTuneNames"), nameEl = byId("fdTuneName");
+      if (!host) return;
+      host.textContent = ""; names.textContent = "";
+      const t = totalOffsets(cfg.tuning), opens = curB.fld.opens;
+      for (const s of STRINGS) {
+        const cell = he("span", { class: "fd-tune", "data-string": s }, host);
+        const ctl = he("span", { class: "fd-tunectl" }, cell);
+        for (const dir of [-1, 1]) {
+          const r = canStep(cfg.tuning, s, dir);
+          const b = he("button", { type: "button", "data-string": s, "data-step": dir > 0 ? "up" : "down",
+            "aria-label": `string ${s} ${dir > 0 ? "up" : "down"} a semitone`, "aria-disabled": r.ok ? "false" : "true",
+            title: r.ok ? `string ${s} ${dir > 0 ? "up" : "down"} a semitone` : r.reason }, ctl);
+          b.textContent = dir > 0 ? "+" : "−";
+          b.addEventListener("click", () => {
+            const rr = canStep(cfg.tuning, s, dir);
+            if (!rr.ok) { tuneWhy = { [s]: rr.reason }; paintTuning(); return; }   // inert, and says why, there
+            setTuning(stepped(cfg.tuning, s, dir));
+          });
+          if (dir < 0) {
+            const name = he("span", { class: "fd-open", "data-string": s, "data-moved": t[s] !== 0 ? "true" : "false",
+              "data-offset": t[s] }, ctl);
+            name.textContent = openStringName(opens[s], OPEN_MIDI[s]);
+          }
+        }
+        const under = he("span", { class: "fd-tunestr" }, cell);
+        under.textContent = `string ${s}` + (t[s] ? ` ${t[s] > 0 ? "+" : ""}${t[s]}` : "");
+        if (tuneWhy[s]) { const why = he("span", { class: "fd-tunewhy", "data-role": "refusal", "data-string": s }, cell); why.textContent = tuneWhy[s]; }
+      }
+      const current = nameOf(cfg.tuning);
+      nameEl.textContent = current || "";
+      nameEl.setAttribute("data-named", current ? "true" : "false");
+      const std = he("button", { type: "button", "data-tuning": STANDARD_NAME, class: current === STANDARD_NAME ? "on" : "",
+        title: "every string back to standard" }, names);
+      std.textContent = STANDARD_NAME;
+      std.addEventListener("click", () => setTuning(null));
+      for (const n of NAMED_TUNINGS) {
+        const b = he("button", { type: "button", "data-tuning": n.name, class: current === n.name ? "on" : "",
+          title: `retune to ${n.name}: ${STRINGS.map((s) => openStringName(OPEN_MIDI[s] + (n.offsets[s] || 0), OPEN_MIDI[s])).join(" ")}` }, names);
+        b.textContent = n.name;
+        b.addEventListener("click", () => setTuning(n.offsets));
+      }
+    };
+
     const build = () => {
       /* the centre's SOURCE (260914): material on centreMaterialRef — the
        * window never jumps per bar; the reading shifts per bar */
-      const fld = field({ key: cfg.key, scale: cfg.scale,
+      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // the tuning is the field's fact (night 47)
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const dots = deriveField(fld);
       const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
@@ -733,6 +832,7 @@ export const fieldBoard = {
         }
       }
 
+      paintTuning();
       /* the rail paints from the same build */
       for (const b of byId("fdNSeg").querySelectorAll("button")) {
         b.classList.toggle("on", +b.dataset.nps === cfg.notesPer);
@@ -896,7 +996,7 @@ export const fieldBoard = {
       announce(d, CONFIG_CHANGED, { strings: [...cfg.strings],
         startDeg: cfg.startDeg, nearFret: cfg.nearFret, notesPer: cfg.notesPer,
         address: cfg.address, figure: cfg.figure, movement: cfg.movement,
-        take: cfg.take, repeat: cfg.repeat });
+        take: cfg.take, repeat: cfg.repeat, tuning: cfg.tuning ? { ...cfg.tuning } : null });
     };
 
     let followMsg = null;   // the named forced follow (260911, item 6) — one build's worth
@@ -1185,6 +1285,9 @@ export const fieldBoard = {
       {
         const pk = tonePick(m);
         if (pk && pk.join() !== (cfg.tones || []).join()) { cfg = { ...cfg, tones: [...pk] }; changed = true; }
+      }
+      if ("tuning" in m && JSON.stringify(totalOffsets(m.tuning)) !== JSON.stringify(totalOffsets(cfg.tuning))) {
+        cfg = { ...cfg, tuning: m.tuning ? totalOffsets(m.tuning) : null }; changed = true;
       }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {

@@ -165,7 +165,12 @@ export default {
      * strings), applied only by the click. */
     /* v0.5.8 (261007, night 43): the chart line's drawing moved into engine/chart-line.mjs, the
      * family's; the sub-line no longer repeats the chord under a root reference (item 3). */
-    blurb: "one tool that holds many études · v0.5.8",
+    /* v0.6.0 (261009, night 47 — alternate tunings item 2): the string labels are the editor —
+     * six steppers under the neck, ±6 semitones each, a crossing refused at the point of the
+     * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
+     * whole-step down · drop C) read both ways; back to standard in one click. The design
+     * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    blurb: "one tool that holds many études · v0.6.0",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

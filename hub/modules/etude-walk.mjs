@@ -63,7 +63,7 @@ export const etudeWalk = {
 
   mount(ctx) {
     const d = ctx.doc;
-    let cfg = { key: "Bb", scale: "major", ref: 0, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
       tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
@@ -92,7 +92,7 @@ export const etudeWalk = {
       /* the centre's SOURCE (260914): the material anchors on
        * centreMaterialRef so the window never jumps per bar; the READING
        * (degrees, colours, figure addressing, the bass) shifts per bar */
-      const fld = field({ key: cfg.key, scale: cfg.scale,
+      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // the tuning is the field's fact (night 47)
         ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
       const prog = progressionOf(cfg, cfg.key, cfg.scale);
       if (index >= prog.chords.length) index = 0;

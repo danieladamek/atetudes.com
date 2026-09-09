@@ -1682,6 +1682,57 @@ def m72_violet_returns_to_a_published_page():
         p.write_text(original)
 
 
+# ---------------------------------------------------------------- mutations 73–75
+# 261009 (night 47, alternate tunings item 2): the crossing refusal gone; a second table for the
+# name; a board that builds its field WITHOUT the tuning — the neck draws drop D, the ear sounds
+# standard, the plausible wrong answer this feature can produce.
+def m73_the_crossing_is_no_longer_refused():
+    p, original, mutated = patch("engine/tunings.mjs",
+        "    if (dir > 0 ? midi >= nm : midi <= nm)\n      return { ok: false, reason:",
+        "    if (false)\n      return { ok: false, reason:")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/tunings.test.mjs")
+        hit = "names the neighbour" in (r.stdout + r.stderr) or "crossing refusal" in (r.stdout + r.stderr) or r.returncode != 0
+        record("a crossing step is no longer refused — the throw is reached one layer down",
+               r.returncode != 0 and hit,
+               "tunings exit %d; the refusal pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m74_the_row_names_itself_from_a_second_list():
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "      const current = nameOf(cfg.tuning);",
+        "      const current = (totalOffsets(cfg.tuning)[6] === -2 && totalOffsets(cfg.tuning)[1] === -2) ? \"DADGAD\" : nameOf(cfg.tuning);   // a second reading")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/tunings.test.mjs")
+        hit = "second table" in (r.stdout + r.stderr)
+        record("the row names itself from a second list (DADGAD spelled in a board)",
+               r.returncode != 0 and hit,
+               "tunings exit %d; the one-table pin named the board: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m75_the_walk_sounds_standard_under_drop_D():
+    # the walk builds its field without the tuning: the neck draws drop D, the ear sounds standard
+    p, original, mutated = patch("hub/modules/etude-walk.mjs",
+        "      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // the tuning is the field's fact (night 47)",
+        "      const fld = field({ key: cfg.key, scale: cfg.scale,")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the neck and the ear disagree" in g.stdout
+        record("the walk sounds standard under drop D (its field built without the tuning) — the neck and the ear disagree",
+               g.returncode != 0 and hit,
+               "suite exit %d; the ear gate bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1800,7 +1851,9 @@ def main():
                m66_the_fallback_clause_returns, m67_the_box_says_so_again,
                m68_the_plus_drops_from_the_reduction, m69_the_fifth_reads_only_under_a_minor_third_again,
                m70_the_degree_and_plus_swap, m71_a_perfect_fifth_gains_no_mark,
-               m72_violet_returns_to_a_published_page)
+               m72_violet_returns_to_a_published_page,
+               m73_the_crossing_is_no_longer_refused, m74_the_row_names_itself_from_a_second_list,
+               m75_the_walk_sounds_standard_under_drop_D)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

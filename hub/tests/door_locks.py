@@ -5425,6 +5425,16 @@ console.log(JSON.stringify(out));
         # once (the .clpsd lesson, third instance) — the buttons persist
         page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        # the tuning editor's three STATE rules (night 47): a moved string, an inert
+        # stepper and a shown refusal exist only after an attempt — string 5 up five
+        # leaves all three (C♯, the fifth step refused at string 4's D); standard
+        # after the check, with the rest of this block's states
+        for _ in range(5):
+            page.click('#fdTuning .fd-tune[data-string="5"] button[data-step="up"]', force=True); page.wait_for_timeout(60)
+        check(page.query_selector('.fd-tune .fd-open[data-moved="true"]') is not None
+              and page.query_selector('.fd-tune button[aria-disabled="true"]') is not None
+              and page.query_selector('.fd-tune .fd-tunewhy') is not None,
+              f"{tag} the tuning editor did not enter its state for the orphan check (moved / inert / refusal)")
         err_state_for_check = True
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped
@@ -5475,6 +5485,8 @@ console.log(JSON.stringify(out));
         page.select_option("#fdBass2", "none")
         page.fill("#pgCustom", ""); page.dispatch_event("#pgCustom", "input")
         page.click('#pgSrcSeg button[data-src=\"cycle\"]')
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(60)
+        check(page.query_selector('.fd-tune .fd-open[data-moved="true"]') is None, f"{tag} the tuning did not return to standard after the orphan check")
     page.wait_for_timeout(40)
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") == "true":
         muted_for_check.click(); page.wait_for_timeout(40)
@@ -5618,6 +5630,98 @@ console.log(JSON.stringify(out));
                   f"{tag} the bind title reports, dates itself, or quotes its caption: {title!r}")
             check("Grip" in title and "Free" in title and "pull" in title and "voice-leading" in title,
                   f"{tag} the bind title does not say what release does per placement: {title!r}")
+
+    # ---------------- ALTERNATE TUNINGS, ITEM 2 (night 47, 261009): the string labels are the editor ----------
+    # Its own surface under the neck (layout (a) — at 390 px the neck SVG is 150 px wide, so a
+    # stepper drawn in it would be 4.7 px; these are HTML controls that keep their size). Six
+    # steppers, ±6 semitones, a crossing refused at the point of the move and said there; the
+    # named table read both ways; standard one click from anywhere. THE GATE: the neck and the
+    # ear agree — in drop D every drawn dot on string 6 sounds 38 + fret through the NOTE stream.
+    # THE PIN: a retune leaves the config unchanged (slots and degrees do not move) while the
+    # drawn frets change. Nothing announces the retune: no toast, no translation.
+    if door_id == "multetudes":
+        check("fdTuning" in r["controlsPresent"] and "fdTuneNames" in r["controlsPresent"], f"{tag} the tuning editor is not in the partition")
+        page.evaluate("() => { window.__cfg = {}; document.addEventListener('atetudes:config', e => Object.assign(window.__cfg, e.detail)); }")
+        ed = lambda: page.evaluate("""() => ({ letters: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent), name: document.getElementById('fdTuneName').textContent,
+          lit: [...document.querySelectorAll('#fdTuneNames button.on')].map(b => b.textContent), why: [...document.querySelectorAll('[data-role="refusal"]')].map(e => e.textContent) })""")
+        sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => { const d = g.querySelector('[data-str]'); return g.dataset.selmidi + '@' + (d ? d.dataset.str + ':' + d.dataset.fret : ''); }).sort()")
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+        e0 = ed()
+        check(e0["letters"] == ["E", "A", "D", "G", "B", "E"] and e0["name"] == "standard" and e0["lit"] == ["standard"],
+              f"{tag} the editor does not read standard at boot: {e0}")
+        sizes = page.evaluate("() => [...document.querySelectorAll('#fdTuning button')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); })")
+        check(len(sizes) == 12 and min(sizes) >= 28, f"{tag} a stepper is smaller than a touch target: {sizes}")
+        # PRIME the listener: setTuning() at standard, asked for standard, announces nothing
+        # (field-board.mjs — an unchanged tuning does not push), so the baseline must come from
+        # a real push. One legal step and its undo announce the full config twice, tuning null again.
+        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="up"]'); page.wait_for_timeout(100)
+        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="down"]'); page.wait_for_timeout(100)
+        check(page.evaluate("() => window.__cfg.tuning === null && 'startDeg' in window.__cfg && 'strings' in window.__cfg"),
+              f"{tag} the config listener holds no baseline — the retune pin would compare against nothing")
+        # DADGAD in six semitone clicks; the row names itself
+        cfg_before = page.evaluate("() => JSON.stringify(window.__cfg)"); sel_before = sel()
+        for s_, n_ in ((6, 2), (2, 2), (1, 2)):
+            for _ in range(n_):
+                page.click(f'#fdTuning .fd-tune[data-string="{s_}"] button[data-step="down"]'); page.wait_for_timeout(100)
+        e1 = ed()
+        check(e1["letters"] == ["D", "A", "D", "G", "A", "D"] and e1["name"] == "DADGAD" and e1["lit"] == ["DADGAD"],
+              f"{tag} six semitone steps do not spell DADGAD, or the row does not name itself: {e1}")
+        # THE RETUNE PIN: the config is unchanged but for the tuning; the drawn frets are not
+        import json as _json
+        a = _json.loads(cfg_before); b2 = _json.loads(page.evaluate("() => JSON.stringify(window.__cfg)"))
+        moved = sorted(k for k in set(a) | set(b2) if _json.dumps(a.get(k), sort_keys=True) != _json.dumps(b2.get(k), sort_keys=True))
+        check(moved == ["tuning"], f"{tag} a retune moved config beyond the tuning — slots and degrees must not move: {moved}")
+        check(sel() != sel_before and len(sel()) > 0, f"{tag} a retune left the drawn frets where they were: {sel_before[:3]} vs {sel()[:3]}")
+        check(page.query_selector(".toast, [data-role='toast'], .fd-translated") is None and "translated" not in page.inner_text("#fdHint").lower(),
+              f"{tag} the retune was announced — nothing went wrong, nothing should say so")
+        # …and ceases to name itself the moment one string moves
+        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="up"]'); page.wait_for_timeout(120)
+        check(ed()["name"] == "" and ed()["lit"] == [], f"{tag} the row still names a tuning it no longer spells: {ed()}")
+        # one click of a name, from standard; standard from anywhere
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
+        check(ed()["letters"] == ["E", "A", "D", "G", "B", "E"], f"{tag} standard is not one click away: {ed()}")
+        page.click('#fdTuneNames button[data-tuning="DADGAD"]'); page.wait_for_timeout(120)
+        check(ed()["letters"] == ["D", "A", "D", "G", "A", "D"] and ed()["name"] == "DADGAD", f"{tag} one click of its name did not retune: {ed()}")
+        # THE CROSSING REFUSAL: string 5 up four is legal (C♯); the fifth step would sound string 4's D — inert, and said there
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
+        for _ in range(5):   # force: an aria-disabled button is inert by its own handler, which is the claim under test
+            page.click('#fdTuning .fd-tune[data-string="5"] button[data-step="up"]', force=True); page.wait_for_timeout(100)
+        e5 = ed()
+        check(e5["letters"][1] == "C♯", f"{tag} string 5 did not stop at C♯ — it moved past its neighbour or short of it: {e5}")
+        check(page.get_attribute('#fdTuning .fd-tune[data-string="5"] button[data-step="up"]', "aria-disabled") == "true", f"{tag} the crossing step is not inert")
+        check(len(e5["why"]) == 1 and "string 4" in e5["why"][0] and "sounds D" in e5["why"][0] and "bind" not in e5["why"][0].lower(),
+              f"{tag} the refusal is not said at the point of the move, or misnames the neighbour: {e5['why']}")
+        check(page.evaluate("() => document.querySelectorAll('[data-role=\"refusal\"]').length") == 1, f"{tag} the reason is not where the move was attempted")
+        # THE EAR: drop D, string 6 in the set — what the WALK sounds is what the NECK draws.
+        # The audition is the walk's (etude-walk.mjs: a STEP request while stopped auditions
+        # through soundCurrent, the one path every walked note takes into audio-card's NOTE
+        # listener), so the sounded midis come from the WALK's field. A probe that clicked a
+        # field dot heard field-board announce that dot's own drawn midi back — the neck against
+        # itself, true by construction — and never bit when the walk's field lost the tuning.
+        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(120)
+        if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") != "true":
+            page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(250)
+        page.evaluate("() => { window.__n = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass') window.__n.push(e.detail.midi); }); }")
+        drawn_sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret }))")
+        ear = []
+        for _ in range(3):   # three bars: one bar can agree by coincidence (measured — 43 sounded on standard's string 6 fret 3 where drop D drew 43 at fret 5)
+            page.evaluate("() => { window.__n = []; }")
+            page.click('#fdMini button[data-role="next"]'); page.wait_for_timeout(450)
+            ear.append({ "drawn": drawn_sel(), "sounded": page.evaluate("() => window.__n.slice()") })
+        six = [x for e in ear for x in e["drawn"] if x["str"] == 6]
+        check(len(six) >= 2 and all(len(e["sounded"]) > 0 for e in ear), f"{tag} the ear gate is vacuous — no string-6 dot drawn, or the walk sounded nothing: {ear}")
+        for x in six:
+            check(x["midi"] == 38 + x["fret"], f"{tag} the NECK draws string 6 fret {x['fret']} as midi {x['midi']}, not {38 + x['fret']} (drop D)")
+        for e in ear:
+            drawn_m = sorted(x["midi"] for x in e["drawn"]); sounded_m = sorted(e["sounded"])
+            check(drawn_m == sounded_m, f"{tag} THE EAR: in drop D the neck drew {drawn_m} and the walk sounded {sounded_m} — the neck and the ear disagree")
+        for x in six:
+            check(any(x["midi"] in e["sounded"] for e in ear if x in e["drawn"]),
+                  f"{tag} THE EAR: string 6 fret {x['fret']} in drop D is drawn as {x['midi']} and never sounded — the neck and the ear disagree")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(150)
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+        if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") == "true":
+            page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(200)
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
