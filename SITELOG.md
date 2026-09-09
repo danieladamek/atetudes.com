@@ -1,3 +1,14 @@
+## 2026-09-09 — DEPLOYED: the 261008c injection live — Ebmaj7#5 reads III+ on every chart line; multetudes, tetradetudes and tetrad-voice-leading moved; written from the run
+
+- record: run 34296870363 · success · commit 1c3a3cb · fetched 2026-09-09T01:00Z · 6/6 studies byte-identical · digest 3f4b0a22a0a1
+- Actions run 34296870363 green on `1c3a3cb` — https://github.com/danieladamek/atetudes.com/actions/runs/34296870363 (created 2026-09-09T00:52:58Z, finished 2026-09-09T01:00:10Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo 71d71b7b6cac · live 71d71b7b6cac — matches.
+- tetrad-voice-leading: repo 01403fdc0117 · live 01403fdc0117 — matches.
+- tetradetudes: repo fc2be27c9d25 · live fc2be27c9d25 — matches.
+- triadetudes: repo 12bb30d3d5d4 · live 12bb30d3d5d4 — matches.
+
 ## 2026-09-08 — The 261008c injection: the roman names the triad — Ebmaj7#5 reads III+ on every chart line, not III
 
 - **Why (PO ruling 261008c, sharpening 261006):** the roman names the TRIAD — case for the third,
