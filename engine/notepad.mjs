@@ -180,6 +180,21 @@ export function toAtchart(doc, meta) {
     : { meta: { atchart: 1, ...(meta || {}) },
         sections: [], substitutions: [], practiceLog: [], body: [] };
   if (doc._at && meta) at.meta = { ...at.meta, ...meta };
+  /* v1.2 (night 49): the file-level `tuning:` is written when the notes in the file AGREE on one
+   * non-standard tuning (an entry exported alone always agrees with itself — Daniel's case); notes
+   * in different tunings each carry their own in their payload and the file states none. A
+   * caller's explicit meta.tuning (or null) wins. Absent stays absent: never {}, never zeros. */
+  if (!meta || !("tuning" in meta)) {
+    const seen = new Set(), tunings = [];
+    for (const e of doc.entries) {
+      const t = e.payload && e.payload.shared && e.payload.shared.tuning;
+      const k = t ? JSON.stringify(Object.keys(t).sort().map((s) => [s, t[s]])) : "standard";
+      if (!seen.has(k)) { seen.add(k); tunings.push(t || null); }
+    }
+    if (tunings.length === 1 && tunings[0]) at.meta.tuning = tunings[0];
+    else if (!doc._at) delete at.meta.tuning;
+  }
+  if (at.meta.tuning == null) delete at.meta.tuning;
 
   const pad = String(doc.pad ?? "").replace(/\n+$/, "");
   let padLines = pad ? pad.split("\n") : [];
@@ -317,7 +332,9 @@ export function fromAtchart(src) {
         savedAt: null, heading, text, payload: null }));
     });
   }
-  return { pad, entries, _at: at };
+  // v1.2 (night 49): the file's own tuning — an instrument fact at the top level — rides out beside
+  // the entries; absent means standard and reads as undefined, never manufactured
+  return { pad, entries, _at: at, ...(at.meta.tuning ? { tuning: at.meta.tuning } : {}) };
 }
 
 function hashStr(s) {

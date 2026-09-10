@@ -291,6 +291,7 @@ export function createNotepadSurface(opts) {
   }
 
   // ---- export / import / clipboard: the FILE is the only way notes move ----
+  let fileTuning = null;   // the last imported file's own top-level tuning, offered until applied or the next import
   function exportText() { return toAtchart(doc, { title: file.title }); }
   function importText(text) {
     let inc;
@@ -303,6 +304,10 @@ export function createNotepadSurface(opts) {
     }
     const have = new Set(doc.entries.map((x) => x.id));
     const added = inc.entries.filter((x) => !have.has(x.id));
+    /* v1.2 (night 49): a file that STATES a tuning at its top level — a hand-typed chart with a
+     * tuning and nothing else, or an exported étude — is OFFERED to this host as a click, through
+     * the same offer the foreign entries use; never applied by the import itself (rule 4) */
+    fileTuning = inc.tuning || null;
     let pad = doc.pad;
     if (inc.pad.trim() && !pad.trim()) pad = inc.pad;
     else if (inc.pad.trim() && pad.trim() && !pad.includes(inc.pad))
@@ -311,6 +316,24 @@ export function createNotepadSurface(opts) {
     els.pad.value = doc.pad;
     persist();
     return added.length;
+  }
+  /* the file's own tuning, offered (night 49): one button in the import message's slot, worded by
+   * the vocabulary's offer — "apply the tuning from this file" — or the withholding, named */
+  function offerFileTuning() {
+    const m = els.importMsg || els.msg;
+    if (!m || !fileTuning) return;
+    const offer = offerOf({ tuning: fileTuning }, adapter.shared && typeof adapter.shared.canTake === "function" ? adapter.shared : null);
+    const docm = els.pad.ownerDocument;
+    const slot = docm.createElement("span"); slot.setAttribute("data-cap", "file-tuning");
+    if (offer.wording && adapter.shared && typeof adapter.shared.apply === "function") {
+      const b = docm.createElement("button"); b.textContent = offer.wording.replace("from this note", "from this file");
+      b.setAttribute("data-cap", "apply-file-tuning");
+      b.addEventListener("click", () => { adapter.shared.apply({ ...offer.take }); fileTuning = null; slot.remove(); onChange(); onApplied(); });
+      slot.appendChild(b);
+    } else if (offer.withheldWording) {
+      slot.textContent = " " + offer.withheldWording.replace("not offered: ", "the file's ");
+    }
+    m.appendChild(slot);
   }
   function importMsg(t) {
     const m = els.importMsg || els.msg;
@@ -331,6 +354,7 @@ export function createNotepadSurface(opts) {
       renderRows(); onChange();
       importMsg("imported " + n + " new entr" + (n === 1 ? "y" : "ies") +
         (n === 0 ? " — everything was already here" : ""));
+      offerFileTuning();
     } catch (e) { importMsg("import failed: " + e.message); }
   }
   /* ONE DOWNLOAD PATH (260916, item 3): the document's Export and an
@@ -408,7 +432,7 @@ export function createNotepadSurface(opts) {
        * family's own sentence; an entry from before the vocabulary reads as it always did */
       const foreign = p && p.app !== adapter.app;
       const sharedOf = foreign ? readShared(p) : {};
-      const sharedSummary = describeShared(sharedOf);
+      const sharedSummary = describeShared(sharedOf, adapter.shared && adapter.shared.describe);   // the host's namers (night 49: the strip's tuning names) ride in
       const summary = !p ? "note" :
         p.app === adapter.app ? adapter.summarize(p.data)
         : p.app + " · v" + p.v + (sharedSummary

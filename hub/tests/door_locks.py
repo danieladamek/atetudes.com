@@ -5791,6 +5791,110 @@ console.log(JSON.stringify(out));
         r9 = rd(); check(r9["letters"] == ["E", "A", "D", "G", "C", "F"] and r9["offsets"] == [0, 0, 0, 0, 1, 1] and r9["name"] == "all fourths", f"{tag} all fourths: {r9}")
         page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
 
+    # ---------------- ALTERNATE TUNINGS, ITEM 3 (night 49, 261010): a saved étude carries its tuning ----------
+    # Daniel's field report replayed: all fourths built, the étude SAVED and EXPORTED ALONE, the
+    # file's own `tuning:` at its top level (v1.2), the file imported into a COLD page, the tuning
+    # OFFERED as a click and RESTORED — the neck and the ear both in all fourths. A standard étude
+    # writes no key; a file from before tonight is tuning-blind and a restore leaves the live
+    # tuning where it is; a door that keeps standard withholds a foreign tuning by name.
+    if door_id in ("multetudes", "tetradetudes", "scribe"):
+        import json as _json, re as _re
+        newest_row = lambda pg: pg.query_selector("#histList .hist")
+        def export_newest(pg):
+            with pg.expect_download() as dl:
+                newest_row(pg).query_selector('[data-cap="entry-export"]').click()
+            return Path(dl.value.path()).read_text()
+        def import_text(pg, txt, name):
+            pg.evaluate("""([txt, name]) => { const inp = document.querySelector('#importFile');
+              const f = new File([txt], name, { type: 'text/markdown' }); const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files;
+              inp.dispatchEvent(new Event('change', { bubbles: true })); }""", [txt, name]); pg.wait_for_timeout(400)
+    if door_id == "multetudes":
+        letters = lambda pg: pg.evaluate("() => [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent)")
+        name_of = lambda pg: pg.evaluate("() => document.getElementById('fdTuneName').textContent")
+        page.click('#fdTuneNames button[data-tuning="all fourths"]'); page.wait_for_timeout(150)
+        check(letters(page) == ["E", "A", "D", "G", "C", "F"], f"{tag} all fourths did not build on the face: {letters(page)}")
+        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        check("all fourths" in newest_row(page).inner_text(), f"{tag} the saved entry's own summary must name the tuning it restores: {newest_row(page).inner_text()[:160]!r}")
+        fourths_file = export_newest(page)
+        check(_re.search(r"^tuning: \{2: 1, 1: 1\}$", fourths_file, _re.M) is not None,
+              f"{tag} the exported étude's file carries no tuning — it describes all fourths as if in standard (the 261010 field report):\n{fourths_file[:400]}")
+        check(fourths_file.count("\ntuning:") == 1, f"{tag} the file states the tuning once, at the top level")
+        check('"tuning":{"1":1,"2":1}' in fourths_file and '"shared":{' in fourths_file, f"{tag} the entry's payload and shared form must both carry the tuning")
+        # a standard étude's file carries NO tuning line — absent means standard; its payload says standard explicitly
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        std_file = export_newest(page)
+        check(_re.search(r"^tuning:", std_file, _re.M) is None and '"tuning":null' in std_file,
+              f"{tag} a standard étude's export must carry no tuning key (and say standard in its payload): {std_file[:300]}")
+        # THE COLD PAGE: a fresh context, the all-fourths file imported — offered, not applied; restored — the neck and the ear in all fourths
+        ctx2 = pw.new_context(viewport={"width": 1280, "height": 900}); page2 = ctx2.new_page()
+        errs2 = []; page2.on("pageerror", lambda e: errs2.append(str(e)))
+        page2.goto(html_path.as_uri()); page2.wait_for_selector("#cards", state="attached"); page2.wait_for_timeout(200)
+        check(letters(page2) == ["E", "A", "D", "G", "B", "E"], f"{tag} the cold page does not boot in standard: {letters(page2)}")
+        import_text(page2, fourths_file, "all-fourths.atchart.md")
+        check(letters(page2) == ["E", "A", "D", "G", "B", "E"], f"{tag} importing alone retuned the page — applying is a click")
+        offer = page2.query_selector('[data-cap="apply-file-tuning"]')
+        check(offer is not None and "apply the tuning from this file" in offer.inner_text(), f"{tag} the file's own tuning was not offered as a click")
+        page2.click('#histList .hist [data-cap="apply"]'); page2.wait_for_timeout(400)
+        check(letters(page2) == ["E", "A", "D", "G", "C", "F"] and name_of(page2) == "all fourths",
+              f"{tag} restoring the imported étude did not bring its tuning: {letters(page2)} {name_of(page2)!r}")
+        # the EAR (the night-47 idiom): the walk's own audition sounds what the neck draws — strings 2 and 1 at 60/65 + fret
+        page2.evaluate("() => { window.__n = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass') window.__n.push(e.detail.midi); }); }")
+        ear = []
+        for _ in range(3):
+            page2.evaluate("() => { window.__n = []; }")
+            page2.click('#fdMini button[data-role="next"]'); page2.wait_for_timeout(450)
+            ear.append({ "drawn": page2.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret }))"), "sounded": page2.evaluate("() => window.__n.slice()") })
+        hi = [x for e in ear for x in e["drawn"] if x["str"] in (1, 2)]
+        check(len(hi) >= 2 and all(len(e["sounded"]) > 0 for e in ear), f"{tag} the ear gate is vacuous on the restored étude: {ear}")
+        for x in hi:
+            check(x["midi"] == (65 if x["str"] == 1 else 60) + x["fret"], f"{tag} the NECK draws string {x['str']} fret {x['fret']} as {x['midi']} — not all fourths")
+        for e in ear:
+            check(sorted(x["midi"] for x in e["drawn"]) == sorted(e["sounded"]), f"{tag} THE EAR on the restored étude: drew {sorted(x['midi'] for x in e['drawn'])}, sounded {sorted(e['sounded'])} — the neck and the ear disagree")
+        # the offer path alone: the file's tuning applied by ITS click
+        page2.click('#fdTuneNames button[data-tuning="standard"]'); page2.wait_for_timeout(150)
+        import_text(page2, fourths_file, "all-fourths-again.atchart.md")
+        ob = page2.query_selector('[data-cap="apply-file-tuning"]')
+        check(ob is not None, f"{tag} a second import of a file with a tuning raised no offer")
+        ob.click(); page2.wait_for_timeout(300)
+        check(letters(page2) == ["E", "A", "D", "G", "C", "F"], f"{tag} the file-tuning offer's click did not retune: {letters(page2)}")
+        # TUNING-BLIND: a file from before tonight (no key, no payload tuning) restores WITHOUT touching the live tuning
+        page2.click('#fdTuneNames button[data-tuning="drop D"]'); page2.wait_for_timeout(150)
+        old_file = std_file.replace(',"tuning":null', "").replace('"tuning":null,', "")
+        check('"tuning"' not in old_file, f"{tag} the synthesized pre-v1.2 file still names a tuning")
+        old_file = old_file.replace('"id":"', '"id":"old-', 1)
+        import_text(page2, old_file, "old.atchart.md")
+        check(page2.query_selector('[data-cap="apply-file-tuning"]') is None, f"{tag} a tuning-blind file must not offer a tuning")
+        page2.click('#histList .hist [data-cap="apply"]'); page2.wait_for_timeout(400)
+        check(letters(page2) == ["D", "A", "D", "G", "B", "E"], f"{tag} restoring a tuning-blind étude moved the tuning — nothing may retro-interpret it: {letters(page2)}")
+        check(not errs2, f"{tag} the cold page raised errors: {errs2[:2]}")
+        ctx2.close()
+        # DADGAD saved, the page left and reopened (the stored notepad), the entry restored — in DADGAD
+        page.click('#fdTuneNames button[data-tuning="DADGAD"]'); page.wait_for_timeout(150)
+        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+        page.goto(html_path.as_uri()); page.wait_for_selector("#cards", state="attached"); page.wait_for_timeout(300)
+        check(letters(page) == ["E", "A", "D", "G", "B", "E"], f"{tag} the reopened page does not boot in standard")
+        page.click('#histList .hist [data-cap="apply"]'); page.wait_for_timeout(400)
+        check(letters(page) == ["D", "A", "D", "G", "A", "D"] and name_of(page) == "DADGAD", f"{tag} DADGAD saved and reopened did not render in DADGAD: {letters(page)} {name_of(page)!r}")
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+    if door_id in ("tetradetudes", "scribe"):
+        # a note written in multetudes in DADGAD arrives here: the tuning is WITHHELD BY NAME — a door that keeps standard says so, a door without strings says so
+        dadgad_note = ("---\natchart: 1\ntitle: \"from multetudes\"\ntuning: {6: -2, 2: -2, 1: -2}\n---\n\n```chart\n| D |\n```\n\n## Notes\n\n### DADGAD étude\n\n```json\n"
+                       + _json.dumps({ "app": "multetudes", "v": 1, "id": "n49-dadgad", "savedAt": "2026-10-10T00:00:00.000Z",
+                                       "data": { "key": "D", "scale": "major", "tuning": { "6": -2, "2": -2, "1": -2 } },
+                                       "shared": { "key": "D", "scale": "major", "bpm": 80, "meter": 4, "tuning": { "6": -2, "2": -2, "1": -2 } } }) + "\n```\n")
+        import_text(page, dadgad_note, "dadgad.atchart.md")
+        row = page.query_selector('#histList .hist')
+        wh = row.query_selector('[data-cap="withheld"]'); wh_text = wh.inner_text() if wh else ""
+        expect = "keeps standard tuning" if door_id == "tetradetudes" else "has no strings to tune"
+        check(expect in wh_text and "tuning" in wh_text, f"{tag} a foreign DADGAD note's tuning is not withheld by name ({expect!r}): {wh_text!r}")
+        ft = page.query_selector('[data-cap="file-tuning"]')
+        check(ft is not None and expect in ft.inner_text(), f"{tag} the file's own tuning is not withheld by name at the import: {ft.inner_text() if ft else None!r}")
+        # the summary names it "DADGAD" on every notepad door: the card reaches the strip's ONE namer
+        # (tunings.mjs rides with the card, as field.mjs and open-string.mjs already did for the set labels)
+        check("DADGAD" in row.inner_text(), f"{tag} the foreign note's tuning must read by the one namer in the summary: {row.inner_text()[:200]!r}")
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

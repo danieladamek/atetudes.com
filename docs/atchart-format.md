@@ -1,7 +1,10 @@
-# The `.atchart.md` chart interchange format — v1.1
+# The `.atchart.md` chart interchange format — v1.2
 
 > Status: **RATIFIED by Daniel, 2026-08-08** (v1) · **v1.1 ratified 2026-08-10** — §2.6 app
-> namespaces, §2.7 unknown frontmatter keys, §5 the handoff channel (Update Log 260810.5).
+> namespaces, §2.7 unknown frontmatter keys, §5 the handoff channel (Update Log 260810.5) ·
+> **v1.2 ratified 2026-09-08, landed 2026-09-10** — §2.1 `tuning`, offsets from standard
+> (Update Log 261010.1). Files written before v1.2 carry no tuning and describe their étude AS IF
+> IN STANDARD — they are tuning-blind, not tuning-standard, and nothing may retro-interpret them.
 > This file is law like the rest of `docs/`: the format version only ever moves forward, and
 > the v2 reservations in §3 may not be improvised into v1. The parser and serializer in
 > `engine/atchart.mjs` implement exactly this document; the round-trip corpus in
@@ -52,6 +55,27 @@ sections: [A1, A2, B, A3]
 - `title`, `composer`, `key`, `meter`, `tempo`, `form`, `sections` — optional, with
   defaults (`key: C`, `meter: 4/4`). A hand-typed chart with nothing but a key and eight
   bars loads.
+- `tuning` — optional. A map from **string number** (1–6, 1 = highest) to a **semitone
+  offset from standard tuning**, an integer in −6…+6. Strings absent from the map are at
+  standard. `tuning:` absent altogether means standard tuning, so every v1 and v1.1 file
+  remains valid and unchanged. A parser must refuse a map whose offsets would place the
+  strings out of ascending pitch order, or whose keys are not string numbers — **a
+  well-formedness check, not an identity one.**
+
+  ```yaml
+  tuning: {6: -2}                  # drop D
+  tuning: {6: -2, 2: -2, 1: -2}    # DADGAD
+  tuning: {6: -2, 5: -2, 1: -2}    # open G
+  ```
+
+  The tuning is an **instrument** fact, not an app configuration, and so it is a top-level
+  key rather than an entry under `apps:` (§2.6): every app reading the file reads the same
+  tuning, and no app's private payload may contradict it. Storing it as **offsets from
+  standard** rather than absolute pitches keeps "absent means standard" total, makes a partial
+  map legible (`{6: -2}` reads *drop the sixth*), and keeps the six-string assumption visible
+  rather than implied — a different number of strings is a v2 question (§3). *(v1.2, ratified
+  2026-09-08; the absolute-MIDI alternative was considered and declined — the argument is kept
+  in the design note's §7.)*
 
 ### 2.2 The chart block
 

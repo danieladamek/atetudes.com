@@ -313,3 +313,46 @@ test("higher MAJOR still refuses (unchanged §2.1 rule); 1.1 parses", () => {
   assert.throws(() => parseAtchart(V1_PLAIN.replace("atchart: 1", "atchart: 2")), /newer/);
   assert.equal(parseAtchart(V11_APPS).meta.atchart, 1.1);
 });
+
+/* ---------------- v1.2: the `tuning` key (alternate tunings item 3, night 49, 261010) ----------------
+ * RED FIRST: today §2.7 carries a `tuning:` line as an unknown key — survival, not agreement. The
+ * format claims the key (docs/atchart-format.md v1.2, ratified 261008: offsets from standard, absent
+ * means standard, well-formedness refused by name through item 1's assertOpens). Written before the
+ * parser and watched to fail: the three malformed maps below pass through untouched today. */
+const withTuning = (t) => `---
+atchart: 1
+tuning: ${t}
+---
+
+\`\`\`chart
+| C | Am | F | G |
+\`\`\`
+`;
+
+test("v1.2 — a malformed tuning is REFUSED BY NAME, naming the string: a key that is not a string number, an offset outside ±6, a crossing", () => {
+  assert.throws(() => parseAtchart(withTuning("{9: -2}")), /string 9|not a real string|string number/, "a key that is not a string number");
+  assert.throws(() => parseAtchart(withTuning("{6: -7}")), /string 6[\s\S]*(window|±6|-6)|six semitones/, "an offset outside −6…+6");
+  assert.throws(() => parseAtchart(withTuning("{5: 5}")), /string 5|string 4|cross|ascend/, "a map that would place the strings out of ascending order");
+});
+
+test("v1.2 — a well-formed tuning is READ as offsets from standard; absent strings are at standard; absent altogether is standard (null)", () => {
+  assert.deepEqual(parseAtchart(withTuning("{6: -2}")).meta.tuning, { 6: -2 }, "drop D");
+  assert.deepEqual(parseAtchart(withTuning("{6: -2, 2: -2, 1: -2}")).meta.tuning, { 6: -2, 2: -2, 1: -2 }, "DADGAD");
+  assert.equal(parseAtchart(CORPUS["minimal — nothing but the version and eight bars"]).meta.tuning, undefined, "absent means standard — the key is not manufactured");
+});
+
+test("v1.2 — the round trip: a file WITH a tuning is a fixed point; a file WITHOUT one never acquires the key — not {}, not zeros, not a comment", () => {
+  for (const t of ["{6: -2}", "{6: -2, 2: -2, 1: -2}", "{6: -2, 5: -2, 1: -2}", "{2: 1, 1: 1}"]) {
+    const src = withTuning(t);
+    const once = serializeAtchart(parseAtchart(src));
+    assert.equal(once, src, `byte-identical: ${t}`);
+    assert.equal(serializeAtchart(parseAtchart(once)), once, "fixed point");
+  }
+  const plain = CORPUS["minimal — nothing but the version and eight bars"];
+  const out = serializeAtchart(parseAtchart(plain));
+  assert.equal(out, plain, "a no-tuning file round-trips byte-identically");
+  assert.ok(!/tuning/.test(out), "…and never gains the key");
+  // a hand-typed file carrying a tuning and nothing else loads
+  const doc = parseAtchart("---\natchart: 1\ntuning: {6: -2}\n---\n\n\`\`\`chart\n| C |\n\`\`\`\n");
+  assert.deepEqual(doc.meta.tuning, { 6: -2 });
+});

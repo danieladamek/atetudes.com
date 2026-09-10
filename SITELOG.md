@@ -1,3 +1,31 @@
+## 2026-09-10 — Night 49: a saved étude carries its tuning — `.atchart.md` v1.2 gains the `tuning` key; Multetudes v0.6.2; every carrier of the format republished
+
+- **Why (Daniel, 261010, in real use):** all fourths built on the Multetudes face, the étude
+  exported to send to a friend as a demonstration of that selection, and the tuning absent on
+  import — the notepad's snapshot had stripped it since night 47, so the file described the étude
+  as if in standard. Ruled: no interim warning; the cause goes, and the record is written.
+- **The format (`docs/atchart-format.md` v1.2, ratified 2026-10-08, the licensed exception):**
+  §2.1 gains `tuning` — a top-level map from string number to a semitone offset from standard,
+  absent meaning standard, so every v1 and v1.1 file remains valid and unchanged; a parser refuses
+  a malformed map by name, naming the string, through the field's own well-formedness law. Files
+  written before v1.2 are tuning-blind, not tuning-standard, and nothing retro-interprets them
+  (Update Log 261010.1). A file with no key is never rewritten to carry one.
+- **What changed:** `engine/atchart.mjs` reads, validates and replays the key (a hand-typed line
+  survives verbatim; it was being rewritten with quotes before); `engine/notepad.mjs` writes the
+  file-level key when every note agrees on one tuning and exposes it on read; the notepad surface
+  offers a file's tuning as a click; `engine/shared-config.mjs` gains `tuning` as its eighth concept
+  and stays a leaf, the strip's one namer handed in by the notepad card, so a foreign note reads
+  "DADGAD" on every notepad door and a door that keeps standard withholds by name. Metronome,
+  Triadetudes, Modes from Pentatonic Boxes, Tetrad Voice Leading, Tetradetudes and Multetudes all
+  republished (the four non-door pages re-inlined or re-emitted; `tools/reinline.py` is tracked).
+- **Verified:** engine 691/691, hub 12/12, the door gate 19,786/0 with Daniel's case replayed on a cold page
+  (the file's key quoted, offered, restored — the neck and the ear in all fourths), the bite chain
+  82/82 with three new mutations (the snapshot stripping again, the parser passing a crossed map,
+  the shared map dropping the tuning), hugo and check_site clean with both generator pages
+  byte-identical to their generators; rendered at 1280 and 390 on a served build and looked at
+  (`notes/working/shots-261010/`).
+- Report: `notes/working/Multetudes build run 261010 — night 49, a saved étude carries its tuning.md`.
+
 ## 2026-09-10 — DEPLOYED: the 261009 tuning-strip injection live — Multetudes v0.6.1 with the global stepper, all fourths and the shifted-tuning reading; multetudes and tetradetudes moved; written from the run
 
 - record: run 34457250446 · success · commit f0bf89c · fetched 2026-09-10T08:57Z · 6/6 studies byte-identical · digest d18ca06d5f75

@@ -16,6 +16,8 @@
  * higher-v entries intact across readers.
  */
 import { parseChord } from "./chord.mjs";
+// v1.2: the tuning key is well-formed by item 1's law (field.mjs), reached here, never restated
+import { opensOf } from "./field.mjs";
 
 export const ATCHART_VERSION = 1;
 // the body-skeleton slot markers (§2.5 preservation): exported so consumers
@@ -44,6 +46,10 @@ function parseScalar(val) {
 
 function canonLine(k, v) {
   if (Array.isArray(v)) return `${k}: [${v.join(", ")}]`;
+  if (v && typeof v === "object") {   // v1.2: the tuning map, flow form, LOW STRING FIRST — 6 → 1, as the strip reads and the format's examples write
+    const ks = Object.keys(v).sort((a, b) => Number(b) - Number(a));
+    return `${k}: {${ks.map((s) => `${s}: ${serializeFlow(v[s])}`).join(", ")}}`;
+  }
   if (typeof v === "string" && /[:#\[\]]/.test(v)) return `${k}: "${v}"`;
   if (typeof v === "string" && v !== v.trim()) return `${k}: "${v}"`;
   return `${k}: ${v}`;
@@ -79,7 +85,7 @@ function parseFrontmatter(lines) {
       fm.push({ kind: "apps", entries });
       continue;
     }
-    const value = parseScalar(rest);
+    const value = key === "tuning" ? parseTuning(rest) : parseScalar(rest);   // v1.2: the one claimed map
     fm.push({ kind: "key", key, raw, value });
     meta[key] = value;
     i++;
@@ -88,12 +94,36 @@ function parseFrontmatter(lines) {
 }
 
 const valEq = (a, b) =>
-  Array.isArray(a) && Array.isArray(b) ? a.join("\u0000") === b.join("\u0000") : a === b;
+  Array.isArray(a) && Array.isArray(b) ? a.join("\u0000") === b.join("\u0000")
+    : a && b && typeof a === "object" && typeof b === "object" ? JSON.stringify(a) === JSON.stringify(b)   // v1.2: a tuning map
+    : a === b;
+
+/* ---------- v1.2: the `tuning` key (docs/atchart-format.md §2.1; ratified 261008, landed 261010) ----------
+ * A map from string number (1–6, 1 = highest) to a semitone offset from standard, −6…+6; strings
+ * absent from the map are at standard; the key absent altogether IS standard, so every v1 and
+ * v1.1 file remains valid and unchanged and a file without the key is NEVER rewritten to carry
+ * one. Well-formedness — real string numbers, the window, no crossing — is item 1's law in
+ * field.mjs (opensOf → assertOpens), reached here so the refusal names the STRING; identity is not
+ * checked (a tuning need not have a name). Top-level, not under apps: an instrument fact every
+ * reader reads alike. Files written before v1.2 carry no tuning and describe their étude AS IF IN
+ * STANDARD — tuning-blind, not tuning-standard; nothing may retro-interpret them. */
+function parseTuning(rest) {
+  let m;
+  try { m = parseFlow(rest); } catch { throw new Error(`tuning: not a map of string number to semitone offset — ${rest}`); }
+  if (!m || typeof m !== "object" || Array.isArray(m)) throw new Error(`tuning: not a map of string number to semitone offset — ${rest}`);
+  for (const [k, v] of Object.entries(m))
+    if (!Number.isInteger(v)) throw new Error(`tuning: string ${k}'s offset must be an integer number of semitones, not ${JSON.stringify(v)}`);
+  try { opensOf(m); } catch (e) { throw new Error("tuning: " + String(e.message || e).replace(/^field: /, "")); }
+  const out = {};
+  for (const [k, v] of Object.entries(m)) out[Number(k)] = v;
+  return out;
+}
 
 function serializeFrontmatter(meta, fm) {
   if (!fm) { // programmatically-built doc: canonical order, canonical lines
     const keys = [...FM_ORDER.filter((k) => k in meta),
-      ...Object.keys(meta).filter((k) => !FM_ORDER.includes(k))];
+      ...Object.keys(meta).filter((k) => !FM_ORDER.includes(k))]
+      .filter((k) => !(k === "tuning" && meta[k] == null));   // v1.2: absent means standard
     return keys.map((k) => canonLine(k, meta[k])).join("\n");
   }
   const out = [];
@@ -116,6 +146,7 @@ function serializeFrontmatter(meta, fm) {
     // defaults injected at parse are not the file's text — appending them
     // would break §4's byte-identity for files that never wrote them
     if (k in DEFAULTS && valEq(meta[k], DEFAULTS[k])) continue;
+    if (k === "tuning" && meta[k] == null) continue;   // v1.2: absent means standard — never written as null, {} or zeros
     out.push(canonLine(k, meta[k]));
   }
   return out.join("\n");
@@ -231,6 +262,7 @@ export function writeApp(doc, id, cfg) {
       ...Object.keys(nd.meta).filter((k) => !FM_ORDER.includes(k))];
     for (const k of keys) {
       if (k in DEFAULTS && valEq(nd.meta[k], DEFAULTS[k])) continue;
+      if (k === "tuning" && nd.meta[k] == null) continue;   // v1.2
       nd._fm.push({ kind: "key", key: k, raw: canonLine(k, nd.meta[k]), value: nd.meta[k] });
     }
   }

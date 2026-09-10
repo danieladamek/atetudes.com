@@ -26,7 +26,24 @@
  *      it maps, never re-describing it.
  */
 
-/** the concepts, in the order a summary reads them */
+/* the tuning's window, ±6 semitones from standard — field.mjs's TUNING_RANGE, stated here a
+ * second time because this module is a LEAF: hand-authored pages inline it verbatim and a door
+ * without strings reaches it without a domain module (notepad-card's own constraint). The two
+ * numbers are pinned equal in shared-config.test; the crossing rule is NOT restated — the file's
+ * door (atchart.mjs) and the field itself refuse a crossed map through item 1's assertOpens. */
+const TUNING_RANGE = 6;
+const STRING_NUMBERS = [6, 5, 4, 3, 2, 1];
+
+/** the moved strings, the vocabulary's own reading of a tuning: "string 6 −2, string 1 −2 from
+ * standard". A host that carries the strip's namer (the one table in engine/tunings.mjs)
+ * hands it in through describeShared's describers and reads "DADGAD" instead; this module names
+ * nothing and states no table. */
+const movedStrings = (v) => STRING_NUMBERS.filter((s) => Number.isInteger(v[s]) && v[s] !== 0)
+  .map((s) => `string ${s} ${v[s] > 0 ? "+" : "−"}${Math.abs(v[s])}`).join(", ") + " from standard";
+
+/** the concepts, in the order a summary reads them.
+ * TUNING joined 261010 (alternate tunings item 3, night 49): an instrument fact, offsets from
+ * standard by string number (the .atchart v1.2 key's own shape; standard travels as ABSENCE). */
 export const SHARED = Object.freeze({
   key:         { label: "key",         describe: (v) => String(v) },
   scale:       { label: "scale",       values: { major: "major", harm: "harmonic minor", mel: "melodic minor" },
@@ -36,6 +53,7 @@ export const SHARED = Object.freeze({
                  describe: (v) => SHARED.progression.values[v] },
   startOn:     { label: "start-on",    describe: (v) => "start on " + ROMAN[v] },
   stringSet:   { label: "string set",  describe: (v) => "strings " + [...v].sort((a, b) => b - a).join("-") },
+  tuning:      { label: "tuning",      describe: (v) => movedStrings(v) },
   bpm:         { label: "bpm",         describe: (v) => v + " bpm" },
   meter:       { label: "meter",       describe: (v) => v + "/4" },
 });
@@ -52,6 +70,13 @@ export function isValid(concept, v) {
     case "startOn": return Number.isInteger(v) && v >= 0 && v <= 6;
     case "stringSet": return Array.isArray(v) && v.length >= 1 && v.length <= 6
       && v.every((s) => Number.isInteger(s) && s >= 1 && s <= 6) && new Set(v).size === v.length;
+    case "tuning": {   // the shape: real string numbers, integer offsets inside the window, not all zero (standard travels as absence)
+      if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+      const ks = Object.keys(v);
+      if (!ks.length || !ks.every((k) => STRING_NUMBERS.includes(Number(k)))) return false;
+      if (!ks.every((k) => Number.isInteger(v[k]) && Math.abs(v[k]) <= TUNING_RANGE)) return false;
+      return ks.some((k) => v[k] !== 0);
+    }
     case "bpm": return typeof v === "number" && v >= 15 && v <= 300;
     case "meter": return Number.isInteger(v) && v >= 1 && v <= 12;
     default: return false;
@@ -79,11 +104,12 @@ export function checkShared(shared, app = "a host") {
 }
 
 /** the summary a foreign entry's shared settings read as — "Bb harmonic minor · Cycling 4ths · start on I · strings 6-5-4-3 · 72 bpm · 4/4" */
-export function describeShared(shared) {
+export function describeShared(shared, describers) {
   const parts = [];
   const s = shared || {};
+  const say = (c, v) => (describers && typeof describers[c] === "function" && describers[c](v)) || SHARED[c].describe(v);
   if ("key" in s || "scale" in s) parts.push([s.key, s.scale && SHARED.scale.describe(s.scale)].filter(Boolean).join(" "));
-  for (const c of CONCEPTS) if (c !== "key" && c !== "scale" && c in s) parts.push(SHARED[c].describe(s[c]));
+  for (const c of CONCEPTS) if (c !== "key" && c !== "scale" && c in s) parts.push(say(c, s[c]));
   return parts.join(" · ");
 }
 

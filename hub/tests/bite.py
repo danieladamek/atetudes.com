@@ -1789,6 +1789,53 @@ def m78_a_second_spelling_override_creeps_in():
         p.write_text(original)
 
 
+def m79_the_snapshot_strips_the_tuning_again():
+    # the field report's exact line: the export describes the étude AS IF IN STANDARD
+    p, original, mutated = patch("hub/modules/notepad-card.mjs",
+        "        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),",
+        "        snapshot: () => { const { tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the file carries no tuning" in g.stdout or "as if in standard" in g.stdout
+        record("the snapshot strips the tuning again — the exported étude reads as if in standard (the 261010 field report)",
+               g.returncode != 0 and hit, "suite exit %d; the round-trip pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m80_the_parser_passes_a_crossed_tuning_through():
+    # the file's door stops refusing: a malformed map is carried as an unknown key would be — survival, not agreement
+    p, original, mutated = patch("engine/atchart.mjs",
+        '  try { opensOf(m); } catch (e) { throw new Error("tuning: " + String(e.message || e).replace(/^field: /, "")); }',
+        '  // (well-formedness not checked)')
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/atchart.test.mjs")
+        hit = "REFUSED BY NAME" in (r.stdout + r.stderr)
+        record("the parser passes a malformed tuning through — a crossing, a bad string, an offset outside the window all load",
+               r.returncode != 0 and hit, "atchart exit %d; the refusal pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m81_the_shared_form_drops_the_tuning():
+    # tuning no longer travels between doors: the vocabulary has it, the door's map does not
+    p, original, mutated = patch("hub/modules/notepad-card.mjs",
+        "              if (Object.keys(t).length) out.tuning = t;",
+        "              // (tuning not mapped)")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "shared form" in g.stdout and "tuning" in g.stdout
+        record("the door's shared map drops the tuning — a DADGAD note arrives in another door as standard",
+               g.returncode != 0 and hit, "suite exit %d; the shared-tuning pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1910,7 +1957,8 @@ def main():
                m72_violet_returns_to_a_published_page,
                m73_the_crossing_is_no_longer_refused, m74_the_row_names_itself_from_a_second_list,
                m75_the_walk_sounds_standard_under_drop_D,
-               m76_the_global_step_clamps, m77_shape_is_read_before_exact, m78_a_second_spelling_override_creeps_in)
+               m76_the_global_step_clamps, m77_shape_is_read_before_exact, m78_a_second_spelling_override_creeps_in,
+               m79_the_snapshot_strips_the_tuning_again, m80_the_parser_passes_a_crossed_tuning_through, m81_the_shared_form_drops_the_tuning)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

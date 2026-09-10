@@ -45,7 +45,7 @@ export default {
   id: "multetudes",
   /* SHARED SETTINGS (261005): what this door can take from another app's note — the card
    * derives the offer from this and the vocabulary; a set of any size 1–6 is a real set here */
-  shared: { carries: ["key", "scale", "progression", "startOn", "stringSet", "bpm", "meter"], stringSet: { min: 1 } },
+  shared: { carries: ["key", "scale", "progression", "startOn", "stringSet", "tuning", "bpm", "meter"], stringSet: { min: 1 } },   // tuning joined 261010 (night 49)
   lock: {
     field: true,
     notepad: true,
@@ -173,7 +173,9 @@ export default {
     /* v0.6.1 (261009, the tuning-strip injection): a global stepper moves all six strings from where
      * they are; the named row is six (the stepper is half-step down, whole-step down and drop C; open E
      * stays by ruling; all fourths added); a shifted named tuning says so; open D spells its F♯. */
-    blurb: "one tool that holds many études · v0.6.1",
+    /* v0.6.2 (261010, night 49 — alternate tunings item 3): a saved étude carries its tuning — the
+     * snapshot keeps it, the file states it (.atchart v1.2), the import offers it, a restore brings it back. */
+    blurb: "one tool that holds many études · v0.6.2",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

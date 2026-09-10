@@ -31,6 +31,7 @@
 import { createNotepadSurface } from "../../engine/notepad-surface.mjs";
 import { OPEN_MIDI } from "../../engine/field.mjs";
 import { setLabel } from "../../engine/open-string.mjs";
+import { describeTuning } from "../../engine/tunings.mjs";
 import { fromTriadetudesV1 } from "../../engine/notepad.mjs";
 import { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } from "../bus.mjs";
 import { SHARED, pcOfKey } from "../../engine/shared-config.mjs";
@@ -219,6 +220,10 @@ export const notepadCard = {
       if (c.placement && c.placement !== "free") parts.push(c.placement);
       if (c.zone && Array.isArray(c.zone.frets) && c.zone.frets.length)
         parts.push("zone " + Math.min(...c.zone.frets) + "–" + Math.max(...c.zone.frets));
+      /* the tuning (night 49): a fact the entry restores, so the summary says it — by the strip's
+       * one namer ("DADGAD", "drop D, a whole step down") or the moved strings; standard says nothing */
+      if (c.tuning && typeof c.tuning === "object" && Object.values(c.tuning).some((v) => v))
+        parts.push(describeTuning(c.tuning) || SHARED.tuning.describe(c.tuning));
       if (typeof c.bpm === "number") parts.push(c.bpm + " bpm");
       return parts.join(" · ") || "no configuration attached";
     };
@@ -253,11 +258,15 @@ export const notepadCard = {
         /* v0.9's wording, adopted 260911 (item 1 / D12): "Save note", not
          * "Save entry" — the label derives from this noun, never hand-set */
         nouns: { item: "note", apply: "Restore étude" },
-        /* THE TUNING IS NOT SNAPSHOTTED YET (night 47, alternate tunings item 2): a saved étude
-         * carrying its tuning is item 3 — the .atchart.md `tuning` key, ratified as offsets from
-         * standard, lands with its Update Log entry that night. Until then an entry stores the
-         * étude as if in standard, and a restore leaves the live tuning where it is. */
-        snapshot: () => { const { tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
+        /* THE TUNING IS SNAPSHOTTED (night 49, alternate tunings item 3 — 261010). Night 47 left
+         * it out here, naming item 3 as the closer; between the two nights the export described
+         * every étude AS IF IN STANDARD, and Daniel met it in real use (261010: all fourths built,
+         * exported for a friend, absent on import). Ruled: no interim warning — the cause goes,
+         * not a narration of it. `tuning` is the field board's total map or null; an entry saved
+         * in standard carries `tuning: null` EXPLICITLY (a restore returns the neck to standard),
+         * while an entry from before this night carries no key at all and is tuning-blind: its
+         * restore leaves the live tuning where it is — nothing retro-interprets it. */
+        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {
@@ -288,11 +297,24 @@ export const notepadCard = {
             if (Array.isArray(c.strings) && c.strings.length) out.stringSet = [...c.strings];
             if (typeof c.bpm === "number") out.bpm = c.bpm;
             if (typeof c.meter === "number") out.meter = c.meter;
+            /* the tuning (night 49): the file's own shape — sparse offsets, standard as absence */
+            if (c.tuning && typeof c.tuning === "object") {
+              const t = {};
+              for (const k of Object.keys(c.tuning)) if (c.tuning[k]) t[k] = c.tuning[k];
+              if (Object.keys(t).length) out.tuning = t;
+            }
             return out;
           },
           canTake: (concept, value) => {
             const decl = (ctx.door.shared || {});
-            if (!decl.carries || !decl.carries.includes(concept)) return `${doorId} has no ${SHARED[concept].label}`;
+            if (!decl.carries || !decl.carries.includes(concept)) {
+              /* a tuning withheld BY NAME (night 49): a door with strings keeps standard until its
+               * own item exposes the control (item 4, one door at a time); a door without strings
+               * has nothing to tune — the declaration says which (stringSet is the strings' own sign) */
+              if (concept === "tuning")
+                return decl.stringSet ? `${doorId} keeps standard tuning — its tuning control is a later item` : `${doorId} has no strings to tune`;
+              return `${doorId} has no ${SHARED[concept].label}`;
+            }
             if (concept === "stringSet" && decl.stringSet) {
               const n = value.length;
               if (decl.stringSet.size && n !== decl.stringSet.size) return `${doorId} works in sets of ${decl.stringSet.size} strings; this set has ${n}`;
@@ -307,10 +329,16 @@ export const notepadCard = {
             if ("progression" in take) { m.source = "cycle"; m.cycle = take.progression; }
             if ("startOn" in take) { m.start = take.startOn; m.startDegree = take.startOn; }
             if ("stringSet" in take) m.strings = [...take.stringSet];
+            if ("tuning" in take) m.tuning = { ...take.tuning };   // the field board normalises and re-announces the total map
             if (Object.keys(m).length) announce(d, CONFIG_CHANGED, m);
             if ("bpm" in take) announce(d, CLOCK, { bpm: take.bpm });
             if ("meter" in take) announce(d, CLOCK, { meter: take.meter });
           },
+          /* the describers (night 49): a foreign note's tuning reads by the strip's ONE namer —
+           * "DADGAD", "drop D, a whole step down" — never a second table. tunings.mjs reaches only
+           * field.mjs and open-string.mjs, both already this card's (the SETS labels above), so
+           * scribe still reaches no tetrad module; the vocabulary itself stays a leaf. */
+          describe: { tuning: describeTuning },
         },
       },
       storage,

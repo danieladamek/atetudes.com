@@ -5783,6 +5783,7 @@ return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, renderPick, 
 /* ===== engine/atchart.mjs ===== */
 const __m_engine_atchart_mjs = (() => {
 const { parseChord } = __m_engine_chord_mjs;
+const { opensOf } = __m_engine_field_mjs;
 /* atchart.mjs — parser + serializer for the .atchart.md format (v1 + v1.1).
  * Spec: docs/atchart-format.md (v1 ratified 2026-08-08; v1.1 ratified
  * 2026-08-10 — §2.6 app namespaces, §2.7 unknown frontmatter keys, §5 the
@@ -5800,6 +5801,8 @@ const { parseChord } = __m_engine_chord_mjs;
  * be the bug: opacity is the mechanism that keeps unknown app ids and
  * higher-v entries intact across readers.
  */
+
+// v1.2: the tuning key is well-formed by item 1's law (field.mjs), reached here, never restated
 
 const ATCHART_VERSION = 1;
 // the body-skeleton slot markers (§2.5 preservation): exported so consumers
@@ -5828,6 +5831,10 @@ function parseScalar(val) {
 
 function canonLine(k, v) {
   if (Array.isArray(v)) return `${k}: [${v.join(", ")}]`;
+  if (v && typeof v === "object") {   // v1.2: the tuning map, flow form, LOW STRING FIRST — 6 → 1, as the strip reads and the format's examples write
+    const ks = Object.keys(v).sort((a, b) => Number(b) - Number(a));
+    return `${k}: {${ks.map((s) => `${s}: ${serializeFlow(v[s])}`).join(", ")}}`;
+  }
   if (typeof v === "string" && /[:#\[\]]/.test(v)) return `${k}: "${v}"`;
   if (typeof v === "string" && v !== v.trim()) return `${k}: "${v}"`;
   return `${k}: ${v}`;
@@ -5863,7 +5870,7 @@ function parseFrontmatter(lines) {
       fm.push({ kind: "apps", entries });
       continue;
     }
-    const value = parseScalar(rest);
+    const value = key === "tuning" ? parseTuning(rest) : parseScalar(rest);   // v1.2: the one claimed map
     fm.push({ kind: "key", key, raw, value });
     meta[key] = value;
     i++;
@@ -5872,12 +5879,36 @@ function parseFrontmatter(lines) {
 }
 
 const valEq = (a, b) =>
-  Array.isArray(a) && Array.isArray(b) ? a.join("\u0000") === b.join("\u0000") : a === b;
+  Array.isArray(a) && Array.isArray(b) ? a.join("\u0000") === b.join("\u0000")
+    : a && b && typeof a === "object" && typeof b === "object" ? JSON.stringify(a) === JSON.stringify(b)   // v1.2: a tuning map
+    : a === b;
+
+/* ---------- v1.2: the `tuning` key (docs/atchart-format.md §2.1; ratified 261008, landed 261010) ----------
+ * A map from string number (1–6, 1 = highest) to a semitone offset from standard, −6…+6; strings
+ * absent from the map are at standard; the key absent altogether IS standard, so every v1 and
+ * v1.1 file remains valid and unchanged and a file without the key is NEVER rewritten to carry
+ * one. Well-formedness — real string numbers, the window, no crossing — is item 1's law in
+ * field.mjs (opensOf → assertOpens), reached here so the refusal names the STRING; identity is not
+ * checked (a tuning need not have a name). Top-level, not under apps: an instrument fact every
+ * reader reads alike. Files written before v1.2 carry no tuning and describe their étude AS IF IN
+ * STANDARD — tuning-blind, not tuning-standard; nothing may retro-interpret them. */
+function parseTuning(rest) {
+  let m;
+  try { m = parseFlow(rest); } catch { throw new Error(`tuning: not a map of string number to semitone offset — ${rest}`); }
+  if (!m || typeof m !== "object" || Array.isArray(m)) throw new Error(`tuning: not a map of string number to semitone offset — ${rest}`);
+  for (const [k, v] of Object.entries(m))
+    if (!Number.isInteger(v)) throw new Error(`tuning: string ${k}'s offset must be an integer number of semitones, not ${JSON.stringify(v)}`);
+  try { opensOf(m); } catch (e) { throw new Error("tuning: " + String(e.message || e).replace(/^field: /, "")); }
+  const out = {};
+  for (const [k, v] of Object.entries(m)) out[Number(k)] = v;
+  return out;
+}
 
 function serializeFrontmatter(meta, fm) {
   if (!fm) { // programmatically-built doc: canonical order, canonical lines
     const keys = [...FM_ORDER.filter((k) => k in meta),
-      ...Object.keys(meta).filter((k) => !FM_ORDER.includes(k))];
+      ...Object.keys(meta).filter((k) => !FM_ORDER.includes(k))]
+      .filter((k) => !(k === "tuning" && meta[k] == null));   // v1.2: absent means standard
     return keys.map((k) => canonLine(k, meta[k])).join("\n");
   }
   const out = [];
@@ -5900,6 +5931,7 @@ function serializeFrontmatter(meta, fm) {
     // defaults injected at parse are not the file's text — appending them
     // would break §4's byte-identity for files that never wrote them
     if (k in DEFAULTS && valEq(meta[k], DEFAULTS[k])) continue;
+    if (k === "tuning" && meta[k] == null) continue;   // v1.2: absent means standard — never written as null, {} or zeros
     out.push(canonLine(k, meta[k]));
   }
   return out.join("\n");
@@ -6015,6 +6047,7 @@ function writeApp(doc, id, cfg) {
       ...Object.keys(nd.meta).filter((k) => !FM_ORDER.includes(k))];
     for (const k of keys) {
       if (k in DEFAULTS && valEq(nd.meta[k], DEFAULTS[k])) continue;
+      if (k === "tuning" && nd.meta[k] == null) continue;   // v1.2
       nd._fm.push({ kind: "key", key: k, raw: canonLine(k, nd.meta[k]), value: nd.meta[k] });
     }
   }
@@ -10565,6 +10598,21 @@ function toAtchart(doc, meta) {
     : { meta: { atchart: 1, ...(meta || {}) },
         sections: [], substitutions: [], practiceLog: [], body: [] };
   if (doc._at && meta) at.meta = { ...at.meta, ...meta };
+  /* v1.2 (night 49): the file-level `tuning:` is written when the notes in the file AGREE on one
+   * non-standard tuning (an entry exported alone always agrees with itself — Daniel's case); notes
+   * in different tunings each carry their own in their payload and the file states none. A
+   * caller's explicit meta.tuning (or null) wins. Absent stays absent: never {}, never zeros. */
+  if (!meta || !("tuning" in meta)) {
+    const seen = new Set(), tunings = [];
+    for (const e of doc.entries) {
+      const t = e.payload && e.payload.shared && e.payload.shared.tuning;
+      const k = t ? JSON.stringify(Object.keys(t).sort().map((s) => [s, t[s]])) : "standard";
+      if (!seen.has(k)) { seen.add(k); tunings.push(t || null); }
+    }
+    if (tunings.length === 1 && tunings[0]) at.meta.tuning = tunings[0];
+    else if (!doc._at) delete at.meta.tuning;
+  }
+  if (at.meta.tuning == null) delete at.meta.tuning;
 
   const pad = String(doc.pad ?? "").replace(/\n+$/, "");
   let padLines = pad ? pad.split("\n") : [];
@@ -10702,7 +10750,9 @@ function fromAtchart(src) {
         savedAt: null, heading, text, payload: null }));
     });
   }
-  return { pad, entries, _at: at };
+  // v1.2 (night 49): the file's own tuning — an instrument fact at the top level — rides out beside
+  // the entries; absent means standard and reads as undefined, never manufactured
+  return { pad, entries, _at: at, ...(at.meta.tuning ? { tuning: at.meta.tuning } : {}) };
 }
 
 function hashStr(s) {
@@ -10760,7 +10810,24 @@ const __m_engine_shared_config_mjs = (() => {
  *      it maps, never re-describing it.
  */
 
-/** the concepts, in the order a summary reads them */
+/* the tuning's window, ±6 semitones from standard — field.mjs's TUNING_RANGE, stated here a
+ * second time because this module is a LEAF: hand-authored pages inline it verbatim and a door
+ * without strings reaches it without a domain module (notepad-card's own constraint). The two
+ * numbers are pinned equal in shared-config.test; the crossing rule is NOT restated — the file's
+ * door (atchart.mjs) and the field itself refuse a crossed map through item 1's assertOpens. */
+const TUNING_RANGE = 6;
+const STRING_NUMBERS = [6, 5, 4, 3, 2, 1];
+
+/** the moved strings, the vocabulary's own reading of a tuning: "string 6 −2, string 1 −2 from
+ * standard". A host that carries the strip's namer (the one table in engine/tunings.mjs)
+ * hands it in through describeShared's describers and reads "DADGAD" instead; this module names
+ * nothing and states no table. */
+const movedStrings = (v) => STRING_NUMBERS.filter((s) => Number.isInteger(v[s]) && v[s] !== 0)
+  .map((s) => `string ${s} ${v[s] > 0 ? "+" : "−"}${Math.abs(v[s])}`).join(", ") + " from standard";
+
+/** the concepts, in the order a summary reads them.
+ * TUNING joined 261010 (alternate tunings item 3, night 49): an instrument fact, offsets from
+ * standard by string number (the .atchart v1.2 key's own shape; standard travels as ABSENCE). */
 const SHARED = Object.freeze({
   key:         { label: "key",         describe: (v) => String(v) },
   scale:       { label: "scale",       values: { major: "major", harm: "harmonic minor", mel: "melodic minor" },
@@ -10770,6 +10837,7 @@ const SHARED = Object.freeze({
                  describe: (v) => SHARED.progression.values[v] },
   startOn:     { label: "start-on",    describe: (v) => "start on " + ROMAN[v] },
   stringSet:   { label: "string set",  describe: (v) => "strings " + [...v].sort((a, b) => b - a).join("-") },
+  tuning:      { label: "tuning",      describe: (v) => movedStrings(v) },
   bpm:         { label: "bpm",         describe: (v) => v + " bpm" },
   meter:       { label: "meter",       describe: (v) => v + "/4" },
 });
@@ -10786,6 +10854,13 @@ function isValid(concept, v) {
     case "startOn": return Number.isInteger(v) && v >= 0 && v <= 6;
     case "stringSet": return Array.isArray(v) && v.length >= 1 && v.length <= 6
       && v.every((s) => Number.isInteger(s) && s >= 1 && s <= 6) && new Set(v).size === v.length;
+    case "tuning": {   // the shape: real string numbers, integer offsets inside the window, not all zero (standard travels as absence)
+      if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+      const ks = Object.keys(v);
+      if (!ks.length || !ks.every((k) => STRING_NUMBERS.includes(Number(k)))) return false;
+      if (!ks.every((k) => Number.isInteger(v[k]) && Math.abs(v[k]) <= TUNING_RANGE)) return false;
+      return ks.some((k) => v[k] !== 0);
+    }
     case "bpm": return typeof v === "number" && v >= 15 && v <= 300;
     case "meter": return Number.isInteger(v) && v >= 1 && v <= 12;
     default: return false;
@@ -10813,11 +10888,12 @@ function checkShared(shared, app = "a host") {
 }
 
 /** the summary a foreign entry's shared settings read as — "Bb harmonic minor · Cycling 4ths · start on I · strings 6-5-4-3 · 72 bpm · 4/4" */
-function describeShared(shared) {
+function describeShared(shared, describers) {
   const parts = [];
   const s = shared || {};
+  const say = (c, v) => (describers && typeof describers[c] === "function" && describers[c](v)) || SHARED[c].describe(v);
   if ("key" in s || "scale" in s) parts.push([s.key, s.scale && SHARED.scale.describe(s.scale)].filter(Boolean).join(" "));
-  for (const c of CONCEPTS) if (c !== "key" && c !== "scale" && c in s) parts.push(SHARED[c].describe(s[c]));
+  for (const c of CONCEPTS) if (c !== "key" && c !== "scale" && c in s) parts.push(say(c, s[c]));
   return parts.join(" · ");
 }
 
@@ -11821,6 +11897,7 @@ function createNotepadSurface(opts) {
   }
 
   // ---- export / import / clipboard: the FILE is the only way notes move ----
+  let fileTuning = null;   // the last imported file's own top-level tuning, offered until applied or the next import
   function exportText() { return toAtchart(doc, { title: file.title }); }
   function importText(text) {
     let inc;
@@ -11833,6 +11910,10 @@ function createNotepadSurface(opts) {
     }
     const have = new Set(doc.entries.map((x) => x.id));
     const added = inc.entries.filter((x) => !have.has(x.id));
+    /* v1.2 (night 49): a file that STATES a tuning at its top level — a hand-typed chart with a
+     * tuning and nothing else, or an exported étude — is OFFERED to this host as a click, through
+     * the same offer the foreign entries use; never applied by the import itself (rule 4) */
+    fileTuning = inc.tuning || null;
     let pad = doc.pad;
     if (inc.pad.trim() && !pad.trim()) pad = inc.pad;
     else if (inc.pad.trim() && pad.trim() && !pad.includes(inc.pad))
@@ -11841,6 +11922,24 @@ function createNotepadSurface(opts) {
     els.pad.value = doc.pad;
     persist();
     return added.length;
+  }
+  /* the file's own tuning, offered (night 49): one button in the import message's slot, worded by
+   * the vocabulary's offer — "apply the tuning from this file" — or the withholding, named */
+  function offerFileTuning() {
+    const m = els.importMsg || els.msg;
+    if (!m || !fileTuning) return;
+    const offer = offerOf({ tuning: fileTuning }, adapter.shared && typeof adapter.shared.canTake === "function" ? adapter.shared : null);
+    const docm = els.pad.ownerDocument;
+    const slot = docm.createElement("span"); slot.setAttribute("data-cap", "file-tuning");
+    if (offer.wording && adapter.shared && typeof adapter.shared.apply === "function") {
+      const b = docm.createElement("button"); b.textContent = offer.wording.replace("from this note", "from this file");
+      b.setAttribute("data-cap", "apply-file-tuning");
+      b.addEventListener("click", () => { adapter.shared.apply({ ...offer.take }); fileTuning = null; slot.remove(); onChange(); onApplied(); });
+      slot.appendChild(b);
+    } else if (offer.withheldWording) {
+      slot.textContent = " " + offer.withheldWording.replace("not offered: ", "the file's ");
+    }
+    m.appendChild(slot);
   }
   function importMsg(t) {
     const m = els.importMsg || els.msg;
@@ -11861,6 +11960,7 @@ function createNotepadSurface(opts) {
       renderRows(); onChange();
       importMsg("imported " + n + " new entr" + (n === 1 ? "y" : "ies") +
         (n === 0 ? " — everything was already here" : ""));
+      offerFileTuning();
     } catch (e) { importMsg("import failed: " + e.message); }
   }
   /* ONE DOWNLOAD PATH (260916, item 3): the document's Export and an
@@ -11938,7 +12038,7 @@ function createNotepadSurface(opts) {
        * family's own sentence; an entry from before the vocabulary reads as it always did */
       const foreign = p && p.app !== adapter.app;
       const sharedOf = foreign ? readShared(p) : {};
-      const sharedSummary = describeShared(sharedOf);
+      const sharedSummary = describeShared(sharedOf, adapter.shared && adapter.shared.describe);   // the host's namers (night 49: the strip's tuning names) ride in
       const summary = !p ? "note" :
         p.app === adapter.app ? adapter.summarize(p.data)
         : p.app + " · v" + p.v + (sharedSummary
@@ -12177,6 +12277,7 @@ const __m_hub_modules_notepad_card_mjs = (() => {
 const { createNotepadSurface } = __m_engine_notepad_surface_mjs;
 const { OPEN_MIDI } = __m_engine_field_mjs;
 const { setLabel } = __m_engine_open_string_mjs;
+const { describeTuning } = __m_engine_tunings_mjs;
 const { fromTriadetudesV1 } = __m_engine_notepad_mjs;
 const { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
@@ -12210,6 +12311,7 @@ const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
  * every card that owns a piece of it re-renders from the message (§4.2.3).
  * This card reaches into nothing.
  */
+
 
 
 
@@ -12400,6 +12502,10 @@ const notepadCard = {
       if (c.placement && c.placement !== "free") parts.push(c.placement);
       if (c.zone && Array.isArray(c.zone.frets) && c.zone.frets.length)
         parts.push("zone " + Math.min(...c.zone.frets) + "–" + Math.max(...c.zone.frets));
+      /* the tuning (night 49): a fact the entry restores, so the summary says it — by the strip's
+       * one namer ("DADGAD", "drop D, a whole step down") or the moved strings; standard says nothing */
+      if (c.tuning && typeof c.tuning === "object" && Object.values(c.tuning).some((v) => v))
+        parts.push(describeTuning(c.tuning) || SHARED.tuning.describe(c.tuning));
       if (typeof c.bpm === "number") parts.push(c.bpm + " bpm");
       return parts.join(" · ") || "no configuration attached";
     };
@@ -12434,11 +12540,15 @@ const notepadCard = {
         /* v0.9's wording, adopted 260911 (item 1 / D12): "Save note", not
          * "Save entry" — the label derives from this noun, never hand-set */
         nouns: { item: "note", apply: "Restore étude" },
-        /* THE TUNING IS NOT SNAPSHOTTED YET (night 47, alternate tunings item 2): a saved étude
-         * carrying its tuning is item 3 — the .atchart.md `tuning` key, ratified as offsets from
-         * standard, lands with its Update Log entry that night. Until then an entry stores the
-         * étude as if in standard, and a restore leaves the live tuning where it is. */
-        snapshot: () => { const { tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
+        /* THE TUNING IS SNAPSHOTTED (night 49, alternate tunings item 3 — 261010). Night 47 left
+         * it out here, naming item 3 as the closer; between the two nights the export described
+         * every étude AS IF IN STANDARD, and Daniel met it in real use (261010: all fourths built,
+         * exported for a friend, absent on import). Ruled: no interim warning — the cause goes,
+         * not a narration of it. `tuning` is the field board's total map or null; an entry saved
+         * in standard carries `tuning: null` EXPLICITLY (a restore returns the neck to standard),
+         * while an entry from before this night carries no key at all and is tuning-blind: its
+         * restore leaves the live tuning where it is — nothing retro-interprets it. */
+        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {
@@ -12469,11 +12579,24 @@ const notepadCard = {
             if (Array.isArray(c.strings) && c.strings.length) out.stringSet = [...c.strings];
             if (typeof c.bpm === "number") out.bpm = c.bpm;
             if (typeof c.meter === "number") out.meter = c.meter;
+            /* the tuning (night 49): the file's own shape — sparse offsets, standard as absence */
+            if (c.tuning && typeof c.tuning === "object") {
+              const t = {};
+              for (const k of Object.keys(c.tuning)) if (c.tuning[k]) t[k] = c.tuning[k];
+              if (Object.keys(t).length) out.tuning = t;
+            }
             return out;
           },
           canTake: (concept, value) => {
             const decl = (ctx.door.shared || {});
-            if (!decl.carries || !decl.carries.includes(concept)) return `${doorId} has no ${SHARED[concept].label}`;
+            if (!decl.carries || !decl.carries.includes(concept)) {
+              /* a tuning withheld BY NAME (night 49): a door with strings keeps standard until its
+               * own item exposes the control (item 4, one door at a time); a door without strings
+               * has nothing to tune — the declaration says which (stringSet is the strings' own sign) */
+              if (concept === "tuning")
+                return decl.stringSet ? `${doorId} keeps standard tuning — its tuning control is a later item` : `${doorId} has no strings to tune`;
+              return `${doorId} has no ${SHARED[concept].label}`;
+            }
             if (concept === "stringSet" && decl.stringSet) {
               const n = value.length;
               if (decl.stringSet.size && n !== decl.stringSet.size) return `${doorId} works in sets of ${decl.stringSet.size} strings; this set has ${n}`;
@@ -12488,10 +12611,16 @@ const notepadCard = {
             if ("progression" in take) { m.source = "cycle"; m.cycle = take.progression; }
             if ("startOn" in take) { m.start = take.startOn; m.startDegree = take.startOn; }
             if ("stringSet" in take) m.strings = [...take.stringSet];
+            if ("tuning" in take) m.tuning = { ...take.tuning };   // the field board normalises and re-announces the total map
             if (Object.keys(m).length) announce(d, CONFIG_CHANGED, m);
             if ("bpm" in take) announce(d, CLOCK, { bpm: take.bpm });
             if ("meter" in take) announce(d, CLOCK, { meter: take.meter });
           },
+          /* the describers (night 49): a foreign note's tuning reads by the strip's ONE namer —
+           * "DADGAD", "drop D, a whole step down" — never a second table. tunings.mjs reaches only
+           * field.mjs and open-string.mjs, both already this card's (the SETS labels above), so
+           * scribe still reaches no tetrad module; the vocabulary itself stays a leaf. */
+          describe: { tuning: describeTuning },
         },
       },
       storage,
@@ -13956,7 +14085,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.1","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.2","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

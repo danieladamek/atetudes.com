@@ -422,8 +422,8 @@ test("§4.3 shared: every notepad host declares its map to the family's shared v
   }
   assert.deepEqual(carriersOf("shared-config"), carriersOf("notepad-surface"), "every carrier of the surface carries the vocabulary it reads");
   // the vocabulary is one: no host restates a concept's label or values
-  const labels = CONCEPTS.map((c) => describeShared({ [c]: c === "stringSet" ? [6, 5, 4, 3] : c === "startOn" ? 0 : c === "bpm" ? 72 : c === "meter" ? 4 : c === "scale" ? "major" : c === "progression" ? "fourths" : "C" }));
-  assert.equal(labels.length, 7);
+  const labels = CONCEPTS.map((c) => describeShared({ [c]: c === "stringSet" ? [6, 5, 4, 3] : c === "tuning" ? { 6: -2 } : c === "startOn" ? 0 : c === "bpm" ? 72 : c === "meter" ? 4 : c === "scale" ? "major" : c === "progression" ? "fourths" : "C" }));
+  assert.equal(labels.length, 8, "eight concepts since night 49 (tuning)");
   assert.equal(offerOf(readShared({ shared: { bpm: 72 } }), { canTake: () => true }).wording, "apply the bpm from this note");
 });
 

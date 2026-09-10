@@ -308,3 +308,40 @@ test("Triadetudes v1 migration: cfg byte-identical, prose intact, duration kept,
   assert.equal(bare.text, "");
   assert.deepEqual(bare.payload, { app: "triadetudes", v: 1, data: null });
 });
+
+/* ---------------- v1.2: a saved étude carries its tuning (night 49, 261010) ---------------- */
+test("v1.2 — an entry exported alone writes the file's top-level tuning; notes that disagree write none; a standard étude writes no key", () => {
+  const mk = (id, tuning) => ({ id, savedAt: "2026-10-10T00:00:00.000Z", text: "", heading: null,
+    payload: { app: "multetudes", v: 1, data: { key: "C", tuning: tuning || null }, ...(tuning ? { shared: { tuning } } : {}) } });
+  const fourths = { 2: 1, 1: 1 };
+  const one = toAtchart({ pad: "", entries: [mk("a", fourths)] }, { title: "all fourths" });
+  assert.match(one, /^tuning: \{2: 1, 1: 1\}$/m, "the file states the étude's tuning at the top level (Daniel's case)");
+  assert.equal((one.match(/^tuning:/gm) || []).length, 1);
+  assert.ok(one.includes('"tuning":{"1":1,"2":1}') && one.includes('"shared":{"tuning":{"1":1,"2":1}}'), "…and the entry carries it in its payload and its shared form");
+  const std = toAtchart({ pad: "", entries: [mk("b", null)] }, { title: "standard" });
+  assert.ok(!/tuning:/m.test(std), "a standard étude's file carries NO tuning line — absent means standard");
+  assert.ok(std.includes('"tuning":null'), "…while its payload says standard explicitly (a restore returns the neck to standard)");
+  const mixed = toAtchart({ pad: "", entries: [mk("a", fourths), mk("c", { 6: -2 })] }, { title: "two" });
+  assert.ok(!/^tuning:/m.test(mixed), "notes in different tunings: the file states none; each note keeps its own");
+  const agree = toAtchart({ pad: "", entries: [mk("a", fourths), mk("d", fourths)] }, { title: "two alike" });
+  assert.match(agree, /^tuning: \{2: 1, 1: 1\}$/m, "notes that agree: the file states it once");
+  // read back: the file's tuning rides out of fromAtchart; a file without one exposes none
+  assert.deepEqual(fromAtchart(one).tuning, { 2: 1, 1: 1 });
+  assert.equal(fromAtchart(std).tuning, undefined);
+  // the round trip through the notepad is byte-identical either way
+  assert.equal(toAtchart(fromAtchart(one), { title: "all fourths" }), one);
+  assert.equal(toAtchart(fromAtchart(std), { title: "standard" }), std);
+});
+
+test("v1.2 — a file from before tonight is TUNING-BLIND: a load-and-save cycle leaves it byte-identical and it never gains a key", () => {
+  // what the notepad WROTE before tonight: a snapshot with no tuning key at all (night 47 stripped it)
+  const before = toAtchart({ pad: "", entries: [{ id: "x", savedAt: "2026-09-01T00:00:00.000Z", text: "", heading: null,
+    payload: { app: "multetudes", v: 1, data: { key: "C", strings: [4, 3, 2, 1] } } }] }, { title: "old" });
+  assert.ok(!/tuning/.test(before), "the pre-v1.2 file names no tuning anywhere");
+  const doc = fromAtchart(before);
+  assert.equal(doc.tuning, undefined, "no key, no tuning — not standard, BLIND");
+  assert.equal(doc.entries[0].payload.data.tuning, undefined, "the entry's payload carries no tuning either — nothing retro-interprets it");
+  const after = toAtchart(doc, { title: "old" });
+  assert.equal(after, before, "byte-identical after a load-and-save cycle");
+  assert.ok(!/tuning/.test(after), "…and it never gains the key");
+});
