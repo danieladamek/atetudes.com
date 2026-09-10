@@ -1,3 +1,14 @@
+## 2026-09-10 — DEPLOYED: night 49 live — a saved étude carries its tuning; .atchart.md v1.2; all six studies moved; written from the run
+
+- record: run 34498897529 · success · commit c5af628 · fetched 2026-09-10T16:04Z · 6/6 studies byte-identical · digest 2ca223bf9c78
+- Actions run 34498897529 green on `c5af628` — https://github.com/danieladamek/atetudes.com/actions/runs/34498897529 (created 2026-09-10T15:56:22Z, finished 2026-09-10T16:04:18Z).
+- metronome: repo 42f2fd02ca47 · live 42f2fd02ca47 — matches.
+- modes-from-pentatonic-boxes: repo 03cedd9c7bb4 · live 03cedd9c7bb4 — matches.
+- multetudes: repo 165f93ec267b · live 165f93ec267b — matches.
+- tetrad-voice-leading: repo ae9c1b7d7cab · live ae9c1b7d7cab — matches.
+- tetradetudes: repo b5ed961560cd · live b5ed961560cd — matches.
+- triadetudes: repo b3b658db02e7 · live b3b658db02e7 — matches.
+
 ## 2026-09-10 — Night 49: a saved étude carries its tuning — `.atchart.md` v1.2 gains the `tuning` key; Multetudes v0.6.2; every carrier of the format republished
 
 - **Why (Daniel, 261010, in real use):** all fourths built on the Multetudes face, the étude
