@@ -1,3 +1,14 @@
+## 2026-09-10 — DEPLOYED: the 261009 tuning-strip injection live — Multetudes v0.6.1 with the global stepper, all fourths and the shifted-tuning reading; multetudes and tetradetudes moved; written from the run
+
+- record: run 34457250446 · success · commit f0bf89c · fetched 2026-09-10T08:57Z · 6/6 studies byte-identical · digest d18ca06d5f75
+- Actions run 34457250446 green on `f0bf89c` — https://github.com/danieladamek/atetudes.com/actions/runs/34457250446 (created 2026-09-10T08:49:27Z, finished 2026-09-10T08:57:01Z).
+- metronome: repo ccd194aed122 · live ccd194aed122 — matches.
+- modes-from-pentatonic-boxes: repo f8ef1e5bc327 · live f8ef1e5bc327 — matches.
+- multetudes: repo 708fb6ce3b3a · live 708fb6ce3b3a — matches.
+- tetrad-voice-leading: repo 01403fdc0117 · live 01403fdc0117 — matches.
+- tetradetudes: repo b35337dcd0f0 · live b35337dcd0f0 — matches.
+- triadetudes: repo dcf77288ba41 · live dcf77288ba41 — matches.
+
 ## 2026-09-09 — The 261009 tuning-strip injection: a global stepper, a six-name row, a shifted tuning that says so, open D's F♯ — Multetudes v0.6.1
 
 - **Why (Daniel, 261009, on the live night-47 strip):** a global − / + that moves all six strings
