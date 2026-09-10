@@ -1,3 +1,28 @@
+## 2026-09-09 — The 261009 tuning-strip injection: a global stepper, a six-name row, a shifted tuning that says so, open D's F♯ — Multetudes v0.6.1
+
+- **Why (Daniel, 261009, on the live night-47 strip):** a global − / + that moves all six strings
+  together; the named row losing the entries the stepper makes redundant; a shifted named tuning
+  made visible; the cells reading as cells; and the ruling that a NAMED tuning may carry its own
+  spelling (open D's F♯).
+- **What changed:** `engine/tunings.mjs` — `canStepAll`/`steppedAll` (a uniform move never crosses,
+  so only the ±6 window refuses, WHOLE, naming the string that ran out — one window clause serves
+  the per-string step too); the table is drop D · DADGAD · open G · open D · open E · all fourths
+  (all fourths derived as a stack of fourths, E A D G C F; half-step down, whole-step down and
+  drop C retired; open E = open D +2 kept by ruling, and a test asserts it is the only uniform-shift
+  pair left); `readTuning` reads exact first then by shape and `describeTuning` says it once —
+  "drop D, a whole step down", "standard, a half step down" — so nothing the retired names said is
+  lost; `openLabel` prefers a name's own spelling on an exact match only, the overrides derived
+  from the table and pinned at exactly one. `hub/modules/field-board.mjs` — the global pair after
+  the name, the shape-matched name's button marked and titled with the same words, the
+  between-cell gap widened (26 px; a hairline was tried at render time and not shipped).
+- **Verified:** engine 685/685, hub 12/12, the door gate 19,868/0, m76–m78 biting singly (a
+  clamped global step; shape read before exact, naming open D / open E; a second spelling
+  override, naming open G), the bite chain 79/79 (`bite-0909-2158`; a first chain, `bite-0909-1451`, read 78/79 with m6 — the one positive control — red for a reason its leg could not name; the harness now records the suite's FAIL lines in that leg, and the first red stands recorded as unexplained for night 50), hugo and check_site clean; rendered at 1280
+  and 390 on a served build — the refusal naming string 6, drop D two steps down, uniform −1,
+  open D at its name and one step away, the cells both ways — zero console errors, looked at
+  (`notes/working/shots-261009d/`).
+- Report: `notes/working/Multetudes build run 261009d — the tuning strip injection.md`.
+
 ## 2026-09-09 — DEPLOYED: night 47 live — the tuning editor under Multetudes' neck (v0.6.0); multetudes and tetradetudes moved; written from the run
 
 - record: run 34379297935 · success · commit bca312f · fetched 2026-09-09T17:01Z · 6/6 studies byte-identical · digest f440408a0625

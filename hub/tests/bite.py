@@ -111,6 +111,15 @@ def suite():
     return sh("python3", "hub/tests/door_locks.py")
 
 
+def fail_lines(r, n=6):
+    """THE SUITE NAMES ITS REASON (261009 — the ear gate's lesson, second sighting): a leg that
+    stakes its verdict on the door suite being GREEN is the one place a failure unrelated to the
+    mutation can surface, and "suite green: False" alone says nothing. m6 read exactly that on the
+    injection's chain while the same body passed standalone: order- or load-dependent, and the log
+    could not say which. The FAIL lines ride in every such record."""
+    return [ln.strip()[:160] for ln in (r.stdout + r.stderr).splitlines() if ln.startswith("FAIL") or "Traceback" in ln][:n]
+
+
 def conformance():
     """the engine's host-conformance suite — the gate for a mutation of a HAND-AUTHORED
     page, which no door pin reads (night 35: the card-carrier pin lives there)"""
@@ -308,9 +317,9 @@ def m6_new_module_no_door_edited():
         r = suite()
         record("a new module with markup and styles, no door edited",
                ok and untouched and r.returncode == 0,
-               "scribe has it:%s plain does not:%s; doors unchanged:%s; suite green:%s"
+               "scribe has it:%s plain does not:%s; doors unchanged:%s; suite green:%s%s"
                % ("tunerbox" in got["scribe"], "tunerbox" not in got["plain"],
-                  untouched, r.returncode == 0))
+                  untouched, r.returncode == 0, "" if r.returncode == 0 else "; the suite said: %s" % fail_lines(r)))
     finally:
         new.unlink(missing_ok=True)
 
@@ -1703,8 +1712,8 @@ def m73_the_crossing_is_no_longer_refused():
 
 def m74_the_row_names_itself_from_a_second_list():
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        "      const current = nameOf(cfg.tuning);",
-        "      const current = (totalOffsets(cfg.tuning)[6] === -2 && totalOffsets(cfg.tuning)[1] === -2) ? \"DADGAD\" : nameOf(cfg.tuning);   // a second reading")
+        "      const current = nameOf(cfg.tuning), reading = readTuning(cfg.tuning), said = describeTuning(cfg.tuning);",
+        "      const current = (totalOffsets(cfg.tuning)[6] === -2 && totalOffsets(cfg.tuning)[1] === -2) ? \"DADGAD\" : nameOf(cfg.tuning), reading = readTuning(cfg.tuning), said = describeTuning(cfg.tuning);   // a second reading")
     try:
         p.write_text(mutated)
         r = sh("node", "--test", "engine/tests/tunings.test.mjs")
@@ -1729,6 +1738,53 @@ def m75_the_walk_sounds_standard_under_drop_D():
         record("the walk sounds standard under drop D (its field built without the tuning) — the neck and the ear disagree",
                g.returncode != 0 and hit,
                "suite exit %d; the ear gate bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m76_the_global_step_clamps():
+    # a refused global step moves the five strings that can and skips the sixth — the clamp the injection forbids
+    p, original, mutated = patch("engine/tunings.mjs",
+        "  const r = canStepAll(tuning, dir);\n  if (!r.ok) throw new Error(`tunings: refused — ${r.reason}`);\n  const t = totalOffsets(tuning);\n  for (const s of STRINGS) t[s] += dir;",
+        "  const t = totalOffsets(tuning);\n  for (const s of STRINGS) t[s] = Math.max(-TUNING_RANGE, Math.min(TUNING_RANGE, t[s] + dir));   // clamped")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/tunings.test.mjs")
+        hit = "refused whole" in (r.stdout + r.stderr) or "transposes as a unit" in (r.stdout + r.stderr)
+        record("the global step clamps — five strings move and the sixth is skipped",
+               r.returncode != 0 and hit, "tunings exit %d; the whole-move pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m77_shape_is_read_before_exact():
+    # the reading checks SHAPE first: open D and open E share a shape, so one of them is named wrongly
+    p, original, mutated = patch("engine/tunings.mjs",
+        "  const exact = nameOf(tuning);\n  if (exact !== null) return { name: exact, shift: 0 };\n  const t = totalOffsets(tuning), shape = shapeOf(t);",
+        "  const t = totalOffsets(tuning), shape = shapeOf(t);   // shape first")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/tunings.test.mjs")
+        out = r.stdout + r.stderr
+        hit = ("open E" in out and "open D" in out) and ("exact" in out)
+        record("the reading checks shape before exact — open D / open E collide",
+               r.returncode != 0 and hit, "tunings exit %d; the pin named the open D / open E pair: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m78_a_second_spelling_override_creeps_in():
+    # a second per-string spelling added quietly (open G's sixth string) — a NEW DECISION must arrive as one
+    p, original, mutated = patch("engine/tunings.mjs",
+        '  { name: "open G",      offsets: { 6: -2, 5: -2, 1: -2 } },',
+        '  { name: "open G",      offsets: { 6: -2, 5: -2, 1: -2 }, spell: { 6: "D" } },')
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/tunings.test.mjs")
+        out = r.stdout + r.stderr
+        hit = "open G" in out and ("second" in out or "new decision" in out.lower() or "not ruled" in out)
+        record("a second spelling override creeps into the table (open G)",
+               r.returncode != 0 and hit, "tunings exit %d; the count pin named the tuning: %s" % (r.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -1853,7 +1909,8 @@ def main():
                m70_the_degree_and_plus_swap, m71_a_perfect_fifth_gains_no_mark,
                m72_violet_returns_to_a_published_page,
                m73_the_crossing_is_no_longer_refused, m74_the_row_names_itself_from_a_second_list,
-               m75_the_walk_sounds_standard_under_drop_D)
+               m75_the_walk_sounds_standard_under_drop_D,
+               m76_the_global_step_clamps, m77_shape_is_read_before_exact, m78_a_second_spelling_override_creeps_in)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__
@@ -1869,7 +1926,7 @@ def main():
     build()
     r = suite()
     green = r.returncode == 0
-    log_line("\nreverted and rebuilt: suite %s" % ("GREEN" if green else "RED — SOURCES MAY BE DIRTY"))
+    log_line("\nreverted and rebuilt: suite %s" % ("GREEN" if green else "RED — SOURCES MAY BE DIRTY: %s" % fail_lines(r)))
     bad = [n for ok, n, _ in results if not ok]
     log_line("%d/%d mutations behaved as required" % (len(results) - len(bad), len(results)))
     log_line(f"log: {LOG['path']}")

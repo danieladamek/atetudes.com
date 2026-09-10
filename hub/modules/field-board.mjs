@@ -37,8 +37,7 @@
  * keep their mutation proofs (bite 10–15).
  */
 import { field, notesOn, OPEN_MIDI, STRINGS } from "../../engine/field.mjs";
-import { openStringName } from "../../engine/open-string.mjs";
-import { NAMED_TUNINGS, nameOf, canStep, stepped, totalOffsets, STANDARD_NAME } from "../../engine/tunings.mjs";
+import { NAMED_TUNINGS, nameOf, readTuning, describeTuning, openLabel, canStep, stepped, canStepAll, steppedAll, totalOffsets, STANDARD_NAME } from "../../engine/tunings.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
@@ -110,7 +109,7 @@ export const fieldBoard = {
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
     "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode",
-    "fdTuning", "fdTuneNames", "fdTuneName"],
+    "fdTuning", "fdTuneNames", "fdTuneName", "fdTuneAll"],
 
   markup: `
   <!-- THE HEADER (260919, night 25 item 1 — ruled): the harmonic readout is
@@ -238,6 +237,7 @@ export const fieldBoard = {
       <span class="fd-lab2">tuning</span>
       <div class="fd-tuning" id="fdTuning" data-control="fdTuning"></div>
       <span class="fd-tunename" id="fdTuneName" data-control="fdTuneName"></span>
+      <span class="fd-tune fd-tuneall" id="fdTuneAll" data-control="fdTuneAll"></span>
     </div>
     <div class="fd-railrow fd-tunerow">
       <span class="fd-lab2">named</span>
@@ -299,7 +299,12 @@ export const fieldBoard = {
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
   border:1px solid var(--line);border-radius:6px;color:var(--ink)}
 .fd-lab2{font-size:12px;color:var(--gray)}
-.fd-tuning{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:flex-start}
+/* the cells (item 5, 261009): the between-cell gap was 10px against a 2px within-cell gap
+ * and still failed — a cell is ~98px and 10px is a third of one button, so the eye read an
+ * even run of boxes and bound each − to the nearest letter. Proximity has to beat rhythm at
+ * this scale: the between-cell gap is now most of a button; no ink (a divider would fight the
+ * wrap at 390 and add an object the strip does not need) — measured both ways, see the run note */
+.fd-tuning{display:flex;flex-wrap:wrap;gap:8px 26px;align-items:flex-start}
 .fd-tune{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
 .fd-tune .fd-tunectl{display:inline-flex;align-items:center;gap:2px}
 .fd-tune button{font:inherit;font-size:14px;line-height:1;min-width:30px;min-height:30px;padding:0;border:1px solid var(--line);
@@ -311,6 +316,10 @@ export const fieldBoard = {
 .fd-tune .fd-tunestr{font-size:10.5px;color:var(--gray)}
 .fd-tune .fd-tunewhy{font-size:11px;color:var(--gray);max-width:150px;text-align:center;min-height:0}
 .fd-tunename{font-size:12.5px;font-weight:600;color:var(--ink)}
+.fd-tunename[data-shift]:not([data-shift="0"]):not([data-shift=""]){font-weight:500}
+.fd-tuneall{margin-left:14px}
+.fd-tuneall .fd-open{font-size:11.5px;font-weight:500;color:var(--gray)}
+#fdTuneNames button[data-shifted="true"]{border-style:dashed}
 /* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
  * Repeat, sharing the mixer's column (margin-left:auto, the same 380px
  * basis) so it sits ABOVE the harmony and bass sliders. Card edge, not
@@ -413,7 +422,12 @@ export const fieldBoard = {
      * A step that would cross a neighbour or leave the window is inert (aria-disabled, the
      * reason in its title) and, when attempted, says why under the cell — there, not in a
      * toast. The named row is tunings.mjs's table, read forward by a click and backward by
-     * nameOf, which also lights the matching name. `standard` is one click from anywhere. */
+     * nameOf, which also lights the matching name. `standard` is one click from anywhere.
+     * THE 261009 INJECTION: a GLOBAL pair after the name moves all six from where they are
+     * (canStepAll — refused whole, naming the string that ran out); the name field reads
+     * exact-first then by shape ("drop D, a whole step down" — describeTuning, the one wording;
+     * the shape-matched name's button wears data-shifted and the same words in its title);
+     * a label prefers the name's own spelling on an exact match (openLabel — open D's F♯). */
     let tuneWhy = {};   // string → the reason shown under its cell after an attempt
     const he = (t, a, parent) => { const e = d.createElement(t); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };   // an HTML element (the board's `el` is SVG)
     const setTuning = (next) => {
@@ -444,26 +458,46 @@ export const fieldBoard = {
           if (dir < 0) {
             const name = he("span", { class: "fd-open", "data-string": s, "data-moved": t[s] !== 0 ? "true" : "false",
               "data-offset": t[s] }, ctl);
-            name.textContent = openStringName(opens[s], OPEN_MIDI[s]);
+            name.textContent = openLabel(cfg.tuning, s);   // the name's own spelling on an exact match, else the direction rule
           }
         }
         const under = he("span", { class: "fd-tunestr" }, cell);
         under.textContent = `string ${s}` + (t[s] ? ` ${t[s] > 0 ? "+" : ""}${t[s]}` : "");
         if (tuneWhy[s]) { const why = he("span", { class: "fd-tunewhy", "data-role": "refusal", "data-string": s }, cell); why.textContent = tuneWhy[s]; }
       }
-      const current = nameOf(cfg.tuning);
-      nameEl.textContent = current || "";
-      nameEl.setAttribute("data-named", current ? "true" : "false");
-      const std = he("button", { type: "button", "data-tuning": STANDARD_NAME, class: current === STANDARD_NAME ? "on" : "",
-        title: "every string back to standard" }, names);
-      std.textContent = STANDARD_NAME;
-      std.addEventListener("click", () => setTuning(null));
-      for (const n of NAMED_TUNINGS) {
-        const b = he("button", { type: "button", "data-tuning": n.name, class: current === n.name ? "on" : "",
-          title: `retune to ${n.name}: ${STRINGS.map((s) => openStringName(OPEN_MIDI[s] + (n.offsets[s] || 0), OPEN_MIDI[s])).join(" ")}` }, names);
-        b.textContent = n.name;
-        b.addEventListener("click", () => setTuning(n.offsets));
+      const current = nameOf(cfg.tuning), reading = readTuning(cfg.tuning), said = describeTuning(cfg.tuning);
+      nameEl.textContent = said;
+      nameEl.setAttribute("data-named", reading ? "true" : "false");
+      nameEl.setAttribute("data-shift", reading ? String(reading.shift) : "");
+      const shiftedFrom = reading && reading.shift !== 0 ? reading.name : null;
+      const nameBtn = (name, offsets, title) => {
+        const b = he("button", { type: "button", "data-tuning": name, class: current === name ? "on" : "",
+          "data-shifted": shiftedFrom === name ? "true" : "false",
+          title: shiftedFrom === name ? `${said} — back to ${name}` : title }, names);
+        b.textContent = name;
+        b.addEventListener("click", () => setTuning(offsets));
+      };
+      nameBtn(STANDARD_NAME, null, "every string back to standard");
+      for (const n of NAMED_TUNINGS)
+        nameBtn(n.name, n.offsets, `retune to ${n.name}: ${STRINGS.map((s) => openLabel(n.offsets, s)).join(" ")}`);
+      // THE GLOBAL PAIR: all six together, from where they are
+      const all = byId("fdTuneAll"); all.textContent = "";
+      const actl = he("span", { class: "fd-tunectl" }, all);
+      for (const dir of [-1, 1]) {
+        const r = canStepAll(cfg.tuning, dir);
+        const b = he("button", { type: "button", "data-string": "all", "data-step": dir > 0 ? "up" : "down",
+          "aria-label": `all strings ${dir > 0 ? "up" : "down"} a semitone`, "aria-disabled": r.ok ? "false" : "true",
+          title: r.ok ? `all strings ${dir > 0 ? "up" : "down"} a semitone` : r.reason }, actl);
+        b.textContent = dir > 0 ? "+" : "−";
+        b.addEventListener("click", () => {
+          const rr = canStepAll(cfg.tuning, dir);
+          if (!rr.ok) { tuneWhy = { all: rr.reason }; paintTuning(); return; }   // refused whole, and says which string
+          setTuning(steppedAll(cfg.tuning, dir));
+        });
+        if (dir < 0) { const mark = he("span", { class: "fd-open", "data-string": "all", "data-moved": "false" }, actl); mark.textContent = "all"; }
       }
+      const under = he("span", { class: "fd-tunestr" }, all); under.textContent = "all strings";
+      if (tuneWhy.all) { const why = he("span", { class: "fd-tunewhy", "data-role": "refusal", "data-string": "all" }, all); why.textContent = tuneWhy.all; }
     };
 
     const build = () => {

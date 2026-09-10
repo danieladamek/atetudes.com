@@ -5435,6 +5435,16 @@ console.log(JSON.stringify(out));
               and page.query_selector('.fd-tune button[aria-disabled="true"]') is not None
               and page.query_selector('.fd-tune .fd-tunewhy') is not None,
               f"{tag} the tuning editor did not enter its state for the orphan check (moved / inert / refusal)")
+        # …and the injection's states (261009): a SHIFTED named tuning (drop D, one global step down —
+        # the name field's data-shift and the name button's data-shifted) — then a refused global step
+        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(60)
+        for _ in range(5):
+            page.click('#fdTuneAll button[data-step="down"]', force=True); page.wait_for_timeout(60)
+        check(page.query_selector('#fdTuneNames button[data-shifted="true"]') is not None
+              and page.query_selector('#fdTuneAll button[aria-disabled="true"]') is not None
+              and page.query_selector('#fdTuneAll .fd-tunewhy') is not None
+              and page.query_selector('.fd-tune .fd-open[data-moved="true"]') is not None,
+              f"{tag} the tuning editor did not enter the injection's states for the orphan check (shifted name / inert global / global refusal)")
         err_state_for_check = True
     # the clock stays RUNNING into the orphan check below: the lamp's live
     # classes are part of this door's DOM, and a check run against a stopped
@@ -5722,6 +5732,64 @@ console.log(JSON.stringify(out));
         page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
         if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") == "true":
             page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(200)
+
+    # ---------------- THE TUNING STRIP INJECTION (261009): a global stepper, the row's contents, the reading ----------
+    # Item 1 a global pair after the name moves all six from where they are, refused WHOLE at the
+    # window naming the string that ran out; item 2 the row is standard + six; item 3 all fourths
+    # derived; item 4 a shifted named tuning says so (exact first, then shape); item 5 the cells
+    # read as cells (spacing, measured); item 6 open D spells its F♯ at its own name only.
+    if door_id == "multetudes":
+        check("fdTuneAll" in r["controlsPresent"], f"{tag} the global stepper is not in the partition")
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
+        rd = lambda: page.evaluate("""() => ({ letters: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent), offsets: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => +e.dataset.offset),
+          name: document.getElementById('fdTuneName').textContent, shift: document.getElementById('fdTuneName').dataset.shift,
+          lit: [...document.querySelectorAll('#fdTuneNames button.on')].map(b => b.textContent), shifted: [...document.querySelectorAll('#fdTuneNames button[data-shifted="true"]')].map(b => [b.textContent, b.title]),
+          why: [...document.querySelectorAll('[data-role="refusal"]')].map(e => [e.dataset.string, e.textContent]), row: [...document.querySelectorAll('#fdTuneNames button')].map(b => b.textContent),
+          inert: [...document.querySelectorAll('#fdTuneAll button')].map(b => b.getAttribute('aria-disabled')) })""")
+        r0 = rd()
+        check(r0["row"] == ["standard", "drop D", "DADGAD", "open G", "open D", "open E", "all fourths"], f"{tag} the named row's contents are not the seven ruled: {r0['row']}")
+        sizes_all = page.evaluate("() => [...document.querySelectorAll('#fdTuneAll button')].map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); })")
+        check(len(sizes_all) == 2 and min(sizes_all) >= 28, f"{tag} the global stepper is smaller than a touch target: {sizes_all}")
+        between = page.evaluate("() => { const c = [...document.querySelectorAll('#fdTuning .fd-tune')].map(e => e.getBoundingClientRect()); return Math.round(c[1].left - c[0].right); }")
+        check(between >= 20, f"{tag} the cells sit {between}px apart — item 5 measured 10px as too close to read as cells")
+        # item 1: a partial tuning transposes as a unit; the window refuses WHOLE, naming string 6
+        for _ in range(4): page.click('#fdTuning .fd-tune[data-string="6"] button[data-step="down"]'); page.wait_for_timeout(80)
+        for _ in range(2): page.click('#fdTuneAll button[data-step="down"]'); page.wait_for_timeout(100)
+        r1 = rd()
+        check(r1["offsets"] == [-6, -2, -2, -2, -2, -2] and r1["letters"] == ["B♭", "G", "C", "F", "A", "D"], f"{tag} two global steps did not transpose the partial tuning as a unit: {r1}")
+        check(r1["inert"][0] == "true" and r1["inert"][1] == "false", f"{tag} the third global step down is not inert (or up is): {r1['inert']}")
+        page.click('#fdTuneAll button[data-step="down"]', force=True); page.wait_for_timeout(100)
+        r2 = rd()
+        check(r2["offsets"] == r1["offsets"], f"{tag} a refused global step moved something — a clamp: {r2['offsets']}")
+        check(len(r2["why"]) == 1 and r2["why"][0][0] == "all" and "string 6" in r2["why"][0][1] and "bind" not in r2["why"][0][1].lower(), f"{tag} the global refusal does not name the string that ran out, where the move was attempted: {r2['why']}")
+        # item 4: drop D two global steps down names itself — item 2 lost nothing
+        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(100)
+        for _ in range(2): page.click('#fdTuneAll button[data-step="down"]'); page.wait_for_timeout(100)
+        r3 = rd()
+        check(r3["name"] == "drop D, a whole step down" and r3["shift"] == "-2" and r3["lit"] == [] and r3["shifted"] and r3["shifted"][0][0] == "drop D" and "drop D, a whole step down" in r3["shifted"][0][1],
+              f"{tag} drop D shifted down a whole step does not say so at the name and the name's button: {r3}")
+        check(r3["letters"] == ["C", "G", "C", "F", "A", "D"] and r3["offsets"] == [-4, -2, -2, -2, -2, -2], f"{tag} old drop C's letters/offsets — C G C F A D: {r3}")
+        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(100)
+        check(rd()["name"] == "drop D" and rd()["shift"] == "0", f"{tag} the shifted name's button did not bring the tuning back to its name")
+        # a uniform −1 from standard reads standard, a half step down (the retired half-step-down button, as a reading)
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(100)
+        page.click('#fdTuneAll button[data-step="down"]'); page.wait_for_timeout(100)
+        r4 = rd()
+        check(r4["name"] == "standard, a half step down" and r4["letters"] == ["E♭", "A♭", "D♭", "G♭", "B♭", "E♭"] and r4["lit"] == [] and r4["shifted"] == [["standard", r4["shifted"][0][1] if r4["shifted"] else ""]] , f"{tag} a uniform −1 does not read as standard shifted: {r4}")
+        # item 6 + the collision: open D reads F♯ at its name; one step up it reads by direction (G) and names itself shifted; two up IS open E, exact
+        page.click('#fdTuneNames button[data-tuning="open D"]'); page.wait_for_timeout(100)
+        r5 = rd(); check(r5["letters"] == ["D", "A", "D", "F♯", "A", "D"] and r5["name"] == "open D" and r5["lit"] == ["open D"], f"{tag} open D at its own name: {r5}")
+        page.click('#fdTuneAll button[data-step="up"]'); page.wait_for_timeout(100)
+        r6 = rd(); check(r6["letters"][3] == "G" and r6["name"] == "open D, a half step up", f"{tag} one global step from open D, string 3 must return to the direction rule and the name must say the shift: {r6}")
+        page.click('#fdTuneAll button[data-step="up"]'); page.wait_for_timeout(100)
+        r7 = rd(); check(r7["name"] == "open E" and r7["lit"] == ["open E"] and r7["shifted"] == [] and r7["letters"] == ["E", "B", "E", "G♯", "B", "E"], f"{tag} open D up a whole step IS open E, exact: {r7}")
+        page.click('#fdTuneNames button[data-tuning="open E"]'); page.wait_for_timeout(100)
+        for _ in range(2): page.click('#fdTuneAll button[data-step="down"]'); page.wait_for_timeout(100)
+        r8 = rd(); check(r8["name"] == "open D" and r8["letters"][3] == "F♯", f"{tag} open E down a whole step is open D, exact, spelling its F♯: {r8}")
+        # item 3: all fourths, one click — E A D G C F
+        page.click('#fdTuneNames button[data-tuning="all fourths"]'); page.wait_for_timeout(100)
+        r9 = rd(); check(r9["letters"] == ["E", "A", "D", "G", "C", "F"] and r9["offsets"] == [0, 0, 0, 0, 1, 1] and r9["name"] == "all fourths", f"{tag} all fourths: {r9}")
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

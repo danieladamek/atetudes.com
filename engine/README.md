@@ -25,7 +25,7 @@ working, not breaking. Document the contract beside the grep in the test file.
 engine/
 ├── chord.mjs            chord-symbol parser: string → structured chord; roman-numeral
 │                        parsing + key resolution (resolveRoman, scaleNotes) (pure)
-├── tunings.mjs          THE NAMED TUNINGS AND THE STEP (alternate tunings item 2): the one table
+├── tunings.mjs          THE NAMED TUNINGS, THE STEP AND THE GLOBAL STEP (alternate tunings item 2; the 261009 injection): the one table
 │                        (drop D · DADGAD · open G · open D · open E · half-step down ·
 │                        whole-step down · drop C) read both ways — nameOf compares offsets —
 │                        and canStep/stepped, the refusal at the point of the move (pure)
