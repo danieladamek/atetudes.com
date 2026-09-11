@@ -1,3 +1,14 @@
+## 2026-09-11 — DEPLOYED: night 50 live — the harness targeted; no study moved; written from the run
+
+- record: run 34576095631 · success · commit 9277a8c · fetched 2026-09-11T07:58Z · 6/6 studies byte-identical · digest 4a05a08967ed
+- Actions run 34576095631 green on `9277a8c` — https://github.com/danieladamek/atetudes.com/actions/runs/34576095631 (created 2026-09-11T07:48:11Z, finished 2026-09-11T07:58:06Z).
+- metronome: repo 42f2fd02ca47 · live 42f2fd02ca47 — matches.
+- modes-from-pentatonic-boxes: repo 03cedd9c7bb4 · live 03cedd9c7bb4 — matches.
+- multetudes: repo 42326517a259 · live 42326517a259 — matches.
+- tetrad-voice-leading: repo ae9c1b7d7cab · live ae9c1b7d7cab — matches.
+- tetradetudes: repo 8a1214d04533 · live 8a1214d04533 — matches.
+- triadetudes: repo b3b658db02e7 · live b3b658db02e7 — matches.
+
 ## 2026-09-11 — Night 50: the bite harness is the night — the split measured, the gate targeted by reach, the scratch-file class closed; no study moved
 
 - **Why (the item, and Daniel's 261010 sequencing):** the mutation chain had become the whole
