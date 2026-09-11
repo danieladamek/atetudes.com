@@ -519,3 +519,33 @@ test("260918-1: the octave tie — an absolute-degree approach equally near in t
   const r2 = orderBy("tones", "(b3)[3]", dm, { fld, strings, pos });
   assert.match(r2.err, /no playable position/, "Dm7's 3rd F3: D♭ 4 below is nearest and unfrettable, 8 above is not equally near — refused by name, never silently re-octaved");
 });
+
+/* ---------------- injection 261011c: a dropped role is not "not there" ---------------- */
+test("THE FIGURE NAMES THE CAUSE AND THE WAY THROUGH when a role the placement DROPPED is asked for — never 'this selection carries no 5th' while the 5 sits on the string", () => {
+  // Daniel's state: Bb Ionian, ONE string, up to three notes on it, four tones — the 5 leaves by the grip rule
+  const fld = field({ key: "Bb", scale: "major" });
+  const pos = positionOf({ field: fld, anchorString: 1, startDegree: 4, nearFret: 3, strings: [1] });
+  const pool = materialIn(pos, [1], fld);
+  const tones = diatonicTones(fld, 0, [0, 2, 4, 6]);          // R 3 5 7 of Bbmaj7
+  const fit = gripFit(tones, 1 * 3);                          // one string × three notes
+  assert.deepEqual(fit.dropped, ["5"], "the grip rule drops the 5, last of the droppables");
+  const r = oneOfEach(fit.tones, pool, { n: 3, centre: pos.centre });
+  assert.ok(r.notes && r.notes.length === 3, "R 3 7 place on the one string");
+  assert.ok(pool.some((x) => x.role === "5" || fld.degOf(x.midi) === 4), "…and the 5 IS in the pool — on the string, in front of the player");
+  const fig = orderBy("tones", "R-3-7-5", r.notes, { fld, strings: [1], pos, absent: { dropped: fit.dropped, kept: r.notes.map((x) => x.role), notesPer: 3, strings: 1 } });
+  assert.equal(fig.order, null, "the figure still refuses — the 5 was not placed");
+  assert.ok(!/carries no 5th/.test(fig.err), `the refusal must not report the consequence as the cause: ${fig.err}`);
+  assert.match(fig.err, /5th/, "it names the role");
+  assert.match(fig.err, /one string|a single string/, "…the cause: the set holds one string");
+  assert.match(fig.err, /R, 3 and 7|R 3 7/, "…which already carries R, 3 and 7");
+  assert.match(fig.err, /second string|another string|one more string/, "…and the way through, derived");
+  assert.ok(!/Line|Grip|checkbox|button/.test(fig.err), "rule 14: no caption");
+  // three tones on the one string: nothing dropped, no refusal at all — the cap is the trigger
+  const three = gripFit(diatonicTones(fld, 0, [0, 2, 6]), 3);
+  assert.deepEqual(three.dropped, []);
+  const r3 = oneOfEach(three.tones, pool, { n: 3, centre: pos.centre });
+  assert.ok(!orderBy("tones", "R-3-7", r3.notes, { fld, strings: [1], pos, absent: { dropped: [], kept: r3.notes.map((x) => x.role), notesPer: 3, strings: 1 } }).err, "three tones on the one string: no refusal — the cap is the trigger");
+  // a role genuinely absent from the chord (a 9 asked of a tetrad) still says so, unchanged
+  const nine = orderBy("tones", "R-9", r3.notes, { fld, strings: [1], pos, absent: { dropped: [], kept: ["R", "3", "7"], notesPer: 3, strings: 1 } });
+  assert.match(nine.err, /9th/);
+});

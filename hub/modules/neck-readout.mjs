@@ -83,7 +83,7 @@ export const neckReadout = {
         const prog = progressionOf(cfg, cfg.key, cfg.scale);
         if (index >= prog.chords.length) index = 0;
         const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-        let sel = [], msg = "", absences = [];
+        let sel = [], msg = "", absences = [], absent = null;   // absent: what the placement dropped (261011c)
         if (prog.err) absences.push(prog.err);
         /* THE GAMUT (night 48) — the readout's sentence, site two of three (rule 10): what the
          * material is drawn from, and the rule's own refusal after a scale change (the degrees
@@ -102,6 +102,7 @@ export const neckReadout = {
             ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
             : oneOfEach(roFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
           sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
+          absent = { dropped: [...roFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
           if (roFit.dropped.length)
             absences.push(`the ${roFit.dropped.join(", ")} dropped by the grip rule — `
               + `${run.strings.length * cfg.notesPer} slots carry `
@@ -204,9 +205,10 @@ export const neckReadout = {
          * hint; the readout never mentioned it): derived here through the same
          * orderBy the neck uses, never read from the neck */
         if (String(cfg.figure || "").trim()) {
-          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos });   // 260923: the window, for the approach reach
+          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
           if (fg.order && fg.order.length)
             bits.push(`figure <b>${fg.order.length} steps</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""})</span>`);
+          else if (fg.err) bits.push(`<span style="color:#B82929">figure: ${fg.err}</span>`);   // the refusal reaches the readout too (rule 10, 261011c)
         }
         /* THE REFERENCE, fretted and NAMED (child 5): the readout says what
          * the stack becomes over it — R19's sentence. The name arrives from

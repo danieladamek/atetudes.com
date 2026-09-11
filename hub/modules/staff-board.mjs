@@ -117,10 +117,13 @@ export const staffBoard = {
           return { notes: cfg.centreSrc === "follows" && cDeg != null
             ? reRead(scaleSel, cDeg) : scaleSel };
         }
+        const fit = cfg.take === "all" ? { tones: c.tones, dropped: [] } : gripFit(c.tones, run.strings.length * cfg.notesPer);
         const r = cfg.take === "all"
           ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(gripFit(c.tones, run.strings.length * cfg.notesPer).tones,
-              pool, { n: cfg.notesPer, centre: pos.centre });
+          : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+        /* what the placement dropped, for the figure's refusal in every bar (261011c) */
+        r.absent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: (r.notes || r.partial || []).map((x) => x.role),
+          strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
         return r;
       };
 
@@ -179,7 +182,7 @@ export const staffBoard = {
        * figure resolves against EACH bar's own selection, exactly as the
        * walk will sound it when the bar arrives. A bar whose selection
        * cannot honour it prints the refusal in the bar. */
-      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos }));   // 260923: the window, for the approach reach
+      const figs = sels.map((sl, i) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos, absent: rs[i].absent || null }));   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
       for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role));

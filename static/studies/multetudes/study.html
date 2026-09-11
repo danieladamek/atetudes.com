@@ -5511,6 +5511,36 @@ function offersOn(notes) {
  * Errors are VALUES, loud on the face, never throws: the surface owes the
  * user the reason, not a dead console.
  */
+/** THE DROPPED ROLE'S SENTENCE (injection 261011c — a live wrong answer): a role the PLACEMENT
+ * dropped is not "not there". Daniel, on one string with up to three notes on it and four tones,
+ * read "this selection carries no 5th" while the 5 sat on the string in front of him. The
+ * placement layer already knew (gripFit's `dropped`, oneOfEach's `dropped` + `resolvesAt`,
+ * everyOccurrence's `capped`); this is the one sentence that reaches it — the CAUSE, and the WAY
+ * THROUGH derived from the numbers (rule 14: no control is named; the cap is said as what it
+ * is, notes on a string). `absent` = { dropped, kept, strings, notesPer, resolvesAt? }. */
+function droppedRoleSentence(role, absent) {
+  const word = role === 1 ? "root" : role + ({ 3: "rd" }[role] || "th");   // the role's word, as orderBy spells it
+  const RANK = ["R", "3", "5", "7", "9", "11", "13"];   // said in role order, as the neck's own drop sentence says them
+  const kept = [...(absent.kept || [])].map(String).sort((a, b) => RANK.indexOf(a) - RANK.indexOf(b));
+  const keptList = kept.length <= 1 ? kept.join("") : kept.slice(0, -1).join(", ") + " and " + kept[kept.length - 1];
+  const strings = absent.strings || 1, cap = absent.notesPer || 1;
+  const need = kept.length + (absent.dropped || []).length;
+  const capWord = (n) => (n === 1 ? "one note" : n === 2 ? "two notes" : n === 3 ? "three notes" : `${n} notes`);
+  const cause = `the ${word} could not be placed — the set holds ${strings === 1 ? "one string" : strings + " strings"}, `
+    + `up to ${capWord(cap)} on ${strings === 1 ? "it" : "each"}, and ${strings === 1 ? "it" : "they"} already carr${strings === 1 ? "ies" : "y"} ${keptList}`;
+  let escape;
+  if (Number.isInteger(absent.resolvesAt) && absent.resolvesAt > cap) escape = `${capWord(absent.resolvesAt)} on a string would carry it`;
+  else {
+    const capNeeded = Math.ceil(need / strings);
+    if (capNeeded <= 3 && capNeeded > cap) escape = `${capWord(capNeeded)} on a string would carry it`;
+    else {
+      const more = Math.ceil(need / 3) - strings;
+      escape = more === 1 ? "a second string would carry it" : more > 1 ? `${more} more strings would carry it` : null;
+    }
+  }
+  return cause + (escape ? ` — ${escape}` : " — no cap or set this neck offers would carry it");
+}
+
 function orderBy(address, text, notes, ctx) {
   const raw = String(text || "").toUpperCase();
   /* THE APPROACH NOTE (260918, night 24 — CR-1 ruled it, Design Spec §2.6
@@ -5605,8 +5635,14 @@ function orderBy(address, text, notes, ctx) {
       if (!"R357".includes(tok) || tok.length > 1)
         return { order: null, err: `${wordOf(tok)}s live in the SCALE box — a chord selection carries R, 3, 5, 7` };
       const hit = notes.find((n) => n.role === tok);
-      if (!hit)
+      if (!hit) {
+        /* a role the PLACEMENT dropped is not absent from the chord: the cause and the way
+         * through (injection 261011c); a role the chord does not hold reads as before */
+        const ab = ctx && ctx.absent;
+        if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(tok))
+          return { order: null, err: droppedRoleSentence(tok === "R" ? 1 : Number(tok), ab) };
         return { order: null, err: `this selection carries no ${wordOf(tok)}` };
+      }
       order.push(hit);
     }
   }
@@ -5666,7 +5702,14 @@ function orderWithApproaches(text, notes, ctx) {
     } else {
       const role = t.deg === 1 ? "R" : String(t.deg);
       target = notes.find((n) => n.role === role);
-      if (!target) return { order: null, err: `this selection carries no ${wordOf(t.deg)}` };
+      if (!target) {
+        /* a role the PLACEMENT dropped is not absent from the chord — say the cause and the way
+         * through (injection 261011c); a role the chord does not hold reads as before */
+        const ab = ctx && ctx.absent;
+        if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(role))
+          return { order: null, err: droppedRoleSentence(t.deg, ab) };
+        return { order: null, err: `this selection carries no ${wordOf(t.deg)}` };
+      }
     }
     const shift = target.deg == null ? 0 : (((target.deg - fld.degOf(target.midi)) % 7) + 7) % 7;
     for (const it of fig.approaches) {
@@ -5801,7 +5844,7 @@ function bracketOf(order) {
   if (dy.tones.length !== 1 || dy.absent.join() !== "7")
     throw new Error("selection: a dyad's 7 on a plain triad must be ABSENT BY NAME, never silently narrowed");
 }
-return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, gripFit, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, orderBy, bracketOf };
+return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, gripFit, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, orderBy, bracketOf };
 })();
 
 /* ===== engine/atchart.mjs ===== */
@@ -7205,7 +7248,7 @@ const etudeWalk = {
       const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
-      let sel = [];
+      let sel = [], walkAbsent = null;   // walkAbsent: what the placement dropped, for the figure's refusal (261011c)
       const refDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
         : cur.degree;
@@ -7225,6 +7268,7 @@ const etudeWalk = {
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
+        walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
       }
       /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
        * ruling, 260904). His own ratification is the reason: the reference
@@ -7246,7 +7290,7 @@ const etudeWalk = {
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
        * the bracket and the polyline draw — or the take's own shape */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos });   // 260923: the window, for the approach reach
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       /* 260905, the coupling severed: Take chooses the MATERIAL, the rail's
        * Movement control chooses together-or-sequence (a scale stays a run —
        * the box has no chord to sound as one). A typed figure sequences
@@ -8752,6 +8796,7 @@ const fieldBoard = {
       if (index >= prog.chords.length) index = 0;
       const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
       let sel = [], selMsg = "", lossMsg = "";   // lossMsg: the sentence that goes ON THE WINDOW when something is wrong with what was placed (260923)
+      let absent = null;   // what the placement dropped, for the figure's refusal (injection 261011c)
       if (prog.err) selMsg = prog.err;
       const fdRefDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
@@ -8771,6 +8816,8 @@ const fieldBoard = {
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(fdFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: the PARTIAL draws beside the refusal (ruling 3)
+        absent = { dropped: [...fdFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role),
+          strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
         const parts = [];
         if (fdFit.dropped.length)
           parts.push(`the ${fdFit.dropped.join(", ")} dropped by the grip rule — `
@@ -8913,7 +8960,7 @@ const fieldBoard = {
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
        * slur is drawn UNDER the dots (the under-draw convention) */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos });   // 260923: the window, for the approach reach
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const approaches = (fig.order || []).filter((n) => n.role === "approach");
       /* §2.6 "Connection. An approach figure joins its target with a slur in
        * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */
@@ -9835,7 +9882,10 @@ const harmonyCard = {
         const sel = byId("hcGamut"); byId("hcGamutLab").textContent = LEXICON.gamut.caption;
         const fld = field({ key: cfg.key, scale: cfg.scale });
         const letter = (deg) => fld.notes[deg].name;
-        const has = (degs) => Array.isArray(cfg.gamut) && degs.every((x) => cfg.gamut.includes(x + 1));
+        /* LIT by containment — and null, the whole field, contains every degree, so an option that
+         * IS the whole field lights exactly when no gamut is set (injection 261011c, item 3): by its
+         * degree count, never by its index or its words (rule 12) */
+        const has = (degs) => cfg.gamut == null ? degs.length === 7 : degs.every((x) => cfg.gamut.includes(x + 1));
         sel.textContent = "";
         const group = (label, items) => {
           const g = d.createElement("optgroup"); g.label = label;
@@ -9847,6 +9897,18 @@ const harmonyCard = {
           }
           sel.appendChild(g);
         };
+        /* THE WAY BACK (injection 261011c, item 3 — Daniel: "no obvious deselect"): ONE option,
+         * first, above every group, that IS the whole field. It carries all seven degrees, so a
+         * plain click (it alone) and a modifier-click (added to the union) both reach seven, which
+         * normalizeGamut already reads as null — the whole field, by the rule that exists. A
+         * STOPGAP: the control's own shape is night 54's; nothing else here changes. */
+        {
+          const all = [0, 1, 2, 3, 4, 5, 6];
+          const o = d.createElement("option"); o.value = all.map((x) => x + 1).join(",");
+          o.textContent = `the whole field — ${all.map((x) => x + 1).join(" ")} of ${letter(0)}`;
+          o.selected = has(all); o.setAttribute("data-role", "whole-field");
+          sel.appendChild(o);
+        }
         const pents = pentatonics(cfg.scale);
         group("pentatonics", pents.length
           ? pents.map((p) => ({ degrees: p.degrees, label: describeGamut(p.degrees.map((x) => x + 1), fld) }))
@@ -10749,7 +10811,7 @@ const neckReadout = {
         const prog = progressionOf(cfg, cfg.key, cfg.scale);
         if (index >= prog.chords.length) index = 0;
         const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-        let sel = [], msg = "", absences = [];
+        let sel = [], msg = "", absences = [], absent = null;   // absent: what the placement dropped (261011c)
         if (prog.err) absences.push(prog.err);
         /* THE GAMUT (night 48) — the readout's sentence, site two of three (rule 10): what the
          * material is drawn from, and the rule's own refusal after a scale change (the degrees
@@ -10768,6 +10830,7 @@ const neckReadout = {
             ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
             : oneOfEach(roFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
           sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
+          absent = { dropped: [...roFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
           if (roFit.dropped.length)
             absences.push(`the ${roFit.dropped.join(", ")} dropped by the grip rule — `
               + `${run.strings.length * cfg.notesPer} slots carry `
@@ -10870,9 +10933,10 @@ const neckReadout = {
          * hint; the readout never mentioned it): derived here through the same
          * orderBy the neck uses, never read from the neck */
         if (String(cfg.figure || "").trim()) {
-          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos });   // 260923: the window, for the approach reach
+          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
           if (fg.order && fg.order.length)
             bits.push(`figure <b>${fg.order.length} steps</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""})</span>`);
+          else if (fg.err) bits.push(`<span style="color:#B82929">figure: ${fg.err}</span>`);   // the refusal reaches the readout too (rule 10, 261011c)
         }
         /* THE REFERENCE, fretted and NAMED (child 5): the readout says what
          * the stack becomes over it — R19's sentence. The name arrives from
@@ -13486,10 +13550,13 @@ const staffBoard = {
           return { notes: cfg.centreSrc === "follows" && cDeg != null
             ? reRead(scaleSel, cDeg) : scaleSel };
         }
+        const fit = cfg.take === "all" ? { tones: c.tones, dropped: [] } : gripFit(c.tones, run.strings.length * cfg.notesPer);
         const r = cfg.take === "all"
           ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(gripFit(c.tones, run.strings.length * cfg.notesPer).tones,
-              pool, { n: cfg.notesPer, centre: pos.centre });
+          : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+        /* what the placement dropped, for the figure's refusal in every bar (261011c) */
+        r.absent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: (r.notes || r.partial || []).map((x) => x.role),
+          strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
         return r;
       };
 
@@ -13548,7 +13615,7 @@ const staffBoard = {
        * figure resolves against EACH bar's own selection, exactly as the
        * walk will sound it when the bar arrives. A bar whose selection
        * cannot honour it prints the refusal in the bar. */
-      const figs = sels.map((sl) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos }));   // 260923: the window, for the approach reach
+      const figs = sels.map((sl, i) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos, absent: rs[i].absent || null }));   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
       for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role));
@@ -14453,7 +14520,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.3","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.4","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

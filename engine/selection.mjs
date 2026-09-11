@@ -627,6 +627,36 @@ export function offersOn(notes) {
  * Errors are VALUES, loud on the face, never throws: the surface owes the
  * user the reason, not a dead console.
  */
+/** THE DROPPED ROLE'S SENTENCE (injection 261011c — a live wrong answer): a role the PLACEMENT
+ * dropped is not "not there". Daniel, on one string with up to three notes on it and four tones,
+ * read "this selection carries no 5th" while the 5 sat on the string in front of him. The
+ * placement layer already knew (gripFit's `dropped`, oneOfEach's `dropped` + `resolvesAt`,
+ * everyOccurrence's `capped`); this is the one sentence that reaches it — the CAUSE, and the WAY
+ * THROUGH derived from the numbers (rule 14: no control is named; the cap is said as what it
+ * is, notes on a string). `absent` = { dropped, kept, strings, notesPer, resolvesAt? }. */
+export function droppedRoleSentence(role, absent) {
+  const word = role === 1 ? "root" : role + ({ 3: "rd" }[role] || "th");   // the role's word, as orderBy spells it
+  const RANK = ["R", "3", "5", "7", "9", "11", "13"];   // said in role order, as the neck's own drop sentence says them
+  const kept = [...(absent.kept || [])].map(String).sort((a, b) => RANK.indexOf(a) - RANK.indexOf(b));
+  const keptList = kept.length <= 1 ? kept.join("") : kept.slice(0, -1).join(", ") + " and " + kept[kept.length - 1];
+  const strings = absent.strings || 1, cap = absent.notesPer || 1;
+  const need = kept.length + (absent.dropped || []).length;
+  const capWord = (n) => (n === 1 ? "one note" : n === 2 ? "two notes" : n === 3 ? "three notes" : `${n} notes`);
+  const cause = `the ${word} could not be placed — the set holds ${strings === 1 ? "one string" : strings + " strings"}, `
+    + `up to ${capWord(cap)} on ${strings === 1 ? "it" : "each"}, and ${strings === 1 ? "it" : "they"} already carr${strings === 1 ? "ies" : "y"} ${keptList}`;
+  let escape;
+  if (Number.isInteger(absent.resolvesAt) && absent.resolvesAt > cap) escape = `${capWord(absent.resolvesAt)} on a string would carry it`;
+  else {
+    const capNeeded = Math.ceil(need / strings);
+    if (capNeeded <= 3 && capNeeded > cap) escape = `${capWord(capNeeded)} on a string would carry it`;
+    else {
+      const more = Math.ceil(need / 3) - strings;
+      escape = more === 1 ? "a second string would carry it" : more > 1 ? `${more} more strings would carry it` : null;
+    }
+  }
+  return cause + (escape ? ` — ${escape}` : " — no cap or set this neck offers would carry it");
+}
+
 export function orderBy(address, text, notes, ctx) {
   const raw = String(text || "").toUpperCase();
   /* THE APPROACH NOTE (260918, night 24 — CR-1 ruled it, Design Spec §2.6
@@ -721,8 +751,14 @@ export function orderBy(address, text, notes, ctx) {
       if (!"R357".includes(tok) || tok.length > 1)
         return { order: null, err: `${wordOf(tok)}s live in the SCALE box — a chord selection carries R, 3, 5, 7` };
       const hit = notes.find((n) => n.role === tok);
-      if (!hit)
+      if (!hit) {
+        /* a role the PLACEMENT dropped is not absent from the chord: the cause and the way
+         * through (injection 261011c); a role the chord does not hold reads as before */
+        const ab = ctx && ctx.absent;
+        if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(tok))
+          return { order: null, err: droppedRoleSentence(tok === "R" ? 1 : Number(tok), ab) };
         return { order: null, err: `this selection carries no ${wordOf(tok)}` };
+      }
       order.push(hit);
     }
   }
@@ -782,7 +818,14 @@ function orderWithApproaches(text, notes, ctx) {
     } else {
       const role = t.deg === 1 ? "R" : String(t.deg);
       target = notes.find((n) => n.role === role);
-      if (!target) return { order: null, err: `this selection carries no ${wordOf(t.deg)}` };
+      if (!target) {
+        /* a role the PLACEMENT dropped is not absent from the chord — say the cause and the way
+         * through (injection 261011c); a role the chord does not hold reads as before */
+        const ab = ctx && ctx.absent;
+        if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(role))
+          return { order: null, err: droppedRoleSentence(t.deg, ab) };
+        return { order: null, err: `this selection carries no ${wordOf(t.deg)}` };
+      }
     }
     const shift = target.deg == null ? 0 : (((target.deg - fld.degOf(target.midi)) % 7) + 7) % 7;
     for (const it of fig.approaches) {

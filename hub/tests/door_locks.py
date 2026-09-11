@@ -5977,6 +5977,67 @@ console.log(JSON.stringify(out));
         check(gamut_of() == "2,3,5,6,7" and "D major pentatonic — 2 3 5 6 7 of G" in page.inner_text("#hcNote"), f"{tag} a gamut must survive a key change BY DEGREE: {gamut_of()!r} {page.inner_text('#hcNote')!r}")
         pick([]); page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
 
+    # ---------------- INJECTION 261011c: a dropped role is not "not there"; the Gamut's way back ----------
+    # Daniel's state: Bb Ionian, ONE string, up to three notes on it, arpeggiate, tones R,3,7,5, figure
+    # R-3-7-5 — the 5 leaves by the grip rule, and the figure's refusal must say the CAUSE and the way
+    # through, on the neck, in the readout, and the walk must sound exactly what draws (rule 10). With
+    # three tones there is no refusal: the cap is the trigger. Item 3: one option, first, that IS the
+    # whole field — a plain click and a modifier-click both land on the whole field, and it is lit there.
+    if door_id == "multetudes":
+        fig_note = lambda: page.inner_text("#fdFigNote")
+        readout = lambda: page.inner_text("#roLine")
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.click('#fdNSeg button[data-nps="3"]'); page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(120)
+        page.fill("#hcTones", "R,3,7,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
+        page.fill("#fdFigIn", "R-3-7-5"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(150)
+        for s_ in (4, 3, 2):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true":
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+        drawn = lambda: sorted(page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi)"))
+        roles = lambda: sorted(page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => (g.querySelector('text') || {}).textContent)"))
+        check(roles() == ["3", "7", "R"], f"{tag} the one string carries R 3 7 and the 5 is dropped by the grip rule: {roles()}")
+        check(page.evaluate("() => document.querySelectorAll('#fieldSvg [data-midi][data-str=\"1\"] text').length") > 0 and any(t == "5" for t in page.evaluate("() => [...document.querySelectorAll('#fieldSvg [data-midi][data-str=\"1\"] text')].map(t => t.textContent)")),
+              f"{tag} the 5 must be ON string 1 in the field — the whole point")
+        fn = fig_note()
+        check("carries no 5th" not in fn, f"{tag} the figure still reports the consequence as the cause: {fn!r}")
+        check("5th" in fn and "one string" in fn and "R, 3 and 7" in fn and "second string" in fn, f"{tag} the figure's refusal must name the cause and the way through: {fn!r}")
+        check(not any(w in fn for w in ("Line", "Grip", "checkbox", "button")), f"{tag} rule 14 — a caption in the refusal: {fn!r}")
+        ro = readout()
+        check("5th" in ro and "second string" in ro, f"{tag} the same refusal must reach the readout (rule 10): {ro[:300]!r}")
+        # the sounding path: the walk sounds exactly what draws — nothing silently missing beyond what the sentence names
+        page.evaluate("() => { window.__n = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass') window.__n.push(e.detail.midi); }); }")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); page.wait_for_timeout(300)
+        page.evaluate("() => { window.__n = []; }")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(2500)
+        sounded = sorted(set(page.evaluate("() => window.__n.slice()")))
+        check(sounded == drawn(), f"{tag} the walk must sound exactly what the neck draws under the refusal: drawn {drawn()}, sounded {sounded}")
+        # three tones: no drop, no refusal — the cap is the trigger
+        page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.fill("#fdFigIn", "R-3-7"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(200)
+        check("could not be placed" not in fig_note() and "carries no" not in fig_note(), f"{tag} with three tones on the one string nothing is refused: {fig_note()!r}")
+        # restore the boot state of this block's controls
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.fill("#hcTones", "R,3,5,7"); page.dispatch_event("#hcTones", "input")
+        page.click('#fdAddrSeg button[data-addr="pattern"]'); page.click('#fdMoveSeg button[data-move="strum"]'); page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(120)
+        for s_ in (4, 3, 2):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true":
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+        # ITEM 3 — the way back: the first option IS the whole field
+        gamut_of = lambda: page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
+        first = page.evaluate("() => { const o = document.querySelector('#hcGamut option'); return { role: o.dataset.role, value: o.value, text: o.textContent, selected: o.selected, first: o === document.getElementById('hcGamut').options[0] }; }")
+        check(first["role"] == "whole-field" and first["first"] and first["value"] == "1,2,3,4,5,6,7", f"{tag} the first option must be the whole field, by role: {first}")
+        check(first["selected"] and gamut_of() == "", f"{tag} with no gamut set the whole-field option must be LIT: {first} {gamut_of()!r}")
+        check("Gamut" not in first["text"] and "whole field" in first["text"], f"{tag} rule 14 / the app's own phrasing: {first['text']!r}")
+        page.select_option("#hcGamut", ["2,3,5,6,7"]); page.wait_for_timeout(250)
+        check(gamut_of() == "2,3,5,6,7" and not page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} with a pentatonic set the whole-field option must NOT be lit: {gamut_of()!r}")
+        # a PLAIN click on the first option: it alone → all seven → the whole field
+        page.click('#hcGamut option[data-role="whole-field"]'); page.wait_for_timeout(300)
+        check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} a plain click on the first option must land on the whole field and light it: {gamut_of()!r}")
+        # a MODIFIER click: added to the union → still all seven → the whole field
+        page.select_option("#hcGamut", ["1,2,4,5,6,7"]); page.wait_for_timeout(250); check(gamut_of() == "1,2,4,5,6,7", f"{tag} the pair set: {gamut_of()!r}")
+        page.click('#hcGamut option[data-role="whole-field"]', modifiers=["Meta"]); page.wait_for_timeout(300)
+        if gamut_of() != "":   # a modifier-click on an option is not honoured by every driver: the union itself is what the item asserts
+            page.select_option("#hcGamut", ["1,2,4,5,6,7", "1,2,3,4,5,6,7"]); page.wait_for_timeout(300)
+        check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} the whole-field option ADDED to a union must still land on the whole field: {gamut_of()!r}")
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

@@ -181,7 +181,10 @@ export const harmonyCard = {
         const sel = byId("hcGamut"); byId("hcGamutLab").textContent = LEXICON.gamut.caption;
         const fld = field({ key: cfg.key, scale: cfg.scale });
         const letter = (deg) => fld.notes[deg].name;
-        const has = (degs) => Array.isArray(cfg.gamut) && degs.every((x) => cfg.gamut.includes(x + 1));
+        /* LIT by containment — and null, the whole field, contains every degree, so an option that
+         * IS the whole field lights exactly when no gamut is set (injection 261011c, item 3): by its
+         * degree count, never by its index or its words (rule 12) */
+        const has = (degs) => cfg.gamut == null ? degs.length === 7 : degs.every((x) => cfg.gamut.includes(x + 1));
         sel.textContent = "";
         const group = (label, items) => {
           const g = d.createElement("optgroup"); g.label = label;
@@ -193,6 +196,18 @@ export const harmonyCard = {
           }
           sel.appendChild(g);
         };
+        /* THE WAY BACK (injection 261011c, item 3 — Daniel: "no obvious deselect"): ONE option,
+         * first, above every group, that IS the whole field. It carries all seven degrees, so a
+         * plain click (it alone) and a modifier-click (added to the union) both reach seven, which
+         * normalizeGamut already reads as null — the whole field, by the rule that exists. A
+         * STOPGAP: the control's own shape is night 54's; nothing else here changes. */
+        {
+          const all = [0, 1, 2, 3, 4, 5, 6];
+          const o = d.createElement("option"); o.value = all.map((x) => x + 1).join(",");
+          o.textContent = `the whole field — ${all.map((x) => x + 1).join(" ")} of ${letter(0)}`;
+          o.selected = has(all); o.setAttribute("data-role", "whole-field");
+          sel.appendChild(o);
+        }
         const pents = pentatonics(cfg.scale);
         group("pentatonics", pents.length
           ? pents.map((p) => ({ degrees: p.degrees, label: describeGamut(p.degrees.map((x) => x + 1), fld) }))

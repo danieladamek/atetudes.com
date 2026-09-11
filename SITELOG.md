@@ -1,3 +1,25 @@
+## 2026-09-11 — Injection 261011c: the figure names the cause and the way through; the Gamut's obvious way back — Multetudes v0.6.4
+
+- **Why (Daniel, 261011, in normal use):** on one string with up to three notes on it and four
+  tones, the figure said *this selection carries no 5th* while the 5 sat on the string in front of
+  him — the placement had dropped it by the grip rule and the resolver reported the consequence as
+  the cause. And the Gamut list had no obvious way back to the whole field.
+- **What changed:** `engine/selection.mjs` — the figure resolver reaches what the placement dropped
+  (gripFit's `dropped`, oneOfEach's `dropped` and `resolvesAt`, everyOccurrence's `capped`, carried
+  by every caller) and says the cause and the escape, derived from the numbers: *the 5th could not
+  be placed — the set holds one string, up to three notes on it, and it already carries R, 3 and 7
+  — a second string would carry it*; at the neck, in the readout, and the walk sounds exactly what
+  draws. A role the chord does not hold reads as before. The Field card's gamut list gains one
+  option, first, that is the whole field — lit whenever no gamut is set, and landing on the whole
+  field by a plain click or added to any union — a stopgap ahead of the control's own night. The
+  per-string cap is unchanged; whether it should bind under arpeggiate on a single string is put to
+  Daniel with a render.
+- **Verified:** engine 698/698 (the refusal's test red first), hub 12/12, the door gate 20,471/0
+  with Daniel's state replayed and the three sites asserted, m86–m87 biting singly, the bite chain
+  88/88, hugo and check_site clean, the n48 capture byte-identical with the first option lit;
+  rendered before and after and looked at (`notes/working/shots-261011c/`).
+- Report: `notes/working/Multetudes build run 261011c — the figure names the cause; the gamut's way back.md`.
+
 ## 2026-09-11 — DEPLOYED: night 50 live — the harness targeted; no study moved; written from the run
 
 - record: run 34576095631 · success · commit 9277a8c · fetched 2026-09-11T07:58Z · 6/6 studies byte-identical · digest 4a05a08967ed

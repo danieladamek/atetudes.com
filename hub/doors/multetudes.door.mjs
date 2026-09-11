@@ -177,7 +177,10 @@ export default {
      * snapshot keeps it, the file states it (.atchart v1.2), the import offers it, a restore brings it back. */
     /* v0.6.3 (261010, night 48 — the partial collection): GAMUT — a pentatonic, a triad pair, any
      * degree subset narrows what the window offers; the field stays seven; nothing chosen is the whole field. */
-    blurb: "one tool that holds many études · v0.6.3",
+    /* v0.6.4 (injection 261011c): a role the placement dropped is named as such by the figure — the cause and
+     * the way through, never "this selection carries no 5th" with the 5 on the string; the gamut list's
+     * first option is the whole field, the obvious way back (a stopgap; the control's own shape is night 54's). */
+    blurb: "one tool that holds many études · v0.6.4",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

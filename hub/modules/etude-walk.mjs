@@ -111,7 +111,7 @@ export const etudeWalk = {
       const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
       const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
-      let sel = [];
+      let sel = [], walkAbsent = null;   // walkAbsent: what the placement dropped, for the figure's refusal (261011c)
       const refDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
         : cur.degree;
@@ -131,6 +131,7 @@ export const etudeWalk = {
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
+        walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
       }
       /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
        * ruling, 260904). His own ratification is the reason: the reference
@@ -152,7 +153,7 @@ export const etudeWalk = {
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
        * the bracket and the polyline draw — or the take's own shape */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos });   // 260923: the window, for the approach reach
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       /* 260905, the coupling severed: Take chooses the MATERIAL, the rail's
        * Movement control chooses together-or-sequence (a scale stays a run —
        * the box has no chord to sound as one). A typed figure sequences

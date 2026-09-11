@@ -564,6 +564,7 @@ export const fieldBoard = {
       if (index >= prog.chords.length) index = 0;
       const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
       let sel = [], selMsg = "", lossMsg = "";   // lossMsg: the sentence that goes ON THE WINDOW when something is wrong with what was placed (260923)
+      let absent = null;   // what the placement dropped, for the figure's refusal (injection 261011c)
       if (prog.err) selMsg = prog.err;
       const fdRefDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
@@ -583,6 +584,8 @@ export const fieldBoard = {
           ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
           : oneOfEach(fdFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: the PARTIAL draws beside the refusal (ruling 3)
+        absent = { dropped: [...fdFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role),
+          strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
         const parts = [];
         if (fdFit.dropped.length)
           parts.push(`the ${fdFit.dropped.join(", ")} dropped by the grip rule — `
@@ -725,7 +728,7 @@ export const fieldBoard = {
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
        * slur is drawn UNDER the dots (the under-draw convention) */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos });   // 260923: the window, for the approach reach
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const approaches = (fig.order || []).filter((n) => n.role === "approach");
       /* §2.6 "Connection. An approach figure joins its target with a slur in
        * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */

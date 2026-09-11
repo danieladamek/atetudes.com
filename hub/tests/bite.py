@@ -1951,6 +1951,37 @@ def m85_the_omitted_role_places_quietly():
         p.write_text(original)
 
 
+def m86_the_figure_reports_the_consequence_again():
+    # the resolver stops reaching the placement's drop: "this selection carries no 5th" while the 5 sits on the string
+    p, original, mutated = patch("engine/selection.mjs",
+        "        if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(tok))\n          return { order: null, err: droppedRoleSentence(tok === \"R\" ? 1 : Number(tok), ab) };",
+        "        // (the drop not reached)")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/selection.test.mjs")
+        hit = "consequence as the cause" in (r.stdout + r.stderr)
+        record("the figure reports the consequence as the cause again — 'carries no 5th' with the 5 on the string",
+               r.returncode != 0 and hit, "selection exit %d; the cause-and-escape pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m87_the_whole_field_option_goes_dark():
+    # the lighting predicate forgets that null contains every degree: the first option is dark in the state it represents
+    p, original, mutated = patch("hub/modules/harmony-card.mjs",
+        "        const has = (degs) => cfg.gamut == null ? degs.length === 7 : degs.every((x) => cfg.gamut.includes(x + 1));",
+        "        const has = (degs) => Array.isArray(cfg.gamut) && degs.every((x) => cfg.gamut.includes(x + 1));")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "whole-field option must be LIT" in g.stdout
+        record("the whole-field option goes dark with no gamut set — the control shows nothing chosen while meaning the whole field",
+               g.returncode != 0 and hit, "suite exit %d; the lit pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -2074,7 +2105,8 @@ def main():
                m75_the_walk_sounds_standard_under_drop_D,
                m76_the_global_step_clamps, m77_shape_is_read_before_exact, m78_a_second_spelling_override_creeps_in,
                m79_the_snapshot_strips_the_tuning_again, m80_the_parser_passes_a_crossed_tuning_through, m81_the_shared_form_drops_the_tuning,
-               m82_the_predicate_ignores_the_gamut, m83_the_pentatonic_rule_admits_a_semitone, m84_a_restored_etude_acquires_a_gamut, m85_the_omitted_role_places_quietly)
+               m82_the_predicate_ignores_the_gamut, m83_the_pentatonic_rule_admits_a_semitone, m84_a_restored_etude_acquires_a_gamut, m85_the_omitted_role_places_quietly,
+               m86_the_figure_reports_the_consequence_again, m87_the_whole_field_option_goes_dark)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors
