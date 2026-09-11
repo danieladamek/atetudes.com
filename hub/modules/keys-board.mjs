@@ -56,7 +56,7 @@ export const keysBoard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, centreSrc: "fixed" };
     let index = 0;
@@ -113,7 +113,7 @@ export const keysBoard = {
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
-      const pool = materialIn(pos, run.strings, fld);
+      const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
       /* THE CURRENT BAR'S CHORD through the one derivation (child 7): the
        * progression owns which chord; chordAt owns what its tones are */
       const prog = progressionOf(cfg, cfg.key, cfg.scale);

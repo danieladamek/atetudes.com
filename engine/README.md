@@ -25,6 +25,7 @@ working, not breaking. Document the contract beside the grep in the test file.
 engine/
 ├── chord.mjs            chord-symbol parser: string → structured chord; roman-numeral
 │                        parsing + key resolution (resolveRoman, scaleNotes) (pure)
+├── gamut.mjs            THE PARTIAL COLLECTION (night 48): pentatonics by the anhemitonic rule, the seven triad pairs, stacks, any degrees — derived, never tabled; the predicate itself lives in position.mjs
 ├── tunings.mjs          THE NAMED TUNINGS, THE STEP AND THE GLOBAL STEP (alternate tunings item 2; the 261009 injection): the one table
 │                        (drop D · DADGAD · open G · open D · open E · half-step down ·
 │                        whole-step down · drop C) read both ways — nameOf compares offsets —

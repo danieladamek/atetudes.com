@@ -67,7 +67,7 @@ export const staffBoard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
       movement: "strum",
       address: "pattern", figure: "",
@@ -97,7 +97,7 @@ export const staffBoard = {
       const anchor = Math.max(...run.strings);
       const pos = positionOf({ field: fld, anchorString: anchor,
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
-      const pool = materialIn(pos, run.strings, fld);
+      const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
 
       /* THE PROGRESSION (child 7): every bar derived through the ONE
        * derivation; the per-bar selection through the same take the single

@@ -1,3 +1,30 @@
+## 2026-09-10 — Night 48: the partial collection — Gamut: pentatonics, triad pairs and any degree subset narrow the neck's offer; Multetudes v0.6.3
+
+- **Why (Daniel, 261006; ruled 261006 and 261008):** *"look at your pentatonics and your paired
+  triads in the context against each degree of the scale."* A collection drawn from INSIDE the
+  field — the field stays seven; a pentatonic from C major is five of the seven, and seeing which
+  two it leaves out is the teaching. The control is called Gamut (Daniel, 261008): the range of
+  notes available in a system, a musical idea in the model's own sentence, field → gamut →
+  position → object.
+- **What changed:** `engine/gamut.mjs` derives every collection from its rule — the anhemitonic
+  pentatonics per scale (four in major and melodic minor, none in harmonic minor, which refuses by
+  name), the seven stepwise triad pairs with the degree each omits (IV + V omits the 3), the stacks,
+  the degrees; nothing is tabled. `engine/position.mjs` applies the gamut as one predicate at
+  `materialIn`, the single site the window's offer is computed; the CR-1 throw is untouched.
+  Multetudes' Centricity card gains the Gamut list under Key · Scale · Object (the union of what is
+  chosen is the gamut; nothing chosen is the whole field); the neck, the readout and the hint say
+  what is lit, and refuse by name a role the gamut omits, a window it empties, and a pentatonic a
+  scale change no longer yields (the degrees stay in force). The pair reads `F + G`; the slash keeps
+  its one meaning. The stored key is `gamut` — degrees, absent meaning the whole field — and an
+  étude saved before tonight restores to the whole field. Silent: no audio in this item.
+- **The red-run:** with nothing chosen the page is byte-identical to before — the neck SVG, every
+  board's DOM, the readout, the neck's stylesheet and its rasterization — in twelve states.
+- **Verified:** engine 697/697, hub 12/12, the door gate 20,351/0, the bite chain 86/86 with four new
+  mutations (the predicate ignoring the gamut, the pentatonic rule admitting a semitone, a restored
+  étude acquiring a gamut, an omitted role placed quietly), hugo and check_site clean; rendered at
+  1280 and 390 on a served build and looked at (`notes/working/shots-261010b/`).
+- Report: `notes/working/Multetudes build run 261010b — night 48, the partial collection.md`.
+
 ## 2026-09-10 — DEPLOYED: night 49 live — a saved étude carries its tuning; .atchart.md v1.2; all six studies moved; written from the run
 
 - record: run 34498897529 · success · commit c5af628 · fetched 2026-09-10T16:04Z · 6/6 studies byte-identical · digest 2ca223bf9c78

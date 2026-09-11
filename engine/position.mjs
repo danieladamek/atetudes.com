@@ -148,11 +148,21 @@ export function regionOf(pos, strings) {
  * constrains the RESULT, not the pool: capping the material first makes
  * almost every chord unfindable, because the root is rarely the lowest scale
  * note on its string (lineVoicing already gets this right; this matches it). */
-export function materialIn(pos, strings, fld) {
+/** THE GAMUT'S PREDICATE (night 48): a gamut is degree numbers 1..7 (the stored key's shape) or
+ * null for the whole field; a note is offered when its keyDeg is one of them. Defined HERE, the
+ * one site that applies it — gamut.mjs derives the collections and imports nothing of this file. */
+export const inGamut = (gamut, keyDeg) => gamut == null || gamut.includes(keyDeg + 1);
+
+export function materialIn(pos, strings, fld, gamut = null) {
   const region = regionOf(pos, strings);
   const out = [];
+  /* THE GAMUT (night 48, 261010 — Daniel's partial collection, ruled 261006): a subset of the
+   * field's seven degrees narrows what the window OFFERS — a pentatonic, a triad pair, any
+   * degrees — as a predicate on keyDeg applied HERE and nowhere else (the one site the material
+   * is computed). null is the whole field, today's offer exactly. It narrows what is offered; it
+   * never widens what is legal: the off-field throw below is untouched (CR-1 §3). */
   for (const s of region.strings)
-    out.push(...notesOn(s, fld).filter((n) => n.fret >= pos.fLo && n.fret <= pos.fHi));
+    out.push(...notesOn(s, fld).filter((n) => n.fret >= pos.fLo && n.fret <= pos.fHi && inGamut(gamut, n.keyDeg)));
   for (const n of out)
     if (fld.degOf(n.midi) < 0)
       throw new Error("materialIn: a note outside the field leaked into the material — " +

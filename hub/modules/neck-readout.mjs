@@ -20,6 +20,8 @@ import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } from
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
+import { describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
+import { inGamut } from "../../engine/position.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
@@ -45,7 +47,7 @@ export const neckReadout = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7],
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
@@ -72,7 +74,7 @@ export const neckReadout = {
         const pos = positionOf({ field: fld, anchorString: anchor,
           startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
         regionOf(pos, run.strings);
-        const pool = materialIn(pos, run.strings, fld);
+        const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
         /* THE CURRENT BAR through the one derivation (child 7). THREE
          * ABSENCES, each named, never merged: a slot the CHORD cannot fill
          * (a dyad's 7 on a triad), a tone the KEY cannot carry (B♭7's own
@@ -83,6 +85,15 @@ export const neckReadout = {
         const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
         let sel = [], msg = "", absences = [];
         if (prog.err) absences.push(prog.err);
+        /* THE GAMUT (night 48) — the readout's sentence, site two of three (rule 10): what the
+         * material is drawn from, and the rule's own refusal after a scale change (the degrees
+         * stay in force; the pentatonic NAME is refused, never silently dropped) */
+        if (cfg.gamut) {
+          absences.push(`gamut: ${describeGamut(cfg.gamut, fld)}`);
+          const brk = pentatonicBreak(cfg.gamut, cfg.scale);
+          if (brk) absences.push(`${cfg.gamut.join(" ")} of ${cfg.key} ${SCALE_WORD[cfg.scale] || cfg.scale} is not semitone-free — ${fld.notes[brk[0]].name} and ${fld.notes[brk[1]].name} sit a semitone apart`);
+          if (!pool.length) absences.push("the gamut leaves nothing in this window");
+        }
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
         else {
           const roFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
@@ -101,7 +112,12 @@ export const neckReadout = {
             absences.push(`${cur.symbol} has no ${cur.absent.join(" or ")} — the chord cannot fill that slot`);
           if (cur.offKey.length)
             absences.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
-          if (r.missing && r.missing.length) msg = `no ${r.missing.join(" or ")} in this frame`;
+          /* the GAMUT's absence (night 48): a fourth absence, named on its own */
+          const outsideGamut = cur.tones.filter((t) => fld.pcs.indexOf(t.pc) >= 0 && !inGamut(cfg.gamut, fld.pcs.indexOf(t.pc))).map((t) => t.role);
+          if (outsideGamut.length) absences.push(`the ${outsideGamut.join(" and ")} of ${cur.symbol} is outside the gamut — a ${cfg.object} cannot be filled from it`);
+          /* the frame's absence names only what the gamut did not already withhold — one fact, one sentence */
+          const frameMissing = (r.missing || []).filter((x) => !outsideGamut.includes(x));
+          if (frameMissing.length) msg = `no ${frameMissing.join(" or ")} in this frame`;
           if (r.capped && r.capped.length)
             msg = (msg ? msg + " · " : "")
               + `the ${r.capped.join(" and ")} is in the box but the grip cannot carry it`

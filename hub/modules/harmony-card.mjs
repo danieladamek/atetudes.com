@@ -23,6 +23,10 @@ import { CENTRE_SOURCES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
 import { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, objectOffsets, pickOf } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
+import { triads, tetrads, triadPairs, pentatonics, pentatonicRefusal, normalizeGamut, describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
+import { LEXICON } from "../lexicon.mjs";
+// the scale's one word (night 41's vocabulary) — one statement, nothing after the semicolon: the build binds exactly this form
+import { SHARED } from "../../engine/shared-config.mjs";
 
 const KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const SCALES = [["major", "Major"], ["harm", "Harmonic minor"], ["mel", "Melodic minor"]];
@@ -43,7 +47,7 @@ export const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcTones", "hcCentreSrc"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcTones", "hcCentreSrc", "hcGamut"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -77,6 +81,17 @@ export const harmonyCard = {
     <div><select id="hcKey" data-control="hcKey" aria-label="Centricity"></select></div>
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
+  </div>
+  <!-- THE GAMUT (night 48, ruled by Daniel 261008 — the partial collection): what the material is
+       drawn FROM, beside Object (what shape) — the row directly under the three, full width,
+       because a multi-select is a list and a fourth grid cell would squeeze the three at 390.
+       Every option is DERIVED (pentatonics by the anhemitonic rule per scale, the seven stepwise
+       triad pairs, the seven stacks of each depth, the seven degrees); the union of what is chosen
+       is the gamut, a set of degrees; nothing chosen is the whole field. Harmonic minor's empty
+       pentatonic list REFUSES BY NAME in the list, never as an empty group. -->
+  <div class="hc-gamut" id="hcGamutBox">
+    <label for="hcGamut" id="hcGamutLab"></label>
+    <select id="hcGamut" data-control="hcGamut" multiple size="5"></select>
   </div>
   <!-- THE TONES (260917, item 1 — ruled): every stacked object picks its
        tones in the FIGURE FIELD'S OWN NOTATION (R,3,5,7); the dyad's pair
@@ -124,6 +139,9 @@ export const harmonyCard = {
  * rises above it. */
 #hcKey{color:var(--red);font-weight:bold;font-size:18px;height:2.9em;padding:0 6px}
 #hcRef,#hcTones{width:100%}
+.hc-gamut{margin-top:8px}
+#hcGamutLab{display:block}
+#hcGamut{width:100%;font:inherit;font-size:12.5px}
 #hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 
   mount(ctx) {
@@ -134,7 +152,8 @@ export const harmonyCard = {
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
     let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "root", tones: [1, 3, 5, 7],
-      centreSrc: "fixed" };   // the source, not a resolved value (260914)
+      centreSrc: "fixed",     // the source, not a resolved value (260914)
+      gamut: null };          // the stored key: degrees 1..7 sorted, or null = the whole field (night 48)
 
     let tonesErr = null;   // the tones field's standing refusal, by name (null when the field is lawful)
     const fill = (sel, items, current) => {
@@ -155,6 +174,35 @@ export const harmonyCard = {
         disabled: !live, title: live ? "" : "arrives with child 4 (dyads, and the chord vocabulary)" })),
         cfg.object);
       const isScale = cfg.object === "scale";
+      /* THE GAMUT LIST (night 48): rebuilt from the rules on every render — the field's own
+       * letters name the options; an option is LIT when the gamut wholly contains it, and the
+       * union of the lit options is the gamut (deselecting one narrows to what the rest cover) */
+      {
+        const sel = byId("hcGamut"); byId("hcGamutLab").textContent = LEXICON.gamut.caption;
+        const fld = field({ key: cfg.key, scale: cfg.scale });
+        const letter = (deg) => fld.notes[deg].name;
+        const has = (degs) => Array.isArray(cfg.gamut) && degs.every((x) => cfg.gamut.includes(x + 1));
+        sel.textContent = "";
+        const group = (label, items) => {
+          const g = d.createElement("optgroup"); g.label = label;
+          for (const it of items) {
+            const o = d.createElement("option"); o.value = it.degrees.map((x) => x + 1).join(","); o.textContent = it.label;
+            if (it.disabled) { o.disabled = true; o.value = ""; }
+            else o.selected = has(it.degrees);
+            g.appendChild(o);
+          }
+          sel.appendChild(g);
+        };
+        const pents = pentatonics(cfg.scale);
+        group("pentatonics", pents.length
+          ? pents.map((p) => ({ degrees: p.degrees, label: describeGamut(p.degrees.map((x) => x + 1), fld) }))
+          : [{ degrees: [], label: pentatonicRefusal(cfg.scale), disabled: true }]);
+        group("triad pairs", triadPairs().map((p) => ({ degrees: p.degrees, label: describeGamut(p.degrees.map((x) => x + 1), fld) })));
+        group("triads", triads().map((t) => ({ degrees: t.degrees, label: `triad on ${letter(t.root)}` })));
+        group("tetrads", tetrads().map((t) => ({ degrees: t.degrees, label: `tetrad on ${letter(t.root)}` })));
+        group("degrees", [0, 1, 2, 3, 4, 5, 6].map((x) => ({ degrees: [x], label: `${x + 1} — ${letter(x)}` })));
+        sel.setAttribute("data-gamut", cfg.gamut ? cfg.gamut.join(",") : "");
+      }
       /* THE TONES FIELD (260917, item 1 \u2014 the dyad's six-pair menu became
        * this): the pick in the figure's notation. The field is repainted
        * from the model only when it does not already SAY the current pick
@@ -203,6 +251,16 @@ export const harmonyCard = {
        * the control lives under the neck. Hidden, never dead-with-no-reason. */
       byId("hcRef").hidden = !isScale;
       byId("hcRefLab").hidden = !isScale;
+      /* THE GAMUT'S HINT (night 48) — site three of three (rule 10): what is lit, said; appended to
+       * the mode's own sentence below only when a gamut is set, so the whole field reads as today */
+      const gamutNote = () => {
+        if (!cfg.gamut) return "";
+        const f = field({ key: cfg.key, scale: cfg.scale });
+        const omitted = [0, 1, 2, 3, 4, 5, 6].filter((x) => !cfg.gamut.includes(x + 1)).map((x) => f.notes[x].name);
+        const brk = pentatonicBreak(cfg.gamut, cfg.scale);
+        return ` ${LEXICON.gamut.caption}: ${describeGamut(cfg.gamut, f)}` + (omitted.length ? ` — ${omitted.join(", ")} ${omitted.length === 1 ? "stays" : "stay"} on the neck at field opacity.` : ".")
+          + (brk ? ` ${cfg.gamut.join(" ")} of ${cfg.key} ${SHARED.scale.values[cfg.scale] || cfg.scale} is not semitone-free — ${f.notes[brk[0]].name} and ${f.notes[brk[1]].name} sit a semitone apart.` : "");
+      };
       if (isScale) {
         const f = field({ key: cfg.key, scale: cfg.scale });
         const follows = cfg.centreSrc === "follows";
@@ -218,7 +276,8 @@ export const harmonyCard = {
           ? "Each bar is read against its own chord's root — the colours and the bass move with the changes."
           : (cfg.ref
             ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the centre, not the key.`
-            : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.");
+            : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.")
+          + gamutNote();
       } else {
         /* chord mode: the face speaks for the TONES — a refusal, by name and
          * red, or the one sentence that says what the pick is and where the
@@ -238,14 +297,14 @@ export const harmonyCard = {
             ? "A shell is the root under the guide tones — R,3,7, the tones above; edit them and it is a pick like any other. "
             : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point; a tone this object cannot hold is refused by name. `
             : `The ${cfg.object} narrowed to ${renderPick(pick).split(",").join(" ")}. `)
-            + "The bass tone lives under the neck, beside the mixer that drives it.";
+            + "The bass tone lives under the neck, beside the mixer that drives it." + gamutNote();
         }
       }
     };
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
 
-    const MINE = ["key", "scale", "object", "ref", "bass", "tones", "centreSrc"];
+    const MINE = ["key", "scale", "object", "ref", "bass", "tones", "centreSrc", "gamut"];   // gamut joined night 48
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
@@ -266,6 +325,12 @@ export const harmonyCard = {
     });
 
     byId("hcKey").addEventListener("change", (e) => { cfg = { ...cfg, key: e.target.value }; push(); });
+    /* THE GAMUT (night 48): the union of what is chosen, a set of degrees — nothing chosen, or
+     * everything, is the whole field (null — the stored key is ABSENT for it, never []) */
+    byId("hcGamut").addEventListener("change", (e) => {
+      const degs = [...e.target.selectedOptions].flatMap((o) => o.value ? o.value.split(",").map(Number) : []);
+      cfg = { ...cfg, gamut: normalizeGamut(degs) }; push();
+    });
     byId("hcScale").addEventListener("change", (e) => { cfg = { ...cfg, scale: e.target.value }; push(); });
     /* choosing an object FILLS its tones (item 2's whole point for Shell:
      * R,3,7 appears, visibly) — a refused edit is forgotten with the object */

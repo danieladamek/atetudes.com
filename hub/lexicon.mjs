@@ -38,6 +38,12 @@ export const LEXICON = {
   voice:       { caption: "Voice",       options: { beep: "beep", wood: "wood", tick: "tick" } },
   bpm:         { caption: "BPM" },
   volume:      { caption: "Vol" },
+  /* GAMUT (night 48, ruled by Daniel 261008): the partial collection's caption — a real music
+   * term, the range of notes available in a system, so it names a musical idea in the model's
+   * own sentence (field → gamut → position → object). "Collection" was the working name, kept
+   * here as the reason for the change (rule 7). Multetudes carries it today; the family's
+   * pentatonic overlay reaches for the same word when it lands. */
+  gamut:       { caption: "Gamut" },
   scale:       { caption: "Scale",       options: { major: "Major", harm: "Harmonic minor", mel: "Melodic minor" } },
   placement:   { caption: "Placement",   options: { grip: "Grip", line: "Line" } },
   /* THE VOCABULARY SWEEP (260928, night 34 — Daniel 260923, "Centricity for sure across all"):

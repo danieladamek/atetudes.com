@@ -63,7 +63,7 @@ export const etudeWalk = {
 
   mount(ctx) {
     const d = ctx.doc;
-    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, strings: [4, 3, 2, 1],
+    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
       startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
       tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
@@ -110,7 +110,7 @@ export const etudeWalk = {
       const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
       const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
         startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
-      const pool = materialIn(pos, run.strings, fld);
+      const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
       let sel = [];
       const refDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)

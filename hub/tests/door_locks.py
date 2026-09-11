@@ -5895,6 +5895,88 @@ console.log(JSON.stringify(out));
         # (tunings.mjs rides with the card, as field.mjs and open-string.mjs already did for the set labels)
         check("DADGAD" in row.inner_text(), f"{tag} the foreign note's tuning must read by the one namer in the summary: {row.inner_text()[:200]!r}")
 
+    # ---------------- THE PARTIAL COLLECTION — GAMUT (night 48, 261010): pentatonics, triad pairs, any degree subset ----------
+    # The field stays seven; the gamut narrows the OFFER at materialIn. Selecting nothing is the
+    # whole field (the red-run: byte-identical to before, captured by n48capture.py). The list is
+    # DERIVED (4 pentatonics in major, none in harmonic minor — refused BY NAME in the list); the
+    # pair reads `F + G` and omits its degree; a role the gamut omits refuses by name on the face;
+    # a scale change the rule no longer yields refuses by name, never drops; a pre-tonight étude
+    # restores to the whole field; a window the gamut empties says so.
+    if door_id == "multetudes":
+        import json as _json
+        opts = lambda: page.evaluate("() => [...document.querySelectorAll('#hcGamut optgroup')].map(g => ({ label: g.label, items: [...g.querySelectorAll('option')].map(o => ({ v: o.value, t: o.textContent, on: o.selected, off: o.disabled })) }))")
+        gamut_of = lambda: page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
+        pick = lambda values: page.select_option("#hcGamut", values)
+        fdsel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi).sort((a, b) => a - b)")
+        fddots = lambda: page.evaluate("() => document.querySelectorAll('#fieldSvg [data-midi]').length")
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        check("hcGamut" in r["controlsPresent"] and page.inner_text("#hcGamutLab").strip() == "Gamut", f"{tag} the Gamut control is not mounted beside Object with the lexicon's caption")
+        g0 = opts(); groups = {g["label"]: g["items"] for g in g0}
+        check([g["label"] for g in g0] == ["pentatonics", "triad pairs", "triads", "tetrads", "degrees"], f"{tag} the gamut's groups: {[g['label'] for g in g0]}")
+        check(len(groups["pentatonics"]) == 4 and len(groups["triad pairs"]) == 7 and len(groups["triads"]) == 7 and len(groups["tetrads"]) == 7 and len(groups["degrees"]) == 7,
+              f"{tag} the derived counts: {[(k, len(v)) for k, v in groups.items()]}")
+        check(sorted(o["v"] for o in groups["pentatonics"]) == ["1,2,3,5,6", "1,2,4,5,6", "2,3,5,6,7", "2,4,5,6,7"], f"{tag} major's four pentatonics: {[o['v'] for o in groups['pentatonics']]}")
+        check(any(o["t"] == "G major pentatonic — 2 3 5 6 7 of C" for o in groups["pentatonics"]), f"{tag} the pentatonic is named by its root: {[o['t'] for o in groups['pentatonics']]}")
+        pair = next((o for o in groups["triad pairs"] if o["v"] == "1,2,4,5,6,7"), None)
+        check(pair is not None and pair["t"] == "F + G — 1 2 4 5 6 7 of C, omitting the 3", f"{tag} IV + V reads F + G and omits the 3: {pair}")
+        check(all("/" not in o["t"] for g in g0 for o in g["items"]), f"{tag} a slash in the gamut list — the pair takes +, the slash keeps its one meaning")
+        check(gamut_of() == "" and all(not o["on"] for g in g0 for o in g["items"]), f"{tag} nothing lit at boot — the whole field")
+        dots_whole = fddots(); sel_whole = fdsel()
+        # a pentatonic: the offer narrows, the field's dots do not; the omitted degrees stay on the neck
+        pick(["2,3,5,6,7"]); page.wait_for_timeout(300)
+        check(gamut_of() == "2,3,5,6,7", f"{tag} the stored gamut after choosing G major pentatonic: {gamut_of()!r}")
+        check(fddots() == dots_whole, f"{tag} the field's dots changed with the gamut — the field must stay seven: {dots_whole} -> {fddots()}")
+        deg_of = page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => g.querySelector('.fd-lab, text') ? g.querySelector('text').textContent : '')")
+        on = [o for g in opts() for o in g["items"] if o["on"]]
+        check(any(o["v"] == "2,3,5,6,7" for o in on), f"{tag} the chosen pentatonic is not lit: {[o['t'] for o in on]}")
+        check("Gamut: G major pentatonic — 2 3 5 6 7 of C — C, F stay on the neck at field opacity." in page.inner_text("#hcNote"), f"{tag} the hint does not say what is lit: {page.inner_text('#hcNote')!r}")
+        ro = page.inner_text("#neckReadout") if page.query_selector("#neckReadout") else page.evaluate("() => document.querySelector('[data-control=\"nrText\"], .nr-text, #nrText')?.innerText || document.body.innerText")
+        check("gamut: G major pentatonic — 2 3 5 6 7 of C" in ro, f"{tag} the readout's sentence does not carry the gamut")
+        # a role the gamut omits refuses BY NAME: bar 1 is Cmaj7 — its R (C, degree 1) is outside {2,3,5,6,7}
+        hint = page.inner_text("#fdHint")
+        check("outside the gamut" in hint and "Cmaj7" in hint, f"{tag} Cmaj7's R (outside the pentatonic) is not refused by name on the face: {hint!r}")
+        check(len(fdsel()) < len(sel_whole) or len(fdsel()) == 3, f"{tag} the tetrad still draws four from a gamut that lacks its root: {fdsel()} vs {sel_whole}")
+        # the pair: F + G — 1 2 4 5 6 7 — the 3 stays out; the union of two picks is a set
+        pick(["1,2,4,5,6,7"]); page.wait_for_timeout(300)
+        check(gamut_of() == "1,2,4,5,6,7", f"{tag} the pair: {gamut_of()!r}")
+        pick(["1,2,4,5,6,7", "2,3,5,6,7"]); page.wait_for_timeout(300)
+        check(gamut_of() == "", f"{tag} the union of the pair and the pentatonic is every degree — the whole field, stored as ABSENT: {gamut_of()!r}")
+        # the scale change: a pentatonic chosen in major, harmonic minor withdraws its name — refused by name, the degrees stay
+        pick(["1,2,3,5,6"]); page.wait_for_timeout(300)
+        page.select_option("#hcScale", "harm"); page.wait_for_timeout(300)
+        check(gamut_of() == "1,2,3,5,6", f"{tag} the scale change dropped the gamut: {gamut_of()!r}")
+        hint = page.inner_text("#fdHint"); note = page.inner_text("#hcNote")
+        check("1 2 3 5 6 of C harmonic minor is not semitone-free" in hint and "D and Eb sit a semitone apart" in hint, f"{tag} the withdrawn pentatonic is not refused by name on the face: {hint!r}")   # the field spells its letters as chord.mjs does (Eb)
+        check("not semitone-free" in note, f"{tag} …nor in the hint: {note!r}")
+        g_h = {g["label"]: g["items"] for g in opts()}
+        check(len(g_h["pentatonics"]) == 1 and g_h["pentatonics"][0]["off"] and g_h["pentatonics"][0]["t"] == "harmonic minor holds no semitone-free pentatonic", f"{tag} harmonic minor's empty list must refuse by name in the list: {g_h['pentatonics']}")
+        check(all(o["on"] for o in g_h["degrees"] if o["v"] in ("1", "2", "3", "5", "6")), f"{tag} the degrees still in force are not lit under harmonic minor")
+        page.select_option("#hcScale", "major"); page.wait_for_timeout(200)
+        # a pre-tonight étude restores to the WHOLE FIELD with no key present
+        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        with page.expect_download() as dl:
+            page.query_selector('#histList .hist [data-cap="entry-export"]').click()
+        txt = Path(dl.value.path()).read_text()
+        check('"gamut":[1,2,3,5,6]' in txt, f"{tag} the saved étude does not carry its gamut by DEGREE: {txt[:300]!r}")
+        old = txt.replace('"gamut":[1,2,3,5,6],', "").replace(',"gamut":[1,2,3,5,6]', "").replace('"id":"', '"id":"old48-', 1)
+        check('"gamut"' not in old, f"{tag} the synthesized pre-tonight étude still names a gamut")
+        page.evaluate("""([t, n]) => { const inp = document.querySelector('#importFile'); const f = new File([t], n, { type: 'text/markdown' }); const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); }""", [old, "old48.atchart.md"]); page.wait_for_timeout(400)
+        check(gamut_of() == "1,2,3,5,6", f"{tag} importing alone changed the gamut")
+        page.click('#histList .hist [data-cap="apply"]'); page.wait_for_timeout(400)
+        check(gamut_of() == "" and fddots() == dots_whole, f"{tag} a pre-tonight étude must restore to the WHOLE FIELD, acquiring no gamut: {gamut_of()!r}")
+        # and the saved one restores its gamut
+        rows = page.query_selector_all('#histList .hist [data-cap="apply"]'); rows[1].click(); page.wait_for_timeout(400)
+        check(gamut_of() == "1,2,3,5,6", f"{tag} the saved gamut did not restore: {gamut_of()!r}")
+        # a window the gamut empties says so: one degree, out of the window
+        pick(["7"]); page.wait_for_timeout(300)
+        hint = page.inner_text("#fdHint")
+        check(gamut_of() == "7" and ("leaves nothing in this window" in hint or len(fdsel()) <= 1), f"{tag} a gamut that empties the box must say so: {hint!r} {fdsel()}")
+        # back to the whole field; key change survival by degree
+        pick([]); page.wait_for_timeout(200); check(gamut_of() == "", f"{tag} deselecting everything is the whole field")
+        pick(["2,3,5,6,7"]); page.select_option("#hcKey", "G"); page.wait_for_timeout(300)
+        check(gamut_of() == "2,3,5,6,7" and "D major pentatonic — 2 3 5 6 7 of G" in page.inner_text("#hcNote"), f"{tag} a gamut must survive a key change BY DEGREE: {gamut_of()!r} {page.inner_text('#hcNote')!r}")
+        pick([]); page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

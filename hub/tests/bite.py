@@ -1836,6 +1836,69 @@ def m81_the_shared_form_drops_the_tuning():
         p.write_text(original)
 
 
+def m82_the_predicate_ignores_the_gamut():
+    # materialIn offers the whole field whatever the gamut says — the omitted degrees come back into the material
+    p, original, mutated = patch("engine/position.mjs",
+        "export const inGamut = (gamut, keyDeg) => gamut == null || gamut.includes(keyDeg + 1);",
+        "export const inGamut = (gamut, keyDeg) => true;   // (the gamut ignored)")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/gamut.test.mjs")
+        hit = "narrows" in (r.stdout + r.stderr) or "the same notes, filtered" in (r.stdout + r.stderr)
+        record("the predicate ignores the gamut — the window offers the whole field", r.returncode != 0 and hit,
+               "gamut exit %d; the filter pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m83_the_pentatonic_rule_admits_a_semitone():
+    # the anhemitonic rule stops refusing: harmonic minor gains pentatonics, major gains more than four
+    p, original, mutated = patch("engine/gamut.mjs",
+        "  const semitone = (a, b) => { const d = ((pcs[b] - pcs[a]) % 12 + 12) % 12; return d === 1 || d === 11; };",
+        "  const semitone = (a, b) => false;   // (no semitone refused)")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/gamut.test.mjs")
+        out = r.stdout + r.stderr
+        hit = "4 / 4 / 0" in out or "harm" in out
+        record("the pentatonic rule admits a semitone — harmonic minor holds pentatonics it cannot", r.returncode != 0 and hit,
+               "gamut exit %d; the count pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m84_a_restored_etude_acquires_a_gamut():
+    # the notepad's restore no longer says "absent means the whole field": a pre-tonight étude keeps whatever gamut is live
+    p, original, mutated = patch("hub/modules/notepad-card.mjs",
+        '          announce(d, CONFIG_CHANGED, { ...rest, gamut: "gamut" in rest ? rest.gamut : null });',
+        "          announce(d, CONFIG_CHANGED, rest);")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "WHOLE FIELD, acquiring no gamut" in g.stdout
+        record("a pre-tonight étude restores and keeps the live gamut — absent no longer means the whole field", g.returncode != 0 and hit,
+               "suite exit %d; the restore pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m85_the_omitted_role_places_quietly():
+    # a role the gamut omits is no longer named on the face — three notes drawn and called a tetrad
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "        if (outsideGamut.length) parts.push(`the ${outsideGamut.join(\" and \")} of ${cur.symbol} is outside the gamut — a ${cfg.object} cannot be filled from it`);",
+        "          // (the gamut's absence not said)")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "outside the pentatonic" in g.stdout and "refused by name" in g.stdout
+        record("a role the gamut omits places quietly — three notes called a tetrad", g.returncode != 0 and hit,
+               "suite exit %d; the by-name pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -1958,7 +2021,8 @@ def main():
                m73_the_crossing_is_no_longer_refused, m74_the_row_names_itself_from_a_second_list,
                m75_the_walk_sounds_standard_under_drop_D,
                m76_the_global_step_clamps, m77_shape_is_read_before_exact, m78_a_second_spelling_override_creeps_in,
-               m79_the_snapshot_strips_the_tuning_again, m80_the_parser_passes_a_crossed_tuning_through, m81_the_shared_form_drops_the_tuning)
+               m79_the_snapshot_strips_the_tuning_again, m80_the_parser_passes_a_crossed_tuning_through, m81_the_shared_form_drops_the_tuning,
+               m82_the_predicate_ignores_the_gamut, m83_the_pentatonic_rule_admits_a_semitone, m84_a_restored_etude_acquires_a_gamut, m85_the_omitted_role_places_quietly)
     preflight(fns)
     for fn in fns:
         LIVE["mutation"] = fn.__name__

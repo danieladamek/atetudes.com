@@ -38,6 +38,9 @@
  */
 import { field, notesOn, OPEN_MIDI, STRINGS } from "../../engine/field.mjs";
 import { NAMED_TUNINGS, nameOf, readTuning, describeTuning, openLabel, canStep, stepped, canStepAll, steppedAll, totalOffsets, STANDARD_NAME } from "../../engine/tunings.mjs";
+import { pentatonicBreak, describeGamut } from "../../engine/gamut.mjs";
+import { inGamut } from "../../engine/position.mjs";
+import { SHARED } from "../../engine/shared-config.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
@@ -369,7 +372,7 @@ export const fieldBoard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    let cfg = { key: "Bb", scale: "major", ref: 0,
+    let cfg = { key: "Bb", scale: "major", ref: 0, gamut: null,   // the gamut: degrees 1..7 or null, the whole field (night 48)
       /* the boot state is v0.9's (register 11): the B♭ tetrad block on
        * 4-3-2-1. The WINDOW moved 260904: the 5th (F) at the third
        * position, frets 3-7 — the only window family on this string set that
@@ -551,7 +554,7 @@ export const fieldBoard = {
       }
 
       /* THE SELECTION — what the controls narrowed the field to */
-      const pool = materialIn(pos, run.strings, fld);
+      const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
       /* THE CURRENT BAR'S CHORD (child 7): the timeline owns the place, the
        * progression owns the bars, chordAt is the ONE derivation — the
        * night-6 successor to the night-5 tonic rule, which the timeline now
@@ -603,7 +606,14 @@ export const fieldBoard = {
         }
         if (cur.offKey.length)
           parts.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
-        if (r.missing && r.missing.length) parts.push(`no ${r.missing.join(" or ")} in this frame`);
+        /* THE GAMUT'S ABSENCE (night 48) — a fourth absence, its own sentence: a role the gamut
+         * omits is refused BY NAME (the reference's precedent: "the R has one occurrence here —
+         * the choice is inert"); the partial still draws beside it, never quietly called whole */
+        const outsideGamut = cur.tones.filter((t) => fld.pcs.indexOf(t.pc) >= 0 && !inGamut(cfg.gamut, fld.pcs.indexOf(t.pc))).map((t) => t.role);
+        if (outsideGamut.length) parts.push(`the ${outsideGamut.join(" and ")} of ${cur.symbol} is outside the gamut — a ${cfg.object} cannot be filled from it`);
+        /* the frame's absence names only what the gamut did not already withhold — one fact, one sentence */
+        const frameMissing = (r.missing || []).filter((x) => !outsideGamut.includes(x));
+        if (frameMissing.length) parts.push(`no ${frameMissing.join(" or ")} in this frame`);
         if (r.unplaceable) {
           /* THE ESCAPE (260908): derived by the engine (resolvesAt — the
            * smallest cap that places), worded by this module's own control:
@@ -622,6 +632,17 @@ export const fieldBoard = {
           parts.push(lossMsg);
         }
         if (parts.length) selMsg = (selMsg ? selMsg + " " : "") + parts.join(". ");
+      }
+      /* THE GAMUT'S OWN REFUSALS on the face (night 48), in both modes: a window it empties says
+       * so rather than drawing nothing; a scale change its rule no longer yields is refused BY
+       * NAME (the degrees stay in force — any degree subset is legal; the pentatonic's name is
+       * what the scale withdrew), never silently dropped */
+      if (cfg.gamut) {
+        const gm = [];
+        if (!pool.length) gm.push("the gamut leaves nothing in this window");
+        const brk = pentatonicBreak(cfg.gamut, cfg.scale);
+        if (brk) gm.push(`${cfg.gamut.join(" ")} of ${cfg.key} ${SHARED.scale.values[cfg.scale] || cfg.scale} is not semitone-free — ${fld.notes[brk[0]].name} and ${fld.notes[brk[1]].name} sit a semitone apart`);
+        if (gm.length) selMsg = (selMsg ? selMsg + ". " : "") + gm.join(". ");
       }
       /* THE REFUSAL ON THE NECK (260908, 2b — Daniel's finding about his own
        * finding: the reason printed in the readout and he still reported
@@ -1322,6 +1343,9 @@ export const fieldBoard = {
       }
       if ("tuning" in m && JSON.stringify(totalOffsets(m.tuning)) !== JSON.stringify(totalOffsets(cfg.tuning))) {
         cfg = { ...cfg, tuning: m.tuning ? totalOffsets(m.tuning) : null }; changed = true;
+      }
+      if ("gamut" in m && JSON.stringify(m.gamut || null) !== JSON.stringify(cfg.gamut || null)) {
+        cfg = { ...cfg, gamut: m.gamut ? [...m.gamut] : null }; changed = true;   // degrees, or null = the whole field (night 48)
       }
       if ("strings" in m && Array.isArray(m.strings)
           && m.strings.join() !== cfg.strings.join()) {

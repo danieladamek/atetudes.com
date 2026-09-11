@@ -224,6 +224,7 @@ export const notepadCard = {
        * one namer ("DADGAD", "drop D, a whole step down") or the moved strings; standard says nothing */
       if (c.tuning && typeof c.tuning === "object" && Object.values(c.tuning).some((v) => v))
         parts.push(describeTuning(c.tuning) || SHARED.tuning.describe(c.tuning));
+      if (Array.isArray(c.gamut) && c.gamut.length) parts.push("gamut " + c.gamut.join(" "));   // degrees, the stored identity (night 48)
       if (typeof c.bpm === "number") parts.push(c.bpm + " bpm");
       return parts.join(" · ") || "no configuration attached";
     };
@@ -272,7 +273,9 @@ export const notepadCard = {
         apply: (data) => {
           if (!data || typeof data !== "object") return;
           const { bpm: savedBpm, ...rest } = data;
-          announce(d, CONFIG_CHANGED, rest);
+          /* THE GAMUT (night 48): absent means the WHOLE FIELD, totally — an étude saved before
+           * tonight carries no key and restores to today's behaviour, never acquiring one */
+          announce(d, CONFIG_CHANGED, { ...rest, gamut: "gamut" in rest ? rest.gamut : null });
           if (typeof savedBpm === "number") announce(d, CLOCK, { bpm: savedBpm });
           if (typeof data.meter === "number") announce(d, CLOCK, { meter: data.meter });
         },
