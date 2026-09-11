@@ -1,3 +1,14 @@
+## 2026-09-11 — DEPLOYED: injection 261011c live — the figure names the cause; the Gamut's way back; Multetudes v0.6.4 moved; written from the run
+
+- record: run 34640264299 · success · commit 908acfa · fetched 2026-09-11T19:50Z · 6/6 studies byte-identical · digest e1364299a03c
+- Actions run 34640264299 green on `908acfa` — https://github.com/danieladamek/atetudes.com/actions/runs/34640264299 (created 2026-09-11T19:42:15Z, finished 2026-09-11T19:50:09Z).
+- metronome: repo 42f2fd02ca47 · live 42f2fd02ca47 — matches.
+- modes-from-pentatonic-boxes: repo 03cedd9c7bb4 · live 03cedd9c7bb4 — matches.
+- multetudes: repo bfa77ddaef2f · live bfa77ddaef2f — matches.
+- tetrad-voice-leading: repo ae9c1b7d7cab · live ae9c1b7d7cab — matches.
+- tetradetudes: repo 8a1214d04533 · live 8a1214d04533 — matches.
+- triadetudes: repo b3b658db02e7 · live b3b658db02e7 — matches.
+
 ## 2026-09-11 — Injection 261011c: the figure names the cause and the way through; the Gamut's obvious way back — Multetudes v0.6.4
 
 - **Why (Daniel, 261011, in normal use):** on one string with up to three notes on it and four
