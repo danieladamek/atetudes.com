@@ -6053,6 +6053,17 @@ def main():
     from playwright.sync_api import sync_playwright
     redrun_pin()
     doors = node("--doors")
+    # THE DOOR FILTER (night 50, 261010): `--doors a,b` runs a subset — the bite harness targets
+    # the doors whose reach holds the file a mutation patched (derived from the resolver's own
+    # census, never chosen by a person); a name that is not a door refuses by name. Without the
+    # flag every door runs, as always — the nightly gate and the chain's closing suite use that.
+    if "--doors" in sys.argv:
+        want = [d for d in sys.argv[sys.argv.index("--doors") + 1].split(",") if d]
+        unknown = [d for d in want if d not in doors]
+        if unknown:
+            print(f"FAIL --doors names {unknown} — the doors are {doors}"); return 1
+        doors = [d for d in doors if d in want]
+        print(f"targeted: --doors {','.join(doors)}")
     print(f"hub door lock suite — {len(doors)} door(s): {', '.join(doors)}")
     with sync_playwright() as p:
         browser = p.chromium.launch()

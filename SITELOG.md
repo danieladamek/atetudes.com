@@ -1,3 +1,22 @@
+## 2026-09-11 — Night 50: the bite harness is the night — the split measured, the gate targeted by reach, the scratch-file class closed; no study moved
+
+- **Why (the item, and Daniel's 261010 sequencing):** the mutation chain had become the whole
+  night, and three door conversions were gated on its cost. Measured first: the rebuild of every door
+  is 0.27 s, the engine suite 4.7 s, the door gate 371 s — of which multetudes is 266 s. A mutation
+  that runs the gate is 97 % gate. The week's "8.8 → 5.1 min" drop was a recovery error: every
+  verified chain ran 4.3–5.0 min per record.
+- **What changed (harness only):** `hub/tests/door_locks.py` takes `--doors`; `hub/tests/bite.py`
+  runs each mutation's gate over the doors whose reach holds the file it patched, derived from the
+  resolver's census (a file outside every reach, or a mutation that wrote its own module, runs every
+  door; the closing suite runs every door), and logs the doors and the reason per mutation. m6
+  rebuilds in its `finally`, the chain builds once after preflight, the signal handler removes a
+  registered scratch file, and the preflight refuses to start over an untracked module in
+  `hub/modules/`, naming it. No mutation added.
+- **Verified:** the full chain before (`bite-0910-1451`, 86/86) and after (`bite-0910-2159`, 86/86, 4h47m against 6h20m) compared record by
+  record — same bites, same sentences; the anchor preflight unchanged; m6 in chain position behind
+  m5 green. No study changed: the deploy record shows six of six unmoved.
+- Report: `notes/working/AtEtudes build run 261010c — night 50, the bite harness is the night.md`.
+
 ## 2026-09-11 — DEPLOYED: night 48 live — Gamut: the partial collection on Multetudes v0.6.3; multetudes and tetradetudes moved; written from the run
 
 - record: run 34553783108 · success · commit 1735321 · fetched 2026-09-11T02:22Z · 6/6 studies byte-identical · digest 1de86a8f9a99

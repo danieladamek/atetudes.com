@@ -15,6 +15,7 @@ import argparse
 import datetime
 import signal
 import subprocess
+import json
 import sys
 from pathlib import Path
 
@@ -27,7 +28,9 @@ results = []
 # the kill and (b) CLEAN SOURCES. try/finally covers exceptions and Ctrl-C;
 # it does not cover a closing terminal — SIGHUP/SIGTERM land here instead.
 LOG = {"fh": None, "path": None}
-LIVE = {"path": None, "original": None, "mutation": None}   # the one patched file
+LIVE = {"path": None, "original": None, "mutation": None,   # the one patched file
+        "touched": set(),      # every path this mutation patched — the census reads it to target the doors (night 50)
+        "scratch": []}         # files a mutation CREATED in the tree — unlinked by the signal handler too (night 50)
 
 
 def log_line(text):
@@ -60,6 +63,7 @@ class PatchedPath:
             LIVE["path"] = None; LIVE["original"] = None
         else:
             LIVE["path"] = self._p; LIVE["original"] = self._original
+        LIVE["touched"].add(str(self._p.relative_to(REPO)))
         return r
 
     def __getattr__(self, name):
@@ -81,6 +85,9 @@ def _die_clean(signum, frame):
                  f"RESTORED {LIVE['path']}")
     else:
         log_line(f"KILLED ({name}) between mutations — sources were clean")
+    for sp in LIVE["scratch"]:   # a file the harness CREATED in the source tree leaves with it (night 50: the tuner-card leak)
+        try: Path(sp).unlink(); log_line(f"KILLED ({name}) — REMOVED the scratch module {sp}")
+        except FileNotFoundError: pass
     log_line(f"log: {LOG['path']}")
     sys.exit(128 + (signum if isinstance(signum, int) else 15))
 
@@ -107,8 +114,48 @@ class BuildBroken(Exception):
     pass
 
 
-def suite():
-    return sh("python3", "hub/tests/door_locks.py")
+# THE REACH CENSUS (night 50, 261010): which doors a mutation can move. Measured first — the
+# rebuild of every door costs 0.27 s, the engine suite 4.7 s, the door gate 371 s, so a mutation
+# that runs the gate is 97 % gate, and the gate is four doors run whole. The resolver already
+# knows which files each door reaches (`filesIn`); a mutation that patched hub/modules/field-board.mjs
+# can move no assertion in plain's gate. DERIVED, never chosen: the doors are the union of every
+# door reaching any file the mutation patched; a file outside every door's reach (the build, the
+# shell, a tool, a door file, a test) runs every door; a mutation that patched nothing through
+# patch() (m6 writes its own module) runs every door. The chain's closing suite runs every door.
+REACH = {"doors": None, "of": {}}
+
+def reach_census():
+    if REACH["doors"] is not None: return
+    REACH["doors"] = json.loads(sh("node", "hub/tools/resolve.mjs", "--doors").stdout)   # a JSON array, as door_locks reads it
+    for door in REACH["doors"]:
+        j = json.loads(sh("node", "hub/tools/resolve.mjs", door, "--json").stdout)
+        for f in j["filesIn"] + [f"hub/doors/{door}.door.mjs"]:
+            REACH["of"].setdefault(f, set()).add(door)
+
+def refuse_strays():
+    """an untracked module in hub/modules/ is a scratch file some killed step left (the 261010
+    tuner-card leak): the chain refuses to start and names it; nothing here removes it"""
+    strays = sh("git", "ls-files", "--others", "--exclude-standard", "hub/modules").stdout.split()
+    if strays:
+        log_line(f"REFUSED TO START: untracked module(s) in hub/modules/ — {', '.join(strays)} — a scratch file a killed step left; remove or track it first")
+    return bool(strays)
+
+def doors_for(touched):
+    """the doors whose reach holds a touched file, or every door — with the reason"""
+    reach_census()
+    if not touched: return REACH["doors"], "every door — the mutation patched nothing through patch()"
+    outside = [f for f in touched if f not in REACH["of"]]
+    if outside: return REACH["doors"], f"every door — {', '.join(outside)} is outside every door's reach"
+    doors = [d for d in REACH["doors"] if any(d in REACH["of"][f] for f in touched)]
+    return doors, "reach of " + ", ".join(sorted(touched))
+
+def suite(every=False):
+    """the door gate, targeted to the doors the live mutation can move (every door when asked)"""
+    if every or PREFLIGHT["on"]:
+        return sh("python3", "hub/tests/door_locks.py")
+    doors, why = doors_for(LIVE["touched"])
+    log_line(f"  gate     {','.join(doors)}  ({why})")
+    return sh("python3", "hub/tests/door_locks.py", "--doors", ",".join(doors))
 
 
 def fail_lines(r, n=6):
@@ -296,6 +343,7 @@ def m6_new_module_no_door_edited():
                  # turned the leftover into a FALSE ROT)
     new = REPO / "hub/modules/tuner-card.mjs"
     doors_before = {d: (REPO / f"hub/doors/{d}.door.mjs").read_text() for d in ("plain", "scribe")}
+    LIVE["scratch"].append(str(new))   # a kill removes it too (night 50)
     try:
         new.write_text(
             '/* added by hub/tests/bite.py — no door file is edited for this. */\n'
@@ -322,6 +370,10 @@ def m6_new_module_no_door_edited():
                   untouched, r.returncode == 0, "" if r.returncode == 0 else "; the suite said: %s" % fail_lines(r)))
     finally:
         new.unlink(missing_ok=True)
+        LIVE["scratch"] = [s for s in LIVE["scratch"] if s != str(new)]
+        build()   # the built doors carried the scratch card until the NEXT mutation rebuilt (night 50, measured: a run
+                  # that ended here left three doors with a phantom Tuner in hub/build); a step that adds a file ends by
+                  # removing its every trace, and a rebuild costs 0.27 s
 
 
 # ---------------------------------------------------------------- mutation 7
@@ -2024,8 +2076,16 @@ def main():
                m79_the_snapshot_strips_the_tuning_again, m80_the_parser_passes_a_crossed_tuning_through, m81_the_shared_form_drops_the_tuning,
                m82_the_predicate_ignores_the_gamut, m83_the_pentatonic_rule_admits_a_semitone, m84_a_restored_etude_acquires_a_gamut, m85_the_omitted_role_places_quietly)
     preflight(fns)
+    # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
+    # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors
+    # carried a phantom card). Refuse to start and name it; nothing here removes it.
+    if refuse_strays():
+        return 1
+    reach_census()
+    build()   # the chain starts from a build of THIS tree, whatever a killed step left in hub/build (night 50)
+    log_line(f"reach census: {len(REACH['doors'])} doors, {len(REACH['of'])} reached files\n")
     for fn in fns:
-        LIVE["mutation"] = fn.__name__
+        LIVE["mutation"] = fn.__name__; LIVE["touched"] = set()
         try:
             fn()
         except BuildBroken as e:
@@ -2034,9 +2094,9 @@ def main():
         except AssertionError as e:
             record(fn.__name__, False, "the mutation anchor rotted — the harness "
                    "must be updated with the code it mutates: " + str(e))
-    LIVE["mutation"] = None
+    LIVE["mutation"] = None; LIVE["touched"] = set()
     build()
-    r = suite()
+    r = suite(every=True)
     green = r.returncode == 0
     log_line("\nreverted and rebuilt: suite %s" % ("GREEN" if green else "RED — SOURCES MAY BE DIRTY: %s" % fail_lines(r)))
     bad = [n for ok, n, _ in results if not ok]
