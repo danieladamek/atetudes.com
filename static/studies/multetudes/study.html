@@ -1570,6 +1570,23 @@ function chromaticSpeller(key, scaleType = "major") {
  * Returns { name, deg (0..6, the §2.1 family index), acc (the alteration
  * against the scale's OWN spelling of that degree), label ("b7", "#4", or
  * the plain degree when diatonic), chromatic }. */
+/** THE CHORD SPELLS ITS OWN TONES (night 46, role A): the 7th of C7 is B♭ — the root's LETTER
+ * stepped by the role (R 3 5 7 9 11 13 → 0 2 4 6 1 3 5 letters), the accidental read off the pitch
+ * class against that letter's natural. Letters and pitch-class math, never a table; §2.6's "the
+ * LETTER of its spelled name" for a chord-supplied tone is the chord's letter, not the key's. */
+function spellRole(rootName, role, pc) {
+  const STEPS = { R: 0, 3: 2, 5: 4, 7: 6, 9: 1, 11: 3, 13: 5 };
+  const step = STEPS[String(role)];
+  if (step === undefined) throw new Error(`spellRole: "${role}" is not a chord role`);
+  const rootIdx = SCALE_LETTERS.indexOf(rootName[0]);
+  if (rootIdx < 0) throw new Error(`spellRole: "${rootName}" has no letter`);
+  const letter = SCALE_LETTERS[(rootIdx + step) % 7];
+  const natural = [0, 2, 4, 5, 7, 9, 11][SCALE_LETTERS.indexOf(letter)];
+  let acc = ((mod12(pc) - natural) % 12 + 12) % 12; if (acc > 6) acc -= 12;
+  if (Math.abs(acc) > 2) throw new Error(`spellRole: the ${role} of ${rootName} would need ${Math.abs(acc)} accidentals`);
+  return letter + (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc));
+}
+
 function alteredDegree(key, scaleType = "major") {
   const spell = chromaticSpeller(key, scaleType);
   const notes = scaleNotes(key, scaleType);
@@ -1577,8 +1594,8 @@ function alteredDegree(key, scaleType = "major") {
   const keyIdx = SCALE_LETTERS.indexOf(notes[0].name[0]);
   const scalePcs = new Set(notes.map((n) => n.pc));
   const DEG = ["R", "2", "3", "4", "5", "6", "7"];
-  return (midi) => {
-    const { name } = spell(midi);
+  return (midi, spelled) => {   // `spelled` (night 46): a chord's own spelling of a member — the chord's letter outranks the key's speller
+    const name = spelled || spell(midi).name;
     const deg = (SCALE_LETTERS.indexOf(name[0]) - keyIdx + 7) % 7;
     const acc = accOf(name) - accOf(major[deg].name);
     const chromatic = !scalePcs.has(mod12(midi));
@@ -1606,7 +1623,7 @@ function resolveRoman(tok, key, scaleType = "major") {
   const symbol = name + romanQualitySuffix(r);
   return { symbol, parsed: parseChord(symbol) };
 }
-return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, chromaticSpeller, alteredDegree, resolveRoman };
+return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, chromaticSpeller, spellRole, alteredDegree, resolveRoman };
 })();
 
 /* ===== engine/tetrad-voicings.mjs ===== */
@@ -5168,14 +5185,50 @@ function gripFit(tones, slots) {
 }
 
 /** fieldPartition(tones, fld) → { inKey, offKey } — which of a chord's tones
- * the FIELD can carry at all. The field is the key, so a tone outside the
- * key can never be material: NOT IN THE KEY is a different absence from NOT
- * IN THIS FRAME, and both are teaching (child 7's own deliverable). */
-/* CR-1 §3 (260918): this partition still answers only NOT IN THE KEY. An
- * offKey tone that reaches a board is legal only wearing a role (an approach
- * tonight; a chord-supplied member once role A is ruled — deferred, see the
- * register's chromatic-chord-alterations entry). §4's doctrine amendment is
- * deferred with it. */
+ * the FIELD itself supplies. The field is the key, so an offKey tone is never a
+ * member of the FIELD — but under CR-1 it may still be material: a chord the
+ * harmony supplies makes its own tones material for as long as it holds. NOT
+ * IN THE KEY, NOT IN THIS FRAME and NOT IN THIS CHORD are three different
+ * absences, and all three are teaching. What this partition answers is only the
+ * first. (CR-1 §4, ratified 261008 and landed night 46 with role A — the
+ * 260918 holding note that deferred this sentence went with the deferral; the
+ * loop below is unchanged, it partitions by key membership either way.) */
+/** THE CHORD'S OWN SUPPLY (role A — CR-1 §6's deferred half, ratified §2.6 261010, night 46): a
+ * tone the harmony supplies and the key does not contain is MATERIAL for as long as the chord
+ * holds — a member of the chord, not of the field, not an approach. The field's pool (materialIn)
+ * stays the field's own and keeps its throw (CR-1 §3); this is the second, ROLE-CARRYING list a
+ * board adds to it: every fret in the window on the run's strings that sounds the tone's pitch
+ * class, from the FIELD's opens (the tuning is the field's fact — never standard). Each note wears
+ * `member: true, chromatic: true` and its role; a note off the field without either is still
+ * illegal on every board (the guards get stronger, not weaker). */
+function chordSupply(tones, fld, strings, pos) {
+  const out = [];
+  for (const t of tones) {
+    if (!t.offKey) continue;
+    for (const s of strings)
+      for (let fret = pos.fLo; fret <= pos.fHi; fret++) {
+        const midi = fld.opens[s] + fret;
+        if (mod12(midi) !== mod12(t.pc)) continue;
+        if (fld.degOf(midi) >= 0) throw new Error("chordSupply: a chord-supplied tone must be off the field — this one is a degree of it");
+        out.push({ string: s, fret, midi, deg: null, keyDeg: -1, role: t.role, member: true, chromatic: true, name: t.name });   // `name`: the chord's own spelling (B♭, not A♯)
+      }
+  }
+  return out;
+}
+
+/** the material a CHORD is placed from: the field's pool, then the chord's own supply (role A) */
+function materialFor(tones, pool, fld, strings, pos) {
+  return [...pool, ...chordSupply(tones, fld, strings, pos)];
+}
+
+/** THE CHORD'S OWN TONE, said once (night 46, CR-1 §5 — "the readout owes two different
+ * sentences"): the field does not supply it, the chord does, for as long as it holds. `labels`
+ * are the altered-degree spellings (♭7, ♯4) the speller derives; `roles` the chord's roles. */
+function chordSuppliedSentence(labels, symbol) {
+  const list = labels.length <= 1 ? labels.join("") : labels.slice(0, -1).join(", ") + " and " + labels[labels.length - 1];
+  return `the ${list} of ${symbol} ${labels.length === 1 ? "is" : "are"} the chord's own — the field does not supply ${labels.length === 1 ? "it" : "them"}; the chord does, for as long as it holds`;
+}
+
 function fieldPartition(tones, fld) {
   const inKey = [], offKey = [];
   for (const t of tones) (fld.degOf(t.pc) >= 0 ? inKey : offKey).push(t);
@@ -5848,7 +5901,7 @@ function bracketOf(order) {
   if (dy.tones.length !== 1 || dy.absent.join() !== "7")
     throw new Error("selection: a dyad's 7 on a plain triad must be ABSENT BY NAME, never silently narrowed");
 }
-return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, gripFit, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, orderBy, bracketOf };
+return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, gripFit, chordSupply, materialFor, chordSuppliedSentence, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, orderBy, bracketOf };
 })();
 
 /* ===== engine/atchart.mjs ===== */
@@ -6793,7 +6846,7 @@ return { REF_OFFSET, centreDegreeOf, centreMaterialRef, reRead, CENTRE_SOURCES, 
 const __m_engine_progression_mjs = (() => {
 const { CYCLES } = __m_engine_tetrad_sequence_mjs;
 const { resolveStructure } = __m_engine_structures_mjs;
-const { parseChord, resolveRoman } = __m_engine_chord_mjs;
+const { parseChord, resolveRoman, spellRole } = __m_engine_chord_mjs;
 const { parseAtchart, serializeAtchart } = __m_engine_atchart_mjs;
 const { diatonicTones, objectTones, fieldPartition, objectOffsets } = __m_engine_selection_mjs;
 const { compositeOver } = __m_engine_reference_mjs;
@@ -7100,9 +7153,12 @@ function chordAt(prog, index, fld, object, pick) {   // pick: tonePick(cfg) — 
       roman: degree < 0 ? "—" : ROMAN[degree], tones: null, absent: [], offKey: [] };
   const ot = objectTones(c.parsed, object, pick);
   const part = fieldPartition(ot.tones, fld);
+  /* ROLE A (night 46, §2.6's material clause): the chord's offKey tones are MEMBERS of the chord —
+   * they ride in `tones` flagged offKey (the placers take them from the chord's own supply), and
+   * `offKey` still lists their roles for the sentence the boards owe */
   return { kind: c.kind, degree, rootPc, symbol: c.symbol,
     roman: romanOf(degree, c.parsed.pcs),
-    tones: part.inKey, absent: ot.absent, offKey: part.offKey.map((t) => t.role) };
+    tones: [...part.inKey, ...part.offKey.map((t) => ({ ...t, offKey: true, name: spellRole(c.parsed.root.name, t.role, t.pc) }))], absent: ot.absent, offKey: part.offKey.map((t) => t.role) };
 }
 
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */
@@ -7136,7 +7192,7 @@ const __m_hub_modules_etude_walk_mjs = (() => {
 const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } = __m_engine_selection_mjs;
+const { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor } = __m_engine_selection_mjs;
 const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
@@ -7268,9 +7324,10 @@ const etudeWalk = {
          * dropped roles are SAID (the boards speak them; the walk sounds the kept stack) */
         const fit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
           : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+        const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply sounds too
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
+          : oneOfEach(fit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
         walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
       }
@@ -8222,7 +8279,7 @@ const { SHARED } = __m_engine_shared_config_mjs;
 const { alteredDegree } = __m_engine_chord_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
-const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit } = __m_engine_selection_mjs;
+const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence } = __m_engine_selection_mjs;
 const { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { progressionOf, chordAt, movementWord } = __m_engine_progression_mjs;
@@ -8820,9 +8877,12 @@ const fieldBoard = {
          * the dropped roles are SAID two lines below */
         const fdFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
           : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+        /* ROLE A (night 46): the chord is placed from the field's pool AND the chord's own supply —
+         * its offKey tones on the run's strings in the window, role-carrying (§2.6's material clause) */
+        const mat = materialFor(cur.tones, pool, fld, run.strings, pos);
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(fdFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
+          : oneOfEach(fdFit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: the PARTIAL draws beside the refusal (ruling 3)
         absent = { dropped: [...fdFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role),
           strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
@@ -8841,14 +8901,21 @@ const fieldBoard = {
            * pool (the engine names it; nothing here tables it); the escape is
            * resolvesAt, worded by this module's own control. */
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
-          const clash = oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre }).collide;
+          const clash = oneOfEach(cur.tones, mat, { n: cfg.notesPer, centre: pos.centre }).collide;
           lossMsg = `missing ${r.capped.map(roleWord).join(" and ")}`
             + (clash ? ` — both ${clash.roles.join(" and ")} on string ${clash.string}` : " — the grip cannot carry it")
             + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} takes ${clash ? "both" : "it"}` : "");
           parts.push(lossMsg);
         }
-        if (cur.offKey.length)
-          parts.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
+        /* THE CHORD'S OWN TONE (night 46, role A — CR-1 §5: the readout owes two different sentences):
+         * the field does not supply it, the chord does; said once in the engine, with the altered
+         * degree the speller derives (♭7, ♯4). "Not in the key — the field cannot carry it" was true
+         * until tonight and is half-false now: the chord carries it. */
+        if (cur.offKey.length) {
+          const alt = alteredDegree(cfg.key, cfg.scale);
+          const labels = cur.tones.filter((t) => t.offKey).map((t) => alt(t.pc + 60, t.name).label);
+          parts.push(chordSuppliedSentence(labels, cur.symbol));
+        }
         /* THE GAMUT'S ABSENCE (night 48) — a fourth absence, its own sentence: a role the gamut
          * omits is refused BY NAME (the reference's precedent: "the R has one occurrence here —
          * the choice is inert"); the partial still draws beside it, never quietly called whole */
@@ -8979,10 +9046,30 @@ const fieldBoard = {
           d: `M${x1},${y1} Q${(x1 + x2) / 2},${Math.min(y1, y2) - bulge} ${x2},${y2}`,
           fill: "none", stroke: ANNOTATION_GRAY, "stroke-width": 1.2, "pointer-events": "none" }, svg);
       }
+      const alteredSel = alteredDegree(cfg.key, cfg.scale);
       for (const x of sel) {
-        const fam = FAM[x.deg];
+        /* CR-1 §3, THE GUARD GETS STRONGER (night 46): an off-field note reaches the neck only
+         * wearing a role — a chord-supplied MEMBER (role A) or an approach (drawn below); one that
+         * carries neither is still impossible, and says which role it lacks */
+        if (fld.degOf(x.midi) < 0 && !x.member)
+          throw new Error("field-board: an off-field note reached the neck without a role — CR-1 §3: legal only as a chord-supplied member (role A) or an approach in the figure's order, and this one carries " + (x.role ? `the role "${x.role}" without membership` : "no role"));
         const g = el("g", { class: "fd-sel", "data-selmidi": x.midi,
           "data-selstr": x.string, "data-selfret": x.fret }, svg);
+        if (x.member && x.chromatic) {
+          /* ROLE A'S MARK (§2.6 as it stands): role = chord tone, so full radius, solid; non-diatonic, so
+           * a starburst; colour = the §2.1 colour of the degree it alters, from the LETTER of the spelling
+           * (alteredDegree — the speller's answer, never a table); interior = the altered degree with its
+           * accidental. The same silhouette night 37 built for approaches at 0.6 and hollow. */
+          const a = alteredSel(x.midi, x.name); const famA = FAM[a.deg];   // the chord's spelling: the 7th of C7 is B♭, so ♭7, amber
+          g.setAttribute("data-role", "member"); g.setAttribute("data-chromatic", "true"); g.setAttribute("data-alters", a.label); g.setAttribute("data-deg", famA);
+          el("polygon", { points: starburst(fx(x.fret), fy(x.string), 13), fill: FAM_COLOR[famA],
+            stroke: "#fff", "stroke-width": 2, "stroke-linejoin": "round", "data-cx": fx(x.fret), "data-cy": fy(x.string) }, g);
+          const t = el("text", { x: fx(x.fret), y: fy(x.string) + 3.6, "text-anchor": "middle",
+            "font-size": "9.5", "font-weight": "bold", fill: FAM_TEXT[famA], class: "fd-lab" }, g);
+          t.textContent = a.label;
+          continue;
+        }
+        const fam = FAM[x.deg];
         el("circle", { cx: fx(x.fret), cy: fy(x.string), r: 13, fill: FAM_COLOR[fam],
           stroke: "#fff", "stroke-width": 2 }, g);
         const t = el("text", { x: fx(x.fret), y: fy(x.string) + 3.6, "text-anchor": "middle",
@@ -10115,7 +10202,8 @@ const __m_hub_modules_keys_board_mjs = (() => {
 const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { oneOfEach, everyOccurrence, scaleTake, gripFit } = __m_engine_selection_mjs;
+const { oneOfEach, everyOccurrence, scaleTake, gripFit, materialFor } = __m_engine_selection_mjs;
+const { alteredDegree } = __m_engine_chord_mjs;
 const { progressionOf, chordAt } = __m_engine_progression_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
@@ -10138,6 +10226,7 @@ const { tonePick, pickOf } = __m_engine_selection_mjs;
  * reconciliation is decided. The geometry is v0.9's (C2–C6 across the
  * board's width).
  */
+
 
 
 
@@ -10252,10 +10341,11 @@ const keysBoard = {
         if (cfg.centreSrc === "follows" && kyRefDeg != null) sel = reRead(sel, kyRefDeg);
       }
       else {
+        const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
+          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
           : oneOfEach(gripFit(cur.tones, run.strings.length * cfg.notesPer).tones,
-              pool, { n: cfg.notesPer, centre: pos.centre });
+              mat, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
@@ -10278,12 +10368,15 @@ const keysBoard = {
         const black = BLACK.includes(mod(nt.midi, 12));
         const cx = xOf(nt.midi) + (black ? ww * 0.3 : ww / 2);
         const cy = black ? 14 + H * 0.48 : 14 + H - 24;
-        const fam = FAM[nt.deg];
+        /* a chord-supplied member (role A, night 46) wears the colour of the degree it alters and its
+         * altered label — the keyboard's mark is the circle (§2.6's shape rule is drawn on the neck) */
+        const alt = nt.member && nt.chromatic ? alteredDegree(cfg.key, cfg.scale)(nt.midi, nt.name) : null;
+        const fam = alt ? FAM[alt.deg] : FAM[nt.deg];
         el("circle", { cx, cy, r: 10, fill: FAM_COLOR[fam], stroke: "#fff",
-          "stroke-width": 1.6, "pointer-events": "none", "data-kysel": nt.midi }, svg);
+          "stroke-width": 1.6, "pointer-events": "none", "data-kysel": nt.midi, ...(alt ? { "data-kyalters": alt.label } : {}) }, svg);
         const t = el("text", { x: cx, y: cy + 3.4, "text-anchor": "middle", "font-size": "9",
           fill: FAM_TEXT[fam], class: "ky-lab" }, svg);
-        t.textContent = nt.role || fam;
+        t.textContent = alt ? alt.label : (nt.role || fam);
       }
       /* the pulse layer rides ABOVE the dots — field-board's own order */
       el("g", { class: "ky-pulselayer" }, svg);
@@ -10751,13 +10844,14 @@ const __m_hub_modules_neck_readout_mjs = (() => {
 const { field, notesOn } = __m_engine_field_mjs;
 const { positionOf, materialIn, regionOf } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy } = __m_engine_selection_mjs;
+const { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence } = __m_engine_selection_mjs;
 const { progressionOf, chordAt } = __m_engine_progression_mjs;
 const { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, listen } = __m_hub_bus_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { describeGamut, pentatonicBreak } = __m_engine_gamut_mjs;
 const { inGamut } = __m_engine_position_mjs;
+const { alteredDegree } = __m_engine_chord_mjs;
 /* neck-readout.mjs — v0.9's READOUT and ASSERT lines (Multetudes surface,
  * 2026-08-29).
  *
@@ -10779,6 +10873,7 @@ const { inGamut } = __m_engine_position_mjs;
 
 
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+
 
 
 
@@ -10857,9 +10952,10 @@ const neckReadout = {
         else {
           const roFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
             : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+          const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
           const r = cfg.take === "all"
-            ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-            : oneOfEach(roFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+            ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
+            : oneOfEach(roFit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
           sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
           absent = { dropped: [...roFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
           if (roFit.dropped.length)
@@ -10870,8 +10966,10 @@ const neckReadout = {
           if (cur.unnamed) absences.push(cur.unnamed);
           if (cur.absent.length)
             absences.push(`${cur.symbol} has no ${cur.absent.join(" or ")} — the chord cannot fill that slot`);
-          if (cur.offKey.length)
-            absences.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
+          if (cur.offKey.length) {   // the chord's own tone, said by the one engine sentence (night 46)
+            const alt = alteredDegree(cfg.key, cfg.scale);
+            absences.push(chordSuppliedSentence(cur.tones.filter((x) => x.offKey).map((x) => alt(x.pc + 60, x.name).label), cur.symbol));
+          }
           /* the GAMUT's absence (night 48): a fourth absence, named on its own */
           const outsideGamut = cur.tones.filter((t) => fld.pcs.indexOf(t.pc) >= 0 && !inGamut(cfg.gamut, fld.pcs.indexOf(t.pc))).map((t) => t.role);
           if (outsideGamut.length) absences.push(`the ${outsideGamut.join(" and ")} of ${cur.symbol} is outside the gamut — a ${cfg.object} cannot be filled from it`);
@@ -13454,7 +13552,7 @@ const { chromaticSpeller, alteredDegree } = __m_engine_chord_mjs;
 const { starburst } = __m_hub_marks_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } = __m_engine_selection_mjs;
+const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor } = __m_engine_selection_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { writtenValue } = __m_engine_drill_mjs;
@@ -13582,9 +13680,10 @@ const staffBoard = {
             ? reRead(scaleSel, cDeg) : scaleSel };
         }
         const fit = cfg.take === "all" ? { tones: c.tones, dropped: [] } : gripFit(c.tones, run.strings.length * cfg.notesPer);
+        const mat = materialFor(c.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
         const r = cfg.take === "all"
-          ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(c.tones, mat, { n: cfg.notesPer })
+          : oneOfEach(fit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
         /* what the placement dropped, for the figure's refusal in every bar (261011c) */
         r.absent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: (r.notes || r.partial || []).map((x) => x.role),
           strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
@@ -13625,12 +13724,18 @@ const staffBoard = {
        * pc 2: "Eb"). One speller, the law resolveRoman's; the role test stays. */
       const spell = chromaticSpeller(cfg.key, cfg.scale);
       const altered = alteredDegree(cfg.key, cfg.scale);   // v1.4: the degree a chromatic note alters, from the same speller
-      const stepOf = (m0, role) => {
+      const stepOf = (m0, role, member, spelled) => {
         const m2 = m0 + WRITTEN, pc = mod(m2, 12);
-        if (!fld.notes.some((n) => n.pc === pc) && role !== "approach")
+        /* CR-1 §3: off the field is drawable only wearing a role — an approach, or (role A, night 46)
+         * a chord-supplied MEMBER; a bare role name is not membership, and still throws */
+        if (!fld.notes.some((n) => n.pc === pc) && role !== "approach" && !member)
           throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable " +
-            "unless it carries a role (CR-1 §3), and this one carries " + (role ? `"${role}"` : "none"));
-        const sp = spell(m2);
+            "unless it carries a role (CR-1 §3): a chord-supplied member or an approach, and this one carries " + (role ? `"${role}" without membership` : "none"));
+        /* a member is spelled by its CHORD (the 7th of C7 is Bb, never A#); its written octave follows
+         * the letter exactly as the speller's does (chord.mjs: a Cb sounds below its C, a B# above its B) */
+        const sp = member && spelled
+          ? { name: spelled, oct: Math.floor(m2 / 12) - 1 + (spelled.startsWith("Cb") ? 1 : 0) - (spelled.startsWith("B#") ? 1 : 0) }
+          : spell(m2);
         return sp.oct * 7 + LETTERS.indexOf(sp.name[0]);
       };
       const yTreble = (s) => TY + GAP * 8 - (s - (4 * 7 + 2)) * GAP;
@@ -13649,7 +13754,7 @@ const staffBoard = {
       const figs = sels.map((sl, i) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos, absent: rs[i].absent || null }));   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
-      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role));
+      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role, nt.member, nt.name));
       for (const fg of figs) if (fg.order) for (const nt of fg.order) allSteps.push(stepOf(nt.midi, nt.role));
       const topStep = allSteps.length ? Math.max(...allSteps) : (4 * 7 + 2) + 8;
       /* a sequenced bar's stems rise 24 above the top head and the tuplet
@@ -13738,7 +13843,7 @@ const staffBoard = {
         const open = together ? beats >= 2 : wv >= 2;
         const xsL = [], ysL = [];
         seq.forEach((nt, k) => {
-          const st = stepOf(nt.midi, nt.role), y = yTreble(st);
+          const st = stepOf(nt.midi, nt.role, nt.member, nt.name), y = yTreble(st);   // a member passes the guard and is spelled by its chord
           /* the x IS the onset: at/beats through the bar, centred in its own
            * written slot — identical to the family's (k+0.5)·(w/L) when the
            * schedule is uniform, but sourced from the event itself */
@@ -13767,7 +13872,10 @@ const staffBoard = {
             else
               el("ellipse", { ...head, cx: x, cy: y, rx: 4.5, ry: 3.4, transform: `rotate(-14 ${x} ${y})` }, svg);
           } else {
-          const fam = FAM[nt.deg];
+          /* a chord-supplied member (role A, night 46): a full notehead in the colour of the degree it
+           * alters, labelled with the altered degree (§2.6's cue-size rule is the approach's) */
+          const altM = nt.member && nt.chromatic ? altered(nt.midi, nt.name) : null;
+          const fam = altM ? FAM[altM.deg] : FAM[nt.deg];
           const head = open
             ? { cx: x, cy: y, rx: 6.4, ry: 5, fill: "#fff", stroke: FAM_COLOR[fam],
                 "stroke-width": 1.6, transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi,
@@ -13775,10 +13883,11 @@ const staffBoard = {
             : { cx: x, cy: y, rx: 6.4, ry: 5, fill: FAM_COLOR[fam],
                 transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi, "data-stbar": ci };
           if (figHere) head["data-stfig"] = k;    // the figure's own steps, addressable
+          if (altM) head["data-stalters"] = altM.label;
           el("ellipse", head, svg);
           const t = el("text", { x, y: y + 3, "text-anchor": "middle", "font-size": "7.5",
             fill: open ? FAM_COLOR[fam] : FAM_TEXT[fam], "font-weight": "bold", class: "st-lab" }, svg);
-          t.textContent = nt.role || fam;
+          t.textContent = altM ? altM.label : (nt.role || fam);
           }
           if (!stacked) { xsL.push(x); ysL.push(y); }
           if (ci === index) {
@@ -13790,7 +13899,7 @@ const staffBoard = {
         /* the notation — score-board's, on this board's heads */
         if (stacked && seq.length && beats < 4) {
           let yTop = 1e9, yLow = -1e9;
-          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi, nt.role));
+          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi, nt.role, nt.member, nt.name));
             yTop = Math.min(yTop, y2); yLow = Math.max(yLow, y2); }
           el("line", { x1: x0 + BW * 0.34 + 6, y1: yLow, x2: x0 + BW * 0.34 + 6,
             y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "stack" }, svg);
@@ -14551,7 +14660,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.5","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.6","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

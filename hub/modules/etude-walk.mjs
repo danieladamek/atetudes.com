@@ -43,7 +43,7 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor } from "../../engine/selection.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
@@ -127,9 +127,10 @@ export const etudeWalk = {
          * dropped roles are SAID (the boards speak them; the walk sounds the kept stack) */
         const fit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
           : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+        const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply sounds too
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
+          : oneOfEach(fit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
         walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
       }

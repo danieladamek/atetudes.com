@@ -194,6 +194,12 @@ separate facts and are drawn in separate channels.
   normal vision; a hue-only channel is separable for no one who cannot read hue and barely
   for anyone who can, where a silhouette survives greyscale (rendered at true size,
   notes/working/shots-260930). Violet returns to §2.1's reservation.*
+- **A chord-supplied chromatic tone is material.** Where the harmony supplies a
+  tone the key does not contain, that tone is a member of the chord for as long
+  as the chord holds — not a member of the field, and not an approach. It draws
+  at full radius and solid, as any chord tone does, wearing this section's
+  non-diatonic mark. *(Ratified by Daniel, 261010 — Update Log 261011.1; the mark was v1.4's,
+  the membership clause is this one.)*
 - **No new ring.** Rings are fully allocated: dashed = pivot and isolation zone; neutral
   dark = the moving voice (§2.3). Approach tones add none.
 - **No interval label.** §2.3's "interval label inside every dot" does not apply to approach

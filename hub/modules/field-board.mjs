@@ -44,7 +44,7 @@ import { SHARED } from "../../engine/shared-config.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence } from "../../engine/selection.mjs";
 import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 // 260917 item 5: the mode names, the one table
 import { MODES } from "../../engine/field.mjs";
@@ -584,9 +584,12 @@ export const fieldBoard = {
          * the dropped roles are SAID two lines below */
         const fdFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
           : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+        /* ROLE A (night 46): the chord is placed from the field's pool AND the chord's own supply —
+         * its offKey tones on the run's strings in the window, role-carrying (§2.6's material clause) */
+        const mat = materialFor(cur.tones, pool, fld, run.strings, pos);
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(fdFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
+          : oneOfEach(fdFit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: the PARTIAL draws beside the refusal (ruling 3)
         absent = { dropped: [...fdFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role),
           strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
@@ -605,14 +608,21 @@ export const fieldBoard = {
            * pool (the engine names it; nothing here tables it); the escape is
            * resolvesAt, worded by this module's own control. */
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
-          const clash = oneOfEach(cur.tones, pool, { n: cfg.notesPer, centre: pos.centre }).collide;
+          const clash = oneOfEach(cur.tones, mat, { n: cfg.notesPer, centre: pos.centre }).collide;
           lossMsg = `missing ${r.capped.map(roleWord).join(" and ")}`
             + (clash ? ` — both ${clash.roles.join(" and ")} on string ${clash.string}` : " — the grip cannot carry it")
             + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} takes ${clash ? "both" : "it"}` : "");
           parts.push(lossMsg);
         }
-        if (cur.offKey.length)
-          parts.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
+        /* THE CHORD'S OWN TONE (night 46, role A — CR-1 §5: the readout owes two different sentences):
+         * the field does not supply it, the chord does; said once in the engine, with the altered
+         * degree the speller derives (♭7, ♯4). "Not in the key — the field cannot carry it" was true
+         * until tonight and is half-false now: the chord carries it. */
+        if (cur.offKey.length) {
+          const alt = alteredDegree(cfg.key, cfg.scale);
+          const labels = cur.tones.filter((t) => t.offKey).map((t) => alt(t.pc + 60, t.name).label);
+          parts.push(chordSuppliedSentence(labels, cur.symbol));
+        }
         /* THE GAMUT'S ABSENCE (night 48) — a fourth absence, its own sentence: a role the gamut
          * omits is refused BY NAME (the reference's precedent: "the R has one occurrence here —
          * the choice is inert"); the partial still draws beside it, never quietly called whole */
@@ -743,10 +753,30 @@ export const fieldBoard = {
           d: `M${x1},${y1} Q${(x1 + x2) / 2},${Math.min(y1, y2) - bulge} ${x2},${y2}`,
           fill: "none", stroke: ANNOTATION_GRAY, "stroke-width": 1.2, "pointer-events": "none" }, svg);
       }
+      const alteredSel = alteredDegree(cfg.key, cfg.scale);
       for (const x of sel) {
-        const fam = FAM[x.deg];
+        /* CR-1 §3, THE GUARD GETS STRONGER (night 46): an off-field note reaches the neck only
+         * wearing a role — a chord-supplied MEMBER (role A) or an approach (drawn below); one that
+         * carries neither is still impossible, and says which role it lacks */
+        if (fld.degOf(x.midi) < 0 && !x.member)
+          throw new Error("field-board: an off-field note reached the neck without a role — CR-1 §3: legal only as a chord-supplied member (role A) or an approach in the figure's order, and this one carries " + (x.role ? `the role "${x.role}" without membership` : "no role"));
         const g = el("g", { class: "fd-sel", "data-selmidi": x.midi,
           "data-selstr": x.string, "data-selfret": x.fret }, svg);
+        if (x.member && x.chromatic) {
+          /* ROLE A'S MARK (§2.6 as it stands): role = chord tone, so full radius, solid; non-diatonic, so
+           * a starburst; colour = the §2.1 colour of the degree it alters, from the LETTER of the spelling
+           * (alteredDegree — the speller's answer, never a table); interior = the altered degree with its
+           * accidental. The same silhouette night 37 built for approaches at 0.6 and hollow. */
+          const a = alteredSel(x.midi, x.name); const famA = FAM[a.deg];   // the chord's spelling: the 7th of C7 is B♭, so ♭7, amber
+          g.setAttribute("data-role", "member"); g.setAttribute("data-chromatic", "true"); g.setAttribute("data-alters", a.label); g.setAttribute("data-deg", famA);
+          el("polygon", { points: starburst(fx(x.fret), fy(x.string), 13), fill: FAM_COLOR[famA],
+            stroke: "#fff", "stroke-width": 2, "stroke-linejoin": "round", "data-cx": fx(x.fret), "data-cy": fy(x.string) }, g);
+          const t = el("text", { x: fx(x.fret), y: fy(x.string) + 3.6, "text-anchor": "middle",
+            "font-size": "9.5", "font-weight": "bold", fill: FAM_TEXT[famA], class: "fd-lab" }, g);
+          t.textContent = a.label;
+          continue;
+        }
+        const fam = FAM[x.deg];
         el("circle", { cx: fx(x.fret), cy: fy(x.string), r: 13, fill: FAM_COLOR[fam],
           stroke: "#fff", "stroke-width": 2 }, g);
         const t = el("text", { x: fx(x.fret), y: fy(x.string) + 3.6, "text-anchor": "middle",

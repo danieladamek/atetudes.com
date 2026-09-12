@@ -1,3 +1,32 @@
+## 2026-09-12 — Night 46: CR-1 role A — a chord-supplied chromatic tone is material; Multetudes v0.6.6; six studies re-inlined for chord.mjs
+
+- **Why:** the twelve-bar blues in C drew C7 as three notes and said *"the 7 of C7 is not in the key —
+  the field cannot carry it"* — true of the field, false of the chord. Design Spec §2.6 gained the
+  material clause, ratified by Daniel 261010 (Update Log 261011.1): where the harmony supplies a tone
+  the key does not contain, that tone is a member of the chord for as long as the chord holds — full
+  radius, solid, wearing v1.4's non-diatonic mark. The register's `chromatic-chord-alterations` entry
+  fired on that sentence and left with the work.
+- **What changed (engine):** `chordAt` hands every chord tone through, the off-key ones flagged and
+  spelled by their chord (`spellRole` — the 7th of C7 is B♭, never A♯); `chordSupply` / `materialFor`
+  in selection.mjs add the chord's own supply to the field's pool, from the field's own tuning;
+  `alteredDegree` takes the chord's spelling for a member; one sentence, `chordSuppliedSentence`.
+  fieldPartition's holding comment replaced by CR-1 §4's ratified text; the loop untouched.
+- **What changed (Multetudes, v0.6.6):** the neck draws a member as a solid starburst in the altered
+  degree's colour with its interior label (the b7 of C7: amber, "b7"); the keys and the staff colour
+  and spell it the same way; the walk sounds it; the readout and the neck say *"the chord's own — the
+  field does not supply it; the chord does, for as long as it holds"*. The guards are stronger: an
+  off-field note without a role still throws on every board, by name.
+- **Six studies move:** `engine/chord.mjs` is carried by all six; metronome and triadetudes
+  re-inlined (`tools/reinline.py chord`), modes-from-pentatonic-boxes and tetrad-voice-leading
+  re-emitted by their generators (byte-identical to what they emit), both doors rebuilt.
+- **Gates:** engine 699/699 (marks.test new — §2.6's starburst and weight pinned by value; the role-A
+  selection test) · hub 12/12 · door gate 20,660 assertions, 0 failed (`hub/tests/out/doors-0911-2114.log`)
+  · singles m88–m90 bite (`bite-m88-90-0911.log`) · chain 91/91, suite green after the revert
+  (`bite-0911-2121.log`, 21:21–02:36) · hugo 0 · check_site clean · Playwright at 1280/390.
+- **Found on the way:** the door gate's closing console check printed the console and not the page
+  errors, so a thrown guard read as `[]`; it prints both now (m88 read NO BITE once for that reason).
+- Report: `notes/working/Multetudes build run 261011e — night 46, role A.md`.
+
 ## 2026-09-12 — DEPLOYED: night 51 live — the neck at 390, fewer frets full size; Multetudes v0.6.5 moved; written from the run
 
 - record: run 34664047471 · success · commit 25028d9 · fetched 2026-09-12T01:19Z · 6/6 studies byte-identical · digest b5f63793513f

@@ -828,6 +828,23 @@ function chromaticSpeller(key, scaleType = "major") {
  * Returns { name, deg (0..6, the §2.1 family index), acc (the alteration
  * against the scale's OWN spelling of that degree), label ("b7", "#4", or
  * the plain degree when diatonic), chromatic }. */
+/** THE CHORD SPELLS ITS OWN TONES (night 46, role A): the 7th of C7 is B♭ — the root's LETTER
+ * stepped by the role (R 3 5 7 9 11 13 → 0 2 4 6 1 3 5 letters), the accidental read off the pitch
+ * class against that letter's natural. Letters and pitch-class math, never a table; §2.6's "the
+ * LETTER of its spelled name" for a chord-supplied tone is the chord's letter, not the key's. */
+function spellRole(rootName, role, pc) {
+  const STEPS = { R: 0, 3: 2, 5: 4, 7: 6, 9: 1, 11: 3, 13: 5 };
+  const step = STEPS[String(role)];
+  if (step === undefined) throw new Error(`spellRole: "${role}" is not a chord role`);
+  const rootIdx = SCALE_LETTERS.indexOf(rootName[0]);
+  if (rootIdx < 0) throw new Error(`spellRole: "${rootName}" has no letter`);
+  const letter = SCALE_LETTERS[(rootIdx + step) % 7];
+  const natural = [0, 2, 4, 5, 7, 9, 11][SCALE_LETTERS.indexOf(letter)];
+  let acc = ((mod12(pc) - natural) % 12 + 12) % 12; if (acc > 6) acc -= 12;
+  if (Math.abs(acc) > 2) throw new Error(`spellRole: the ${role} of ${rootName} would need ${Math.abs(acc)} accidentals`);
+  return letter + (acc > 0 ? "#".repeat(acc) : "b".repeat(-acc));
+}
+
 function alteredDegree(key, scaleType = "major") {
   const spell = chromaticSpeller(key, scaleType);
   const notes = scaleNotes(key, scaleType);
@@ -835,8 +852,8 @@ function alteredDegree(key, scaleType = "major") {
   const keyIdx = SCALE_LETTERS.indexOf(notes[0].name[0]);
   const scalePcs = new Set(notes.map((n) => n.pc));
   const DEG = ["R", "2", "3", "4", "5", "6", "7"];
-  return (midi) => {
-    const { name } = spell(midi);
+  return (midi, spelled) => {   // `spelled` (night 46): a chord's own spelling of a member — the chord's letter outranks the key's speller
+    const name = spelled || spell(midi).name;
     const deg = (SCALE_LETTERS.indexOf(name[0]) - keyIdx + 7) % 7;
     const acc = accOf(name) - accOf(major[deg].name);
     const chromatic = !scalePcs.has(mod12(midi));
@@ -864,7 +881,7 @@ function resolveRoman(tok, key, scaleType = "major") {
   const symbol = name + romanQualitySuffix(r);
   return { symbol, parsed: parseChord(symbol) };
 }
-return { parseChord, resolveRoman, scaleNotes, pcOf, accOf };
+return { LETTER_PC, accOf, pcOf, parseChord, parseRoman, SCALE_STEPS, scaleNotes, chromaticSpeller, spellRole, alteredDegree, resolveRoman };
 })();
 const FIELD = (() => {
 const { scaleNotes, SCALE_STEPS } = CHORD;

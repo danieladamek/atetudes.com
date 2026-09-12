@@ -16,7 +16,8 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, gripFit } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit, materialFor } from "../../engine/selection.mjs";
+import { alteredDegree } from "../../engine/chord.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
@@ -128,10 +129,11 @@ export const keysBoard = {
         if (cfg.centreSrc === "follows" && kyRefDeg != null) sel = reRead(sel, kyRefDeg);
       }
       else {
+        const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
+          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
           : oneOfEach(gripFit(cur.tones, run.strings.length * cfg.notesPer).tones,
-              pool, { n: cfg.notesPer, centre: pos.centre });
+              mat, { n: cfg.notesPer, centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
@@ -154,12 +156,15 @@ export const keysBoard = {
         const black = BLACK.includes(mod(nt.midi, 12));
         const cx = xOf(nt.midi) + (black ? ww * 0.3 : ww / 2);
         const cy = black ? 14 + H * 0.48 : 14 + H - 24;
-        const fam = FAM[nt.deg];
+        /* a chord-supplied member (role A, night 46) wears the colour of the degree it alters and its
+         * altered label — the keyboard's mark is the circle (§2.6's shape rule is drawn on the neck) */
+        const alt = nt.member && nt.chromatic ? alteredDegree(cfg.key, cfg.scale)(nt.midi, nt.name) : null;
+        const fam = alt ? FAM[alt.deg] : FAM[nt.deg];
         el("circle", { cx, cy, r: 10, fill: FAM_COLOR[fam], stroke: "#fff",
-          "stroke-width": 1.6, "pointer-events": "none", "data-kysel": nt.midi }, svg);
+          "stroke-width": 1.6, "pointer-events": "none", "data-kysel": nt.midi, ...(alt ? { "data-kyalters": alt.label } : {}) }, svg);
         const t = el("text", { x: cx, y: cy + 3.4, "text-anchor": "middle", "font-size": "9",
           fill: FAM_TEXT[fam], class: "ky-lab" }, svg);
-        t.textContent = nt.role || fam;
+        t.textContent = alt ? alt.label : (nt.role || fam);
       }
       /* the pulse layer rides ABOVE the dots — field-board's own order */
       el("g", { class: "ky-pulselayer" }, svg);

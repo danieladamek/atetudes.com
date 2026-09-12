@@ -1982,6 +1982,53 @@ def m87_the_whole_field_option_goes_dark():
         p.write_text(original)
 
 
+def m88_a_member_reaches_the_neck_without_its_role():
+    # the supply forgets the membership flag: an off-field note reaches the neck without a role — the guard must throw
+    p, original, mutated = patch("engine/selection.mjs",
+        "        out.push({ string: s, fret, midi, deg: null, keyDeg: -1, role: t.role, member: true, chromatic: true, name: t.name });   // `name`: the chord's own spelling (B♭, not A♯)",
+        "        out.push({ string: s, fret, midi, deg: null, keyDeg: -1, role: t.role, name: t.name });   // (no membership)")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "without a role" in g.stdout and "CR-1" in g.stdout
+        record("a chord-supplied tone reaches the neck without its role — the guard throws, naming the missing role",
+               g.returncode != 0 and hit, "suite exit %d; the guard bit by name: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m89_the_supply_reads_standard_tuning():
+    # the chord's supply computes frets from the module's default instead of the field's opens: drop D draws the b7 two frets wrong
+    p, original, mutated = patch("engine/selection.mjs",
+        "        const midi = fld.opens[s] + fret;\n        if (mod12(midi) !== mod12(t.pc)) continue;",
+        "        const midi = OPEN_MIDI[s] + fret;\n        if (mod12(midi) !== mod12(t.pc)) continue;")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/selection.test.mjs", "engine/tests/tuning.test.mjs")
+        hit = "never standard" in (r.stdout + r.stderr) or "reads the constant as THE tuning" in (r.stdout + r.stderr) or "OPEN_MIDI is not defined" in (r.stdout + r.stderr)
+        record("the chord's supply reads standard tuning — drop D places the b7 two frets wrong",
+               r.returncode != 0 and hit, "engine exit %d; the tuning pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m90_the_field_cannot_carry_it_returns():
+    # the neck's sentence reverts to the half-false one
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "          parts.push(chordSuppliedSentence(labels, cur.symbol));",
+        "          parts.push(`the ${cur.offKey.join(\" and \")} of ${cur.symbol} is not in the key — the field cannot carry it`);")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the neck's sentence" in g.stdout or "half-false sentence" in g.stdout
+        record("'the field cannot carry it' returns to the neck — half-false under role A",
+               g.returncode != 0 and hit, "suite exit %d; the sentence pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
 
@@ -2106,7 +2153,8 @@ def main():
                m76_the_global_step_clamps, m77_shape_is_read_before_exact, m78_a_second_spelling_override_creeps_in,
                m79_the_snapshot_strips_the_tuning_again, m80_the_parser_passes_a_crossed_tuning_through, m81_the_shared_form_drops_the_tuning,
                m82_the_predicate_ignores_the_gamut, m83_the_pentatonic_rule_admits_a_semitone, m84_a_restored_etude_acquires_a_gamut, m85_the_omitted_role_places_quietly,
-               m86_the_figure_reports_the_consequence_again, m87_the_whole_field_option_goes_dark)
+               m86_the_figure_reports_the_consequence_again, m87_the_whole_field_option_goes_dark,
+               m88_a_member_reaches_the_neck_without_its_role, m89_the_supply_reads_standard_tuning, m90_the_field_cannot_carry_it_returns)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

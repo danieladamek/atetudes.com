@@ -24,7 +24,7 @@ import { chromaticSpeller, alteredDegree } from "../../engine/chord.mjs";
 import { starburst } from "../marks.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor } from "../../engine/selection.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
@@ -118,9 +118,10 @@ export const staffBoard = {
             ? reRead(scaleSel, cDeg) : scaleSel };
         }
         const fit = cfg.take === "all" ? { tones: c.tones, dropped: [] } : gripFit(c.tones, run.strings.length * cfg.notesPer);
+        const mat = materialFor(c.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
         const r = cfg.take === "all"
-          ? everyOccurrence(c.tones, pool, { n: cfg.notesPer })
-          : oneOfEach(fit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(c.tones, mat, { n: cfg.notesPer })
+          : oneOfEach(fit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
         /* what the placement dropped, for the figure's refusal in every bar (261011c) */
         r.absent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: (r.notes || r.partial || []).map((x) => x.role),
           strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
@@ -161,12 +162,18 @@ export const staffBoard = {
        * pc 2: "Eb"). One speller, the law resolveRoman's; the role test stays. */
       const spell = chromaticSpeller(cfg.key, cfg.scale);
       const altered = alteredDegree(cfg.key, cfg.scale);   // v1.4: the degree a chromatic note alters, from the same speller
-      const stepOf = (m0, role) => {
+      const stepOf = (m0, role, member, spelled) => {
         const m2 = m0 + WRITTEN, pc = mod(m2, 12);
-        if (!fld.notes.some((n) => n.pc === pc) && role !== "approach")
+        /* CR-1 §3: off the field is drawable only wearing a role — an approach, or (role A, night 46)
+         * a chord-supplied MEMBER; a bare role name is not membership, and still throws */
+        if (!fld.notes.some((n) => n.pc === pc) && role !== "approach" && !member)
           throw new Error("staff-board: a selected note is off the field — nothing off the field is drawable " +
-            "unless it carries a role (CR-1 §3), and this one carries " + (role ? `"${role}"` : "none"));
-        const sp = spell(m2);
+            "unless it carries a role (CR-1 §3): a chord-supplied member or an approach, and this one carries " + (role ? `"${role}" without membership` : "none"));
+        /* a member is spelled by its CHORD (the 7th of C7 is Bb, never A#); its written octave follows
+         * the letter exactly as the speller's does (chord.mjs: a Cb sounds below its C, a B# above its B) */
+        const sp = member && spelled
+          ? { name: spelled, oct: Math.floor(m2 / 12) - 1 + (spelled.startsWith("Cb") ? 1 : 0) - (spelled.startsWith("B#") ? 1 : 0) }
+          : spell(m2);
         return sp.oct * 7 + LETTERS.indexOf(sp.name[0]);
       };
       const yTreble = (s) => TY + GAP * 8 - (s - (4 * 7 + 2)) * GAP;
@@ -185,7 +192,7 @@ export const staffBoard = {
       const figs = sels.map((sl, i) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos, absent: rs[i].absent || null }));   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
-      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role));
+      for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role, nt.member, nt.name));
       for (const fg of figs) if (fg.order) for (const nt of fg.order) allSteps.push(stepOf(nt.midi, nt.role));
       const topStep = allSteps.length ? Math.max(...allSteps) : (4 * 7 + 2) + 8;
       /* a sequenced bar's stems rise 24 above the top head and the tuplet
@@ -274,7 +281,7 @@ export const staffBoard = {
         const open = together ? beats >= 2 : wv >= 2;
         const xsL = [], ysL = [];
         seq.forEach((nt, k) => {
-          const st = stepOf(nt.midi, nt.role), y = yTreble(st);
+          const st = stepOf(nt.midi, nt.role, nt.member, nt.name), y = yTreble(st);   // a member passes the guard and is spelled by its chord
           /* the x IS the onset: at/beats through the bar, centred in its own
            * written slot — identical to the family's (k+0.5)·(w/L) when the
            * schedule is uniform, but sourced from the event itself */
@@ -303,7 +310,10 @@ export const staffBoard = {
             else
               el("ellipse", { ...head, cx: x, cy: y, rx: 4.5, ry: 3.4, transform: `rotate(-14 ${x} ${y})` }, svg);
           } else {
-          const fam = FAM[nt.deg];
+          /* a chord-supplied member (role A, night 46): a full notehead in the colour of the degree it
+           * alters, labelled with the altered degree (§2.6's cue-size rule is the approach's) */
+          const altM = nt.member && nt.chromatic ? altered(nt.midi, nt.name) : null;
+          const fam = altM ? FAM[altM.deg] : FAM[nt.deg];
           const head = open
             ? { cx: x, cy: y, rx: 6.4, ry: 5, fill: "#fff", stroke: FAM_COLOR[fam],
                 "stroke-width": 1.6, transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi,
@@ -311,10 +321,11 @@ export const staffBoard = {
             : { cx: x, cy: y, rx: 6.4, ry: 5, fill: FAM_COLOR[fam],
                 transform: `rotate(-18 ${x} ${y})`, "data-stmidi": nt.midi, "data-stbar": ci };
           if (figHere) head["data-stfig"] = k;    // the figure's own steps, addressable
+          if (altM) head["data-stalters"] = altM.label;
           el("ellipse", head, svg);
           const t = el("text", { x, y: y + 3, "text-anchor": "middle", "font-size": "7.5",
             fill: open ? FAM_COLOR[fam] : FAM_TEXT[fam], "font-weight": "bold", class: "st-lab" }, svg);
-          t.textContent = nt.role || fam;
+          t.textContent = altM ? altM.label : (nt.role || fam);
           }
           if (!stacked) { xsL.push(x); ysL.push(y); }
           if (ci === index) {
@@ -326,7 +337,7 @@ export const staffBoard = {
         /* the notation — score-board's, on this board's heads */
         if (stacked && seq.length && beats < 4) {
           let yTop = 1e9, yLow = -1e9;
-          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi, nt.role));
+          for (const nt of seq) { const y2 = yTreble(stepOf(nt.midi, nt.role, nt.member, nt.name));
             yTop = Math.min(yTop, y2); yLow = Math.max(yLow, y2); }
           el("line", { x1: x0 + BW * 0.34 + 6, y1: yLow, x2: x0 + BW * 0.34 + 6,
             y2: yTop - 26, stroke: "#212126", "stroke-width": 1.2, "data-ststem": "stack" }, svg);

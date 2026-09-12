@@ -14,7 +14,7 @@
 import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
@@ -22,6 +22,7 @@ import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
 import { inGamut } from "../../engine/position.mjs";
+import { alteredDegree } from "../../engine/chord.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
@@ -98,9 +99,10 @@ export const neckReadout = {
         else {
           const roFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
             : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+          const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
           const r = cfg.take === "all"
-            ? everyOccurrence(cur.tones, pool, { n: cfg.notesPer })
-            : oneOfEach(roFit.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+            ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
+            : oneOfEach(roFit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
           sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
           absent = { dropped: [...roFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
           if (roFit.dropped.length)
@@ -111,8 +113,10 @@ export const neckReadout = {
           if (cur.unnamed) absences.push(cur.unnamed);
           if (cur.absent.length)
             absences.push(`${cur.symbol} has no ${cur.absent.join(" or ")} — the chord cannot fill that slot`);
-          if (cur.offKey.length)
-            absences.push(`the ${cur.offKey.join(" and ")} of ${cur.symbol} is not in the key — the field cannot carry it`);
+          if (cur.offKey.length) {   // the chord's own tone, said by the one engine sentence (night 46)
+            const alt = alteredDegree(cfg.key, cfg.scale);
+            absences.push(chordSuppliedSentence(cur.tones.filter((x) => x.offKey).map((x) => alt(x.pc + 60, x.name).label), cur.symbol));
+          }
           /* the GAMUT's absence (night 48): a fourth absence, named on its own */
           const outsideGamut = cur.tones.filter((t) => fld.pcs.indexOf(t.pc) >= 0 && !inGamut(cfg.gamut, fld.pcs.indexOf(t.pc))).map((t) => t.role);
           if (outsideGamut.length) absences.push(`the ${outsideGamut.join(" and ")} of ${cur.symbol} is outside the gamut — a ${cfg.object} cannot be filled from it`);

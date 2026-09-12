@@ -280,14 +280,50 @@ export function gripFit(tones, slots) {
 }
 
 /** fieldPartition(tones, fld) → { inKey, offKey } — which of a chord's tones
- * the FIELD can carry at all. The field is the key, so a tone outside the
- * key can never be material: NOT IN THE KEY is a different absence from NOT
- * IN THIS FRAME, and both are teaching (child 7's own deliverable). */
-/* CR-1 §3 (260918): this partition still answers only NOT IN THE KEY. An
- * offKey tone that reaches a board is legal only wearing a role (an approach
- * tonight; a chord-supplied member once role A is ruled — deferred, see the
- * register's chromatic-chord-alterations entry). §4's doctrine amendment is
- * deferred with it. */
+ * the FIELD itself supplies. The field is the key, so an offKey tone is never a
+ * member of the FIELD — but under CR-1 it may still be material: a chord the
+ * harmony supplies makes its own tones material for as long as it holds. NOT
+ * IN THE KEY, NOT IN THIS FRAME and NOT IN THIS CHORD are three different
+ * absences, and all three are teaching. What this partition answers is only the
+ * first. (CR-1 §4, ratified 261008 and landed night 46 with role A — the
+ * 260918 holding note that deferred this sentence went with the deferral; the
+ * loop below is unchanged, it partitions by key membership either way.) */
+/** THE CHORD'S OWN SUPPLY (role A — CR-1 §6's deferred half, ratified §2.6 261010, night 46): a
+ * tone the harmony supplies and the key does not contain is MATERIAL for as long as the chord
+ * holds — a member of the chord, not of the field, not an approach. The field's pool (materialIn)
+ * stays the field's own and keeps its throw (CR-1 §3); this is the second, ROLE-CARRYING list a
+ * board adds to it: every fret in the window on the run's strings that sounds the tone's pitch
+ * class, from the FIELD's opens (the tuning is the field's fact — never standard). Each note wears
+ * `member: true, chromatic: true` and its role; a note off the field without either is still
+ * illegal on every board (the guards get stronger, not weaker). */
+export function chordSupply(tones, fld, strings, pos) {
+  const out = [];
+  for (const t of tones) {
+    if (!t.offKey) continue;
+    for (const s of strings)
+      for (let fret = pos.fLo; fret <= pos.fHi; fret++) {
+        const midi = fld.opens[s] + fret;
+        if (mod12(midi) !== mod12(t.pc)) continue;
+        if (fld.degOf(midi) >= 0) throw new Error("chordSupply: a chord-supplied tone must be off the field — this one is a degree of it");
+        out.push({ string: s, fret, midi, deg: null, keyDeg: -1, role: t.role, member: true, chromatic: true, name: t.name });   // `name`: the chord's own spelling (B♭, not A♯)
+      }
+  }
+  return out;
+}
+
+/** the material a CHORD is placed from: the field's pool, then the chord's own supply (role A) */
+export function materialFor(tones, pool, fld, strings, pos) {
+  return [...pool, ...chordSupply(tones, fld, strings, pos)];
+}
+
+/** THE CHORD'S OWN TONE, said once (night 46, CR-1 §5 — "the readout owes two different
+ * sentences"): the field does not supply it, the chord does, for as long as it holds. `labels`
+ * are the altered-degree spellings (♭7, ♯4) the speller derives; `roles` the chord's roles. */
+export function chordSuppliedSentence(labels, symbol) {
+  const list = labels.length <= 1 ? labels.join("") : labels.slice(0, -1).join(", ") + " and " + labels[labels.length - 1];
+  return `the ${list} of ${symbol} ${labels.length === 1 ? "is" : "are"} the chord's own — the field does not supply ${labels.length === 1 ? "it" : "them"}; the chord does, for as long as it holds`;
+}
+
 export function fieldPartition(tones, fld) {
   const inKey = [], offKey = [];
   for (const t of tones) (fld.degOf(t.pc) >= 0 ? inKey : offKey).push(t);

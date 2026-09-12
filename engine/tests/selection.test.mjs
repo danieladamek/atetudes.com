@@ -32,6 +32,8 @@ import { positionOf, materialIn } from "../position.mjs";
 import { makeRun } from "../string-run.mjs";
 import { diatonicTones, oneOfEach, everyOccurrence, scaleTake, objectOffsets, objectTones, gripFit, STACK_DEPTH } from "../selection.mjs";
 import { parseChord } from "../chord.mjs";
+import * as SEL from "../selection.mjs";
+import { readFileSync } from "node:fs";
 import { lineVoicing, chooseVoicings, makeZone } from "../isolation.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
@@ -548,4 +550,38 @@ test("THE FIGURE NAMES THE CAUSE AND THE WAY THROUGH when a role the placement D
   // a role genuinely absent from the chord (a 9 asked of a tetrad) still says so, unchanged
   const nine = orderBy("tones", "R-9", r3.notes, { fld, strings: [1], pos, absent: { dropped: [], kept: ["R", "3", "7"], notesPer: 3, strings: 1 } });
   assert.match(nine.err, /9th/);
+});
+
+/* ---------------- night 46: role A — fieldPartition answers ONE absence; the chord's own tone is material ---------------- */
+test("ROLE A (CR-1 §4, ratified §2.6): fieldPartition partitions by key membership only, and an offKey tone is still MATERIAL — the chord supplies it, on the run's strings, from the field's own opens", () => {
+  const { fieldPartition, chordSupply, materialFor, chordSuppliedSentence } = SEL;
+  const fld = field({ key: "C", scale: "major" });
+  const tones = objectTones(parseChord("C7"), "tetrad", [1, 3, 5, 7]).tones;   // C E G Bb — the b7 is off the key
+  const part = fieldPartition(tones, fld);
+  assert.deepEqual(part.inKey.map((t) => t.role), ["R", "3", "5"]); assert.deepEqual(part.offKey.map((t) => t.role), ["7"], "NOT IN THE KEY: the partition's one answer");
+  // the amended doctrine, on the artifact: the comment says what it answers and what it does not
+  const src = readFileSync(new URL("../selection.mjs", import.meta.url), "utf8");
+  assert.ok(/which of a chord's tones\n \* the FIELD itself supplies/.test(src) && /may still be material/.test(src) && /What this partition answers is only the\n \* first/.test(src), "fieldPartition's comment is the ratified §4 sentence");
+  assert.ok(!/can never be material/.test(src) && !/deferred with it/.test(src), "the old claim of jurisdiction and the 260918 holding note are gone");
+  // the supply: the b7 placed on the run's strings inside the window, ROLE-CARRYING, from the FIELD's opens
+  const pos = positionOf({ field: fld, anchorString: 4, startDegree: 4, nearFret: 5, strings: [4, 3, 2, 1] });
+  const pool = materialIn(pos, [4, 3, 2, 1], fld);
+  const supplied = part.offKey.map((t) => ({ ...t, offKey: true }));
+  const sup = chordSupply([...part.inKey, ...supplied], fld, [4, 3, 2, 1], pos);
+  assert.ok(sup.length > 0, "the b7 has a fret in the window");
+  for (const n of sup) { assert.equal(n.role, "7"); assert.equal(n.member, true); assert.equal(n.chromatic, true); assert.ok(n.fret >= pos.fLo && n.fret <= pos.fHi); assert.equal((n.midi % 12), 10, "Bb"); assert.equal(fld.degOf(n.midi), -1, "off the field"); }
+  assert.ok(pool.every((n) => fld.degOf(n.midi) >= 0), "materialIn's pool stays the field's own — untouched");
+  const r = oneOfEach([...part.inKey, ...supplied], materialFor([...part.inKey, ...supplied], pool, fld, [4, 3, 2, 1], pos), { n: 1, centre: pos.centre });
+  assert.ok(r.notes && r.notes.length === 4, "C7 places all four — the b7 is material");
+  assert.ok(r.notes.some((n) => n.role === "7" && n.member), "…and the b7 wears its membership");
+  // THE TUNING IS THE FIELD'S FACT: in drop D the sixth string's b7 sits two frets higher
+  const dropD = field({ key: "C", scale: "major", tuning: { 6: -2 } });
+  const whole = { fLo: 0, fHi: 12 };   // the whole neck's low octave, for the comparison
+  const supD = chordSupply(supplied, dropD, [6], whole).map((n) => n.fret), supS = chordSupply(supplied, fld, [6], whole).map((n) => n.fret);
+  assert.deepEqual(supS, [6], "standard: string 6's Bb is at fret 6"); assert.deepEqual(supD, [8], `drop D: the b7 on string 6 moves two frets up (${supS} → ${supD}) — from fld.opens, never standard`);
+  // the guard: a supplied tone that IS a degree of the field is a contradiction and throws
+  assert.throws(() => chordSupply([{ role: "5", pc: 7, offKey: true }], fld, [4], pos), /must be off the field/);
+  // the sentence, once
+  assert.equal(chordSuppliedSentence(["♭7"], "C7"), "the ♭7 of C7 is the chord's own — the field does not supply it; the chord does, for as long as it holds");
+  assert.ok(!/cannot carry/.test(chordSuppliedSentence(["♭7"], "C7")), "the half-false sentence is gone");
 });

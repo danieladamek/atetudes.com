@@ -40,7 +40,7 @@
  */
 import { CYCLES } from "./tetrad-sequence.mjs";
 import { resolveStructure } from "./structures.mjs";
-import { parseChord, resolveRoman } from "./chord.mjs";
+import { parseChord, resolveRoman, spellRole } from "./chord.mjs";
 import { parseAtchart, serializeAtchart } from "./atchart.mjs";
 import { diatonicTones, objectTones, fieldPartition, objectOffsets } from "./selection.mjs";
 import { compositeOver } from "./reference.mjs";
@@ -302,9 +302,12 @@ export function chordAt(prog, index, fld, object, pick) {   // pick: tonePick(cf
       roman: degree < 0 ? "—" : ROMAN[degree], tones: null, absent: [], offKey: [] };
   const ot = objectTones(c.parsed, object, pick);
   const part = fieldPartition(ot.tones, fld);
+  /* ROLE A (night 46, §2.6's material clause): the chord's offKey tones are MEMBERS of the chord —
+   * they ride in `tones` flagged offKey (the placers take them from the chord's own supply), and
+   * `offKey` still lists their roles for the sentence the boards owe */
   return { kind: c.kind, degree, rootPc, symbol: c.symbol,
     roman: romanOf(degree, c.parsed.pcs),
-    tones: part.inKey, absent: ot.absent, offKey: part.offKey.map((t) => t.role) };
+    tones: [...part.inKey, ...part.offKey.map((t) => ({ ...t, offKey: true, name: spellRole(c.parsed.root.name, t.role, t.pc) }))], absent: ot.absent, offKey: part.offKey.map((t) => t.role) };
 }
 
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */

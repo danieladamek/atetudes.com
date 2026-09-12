@@ -3218,9 +3218,12 @@ console.log(JSON.stringify(out));
         page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(200)
         check(tlline() == "Bb7 Eb7 Bb7 Bb7 Eb7 Eb7 Bb7 Bb7 F7 Eb7 Bb7 F7",
               f"{tag} twelve-bar blues in B♭, chip for chip: {tlline()!r}")
+        # UPDATED 261011 (night 46, rule 7): the b7 of B♭7 was "not in the key — the field cannot carry it";
+        # under role A it is the CHORD'S OWN — the field does not supply it, the chord does. The absence
+        # is still named on both faces, by the one engine sentence.
         for face in ("#roLine", "#fdHint"):
-            check("not in the key" in page.inner_text(face),
-                  f"{tag} B♭7's 7th must be reported NOT IN THE KEY on {face}: "
+            check("the chord's own — the field does not supply it" in page.inner_text(face),
+                  f"{tag} B♭7's 7th must be reported the CHORD'S OWN on {face}: "
                   f"{page.inner_text(face)!r}")
         check("in this frame" not in page.inner_text("#roLine"),
               f"{tag} an off-key tone must not be misreported as a frame absence")
@@ -5479,7 +5482,7 @@ console.log(JSON.stringify(out));
         page.wait_for_timeout(80)
 
     check(not errors and not [c for c in console if c[0] in ("error", "warning")],
-          f"{tag} console dirtied by interaction: {console}")
+          f"{tag} console dirtied by interaction: {console} page errors: {errors[:3]}")   # 261011: the page errors printed too — a thrown guard used to leave this line reading "[]"
 
     # re-expand the panels collapsed only for the orphan check, so the gate
     # screenshots show the whole page rather than two shut panels — and only
@@ -6078,6 +6081,62 @@ console.log(JSON.stringify(out));
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(400)
         n4 = neck()
         check(n4["vbx"] == 0 and n4["vbw"] == 1280 and n4["window"] is None, f"{tag} back at 1280 the neck must be the whole neck again: {n4}")
+
+    # ---------------- ROLE A (night 46, 261011): a chord-supplied chromatic tone is material ----------
+    # Daniel's case (261009): the twelve-bar blues in C — I7's b7 is off the key. Before tonight it
+    # neither drew nor sounded and the face said "the field cannot carry it". Now it is the chord's
+    # own: placed from the chord's supply on the run's strings in the window (from the FIELD's opens
+    # — drop D moves it), drawn full and solid as a starburst in the altered degree's colour with the
+    # altered degree inside, sounded by the walk, and said by one sentence at the neck and the readout.
+    if door_id == "multetudes":
+        import re as _re
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.click('#pgSrcSeg button[data-src="form"]'); page.wait_for_timeout(150); page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(300)
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(300)
+        sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret, role: g.dataset.role || 'chord', chromatic: g.dataset.chromatic === 'true', alters: g.dataset.alters || null, shape: g.querySelector('polygon') ? 'starburst' : 'circle', fill: g.querySelector('circle, polygon').getAttribute('fill'), label: (g.querySelector('text') || {}).textContent || null }))")
+        s0 = sel()
+        # rule 3 — the guards' names are asserted WHERE the effect is: a role-A board that throws says so here, by name
+        # (the suite's "console dirtied" check at the end prints the console, not the page errors — a guard's message
+        # would otherwise never reach the log, which is how m88's first run read NO BITE for a guard that had thrown)
+        check(not errors, f"{tag} role A raised page errors on the C7 step: {errors[:2]}")
+        check(len(s0) == 4, f"{tag} C7 must draw FOUR tones now — the b7 is material: {s0}")
+        m = [x for x in s0 if x["role"] == "member"]
+        if len(m) != 1: m = [{"chromatic": False, "shape": None, "alters": None, "label": None, "fill": None, "midi": -1}]   # a shape the checks below can read and fail on, instead of an IndexError that ends the door
+        check(len(m) == 1 and m[0]["chromatic"] and m[0]["shape"] == "starburst" and m[0]["alters"] == "b7" and m[0]["label"] == "b7", f"{tag} the b7 must draw as a full solid starburst labelled b7 (the speller's own form, as the approach's b3 above): {m}")
+        amber = page.evaluate("() => { const s = document.querySelector('#fieldSvg .fd-sel[data-role=\"member\"] polygon'); return s && s.getAttribute('fill'); }")
+        seven = page.evaluate("() => { const s = document.querySelector('#fdLegend span:last-of-type i, #fdLegend i'); return null; }")
+        check(m[0]["fill"] and m[0]["fill"].lower() == "#d99a08", f"{tag} the b7's colour is the 7th's (§2.1 amber, the degree it alters): {m[0]['fill']}")
+        check(m[0]["midi"] % 12 == 10, f"{tag} the member sounds Bb: {m[0]}")
+        hint = page.inner_text("#fdHint"); ro = page.inner_text("#roLine")
+        check("the b7 of C7 is the chord's own — the field does not supply it; the chord does, for as long as it holds" in hint, f"{tag} the neck's sentence: {hint!r}")
+        check("the b7 of C7 is the chord's own" in ro and "cannot carry" not in ro, f"{tag} the readout's sentence: {ro[-260:]!r}")
+        check("cannot carry it" not in hint, f"{tag} the half-false sentence must be gone from the neck: {hint!r}")
+        # the sounding path: the walk sounds the member with the rest
+        page.evaluate("() => { window.__n = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass') window.__n.push(e.detail.midi); }); }")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); page.wait_for_timeout(300)
+        page.evaluate("() => { window.__n = []; }"); page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(1200)
+        sounded = sorted(set(page.evaluate("() => window.__n.slice()")))
+        check(sounded == sorted(x["midi"] for x in sel()), f"{tag} the walk must sound the member with the chord: drawn {sorted(x['midi'] for x in sel())}, sounded {sounded}")
+        # the tuning is the field's fact: in drop D with string 6 in the set, a member on string 6 sits two frets higher than in standard
+        if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") != "true": page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(250)
+        std6 = [x for x in sel() if x["role"] == "member" and x["str"] == 6]
+        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(300)
+        drop6 = [x for x in sel() if x["role"] == "member" and x["str"] == 6]
+        if std6 and drop6:
+            check(drop6[0]["fret"] == std6[0]["fret"] + 2 and drop6[0]["midi"] == std6[0]["midi"], f"{tag} in drop D the member on string 6 must move two frets up and sound the same Bb: {std6} -> {drop6}")
+        else:
+            check(all(x["midi"] % 12 == 10 for x in drop6 + std6) and (drop6 or std6), f"{tag} the member stays a Bb under a retune: {std6} {drop6}")
+        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(200)
+        if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") == "true": page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(250)
+        # an approach beside the member, for the eye: 0.6 hollow against full solid, the same silhouette
+        # (the tones address takes a figure of approaches alone — "(-1)[3]"; a mixed "R-(-1)[3]-5-7" is refused by the grammar, found by the first gate)
+        page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(120); page.fill("#fdFigIn", "(-1)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(300)
+        check("approached from a half step below" in page.inner_text("#fdFigNote"), f"{tag} the approach figure must be accepted, not refused: {page.inner_text('#fdFigNote')!r}")
+        ap = page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-appr polygon')].map(p => ({ fill: p.getAttribute('fill'), sw: p.getAttribute('stroke-width') }))")
+        mem = page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel[data-role=\"member\"] polygon')].map(p => ({ fill: p.getAttribute('fill') }))")
+        check(len(ap) >= 1 and ap[0]["fill"] == "none" and len(mem) == 1 and mem[0]["fill"] != "none", f"{tag} the approach's starburst is hollow and the member's solid: {ap} {mem}")
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(120)
+        page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
