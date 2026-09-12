@@ -262,6 +262,10 @@ export const fieldBoard = {
 #fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
 .fd-wrap{display:flex;gap:12px;align-items:flex-start}
 .fd-rail{flex:0 0 170px}
+/* THE NECK AT 390 (night 51, 261011 — measured: in a 332 px wrap the rail's 170 px left the SVG
+ * 150 px wide, scale 0.117, a 4.7 px hit target). Under 600 px the rail stacks beneath the neck so
+ * the board's whole width is the neck's, and the SVG shows a fret WINDOW at full size (below). */
+@media (max-width:600px){.fd-wrap{flex-direction:column}.fd-rail{flex:0 0 auto;width:100%}.fd-rail.fd-shut{flex:0 0 30px;width:100%}}
 .fd-rail.fd-shut{flex:0 0 30px;overflow:hidden}
 .fd-rail.fd-shut>*{display:none}
 .fd-rail.fd-shut>.fd-railtop{display:flex}
@@ -833,11 +837,32 @@ export const fieldBoard = {
       edge(ys[0], "size-top"); edge(ys[1], "size-bottom");
       for (const n of [grip, gripHit]) n.addEventListener("pointerdown", (e) => startDrag(e, "move"));
 
+      /* THE FRET WINDOW AT NARROW WIDTHS (night 51): fewer frets, full size — the position's
+       * frets and whatever the selection reaches, never fewer than five, drawn at the 1280
+       * geometry; the squares' and bracket's column moves to the window's right edge so the set
+       * stays a control a finger can hit. Nothing about what the neck teaches changes: degrees,
+       * colours, the position, the isolation box and the marks are the same nodes at the same
+       * coordinates — only the viewBox and the gutter's x move, and only under 600 px. */
+      const narrow = d.defaultView.matchMedia && d.defaultView.matchMedia("(max-width: 600px)").matches;
+      const drawnFrets = sel.map((n) => n.fret);
+      let wLo = Math.max(0, Math.min(pos.fLo, ...drawnFrets)), wHi = Math.min(NFRETS, Math.max(pos.fHi, ...drawnFrets));
+      while (wHi - wLo + 1 < 5) { if (wHi < NFRETS) wHi++; else if (wLo > 0) wLo--; else break; }
+      const sideX = narrow ? fx(wHi) + FW / 2 + 42 : STR_X;   // the gutter follows the window
+      const brkX = sideX + (BRK_X - STR_X);
+      if (narrow) {
+        const x0 = wLo <= 1 ? FX0 - 44 : fx(wLo) - FW / 2 - 8;   // measured 261011: 487 units gave scale 0.68 and a 23 px hit; 467 gives 0.71 and 24
+        const x1 = brkX + 24;
+        svg.setAttribute("viewBox", `${x0} 0 ${x1 - x0} 260`);
+        svg.setAttribute("data-window", `${wLo}-${wHi}`);
+      } else if (svg.getAttribute("viewBox") !== "0 0 1280 260") {
+        svg.setAttribute("viewBox", "0 0 1280 260"); svg.removeAttribute("data-window");
+      }
+
       /* the gutter: the set squares, then the pattern-bracket column (3b's) */
-      const capT = el("text", { x: STR_X, y: fy(1) - 22, "text-anchor": "middle",
+      const capT = el("text", { x: sideX, y: fy(1) - 22, "text-anchor": "middle",
         "font-size": "8.5", fill: "#B9B9BF" }, svg);
       capT.textContent = "set";
-      const capB = el("text", { x: BRK_X + 10, y: fy(1) - 22, "text-anchor": "middle",
+      const capB = el("text", { x: brkX + 10, y: fy(1) - 22, "text-anchor": "middle",
         "font-size": "8.5", fill: "#B9B9BF" }, svg);
       capB.textContent = "pattern";
       const brSteps = bracketOf(fig.order);
@@ -860,11 +885,11 @@ export const fieldBoard = {
           "aria-label": `string ${s}` + (on ? " — in the set" : " — not in the set") }, svg);
         const ttl = el("title", {}, g);
         ttl.textContent = on ? `string ${s} is in the set — click to leave it out` : `string ${s} is out of the set — click to include it`;
-        el("rect", { class: "fd-hit", x: STR_X - 20, y: fy(s) - 17, width: 40, height: 34 }, g);
-        el("rect", { class: "fd-sq", x: STR_X - 12, y: fy(s) - 11, width: 24, height: 22, rx: 6,
+        el("rect", { class: "fd-hit", x: sideX - 20, y: fy(s) - 17, width: 40, height: 34 }, g);
+        el("rect", { class: "fd-sq", x: sideX - 12, y: fy(s) - 11, width: 24, height: 22, rx: 6,
           fill: on ? "#212126" : "#fff", stroke: on ? "#212126" : "#B9B9BF",
           "stroke-width": 1.3 }, g);
-        const t = el("text", { x: STR_X, y: fy(s) + 4, "text-anchor": "middle",
+        const t = el("text", { x: sideX, y: fy(s) + 4, "text-anchor": "middle",
           "font-size": "11.5", "font-weight": on ? "bold" : "normal",
           fill: on ? "#fff" : "#73737A", class: "fd-lab" }, g);
         t.textContent = s;
@@ -882,7 +907,7 @@ export const fieldBoard = {
           text2 = "{" + Array.from({ length: offers[s] }, (x, i) => i + 1).join(",") + "}";
         }
         if (text2) {
-          const bt = el("text", { x: BRK_X, y: fy(s) + 4, "font-size": "11.5",
+          const bt = el("text", { x: brkX, y: fy(s) + 4, "font-size": "11.5",
             fill: fill2, "font-weight": cfg.address === "pattern" && fig.order ? "600" : "400",
             "font-family": "ui-monospace,SFMono-Regular,Menlo,monospace",
             class: "fd-brk", "data-fdbrk": s }, svg);
@@ -1186,6 +1211,8 @@ export const fieldBoard = {
       if (has && cfg.strings.length === 1) return;   // a run is never empty
       setStrings(has ? cfg.strings.filter((x) => x !== s) : [...cfg.strings, s]);
     };
+    /* crossing 600 px re-lays the neck (night 51): the window and the gutter are build-time facts */
+    if (d.defaultView.matchMedia) d.defaultView.matchMedia("(max-width: 600px)").addEventListener("change", () => build());
     byId("fieldSvg").addEventListener("click", (e) => {
       const sq = e.target.closest("[data-fdstr]");
       if (sq) { toggleSquare(sq); return; }

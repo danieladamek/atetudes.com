@@ -1,3 +1,23 @@
+## 2026-09-11 — Night 51: the neck at 390 — fewer frets, full size; Multetudes v0.6.5
+
+- **Why (the item, promoted by Daniel 261011 for its immediate value):** at phone width the neck
+  rendered 150 × 30 px — scale 0.117, a 4.7 px hit target on the set squares — because the rail's
+  170 px sat beside it in a 332 px wrap. The 4.7 px control was the symptom; the board was the
+  defect.
+- **What changed (inside the neck's board only):** under 600 px the rail stacks beneath the neck
+  and the SVG shows a fret window at the 1280 geometry — the position's frets and whatever the
+  selection reaches, never fewer than five — with the set squares' column at the window's edge, so
+  a finger can hit them; the arrow keys step the window as before. Measured after: at 390 the neck
+  is 332 px wide at scale 0.717, the square 17 × 16 px with a 28.7 × 24.4 px hit (WCAG 2.5.8's 24),
+  the dot 18.6 px. At 1280 nothing moved: the neck's markup, every board's DOM and the readout are
+  byte-identical to before in six states. Nothing the neck teaches changed, and nothing outside the
+  board — the transport, the mixer and the cards' rows are the re-cut's.
+- **Verified:** engine 698/698, hub 12/12, the door gate 20,522/0 with the window, the hit size,
+  the click and the whole neck at 1280 asserted and the gate's own axe pass at 390 clean, the bite
+  chain 88/88, hugo and check_site clean; rendered before and after at both widths and looked at
+  (`notes/working/shots-261011d/`).
+- Report: `notes/working/Multetudes build run 261011d — night 51, the neck at 390.md`.
+
 ## 2026-09-11 — DEPLOYED: injection 261011c live — the figure names the cause; the Gamut's way back; Multetudes v0.6.4 moved; written from the run
 
 - record: run 34640264299 · success · commit 908acfa · fetched 2026-09-11T19:50Z · 6/6 studies byte-identical · digest e1364299a03c

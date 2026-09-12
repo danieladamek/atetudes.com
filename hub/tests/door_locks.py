@@ -6038,6 +6038,47 @@ console.log(JSON.stringify(out));
             page.select_option("#hcGamut", ["1,2,4,5,6,7", "1,2,3,4,5,6,7"]); page.wait_for_timeout(300)
         check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} the whole-field option ADDED to a union must still land on the whole field: {gamut_of()!r}")
 
+    # ---------------- THE NECK AT 390 (night 51, 261011): fewer frets, full size ----------
+    # Measured before the change: a 332 px wrap, the rail's 170 px beside the neck, the SVG 150 px
+    # wide, scale 0.117, the set square's hit 4.7 px. Now: under 600 px the rail stacks beneath the
+    # neck and the SVG shows a fret WINDOW at the 1280 geometry — the position's frets and whatever
+    # the selection reaches, never fewer than five — with the squares' column at the window's edge.
+    # At 1280 nothing changes: the viewBox is the full neck and the SVG is the same markup.
+    if door_id == "multetudes":
+        neck = lambda: page.evaluate("""() => { const svg = document.getElementById('fieldSvg'); const b = svg.getBoundingClientRect(); const vb = svg.viewBox.baseVal;
+          const hit = document.querySelector('#fieldSvg [data-fdstr="4"] .fd-hit').getBoundingClientRect(); const sq = document.querySelector('#fieldSvg [data-fdstr="4"] .fd-sq').getBoundingClientRect();
+          const inside = [...document.querySelectorAll('#fieldSvg [data-fdstr] .fd-hit')].every(r => { const q = r.getBoundingClientRect(); return q.left >= b.left - 0.5 && q.right <= b.right + 0.5; });
+          return { w: b.width, scale: b.width / vb.width, vbx: vb.x, vbw: vb.width, window: svg.dataset.window || null, hit: [hit.width, hit.height], sq: [sq.width, sq.height], inside, dir: getComputedStyle(document.querySelector('.fd-wrap')).flexDirection,
+            pos: [+document.querySelector('#fieldSvg .fd-box, #fieldSvg [data-flo]')?.dataset?.flo || null] }; }""")
+        n1 = neck()
+        check(n1["vbx"] == 0 and n1["vbw"] == 1280 and n1["window"] is None and n1["dir"] == "row", f"{tag} at 1280 the neck must be the whole neck, unchanged: {n1}")
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(400)
+        n2 = neck()
+        check(n2["dir"] == "column" and n2["w"] >= 300, f"{tag} at 390 the rail must stack under the neck and the SVG take the board's width: {n2}")
+        check(n2["window"] is not None and n2["vbx"] > 0 and n2["vbw"] < 700, f"{tag} at 390 the neck must show a fret window, not the whole neck: {n2}")
+        check(n2["scale"] >= 0.7, f"{tag} at 390 the window must draw near the 1280 geometry (scale ≥ 0.7): {n2['scale']:.3f}")
+        check(n2["hit"][0] >= 24 and n2["hit"][1] >= 24, f"{tag} at 390 a set square's hit target must clear 24 × 24 px (WCAG 2.5.8): {n2['hit']}")
+        check(n2["sq"][0] >= 14 and n2["inside"], f"{tag} at 390 the squares must be visible marks inside the SVG's box: {n2}")
+        lo, hi = [int(x) for x in n2["window"].split("-")]
+        check(hi - lo + 1 >= 5, f"{tag} the window holds at least five frets: {n2['window']}")
+        # the window follows the selection: under Line the placement reaches past the position
+        page.click('#fdNSeg button[data-nps="3"]'); page.wait_for_timeout(300)
+        n3 = neck(); lo3, hi3 = [int(x) for x in n3["window"].split("-")]
+        drawn = page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selfret)")
+        check(min(drawn) >= lo3 and max(drawn) <= hi3 and n3["scale"] >= 0.55 and n3["hit"][0] >= 22, f"{tag} the window must hold every drawn fret under Line at a usable size: window {n3['window']} drawn {drawn} scale {n3['scale']:.2f} hit {n3['hit']}")
+        page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(200)
+        # a finger's click on a square at 390 toggles the string — the control is a control there now
+        page.click('#fieldSvg [data-fdstr="4"]'); page.wait_for_timeout(300)
+        check(page.get_attribute('#fieldSvg [data-fdstr="4"]', "aria-pressed") == "false", f"{tag} at 390 a click on the square must toggle the string")
+        page.click('#fieldSvg [data-fdstr="4"]'); page.wait_for_timeout(300)
+        check(page.get_attribute('#fieldSvg [data-fdstr="4"]', "aria-pressed") == "true", f"{tag} …and back")
+        # the axe pass at 390 is the gate's own, above: it sets the viewport to 390, which re-lays the
+        # neck through the breakpoint listener, and runs axe with this door's standing exemptions —
+        # a second, bare run here would refuse the door's known select-name rows, not the neck
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(400)
+        n4 = neck()
+        check(n4["vbx"] == 0 and n4["vbw"] == 1280 and n4["window"] is None, f"{tag} back at 1280 the neck must be the whole neck again: {n4}")
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

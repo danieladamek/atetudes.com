@@ -180,7 +180,10 @@ export default {
     /* v0.6.4 (injection 261011c): a role the placement dropped is named as such by the figure — the cause and
      * the way through, never "this selection carries no 5th" with the 5 on the string; the gamut list's
      * first option is the whole field, the obvious way back (a stopgap; the control's own shape is night 54's). */
-    blurb: "one tool that holds many études · v0.6.4",
+    /* v0.6.5 (261011, night 51 — the neck at 390): under 600 px the rail stacks beneath the neck and the SVG shows
+     * a fret window at full size — the position's frets and what the selection reaches, never fewer than five —
+     * with the set squares at the window's edge; 1280 unchanged. */
+    blurb: "one tool that holds many études · v0.6.5",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
