@@ -1,3 +1,14 @@
+## 2026-09-12 — DEPLOYED: night 56 live — the cap is a voicing's rule, a line is uncapped; Multetudes v0.6.8 moved; written from the run
+
+- record: run 34720161569 · success · commit f3fee6a · fetched 2026-09-12T21:40Z · 6/6 studies byte-identical · digest 9d5de803aa00
+- Actions run 34720161569 green on `f3fee6a` — https://github.com/danieladamek/atetudes.com/actions/runs/34720161569 (created 2026-09-12T21:30:42Z, finished 2026-09-12T21:39:25Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 16a276505fe6 · live 16a276505fe6 — matches.
+- multetudes: repo b8355544e6a5 · live b8355544e6a5 — matches.
+- tetrad-voice-leading: repo e546d476530d · live e546d476530d — matches.
+- tetradetudes: repo 18efde69d068 · live 18efde69d068 — matches.
+- triadetudes: repo 89d02273d7e2 · live 89d02273d7e2 — matches.
+
 ## 2026-09-12 — Night 56: the cap is a voicing's rule — a line is uncapped; Multetudes v0.6.8
 
 - **Why (Daniel's ruling 261012 on injection 261011c's item 2):** the per-string cap exists because a
