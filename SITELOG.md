@@ -1,3 +1,14 @@
+## 2026-09-12 — DEPLOYED: night 46 live — a chord-supplied chromatic tone is material; Multetudes v0.6.6; all six studies moved (chord.mjs re-inlined); written from the run
+
+- record: run 34681240958 · success · commit 7fc4e4a · fetched 2026-09-12T07:48Z · 6/6 studies byte-identical · digest 60f68aa5eca4
+- Actions run 34681240958 green on `7fc4e4a` — https://github.com/danieladamek/atetudes.com/actions/runs/34681240958 (created 2026-09-12T07:38:06Z, finished 2026-09-12T07:46:09Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 16a276505fe6 · live 16a276505fe6 — matches.
+- multetudes: repo 0faacfbb5f72 · live 0faacfbb5f72 — matches.
+- tetrad-voice-leading: repo e546d476530d · live e546d476530d — matches.
+- tetradetudes: repo 18efde69d068 · live 18efde69d068 — matches.
+- triadetudes: repo 89d02273d7e2 · live 89d02273d7e2 — matches.
+
 ## 2026-09-12 — Night 46: CR-1 role A — a chord-supplied chromatic tone is material; Multetudes v0.6.6; six studies re-inlined for chord.mjs
 
 - **Why:** the twelve-bar blues in C drew C7 as three notes and said *"the 7 of C7 is not in the key —
