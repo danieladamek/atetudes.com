@@ -10,8 +10,12 @@
  * chips and the boards ask with STEP_CHANGED {request:true, index}; this
  * strip clamps into the derived length, wraps ⏮/⏭ around the ends the way a
  * practice loop should, and echoes STEP_CHANGED {index}. Every board renders
- * the echo (§4.2.3). The mini's ▶ stays a PLAY request answered by the walk,
- * not by this strip — a strip summons the transport; it never owns a timer.
+ * the echo (§4.2.3). A strip summons the transport; it never owns a timer —
+ * and since night 55 (261012) this strip carries no summoner at all: the
+ * ⏮ ▶ ⏹ ⏭ that floated over the scroller's right end (position:absolute,
+ * z-index 5) was a second copy of the neck's own cluster (#fdMini, the 260919
+ * clock row) and it covered the last chord of a long progression — Daniel,
+ * 261009. The transport is the neck's, once; the chart line is chips only.
  *
  * THE BASS SUB-LINE: with a reference chosen, each chip carries what its
  * stack becomes over it — compositeOver's read-back name and the slash —
@@ -26,7 +30,6 @@
  * module; only the data differs. The position stays HERE: a chip click comes
  * back through onPick and is announced as the same request every board makes.
  */
-import { mountMini } from "../mini.mjs";
 import { field } from "../../engine/field.mjs";
 import { progressionOf, chordAt, beatsOf } from "../../engine/progression.mjs";
 import { placeReference, compositeOver, REF_OFFSET } from "../../engine/reference.mjs";
@@ -43,23 +46,19 @@ export const timelineStrip = {
   requires: { surface: "multetudes" },
   mount_point: "boards",
   order: 16,
-  controls: ["tlScroll", "tlStripMini"],
+  controls: ["tlScroll"],
 
   markup: `
-  <span class="mini" id="tlStripMini" data-control="tlStripMini"></span>
   <span class="clpsum">the chart line</span>
   <div id="tlScroll" data-control="tlScroll"></div>`,
 
   /* the strip's rules are the family's, scoped under this strip; the sub-line rules
-   * because this host derives a sub-line. The mini's rules are this module's own. */
-  styles: chartLineStyles("#tlScroll", { subline: true }) + `
-#tlStripMini{position:absolute;top:8px;right:12px;display:flex;gap:4px;z-index:5}
-#tlStripMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
-  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
-#tlStripMini button:hover{border-color:var(--ink)}`,
+   * because this host derives a sub-line. This module owns no rules of its own: the
+   * mini that floated here (position:absolute, top right, z-index 5) is gone — see
+   * the header — and the scroller is a scroller, reserving nothing at its end. */
+  styles: chartLineStyles("#tlScroll", { subline: true }),
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    mountMini(ctx, byId("tlStripMini"));
 
     /* mirrors of the owners' halves; `index` is MINE (the position) */
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null,

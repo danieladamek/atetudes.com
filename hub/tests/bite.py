@@ -2028,6 +2028,24 @@ def m90_the_field_cannot_carry_it_returns():
     finally:
         p.write_text(original)
 
+def m91_an_overlay_returns_to_the_chart_line():
+    # night 55: something floats over the scroller's right end again — the shape of the deleted mini
+    # (position:absolute, top right, z-index 5, the mini's own 122 × 22) — and the last chord of a long
+    # progression is covered. The gate asserts at the last chip's own centre, both widths; it must bite.
+    p, original, mutated = patch("hub/modules/timeline-strip.mjs",
+        '  styles: chartLineStyles("#tlScroll", { subline: true }),',
+        '  styles: chartLineStyles("#tlScroll", { subline: true }) + `#tlScroll::after{content:"";position:absolute;top:8px;right:12px;width:122px;height:22px;z-index:5;background:#fff}`,')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "is fully visible" in g.stdout or "floats over the scroller" in g.stdout
+        record("an overlay returns to the chart line's right end — the last chord is covered again",
+               g.returncode != 0 and hit, "suite exit %d; the last-chip pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
@@ -2154,7 +2172,8 @@ def main():
                m79_the_snapshot_strips_the_tuning_again, m80_the_parser_passes_a_crossed_tuning_through, m81_the_shared_form_drops_the_tuning,
                m82_the_predicate_ignores_the_gamut, m83_the_pentatonic_rule_admits_a_semitone, m84_a_restored_etude_acquires_a_gamut, m85_the_omitted_role_places_quietly,
                m86_the_figure_reports_the_consequence_again, m87_the_whole_field_option_goes_dark,
-               m88_a_member_reaches_the_neck_without_its_role, m89_the_supply_reads_standard_tuning, m90_the_field_cannot_carry_it_returns)
+               m88_a_member_reaches_the_neck_without_its_role, m89_the_supply_reads_standard_tuning, m90_the_field_cannot_carry_it_returns,
+               m91_an_overlay_returns_to_the_chart_line)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

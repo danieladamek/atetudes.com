@@ -763,9 +763,9 @@ def run_door(pw, door_id):
         # arrived armed at every later leg, clock running, for 14 seconds of
         # gate time. Role-addressed and UNCONDITIONAL now: a missing button
         # fails loudly here, at the owner, instead of arming the night.
-        page.click('#tlStripMini button[data-role="play"]')
+        page.click('#fdMini button[data-role="play"]')
         page.wait_for_timeout(4500)
-        page.click('#tlStripMini button[data-role="stop"]')
+        page.click('#fdMini button[data-role="stop"]')
         page.wait_for_timeout(400)
         plog = page.evaluate("() => window.__pulseLog")
         step_i = next((i for i, r in enumerate(plog) if r["ev"] == "STEP"), None)
@@ -1439,8 +1439,8 @@ def run_door(pw, door_id):
               }, 120);
             }, true); }
           window.__fdRing = []; }""")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(3400)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(400)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(3400)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(400)
         fd_rows = page.evaluate("() => window.__fdRing")
         check(len(fd_rows) >= 8 and all(r["drawn"] for r in fd_rows),
               f"{tag} the strum pass sounded and every note has a drawn dot "
@@ -1542,7 +1542,7 @@ def run_door(pw, door_id):
                   C.prototype.start = function(...a) { (window.__raw ||= []).push(1);
                     return P.apply(this, a); }; } }
               window.__nt = []; window.__adv = []; window.__raw = []; }""")
-            page.click('#tlStripMini button[data-role="play"]')
+            page.click('#fdMini button[data-role="play"]')
             page.wait_for_timeout(3300)   # >3 bar-lengths at 240
             rp = page.evaluate("""() => ({ nt: window.__nt.map(n => n.m),
               adv: window.__adv.length, raw: (window.__raw || []).length })""")
@@ -1570,7 +1570,7 @@ def run_door(pw, door_id):
             page.click("#fdRepeat")
             page.wait_for_timeout(1400)
             rp2 = page.evaluate("() => window.__adv.map(a => a.i)")
-            page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+            page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
             check(rp_at >= 0 and len(rp2) >= 1 and rp2[0] == rp_at + 1,
                   f"{tag} repeat OFF resumes the progression at the bar AFTER the one "
                   f"repeating (was on chip {rp_at}, echoes {rp2})")
@@ -1759,8 +1759,8 @@ def run_door(pw, door_id):
             }, true);
           }
         }""")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(4500)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(400)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(4500)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(400)
         ky_rows = page.evaluate("() => window.__kyLog")
         check(len(ky_rows) >= 5,
               f"{tag} the keys-pulse pass sounded enough notes to judge ({len(ky_rows)})")
@@ -2299,8 +2299,8 @@ console.log(JSON.stringify(out));
               if (e.detail && e.detail.request !== true)
                 window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }
           window.__nt = []; window.__adv = []; }""")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(8600)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(8600)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         mx_nt = page.evaluate("() => window.__nt"); mx_adv = page.evaluate("() => window.__adv")
         if len(mx_adv) < 2:
             check(False, f"{tag} matrix sound half never advanced ({len(mx_adv)} echoes)")
@@ -2363,8 +2363,8 @@ console.log(JSON.stringify(out));
               { detail: { index: 0, request: true } }))""")
             page.wait_for_timeout(150)
             page.evaluate("() => { window.__raw = []; window.__nt = [] }")
-            page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(600)
-            page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+            page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(600)
+            page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
             return page.evaluate("() => [window.__nt.length, window.__raw.length]")
 
         base = play_bar_counts()
@@ -2653,8 +2653,8 @@ console.log(JSON.stringify(out));
           new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.classList && n.classList.contains('fd-pulse'))
             window.__apRings.push([+n.getAttribute('cx'), +n.getAttribute('cy')]); }))).observe(svg, { childList: true, subtree: true }); }""")
         page.uncheck("#fdMetChk"); page.wait_for_timeout(80)
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(2600)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(300)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(2600)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(300)
         # the mark is a polygon now: its centre is the mean of its top and bottom points — compared
         # as NUMBERS (the polygon's points carry two decimals, the ring's cx/cy do not; the first
         # draft compared the strings and the pin failed on "352.50" vs "352.5", 260930)
@@ -3260,10 +3260,10 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => { window.__wk = [];
           document.addEventListener('atetudes:step', e => {
             if (e.detail && e.detail.request !== true) window.__wk.push(e.detail.index); }); }""")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(2600)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(2600)
         check(page.evaluate("() => window.__wk.length") >= 2,
               f"{tag} Play must walk the bars: steps {page.evaluate('() => window.__wk')}")
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         wk0 = page.evaluate("() => window.__wk.length")
         page.wait_for_timeout(900)
         check(page.evaluate("() => window.__wk.length") == wk0
@@ -3303,8 +3303,8 @@ console.log(JSON.stringify(out));
             .split(',').map(k => sel[k]); }""")
         check(len(want_midis) == 6 and all(m for m in want_midis),
               f"{tag} the neck must offer a 6-step figure to walk: {want_midis}")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1150)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(1150)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         heard = page.evaluate("() => window.__nt")
         first = heard[:6]
         span = 4 * 60.0 / 240.0
@@ -3329,8 +3329,8 @@ console.log(JSON.stringify(out));
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(200)
         page.evaluate("() => { window.__nt = [] }")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(350)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(350)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         heard = page.evaluate("() => window.__nt")
         check(len(heard) >= 4 and (heard[3]["t"] - heard[0]["t"]) < 40,
               f"{tag} block movement (the default) sounds TOGETHER: "
@@ -3342,8 +3342,8 @@ console.log(JSON.stringify(out));
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
         page.evaluate("() => { window.__nt = []; window.__adv = [] }")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1150)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(1150)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         heard = page.evaluate("() => window.__nt")
         adv = page.evaluate("() => window.__adv")
         cut = (adv[0]["t"] - 50) if adv else float("inf")
@@ -3361,8 +3361,8 @@ console.log(JSON.stringify(out));
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
         page.evaluate("() => { window.__nt = [] }")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(350)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(350)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         heard = page.evaluate("() => window.__nt")
         check(len(heard) >= 5 and (heard[len(heard) - 1]["t"] - heard[0]["t"]) < 40,
               f"{tag} every-occurrence + BLOCK must sound together — the material must "
@@ -3379,7 +3379,7 @@ console.log(JSON.stringify(out));
         page.fill("#bpmRange", "120"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(150)
         page.evaluate("() => { window.__nt = [] }")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(180)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(180)
         pulse = page.evaluate("""() => {
           const rings = [...document.querySelectorAll('#fieldSvg .fd-pulse')]
             .map(r => [r.getAttribute('cx'), r.getAttribute('cy')]);
@@ -3397,15 +3397,15 @@ console.log(JSON.stringify(out));
         page.wait_for_timeout(500)
         check(page.eval_on_selector_all("#fieldSvg .fd-pulse", "e => e.length") == 0,
               f"{tag} the pulse must fade — a ring that stays is a marker, not a pulse")
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(200)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(200)
         # and in ARPEGGIO movement the rings arrive one at a time
         page.click('#fdMoveSeg button[data-move=\"arpeggiate\"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(150)
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(700)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(700)
         midbar = page.eval_on_selector_all("#fieldSvg .fd-pulse", "e => e.length")
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         check(1 <= midbar <= 2,
               f"{tag} an ARPEGGIO pulses one dot at a time, not the chord at once: {midbar} rings mid-bar")
         page.click('#fdMoveSeg button[data-move=\"strum\"]')
@@ -3547,8 +3547,8 @@ console.log(JSON.stringify(out));
               f"else — drawn {drawn2}, NOTEs {aud2[0]}, raw starts {aud2[1]}")
         page.uncheck("#fdMetChk"); page.wait_for_timeout(150)
         page.evaluate("() => { window.__raw = []; window.__nt = [] }")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1400)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(300)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(1400)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(300)
         counts = page.evaluate("() => [window.__nt.length, window.__raw.length]")
         check(counts[0] >= 3 and counts[0] == counts[1],
               f"{tag} with the click muted, every raw audio start must BE an announced "
@@ -3565,8 +3565,8 @@ console.log(JSON.stringify(out));
         page.select_option("#fdSplit", "1+1+1+1"); page.dispatch_event("#fdSplit", "change")
         page.wait_for_timeout(150)
         page.evaluate("() => { window.__adv = [] }")
-        page.click('#tlStripMini button[data-role="play"]'); page.wait_for_timeout(1400)
-        page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(1400)
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         adv = page.evaluate("() => window.__adv")
         beat = 60.0 / 240.0
         adv_d = [(adv[i + 1]["t"] - adv[i]["t"]) / 1000.0 for i in range(len(adv) - 1)]
@@ -3643,9 +3643,9 @@ console.log(JSON.stringify(out));
               window.__cf.bars = [{ i: -1, t: performance.now(), drawn, refused: !!document.querySelector('#fieldSvg .fd-refusal'),
                 ref: rf ? +rf.dataset.refmidi : null }];
               window.__cf.notes = []; }""")
-            page.click('#tlStripMini button[data-role="play"]')
+            page.click('#fdMini button[data-role="play"]')
             page.wait_for_timeout(8600)                      # eight 1 s bars at 240
-            page.click('#tlStripMini button[data-role="stop"]'); page.wait_for_timeout(250)
+            page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
             cf = page.evaluate("() => window.__cf")
             bars, notes = cf["bars"], cf["notes"]
             check(len(bars) >= 8, f"{tag} [{label}] the corpus must actually run: {len(bars)} bars")
@@ -6136,6 +6136,53 @@ console.log(JSON.stringify(out));
         mem = page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel[data-role=\"member\"] polygon')].map(p => ({ fill: p.getAttribute('fill') }))")
         check(len(ap) >= 1 and ap[0]["fill"] == "none" and len(mem) == 1 and mem[0]["fill"] != "none", f"{tag} the approach's starburst is hollow and the member's solid: {ap} {mem}")
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(120)
+        page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
+
+    # ---------------- THE TRANSPORT OFF THE CHART LINE (night 55, 261012): the last chord is not covered ----------
+    # Daniel, 261009, with a screenshot: "…remove the transport controls from this strip where it sometimes
+    # covers up the last chord in the series." Measured before the change (blues-12 in C): the strip's own
+    # ⏮ ▶ ⏹ ⏭ floated position:absolute over the scroller's right end and covered 39% of the last chip at
+    # 1280 AND at 390; the 130 px reservation the item cites had already left with night 43, so nothing
+    # reserved room for it at all. The cluster was a second copy of the neck's own (#fdMini, the 260919
+    # clock row). The fix is the deletion: the strip carries no mini, positions nothing absolutely, and
+    # the scroller is a scroller. Asserted where the effect is — at the last chip's own centre, both widths.
+    if door_id == "multetudes":
+        page.select_option("#hcKey", "C"); page.click('#pgSrcSeg button[data-src="form"]'); page.wait_for_timeout(120); page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(300)
+        check(page.query_selector("#tlStripMini") is None, f"{tag} the chart line carries no mini of its own — the transport is the neck's (#fdMini), one copy")
+        check(page.query_selector('#fdMini button[data-role="play"]') is not None and page.query_selector('#fdMini button[data-role="stop"]') is not None, f"{tag} the neck's own cluster is the transport the strip used to duplicate — ⏮ ▶ ⏹ ⏭ under the neck")
+        strip_read = lambda: page.evaluate("""() => { const sc = document.getElementById('tlScroll'); sc.scrollLeft = sc.scrollWidth;
+          const chips = [...sc.querySelectorAll('button')]; const last = chips[chips.length - 1];
+          last.scrollIntoView({ block: 'center' });
+          const R = (e) => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom].map(v => +v.toFixed(1)); };
+          const inter = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+          const sb = R(sc), cb = R(last);
+          /* everything positioned absolutely in this board that reaches INTO the scroller's box — the shell's
+           * own collapse button (▾, top right of every board) is the one floater a header-less board keeps;
+           * anything else is a floater the strip put there */
+          const board = sc.closest('.board') || sc.parentElement;
+          const floaters = [...board.querySelectorAll('*')].filter(x => getComputedStyle(x).position === 'absolute' && x.getBoundingClientRect().width > 0)
+            .map(x => ({ id: x.id || x.className || x.tagName, rect: R(x), overScroller: +inter(R(x), sb).toFixed(0), overChip: +inter(R(x), cb).toFixed(0) })).filter(f => f.overScroller > 0);
+          /* the chord itself — the chip's symbol and roman — probed at nine points each: every point must land
+           * on the chip (the mini's bottom edge sat 4 px ABOVE the chip's centre, measured 261012, so the
+           * centre alone would have passed the very defect) */
+          const miss = [];
+          for (const t of [...last.children].filter(k => k.textContent.trim())) { const b = R(t);
+            for (const fx of [0.1, 0.5, 0.9]) for (const fy of [0.1, 0.5, 0.9]) {
+              const e = document.elementFromPoint(b[0] + (b[2] - b[0]) * fx, b[1] + (b[3] - b[1]) * fy);
+              if (!e || !(e === last || last.contains(e))) miss.push([t.className || t.tagName, fx, fy, e ? (e.id || e.className || e.tagName) : null]); } }
+          return { n: chips.length, text: last.textContent.trim(), chip: cb, scroller: sb, floaters, miss,
+            pr: getComputedStyle(sc).paddingRight, fullyIn: cb[2] <= sb[2] + 0.5 && cb[0] >= sb[0] - 0.5 }; }""")
+        for vw in (1280, 390):
+            page.set_viewport_size({"width": vw, "height": 900}); page.wait_for_timeout(300)
+            sr = strip_read()   # NOT `r` — that name is the resolver's record, read by every block after this one
+            strangers = [f for f in sr["floaters"] if f["id"] != "clpsBtn"]
+            check(sr["n"] == 12 and not strangers, f"{tag} @{vw}: nothing the strip put there floats over the scroller (the shell's ▾ is the one floater a header-less board keeps): {sr['floaters']}")
+            check(not sr["miss"] and sr["fullyIn"], f"{tag} @{vw}: the last chord ({sr['text']}) is fully visible — its symbol and roman land on the chip at every probe, inside the scroller: missed {sr['miss']}, chip {sr['chip']}, scroller {sr['scroller']}")
+            check(sr["pr"] == "0px", f"{tag} @{vw}: the scroller reserves nothing at its end: padding-right {sr['pr']}")
+            # the shell's ▾ over the chip's top-right CORNER — the shell's, not the strip's; pinned so growth is caught
+            shell = [f for f in sr["floaters"] if f["id"] == "clpsBtn"]
+            check(all(f["overChip"] <= 120 for f in shell), f"{tag} @{vw}: the shell's collapse button may touch only the last chip's corner (≤ 120 px², measured 94 on 261012): {shell}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
         page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------

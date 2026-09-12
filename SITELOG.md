@@ -1,3 +1,28 @@
+## 2026-09-12 — Night 55: the transport off the chart line — the strip's floating mini deleted; Multetudes v0.6.7
+
+- **Why (Daniel, 261009, with a screenshot):** the chart line's ⏮ ▶ ⏹ ⏭ floated `position:absolute`
+  over the scroller's right end and covered the last chord of a long progression — measured before the
+  change at 39 % of the last chip's area at 1280 and at 390 (the twelve-bar blues in C). The 130 px
+  reservation the item cites had already left with night 43, so nothing reserved room for it at all.
+- **What changed (multetudes only):** the strip's mini is deleted whole — its declaration, markup, the
+  absolute rule, the import and the mount — because its four buttons were a second copy of the neck's
+  own cluster under the neck (the 260919 clock row). The transport is the neck's, once; the chart line
+  is chips only; the scroller reserves nothing. Beside the neck's readout there is 808 px free at 1280
+  and 13 px at 390, so the seat that exists at both widths is the one the neck already has; the header
+  seat is the re-cut's second half, with the mixer strip and `ROW_COUNTS`, untouched here.
+- **Rule 8, red first:** with the markup gone and the declaration kept, the resolver refused by name
+  (`declares control "tlStripMini" but its markup has no id`); then the declaration was reconciled —
+  75/40 controls present/locked (76 before). The gate's 34 clicks on the strip's mini now click the
+  neck's; a night-55 block names every floater over the scroller and probes the last chord's symbol
+  and roman at nine points each, both widths; m91 (an overlay returns) bites.
+- **Found:** the shell's collapse button ▾ also floats over this header-less board and touches the last
+  chip's corner (94 px², pinned ≤ 120) — the shell's, proposed not settled; the page scrolls
+  horizontally at 390 (790 against 390, a card at 528) — the Centricity item's shape.
+- **Gates:** engine 699/699 · hub 12/12 · door gate 20,638/0 (`hub/tests/out/doors-0912-0306.log`; red
+  first `doors-n55-red-0912-0259.log`) · m91 bites (`bite-m91-0912.log`) · chain 92/92, suite green
+  (`bite-0912-0317.log`, 03:17–09:08) · hugo 0 · check_site clean · Playwright at 1280/390.
+- Report: `notes/working/Multetudes build run 261012 — night 55, the transport off the chart line.md`.
+
 ## 2026-09-12 — DEPLOYED: night 46 live — a chord-supplied chromatic tone is material; Multetudes v0.6.6; all six studies moved (chord.mjs re-inlined); written from the run
 
 - record: run 34681240958 · success · commit 7fc4e4a · fetched 2026-09-12T07:48Z · 6/6 studies byte-identical · digest 60f68aa5eca4

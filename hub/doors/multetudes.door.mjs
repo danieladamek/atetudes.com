@@ -187,7 +187,10 @@ export default {
      * chromatic tone is MATERIAL — the b7 of C7 in C draws full, solid, a starburst in the 7th's amber,
      * spelled by its chord (Bb, never A#), placed from the field's own tuning, sounded by the walk; the
      * neck and the readout say "the chord's own — the field does not supply it; the chord does". */
-    blurb: "one tool that holds many études · v0.6.6",
+    /* v0.6.7 (261012, night 55 — the transport off the chart line): the strip's floating ⏮ ▶ ⏹ ⏭ — a
+     * second copy of the neck's own cluster, covering the last chord of a long progression — is
+     * deleted with its absolute positioning; the chart line is chips only, the transport is the neck's. */
+    blurb: "one tool that holds many études · v0.6.7",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
