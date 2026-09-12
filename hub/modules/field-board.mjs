@@ -44,7 +44,7 @@ import { SHARED } from "../../engine/shared-config.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
 import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 // 260917 item 5: the mode names, the one table
 import { MODES } from "../../engine/field.mjs";
@@ -141,7 +141,7 @@ export const fieldBoard = {
       <div class="fd-placerow">
         <div class="seg" id="fdNSeg" data-control="fdNSeg">
           <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-          <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+          <button data-nps="3" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
         </div>
         <label class="chk fd-alltones" id="fdAllTonesLab"
           title="every occurrence in the box — off, one of each tone"><input
@@ -583,20 +583,20 @@ export const fieldBoard = {
         /* the named drop (260914, item 3): the kept stack sounds and draws;
          * the dropped roles are SAID two lines below */
         const fdFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
-          : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+          : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped — Infinity slots pass the stack through
         /* ROLE A (night 46): the chord is placed from the field's pool AND the chord's own supply —
          * its offKey tones on the run's strings in the window, role-carrying (§2.6's material clause) */
         const mat = materialFor(cur.tones, pool, fld, run.strings, pos);
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
-          : oneOfEach(fdFit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
+          : oneOfEach(fdFit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: the PARTIAL draws beside the refusal (ruling 3)
         absent = { dropped: [...fdFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role),
-          strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
+          strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };   // the sentence says the CAP, not the stored value
         const parts = [];
         if (fdFit.dropped.length)
           parts.push(`the ${fdFit.dropped.join(", ")} dropped by the grip rule — `
-            + `${run.strings.length * cfg.notesPer} slots carry `
+            + `${run.strings.length * capOf(cfg.notesPer)} slots carry `
             + fdFit.tones.map((t) => t.role).join(" "));
         if (fdFit.refuse) parts.push(fdFit.refuse);
         if (cur.unnamed) parts.push(cur.unnamed);
@@ -608,10 +608,10 @@ export const fieldBoard = {
            * pool (the engine names it; nothing here tables it); the escape is
            * resolvesAt, worded by this module's own control. */
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
-          const clash = oneOfEach(cur.tones, mat, { n: cfg.notesPer, centre: pos.centre }).collide;
+          const clash = oneOfEach(cur.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre }).collide;
           lossMsg = `missing ${r.capped.map(roleWord).join(" and ")}`
             + (clash ? ` — both ${clash.roles.join(" and ")} on string ${clash.string}` : " — the grip cannot carry it")
-            + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} takes ${clash ? "both" : "it"}` : "");
+            + (r.resolvesAt != null ? ` — ${lineWord} takes ${clash ? "both" : "it"}` : "");   // night 56: the line is uncapped, so any derived resolution is the line's
           parts.push(lossMsg);
         }
         /* THE CHORD'S OWN TONE (night 46, role A — CR-1 §5: the readout owes two different sentences):
@@ -636,7 +636,7 @@ export const fieldBoard = {
            * smallest cap that places), worded by this module's own control:
            * the label on the raised-cap button IS the app's word for it. */
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
-          const esc = r.resolvesAt != null && r.resolvesAt <= 3
+          const esc = r.resolvesAt != null   // night 56: a line is uncapped — whatever the engine found resolves under it
             ? ` — ${lineWord} takes ${r.collide ? "both" : "them"}`
             : " — and no per-string ceiling resolves it";
           /* the refusal sentence stays VERBATIM (ruling 3: it is the best prose on the

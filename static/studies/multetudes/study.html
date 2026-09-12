@@ -631,7 +631,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       <div class="fd-placerow">
         <div class="seg" id="fdNSeg" data-control="fdNSeg">
           <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-          <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+          <button data-nps="3" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
         </div>
         <label class="chk fd-alltones" id="fdAllTonesLab"
           title="every occurrence in the box — off, one of each tone"><input
@@ -4951,6 +4951,22 @@ const { parseMotion, describeMotion, approachMidi, placeNear } = __m_engine_moti
  * PLACEMENT is then a theorem, not a sampled hope: raising the ceiling
  * PERMITS a second note on a string and never CAUSES one. Asserted at load.
  *
+ * THE CAP IS A VOICING'S RULE (Daniel, 261012, on injection 261011c's item 2).
+ * The simultaneity argument above is sound for a voicing — Grip, and the
+ * tetrad doors' free placement — and it was applied to every placement,
+ * including one that is not a voicing: a LINE. A line is played one note
+ * after another along the set; no hand holds its notes together, so nothing
+ * caps a string. `capOf(notesPer)` is the one site that says so: Grip's
+ * stored value 1 is its cap; Line's stored value 3 (the control's, the
+ * format's, every saved étude's — untouched) NAMES the placement and no
+ * longer bounds it — its cap is UNCAPPED. Movement is NOT the axis: the
+ * same Take must yield the same material under strum and under arpeggiate
+ * (the 260905 severance — Take chooses the MATERIAL, Movement chooses
+ * together-or-sequence); placement already decides whether a hand must hold
+ * the notes. Line + strum therefore sounds its take at one onset, as it did
+ * at the cap of three — the synth can, a guitar could not, and Movement
+ * still chooses together; a decision, Daniel's to reverse.
+ *
  * At n = 1 the term is identically zero, so on the ratified conformance
  * ground (one note per string) the choice is EXACTLY the carried §6.1.2 key.
  * At n > 1 this deliberately diverges from isolation.mjs's lineVoicing —
@@ -5139,6 +5155,17 @@ function objectTones(parsed, object, pick) {
   return { tones, absent };
 }
 
+/** THE PLACEMENT'S CAP (night 56, ruled 261012 — see the header): the per-string ceiling a
+ * placement imposes, from the placement's stored value. Grip (1) is a voicing: one note per
+ * string. Anything else is a line, and a line is UNCAPPED — its notes sound in sequence. The
+ * boards hand this to gripFit (slots = strings × cap: Infinity passes a stack through verbatim),
+ * oneOfEach and everyOccurrence (n), and to the dropped role's sentence. */
+const UNCAPPED = Infinity;
+function capOf(notesPer) {
+  if (!Number.isInteger(notesPer) || notesPer < 1) throw new Error(`capOf: a placement's stored value is a positive integer, not ${notesPer}`);
+  return notesPer === 1 ? 1 : UNCAPPED;
+}
+
 /** gripFit(tones, slots) → { tones, dropped, refuse? } — a stack deeper
  * than the strings can carry drops tones by a NAMED rule (260914 item 3;
  * RATIFIED 260915): the 5th goes first, then the non-naming extensions
@@ -5298,8 +5325,8 @@ const lexLess = (a, b) => {
  */
 function oneOfEach(tones, pool, { n = 1, centre } = {}) {
   if (!Array.isArray(tones) || !tones.length) throw new Error("oneOfEach: no tones");
-  if (!Number.isInteger(n) || n < 1 || n > 3)
-    throw new Error(`oneOfEach: the ceiling is 1..3 (the hand's reach), not ${n}`);
+  if (n !== UNCAPPED && (!Number.isInteger(n) || n < 1 || n > 3))
+    throw new Error(`oneOfEach: a voicing's ceiling is 1..3 (the hand's reach) and a line's is UNCAPPED (its notes sound in sequence — ruled 261012); ${n} is neither`);
   if (typeof centre !== "number") throw new Error("oneOfEach: the frame centre is required — drift is part of the choice");
   const missing = tones.filter((t) => !pool.some((m) => mod12(m.midi) === mod12(t.pc)));
   const present = tones.filter((t) => !missing.includes(t));
@@ -5347,6 +5374,9 @@ function oneOfEach(tones, pool, { n = 1, centre } = {}) {
     let resolvesAt = null;
     for (let nn = n + 1; nn <= 3 && resolvesAt === null; nn++)
       if (oneOfEach(tones, pool, { n: nn, centre }).notes) resolvesAt = nn;
+    /* …and past the hand's reach, the UNCAPPED line (night 56): four on one string place there,
+     * and the escape says so as the number the engine derived — consumers word it */
+    if (resolvesAt === null && n !== UNCAPPED && oneOfEach(tones, pool, { n: UNCAPPED, centre }).notes) resolvesAt = UNCAPPED;
     /* THE PARTIAL (260922b ruling 3, built 260923): draw what fits, name what
      * could not come and why. Derived HERE, once, so every view that asks
      * (the neck, the staff, the keys, the readout) draws the same three notes:
@@ -5397,11 +5427,18 @@ function oneOfEach(tones, pool, { n = 1, centre } = {}) {
  * nothing else. Where the cap does not bind, every occurrence is still
  * every occurrence. */
 function everyOccurrence(tones, pool, { n = 3 } = {}) {
-  if (!Number.isInteger(n) || n < 1 || n > 3)
-    throw new Error(`everyOccurrence: the ceiling is 1..3, not ${n}`);
+  if (n !== UNCAPPED && (!Number.isInteger(n) || n < 1 || n > 3))
+    throw new Error(`everyOccurrence: a voicing's ceiling is 1..3 and a line's is UNCAPPED (ruled 261012); ${n} is neither`);
   const roleOf = new Map(tones.map((t) => [mod12(t.pc), t.role]));
   const missing = tones.filter((t) => !pool.some((m) => mod12(m.midi) === mod12(t.pc)))
     .map((t) => t.role);
+  /* A LINE IS UNCAPPED (night 56): every occurrence is every occurrence, no slot to match, nothing
+   * capped — the coverage rule below exists only because a cap can bind */
+  if (n === UNCAPPED) {
+    const notes = pool.filter((m) => roleOf.has(mod12(m.midi))).map((m) => ({ ...m, role: roleOf.get(mod12(m.midi)) }))
+      .sort((a, b) => a.midi - b.midi);
+    return { notes: assertAddressable(notes, "everyOccurrence"), missing, capped: [] };
+  }
   const strings = [...new Set(pool.map((m) => m.string))].sort((a, b) => a - b);
   const cands = new Map(strings.map((s) => [s,
     pool.filter((m) => m.string === s && roleOf.has(mod12(m.midi)))
@@ -5581,7 +5618,8 @@ function droppedRoleSentence(role, absent) {
   const cause = `the ${word} could not be placed — the set holds ${strings === 1 ? "one string" : strings + " strings"}, `
     + `up to ${capWord(cap)} on ${strings === 1 ? "it" : "each"}, and ${strings === 1 ? "it" : "they"} already carr${strings === 1 ? "ies" : "y"} ${keptList}`;
   let escape;
-  if (Number.isInteger(absent.resolvesAt) && absent.resolvesAt > cap) escape = `${capWord(absent.resolvesAt)} on a string would carry it`;
+  if (absent.resolvesAt === UNCAPPED) escape = `placed one after another, the string${strings === 1 ? "" : "s"} would carry it`;   // night 56: the uncapped line
+  else if (Number.isInteger(absent.resolvesAt) && absent.resolvesAt > cap) escape = `${capWord(absent.resolvesAt)} on a string would carry it`;
   else {
     const capNeeded = Math.ceil(need / strings);
     if (capNeeded <= 3 && capNeeded > cap) escape = `${capWord(capNeeded)} on a string would carry it`;
@@ -5896,7 +5934,7 @@ function bracketOf(order) {
   if (dy.tones.length !== 1 || dy.absent.join() !== "7")
     throw new Error("selection: a dyad's 7 on a plain triad must be ABSENT BY NAME, never silently narrowed");
 }
-return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, gripFit, chordSupply, materialFor, chordSuppliedSentence, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, orderBy, bracketOf };
+return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, UNCAPPED, capOf, gripFit, chordSupply, materialFor, chordSuppliedSentence, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, orderBy, bracketOf };
 })();
 
 /* ===== engine/atchart.mjs ===== */
@@ -7187,7 +7225,7 @@ const __m_hub_modules_etude_walk_mjs = (() => {
 const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor } = __m_engine_selection_mjs;
+const { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } = __m_engine_selection_mjs;
 const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
@@ -7318,13 +7356,13 @@ const etudeWalk = {
          * the placement's capacity reduces by gripFit's rule, and the
          * dropped roles are SAID (the boards speak them; the walk sounds the kept stack) */
         const fit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
-          : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+          : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
         const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply sounds too
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
-          : oneOfEach(fit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
+          : oneOfEach(fit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
-        walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
+        walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
       }
       /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
        * ruling, 260904). His own ratification is the reason: the reference
@@ -8274,7 +8312,7 @@ const { SHARED } = __m_engine_shared_config_mjs;
 const { alteredDegree } = __m_engine_chord_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
-const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence } = __m_engine_selection_mjs;
+const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } = __m_engine_selection_mjs;
 const { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { progressionOf, chordAt, movementWord } = __m_engine_progression_mjs;
@@ -8429,7 +8467,7 @@ const fieldBoard = {
       <div class="fd-placerow">
         <div class="seg" id="fdNSeg" data-control="fdNSeg">
           <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-          <button data-nps="3" title="up to three on a string — thirds on one string, lines through the chord">Line</button>
+          <button data-nps="3" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
         </div>
         <label class="chk fd-alltones" id="fdAllTonesLab"
           title="every occurrence in the box — off, one of each tone"><input
@@ -8871,20 +8909,20 @@ const fieldBoard = {
         /* the named drop (260914, item 3): the kept stack sounds and draws;
          * the dropped roles are SAID two lines below */
         const fdFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
-          : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+          : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped — Infinity slots pass the stack through
         /* ROLE A (night 46): the chord is placed from the field's pool AND the chord's own supply —
          * its offKey tones on the run's strings in the window, role-carrying (§2.6's material clause) */
         const mat = materialFor(cur.tones, pool, fld, run.strings, pos);
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
-          : oneOfEach(fdFit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
+          : oneOfEach(fdFit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: the PARTIAL draws beside the refusal (ruling 3)
         absent = { dropped: [...fdFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role),
-          strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
+          strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };   // the sentence says the CAP, not the stored value
         const parts = [];
         if (fdFit.dropped.length)
           parts.push(`the ${fdFit.dropped.join(", ")} dropped by the grip rule — `
-            + `${run.strings.length * cfg.notesPer} slots carry `
+            + `${run.strings.length * capOf(cfg.notesPer)} slots carry `
             + fdFit.tones.map((t) => t.role).join(" "));
         if (fdFit.refuse) parts.push(fdFit.refuse);
         if (cur.unnamed) parts.push(cur.unnamed);
@@ -8896,10 +8934,10 @@ const fieldBoard = {
            * pool (the engine names it; nothing here tables it); the escape is
            * resolvesAt, worded by this module's own control. */
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
-          const clash = oneOfEach(cur.tones, mat, { n: cfg.notesPer, centre: pos.centre }).collide;
+          const clash = oneOfEach(cur.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre }).collide;
           lossMsg = `missing ${r.capped.map(roleWord).join(" and ")}`
             + (clash ? ` — both ${clash.roles.join(" and ")} on string ${clash.string}` : " — the grip cannot carry it")
-            + (r.resolvesAt != null && r.resolvesAt <= 3 ? ` — ${lineWord} takes ${clash ? "both" : "it"}` : "");
+            + (r.resolvesAt != null ? ` — ${lineWord} takes ${clash ? "both" : "it"}` : "");   // night 56: the line is uncapped, so any derived resolution is the line's
           parts.push(lossMsg);
         }
         /* THE CHORD'S OWN TONE (night 46, role A — CR-1 §5: the readout owes two different sentences):
@@ -8924,7 +8962,7 @@ const fieldBoard = {
            * smallest cap that places), worded by this module's own control:
            * the label on the raised-cap button IS the app's word for it. */
           const lineWord = byId("fdNSeg").querySelector('button[data-nps="3"]').textContent.trim();
-          const esc = r.resolvesAt != null && r.resolvesAt <= 3
+          const esc = r.resolvesAt != null   // night 56: a line is uncapped — whatever the engine found resolves under it
             ? ` — ${lineWord} takes ${r.collide ? "both" : "them"}`
             : " — and no per-string ceiling resolves it";
           /* the refusal sentence stays VERBATIM (ruling 3: it is the best prose on the
@@ -10197,7 +10235,7 @@ const __m_hub_modules_keys_board_mjs = (() => {
 const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { oneOfEach, everyOccurrence, scaleTake, gripFit, materialFor } = __m_engine_selection_mjs;
+const { oneOfEach, everyOccurrence, scaleTake, gripFit, materialFor, capOf } = __m_engine_selection_mjs;
 const { alteredDegree } = __m_engine_chord_mjs;
 const { progressionOf, chordAt } = __m_engine_progression_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
@@ -10338,9 +10376,9 @@ const keysBoard = {
       else {
         const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
-          : oneOfEach(gripFit(cur.tones, run.strings.length * cfg.notesPer).tones,
-              mat, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })   // night 56: a line is uncapped
+          : oneOfEach(gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer)).tones,
+              mat, { n: capOf(cfg.notesPer), centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides
@@ -10839,7 +10877,7 @@ const __m_hub_modules_neck_readout_mjs = (() => {
 const { field, notesOn } = __m_engine_field_mjs;
 const { positionOf, materialIn, regionOf } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence } = __m_engine_selection_mjs;
+const { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence, capOf } = __m_engine_selection_mjs;
 const { progressionOf, chordAt } = __m_engine_progression_mjs;
 const { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, listen } = __m_hub_bus_mjs;
@@ -10946,16 +10984,16 @@ const neckReadout = {
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
         else {
           const roFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
-            : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+            : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
           const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
           const r = cfg.take === "all"
-            ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
-            : oneOfEach(roFit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
+            ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
+            : oneOfEach(roFit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
           sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
-          absent = { dropped: [...roFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
+          absent = { dropped: [...roFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
           if (roFit.dropped.length)
             absences.push(`the ${roFit.dropped.join(", ")} dropped by the grip rule — `
-              + `${run.strings.length * cfg.notesPer} slots carry `
+              + `${run.strings.length * capOf(cfg.notesPer)} slots carry `
               + roFit.tones.map((t) => t.role).join(" "));
           if (roFit.refuse) absences.push(roFit.refuse);
           if (cur.unnamed) absences.push(cur.unnamed);
@@ -10974,11 +11012,11 @@ const neckReadout = {
           if (r.capped && r.capped.length)
             msg = (msg ? msg + " · " : "")
               + `the ${r.capped.join(" and ")} is in the box but the grip cannot carry it`
-              + (r.resolvesAt != null && r.resolvesAt <= 3 ? " — Line shows it" : "");
+              + (r.resolvesAt != null ? " — Line shows it" : "");   // night 56: any derived resolution is the line's
           if (r.unplaceable) msg = (r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
             : "no placement fits")
-            + (r.resolvesAt != null && r.resolvesAt <= 3
+            + (r.resolvesAt != null
               ? " — Line takes them" : " — and no per-string ceiling resolves it");
         }
         // v0.9's own pre-draw checks, re-run here against an independent derivation
@@ -10986,10 +11024,10 @@ const neckReadout = {
           fld.pcs.length === 7 && new Set(fld.pcs).size === 7);
         check("the frame is three ascending scale notes", () =>
           pos.frets.length === 3 && pos.fLo < pos.fHi);
-        check("no string carries more than the placement allows", () => {
+        check("no string carries more than the placement allows", () => {   // night 56: a line is UNCAPPED, so this binds under grip (and the scale's reach); vacuous under a line, by the ruling
           const per = {};
           for (const x of sel) per[x.string] = (per[x.string] || 0) + 1;
-          const cap = cfg.object === "scale" ? 3 : cfg.notesPer;
+          const cap = cfg.object === "scale" ? 3 : capOf(cfg.notesPer);
           return Object.values(per).every((c) => c <= cap);
         });
         check("every selected note is a real field note in the frame", () =>
@@ -11033,7 +11071,7 @@ const neckReadout = {
           if (cfg.object === "scale") { placeK++; continue; }
           const br = cfg.take === "all"
             ? { notes: true }
-            : oneOfEach(bc.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+            : oneOfEach(bc.tones, pool, { n: capOf(cfg.notesPer), centre: pos.centre });
           if (br.notes) placeK++;
         }
         bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`
@@ -13547,7 +13585,7 @@ const { chromaticSpeller, alteredDegree } = __m_engine_chord_mjs;
 const { starburst } = __m_hub_marks_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor } = __m_engine_selection_mjs;
+const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } = __m_engine_selection_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
 const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { writtenValue } = __m_engine_drill_mjs;
@@ -13674,14 +13712,14 @@ const staffBoard = {
           return { notes: cfg.centreSrc === "follows" && cDeg != null
             ? reRead(scaleSel, cDeg) : scaleSel };
         }
-        const fit = cfg.take === "all" ? { tones: c.tones, dropped: [] } : gripFit(c.tones, run.strings.length * cfg.notesPer);
+        const fit = cfg.take === "all" ? { tones: c.tones, dropped: [] } : gripFit(c.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
         const mat = materialFor(c.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
         const r = cfg.take === "all"
-          ? everyOccurrence(c.tones, mat, { n: cfg.notesPer })
-          : oneOfEach(fit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(c.tones, mat, { n: capOf(cfg.notesPer) })
+          : oneOfEach(fit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
         /* what the placement dropped, for the figure's refusal in every bar (261011c) */
         r.absent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: (r.notes || r.partial || []).map((x) => x.role),
-          strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
+          strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
         return r;
       };
 
@@ -14653,7 +14691,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.7","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.8","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

@@ -43,7 +43,7 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } from "../../engine/selection.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
@@ -126,13 +126,13 @@ export const etudeWalk = {
          * the placement's capacity reduces by gripFit's rule, and the
          * dropped roles are SAID (the boards speak them; the walk sounds the kept stack) */
         const fit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
-          : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+          : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
         const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply sounds too
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
-          : oneOfEach(fit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
+          : oneOfEach(fit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
-        walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
+        walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
       }
       /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
        * ruling, 260904). His own ratification is the reason: the reference

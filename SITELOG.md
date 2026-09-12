@@ -1,3 +1,32 @@
+## 2026-09-12 — Night 56: the cap is a voicing's rule — a line is uncapped; Multetudes v0.6.8
+
+- **Why (Daniel's ruling 261012 on injection 261011c's item 2):** the per-string cap exists because a
+  voicing is only what can sound together and two notes on one string cannot. Grip is a voicing; a LINE is
+  not — its notes sound one after another along the set, no hand holds them — and the cap had been applied
+  to it anyway. Daniel's own case: Gm7 — G Aeolian, one string, Line, arpeggiate, tones R,3,7,5, figure
+  7-5-3-R — drew three notes, dropped the 5 and refused the figure (honestly). Movement is not the axis
+  (the 260905 severance: Take chooses the material, Movement together-or-sequence); placement is.
+- **What changed (the engine, one site):** `capOf(notesPer)` in `engine/selection.mjs` — Grip's stored 1 is
+  its cap; Line's stored 3 names the placement and no longer bounds it (`UNCAPPED`). `gripFit` passes an
+  uncapped stack through; `oneOfEach` and `everyOccurrence` admit the uncapped line and their ceiling
+  assertions say what they govern (a voicing's 1..3, a line's UNCAPPED); the derived escape reaches the
+  uncapped line; the dropped role's sentence words it. The stored value, the format and saved études are
+  untouched. In Multetudes the placement was already in scope at all five boards as `cfg.notesPer`, so
+  every site calls the one rule — no new plumbing.
+- **On the face (multetudes v0.6.8):** the same case draws all four tones on the one string and the walk
+  sounds them in the figure's order, 7 5 3 R, at 1280 and 390. Grip is byte-identical: the 5 still drops by
+  the grip rule and the refusal still names the cause and the escape. Line + strum: with a resolving figure
+  the override law already sequences and disables strum; without one, strum sounds the take at one onset —
+  unchanged, stated in the engine's header, Daniel's to reverse. The Line button's caption says what a line is.
+- **Gates:** engine 700/700 (the night-56 test red first on `capOf is not a function`) · hub 12/12 · gate red
+  first against the old build (`hub/tests/out/doors-n56-red-0912-0925.log`, the night's six by name) · door
+  gate 20,682/0 (`doors-0912-1041.log`) · m92 (the cap returns under a line) bites in the engine and the gate
+  (`bite-m92-0912.log`) · chain 93/93, suite green (`bite-0912-1053.log`, 10:53–16:29) · hugo 0 · check_site clean.
+- **Found:** injection 261011c's gate block pinned the retired behaviour and now proves its sentence under
+  Grip, where the cap still binds; a door crash in the gate now names its own line and locator; two targeted
+  gate runs took 20 and 30 minutes where the next took five on the same build — unexplained, recorded.
+- Report: `notes/working/Multetudes build run 261012b — night 56, the cap is a voicing's rule.md`.
+
 ## 2026-09-12 — DEPLOYED: night 55 live — the transport off the chart line; Multetudes v0.6.7 moved; written from the run
 
 - record: run 34698793823 · success · commit 010cd67 · fetched 2026-09-12T14:26Z · 6/6 studies byte-identical · digest 18202a058af2

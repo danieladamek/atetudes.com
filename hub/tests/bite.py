@@ -2045,6 +2045,25 @@ def m91_an_overlay_returns_to_the_chart_line():
     finally:
         p.write_text(original)
 
+def m92_the_cap_returns_under_line():
+    # night 56: the placement's cap forgets the ruling — a line is capped at its stored value again (three on a
+    # string): Daniel's case draws three, the 5 leaves, the figure refuses. The engine test AND the gate must bite.
+    p, original, mutated = patch("engine/selection.mjs",
+        "  return notesPer === 1 ? 1 : UNCAPPED;",
+        "  return notesPer;   // (the cap binds every placement again)")
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/selection.test.mjs")
+        eng = r.returncode != 0 and "NIGHT 56" in (r.stdout + r.stderr)
+        build()
+        g = suite()
+        hit = "a line is uncapped" in g.stdout or "the refusal is no longer reached" in g.stdout
+        record("the cap returns under a line — three on the string, the 5 dropped, the figure refused again",
+               eng and g.returncode != 0 and hit, "engine bit: %s; suite exit %d; the line pin bit: %s" % (eng, g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 
 
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
@@ -2173,7 +2192,7 @@ def main():
                m82_the_predicate_ignores_the_gamut, m83_the_pentatonic_rule_admits_a_semitone, m84_a_restored_etude_acquires_a_gamut, m85_the_omitted_role_places_quietly,
                m86_the_figure_reports_the_consequence_again, m87_the_whole_field_option_goes_dark,
                m88_a_member_reaches_the_neck_without_its_role, m89_the_supply_reads_standard_tuning, m90_the_field_cannot_carry_it_returns,
-               m91_an_overlay_returns_to_the_chart_line)
+               m91_an_overlay_returns_to_the_chart_line, m92_the_cap_returns_under_line)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

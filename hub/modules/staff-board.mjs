@@ -24,7 +24,7 @@ import { chromaticSpeller, alteredDegree } from "../../engine/chord.mjs";
 import { starburst } from "../marks.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } from "../../engine/selection.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
 import { writtenValue } from "../../engine/drill.mjs";
@@ -117,14 +117,14 @@ export const staffBoard = {
           return { notes: cfg.centreSrc === "follows" && cDeg != null
             ? reRead(scaleSel, cDeg) : scaleSel };
         }
-        const fit = cfg.take === "all" ? { tones: c.tones, dropped: [] } : gripFit(c.tones, run.strings.length * cfg.notesPer);
+        const fit = cfg.take === "all" ? { tones: c.tones, dropped: [] } : gripFit(c.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
         const mat = materialFor(c.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
         const r = cfg.take === "all"
-          ? everyOccurrence(c.tones, mat, { n: cfg.notesPer })
-          : oneOfEach(fit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(c.tones, mat, { n: capOf(cfg.notesPer) })
+          : oneOfEach(fit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
         /* what the placement dropped, for the figure's refusal in every bar (261011c) */
         r.absent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: (r.notes || r.partial || []).map((x) => x.role),
-          strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
+          strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
         return r;
       };
 

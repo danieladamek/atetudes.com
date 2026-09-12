@@ -552,6 +552,59 @@ test("THE FIGURE NAMES THE CAUSE AND THE WAY THROUGH when a role the placement D
   assert.match(nine.err, /9th/);
 });
 
+/* ---------------- night 56: the cap is a VOICING's rule — a line is uncapped (Daniel, 261012, on injection 261011c item 2) ---------------- */
+test("NIGHT 56 (ruled 261012): the per-string cap belongs to the placements that produce a VOICING — Grip keeps one per string; a LINE is uncapped, and Daniel's own case places all four tones on one string, in sequence", () => {
+  const { capOf, UNCAPPED, orderBy, droppedRoleSentence } = SEL;
+  const pc = (m) => ((m % 12) + 12) % 12;
+  assert.equal(capOf(1), 1, "Grip — one note per string: a voicing, capped");
+  assert.equal(capOf(3), UNCAPPED, "Line — stored as notesPer 3 (the control's value, the format's, every saved étude's — untouched): it NAMES the placement and no longer bounds it");
+  // Daniel's case: Gm7 — G Aeolian (the vi of Bb major) · set 1 (one string) · tones R,3,7,5
+  const fld = field({ key: "Bb", scale: "major" });
+  const pos = positionOf({ field: fld, anchorString: 1, startDegree: 4, nearFret: 3, strings: [1] });
+  const pool = materialIn(pos, [1], fld);
+  const tones = diatonicTones(fld, 5, [0, 2, 4, 6]);          // R 3 5 7 of Gm7
+  // BEFORE the rule (the injection's measurement): one string × three notes drops the 5
+  assert.deepEqual(gripFit(tones, 1 * 3).dropped, ["5"], "at a cap of three the 5 leaves first — the ratified drop order");
+  // UNDER the rule: a line is uncapped — nothing drops, all four place on the one string
+  const cap = capOf(3);
+  const fit = gripFit(tones, 1 * cap);
+  assert.deepEqual(fit.dropped, [], "no slots bound a line — gripFit passes the stack through verbatim");
+  assert.equal(fit.tones.length, 4);
+  const r = oneOfEach(fit.tones, pool, { n: cap, centre: pos.centre });
+  assert.ok(r.notes && r.notes.length === 4, `four notes on the one string: ${JSON.stringify(r.notes)}`);
+  assert.ok(r.notes.every((x) => x.string === 1), "…all on string 1");
+  assert.deepEqual(r.notes.map((x) => x.role).sort(), ["3", "5", "7", "R"], "…every role, the 5 included");
+  // the figure 7-5-3-R then resolves — the refusal is no longer reached under a line
+  const fig = orderBy("tones", "7-5-3-R", r.notes, { fld, strings: [1], pos, absent: { dropped: [], kept: r.notes.map((x) => x.role), notesPer: cap, strings: 1 } });
+  assert.ok(fig.order && fig.order.length === 4 && !fig.err, `the figure orders all four: ${fig.err}`);
+  // every occurrence, uncapped: every instance of the four tones on the string — nothing capped, nothing doubled-for-show
+  const all = everyOccurrence(tones, pool, { n: cap });
+  const hits = pool.filter((m) => tones.some((t) => pc(m.midi) === pc(t.pc))).length;
+  assert.equal(all.notes.length, hits, "every occurrence IS every occurrence under a line");
+  assert.deepEqual(all.capped || [], []);
+  // GRIP UNCHANGED (what must not change): the same case under Grip still drops the 5 and still names the cause and the escape
+  const g = gripFit(tones, 1 * capOf(1));
+  assert.deepEqual(g.dropped, ["5"], "Grip: the 5 still leaves by the grip rule");
+  assert.match(g.refuse || "", /3 tones after the drops and only 1 strings/, "…and the rule still refuses past its reach, by name");
+  const rg = oneOfEach(g.tones, pool, { n: capOf(1), centre: pos.centre });
+  assert.ok(rg.unplaceable && rg.collide && rg.collide.string === 1, "Grip on one string: unplaceable, the collide named");
+  assert.equal(rg.resolvesAt, 3, "…and the escape is derived: three on a string places R 3 7 (a line)");
+  const sentence = droppedRoleSentence(7, { dropped: ["5"], kept: ["R"], strings: 1, notesPer: 1, resolvesAt: 3 });
+  assert.match(sentence, /7th could not be placed — the set holds one string, up to one note on it/, "the injection's sentence does not regress");
+  assert.match(sentence, /three notes on a string would carry it/, "…with its escape");
+  // the escape where only an UNCAPPED line resolves: a 9th chord's R 3 7 9 on one string under Grip
+  const nine = gripFit(diatonicTones(fld, 5, [0, 2, 4, 6, 8]), 1);   // R 3 5 7 9 → the 5 drops, four remain, the rule refuses further
+  assert.deepEqual(nine.dropped, ["5"]); assert.equal(nine.tones.length, 4);
+  const r9 = oneOfEach(nine.tones, pool, { n: 1, centre: pos.centre });
+  assert.equal(r9.resolvesAt, UNCAPPED, "no cap in 1..3 places four on one string; the uncapped line does — said as the number the engine derived");
+  const s9 = droppedRoleSentence(9, { dropped: ["5"], kept: ["R"], strings: 1, notesPer: 1, resolvesAt: UNCAPPED });
+  assert.match(s9, /one after another/, "…and the sentence says the way through in the engine's own words (rule 14: no caption)");
+  assert.ok(!/Line|Grip|Infinity/.test(s9), s9);
+  // the ceiling's assertion says what it governs now (rule 7)
+  assert.throws(() => oneOfEach(tones, pool, { n: 4, centre: pos.centre }), /voicing.*1\.\.3.*line|1\.\.3.*voicing.*line/i, "a voicing's ceiling is 1..3; a line's is UNCAPPED; 4 is neither");
+  assert.throws(() => everyOccurrence(tones, pool, { n: 0 }), /voicing/i);
+});
+
 /* ---------------- night 46: role A — fieldPartition answers ONE absence; the chord's own tone is material ---------------- */
 test("ROLE A (CR-1 §4, ratified §2.6): fieldPartition partitions by key membership only, and an offKey tone is still MATERIAL — the chord supplies it, on the run's strings, from the field's own opens", () => {
   const { fieldPartition, chordSupply, materialFor, chordSuppliedSentence } = SEL;

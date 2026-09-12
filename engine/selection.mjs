@@ -50,6 +50,22 @@
  * PLACEMENT is then a theorem, not a sampled hope: raising the ceiling
  * PERMITS a second note on a string and never CAUSES one. Asserted at load.
  *
+ * THE CAP IS A VOICING'S RULE (Daniel, 261012, on injection 261011c's item 2).
+ * The simultaneity argument above is sound for a voicing — Grip, and the
+ * tetrad doors' free placement — and it was applied to every placement,
+ * including one that is not a voicing: a LINE. A line is played one note
+ * after another along the set; no hand holds its notes together, so nothing
+ * caps a string. `capOf(notesPer)` is the one site that says so: Grip's
+ * stored value 1 is its cap; Line's stored value 3 (the control's, the
+ * format's, every saved étude's — untouched) NAMES the placement and no
+ * longer bounds it — its cap is UNCAPPED. Movement is NOT the axis: the
+ * same Take must yield the same material under strum and under arpeggiate
+ * (the 260905 severance — Take chooses the MATERIAL, Movement chooses
+ * together-or-sequence); placement already decides whether a hand must hold
+ * the notes. Line + strum therefore sounds its take at one onset, as it did
+ * at the cap of three — the synth can, a guitar could not, and Movement
+ * still chooses together; a decision, Daniel's to reverse.
+ *
  * At n = 1 the term is identically zero, so on the ratified conformance
  * ground (one note per string) the choice is EXACTLY the carried §6.1.2 key.
  * At n > 1 this deliberately diverges from isolation.mjs's lineVoicing —
@@ -239,6 +255,17 @@ export function objectTones(parsed, object, pick) {
   return { tones, absent };
 }
 
+/** THE PLACEMENT'S CAP (night 56, ruled 261012 — see the header): the per-string ceiling a
+ * placement imposes, from the placement's stored value. Grip (1) is a voicing: one note per
+ * string. Anything else is a line, and a line is UNCAPPED — its notes sound in sequence. The
+ * boards hand this to gripFit (slots = strings × cap: Infinity passes a stack through verbatim),
+ * oneOfEach and everyOccurrence (n), and to the dropped role's sentence. */
+export const UNCAPPED = Infinity;
+export function capOf(notesPer) {
+  if (!Number.isInteger(notesPer) || notesPer < 1) throw new Error(`capOf: a placement's stored value is a positive integer, not ${notesPer}`);
+  return notesPer === 1 ? 1 : UNCAPPED;
+}
+
 /** gripFit(tones, slots) → { tones, dropped, refuse? } — a stack deeper
  * than the strings can carry drops tones by a NAMED rule (260914 item 3;
  * RATIFIED 260915): the 5th goes first, then the non-naming extensions
@@ -398,8 +425,8 @@ const lexLess = (a, b) => {
  */
 export function oneOfEach(tones, pool, { n = 1, centre } = {}) {
   if (!Array.isArray(tones) || !tones.length) throw new Error("oneOfEach: no tones");
-  if (!Number.isInteger(n) || n < 1 || n > 3)
-    throw new Error(`oneOfEach: the ceiling is 1..3 (the hand's reach), not ${n}`);
+  if (n !== UNCAPPED && (!Number.isInteger(n) || n < 1 || n > 3))
+    throw new Error(`oneOfEach: a voicing's ceiling is 1..3 (the hand's reach) and a line's is UNCAPPED (its notes sound in sequence — ruled 261012); ${n} is neither`);
   if (typeof centre !== "number") throw new Error("oneOfEach: the frame centre is required — drift is part of the choice");
   const missing = tones.filter((t) => !pool.some((m) => mod12(m.midi) === mod12(t.pc)));
   const present = tones.filter((t) => !missing.includes(t));
@@ -447,6 +474,9 @@ export function oneOfEach(tones, pool, { n = 1, centre } = {}) {
     let resolvesAt = null;
     for (let nn = n + 1; nn <= 3 && resolvesAt === null; nn++)
       if (oneOfEach(tones, pool, { n: nn, centre }).notes) resolvesAt = nn;
+    /* …and past the hand's reach, the UNCAPPED line (night 56): four on one string place there,
+     * and the escape says so as the number the engine derived — consumers word it */
+    if (resolvesAt === null && n !== UNCAPPED && oneOfEach(tones, pool, { n: UNCAPPED, centre }).notes) resolvesAt = UNCAPPED;
     /* THE PARTIAL (260922b ruling 3, built 260923): draw what fits, name what
      * could not come and why. Derived HERE, once, so every view that asks
      * (the neck, the staff, the keys, the readout) draws the same three notes:
@@ -497,11 +527,18 @@ export function oneOfEach(tones, pool, { n = 1, centre } = {}) {
  * nothing else. Where the cap does not bind, every occurrence is still
  * every occurrence. */
 export function everyOccurrence(tones, pool, { n = 3 } = {}) {
-  if (!Number.isInteger(n) || n < 1 || n > 3)
-    throw new Error(`everyOccurrence: the ceiling is 1..3, not ${n}`);
+  if (n !== UNCAPPED && (!Number.isInteger(n) || n < 1 || n > 3))
+    throw new Error(`everyOccurrence: a voicing's ceiling is 1..3 and a line's is UNCAPPED (ruled 261012); ${n} is neither`);
   const roleOf = new Map(tones.map((t) => [mod12(t.pc), t.role]));
   const missing = tones.filter((t) => !pool.some((m) => mod12(m.midi) === mod12(t.pc)))
     .map((t) => t.role);
+  /* A LINE IS UNCAPPED (night 56): every occurrence is every occurrence, no slot to match, nothing
+   * capped — the coverage rule below exists only because a cap can bind */
+  if (n === UNCAPPED) {
+    const notes = pool.filter((m) => roleOf.has(mod12(m.midi))).map((m) => ({ ...m, role: roleOf.get(mod12(m.midi)) }))
+      .sort((a, b) => a.midi - b.midi);
+    return { notes: assertAddressable(notes, "everyOccurrence"), missing, capped: [] };
+  }
   const strings = [...new Set(pool.map((m) => m.string))].sort((a, b) => a - b);
   const cands = new Map(strings.map((s) => [s,
     pool.filter((m) => m.string === s && roleOf.has(mod12(m.midi)))
@@ -681,7 +718,8 @@ export function droppedRoleSentence(role, absent) {
   const cause = `the ${word} could not be placed — the set holds ${strings === 1 ? "one string" : strings + " strings"}, `
     + `up to ${capWord(cap)} on ${strings === 1 ? "it" : "each"}, and ${strings === 1 ? "it" : "they"} already carr${strings === 1 ? "ies" : "y"} ${keptList}`;
   let escape;
-  if (Number.isInteger(absent.resolvesAt) && absent.resolvesAt > cap) escape = `${capWord(absent.resolvesAt)} on a string would carry it`;
+  if (absent.resolvesAt === UNCAPPED) escape = `placed one after another, the string${strings === 1 ? "" : "s"} would carry it`;   // night 56: the uncapped line
+  else if (Number.isInteger(absent.resolvesAt) && absent.resolvesAt > cap) escape = `${capWord(absent.resolvesAt)} on a string would carry it`;
   else {
     const capNeeded = Math.ceil(need / strings);
     if (capNeeded <= 3 && capNeeded > cap) escape = `${capWord(capNeeded)} on a string would carry it`;

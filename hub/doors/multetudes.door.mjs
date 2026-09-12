@@ -190,7 +190,10 @@ export default {
     /* v0.6.7 (261012, night 55 — the transport off the chart line): the strip's floating ⏮ ▶ ⏹ ⏭ — a
      * second copy of the neck's own cluster, covering the last chord of a long progression — is
      * deleted with its absolute positioning; the chart line is chips only, the transport is the neck's. */
-    blurb: "one tool that holds many études · v0.6.7",
+    /* v0.6.8 (261012, night 56 — the cap is a voicing's rule, ruled 261012): under Line nothing caps a
+     * string — Daniel's Gm7 on one string draws and sounds all four tones in sequence; Grip keeps its
+     * cap and its refusal; Line + strum sounds its take at one onset (stated, Daniel's to reverse). */
+    blurb: "one tool that holds many études · v0.6.8",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

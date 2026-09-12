@@ -16,7 +16,7 @@
 import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, gripFit, materialFor } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit, materialFor, capOf } from "../../engine/selection.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
@@ -131,9 +131,9 @@ export const keysBoard = {
       else {
         const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
         const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
-          : oneOfEach(gripFit(cur.tones, run.strings.length * cfg.notesPer).tones,
-              mat, { n: cfg.notesPer, centre: pos.centre });
+          ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })   // night 56: a line is uncapped
+          : oneOfEach(gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer)).tones,
+              mat, { n: capOf(cfg.notesPer), centre: pos.centre });
         sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
       }
       /* the reference mark, as v0.9's drawKeys carries it (the bass rides

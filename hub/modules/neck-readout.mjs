@@ -14,7 +14,7 @@
 import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
@@ -98,16 +98,16 @@ export const neckReadout = {
         if (cfg.object === "scale") sel = scaleTake(pool).notes;
         else {
           const roFit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
-            : gripFit(cur.tones, run.strings.length * cfg.notesPer);
+            : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
           const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply
           const r = cfg.take === "all"
-            ? everyOccurrence(cur.tones, mat, { n: cfg.notesPer })
-            : oneOfEach(roFit.tones, mat, { n: cfg.notesPer, centre: pos.centre });
+            ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
+            : oneOfEach(roFit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
           sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
-          absent = { dropped: [...roFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: cfg.notesPer, resolvesAt: r.resolvesAt };
+          absent = { dropped: [...roFit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
           if (roFit.dropped.length)
             absences.push(`the ${roFit.dropped.join(", ")} dropped by the grip rule — `
-              + `${run.strings.length * cfg.notesPer} slots carry `
+              + `${run.strings.length * capOf(cfg.notesPer)} slots carry `
               + roFit.tones.map((t) => t.role).join(" "));
           if (roFit.refuse) absences.push(roFit.refuse);
           if (cur.unnamed) absences.push(cur.unnamed);
@@ -126,11 +126,11 @@ export const neckReadout = {
           if (r.capped && r.capped.length)
             msg = (msg ? msg + " · " : "")
               + `the ${r.capped.join(" and ")} is in the box but the grip cannot carry it`
-              + (r.resolvesAt != null && r.resolvesAt <= 3 ? " — Line shows it" : "");
+              + (r.resolvesAt != null ? " — Line shows it" : "");   // night 56: any derived resolution is the line's
           if (r.unplaceable) msg = (r.collide
             ? `no placement fits — the ${r.collide.roles.join(" and ")} occur only on string ${r.collide.string}`
             : "no placement fits")
-            + (r.resolvesAt != null && r.resolvesAt <= 3
+            + (r.resolvesAt != null
               ? " — Line takes them" : " — and no per-string ceiling resolves it");
         }
         // v0.9's own pre-draw checks, re-run here against an independent derivation
@@ -138,10 +138,10 @@ export const neckReadout = {
           fld.pcs.length === 7 && new Set(fld.pcs).size === 7);
         check("the frame is three ascending scale notes", () =>
           pos.frets.length === 3 && pos.fLo < pos.fHi);
-        check("no string carries more than the placement allows", () => {
+        check("no string carries more than the placement allows", () => {   // night 56: a line is UNCAPPED, so this binds under grip (and the scale's reach); vacuous under a line, by the ruling
           const per = {};
           for (const x of sel) per[x.string] = (per[x.string] || 0) + 1;
-          const cap = cfg.object === "scale" ? 3 : cfg.notesPer;
+          const cap = cfg.object === "scale" ? 3 : capOf(cfg.notesPer);
           return Object.values(per).every((c) => c <= cap);
         });
         check("every selected note is a real field note in the frame", () =>
@@ -185,7 +185,7 @@ export const neckReadout = {
           if (cfg.object === "scale") { placeK++; continue; }
           const br = cfg.take === "all"
             ? { notes: true }
-            : oneOfEach(bc.tones, pool, { n: cfg.notesPer, centre: pos.centre });
+            : oneOfEach(bc.tones, pool, { n: capOf(cfg.notesPer), centre: pos.centre });
           if (br.notes) placeK++;
         }
         bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`

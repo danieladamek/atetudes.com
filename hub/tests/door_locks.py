@@ -5981,16 +5981,21 @@ console.log(JSON.stringify(out));
         pick([]); page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
 
     # ---------------- INJECTION 261011c: a dropped role is not "not there"; the Gamut's way back ----------
-    # Daniel's state: Bb Ionian, ONE string, up to three notes on it, arpeggiate, tones R,3,7,5, figure
-    # R-3-7-5 — the 5 leaves by the grip rule, and the figure's refusal must say the CAUSE and the way
-    # through, on the neck, in the readout, and the walk must sound exactly what draws (rule 10). With
-    # three tones there is no refusal: the cap is the trigger. Item 3: one option, first, that IS the
-    # whole field — a plain click and a modifier-click both land on the whole field, and it is lit there.
+    # Daniel's state: Bb Ionian, ONE string, arpeggiate, tones R,3,7,5, figure R-3-7-5 — a role the placement
+    # dropped is asked for, and the figure's refusal must say the CAUSE and the way through, on the neck, in
+    # the readout, and the walk must sound exactly what draws (rule 10). UPDATED 261012 (night 56, rule 7):
+    # Daniel's state was Line, where the cap of three dropped the 5; the 261012 ruling made a line UNCAPPED,
+    # so the refusal is no longer reached there (night 56's block pins the four notes). The sentence this
+    # block exists for still binds wherever a cap binds — under GRIP, one note per string: the 5 leaves by the
+    # grip rule, the 7 and the 3 by the partial (last first), the R stays, and the figure's first unplaced role
+    # is the 3rd — "three notes on a string would carry it", derived. With three tones under Line there is no
+    # refusal. Item 3: one option, first, that IS the whole field — a plain click and a modifier-click both
+    # land on the whole field, and it is lit there.
     if door_id == "multetudes":
         fig_note = lambda: page.inner_text("#fdFigNote")
         readout = lambda: page.inner_text("#roLine")
         page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
-        page.click('#fdNSeg button[data-nps="3"]'); page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(120)
+        page.click('#fdNSeg button[data-nps="1"]'); page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(120)
         page.fill("#hcTones", "R,3,7,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
         page.fill("#fdFigIn", "R-3-7-5"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(150)
         for s_ in (4, 3, 2):
@@ -5998,15 +6003,15 @@ console.log(JSON.stringify(out));
                 page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
         drawn = lambda: sorted(page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi)"))
         roles = lambda: sorted(page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => (g.querySelector('text') || {}).textContent)"))
-        check(roles() == ["3", "7", "R"], f"{tag} the one string carries R 3 7 and the 5 is dropped by the grip rule: {roles()}")
+        check(roles() == ["R"], f"{tag} under GRIP the one string carries the R alone — the 5 dropped by the grip rule, the 7 and the 3 by the partial: {roles()}")
         check(page.evaluate("() => document.querySelectorAll('#fieldSvg [data-midi][data-str=\"1\"] text').length") > 0 and any(t == "5" for t in page.evaluate("() => [...document.querySelectorAll('#fieldSvg [data-midi][data-str=\"1\"] text')].map(t => t.textContent)")),
               f"{tag} the 5 must be ON string 1 in the field — the whole point")
         fn = fig_note()
         check("carries no 5th" not in fn, f"{tag} the figure still reports the consequence as the cause: {fn!r}")
-        check("5th" in fn and "one string" in fn and "R, 3 and 7" in fn and "second string" in fn, f"{tag} the figure's refusal must name the cause and the way through: {fn!r}")
+        check("3rd" in fn and "one string" in fn and "up to one note" in fn and "carries R" in fn and "three notes on a string would carry it" in fn, f"{tag} the figure's refusal must name the cause and the way through (the first unplaced role, the cap, what the string carries, the derived escape): {fn!r}")
         check(not any(w in fn for w in ("Line", "Grip", "checkbox", "button")), f"{tag} rule 14 — a caption in the refusal: {fn!r}")
         ro = readout()
-        check("5th" in ro and "second string" in ro, f"{tag} the same refusal must reach the readout (rule 10): {ro[:300]!r}")
+        check("3rd" in ro and "three notes on a string" in ro, f"{tag} the same refusal must reach the readout (rule 10): {ro[:300]!r}")
         # the sounding path: the walk sounds exactly what draws — nothing silently missing beyond what the sentence names
         page.evaluate("() => { window.__n = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass') window.__n.push(e.detail.midi); }); }")
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); page.wait_for_timeout(300)
@@ -6014,9 +6019,9 @@ console.log(JSON.stringify(out));
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(2500)
         sounded = sorted(set(page.evaluate("() => window.__n.slice()")))
         check(sounded == drawn(), f"{tag} the walk must sound exactly what the neck draws under the refusal: drawn {drawn()}, sounded {sounded}")
-        # three tones: no drop, no refusal — the cap is the trigger
-        page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.fill("#fdFigIn", "R-3-7"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(200)
-        check("could not be placed" not in fig_note() and "carries no" not in fig_note(), f"{tag} with three tones on the one string nothing is refused: {fig_note()!r}")
+        # three tones under LINE: no drop, no refusal — the cap was the trigger, and a line has none (night 56)
+        page.click('#fdNSeg button[data-nps="3"]'); page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.fill("#fdFigIn", "R-3-7"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        check("could not be placed" not in fig_note() and "carries no" not in fig_note(), f"{tag} with three tones on the one string under a line nothing is refused: {fig_note()!r}")
         # restore the boot state of this block's controls
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.fill("#hcTones", "R,3,5,7"); page.dispatch_event("#hcTones", "input")
         page.click('#fdAddrSeg button[data-addr="pattern"]'); page.click('#fdMoveSeg button[data-move="strum"]'); page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(120)
@@ -6185,6 +6190,60 @@ console.log(JSON.stringify(out));
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
         page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
 
+    # ---------------- THE CAP IS A VOICING'S RULE (night 56, ruled 261012): a line is uncapped ----------
+    # Daniel's own case, twice (injection 261011c item 2 → the 261012 ruling): Gm7 — G Aeolian (the vi of Bb
+    # major) · set 1 (one string) · Line · arpeggiate · tones R,3,7,5 · figure 7-5-3-R. Before: the 5 dropped by
+    # the grip rule, three on the string, the figure refused (honestly — "a second string would carry it").
+    # Now: a line is not a voicing — nothing caps a string — four notes on the one string, drawn AND sounded,
+    # the figure orders all four. Grip unchanged: the same case still drops the 5 and still names the cause
+    # and the escape. Line + strum: the take sounds at one onset (the 260905 severance — Movement chooses
+    # together), a decision stated in selection.mjs's header, Daniel's to reverse.
+    if door_id == "multetudes":
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.click('#pgSrcSeg button[data-src="custom"]'); page.wait_for_timeout(100); page.fill("#pgCustom", "Gm7"); page.dispatch_event("#pgCustom", "input"); page.wait_for_timeout(300)
+        page.fill("#hcTones", "R,3,7,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
+        for s_ in (6, 5, 4, 3, 2):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(150)
+        if page.get_attribute('#fieldSvg [data-fdstr="1"]', "aria-pressed") != "true": page.click('#fieldSvg [data-fdstr="1"]'); page.wait_for_timeout(150)
+        page.click('#fdNSeg button[data-nps="3"]'); page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(120)
+        page.fill("#fdFigIn", "7-5-3-R"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(300)
+        n56 = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret, label: (g.querySelector('text') || {}).textContent || null })).sort((a, b) => a.fret - b.fret)")
+        sound = lambda: (page.evaluate("() => { window.__n56 = []; if (!window.__n56on) { window.__n56on = true; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass') window.__n56.push({ m: e.detail.midi, t: performance.now() }); }); } }"),
+                         page.click('#fdMini button[data-role="play"]'), page.wait_for_timeout(3600), page.click('#fdMini button[data-role="stop"]'), page.wait_for_timeout(300),
+                         page.evaluate("() => window.__n56"))[-1]
+        check(page.inner_text("#fdMode").startswith("Gm7"), f"{tag} Daniel's chord: {page.inner_text('#fdMode')!r}")
+        d = n56()
+        check(len(d) == 4 and all(x["str"] == 1 for x in d) and sorted(x["label"] for x in d) == ["3", "5", "7", "R"], f"{tag} LINE on one string: all four tones drawn on string 1, the 5 included — a line is uncapped: {d}")
+        hint = page.inner_text("#fdHint"); fn = page.inner_text("#fdFigNote")
+        check("dropped by the grip rule" not in hint and "no placement fits" not in hint, f"{tag} under a line nothing is dropped and nothing refuses: {hint!r}")
+        check("could not be placed" not in fn, f"{tag} the figure 7-5-3-R orders all four — the refusal is no longer reached under a line: {fn!r}")
+        snd = sound(); drawn_midis = sorted(x["midi"] for x in d)
+        check(len(snd) >= 4 and sorted(set(x["m"] for x in snd[:4])) == drawn_midis, f"{tag} the walk SOUNDS the four it draws (arpeggiate, one string): sounded {[x['m'] for x in snd]} drawn {drawn_midis}")
+        check(len(snd) >= 4 and (snd[3]["t"] - snd[0]["t"]) > 1500, f"{tag} arpeggiate: four notes in SEQUENCE, not a chord: onsets {[round(x['t'] - snd[0]['t']) for x in snd[:4]] if snd else snd}")
+        # LINE + STRUM — the decision, in two halves. With a figure that resolves, the OVERRIDE LAW (260913b) already
+        # sequences and disables strum — "the typed figure sequences" — so Daniel's own case never strums; asserted.
+        # Without a figure, strum sounds the take at ONE onset (Movement chooses together; a guitar could not, the
+        # synth does) — the behaviour chosen and stated in selection.mjs's header, Daniel's to reverse.
+        check(page.evaluate("() => document.querySelector('#fdMoveSeg button[data-move=\"strum\"]').disabled"), f"{tag} with the figure 7-5-3-R resolving, strum is overridden — the figure sequences (the 260913b law)")
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        page.click('#fdMoveSeg button[data-move="strum"]'); page.wait_for_timeout(200)
+        snd2 = sound()
+        check(len(snd2) >= 4 and sorted(set(x["m"] for x in snd2[:4])) == drawn_midis and (snd2[3]["t"] - snd2[0]["t"]) < 120, f"{tag} line + strum: the four sound together at one onset (the stated decision): {[(x['m'], round(x['t'] - snd2[0]['t'])) for x in snd2[:4]] if snd2 else snd2}")
+        page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.fill("#fdFigIn", "7-5-3-R"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        # GRIP UNCHANGED: the same case still drops the 5 by the grip rule and still names the cause and the escape
+        page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(300)
+        dg = n56(); hg = page.inner_text("#fdHint"); fg = page.inner_text("#fdFigNote")
+        check(len(dg) == 1 and dg[0]["label"] == "R" and "the 5 dropped by the grip rule" in hg, f"{tag} GRIP unchanged: the 5 still leaves by the grip rule and the one string carries the R: {dg} {hg!r}")
+        check("7th could not be placed" in fg and "one string" in fg and "up to one note" in fg and "would carry it" in fg, f"{tag} GRIP unchanged: the figure's refusal still names the cause and the escape: {fg!r}")
+        check("no placement fits" in hg and "occur only on string 1" in hg and ("takes both" in hg or "takes them" in hg), f"{tag} GRIP unchanged: the neck's refusal still names the collide and the way through (the line, by its control's own live caption — 'both' with a collide): {hg!r}")
+        # the neck's sentence under grip may name the raised placement by its control's live caption (the injection's technique), never a hard-quoted one
+        # restore what the blocks after this one expect
+        page.click('#fdNSeg button[data-nps="1"]'); page.click('#fdAddrSeg button[data-addr="pattern"]'); page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
+        page.click('#fdMoveSeg button[data-move="strum"]'); page.fill("#hcTones", "R,3,5,7"); page.dispatch_event("#hcTones", "input")
+        for s_ in (4, 3, 2):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(120)
+        page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(200)
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.
@@ -6280,8 +6339,14 @@ def main():
                 try:
                     run_door(browser, d)
                 except Exception as e:  # noqa: BLE001
-                    check(False, f"[{d}] the suite could not finish this door: "
-                                 f"{type(e).__name__}: {str(e).splitlines()[0]}")
+                    # 261012 (night 56, rule 9): a crash names ITS OWN LINE in this file and the locator it waited on —
+                    # a bare "Timeout 30000ms exceeded" had no path and no selector, and cost a run to locate
+                    import traceback as _tb
+                    frames = [f for f in _tb.extract_tb(e.__traceback__) if f.filename.endswith("door_locks.py")]
+                    where = f" at door_locks.py:{frames[-1].lineno}" if frames else ""
+                    loc = next((ln.strip() for ln in str(e).splitlines() if "waiting for" in ln or "locator(" in ln), "")
+                    check(False, f"[{d}] the suite could not finish this door{where}: "
+                                 f"{type(e).__name__}: {str(e).splitlines()[0]}" + (f" — {loc}" if loc else ""))
         finally:
             browser.close()
     print(f"\n{checks} assertions, {len(failures)} failed")
