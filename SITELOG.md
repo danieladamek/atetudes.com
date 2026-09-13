@@ -1,3 +1,14 @@
+## 2026-09-13 — DEPLOYED: night 58 live — the mixer strip and the row-count re-cut; Multetudes v0.6.10, Tetradetudes v0.6.5, Triadetudes' Mixer card; written from the run (the second run — the first, 34773107358, failed on the night's own chevron pin, re-stated in 61a09df)
+
+- record: run 34773674522 · success · commit 61a09df · fetched 2026-09-13T18:23Z · 6/6 studies byte-identical · digest 577e44bff535
+- Actions run 34773674522 green on `61a09df` — https://github.com/danieladamek/atetudes.com/actions/runs/34773674522 (created 2026-09-13T18:07:53Z, finished 2026-09-13T18:16:41Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 0468a2f1ea39 · live 0468a2f1ea39 — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 7bc851369156 · live 7bc851369156 — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-13 — Night 58: the mixer strip and the row-count re-cut — ROW_COUNTS re-cut across the family; Multetudes v0.6.10, Tetradetudes v0.6.5, Triadetudes' Mixer card
 
 - **Why (Daniel's 261009 mockup, ruled 261010 as a family-standard decision):** the Transport card had carried
