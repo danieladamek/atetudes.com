@@ -2096,6 +2096,29 @@ def m94_the_sounded_bass_needs_a_string_again():
     finally:
         p.write_text(original)
 
+def m95_a_mixer_row_returns_to_the_transport_card():
+    # night 58: a level row sneaks back into the Transport card's markup — the clock carries a mixer row again.
+    # The family constant (host-conformance, static, all six pages) and the door gate's DOM pin must both bite.
+    p, original, mutated = patch("hub/modules/transport-card.mjs",
+        '  <div class="clpsum">The étude\'s walk — Play joins the grid at the next bar.</div>',
+        '  <div class="bpmrow"><span class="trLab">a level that came back</span><input type="range" min="0" max="100" value="100"></div>\n  <div class="clpsum">The étude\'s walk — Play joins the grid at the next bar.</div>')
+    try:
+        p.write_text(mutated)
+        build()
+        import shutil
+        shutil.copyfile(str(REPO / "hub/build/tetradetudes.html"), str(REPO / "static/studies/tetradetudes/study.html"))   # the static pin reads the published page
+        r = sh("node", "--test", "engine/tests/host-conformance.test.mjs")
+        stat = r.returncode != 0 and "row groups" in (r.stdout + r.stderr)
+        g = suite()
+        hit = "the transport card renders" in g.stdout
+        record("a mixer row returns to the Transport card — four rows where the clock is three",
+               stat and g.returncode != 0 and hit, "constant bit: %s; suite exit %d; the DOM pin bit: %s" % (stat, g.returncode, hit))
+    finally:
+        p.write_text(original)
+        build()
+        shutil.copyfile(str(REPO / "hub/build/tetradetudes.html"), str(REPO / "static/studies/tetradetudes/study.html"))
+
+
 
 
 
@@ -2227,7 +2250,8 @@ def main():
                m86_the_figure_reports_the_consequence_again, m87_the_whole_field_option_goes_dark,
                m88_a_member_reaches_the_neck_without_its_role, m89_the_supply_reads_standard_tuning, m90_the_field_cannot_carry_it_returns,
                m91_an_overlay_returns_to_the_chart_line, m92_the_cap_returns_under_line,
-               m93_the_snapshot_allowlist_forgets_the_new_settings, m94_the_sounded_bass_needs_a_string_again)
+               m93_the_snapshot_allowlist_forgets_the_new_settings, m94_the_sounded_bass_needs_a_string_again,
+               m95_a_mixer_row_returns_to_the_transport_card)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

@@ -4224,9 +4224,15 @@ console.log(JSON.stringify(out));
         metro_rows = len([x for x in rows if x["card"] == "Metronome"])
         check(metro_rows == 4,
               f"{tag} the metronome card renders {metro_rows} row groups, not 4 — the card grammar is fixed")
+        # RE-CUT 261012 (night 58): the transport card is the CLOCK — three row groups (play, BPM, sig+bar split);
+        # the mixer — voice, chord, bass — is a card of its own beside it, three row groups. The reasoning above
+        # stands: no row spent on a checkbox; what changed is that rows 3–5 were a mixer under the clock's name.
         tr_rows = len([x for x in rows if x["card"] == "Transport"])
-        check(tr_rows == 5,
-              f"{tag} the transport card renders {tr_rows} row groups, not 5 (play, BPM, sig+voice, chord, bass)")
+        check(tr_rows == 3,
+              f"{tag} the transport card renders {tr_rows} row groups, not 3 (play, BPM, sig+bar split) — the mixer left it (261012)")
+        mx_rows = len([x for x in rows if x["card"] == "Mixer"])
+        check(mx_rows == 3,
+              f"{tag} the mixer card renders {mx_rows} row groups, not 3 (voice, chord, bass) — the clock's mixer is a card of its own (261012)")
         # accents MOVED into the selects row — and still WORK: the downbeat dot
         # wears .acc while the box is checked, live, on the running clock
         check(page.is_checked("#accChk"), f"{tag} accents not on by default — cannot exercise the moved checkbox")
@@ -4826,13 +4832,13 @@ console.log(JSON.stringify(out));
         ids2 = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
         check(ids2 == ids, f"{tag} the dots were rebuilt on a step — nothing would glide")
     if "chordVolR" in r["controlsPresent"]:
-        # ---- the audio path, which no static check can see. THE MIXER LIVES IN
-        # TRANSPORT (the reference's form); the audio realiser is a hidden module
-        # that only listens. The chord slider is called "chord" in every app —
-        # Daniel's consistent-reproducible-pattern call (260820.3) retired the
-        # per-door chordLabel key: one value across every door is a fact with no
-        # variation, so the word is markup, not configuration.
-        labels = page.eval_on_selector_all(".trMixLab", "e => e.map(x => x.textContent.trim())")
+        # ---- the audio path, which no static check can see. THE MIXER IS A CARD OF ITS
+        # OWN since night 58 (261012 — it lived in Transport, the reference's old form);
+        # the audio realiser is a hidden module that only listens. The chord slider is
+        # called "chord" in every app — Daniel's consistent-reproducible-pattern call
+        # (260820.3) retired the per-door chordLabel key: one value across every door is
+        # a fact with no variation, so the word is markup, not configuration.
+        labels = page.eval_on_selector_all(".mxMixLab", "e => e.map(x => x.textContent.trim())")
         check(labels == ["chord", "bass"], f"{tag} the mixer rows are not chord/bass: {labels}")
         check(page.query_selector("#auOn") is None and page.query_selector(".auHead") is None,
               f"{tag} a separate Sound card still renders — the mixer must live in Transport")
@@ -5535,7 +5541,7 @@ console.log(JSON.stringify(out));
     AXE_FLOOR = ["wcag2a", "wcag2aa"]
     AXE_EXEMPT = {   # rule → { door → set of axe target selectors }, all reported 260923
         "label": {   # range sliders with no label: the metronome's, the neck's mixer's
-            "multetudes": {"#bpmRange", "#clickVolR", "#fdHarmVol", "#fdBassVol"},
+            "multetudes": {"#bpmRange", "#clickVolR"},   # #fdHarmVol / #fdBassVol RETIRED 261012 (night 58): named in the mixer strip
             "tetradetudes": {"#bpmRange", "#clickVolR", "#bpmRange2", "#chordVolR", "#bassVolR"},
             "scribe": {"#bpmRange", "#clickVolR"}, "plain": {"#bpmRange", "#clickVolR"}},
         "select-name": {   # selects with a visible caption not associated, or none (item 1's list)
@@ -6258,7 +6264,7 @@ console.log(JSON.stringify(out));
         legend_before = page.inner_text("#fdLegend")
         check("colour = function against the key" in legend_before, f"{tag} the legend's sentence before: {legend_before!r}")
         # the two controls, with the one vocabulary
-        lab = page.evaluate("() => [...document.querySelectorAll('.fd-lab2')].map(e => e.textContent.trim())")
+        lab = page.evaluate("() => [...document.querySelectorAll('.fd-lab2, .mx-lab')].map(e => e.textContent.trim())")   # night 58: the labels moved to the mixer strip
         check("reference tone" in lab and "sounded bass" in lab and not any("/" in x and "reference" in x for x in lab), f"{tag} two labelled controls, no slash: {lab}")
         opts = lambda sel: page.evaluate(f"() => [...document.querySelectorAll('{sel} option')].filter(o => !o.disabled).map(o => o.value)")
         check(opts("#fdSounded") == opts("#fdBass2") and "root" in opts("#fdSounded"), f"{tag} the sounded bass offers the reference's own list (rule 6): {opts('#fdSounded')} vs {opts('#fdBass2')}")
@@ -6321,6 +6327,56 @@ console.log(JSON.stringify(out));
         check(page.inner_text("#fdLegend") == legend_before, f"{tag} the legend's sentence is unchanged by the split: {page.inner_text('#fdLegend')!r}")
         # restore
         page.uncheck("#fdPad"); page.select_option("#fdSounded", "none"); page.wait_for_timeout(200)
+
+    # ---------------- THE MIXER STRIP, AND THE ROW-COUNT RE-CUT (night 58, 261012) ----------
+    # Daniel's 261009 mockup, finished: the mixer left the Transport card (tetradetudes: mixer-card.mjs, three
+    # rows — voice · chord · bass — beside the clock's three) and left the neck (multetudes: mixer-strip.mjs, a
+    # BOARD below the neck holding the voice and harmony level, the reference tone, the sounded bass and the
+    # bass level, the pad and its level). A re-housing: every id, message and state as before — the audio pins
+    # above already exercise the levels by id; here the SEATS are pinned, and at 390 the rows stack.
+    if door_id == "multetudes":
+        seat = page.evaluate("""() => {
+          const boards = [...document.querySelectorAll('.board')];
+          const mixer = boards.find(b => (b.querySelector('.bh span') || {}).textContent === 'Mixer');
+          const neck = boards.find(b => b.querySelector('#fieldSvg'));
+          const ids = ['fdVoice','fdHarmVol','fdHarmMute','fdBass2','fdSounded','fdBassVol','fdBassMute','fdPad','fdPadVol','fdPadMute'];
+          const inMixer = ids.filter(i => mixer && mixer.querySelector('#' + i)), inNeck = ids.filter(i => neck && neck.querySelector('#' + i));
+          const clock = ['fdMini','fdRepeat','fdSplit','fdBpm','fdMetChk'].filter(i => neck && neck.querySelector('#' + i));
+          const rows = mixer ? mixer.querySelectorAll('.mx-row').length : 0;
+          const chevronInHeader = mixer ? (() => { const c = mixer.querySelector('.clpsBtn'); const h = mixer.querySelector('.bh'); if (!c || !h) return false; const cr = c.getBoundingClientRect(), hr = h.getBoundingClientRect(); return cr.top >= hr.top - 2 && cr.bottom <= hr.bottom + 2; })() : false;
+          const order = boards.indexOf(mixer) - boards.indexOf(neck);
+          return { mixer: !!mixer, inMixer, inNeck, clock, rows, chevronInHeader, order, pairrows: neck ? neck.querySelectorAll('.fd-pairrow').length : -1 }; }""")
+        check(seat["mixer"] and seat["rows"] == 3, f"{tag} the Mixer board exists below the neck with three rows: {seat}")
+        check(len(seat["inMixer"]) == 10 and not seat["inNeck"], f"{tag} the ten mixer controls live in the Mixer board and none in the neck: {seat}")
+        check(len(seat["clock"]) == 5 and seat["pairrows"] == 0, f"{tag} the neck keeps its clock row (the 260919 ruling) and no mixer row: {seat}")
+        check(seat["order"] == 1, f"{tag} the Mixer board is the one right after the neck: order {seat['order']}")
+        check(seat["chevronInHeader"], f"{tag} the strip has a header, so the shell's chevron sits in it")
+        # a level moved in the strip still moves the bus: the harmony level at zero starts no chord source
+        page.evaluate("() => { if (!window.__n58) { window.__n58 = { raw: 0 }; for (const C of [AudioBufferSourceNode, OscillatorNode]) { const P = C.prototype.start; C.prototype.start = function(...a) { window.__n58.raw++; return P.apply(this, a); }; } } }")
+        page.select_option("#fdSounded", "none"); page.uncheck("#fdPad"); page.wait_for_timeout(150)
+        page.fill("#fdHarmVol", "0"); page.dispatch_event("#fdHarmVol", "input"); page.wait_for_timeout(150)
+        page.evaluate("() => { window.__n58.raw = 0; }"); page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(900); page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        raw0 = page.evaluate("() => window.__n58.raw")
+        page.fill("#fdHarmVol", "100"); page.dispatch_event("#fdHarmVol", "input"); page.wait_for_timeout(150)
+        page.evaluate("() => { window.__n58.raw = 0; }"); page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(900); page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
+        raw1 = page.evaluate("() => window.__n58.raw")
+        check(raw1 >= 3 and raw0 <= raw1 - 3, f"{tag} the harmony level in the strip still drives the chord bus (sources at zero: {raw0}, at unity: {raw1})")
+        # 390: stack, do not shrink — each level slider keeps a usable width and the board is the page's width
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
+        narrow = page.evaluate("""() => { const boards = [...document.querySelectorAll('.board')]; const mixer = boards.find(b => (b.querySelector('.bh span') || {}).textContent === 'Mixer');
+          const neck = boards.find(b => b.querySelector('#fieldSvg')); const w = (e) => Math.round(e.getBoundingClientRect().width);
+          return { board: w(mixer), neck: w(neck), sliders: ['fdHarmVol','fdBassVol','fdPadVol'].map(i => w(document.getElementById(i))),
+            rows: [...mixer.querySelectorAll('.mx-row')].map(r => Math.round(r.getBoundingClientRect().height)) }; }""")
+        check(narrow["board"] == narrow["neck"] and all(s_ >= 150 for s_ in narrow["sliders"]), f"{tag} @390 the strip takes the neck's width and every level slider keeps ≥ 150 px: {narrow}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
+    if door_id == "tetradetudes":
+        tcard = page.evaluate("""() => { const cards = [...document.querySelectorAll('.card')]; const byT = (t) => cards.find(c => (c.querySelector('h2') || {}).textContent.trim() === t);
+          const tr = byT('Transport'), mx = byT('Mixer');
+          return { mixer: !!mx, voiceInMixer: !!(mx && mx.querySelector('#noteVoiceSel')), voiceInTransport: !!(tr && tr.querySelector('#noteVoiceSel')),
+            slidersInMixer: ['chordVolR','bassVolR','chordMute','bassMute'].filter(i => mx && mx.querySelector('#' + i)).length,
+            trRows: tr ? tr.querySelectorAll('.transport,.row2,.bpmrow').length : -1, mxRows: mx ? mx.querySelectorAll('.transport,.row2,.bpmrow').length : -1 }; }""")
+        check(tcard["mixer"] and tcard["voiceInMixer"] and not tcard["voiceInTransport"] and tcard["slidersInMixer"] == 4, f"{tag} the Mixer card holds the voice and both levels; the Transport card holds neither: {tcard}")
+        check(tcard["trRows"] == 3 and tcard["mxRows"] == 3, f"{tag} Transport 3 rows, Mixer 3 rows: {tcard}")
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

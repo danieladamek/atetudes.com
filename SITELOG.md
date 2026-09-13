@@ -1,3 +1,27 @@
+## 2026-09-13 — Night 58: the mixer strip and the row-count re-cut — ROW_COUNTS re-cut across the family; Multetudes v0.6.10, Tetradetudes v0.6.5, Triadetudes' Mixer card
+
+- **Why (Daniel's 261009 mockup, ruled 261010 as a family-standard decision):** the Transport card had carried
+  the clock AND a mixer under one name since the grammar was set — rows 3–5 of five. Night 55 moved the transport,
+  night 57 built the contents; this night builds the strip that holds them and re-cuts the constant.
+- **The constant, re-cut — not edited to fit:** `ROW_COUNTS = { Metronome: 4, Transport: 3, Mixer: 3 }` — *a
+  Transport card is the clock (play · BPM · time signature with the bar split); a Mixer card is what sounds
+  (voice · chord · bass); every host with the clock has the mixer beside it.* Changed FIRST, the floor red on
+  triadetudes, then the markup moved until green on all six (engine 703/703); the door gate's DOM pin says the
+  same numbers. `voice` travels with the mixer — a timbre, what sounds — PROPOSED, Daniel's to reverse.
+- **The re-housing (every id, bus message and state as before):** tetradetudes' Transport card → `transport-card`
+  (three rows) + a new `mixer-card` (voice · chord · bass, the MIXER announce and the mute rule with it);
+  triadetudes' hand page the same split, its JS untouched; Multetudes' three mixer rows out of the neck into
+  `mixer-strip`, a board below the neck with its own header — the voice and harmony level, the reference tone,
+  the sounded bass and the bass level, the pad and its level; the neck keeps its clock row (the 260919 ruling)
+  and its tuning rows. Nothing waits for a control: night 57 built the pad. At 390 the strip stacks at the
+  neck's width, every slider at 195 px. The chevron item stays open (the chart line gained no header).
+- **Gates:** engine 703/703 (the §4.3 grammar over all six pages) · hub 12/12 (the divergence register's census
+  gained `mixer-strip`, entry 37) · red first `hub/tests/out/doors-n58-red-0913-0044.log` · door gate 21,205/0
+  (`doors-0913-0102.log`; a first run red on two axe exemptions that now matched nothing — retired — and an
+  older pin re-pointed to the Mixer card) · m95 (a level row returns to the Transport card) bites in both pins
+  (`bite-m95-0913.log`) · chain 96/96, suite green (`bite-0913-0112.log`, 01:12–07:17) · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261012d — night 58, the mixer strip and the row-count re-cut.md`.
+
 ## 2026-09-13 — DEPLOYED: night 57 live — the bass and the reference part company, and the pad takes a seat; Multetudes v0.6.9; five studies moved; written from the run
 
 - record: run 34740757601 · success · commit 3acc4b8 · fetched 2026-09-13T05:51Z · 6/6 studies byte-identical · digest f4ae3726d540

@@ -2,10 +2,14 @@
  *
  * `static/studies/triadetudes/study.html` is the layout specification, and this
  * is its second card, in its form and order: ◀ Play ▶, the BPM row, Time sig
- * and Bar split, the checkbox row (metronome · count-in · mute chords · voice),
- * the two mixer sliders, and the hint. THE MIXER LIVES HERE, as it does in the
- * reference — there is no separate Sound card. Every control id is the
- * reference's own where a twin exists.
+ * and Bar split, and the hint. Every control id is the reference's own where a
+ * twin exists. THE MIXER LEFT THIS CARD (night 58, 261012 — Daniel's 261009 mockup,
+ * ruled 261010 as a family-standard decision): the voice and the two level rows
+ * were a mixer under the clock's name — rows 3–5 of five — and are now
+ * `mixer-card.mjs`, a card of its own beside this one. A TRANSPORT CARD IS THE
+ * CLOCK: play · BPM · time signature (with the bar split), three row groups;
+ * the reference page carries the same split. The clock still ARMS audio on Play
+ * (MIXER { on: true }) — that is the clock's business, not a level.
  *
  * ONE GRID, AND THIS CARD IS NOT ITS OWNER. `metronome-card` owns the clock;
  * this card subscribes to `BEAT`, walks `engine/transport.mjs` along it, and
@@ -22,7 +26,6 @@
  * this shell's strip mini-transports provide properly.
  */
 import { createTransportCore, patternOf, SPLITS } from "../../engine/transport.mjs";
-import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } from "../bus.mjs";
 
 const METERS = Object.keys(SPLITS).map(Number).sort((a, b) => a - b);
@@ -34,7 +37,7 @@ export const transportCard = {
   mount_point: "cards",
   order: 1,
   controls: ["prevBtn", "playBtn", "nextBtn", "bpmRange2", "meterSel2", "splitSel",
-    "clickChk2", "countChk", "chordMute", "bassMute", "noteVoiceSel", "chordVolR", "bassVolR"],
+    "clickChk2", "countChk"],
 
   markup: `
   <h2>Transport</h2>
@@ -59,28 +62,13 @@ export const transportCard = {
       <select id="meterSel2" data-control="meterSel2"></select></div>
     <div><label>Bar split<br>(beats per chord)</label>
       <select id="splitSel" data-control="splitSel"></select></div>
-    <div class="rowEnd"><label class="chk" title="the note voice — tone, pluck (plucked string), sustain (notes hold to the change)">voice
-      <select id="noteVoiceSel" data-control="noteVoiceSel"></select></label></div>
-  </div>
-  <div class="bpmrow" title="the mixer: the chord level — muted is this slider at zero">
-    <button id="chordMute" data-control="chordMute" class="muteBtn">\u{1F50A}</button>
-    <span class="trLab trMixLab">chord</span>
-    <input type="range" id="chordVolR" data-control="chordVolR" min="0" max="100" value="100">
-    <span class="trVal" id="chordVolVal">100</span>
-  </div>
-  <div class="bpmrow" title="the mixer: the bass level — muted is this slider at zero">
-    <button id="bassMute" data-control="bassMute" class="muteBtn">\u{1F50A}</button>
-    <span class="trLab trMixLab">bass</span>
-    <input type="range" id="bassVolR" data-control="bassVolR" min="0" max="100" value="100">
-    <span class="trVal" id="bassVolVal">100</span>
   </div>
   <div class="clpsum">The étude's walk — Play joins the grid at the next bar.</div>
   <div class="hint info">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2
   beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next bar</b> — the
   click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first).
-  Mute chords is the chord level at zero — bass and click keep sounding and the changes still
-  animate in time: play-along, you supply the voicings. Sound starts on your first click. The
-  click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
+  Sound starts on your first click. What sounds — the voice and each bus's level — lives in the Mixer
+  card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
   /* Play IS the shell's red `.primary`, as the reference's is — Daniel reversed
    * the earlier retire-the-red call in the 2026-08-19 side-by-side ("more
@@ -93,7 +81,6 @@ export const transportCard = {
 .trPlay{font-weight:bold}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
-.trMixLab{width:36px}
 .trVal{font-size:13px;width:30px;text-align:right}
 .trSig select{width:auto;padding:3px 6px;margin-left:4px}
 /* only this module puts a row-end group inside a .transport row (the Play
@@ -110,7 +97,6 @@ export const transportCard = {
     let core = createTransportCore({ meter, splitIdx, steps, countIn: false });
     let armed = false, position = 0;
     let armFrom = null, armAt = 0;   // metroOwner: see setPlaying
-    let chordVol = 1, bassVol = 1;
 
     const fillMeters = () => {
       const sel = byId("meterSel2"); sel.textContent = "";
@@ -130,20 +116,13 @@ export const transportCard = {
         sel.appendChild(o);
       });
     };
-    const vsel = byId("noteVoiceSel");
-    for (const n of NOTE_VOICE_NAMES) {
-      const o = d.createElement("option"); o.value = n; o.textContent = n; vsel.appendChild(o);
-    }
-
     const showLoop = () => { byId("trLoop").textContent = armed ? "loop " + (core.loop + 1) : ""; };
 
     /* the click's on/off is NOT here any more (260820.2): it is the clock
      * owner's state (CLOCK_STATE.click) and this card's checkbox is a VIEW of
      * it — changes go out as a CLOCK request, renders come back from the
      * state, so the metronome's own Sound button and this checkbox can never
-     * disagree. The mixer keeps the levels and the voice. */
-    const mixer = () => announce(d, MIXER, {
-      chord: chordVol, bass: bassVol, voice: vsel.value });
+     * disagree. The levels and the voice are mixer-card's (night 58). */
 
     /* metroOwner — the reference's rule, carried by name (side-by-side triage
      * 2026-08-19). Play STARTS the clock as "transport" if it is not already
@@ -206,40 +185,6 @@ export const transportCard = {
     });
     byId("countChk").addEventListener("change", (e) => core.setCountIn(e.target.checked));
     byId("clickChk2").addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
-    vsel.addEventListener("change", mixer);
-    /* ONE MUTE ICON PER SLIDER (260820.3) — v0.8.7's mute-is-the-slider-at-
-     * zero rule made universal, and the "mute chords" checkbox retired into it.
-     * The ICON IS A VIEW OF THE LEVEL, never separate state: level 0 renders
-     * muted however it got there, dragging by hand included; the stash is a
-     * memory, not an owner — unmute restores the last non-zero level, or the
-     * slider's default when there is none. The dead Sound button and the
-     * MIXER-vs-CLOCK_STATE trap were both a second owner; this has one. */
-    const wireMute = (btnId, sliderId, valId, get, set, dflt) => {
-      let stash = 0;
-      const renderIcon = () => {
-        const muted = get() === 0, b = byId(btnId);
-        b.textContent = muted ? "\u{1F507}" : "\u{1F50A}";
-        b.setAttribute("aria-pressed", String(muted));
-        b.title = muted ? "unmute — restore the level" : "mute — the slider to zero";
-      };
-      const apply = (v) => { set(v);
-        byId(sliderId).value = String(Math.round(v * 100));
-        byId(valId).textContent = String(Math.round(v * 100));
-        renderIcon(); mixer(); };
-      byId(btnId).addEventListener("click", () => {
-        if (get() > 0) { stash = get(); apply(0); }
-        else apply(stash > 0 ? stash : dflt);
-      });
-      byId(sliderId).addEventListener("input", (e) => {
-        const v = Number(e.target.value) / 100;
-        if (v > 0) stash = v;
-        set(v); byId(valId).textContent = e.target.value; renderIcon(); mixer();
-      });
-      renderIcon();
-    };
-    wireMute("chordMute", "chordVolR", "chordVolVal", () => chordVol, (v) => { chordVol = v; }, 1);
-    wireMute("bassMute", "bassVolR", "bassVolVal", () => bassVol, (v) => { bassVol = v; }, 1);
-
     /* a strip mini summoned Play — arm (or disarm) the walk exactly as our own
      * Play button does; setPlaying takes it from there (grid + audio) */
     listen(d, PLAY, (m) => {
@@ -291,7 +236,6 @@ export const transportCard = {
       announce(d, ATTACK, { index: w.step, lead: ev.lead, level: w.level, beats });
       announce(d, STEP_CHANGED, { index: w.step, request: true, attack: true, lead: ev.lead, level: w.level, meter, splitIdx, beats });
     });
-
-    mixer();
+    /* the boot announce of the levels and the voice is mixer-card's (night 58) */
   },
 };

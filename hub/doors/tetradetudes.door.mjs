@@ -114,7 +114,10 @@ export default {
     /* v0.6.4 (261008, injection 261006): the chip's roman reads function only (vii°, the
      * Start-on selector keeps viiø7); the Grip/Free sentence names the tie rules; the bind
      * control's title says what release does per placement, and no longer says the box reports. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.4",
+    /* v0.6.5 (261012, night 58 — the row-count re-cut): the mixer leaves the Transport card for a Mixer card
+     * of its own (voice · chord · bass); the Transport card is the clock (play · BPM · sig). ROW_COUNTS re-cut
+     * across the family; every id, message and state as before. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.5",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

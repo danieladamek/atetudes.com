@@ -529,23 +529,37 @@ test("§4.3 metronome: the control inventory and the family guarantee render in 
 
 // ================= the card grammar (260820.4): four rows, none spent on a checkbox =================
 // Daniel's sketch made row count part of the family look: the metronome card is
-// exactly four row groups (transport · BPM · selects+accents · icon+Vol) and the
-// transport card exactly five (play · BPM · sig+voice · chord · bass) — the
+// exactly four row groups (transport · BPM · selects+accents · icon+Vol) — the
 // checkbox-only rows (`metrosound`, `trChecks`, and the hand-authored studies'
 // inline-styled equivalents) are gone, their controls riding the right end of
 // rows that already exist. This asserts the SHAPE statically: row-group counts
 // per card region and the absence of the retired row classes. The stronger
 // predicate — "no row group's live content is only checkboxes" — needs a DOM,
 // and lives in hub/tests/door_locks.py where one runs.
+//
+// RE-CUT 261012 (night 58 — Daniel's 261009 mockup, ruled 261010 as a family-standard decision):
+// the transport card had been FIVE rows (play · BPM · sig+voice · chord · bass), and rows 3–5 were
+// a mixer under the clock's name. A TRANSPORT CARD IS THE CLOCK — play · BPM · time signature
+// (with the bar split) — THREE row groups. A MIXER CARD IS WHAT SOUNDS — voice · chord · bass —
+// THREE row groups; voice travels with the mixer because a voice is a timbre, WHAT sounds, beside
+// the levels of what sounds (proposed by the night, Daniel's to reverse). Every host that carries
+// a Transport card carries a Mixer card beside it. Multetudes' mixer is a BOARD under its neck
+// (the 260919 ruling seated its clock row there), which this constant never counted; the door
+// gate pins that board's rows by DOM. The constant is not edited to fit a page: it says what a
+// card IS across the six studies, and the floor runs on all six.
 
-const ROW_COUNTS = { Metronome: 4, Transport: 5 };
+const ROW_COUNTS = { Metronome: 4, Transport: 3, Mixer: 3 };
 const GRAMMAR_HOSTS = ["metronome", "triadetudes", "tetradetudes", "multetudes", "modes-from-pentatonic-boxes", "tetrad-voice-leading"];   // 261003/261004: the bridge's two pages
 
-test("§4.3 grammar: metronome cards are four row groups, transport cards five, in every host", () => {
+test("§4.3 grammar: metronome cards are four row groups, transport cards three and mixer cards three, in every host — and a host with a clock has a mixer beside it", () => {
   for (const name of GRAMMAR_HOSTS) {
     const page = studyOf(name);
     assert.ok(!/metrosound|trChecks/.test(page),
       `[${name}] carries a retired checkbox-row class — the card grammar item deleted these`);
+    // the re-cut (261012): the clock and the mixer are two cards, in every host that has the clock
+    const titles = [...page.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)].map((m) => m[1].trim().replace("&amp;", "&"));
+    if (titles.includes("Transport"))
+      assert.ok(titles.includes("Mixer"), `[${name}] carries a Transport card and no Mixer card — the mixer left the transport (261012) and must have a card of its own`);
     // a door page holds each card twice (module template + door body); the
     // count must hold for EVERY occurrence of a card's <h2> region
     for (const m of page.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)) {

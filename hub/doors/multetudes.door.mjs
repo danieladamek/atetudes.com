@@ -198,7 +198,10 @@ export default {
      * pitch with no string, on any set — the six-string set included); the pad — the bar's harmony on its
      * own bus, seated above the guitar's register by measurement, held for the bar, never drawn — with its
      * own level; both settings saved, exported and restored. The rows sit under the neck until night 58's strip. */
-    blurb: "one tool that holds many études · v0.6.9",
+    /* v0.6.10 (261012, night 58 — the mixer strip): the voice and the harmony level, the reference tone, the
+     * sounded bass and the bass level, the pad and its level leave the neck for a board of their own below it
+     * (mixer-strip.mjs); the neck keeps its clock row and its tuning rows. Daniel's 261009 mockup, finished. */
+    blurb: "one tool that holds many études · v0.6.10",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
