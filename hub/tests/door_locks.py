@@ -6343,7 +6343,14 @@ console.log(JSON.stringify(out));
           const inMixer = ids.filter(i => mixer && mixer.querySelector('#' + i)), inNeck = ids.filter(i => neck && neck.querySelector('#' + i));
           const clock = ['fdMini','fdRepeat','fdSplit','fdBpm','fdMetChk'].filter(i => neck && neck.querySelector('#' + i));
           const rows = mixer ? mixer.querySelectorAll('.mx-row').length : 0;
-          const chevronInHeader = mixer ? (() => { const c = mixer.querySelector('.clpsBtn'); const h = mixer.querySelector('.bh'); if (!c || !h) return false; const cr = c.getBoundingClientRect(), hr = h.getBoundingClientRect(); return cr.top >= hr.top - 2 && cr.bottom <= hr.bottom + 2; })() : false;
+          /* the CLAIM (re-stated 261013 after CI): the strip has a header, so the chevron sits in the header BAND and over
+           * none of the strip's rows — not "inside the .bh box to the pixel": CI's Linux Chromium sets the 11 px header
+           * a few px shorter than this Mac's and the chevron's 17 px box overhung it by more than the 2 px tolerance
+           * (run 34773107358, the only red). The 29-versus-30 lesson, third sighting. */
+          const chevronInHeader = mixer ? (() => { const c = mixer.querySelector('.clpsBtn'); const h = mixer.querySelector('.bh'); if (!c || !h) return false;
+            const cr = c.getBoundingClientRect(), hr = h.getBoundingClientRect();
+            const overRow = [...mixer.querySelectorAll('.mx-row')].some(r => { const rr = r.getBoundingClientRect(); return cr.bottom > rr.top + 1 && cr.top < rr.bottom - 1 && cr.right > rr.left && cr.left < rr.right; });
+            return cr.top >= hr.top - 4 && cr.top < hr.bottom && !overRow; })() : false;
           const order = boards.indexOf(mixer) - boards.indexOf(neck);
           return { mixer: !!mixer, inMixer, inNeck, clock, rows, chevronInHeader, order, pairrows: neck ? neck.querySelectorAll('.fd-pairrow').length : -1 }; }""")
         check(seat["mixer"] and seat["rows"] == 3, f"{tag} the Mixer board exists below the neck with three rows: {seat}")
