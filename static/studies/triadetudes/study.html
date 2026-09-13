@@ -4682,9 +4682,12 @@ function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
   // as an array of the voicing's own notes (identity, not lookup), or null
   // for a block strum of the whole voicing.
   const out = [];
+  /* G11, NARROWED (night 57 — the register's own `then`): the pedal is the one legitimately
+   * stringless event, and it SAYS SO — `unfretted: true` is the flag the real-string assertion
+   * below reads; a stringless event without it is refused by name, as every chord event is */
   if (bassMidi !== null && bassMidi !== undefined)
     out.push({ midi: bassMidi, string: null, fret: null, role: "bass",
-      slot: null, onset: 0, dur: 1.0 });
+      slot: null, onset: 0, dur: 1.0, unfretted: true });
   const seq = order || voicing.notes;
   for (const n of seq)
     if (n.role === undefined && !voicing.notes.includes(n))
@@ -4703,6 +4706,9 @@ function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
       dur: Math.min(0.9, step * 1.6) }));
   }
   // structural assertions — derived, then checked, before anyone consumes it
+  for (const e of out)   // the exemption is the FLAG, not the role (night 57)
+    if (e.unfretted !== true && (!Number.isInteger(e.string) || e.string < 1 || e.string > 6))
+      throw new Error("noteEvents: event carries no real string");
   const chord = out.filter((e) => e.role !== "bass");
   if (chord.length !== seq.length)
     throw new Error("noteEvents: event count != sequence length");

@@ -20,7 +20,7 @@
  * FIRST REAL GESTURE and never on load — the `file://` gate demands zero
  * console errors, and there is no reason to manufacture warnings either.
  *
- * The mixer is two gain buses on existing paths (v0.8.7): chord and bass,
+ * The mixer is three gain buses on existing paths (v0.8.7; the pad's since night 57): chord, bass and pad,
  * each one multiply, ramped rather than stepped so a level move mid-note does
  * not click. ITS CONTROLS ARE NOT HERE: as in the reference page, the sliders
  * and the voice select live in the Transport card, which announces `MIXER`.
@@ -55,10 +55,11 @@ export const audioCard = {
     const families = Array.isArray(lock.families) && lock.families.length ? lock.families : ["drop2"];
 
     /* PRIVATE. Nothing else reads any of this. */
-    let ac = null, chordBus = null, bassBus = null, wave = null;
+    let ac = null, chordBus = null, bassBus = null, padBus = null;
+    const waves = new Map();   // one PeriodicWave per partials table (the sustain's, the pad's)
     const buffers = new Map();
     let on = false, voice = NOTE_VOICE_NAMES[0], clickOn = true;
-    let chordVol = 1, bassVol = 1;
+    let chordVol = 1, bassVol = 1, padVol = 1;   // night 57: the pad's bus
     let cfg = null, pass = null, live = 0;
     let bpm = 72, durBeats = 2;                       // the clock's, heard on the bus
 
@@ -71,17 +72,19 @@ export const audioCard = {
         try { ac = new Ctor(); } catch { return null; }
         chordBus = ac.createGain(); chordBus.gain.value = chordVol; chordBus.connect(ac.destination);
         bassBus = ac.createGain(); bassBus.gain.value = bassVol; bassBus.connect(ac.destination);
+        padBus = ac.createGain(); padBus.gain.value = padVol; padBus.connect(ac.destination);   // night 57
       }
       if (ac.state === "suspended") ac.resume();
       return ac;
     };
 
-    const busFor = (name) => (name === "bass" ? bassBus : chordBus);
+    const busFor = (name) => (name === "bass" ? bassBus : name === "pad" ? padBus : chordBus);
 
     const syncBuses = () => {
       if (!ac) return;                                // ramp, not a step: no click mid-note
       chordBus.gain.setTargetAtTime(chordVol, ac.currentTime, 0.02);
       bassBus.gain.setTargetAtTime(bassVol, ac.currentTime, 0.02);
+      padBus.gain.setTargetAtTime(padVol, ac.currentTime, 0.02);
     };
 
     const pluckBuffer = (midi) => {
@@ -94,12 +97,16 @@ export const audioCard = {
       return b;
     };
 
-    const sustainWave = () => {
-      if (!wave) {
-        const amps = Float32Array.from(SUSTAIN_PARTIALS);
-        wave = ac.createPeriodicWave(new Float32Array(amps.length), amps);
+    /** a PeriodicWave per partials table — the sustain voice's and, since night 57, the pad's;
+     * the table is the voice description's own (voices.mjs), never a number invented here */
+    const waveFor = (partials) => {
+      let w = waves.get(partials);
+      if (!w) {
+        const amps = Float32Array.from(partials);
+        w = ac.createPeriodicWave(new Float32Array(amps.length), amps);
+        waves.set(partials, w);
       }
-      return wave;
+      return w;
     };
 
     /** realise ONE described voice as nodes. Every source is counted and its
@@ -114,7 +121,7 @@ export const audioCard = {
         src.buffer = pluckBuffer(midi);
       } else {
         src = ac.createOscillator();
-        if (spec.source.kind === "wave") src.setPeriodicWave(sustainWave());
+        if (spec.source.kind === "wave") src.setPeriodicWave(waveFor(spec.source.partials || SUSTAIN_PARTIALS));
         else src.type = spec.source.type;
         src.frequency.value = hzOf(midi);
       }
@@ -247,12 +254,16 @@ export const audioCard = {
        * precedent is STEP_CHANGED's attack. Until this, the only producer
        * of a bass-role event was the tetrad pass, and a door without it had
        * a bass slider controlling nothing. */
-      const role = m.role === "bass" ? "bass" : "chord";
-      if ((role === "bass" ? bassVol : chordVol) === 0) return;
+      /* night 57: a NOTE may also name the PAD role (its own bus, its own voice) and carry a
+       * duration — the walk hands the pad the bar's span, so the pad holds to the change; a
+       * NOTE without one keeps the 0.7 s every other note has. */
+      const role = m.role === "bass" ? "bass" : m.role === "pad" ? "pad" : "chord";
+      if ((role === "bass" ? bassVol : role === "pad" ? padVol : chordVol) === 0) return;
       const a = audio();
       if (!a) return;
-      sound(voiceFor(role, voice), m.midi, a.currentTime + 0.02, 0.7,
-        role === "bass" ? 0.3 : 0.24);
+      const dur = typeof m.dur === "number" && m.dur > 0 ? m.dur : 0.7;
+      sound(voiceFor(role, voice), m.midi, a.currentTime + 0.02, dur,
+        role === "bass" ? 0.3 : role === "pad" ? 0.12 : 0.24);
     });
     listen(d, ATTACK, (m) => {
       if (!m || typeof m.index !== "number") return;
@@ -265,6 +276,7 @@ export const audioCard = {
       if (!m) return;
       if (typeof m.chord === "number") chordVol = m.chord;
       if (typeof m.bass === "number") bassVol = m.bass;
+      if (typeof m.pad === "number") padVol = m.pad;   // night 57
       if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) voice = m.voice;
       if (m.on === true) { on = true; audio(); }
       syncBuses();

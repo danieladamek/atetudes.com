@@ -197,3 +197,20 @@ test("260915-3b: a diatonic stack the vocabulary cannot name carries the honest 
   assert.ok(unnamedSeen >= 8, `the corpus really exercises the refusal (${unnamedSeen})`);
   assert.ok(namedSeen >= 20, `and the named path (${namedSeen})`);
 });
+
+
+/* ---------------- night 57: the walk's schedule carries a SOUNDED bass, stringless on purpose ---------------- */
+test("NIGHT 57 — walkSchedule: the sounded bass is a bass-role event flagged unfretted, beside the fretted reference; the same pitch is not doubled", () => {
+  const sel = [{ midi: 60 }, { midi: 64 }, { midi: 55 }, { midi: 67 }];
+  const both = walkSchedule(sel, null, 4, 120, { refMidi: 43, soundedMidi: 31 });
+  assert.deepEqual(both.events[0], { midi: 43, at: 0, role: "bass" }, "the fretted reference, as before");
+  assert.deepEqual(both.events[1], { midi: 31, at: 0, role: "bass", unfretted: true }, "the sounded bass — no string, flagged so");
+  assert.equal(both.events.length, 6, "every note it was given, both basses counted");
+  const only = walkSchedule(sel, null, 4, 120, { soundedMidi: 31 });
+  assert.deepEqual(only.events[0], { midi: 31, at: 0, role: "bass", unfretted: true }, "a sounded bass with no reference at all — the six-string set");
+  assert.equal(only.events.length, 5);
+  const same = walkSchedule(sel, null, 4, 120, { refMidi: 43, soundedMidi: 43 });
+  assert.equal(same.events.filter((e) => e.role === "bass").length, 1, "the same pitch sounds once — the reference's event, which the saved étude already meant");
+  const none = walkSchedule(sel, null, 4, 120, {});
+  assert.equal(none.events.filter((e) => e.role === "bass").length, 0, "absent means silent");
+});

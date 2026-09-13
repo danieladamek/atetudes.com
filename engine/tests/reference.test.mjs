@@ -14,6 +14,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { placeReference, compositeOver, REF_OFFSET } from "../reference.mjs";
 import { notesOn, field } from "../field.mjs";
+import { positionOf } from "../position.mjs";   // night 57
 import { diatonicTones, objectOffsets } from "../selection.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -162,4 +163,30 @@ test("260918-3: nearness governs the string too — a nearer occurrence on strin
   // with string 6 in the set only string 5 is free: unchanged behaviour
   const on5 = placeReference("root", 0, fld, [6, 4, 3], high);
   assert.equal(on5.note.string, 5);
+});
+
+
+/* ---------------- night 57: the reference tone and the sounded bass are two things (Daniel, 261006; dispatched 261012) ---------------- */
+test("NIGHT 57 — soundedBass: a pitch class by the reference's own degree arithmetic, NO string, never drawn, offerable on ANY set — the six-string set included", async () => {
+  const REF = await import("../reference.mjs");
+  const { soundedBass, referenceChoicesFor } = REF;
+  const fld = field({ key: "Bb", scale: "major" });
+  // Bbmaj7 (degree 0): the root is Bb, a 3rd below is G (two degrees down), a 5th below is Eb (four down), the 3rd in the bass is D
+  const root = soundedBass("root", 0, fld, [1, 3, 5, 7]);
+  assert.equal(root.pc, fld.pcs[0]); assert.equal(root.name, "Bb"); assert.equal(root.unfretted, true, "the sounded bass claims no string");
+  assert.equal(soundedBass("third", 0, fld, [1, 3, 5, 7]).name, "G");
+  assert.equal(soundedBass("fifth", 0, fld, [1, 3, 5, 7]).name, "Eb");
+  assert.equal(soundedBass("tone:3", 0, fld, [1, 3, 5, 7]).name, "D");
+  // the same guard as the reference: a chord tone the pick no longer holds is refused BY NAME, never silently
+  const r = soundedBass("tone:7", 0, fld, [1, 3, 5]);
+  assert.equal(r.pc, undefined); assert.match(r.reason, /7th/);
+  // "none" is silence, stated
+  assert.equal(soundedBass("none", 0, fld, [1, 3, 5, 7]).pc, undefined);
+  // the vocabulary is the reference's own list, stated once (rule 6)
+  assert.deepEqual(REF.soundedChoicesFor([1, 3, 5, 7]), referenceChoicesFor([1, 3, 5, 7]));
+  // the whole point: the set has nothing to do with it — the reference is refused where 5 and 6 are both in the set; the sounded bass is not
+  const pos = positionOf({ field: fld, anchorString: 6, startDegree: 4, nearFret: 3, strings: [6, 5, 4, 3, 2, 1] });
+  const ref = placeReference("root", 0, fld, [6, 5, 4, 3, 2, 1], pos, [1, 3, 5, 7]);
+  assert.equal(ref.note, null); assert.ok(ref.offer && ref.offer.unfretted, "the reference is offered unfretted on the six-string set (night 37, unchanged)");
+  assert.equal(soundedBass("root", 0, fld, [1, 3, 5, 7]).pc, fld.pcs[0], "…and the sounded bass has a pitch there all the same");
 });

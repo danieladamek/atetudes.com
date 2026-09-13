@@ -45,7 +45,8 @@ import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } from "../../engine/selection.mjs";
 import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
-import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
+import { bassSeat, padSeat } from "../../engine/voices.mjs";
+import { placeReference, centreDegreeOf, centreMaterialRef, reRead, soundedBass } from "../../engine/reference.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE,
@@ -64,7 +65,7 @@ export const etudeWalk = {
   mount(ctx) {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, sounded: "none", pad: false,   // night 57
       tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
@@ -152,6 +153,16 @@ export const etudeWalk = {
         const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos, pickOf(cfg));
         if (rp.note) refMidi = rp.note.midi;
       }
+      /* THE SOUNDED BASS (night 57): a pitch with no string, seated below the voicing's lowest note
+       * (bassSeat — the bass register rule that already existed), on ANY set. Silent through a refused
+       * bar for the reference's own reason: nothing on top to be under. The walk hands it to the
+       * schedule flagged `unfretted` — the stringless bass event exists on purpose (G11, narrowed). */
+      let soundedMidi = null;
+      if (cfg.sounded && cfg.sounded !== "none" && refDeg != null && refDeg >= 0 && sel.length
+          && (cfg.object === "scale" || cur.degree >= 0)) {
+        const sb = soundedBass(cfg.sounded, refDeg, fld, cfg.object === "scale" ? null : pickOf(cfg));
+        if (sb.pc != null) soundedMidi = bassSeat(Math.min(...sel.map((x) => x.midi)), sb.pc);
+      }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
        * the bracket and the polyline draw — or the take's own shape */
       const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
@@ -160,11 +171,17 @@ export const etudeWalk = {
        * the box has no chord to sound as one). A typed figure sequences
        * regardless, as ruled. */
       const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
-      const { events } = walkSchedule(sel, fig.err ? null : fig.order,
-        chordBeats(prog), bpm, { spread, refMidi });
+      const { events, span } = walkSchedule(sel, fig.err ? null : fig.order,
+        chordBeats(prog), bpm, { spread, refMidi, soundedMidi });
       clearPending();
+      /* THE PAD (night 57): the bar's harmony seated above the strings' register (padSeat), at the
+       * attack, held for the bar — a seat and a bus, no scheduler: the same announce as every note,
+       * with the bar's span as its duration. Never under a scale (no chord), never through a refused bar. */
+      if (cfg.pad && cfg.object !== "scale" && cur.tones && cur.tones.length && sel.length)
+        for (const m of padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12)))
+          announce(d, NOTE, { midi: m, role: "pad", dur: span });
       for (const ev of events) {
-        const msg = ev.role ? { midi: ev.midi, role: ev.role } : { midi: ev.midi };
+        const msg = ev.role ? { midi: ev.midi, role: ev.role, ...(ev.unfretted ? { unfretted: true } : {}) } : { midi: ev.midi };
         if (ev.at <= 0) { announce(d, NOTE, msg); continue; }
         timers.push(d.defaultView.setTimeout(() => {
           if (armed || auditioning) announce(d, NOTE, msg);

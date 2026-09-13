@@ -187,12 +187,15 @@ export function beatsOf(bars, meter = 4, split = null) {
  *                  ARPEGGIO or a scale (spread=true) sounds low → high
  *                  across the span, the run the take already implies;
  *   opts.refMidi — the fretted reference, under the chord, at 0.
+ *   opts.soundedMidi — the SOUNDED BASS (night 57): a pitch with no string, at 0, wearing the
+ *                  bass role and the `unfretted: true` flag; not doubled when it is the
+ *                  reference's own pitch (a saved étude's reference keeps meaning what it meant).
  * Nothing truncates: any number of steps subdivides the span (the report
  * states why the "more steps than the span can carry" case cannot arise
  * under even subdivision). Every schedule is asserted before it is returned:
  * times ascending within [0, span), the event count equal to the material's.
  */
-export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null } = {}) {
+export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null, soundedMidi = null } = {}) {
   if (!(beats > 0) || !(bpm > 0))
     throw new Error("walkSchedule: beats and bpm must be positive — the span is derived from them");
   const span = beats * 60 / bpm;
@@ -205,6 +208,8 @@ export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi =
   /* the reference carries its ROLE (260906): it is the bass line's note, and
    * whoever realises audio may route it to the bass bus — the additive-field
    * precedent (STEP_CHANGED's attack) followed for NOTE */
+  const sounded = soundedMidi != null && soundedMidi !== refMidi;   // the same pitch sounds once
+  if (sounded) events.unshift({ midi: soundedMidi, at: 0, role: "bass", unfretted: true });
   if (refMidi != null) events.unshift({ midi: refMidi, at: 0, role: "bass" });
   for (let i = 1; i < events.length; i++)
     if (events[i].at < events[i - 1].at)
@@ -213,7 +218,7 @@ export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi =
     if (e.at < 0 || e.at >= span - 1e-9)
       throw new Error("walkSchedule: a step left the chord's span — steps never spill into the next chord " +
         "(a step AT the span is the next chord's downbeat, which is spilling)");
-  const expected = seq.length + (refMidi != null ? 1 : 0);
+  const expected = seq.length + (refMidi != null ? 1 : 0) + (sounded ? 1 : 0);
   if (events.length !== expected)
     throw new Error("walkSchedule: an event went missing — the schedule must carry every note it was given");
   return { events, span };

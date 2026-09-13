@@ -6244,6 +6244,84 @@ console.log(JSON.stringify(out));
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(120)
         page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(200)
 
+    # ---------------- THE BASS AND THE REFERENCE PART COMPANY, AND THE PAD TAKES A SEAT (night 57, 261012) ----------
+    # Daniel's ruling 261006: the reference tone (fretted, drawn, chord-naming — not always offerable) and the
+    # sounded bass (a pitch, no string, never drawn, on ANY set) were two things held in one control. Item 1's
+    # proof is the SIX-STRING set, where the reference is offered unfretted and silent (night 37, unchanged) and
+    # the sounded bass sounds all the same — as a bass-role NOTE flagged unfretted, and as a source started at the
+    # AudioContext. Item 2: the pad — the bar's harmony on its own bus, seated in PAD_REGISTER [74, 86) (chosen
+    # by measurement), held for the bar, never drawn. Both settings save, export, and restore into a COLD page.
+    # The legend's sentence reads cfg.ref (the centre), which the split does not touch — asserted unchanged.
+    if door_id == "multetudes":
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(150)
+        legend_before = page.inner_text("#fdLegend")
+        check("colour = function against the key" in legend_before, f"{tag} the legend's sentence before: {legend_before!r}")
+        # the two controls, with the one vocabulary
+        lab = page.evaluate("() => [...document.querySelectorAll('.fd-lab2')].map(e => e.textContent.trim())")
+        check("reference tone" in lab and "sounded bass" in lab and not any("/" in x and "reference" in x for x in lab), f"{tag} two labelled controls, no slash: {lab}")
+        opts = lambda sel: page.evaluate(f"() => [...document.querySelectorAll('{sel} option')].filter(o => !o.disabled).map(o => o.value)")
+        check(opts("#fdSounded") == opts("#fdBass2") and "root" in opts("#fdSounded"), f"{tag} the sounded bass offers the reference's own list (rule 6): {opts('#fdSounded')} vs {opts('#fdBass2')}")
+        check(page.evaluate("() => document.getElementById('fdSounded').value") == "none" and not page.is_checked("#fdPad"), f"{tag} both absent by default — absent means silent")
+        # THE SIX-STRING SET: strings 5 and 6 join 4-3-2-1
+        for s_ in (5, 6):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+        pressed = page.evaluate("() => [...document.querySelectorAll('#fieldSvg [data-fdstr]')].filter(g => g.getAttribute('aria-pressed') === 'true').map(g => +g.dataset.fdstr).sort()")
+        check(pressed == [1, 2, 3, 4, 5, 6], f"{tag} the six-string set: {pressed}")
+        check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None and "offered unfretted" in page.inner_text("#fdHint"), f"{tag} the reference is refused a string here and offered unfretted, as night 37 left it: {page.inner_text('#fdHint')[:200]!r}")
+        hook = "() => { if (!window.__n57) { window.__n57 = { notes: [], raw: 0 }; document.addEventListener('atetudes:note', e => window.__n57.notes.push({ m: e.detail.midi, r: e.detail.role || 'chord', u: !!e.detail.unfretted, d: e.detail.dur || null })); for (const C of [AudioBufferSourceNode, OscillatorNode]) { const P = C.prototype.start; C.prototype.start = function(...a) { window.__n57.raw++; return P.apply(this, a); }; } } window.__n57.notes = []; window.__n57.raw = 0; }"
+        def bar():
+            page.evaluate(hook)
+            page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(1200); page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(300)
+            return page.evaluate("() => window.__n57")
+        b0 = bar()
+        check(b0["raw"] >= 1 and not any(n["r"] == "bass" for n in b0["notes"]), f"{tag} six strings, sounded bass none: the bar sounds and NO bass sounds — the reference has nowhere to sit: {b0}")
+        page.select_option("#fdSounded", "root"); page.wait_for_timeout(300)
+        b1 = bar()
+        sb = [n for n in b1["notes"] if n["r"] == "bass"]
+        check(len(sb) >= 1 and all(n["u"] for n in sb) and b1["raw"] >= b0["raw"] + 1, f"{tag} ITEM 1's PROOF — a sounded bass on the six-string set: bass NOTEs flagged unfretted {sb}, sources started {b1['raw']} (was {b0['raw']})")
+        check(sb and sb[0]["m"] % 12 == 10 and sb[0]["m"] < 60, f"{tag} the sounded bass is the ROOT (Bb) seated below the voicing: {sb}")
+        hint = page.inner_text("#fdHint"); ro = page.inner_text("#roLine")
+        check("A sounded bass on Bb" in hint and "no string" in hint, f"{tag} the neck says the sounded bass by name and that it has no string: {hint!r}")
+        check("sounded bass Bb" in ro and "no string" in ro, f"{tag} the readout says it too (rule 10): {ro[-260:]!r}")
+        check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None, f"{tag} the sounded bass is never drawn — no FRETTED reference mark appeared (the unfretted offer's gutter mark stays, as night 37 left it)")
+        # the reference's own behaviour, unchanged: back on 4-3-2-1 it is fretted and drawn, and the sounded bass sounds beside it once (the same pitch is not doubled)
+        for s_ in (5, 6):
+            page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+        check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is not None, f"{tag} on 4-3-2-1 the reference is fretted and drawn again, as before")
+        b2 = bar(); sb2 = [n for n in b2["notes"] if n["r"] == "bass"]
+        check(1 <= len(set(n["m"] for n in sb2)) <= 2 and len(sb2) == len(set(n["m"] for n in sb2)), f"{tag} the fretted reference and the sounded bass: distinct pitches, none doubled: {sb2}")
+        # ITEM 2 — THE PAD: on its own bus, in its register, held for the bar, never drawn
+        page.check("#fdPad"); page.wait_for_timeout(300)
+        check("The pad sounds" in page.inner_text("#fdHint") and "pad" in page.inner_text("#roLine"), f"{tag} the pad is said on the neck and in the readout: {page.inner_text('#fdHint')!r}")
+        b3 = bar(); pads = [n for n in b3["notes"] if n["r"] == "pad"]
+        check(len(pads) == 4 and all(74 <= n["m"] < 86 for n in pads) and all(n["d"] and n["d"] > 1 for n in pads), f"{tag} the pad: the bar's four tones in [74, 86), each held for the bar: {pads}")
+        check(b3["raw"] >= b2["raw"] + 4, f"{tag} the pad is AUDIBLE — four more sources started at the AudioContext: {b3['raw']} vs {b2['raw']}")
+        check(page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-sel').length") == page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)').length"), f"{tag} the pad draws nothing on the neck")
+        # the pad's level at zero schedules nothing (the mute rule, one state two views)
+        page.fill("#fdPadVol", "0"); page.dispatch_event("#fdPadVol", "input"); page.wait_for_timeout(150)
+        b4 = bar()
+        check(b4["raw"] <= b2["raw"] + 1 and page.get_attribute("#fdPadMute", "aria-pressed") == "true", f"{tag} the pad slider at zero starts no pad source and reads muted: {b4['raw']} vs {b2['raw']}")
+        page.fill("#fdPadVol", "100"); page.dispatch_event("#fdPadVol", "input"); page.wait_for_timeout(150)
+        # SAVE · EXPORT · IMPORT INTO A COLD PAGE · both restored
+        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        n57_file = export_newest(page)
+        check('"sounded":"root"' in n57_file and '"pad":true' in n57_file, f"{tag} the exported étude carries both new settings: {n57_file[:300]!r}")
+        ctx3 = pw.new_context(viewport={"width": 1280, "height": 900}); page3 = ctx3.new_page(); errs3 = []; page3.on("pageerror", lambda e: errs3.append(str(e)))
+        page3.goto(html_path.as_uri()); page3.wait_for_selector("#cards", state="attached"); page3.wait_for_timeout(200)
+        check(page3.evaluate("() => document.getElementById('fdSounded').value") == "none" and not page3.is_checked("#fdPad"), f"{tag} the cold page boots with both absent")
+        import_text(page3, n57_file, "night57.atchart.md")
+        page3.click('#histList .hist [data-cap="apply"]'); page3.wait_for_timeout(400)
+        cold_sounded = page3.evaluate("() => document.getElementById('fdSounded').value"); cold_pad = page3.is_checked("#fdPad")
+        check(cold_sounded == "root" and cold_pad, f"{tag} restored into a cold page: sounded {cold_sounded!r}, pad {cold_pad}")
+        check("A sounded bass on" in page3.inner_text("#fdHint") and "The pad sounds" in page3.inner_text("#fdHint"), f"{tag} …and the cold page says both: {page3.inner_text('#fdHint')!r}")
+        check(not errs3, f"{tag} the cold page raised errors: {errs3[:2]}")
+        ctx3.close()
+        # the legend's sentence, after: unchanged — cfg.ref is the centre, untouched by the split
+        check(page.inner_text("#fdLegend") == legend_before, f"{tag} the legend's sentence is unchanged by the split: {page.inner_text('#fdLegend')!r}")
+        # restore
+        page.uncheck("#fdPad"); page.select_option("#fdSounded", "none"); page.wait_for_timeout(200)
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

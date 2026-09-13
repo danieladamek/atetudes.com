@@ -2063,6 +2063,40 @@ def m92_the_cap_returns_under_line():
     finally:
         p.write_text(original)
 
+def m93_the_snapshot_allowlist_forgets_the_new_settings():
+    # night 57: the field board's CONFIG allowlist — the list that lost the tuning once — drops the two new
+    # settings: the cold page's restore no longer brings the sounded bass or the pad. The gate's cold-page pin must bite.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '"movement", "bass", "sounded", "pad", "source",',
+        '"movement", "bass", "source",')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "restored into a cold page" in g.stdout or "the cold page says both" in g.stdout
+        record("the snapshot allowlist forgets the sounded bass and the pad — a cold restore loses both",
+               g.returncode != 0 and hit, "suite exit %d; the cold-page pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m94_the_sounded_bass_needs_a_string_again():
+    # night 57: the walk couples the sounded bass to the reference's FRETTED note again — silent wherever the
+    # reference is refused, which is the six-string set, which is the whole point. Item 1's proof must bite.
+    p, original, mutated = patch("hub/modules/etude-walk.mjs",
+        "        if (sb.pc != null) soundedMidi = bassSeat(Math.min(...sel.map((x) => x.midi)), sb.pc);",
+        "        if (sb.pc != null && refMidi != null) soundedMidi = bassSeat(Math.min(...sel.map((x) => x.midi)), sb.pc);   // (coupled to the fretted reference again)")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "ITEM 1's PROOF" in g.stdout
+        record("the sounded bass needs a fretted reference again — silent on the six-string set",
+               g.returncode != 0 and hit, "suite exit %d; item 1's proof bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 
 
 
@@ -2192,7 +2226,8 @@ def main():
                m82_the_predicate_ignores_the_gamut, m83_the_pentatonic_rule_admits_a_semitone, m84_a_restored_etude_acquires_a_gamut, m85_the_omitted_role_places_quietly,
                m86_the_figure_reports_the_consequence_again, m87_the_whole_field_option_goes_dark,
                m88_a_member_reaches_the_neck_without_its_role, m89_the_supply_reads_standard_tuning, m90_the_field_cannot_carry_it_returns,
-               m91_an_overlay_returns_to_the_chart_line, m92_the_cap_returns_under_line)
+               m91_an_overlay_returns_to_the_chart_line, m92_the_cap_returns_under_line,
+               m93_the_snapshot_allowlist_forgets_the_new_settings, m94_the_sounded_bass_needs_a_string_again)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

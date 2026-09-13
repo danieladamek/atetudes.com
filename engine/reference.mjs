@@ -132,6 +132,32 @@ export function referenceChoicesFor(pick) {
   ];
 }
 
+/** THE SOUNDED BASS (night 57 — Daniel's ruling 261006, dispatched 261012): the reference tone and
+ * the sounded bass were always two things, and this module held both in one field. The reference
+ * (placeReference) is FRETTED, DRAWN and CHORD-NAMING, so it is not always offerable. A bass that
+ * SOUNDS needs none of that: a pitch class by the same degree arithmetic (refOffsetOf — the root, a
+ * 3rd below, a 5th below, a chord tone the pick holds), NO string, never drawn, names nothing, and
+ * offerable on ANY set — the six-string set included. Where it sits is the walk's business
+ * (voices.mjs bassSeat, below the voicing's lowest note); this answers only WHICH pitch class.
+ * `unfretted: true` is the flag G11's exemption narrows to (note-events.mjs): a bass with no string
+ * says so. The same pick guard as the reference: a tone the pick no longer holds is refused by name. */
+export function soundedBass(kind, chordDeg, fld, pick) {
+  if (kind === "none" || kind == null) return { none: true };
+  if (Array.isArray(pick) && /^tone:/.test(String(kind))) {
+    const d = Number(String(kind).slice(5));
+    if (!pick.includes(d))
+      return { reason: `the sounded bass names the ${degreeWord(d)}, which the chosen tones do not hold — pick it, or choose another bass` };
+  }
+  const off = refOffsetOf(kind);
+  if (off === null) throw new Error(`soundedBass: "${kind}" is not one of the bass choices`);
+  if (!Number.isInteger(chordDeg) || chordDeg < 0 || chordDeg > 6)
+    throw new Error(`soundedBass: chordDeg 0..6, not ${chordDeg}`);
+  const keyDeg = mod7(chordDeg + off);
+  return { keyDeg, pc: fld.pcs[keyDeg], name: fld.notes[keyDeg].name, unfretted: true };
+}
+/** the sounded bass's vocabulary IS the reference's (rule 6: one list) */
+export const soundedChoicesFor = referenceChoicesFor;
+
 export function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   if (kind === "none" || kind == null) return { note: null, stretch: false, reason: null };
   const off = refOffsetOf(kind);

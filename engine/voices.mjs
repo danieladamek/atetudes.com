@@ -190,9 +190,53 @@ export const BASS_VOICE = {
   },
 };
 
-/** the voice a note event should use: the bass pedal has its own */
+/* ---------------- the pad: a SEAT and a voice, not a subsystem (night 57) ---------------- */
+
+/** THE PAD'S REGISTER, chosen by measurement (261012, 1,632 one-of-each voicings over 12 keys × 6 sets ×
+ * 4 windows × 7 degrees): the guitar's voicings sit lowest 45–61 (p10–p90, median 52) and highest 60–73
+ * (median 67); the bass seat sits 35–53 (median 43). Below the guitar is the bass's octave — a pad there
+ * doubles the bass; the ONE register neither occupies is above 73. So the pad sits in [74, 86): D5 up to
+ * (not including) D6 — clear of 90 % of the guitar's highs and of every bass seat — and its timbre does
+ * the rest: fundamentals-heavy partials under a low-pass, a swell in, no attack. "Doesn't sit where the
+ * guitar sits" is this number, not a taste. The pad's chord is the bar's harmony seated here — never a
+ * voicing anyone plays, never drawn. Daniel's to move; the constant is the one place it lives. */
+export const PAD_REGISTER = Object.freeze([74, 86]);
+
+/** the pad's notes: each of the chord's pitch classes at its one midi inside PAD_REGISTER, low → high */
+export function padSeat(pcs) {
+  const [lo, hi] = PAD_REGISTER;
+  const out = [];
+  for (const pc of pcs) {
+    if (!Number.isInteger(pc) || pc < 0 || pc > 11) throw new Error(`padSeat: ${pc} is not a pitch class (0..11)`);
+    const m = lo + ((((pc - lo) % 12) + 12) % 12);
+    if (m >= hi) throw new Error("padSeat: the register is narrower than an octave");
+    out.push(m);
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** fundamentals-heavy, dark: the pad is heard under the material, not beside the guitar's lines */
+export const PAD_PARTIALS = Object.freeze([0, 1, 0.35, 0.12, 0.04]);
+
+export const PAD_VOICE = {
+  bus: "pad", tail: 0.1,
+  source: { kind: "wave", partials: PAD_PARTIALS },
+  filter: { type: "lowpass", freq: 1400, q: 0.3 },
+  envelope: (t, dur, vel) => {
+    const a = Math.min(0.18, dur * 0.35), r = Math.min(0.3, dur * 0.4);
+    return [
+      env("set", t, 0),
+      env("linear", t + a, vel),
+      env("set", t + Math.max(a, dur - r), vel),
+      env("linear", t + dur, 0),
+    ];
+  },
+};
+
+/** the voice a note event should use: the bass pedal and the pad have their own */
 export function voiceFor(role, name) {
   if (role === "bass") return BASS_VOICE;
+  if (role === "pad") return PAD_VOICE;
   return NOTE_VOICES[name] || NOTE_VOICES.tone;
 }
 
@@ -237,7 +281,7 @@ export function clickSpec(name, level, { accents = true, vol = 1 } = {}) {
 
 {
   // every named voice is complete enough for a host to realise blind
-  for (const [n, v] of Object.entries({ ...NOTE_VOICES, bass: BASS_VOICE })) {
+  for (const [n, v] of Object.entries({ ...NOTE_VOICES, bass: BASS_VOICE, pad: PAD_VOICE })) {
     if (!v.source || !v.filter || typeof v.envelope !== "function")
       throw new Error(`voices: ${n} is not a realisable description`);
     const { points } = envelopeOf(v, 0, 0.5, 0.2);

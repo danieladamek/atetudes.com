@@ -249,3 +249,28 @@ test("A440 is A440", () => {
   assert.ok(Math.abs(hzOf(81) - 880) < 1e-9);
   assert.ok(Math.abs(hzOf(57) - 220) < 1e-9);
 });
+
+
+/* ---------------- night 57: the pad is a SEAT, not a subsystem ---------------- */
+test("NIGHT 57 — the pad: a described voice on its own bus, and a seat rule chosen by measurement — above the guitar's voicings, clear of the bass", async () => {
+  const V = await import("../voices.mjs");
+  const { PAD_VOICE, PAD_REGISTER, padSeat, voiceFor, envelopeOf } = V;
+  assert.equal(PAD_VOICE.bus, "pad", "its own bus — the mixer's third");
+  assert.ok(PAD_VOICE.source && PAD_VOICE.filter && typeof PAD_VOICE.envelope === "function", "a description the card can realise blind, like every voice");
+  assert.equal(voiceFor("pad", "tone"), PAD_VOICE, "the pad role takes the pad voice whatever note voice is chosen");
+  assert.equal(voiceFor("bass", "tone"), V.BASS_VOICE); assert.equal(voiceFor("chord", "pluck"), V.NOTE_VOICES.pluck);
+  const { points } = envelopeOf(PAD_VOICE, 0, 2, 0.2);
+  assert.ok(points[1].at - points[0].at >= 0.12, "a pad swells in — no click at the attack");
+  assert.ok(Math.max(...points.map((p) => p.value)) <= 0.2, "…and never above the velocity it was given");
+  // THE SEAT, by measurement (261012): the guitar's voicings sit lowest ≈ 45–61 (p10–p90, median 52) and highest ≈ 60–73 (median 67);
+  // the bass seat sits 35–53 (median 43). Below the guitar is the bass's octave; the one register neither occupies is above 73.
+  assert.deepEqual(PAD_REGISTER, [74, 86], "the pad's window: D5 up to (not including) D6 — clear of 90 % of the guitar's highs and of every bass seat");
+  const pcs = [10, 2, 5, 9];   // Bbmaj7: Bb D F A
+  const seat = padSeat(pcs);
+  assert.equal(seat.length, 4, "one note per chord tone");
+  assert.ok(seat.every((m) => m >= 74 && m < 86), `every note inside the window: ${seat}`);
+  assert.deepEqual([...seat].sort((a, b) => a - b), seat, "sorted low → high");
+  assert.deepEqual(seat.map((m) => ((m % 12) + 12) % 12).sort(), [...pcs].sort(), "the chord's own pitch classes, nothing added");
+  assert.deepEqual(padSeat([]), [], "no chord, no pad");
+  assert.throws(() => padSeat([12]), /pitch class/);
+});

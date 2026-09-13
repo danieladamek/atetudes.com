@@ -16,7 +16,7 @@ import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
-import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } from "../../engine/reference.mjs";
+import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef, soundedBass } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
@@ -49,7 +49,7 @@ export const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7],
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], sounded: "none", pad: false,   // night 57
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       centreSrc: "fixed",
@@ -249,6 +249,16 @@ export const neckReadout = {
             bits.push(`<span style="color:#B82929">reference refused: ${rp.reason}</span>`);
           }
         }
+        /* THE SOUNDED BASS AND THE PAD (night 57) — the readout says them so the split is visible on the face (rule 10, CC-1) */
+        if (cfg.sounded && cfg.sounded !== "none" && cfg.object !== "scale" && cur.degree >= 0 && roRefDeg != null) {
+          const sb = soundedBass(cfg.sounded, roRefDeg, fld, pickOf(cfg));
+          bits.push(sb.reason ? `<span style="color:#B82929">sounded bass silent: ${sb.reason}</span>`
+            : `sounded bass <b>${sb.name}</b> <span class="ro-dim">— no string, under the material</span>`);
+        } else if (cfg.sounded && cfg.sounded !== "none" && cfg.object === "scale" && roRefDeg != null) {
+          const sb = soundedBass(cfg.sounded, roRefDeg, fld, null);
+          bits.push(`sounded bass <b>${sb.name}</b> <span class="ro-dim">— no string, under the centre</span>`);
+        }
+        if (cfg.pad) bits.push(cfg.object === "scale" ? `<span class="ro-dim">pad: no chord under a scale</span>` : `pad <b>${cur.symbol}</b> <span class="ro-dim">— above the strings' register</span>`);
         for (const a of absences) bits.push(`<span style="color:#B82929">${a}</span>`);
         if (msg) bits.push(`<span style="color:#B82929">${msg}</span>`);
       } catch (e) {

@@ -238,3 +238,14 @@ test("figureEvents NEVER silently falls back to block when a figure was asked fo
     assert.ok(new Set(onsets).size === 4, `${s.symbol}: not four distinct onsets — fell back to a block`);
   }
 });
+
+
+/* ---------------- night 57: G11 NARROWED — the one legitimately stringless event is the bass that says so ---------------- */
+test("NIGHT 57 — noteEvents: the bass event carries unfretted: true (the flag IS the exemption); any other event without a real string throws by name", async () => {
+  const { noteEvents } = await import("../note-events.mjs");
+  const voicing = { notes: [{ string: 4, fret: 5, midi: 55, slot: 0 }, { string: 3, fret: 4, midi: 59, slot: 1 }] };
+  const ev = noteEvents(voicing, null, 43, 2, 72);
+  const bass = ev.find((e) => e.role === "bass");
+  assert.ok(bass && bass.string === null && bass.unfretted === true, `the pedal is stringless ON PURPOSE and says so: ${JSON.stringify(bass)}`);
+  assert.throws(() => noteEvents({ notes: [{ string: null, fret: null, midi: 55, slot: 0 }] }, null, null, 2, 72), /no real string/, "a chord event with no string is still refused");
+});

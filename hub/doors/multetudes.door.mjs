@@ -193,7 +193,12 @@ export default {
     /* v0.6.8 (261012, night 56 — the cap is a voicing's rule, ruled 261012): under Line nothing caps a
      * string — Daniel's Gm7 on one string draws and sounds all four tones in sequence; Grip keeps its
      * cap and its refusal; Line + strum sounds its take at one onset (stated, Daniel's to reverse). */
-    blurb: "one tool that holds many études · v0.6.8",
+    /* v0.6.9 (261012, night 57 — the accompaniment arc, both items): the reference tone and the sounded
+     * bass are two controls (the reference fretted, drawn and chord-naming as before; the sounded bass a
+     * pitch with no string, on any set — the six-string set included); the pad — the bar's harmony on its
+     * own bus, seated above the guitar's register by measurement, held for the bar, never drawn — with its
+     * own level; both settings saved, exported and restored. The rows sit under the neck until night 58's strip. */
+    blurb: "one tool that holds many études · v0.6.9",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

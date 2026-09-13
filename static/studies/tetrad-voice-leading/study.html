@@ -4179,9 +4179,12 @@ function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
   // as an array of the voicing's own notes (identity, not lookup), or null
   // for a block strum of the whole voicing.
   const out = [];
+  /* G11, NARROWED (night 57 — the register's own `then`): the pedal is the one legitimately
+   * stringless event, and it SAYS SO — `unfretted: true` is the flag the real-string assertion
+   * below reads; a stringless event without it is refused by name, as every chord event is */
   if (bassMidi !== null && bassMidi !== undefined)
     out.push({ midi: bassMidi, string: null, fret: null, role: "bass",
-      slot: null, onset: 0, dur: 1.0 });
+      slot: null, onset: 0, dur: 1.0, unfretted: true });
   const seq = order || voicing.notes;
   for (const n of seq)
     if (n.role === undefined && !voicing.notes.includes(n))
@@ -4200,6 +4203,9 @@ function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
       dur: Math.min(0.9, step * 1.6) }));
   }
   // structural assertions — derived, then checked, before anyone consumes it
+  for (const e of out)   // the exemption is the FLAG, not the role (night 57)
+    if (e.unfretted !== true && (!Number.isInteger(e.string) || e.string < 1 || e.string > 6))
+      throw new Error("noteEvents: event carries no real string");
   const chord = out.filter((e) => e.role !== "bass");
   if (chord.length !== seq.length)
     throw new Error("noteEvents: event count != sequence length");
@@ -4409,9 +4415,53 @@ const BASS_VOICE = {
   },
 };
 
-/** the voice a note event should use: the bass pedal has its own */
+/* ---------------- the pad: a SEAT and a voice, not a subsystem (night 57) ---------------- */
+
+/** THE PAD'S REGISTER, chosen by measurement (261012, 1,632 one-of-each voicings over 12 keys × 6 sets ×
+ * 4 windows × 7 degrees): the guitar's voicings sit lowest 45–61 (p10–p90, median 52) and highest 60–73
+ * (median 67); the bass seat sits 35–53 (median 43). Below the guitar is the bass's octave — a pad there
+ * doubles the bass; the ONE register neither occupies is above 73. So the pad sits in [74, 86): D5 up to
+ * (not including) D6 — clear of 90 % of the guitar's highs and of every bass seat — and its timbre does
+ * the rest: fundamentals-heavy partials under a low-pass, a swell in, no attack. "Doesn't sit where the
+ * guitar sits" is this number, not a taste. The pad's chord is the bar's harmony seated here — never a
+ * voicing anyone plays, never drawn. Daniel's to move; the constant is the one place it lives. */
+const PAD_REGISTER = Object.freeze([74, 86]);
+
+/** the pad's notes: each of the chord's pitch classes at its one midi inside PAD_REGISTER, low → high */
+function padSeat(pcs) {
+  const [lo, hi] = PAD_REGISTER;
+  const out = [];
+  for (const pc of pcs) {
+    if (!Number.isInteger(pc) || pc < 0 || pc > 11) throw new Error(`padSeat: ${pc} is not a pitch class (0..11)`);
+    const m = lo + ((((pc - lo) % 12) + 12) % 12);
+    if (m >= hi) throw new Error("padSeat: the register is narrower than an octave");
+    out.push(m);
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** fundamentals-heavy, dark: the pad is heard under the material, not beside the guitar's lines */
+const PAD_PARTIALS = Object.freeze([0, 1, 0.35, 0.12, 0.04]);
+
+const PAD_VOICE = {
+  bus: "pad", tail: 0.1,
+  source: { kind: "wave", partials: PAD_PARTIALS },
+  filter: { type: "lowpass", freq: 1400, q: 0.3 },
+  envelope: (t, dur, vel) => {
+    const a = Math.min(0.18, dur * 0.35), r = Math.min(0.3, dur * 0.4);
+    return [
+      env("set", t, 0),
+      env("linear", t + a, vel),
+      env("set", t + Math.max(a, dur - r), vel),
+      env("linear", t + dur, 0),
+    ];
+  },
+};
+
+/** the voice a note event should use: the bass pedal and the pad have their own */
 function voiceFor(role, name) {
   if (role === "bass") return BASS_VOICE;
+  if (role === "pad") return PAD_VOICE;
   return NOTE_VOICES[name] || NOTE_VOICES.tone;
 }
 
@@ -4456,7 +4506,7 @@ function clickSpec(name, level, { accents = true, vol = 1 } = {}) {
 
 {
   // every named voice is complete enough for a host to realise blind
-  for (const [n, v] of Object.entries({ ...NOTE_VOICES, bass: BASS_VOICE })) {
+  for (const [n, v] of Object.entries({ ...NOTE_VOICES, bass: BASS_VOICE, pad: PAD_VOICE })) {
     if (!v.source || !v.filter || typeof v.envelope !== "function")
       throw new Error(`voices: ${n} is not a realisable description`);
     const { points } = envelopeOf(v, 0, 0.5, 0.2);
@@ -4476,7 +4526,7 @@ function clickSpec(name, level, { accents = true, vol = 1 } = {}) {
   if (clickSpec("beep", 2, { accents: false }).gain !== clickSpec("beep", 0, { accents: true }).gain)
     throw new Error("voices: accents off must make a downbeat sound exactly like a beat");
 }
-return { hzOf, NOTE_VOICE_NAMES, SUSTAIN_HOLD, voiceSchedule, chordSchedule, bassSeat, pluckSamples, SUSTAIN_PARTIALS, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, CLICK_VOICES, CLICK_VOICE_NAMES, clickSpec };
+return { hzOf, NOTE_VOICE_NAMES, SUSTAIN_HOLD, voiceSchedule, chordSchedule, bassSeat, pluckSamples, SUSTAIN_PARTIALS, NOTE_VOICES, BASS_VOICE, PAD_REGISTER, padSeat, PAD_PARTIALS, PAD_VOICE, voiceFor, envelopeOf, CLICK_VOICES, CLICK_VOICE_NAMES, clickSpec };
 })();
 const M_DEGREE_PALETTE = (() => {
 /* degree-palette.mjs — THE DEGREE PALETTE, stated once, where every carrier can reach it

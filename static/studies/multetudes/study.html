@@ -706,15 +706,36 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
         <span class="fd-val" id="fdHarmVal">100</span>
       </div>
     </div>
+    <!-- TWO THINGS, TWO CONTROLS (night 57 — Daniel's ruling 261006): "Bass / reference tone" was one
+         control with a slash and two jobs. The REFERENCE TONE is fretted, drawn on string 5 or 6 and
+         names the chord it makes, so it is not always offerable (both reference strings in the set: an
+         unfretted offer, drawn and silent — night 37, unchanged). The SOUNDED BASS is a pitch with no
+         string — never drawn, naming nothing, sounding under the material on ANY set — seated below the
+         voicing's lowest note (voices.mjs bassSeat). Same vocabulary, one list (reference.mjs). Both
+         land on the bass bus and its one level. Night 58 moves these rows into the mixer strip. -->
     <div class="fd-railrow fd-pairrow">
-      <span class="fd-lab2">Bass / reference tone</span>
+      <span class="fd-lab2">reference tone</span>
       <select id="fdBass2" data-control="fdBass2"
-        title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
-      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
+        title="the reference under the harmony — fretted, drawn on string 5 or 6, naming the chord it makes; one state, two views; Harmony's select is the other"></select>
+      <span class="fd-lab2">sounded bass</span>
+      <select id="fdSounded" data-control="fdSounded"
+        title="a bass that sounds under the material on any string set — a pitch with no string, never drawn, naming nothing"></select>
+      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — the reference's and the sounded bass's, one bus; muted is this slider at zero">
         <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">bass</span>
         <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
         <span class="fd-val" id="fdBassVal">100</span>
+      </div>
+    </div>
+    <!-- THE PAD IS A SEAT (night 57): the bar's harmony as a sustaining voice, seated ABOVE the guitar's
+         register (voices.mjs PAD_REGISTER, chosen by measurement), never drawn; its own bus and level. -->
+    <div class="fd-railrow fd-pairrow">
+      <label class="chk" id="fdPadLab" title="a sustaining chord under the material — the bar's harmony seated above the strings' register; never drawn, not a voicing anyone plays"><input type="checkbox" id="fdPad" data-control="fdPad"> pad</label>
+      <div class="bpmrow fd-mixrow" title="the mixer: the pad level — muted is this slider at zero">
+        <button class="muteBtn" id="fdPadMute" data-control="fdPadMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">pad</span>
+        <input type="range" id="fdPadVol" data-control="fdPadVol" min="0" max="100" value="100" aria-label="pad level">
+        <span class="fd-val" id="fdPadVal">100</span>
       </div>
     </div>
     <!-- THE STRING LABELS ARE THE EDITOR (night 47, alternate tunings item 2 — Daniel's
@@ -810,9 +831,12 @@ function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
   // as an array of the voicing's own notes (identity, not lookup), or null
   // for a block strum of the whole voicing.
   const out = [];
+  /* G11, NARROWED (night 57 — the register's own `then`): the pedal is the one legitimately
+   * stringless event, and it SAYS SO — `unfretted: true` is the flag the real-string assertion
+   * below reads; a stringless event without it is refused by name, as every chord event is */
   if (bassMidi !== null && bassMidi !== undefined)
     out.push({ midi: bassMidi, string: null, fret: null, role: "bass",
-      slot: null, onset: 0, dur: 1.0 });
+      slot: null, onset: 0, dur: 1.0, unfretted: true });
   const seq = order || voicing.notes;
   for (const n of seq)
     if (n.role === undefined && !voicing.notes.includes(n))
@@ -831,6 +855,9 @@ function noteEvents(voicing, order, bassMidi, durBeats, bpm) {
       dur: Math.min(0.9, step * 1.6) }));
   }
   // structural assertions — derived, then checked, before anyone consumes it
+  for (const e of out)   // the exemption is the FLAG, not the role (night 57)
+    if (e.unfretted !== true && (!Number.isInteger(e.string) || e.string < 1 || e.string > 6))
+      throw new Error("noteEvents: event carries no real string");
   const chord = out.filter((e) => e.role !== "bass");
   if (chord.length !== seq.length)
     throw new Error("noteEvents: event count != sequence length");
@@ -1042,9 +1069,53 @@ const BASS_VOICE = {
   },
 };
 
-/** the voice a note event should use: the bass pedal has its own */
+/* ---------------- the pad: a SEAT and a voice, not a subsystem (night 57) ---------------- */
+
+/** THE PAD'S REGISTER, chosen by measurement (261012, 1,632 one-of-each voicings over 12 keys × 6 sets ×
+ * 4 windows × 7 degrees): the guitar's voicings sit lowest 45–61 (p10–p90, median 52) and highest 60–73
+ * (median 67); the bass seat sits 35–53 (median 43). Below the guitar is the bass's octave — a pad there
+ * doubles the bass; the ONE register neither occupies is above 73. So the pad sits in [74, 86): D5 up to
+ * (not including) D6 — clear of 90 % of the guitar's highs and of every bass seat — and its timbre does
+ * the rest: fundamentals-heavy partials under a low-pass, a swell in, no attack. "Doesn't sit where the
+ * guitar sits" is this number, not a taste. The pad's chord is the bar's harmony seated here — never a
+ * voicing anyone plays, never drawn. Daniel's to move; the constant is the one place it lives. */
+const PAD_REGISTER = Object.freeze([74, 86]);
+
+/** the pad's notes: each of the chord's pitch classes at its one midi inside PAD_REGISTER, low → high */
+function padSeat(pcs) {
+  const [lo, hi] = PAD_REGISTER;
+  const out = [];
+  for (const pc of pcs) {
+    if (!Number.isInteger(pc) || pc < 0 || pc > 11) throw new Error(`padSeat: ${pc} is not a pitch class (0..11)`);
+    const m = lo + ((((pc - lo) % 12) + 12) % 12);
+    if (m >= hi) throw new Error("padSeat: the register is narrower than an octave");
+    out.push(m);
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** fundamentals-heavy, dark: the pad is heard under the material, not beside the guitar's lines */
+const PAD_PARTIALS = Object.freeze([0, 1, 0.35, 0.12, 0.04]);
+
+const PAD_VOICE = {
+  bus: "pad", tail: 0.1,
+  source: { kind: "wave", partials: PAD_PARTIALS },
+  filter: { type: "lowpass", freq: 1400, q: 0.3 },
+  envelope: (t, dur, vel) => {
+    const a = Math.min(0.18, dur * 0.35), r = Math.min(0.3, dur * 0.4);
+    return [
+      env("set", t, 0),
+      env("linear", t + a, vel),
+      env("set", t + Math.max(a, dur - r), vel),
+      env("linear", t + dur, 0),
+    ];
+  },
+};
+
+/** the voice a note event should use: the bass pedal and the pad have their own */
 function voiceFor(role, name) {
   if (role === "bass") return BASS_VOICE;
+  if (role === "pad") return PAD_VOICE;
   return NOTE_VOICES[name] || NOTE_VOICES.tone;
 }
 
@@ -1089,7 +1160,7 @@ function clickSpec(name, level, { accents = true, vol = 1 } = {}) {
 
 {
   // every named voice is complete enough for a host to realise blind
-  for (const [n, v] of Object.entries({ ...NOTE_VOICES, bass: BASS_VOICE })) {
+  for (const [n, v] of Object.entries({ ...NOTE_VOICES, bass: BASS_VOICE, pad: PAD_VOICE })) {
     if (!v.source || !v.filter || typeof v.envelope !== "function")
       throw new Error(`voices: ${n} is not a realisable description`);
     const { points } = envelopeOf(v, 0, 0.5, 0.2);
@@ -1109,7 +1180,7 @@ function clickSpec(name, level, { accents = true, vol = 1 } = {}) {
   if (clickSpec("beep", 2, { accents: false }).gain !== clickSpec("beep", 0, { accents: true }).gain)
     throw new Error("voices: accents off must make a downbeat sound exactly like a beat");
 }
-return { hzOf, NOTE_VOICE_NAMES, SUSTAIN_HOLD, voiceSchedule, chordSchedule, bassSeat, pluckSamples, SUSTAIN_PARTIALS, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, CLICK_VOICES, CLICK_VOICE_NAMES, clickSpec };
+return { hzOf, NOTE_VOICE_NAMES, SUSTAIN_HOLD, voiceSchedule, chordSchedule, bassSeat, pluckSamples, SUSTAIN_PARTIALS, NOTE_VOICES, BASS_VOICE, PAD_REGISTER, padSeat, PAD_PARTIALS, PAD_VOICE, voiceFor, envelopeOf, CLICK_VOICES, CLICK_VOICE_NAMES, clickSpec };
 })();
 
 /* ===== engine/chord.mjs ===== */
@@ -4275,7 +4346,7 @@ const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, li
  * FIRST REAL GESTURE and never on load — the `file://` gate demands zero
  * console errors, and there is no reason to manufacture warnings either.
  *
- * The mixer is two gain buses on existing paths (v0.8.7): chord and bass,
+ * The mixer is three gain buses on existing paths (v0.8.7; the pad's since night 57): chord, bass and pad,
  * each one multiply, ramped rather than stepped so a level move mid-note does
  * not click. ITS CONTROLS ARE NOT HERE: as in the reference page, the sliders
  * and the voice select live in the Transport card, which announces `MIXER`.
@@ -4306,10 +4377,11 @@ const audioCard = {
     const families = Array.isArray(lock.families) && lock.families.length ? lock.families : ["drop2"];
 
     /* PRIVATE. Nothing else reads any of this. */
-    let ac = null, chordBus = null, bassBus = null, wave = null;
+    let ac = null, chordBus = null, bassBus = null, padBus = null;
+    const waves = new Map();   // one PeriodicWave per partials table (the sustain's, the pad's)
     const buffers = new Map();
     let on = false, voice = NOTE_VOICE_NAMES[0], clickOn = true;
-    let chordVol = 1, bassVol = 1;
+    let chordVol = 1, bassVol = 1, padVol = 1;   // night 57: the pad's bus
     let cfg = null, pass = null, live = 0;
     let bpm = 72, durBeats = 2;                       // the clock's, heard on the bus
 
@@ -4322,17 +4394,19 @@ const audioCard = {
         try { ac = new Ctor(); } catch { return null; }
         chordBus = ac.createGain(); chordBus.gain.value = chordVol; chordBus.connect(ac.destination);
         bassBus = ac.createGain(); bassBus.gain.value = bassVol; bassBus.connect(ac.destination);
+        padBus = ac.createGain(); padBus.gain.value = padVol; padBus.connect(ac.destination);   // night 57
       }
       if (ac.state === "suspended") ac.resume();
       return ac;
     };
 
-    const busFor = (name) => (name === "bass" ? bassBus : chordBus);
+    const busFor = (name) => (name === "bass" ? bassBus : name === "pad" ? padBus : chordBus);
 
     const syncBuses = () => {
       if (!ac) return;                                // ramp, not a step: no click mid-note
       chordBus.gain.setTargetAtTime(chordVol, ac.currentTime, 0.02);
       bassBus.gain.setTargetAtTime(bassVol, ac.currentTime, 0.02);
+      padBus.gain.setTargetAtTime(padVol, ac.currentTime, 0.02);
     };
 
     const pluckBuffer = (midi) => {
@@ -4345,12 +4419,16 @@ const audioCard = {
       return b;
     };
 
-    const sustainWave = () => {
-      if (!wave) {
-        const amps = Float32Array.from(SUSTAIN_PARTIALS);
-        wave = ac.createPeriodicWave(new Float32Array(amps.length), amps);
+    /** a PeriodicWave per partials table — the sustain voice's and, since night 57, the pad's;
+     * the table is the voice description's own (voices.mjs), never a number invented here */
+    const waveFor = (partials) => {
+      let w = waves.get(partials);
+      if (!w) {
+        const amps = Float32Array.from(partials);
+        w = ac.createPeriodicWave(new Float32Array(amps.length), amps);
+        waves.set(partials, w);
       }
-      return wave;
+      return w;
     };
 
     /** realise ONE described voice as nodes. Every source is counted and its
@@ -4365,7 +4443,7 @@ const audioCard = {
         src.buffer = pluckBuffer(midi);
       } else {
         src = ac.createOscillator();
-        if (spec.source.kind === "wave") src.setPeriodicWave(sustainWave());
+        if (spec.source.kind === "wave") src.setPeriodicWave(waveFor(spec.source.partials || SUSTAIN_PARTIALS));
         else src.type = spec.source.type;
         src.frequency.value = hzOf(midi);
       }
@@ -4498,12 +4576,16 @@ const audioCard = {
        * precedent is STEP_CHANGED's attack. Until this, the only producer
        * of a bass-role event was the tetrad pass, and a door without it had
        * a bass slider controlling nothing. */
-      const role = m.role === "bass" ? "bass" : "chord";
-      if ((role === "bass" ? bassVol : chordVol) === 0) return;
+      /* night 57: a NOTE may also name the PAD role (its own bus, its own voice) and carry a
+       * duration — the walk hands the pad the bar's span, so the pad holds to the change; a
+       * NOTE without one keeps the 0.7 s every other note has. */
+      const role = m.role === "bass" ? "bass" : m.role === "pad" ? "pad" : "chord";
+      if ((role === "bass" ? bassVol : role === "pad" ? padVol : chordVol) === 0) return;
       const a = audio();
       if (!a) return;
-      sound(voiceFor(role, voice), m.midi, a.currentTime + 0.02, 0.7,
-        role === "bass" ? 0.3 : 0.24);
+      const dur = typeof m.dur === "number" && m.dur > 0 ? m.dur : 0.7;
+      sound(voiceFor(role, voice), m.midi, a.currentTime + 0.02, dur,
+        role === "bass" ? 0.3 : role === "pad" ? 0.12 : 0.24);
     });
     listen(d, ATTACK, (m) => {
       if (!m || typeof m.index !== "number") return;
@@ -4516,6 +4598,7 @@ const audioCard = {
       if (!m) return;
       if (typeof m.chord === "number") chordVol = m.chord;
       if (typeof m.bass === "number") bassVol = m.bass;
+      if (typeof m.pad === "number") padVol = m.pad;   // night 57
       if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) voice = m.voice;
       if (m.on === true) { on = true; audio(); }
       syncBuses();
@@ -6708,6 +6791,32 @@ function referenceChoicesFor(pick) {
   ];
 }
 
+/** THE SOUNDED BASS (night 57 — Daniel's ruling 261006, dispatched 261012): the reference tone and
+ * the sounded bass were always two things, and this module held both in one field. The reference
+ * (placeReference) is FRETTED, DRAWN and CHORD-NAMING, so it is not always offerable. A bass that
+ * SOUNDS needs none of that: a pitch class by the same degree arithmetic (refOffsetOf — the root, a
+ * 3rd below, a 5th below, a chord tone the pick holds), NO string, never drawn, names nothing, and
+ * offerable on ANY set — the six-string set included. Where it sits is the walk's business
+ * (voices.mjs bassSeat, below the voicing's lowest note); this answers only WHICH pitch class.
+ * `unfretted: true` is the flag G11's exemption narrows to (note-events.mjs): a bass with no string
+ * says so. The same pick guard as the reference: a tone the pick no longer holds is refused by name. */
+function soundedBass(kind, chordDeg, fld, pick) {
+  if (kind === "none" || kind == null) return { none: true };
+  if (Array.isArray(pick) && /^tone:/.test(String(kind))) {
+    const d = Number(String(kind).slice(5));
+    if (!pick.includes(d))
+      return { reason: `the sounded bass names the ${degreeWord(d)}, which the chosen tones do not hold — pick it, or choose another bass` };
+  }
+  const off = refOffsetOf(kind);
+  if (off === null) throw new Error(`soundedBass: "${kind}" is not one of the bass choices`);
+  if (!Number.isInteger(chordDeg) || chordDeg < 0 || chordDeg > 6)
+    throw new Error(`soundedBass: chordDeg 0..6, not ${chordDeg}`);
+  const keyDeg = mod7(chordDeg + off);
+  return { keyDeg, pc: fld.pcs[keyDeg], name: fld.notes[keyDeg].name, unfretted: true };
+}
+/** the sounded bass's vocabulary IS the reference's (rule 6: one list) */
+const soundedChoicesFor = referenceChoicesFor;
+
 function placeReference(kind, chordDeg, fld, strings, pos, pick) {
   if (kind === "none" || kind == null) return { note: null, stretch: false, reason: null };
   const off = refOffsetOf(kind);
@@ -6872,7 +6981,7 @@ function compositeOver(fld, refKeyDeg, tonePcs) {
   if (!far.note || far.stretch !== true || (far.note.fret >= 8 && far.note.fret <= 9))
     throw new Error("reference: a reach past the box must carry the stretch flag");
 }
-return { REF_OFFSET, centreDegreeOf, centreMaterialRef, reRead, CENTRE_SOURCES, REFERENCE_CHOICES, refOffsetOf, referenceChoicesFor, placeReference, compositeOver };
+return { REF_OFFSET, centreDegreeOf, centreMaterialRef, reRead, CENTRE_SOURCES, REFERENCE_CHOICES, refOffsetOf, referenceChoicesFor, soundedBass, soundedChoicesFor, placeReference, compositeOver };
 })();
 
 /* ===== engine/progression.mjs ===== */
@@ -7071,12 +7180,15 @@ function beatsOf(bars, meter = 4, split = null) {
  *                  ARPEGGIO or a scale (spread=true) sounds low → high
  *                  across the span, the run the take already implies;
  *   opts.refMidi — the fretted reference, under the chord, at 0.
+ *   opts.soundedMidi — the SOUNDED BASS (night 57): a pitch with no string, at 0, wearing the
+ *                  bass role and the `unfretted: true` flag; not doubled when it is the
+ *                  reference's own pitch (a saved étude's reference keeps meaning what it meant).
  * Nothing truncates: any number of steps subdivides the span (the report
  * states why the "more steps than the span can carry" case cannot arise
  * under even subdivision). Every schedule is asserted before it is returned:
  * times ascending within [0, span), the event count equal to the material's.
  */
-function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null } = {}) {
+function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null, soundedMidi = null } = {}) {
   if (!(beats > 0) || !(bpm > 0))
     throw new Error("walkSchedule: beats and bpm must be positive — the span is derived from them");
   const span = beats * 60 / bpm;
@@ -7089,6 +7201,8 @@ function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null }
   /* the reference carries its ROLE (260906): it is the bass line's note, and
    * whoever realises audio may route it to the bass bus — the additive-field
    * precedent (STEP_CHANGED's attack) followed for NOTE */
+  const sounded = soundedMidi != null && soundedMidi !== refMidi;   // the same pitch sounds once
+  if (sounded) events.unshift({ midi: soundedMidi, at: 0, role: "bass", unfretted: true });
   if (refMidi != null) events.unshift({ midi: refMidi, at: 0, role: "bass" });
   for (let i = 1; i < events.length; i++)
     if (events[i].at < events[i - 1].at)
@@ -7097,7 +7211,7 @@ function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null }
     if (e.at < 0 || e.at >= span - 1e-9)
       throw new Error("walkSchedule: a step left the chord's span — steps never spill into the next chord " +
         "(a step AT the span is the next chord's downbeat, which is spilling)");
-  const expected = seq.length + (refMidi != null ? 1 : 0);
+  const expected = seq.length + (refMidi != null ? 1 : 0) + (sounded ? 1 : 0);
   if (events.length !== expected)
     throw new Error("walkSchedule: an event went missing — the schedule must carry every note it was given");
   return { events, span };
@@ -7227,7 +7341,8 @@ const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } = __m_engine_selection_mjs;
 const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
-const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
+const { bassSeat, padSeat } = __m_engine_voices_mjs;
+const { placeReference, centreDegreeOf, centreMaterialRef, reRead, soundedBass } = __m_engine_reference_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, listen, announce } = __m_hub_bus_mjs;
 /* etude-walk.mjs — THE WALK (child 7; the TIME DIMENSION 260902): Play
@@ -7278,6 +7393,7 @@ const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, list
 
 
 
+
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 
@@ -7294,7 +7410,7 @@ const etudeWalk = {
   mount(ctx) {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1,
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, sounded: "none", pad: false,   // night 57
       tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
     let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
@@ -7382,6 +7498,16 @@ const etudeWalk = {
         const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos, pickOf(cfg));
         if (rp.note) refMidi = rp.note.midi;
       }
+      /* THE SOUNDED BASS (night 57): a pitch with no string, seated below the voicing's lowest note
+       * (bassSeat — the bass register rule that already existed), on ANY set. Silent through a refused
+       * bar for the reference's own reason: nothing on top to be under. The walk hands it to the
+       * schedule flagged `unfretted` — the stringless bass event exists on purpose (G11, narrowed). */
+      let soundedMidi = null;
+      if (cfg.sounded && cfg.sounded !== "none" && refDeg != null && refDeg >= 0 && sel.length
+          && (cfg.object === "scale" || cur.degree >= 0)) {
+        const sb = soundedBass(cfg.sounded, refDeg, fld, cfg.object === "scale" ? null : pickOf(cfg));
+        if (sb.pc != null) soundedMidi = bassSeat(Math.min(...sel.map((x) => x.midi)), sb.pc);
+      }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
        * the bracket and the polyline draw — or the take's own shape */
       const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
@@ -7390,11 +7516,17 @@ const etudeWalk = {
        * the box has no chord to sound as one). A typed figure sequences
        * regardless, as ruled. */
       const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
-      const { events } = walkSchedule(sel, fig.err ? null : fig.order,
-        chordBeats(prog), bpm, { spread, refMidi });
+      const { events, span } = walkSchedule(sel, fig.err ? null : fig.order,
+        chordBeats(prog), bpm, { spread, refMidi, soundedMidi });
       clearPending();
+      /* THE PAD (night 57): the bar's harmony seated above the strings' register (padSeat), at the
+       * attack, held for the bar — a seat and a bus, no scheduler: the same announce as every note,
+       * with the bar's span as its duration. Never under a scale (no chord), never through a refused bar. */
+      if (cfg.pad && cfg.object !== "scale" && cur.tones && cur.tones.length && sel.length)
+        for (const m of padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12)))
+          announce(d, NOTE, { midi: m, role: "pad", dur: span });
       for (const ev of events) {
-        const msg = ev.role ? { midi: ev.midi, role: ev.role } : { midi: ev.midi };
+        const msg = ev.role ? { midi: ev.midi, role: ev.role, ...(ev.unfretted ? { unfretted: true } : {}) } : { midi: ev.midi };
         if (ev.at <= 0) { announce(d, NOTE, msg); continue; }
         timers.push(d.defaultView.setTimeout(() => {
           if (armed || auditioning) announce(d, NOTE, msg);
@@ -8313,7 +8445,7 @@ const { alteredDegree } = __m_engine_chord_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } = __m_engine_selection_mjs;
-const { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead } = __m_engine_reference_mjs;
+const { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead, soundedBass, soundedChoicesFor } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { progressionOf, chordAt, movementWord } = __m_engine_progression_mjs;
 const { STRING_SETS } = __m_engine_tetrad_sequence_mjs;
@@ -8436,7 +8568,7 @@ const fieldBoard = {
   mount_point: "boards",
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
-    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
+    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdSounded", "fdPad", "fdPadVol", "fdPadMute", "fdRailBtn",
     "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode",
     "fdTuning", "fdTuneNames", "fdTuneName", "fdTuneAll"],
 
@@ -8542,15 +8674,36 @@ const fieldBoard = {
         <span class="fd-val" id="fdHarmVal">100</span>
       </div>
     </div>
+    <!-- TWO THINGS, TWO CONTROLS (night 57 — Daniel's ruling 261006): "Bass / reference tone" was one
+         control with a slash and two jobs. The REFERENCE TONE is fretted, drawn on string 5 or 6 and
+         names the chord it makes, so it is not always offerable (both reference strings in the set: an
+         unfretted offer, drawn and silent — night 37, unchanged). The SOUNDED BASS is a pitch with no
+         string — never drawn, naming nothing, sounding under the material on ANY set — seated below the
+         voicing's lowest note (voices.mjs bassSeat). Same vocabulary, one list (reference.mjs). Both
+         land on the bass bus and its one level. Night 58 moves these rows into the mixer strip. -->
     <div class="fd-railrow fd-pairrow">
-      <span class="fd-lab2">Bass / reference tone</span>
+      <span class="fd-lab2">reference tone</span>
       <select id="fdBass2" data-control="fdBass2"
-        title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
-      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
+        title="the reference under the harmony — fretted, drawn on string 5 or 6, naming the chord it makes; one state, two views; Harmony's select is the other"></select>
+      <span class="fd-lab2">sounded bass</span>
+      <select id="fdSounded" data-control="fdSounded"
+        title="a bass that sounds under the material on any string set — a pitch with no string, never drawn, naming nothing"></select>
+      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — the reference's and the sounded bass's, one bus; muted is this slider at zero">
         <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">bass</span>
         <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
         <span class="fd-val" id="fdBassVal">100</span>
+      </div>
+    </div>
+    <!-- THE PAD IS A SEAT (night 57): the bar's harmony as a sustaining voice, seated ABOVE the guitar's
+         register (voices.mjs PAD_REGISTER, chosen by measurement), never drawn; its own bus and level. -->
+    <div class="fd-railrow fd-pairrow">
+      <label class="chk" id="fdPadLab" title="a sustaining chord under the material — the bar's harmony seated above the strings' register; never drawn, not a voicing anyone plays"><input type="checkbox" id="fdPad" data-control="fdPad"> pad</label>
+      <div class="bpmrow fd-mixrow" title="the mixer: the pad level — muted is this slider at zero">
+        <button class="muteBtn" id="fdPadMute" data-control="fdPadMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">pad</span>
+        <input type="range" id="fdPadVol" data-control="fdPadVol" min="0" max="100" value="100" aria-label="pad level">
+        <span class="fd-val" id="fdPadVal">100</span>
       </div>
     </div>
     <!-- THE STRING LABELS ARE THE EDITOR (night 47, alternate tunings item 2 — Daniel's
@@ -8715,7 +8868,7 @@ const fieldBoard = {
        * fact, owned here because the neck is where the instrument is; every other board
        * builds its field with it. Item 1 made it state; tonight it gets a face. */
       tuning: null,
-      object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
+      object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root", sounded: "none", pad: false,   // night 57: the sounded bass and the pad, absent by default
       /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
        * Harmony is doing movement (partial) duty here which it shouldn't
        * be."). Take is MATERIAL — which notes exist (one of each · every
@@ -9331,6 +9484,20 @@ const fieldBoard = {
           }
         }
         if (b2.value !== cfg.bass) b2.value = cfg.bass;
+        /* the SOUNDED BASS's options: the same list, filled the same way (night 57) */
+        const sb2 = byId("fdSounded");
+        const soundedWant = soundedChoicesFor(pickOf(cfg)).map(([v]) => v);
+        if (soundedWant.join() !== [...sb2.options].map((o) => o.value).join() || (!soundedWant.includes(cfg.sounded) && ![...sb2.options].some((o) => o.value === cfg.sounded && o.disabled))) {
+          sb2.textContent = "";
+          for (const [v, l] of soundedChoicesFor(pickOf(cfg))) { const o = d.createElement("option"); o.value = v; o.textContent = l; sb2.appendChild(o); }
+          if (!soundedWant.includes(cfg.sounded) && cfg.sounded) {
+            const o = d.createElement("option"); o.value = cfg.sounded; o.disabled = true;
+            o.textContent = `${cfg.sounded.replace(/^tone:/, "the ") + (cfg.sounded.startsWith("tone:") ? " in the bass" : "")} — not among the chosen tones`;
+            sb2.appendChild(o);
+          }
+        }
+        if (sb2.value !== cfg.sounded) sb2.value = cfg.sounded;
+        byId("fdPad").checked = !!cfg.pad;
         b2.disabled = false;   // 4a: live in scale mode too — the centre works
         b2.title = cfg.object === "scale"
           ? "the reference under the mode — placed against the CENTRE chosen in Harmony"
@@ -9411,6 +9578,24 @@ const fieldBoard = {
        * choose strings and step the window. In the ordinary case this line is
        * nearly empty, and that is correct — CC-1: it earns its space when
        * something is off, refused or silent. */
+      /* THE SOUNDED BASS AND THE PAD, said (night 57 — rule 10, CC-1: distinguishable on the face). The
+       * sounded bass is a pitch, not a place: its name, and that it has no string. Silent where the
+       * reference is silent (a refused bar has no harmony to be under — Daniel, 260904). */
+      let soundedMsg = "", padMsg = "";
+      if (cfg.sounded && cfg.sounded !== "none" && cfg.object !== "scale") {
+        if (cur.degree < 0) soundedMsg = `Sounded bass silent: it is relative to the chord's degree, and ${cur.symbol}'s root is not in the key. `;
+        else if (fdRefDeg != null) {
+          const sb = soundedBass(cfg.sounded, fdRefDeg, fld, pickOf(cfg));
+          soundedMsg = sb.reason ? `Sounded bass silent: ${sb.reason}. `
+            : sel.length ? `A sounded bass on ${sb.name} — no string, never drawn, under the material on any set. `
+            : `The sounded bass stays silent — nothing sits on top of it. `;
+        }
+      } else if (cfg.sounded && cfg.sounded !== "none" && cfg.object === "scale" && fdRefDeg != null) {
+        const sb = soundedBass(cfg.sounded, fdRefDeg, fld, null);
+        soundedMsg = `A sounded bass on ${sb.name} under the centre — no string, never drawn. `;
+      }
+      if (cfg.pad) padMsg = cfg.object === "scale" ? "The pad has no chord to sound under a scale. "
+        : sel.length ? `The pad sounds ${cur.symbol} above the strings' register. ` : "The pad stays silent — nothing sits on top of it. ";
       byId("fdHint").textContent =
         (selMsg ? `${selMsg}. ` : "") +
         (followMsg && followMsg.sd === cfg.startDeg && followMsg.nf === cfg.nearFret
@@ -9419,6 +9604,7 @@ const fieldBoard = {
           ? (!isScale && !sel.length ? "The reference is drawn but stays silent — nothing sits on top of it. " : "")
           : refP.offer ? `Reference offered unfretted: ${refP.reason} — drawn below the strings, sounding nothing. `
           : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +
+        soundedMsg + padMsg +
         "Click the numbers to choose strings; ← → step the window.";
       byId("fdLegend").innerHTML = FAM.map((f2) =>
         `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
@@ -9652,6 +9838,10 @@ const fieldBoard = {
       const b2 = byId("fdBass2");
       b2.addEventListener("change", (e) =>
         announce(d, CONFIG_CHANGED, { bass: e.target.value }));
+      /* night 57: the two new settings announce like every other — the notepad's snapshot reads the
+       * announced state, so what is announced is what is saved, exported and restored */
+      byId("fdSounded").addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { sounded: e.target.value }));
+      byId("fdPad").addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { pad: !!e.target.checked }));
     }
     mountMini(ctx, byId("fdMini"));
     mountReadout(ctx, byId("fdMode"));   // 260920: the shared readout, its own derivation
@@ -9692,7 +9882,7 @@ const fieldBoard = {
       v.addEventListener("change", (e) => announce(d, MIXER, { voice: e.target.value }));
     }
     for (const [slId, muteId, valId, chan] of
-      [["fdHarmVol", "fdHarmMute", "fdHarmVal", "chord"], ["fdBassVol", "fdBassMute", "fdBassVal", "bass"]]) {
+      [["fdHarmVol", "fdHarmMute", "fdHarmVal", "chord"], ["fdBassVol", "fdBassMute", "fdBassVal", "bass"], ["fdPadVol", "fdPadMute", "fdPadVal", "pad"]]) {   // night 57: the pad's bus
       const sl = byId(slId), mute = byId(muteId), val = byId(valId);
       let last = 100;
       const paint = () => {
@@ -9714,7 +9904,7 @@ const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start", "repeat", "centreSrc"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "sounded", "pad", "source", "cycle", "form", "custom", "start", "repeat", "centreSrc"])   // night 57: sounded, pad
         if (k in m && m[k] !== cfg[k]) {
           /* a restored v0.1.0 étude says movement "block"/"arpeggio" — the
            * alias map is the one place the old words are known (260913) */
@@ -10879,7 +11069,7 @@ const { positionOf, materialIn, regionOf } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence, capOf } = __m_engine_selection_mjs;
 const { progressionOf, chordAt } = __m_engine_progression_mjs;
-const { placeReference, compositeOver, centreDegreeOf, centreMaterialRef } = __m_engine_reference_mjs;
+const { placeReference, compositeOver, centreDegreeOf, centreMaterialRef, soundedBass } = __m_engine_reference_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, listen } = __m_hub_bus_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { describeGamut, pentatonicBreak } = __m_engine_gamut_mjs;
@@ -10935,7 +11125,7 @@ const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7],
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], sounded: "none", pad: false,   // night 57
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       centreSrc: "fixed",
@@ -11135,6 +11325,16 @@ const neckReadout = {
             bits.push(`<span style="color:#B82929">reference refused: ${rp.reason}</span>`);
           }
         }
+        /* THE SOUNDED BASS AND THE PAD (night 57) — the readout says them so the split is visible on the face (rule 10, CC-1) */
+        if (cfg.sounded && cfg.sounded !== "none" && cfg.object !== "scale" && cur.degree >= 0 && roRefDeg != null) {
+          const sb = soundedBass(cfg.sounded, roRefDeg, fld, pickOf(cfg));
+          bits.push(sb.reason ? `<span style="color:#B82929">sounded bass silent: ${sb.reason}</span>`
+            : `sounded bass <b>${sb.name}</b> <span class="ro-dim">— no string, under the material</span>`);
+        } else if (cfg.sounded && cfg.sounded !== "none" && cfg.object === "scale" && roRefDeg != null) {
+          const sb = soundedBass(cfg.sounded, roRefDeg, fld, null);
+          bits.push(`sounded bass <b>${sb.name}</b> <span class="ro-dim">— no string, under the centre</span>`);
+        }
+        if (cfg.pad) bits.push(cfg.object === "scale" ? `<span class="ro-dim">pad: no chord under a scale</span>` : `pad <b>${cur.symbol}</b> <span class="ro-dim">— above the strings' register</span>`);
         for (const a of absences) bits.push(`<span style="color:#B82929">${a}</span>`);
         if (msg) bits.push(`<span style="color:#B82929">${msg}</span>`);
       } catch (e) {
@@ -14691,7 +14891,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.8","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.9","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

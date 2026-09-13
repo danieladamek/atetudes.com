@@ -1,3 +1,31 @@
+## 2026-09-13 — Night 57: the bass and the reference part company, and the pad takes a seat; Multetudes v0.6.9; five studies moved for note-events and voices
+
+- **Why (Daniel's ruling 261006, dispatched 261012):** `Bass / reference tone` was one control with a slash and
+  two jobs. The reference tone is fretted, drawn and chord-naming, so it is not always offerable — a set using
+  strings 5 and 6 leaves it nowhere (the unfretted offer, night 37). A bass that sounds needs none of that.
+  And Daniel asked for a chord pad under the material.
+- **Item 1 — two controls:** the reference tone unchanged (id, fill, refusal, the offer); a SOUNDED BASS — a
+  pitch with no string, from the same vocabulary (one list), seated below the voicing's lowest note by the
+  register rule that already existed (`bassSeat`), on ANY set, never drawn, naming nothing, on the bass bus.
+  The proof is the six-string set: the reference offered unfretted and silent, the sounded root sounding as a
+  bass-role note flagged `unfretted: true` and a source started at the AudioContext. G11 reached, not
+  re-invented: the flag is the exemption now (`note-events.mjs`); the register's `g11-bass-exemption` entry
+  did its own `then` and left.
+- **Item 2 — the pad, a seat and a bus:** register chosen by measurement over 1,632 voicings (the guitar's
+  voicings sit 45–73, the bass seat 35–53; the one free register is above 73) — `PAD_REGISTER` [74, 86); a
+  described voice (`PAD_VOICE`) on a third bus with its own level and mute; the bar's harmony seated there,
+  held for the bar (a NOTE may carry a duration), never drawn. No scheduler, no second clock.
+- **Saved études:** both settings announce, snapshot, export and restore into a cold page; the field board's
+  own CONFIG allowlist names them (m93 removes them and the cold-page pin bites). `ROW_COUNTS`, the Transport
+  card and the mixer strip untouched — the rows sit under the neck until night 58.
+- **Gates:** engine 703/703 (four tests red first) · hub 12/12 · gate red first against the old build
+  (`hub/tests/out/doors-n57-red-0912-1805.log`) · door gate 21,065/0 (`doors-0912-1819.log`; a first run red on
+  the pad slider's missing accessible name — named, not exempted) · m93, m94 bite (`bite-m93-94-0912.log`) ·
+  chain 95/95, suite green (`bite-0912-1837.log`, 18:37–00:36) · hugo 0 · check_site clean.
+- **Carriers:** note-events.mjs (triadetudes re-inlined; the two generator pages re-emitted; both doors) and
+  voices.mjs (the generator pages, both doors) — five studies move; the metronome carries neither.
+- Report: `notes/working/Multetudes build run 261012c — night 57, the bass and the reference part company, and the pad takes a seat.md`.
+
 ## 2026-09-12 — DEPLOYED: night 56 live — the cap is a voicing's rule, a line is uncapped; Multetudes v0.6.8 moved; written from the run
 
 - record: run 34720161569 · success · commit f3fee6a · fetched 2026-09-12T21:40Z · 6/6 studies byte-identical · digest 9d5de803aa00

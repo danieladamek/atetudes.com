@@ -45,7 +45,7 @@ import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
-import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead } from "../../engine/reference.mjs";
+import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead, soundedBass, soundedChoicesFor } from "../../engine/reference.mjs";
 // 260917 item 5: the mode names, the one table
 import { MODES } from "../../engine/field.mjs";
 import { progressionOf, chordAt, movementWord } from "../../engine/progression.mjs";
@@ -110,7 +110,7 @@ export const fieldBoard = {
   mount_point: "boards",
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
-    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdRailBtn",
+    "fdVoice", "fdHarmVol", "fdHarmMute", "fdBassVol", "fdBassMute", "fdSounded", "fdPad", "fdPadVol", "fdPadMute", "fdRailBtn",
     "fdAllTones", "fdBpm", "fdBass2", "fdMini", "fdRepeat", "fdMode",
     "fdTuning", "fdTuneNames", "fdTuneName", "fdTuneAll"],
 
@@ -216,15 +216,36 @@ export const fieldBoard = {
         <span class="fd-val" id="fdHarmVal">100</span>
       </div>
     </div>
+    <!-- TWO THINGS, TWO CONTROLS (night 57 — Daniel's ruling 261006): "Bass / reference tone" was one
+         control with a slash and two jobs. The REFERENCE TONE is fretted, drawn on string 5 or 6 and
+         names the chord it makes, so it is not always offerable (both reference strings in the set: an
+         unfretted offer, drawn and silent — night 37, unchanged). The SOUNDED BASS is a pitch with no
+         string — never drawn, naming nothing, sounding under the material on ANY set — seated below the
+         voicing's lowest note (voices.mjs bassSeat). Same vocabulary, one list (reference.mjs). Both
+         land on the bass bus and its one level. Night 58 moves these rows into the mixer strip. -->
     <div class="fd-railrow fd-pairrow">
-      <span class="fd-lab2">Bass / reference tone</span>
+      <span class="fd-lab2">reference tone</span>
       <select id="fdBass2" data-control="fdBass2"
-        title="the reference under the harmony — one state, two views; Harmony's select is the other"></select>
-      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — muted is this slider at zero">
+        title="the reference under the harmony — fretted, drawn on string 5 or 6, naming the chord it makes; one state, two views; Harmony's select is the other"></select>
+      <span class="fd-lab2">sounded bass</span>
+      <select id="fdSounded" data-control="fdSounded"
+        title="a bass that sounds under the material on any string set — a pitch with no string, never drawn, naming nothing"></select>
+      <div class="bpmrow fd-mixrow" title="the mixer: the bass level — the reference's and the sounded bass's, one bus; muted is this slider at zero">
         <button class="muteBtn" id="fdBassMute" data-control="fdBassMute" aria-pressed="false">&#128266;</button>
         <span class="fd-lab2 fd-mixlab">bass</span>
         <input type="range" id="fdBassVol" data-control="fdBassVol" min="0" max="100" value="100">
         <span class="fd-val" id="fdBassVal">100</span>
+      </div>
+    </div>
+    <!-- THE PAD IS A SEAT (night 57): the bar's harmony as a sustaining voice, seated ABOVE the guitar's
+         register (voices.mjs PAD_REGISTER, chosen by measurement), never drawn; its own bus and level. -->
+    <div class="fd-railrow fd-pairrow">
+      <label class="chk" id="fdPadLab" title="a sustaining chord under the material — the bar's harmony seated above the strings' register; never drawn, not a voicing anyone plays"><input type="checkbox" id="fdPad" data-control="fdPad"> pad</label>
+      <div class="bpmrow fd-mixrow" title="the mixer: the pad level — muted is this slider at zero">
+        <button class="muteBtn" id="fdPadMute" data-control="fdPadMute" aria-pressed="false">&#128266;</button>
+        <span class="fd-lab2 fd-mixlab">pad</span>
+        <input type="range" id="fdPadVol" data-control="fdPadVol" min="0" max="100" value="100" aria-label="pad level">
+        <span class="fd-val" id="fdPadVal">100</span>
       </div>
     </div>
     <!-- THE STRING LABELS ARE THE EDITOR (night 47, alternate tunings item 2 — Daniel's
@@ -389,7 +410,7 @@ export const fieldBoard = {
        * fact, owned here because the neck is where the instrument is; every other board
        * builds its field with it. Item 1 made it state; tonight it gets a face. */
       tuning: null,
-      object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
+      object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root", sounded: "none", pad: false,   // night 57: the sounded bass and the pad, absent by default
       /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
        * Harmony is doing movement (partial) duty here which it shouldn't
        * be."). Take is MATERIAL — which notes exist (one of each · every
@@ -1005,6 +1026,20 @@ export const fieldBoard = {
           }
         }
         if (b2.value !== cfg.bass) b2.value = cfg.bass;
+        /* the SOUNDED BASS's options: the same list, filled the same way (night 57) */
+        const sb2 = byId("fdSounded");
+        const soundedWant = soundedChoicesFor(pickOf(cfg)).map(([v]) => v);
+        if (soundedWant.join() !== [...sb2.options].map((o) => o.value).join() || (!soundedWant.includes(cfg.sounded) && ![...sb2.options].some((o) => o.value === cfg.sounded && o.disabled))) {
+          sb2.textContent = "";
+          for (const [v, l] of soundedChoicesFor(pickOf(cfg))) { const o = d.createElement("option"); o.value = v; o.textContent = l; sb2.appendChild(o); }
+          if (!soundedWant.includes(cfg.sounded) && cfg.sounded) {
+            const o = d.createElement("option"); o.value = cfg.sounded; o.disabled = true;
+            o.textContent = `${cfg.sounded.replace(/^tone:/, "the ") + (cfg.sounded.startsWith("tone:") ? " in the bass" : "")} — not among the chosen tones`;
+            sb2.appendChild(o);
+          }
+        }
+        if (sb2.value !== cfg.sounded) sb2.value = cfg.sounded;
+        byId("fdPad").checked = !!cfg.pad;
         b2.disabled = false;   // 4a: live in scale mode too — the centre works
         b2.title = cfg.object === "scale"
           ? "the reference under the mode — placed against the CENTRE chosen in Harmony"
@@ -1085,6 +1120,24 @@ export const fieldBoard = {
        * choose strings and step the window. In the ordinary case this line is
        * nearly empty, and that is correct — CC-1: it earns its space when
        * something is off, refused or silent. */
+      /* THE SOUNDED BASS AND THE PAD, said (night 57 — rule 10, CC-1: distinguishable on the face). The
+       * sounded bass is a pitch, not a place: its name, and that it has no string. Silent where the
+       * reference is silent (a refused bar has no harmony to be under — Daniel, 260904). */
+      let soundedMsg = "", padMsg = "";
+      if (cfg.sounded && cfg.sounded !== "none" && cfg.object !== "scale") {
+        if (cur.degree < 0) soundedMsg = `Sounded bass silent: it is relative to the chord's degree, and ${cur.symbol}'s root is not in the key. `;
+        else if (fdRefDeg != null) {
+          const sb = soundedBass(cfg.sounded, fdRefDeg, fld, pickOf(cfg));
+          soundedMsg = sb.reason ? `Sounded bass silent: ${sb.reason}. `
+            : sel.length ? `A sounded bass on ${sb.name} — no string, never drawn, under the material on any set. `
+            : `The sounded bass stays silent — nothing sits on top of it. `;
+        }
+      } else if (cfg.sounded && cfg.sounded !== "none" && cfg.object === "scale" && fdRefDeg != null) {
+        const sb = soundedBass(cfg.sounded, fdRefDeg, fld, null);
+        soundedMsg = `A sounded bass on ${sb.name} under the centre — no string, never drawn. `;
+      }
+      if (cfg.pad) padMsg = cfg.object === "scale" ? "The pad has no chord to sound under a scale. "
+        : sel.length ? `The pad sounds ${cur.symbol} above the strings' register. ` : "The pad stays silent — nothing sits on top of it. ";
       byId("fdHint").textContent =
         (selMsg ? `${selMsg}. ` : "") +
         (followMsg && followMsg.sd === cfg.startDeg && followMsg.nf === cfg.nearFret
@@ -1093,6 +1146,7 @@ export const fieldBoard = {
           ? (!isScale && !sel.length ? "The reference is drawn but stays silent — nothing sits on top of it. " : "")
           : refP.offer ? `Reference offered unfretted: ${refP.reason} — drawn below the strings, sounding nothing. `
           : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +
+        soundedMsg + padMsg +
         "Click the numbers to choose strings; ← → step the window.";
       byId("fdLegend").innerHTML = FAM.map((f2) =>
         `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
@@ -1326,6 +1380,10 @@ export const fieldBoard = {
       const b2 = byId("fdBass2");
       b2.addEventListener("change", (e) =>
         announce(d, CONFIG_CHANGED, { bass: e.target.value }));
+      /* night 57: the two new settings announce like every other — the notepad's snapshot reads the
+       * announced state, so what is announced is what is saved, exported and restored */
+      byId("fdSounded").addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { sounded: e.target.value }));
+      byId("fdPad").addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { pad: !!e.target.checked }));
     }
     mountMini(ctx, byId("fdMini"));
     mountReadout(ctx, byId("fdMode"));   // 260920: the shared readout, its own derivation
@@ -1366,7 +1424,7 @@ export const fieldBoard = {
       v.addEventListener("change", (e) => announce(d, MIXER, { voice: e.target.value }));
     }
     for (const [slId, muteId, valId, chan] of
-      [["fdHarmVol", "fdHarmMute", "fdHarmVal", "chord"], ["fdBassVol", "fdBassMute", "fdBassVal", "bass"]]) {
+      [["fdHarmVol", "fdHarmMute", "fdHarmVal", "chord"], ["fdBassVol", "fdBassMute", "fdBassVal", "bass"], ["fdPadVol", "fdPadMute", "fdPadVal", "pad"]]) {   // night 57: the pad's bus
       const sl = byId(slId), mute = byId(muteId), val = byId(valId);
       let last = 100;
       const paint = () => {
@@ -1388,7 +1446,7 @@ export const fieldBoard = {
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "source", "cycle", "form", "custom", "start", "repeat", "centreSrc"])
+      for (const k of ["key", "scale", "ref", "startDeg", "nearFret", "object", "take", "notesPer", "address", "figure", "movement", "bass", "sounded", "pad", "source", "cycle", "form", "custom", "start", "repeat", "centreSrc"])   // night 57: sounded, pad
         if (k in m && m[k] !== cfg[k]) {
           /* a restored v0.1.0 étude says movement "block"/"arpeggio" — the
            * alias map is the one place the old words are known (260913) */

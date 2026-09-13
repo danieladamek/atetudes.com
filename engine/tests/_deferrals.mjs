@@ -48,34 +48,15 @@ const read = (p) => readFileSync(join(ROOT, p), "utf8");
  * SETTLED 261011 (night 46): chromatic-chord-alterations EXPIRED — its `due` fired the moment
  * §2.6's material clause landed (ratified 261010; the words the probe was keyed on), and `built`
  * fired on selection.test's role-A assertion the same pass, per its own `then`; the entry left
- * with the work. The re-keying history stays in git. */
+ * with the work. The re-keying history stays in git.
+ * SETTLED 261012 (night 57): g11-bass-exemption EXPIRED — its `until` said "the offer SOUNDS", and
+ * Daniel's 261006 ruling superseded that premise: the unfretted OFFER stays drawn and silent (night 37,
+ * unchanged) and the stringless pitch is a SECOND control, the SOUNDED BASS (reference.mjs soundedBass,
+ * etude-walk's soundedMidi). Its `then` was done as written — the exemption narrowed to the flag
+ * (`unfretted: true` on the one legitimately stringless event; every other event without a real string
+ * throws by name; pinned in figure.test beside the chord-event assertion) — and the entry left with the
+ * work. The re-keying it would have needed is this note. */
 export const DEFERRALS = [
-  {
-    /* 261001 (night 37, item 2): the unfretted reference is BUILT as a named
-     * offer (reference.mjs `offer`, drawn on the neck in the gutter below
-     * the strings) — and it does not yet SOUND. The stringless bass a
-     * sounding offer would need is exactly G11's exemption in
-     * note-events.mjs ("event carries no real string" is asserted for every
-     * chord event and skipped for the bass). That exemption stays a DEBT:
-     * blanket today, it should narrow to the one legitimate case. */
-    name: "g11-bass-exemption",
-    deferred: "note-events.mjs exempts its bass from the real-string "
-      + "assertion (G11, priced with the release republish): a bass event "
-      + "may carry no string at all, whatever it is. The unfretted "
-      + "reference offer (261001) is the one case that legitimately has "
-      + "no string; the exemption should narrow to it — a bass with no "
-      + "string is the OFFER, asserted, and every other bass is a real "
-      + "fretted note like every chord event",
-    until: "the offer SOUNDS — a caller hands the walk the offer's pitch "
-      + "as the reference (etude-walk reads `offer`), so a stringless bass "
-      + "event exists on purpose. Observable: etude-walk.mjs reads the "
-      + "offer for its refMidi",
-    due: () => /refMidi[^\n]*offer|offer[^\n]*refMidi/.test(read("hub/modules/etude-walk.mjs")),
-    built: () => /unfretted/.test(read("engine/note-events.mjs")),
-    then: "narrow the exemption: a stringless bass event must carry the "
-      + "offer's flag (unfretted: true) or throw naming the missing string; "
-      + "pin it beside the chord-event assertion; then remove this entry",
-  },
   {
     name: "extended-symbol-naming",
     deferred: "read-back naming past the 9th — assembleSuffix's vocabulary "
