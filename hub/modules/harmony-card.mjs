@@ -458,6 +458,15 @@ export const harmonyCard = {
 
     const MINE = ["key", "scale", "object", "ref", "bass", "tones", "centreSrc", "gamut"];   // gamut joined night 48
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    /* A CORRECTION LANDS AFTER THE MESSAGE IT CORRECTS (night 61 — a defect of nights 59 and 60, found on the face):
+     * this card owns the harmony half and, hearing a message, may correct it — the object the tones make, a gamut
+     * dropped under a chord, a default pick. Announced from INSIDE the listener, the correction is dispatched while
+     * the outer message is still being delivered: a listener registered after this card (the readout, order 19)
+     * hears the correction FIRST and the stale outer value LAST, and keeps it — the readout said "this dyad's stack"
+     * over a triad, and "the R of Cmaj7 is outside the gamut" over a gamut the card had dropped, while the card and
+     * the neck said otherwise (§4.4's silent divergence, painted). So a correction is announced in a microtask:
+     * after the outer dispatch has reached everyone, before anything is painted. */
+    const correct = (patch) => d.defaultView.queueMicrotask(() => announce(d, CONFIG_CHANGED, patch));
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
@@ -470,8 +479,8 @@ export const harmonyCard = {
       } else if ("object" in m && !("tones" in m) && !("dyad" in m) && changed) {
         cfg = { ...cfg, tones: defaultPick(cfg.object) }; tonesErr = null;
         /* the owner SAYS the pick it derived — every mirror that heard the
-         * object without one hears the default in the same dispatch */
-        announce(d, CONFIG_CHANGED, { tones: cfg.tones });
+         * object without one hears the default in the same task (night 61: after the message, not inside it) */
+        correct({ tones: cfg.tones });
       }
       /* TONES IS THE TRUTH (night 59): tones that arrive NAME the object. A pre-cut entry (payload v1) also
        * carries the object it was saved under; where that word is not what the tones make, the tones win
@@ -487,7 +496,7 @@ export const harmonyCard = {
         if (derived !== cfg.object) {
           if ("object" in m && m.object !== derived && m.object !== "scale") migrated = { saved: m.object, derived };
           cfg = { ...cfg, object: derived }; changed = true;
-          announce(d, CONFIG_CHANGED, { object: derived });
+          correct({ object: derived });
         }
       }
       /* THE MIGRATION (night 60, ruled 261013b): a saved gamut with a chord object — a combination the one-state
@@ -496,7 +505,7 @@ export const harmonyCard = {
       if ("gamut" in m && cfg.gamut && cfg.object !== "scale") {
         dropped = { letters: letterOfGamut(cfg.gamut), saved: true };
         cfg = { ...cfg, gamut: null }; changed = true;
-        announce(d, CONFIG_CHANGED, { gamut: null });
+        correct({ gamut: null });
       }
       if (changed) render();
     });

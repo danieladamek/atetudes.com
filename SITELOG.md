@@ -1,3 +1,38 @@
+## 2026-09-14 — Night 61: the census answered, the Key already weighted, and two sentences that turned out reachable — a Centricity-card correction lands after the message it corrects; Multetudes v0.6.13
+
+- **The dispatch (261014) asked for three things; said plainly, what shipped:** the night-56 census errand answered
+  from the logs (read-only); the Key-field item measured and found already shipped by night 28 (nothing built; the
+  backlog item to review); and the two neck gamut sentences night 60 had called unreachable ENUMERATED AND MEASURED
+  before any deletion — **neither is dead, nothing was retired**, and the measurement found a painted defect that
+  this night fixes.
+- **Item 0 — the census:** the two slow targeted runs of night 56 (`doors-n56-multetudes-0912-{0942,1004}.log`) had
+  the SAME census as the fast one (`--doors multetudes`) and were NOT the same work — each died on one 30-second
+  Playwright timeout having done less of the door (1,890 / 2,286 assertions) than the run that finished (2,299,
+  `4:57.90 total`, `…-1035.log`); the slow logs carry no stamp of any kind. The seven-door budget stands.
+  Recommendation, not a ruling: count only completed, stamped runs; close the item.
+- **Item 1 — the Key field:** measured on the served build at both widths: 59 × 52.2 px, 18 px bold, the palette's
+  R; Scale and Object 30 px; ratio 1.74; a shared bottom edge; the grid `minmax(0,1fr)` × 3. Shipped 260922 (night
+  28) and pinned relatively since (`door_locks.py`, band 1.6–1.9 — the pin the dispatch names, already reversed).
+- **Item 2 — two sentences:** `field-board.mjs:637` (*the gamut leaves nothing in this window*) is REACHABLE at a
+  string's end, where the octave extension stops at fret 15 — night 60's report corrected; pinned there, armed as
+  m101. `field-board.mjs:608` and its readout mirror `neck-readout.mjs:122` (*the R of Cmaj7 is outside the gamut…*)
+  are reachable through a restore of a chord étude carrying a gamut — the neck builds once with both, unpainted; and
+  **the READOUT was painting it**, with the dropped gamut, and (night 59's shape) *this dyad's stack* over a triad:
+  the Centricity card announced its corrections from inside its own CONFIG listener, so a listener registered after
+  it (the readout) heard the correction first and the stale value last. §4.4's silent divergence, on the face.
+- **The fix, one site:** `correct()` in `harmony-card.mjs` announces a correction in a microtask — after the outer
+  message has reached everyone, before anything is painted. Pinned on the face for both restores (the neck draws
+  the chord whole and neither the hint nor the readout names a gamut; the readout names the triad, never the saved
+  word); armed as m102 and m103. `field-board.mjs` and `neck-readout.mjs` untouched — the centre's four read sites
+  untouched; the chord-branch prose left in place per the dispatch's own rule (reachable → say so and leave it), its
+  retirement Daniel's once the restore routes the harmony keys through their owner.
+- **Gates:** engine 704/704 · hub 12/12 · red first `hub/tests/out/doors-n61-red-0914-0712.log` (1 by name) · the
+  block's own pin finding the readout defect `doors-n61-multetudes-0914-0720.log` (2,435/1) · door 2,437/0
+  (`…-0725.log`) · door gate **21,743/0** (`doors-0914-0734.log`) · singles m101, m102, m103 bite
+  (`bite-n61-singles-0914.log`) · chain **104/104**, suite green (`bite-0914-0759.log`, 07:59–15:20) · hugo 0 ·
+  check_site clean · renders 1280/390, zero console errors.
+- Report: `notes/working/Multetudes build run 261014 — night 61, the census answered, the Key already weighted, and two sentences that turned out reachable.md`.
+
 ## 2026-09-14 — DEPLOYED: night 60 live — the Gamut becomes a dropdown and the chips become a readout; Multetudes v0.6.12; written from the run
 
 - record: run 34828354908 · success · commit 3ebc4ba · fetched 2026-09-14T09:40Z · 6/6 studies byte-identical · digest 1c500091e577

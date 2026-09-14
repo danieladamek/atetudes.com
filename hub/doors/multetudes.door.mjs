@@ -211,7 +211,10 @@ export default {
      * seven key-degree chips below it in the palette, lit by opacity — a picker under a scale, a readout of the
      * notes passing under a chord — with two standing marks (against the key; following / held); a saved gamut
      * under a chord object is dropped and said (ruled 261013b). */
-    blurb: "one tool that holds many études · v0.6.12",
+    /* v0.6.13 (261014, night 61): a correction the Centricity card makes while hearing a message (the object the
+     * tones make, a gamut dropped under a chord) is announced after that message has reached everyone — the
+     * readout had kept the stale object and the dropped gamut, painted, while the card and the neck said otherwise. */
+    blurb: "one tool that holds many études · v0.6.13",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

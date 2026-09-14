@@ -2199,6 +2199,57 @@ def m100_the_derivation_skips_a_null_pick():
         p.write_text(original)
 
 
+def m101_the_emptied_window_goes_unsaid():
+    # night 61: the gamut's REACHABLE absence — a window the gamut empties at a string's end — stops being said; the
+    # neck draws nothing and says nothing. The night-61 pin at the string's end must bite.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '        if (!pool.length) gm.push("the gamut leaves nothing in this window");',
+        "        // (the emptied window not said)")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "EMPTIES it, and the neck says so" in g.stdout
+        record("the emptied window goes unsaid — the neck draws nothing at the string's end and says nothing",
+               g.returncode != 0 and hit, "suite exit %d; the end-window pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m102_the_dropped_gamut_never_reaches_the_neck():
+    # night 61: the card drops a restored gamut under a chord but no longer ANNOUNCES the drop — the neck keeps the gamut
+    # the card let go (§4.4's silent divergence: the chord partial, "outside the gamut" painted). The face pin must bite.
+    p, original, mutated = patch("hub/modules/harmony-card.mjs",
+        "        correct({ gamut: null });",
+        "        // (the drop kept to the card)")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "say nothing of a gamut" in g.stdout or "draws Cmaj7 WHOLE" in g.stdout
+        record("the dropped gamut never reaches the neck — the card lets it go and the neck keeps narrowing by it",
+               g.returncode != 0 and hit, "suite exit %d; the face pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m103_a_correction_lands_inside_the_dispatch_again():
+    # night 61: the card's corrections go back to being announced from INSIDE its listener — the readout hears them
+    # before the message they correct and keeps the stale value (the dyad over a triad; the dropped gamut). Both face pins must bite.
+    p, original, mutated = patch("hub/modules/harmony-card.mjs",
+        "    const correct = (patch) => d.defaultView.queueMicrotask(() => announce(d, CONFIG_CHANGED, patch));",
+        "    const correct = (patch) => announce(d, CONFIG_CHANGED, patch);   // (inside the dispatch again)")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "never the stale saved word" in g.stdout or "say nothing of a gamut" in g.stdout
+        record("a correction lands inside the dispatch again — the readout keeps the stale object and the dropped gamut",
+               g.returncode != 0 and hit, "suite exit %d; the face pins bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/modules/notepad-card.mjs",
@@ -2350,7 +2401,9 @@ def main():
                m93_the_snapshot_allowlist_forgets_the_new_settings, m94_the_sounded_bass_needs_a_string_again,
                m95_a_mixer_row_returns_to_the_transport_card,
                m96_the_derivation_forgets_the_presets, m97_the_snapshot_stores_the_object_again,
-               m98_a_chip_hue_follows_lit_ness, m99_the_dropped_gamut_goes_unsaid, m100_the_derivation_skips_a_null_pick)
+               m98_a_chip_hue_follows_lit_ness, m99_the_dropped_gamut_goes_unsaid, m100_the_derivation_skips_a_null_pick,
+               m101_the_emptied_window_goes_unsaid, m102_the_dropped_gamut_never_reaches_the_neck,
+               m103_a_correction_lands_inside_the_dispatch_again)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

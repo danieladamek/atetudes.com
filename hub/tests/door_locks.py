@@ -6616,6 +6616,80 @@ console.log(JSON.stringify(out));
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
         page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
 
+    # ---------------- TWO SENTENCES THE APP CAN NO LONGER MEAN? (night 61, 261014) — a finding, not a retirement ----------
+    # Night 60's one-state rule (the Gamut lives only at Object = scale) was said to leave the CHORD-BRANCH gamut prose
+    # unreachable in two places — the neck's "the R of Cmaj7 is outside the gamut — a tetrad cannot be filled from it"
+    # (field-board.mjs) and the readout's mirror of it (neck-readout.mjs). Measured before deleting (rule 4), it is NOT
+    # dead: on a restore of a chord étude carrying a gamut the neck hears the restore's message before the card's
+    # {gamut:null} correction lands and BUILDS ONCE with both — the sentence is composed (a setter hook on the hint
+    # caught it) and reset inside the same task, never painted (a MutationObserver saw one record). A path the app can
+    # still execute is left in place (the dispatch's own rule: reachable → say so and leave it); what is pinned is the
+    # FACE: after such a restore the neck draws the chord whole, and neither the hint nor the readout carries the
+    # sentence — the one-state rule's effect where it is. The emptied-window sentence is NOT dead either — night 60's
+    # report was wrong about it: at a string's END the octave extension stops at fret 15 and the window cannot hold
+    # every degree, so one string, the window stepped to its last stop, a gamut of the degree it lacks EMPTIES it and
+    # the neck and the readout both say so. Pinned as the reachable case it is.
+    if door_id == "multetudes":
+        built = html_path.read_text()
+        check("the gamut leaves nothing in this window" in built and "is not semitone-free" in built and "is outside the gamut" in built,
+              f"{tag} the gamut's sentences stand in the artifact — none retired tonight (the chord-branch one is composed unpainted on a restore; see the block's note)")
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        n61_file = export_newest(page)
+        check('"gamut":null' in n61_file and '"tones":[1,3,5,7]' in n61_file, f"{tag} the export under a chord (the fixture's base)")
+        n61_mixed = n61_file.replace('"gamut":null', '"gamut":[2,3,5,6,7]').replace('"id":"', '"id":"n61mixed-', 1)
+        ctx7 = pw.new_context(viewport={"width": 1280, "height": 900}); page7 = ctx7.new_page(); errs7 = []; page7.on("pageerror", lambda e: errs7.append(str(e)))
+        page7.goto(html_path.as_uri()); page7.wait_for_selector("#cards", state="attached"); page7.wait_for_timeout(200)
+        import_text(page7, n61_mixed, "night61-mixed.atchart.md")
+        page7.click('#histList .hist [data-cap="apply"]'); page7.wait_for_timeout(500)
+        face = page7.evaluate("() => ({ hint: document.getElementById('fdHint').textContent, ro: document.getElementById('roLine').textContent, sel: [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi % 12).sort((a, b) => a - b), gamut: document.getElementById('hcGamut').dataset.gamut, obj: document.getElementById('hcObj').value })")
+        check(face["obj"] == "tetrad" and face["gamut"] == "" and "outside the gamut" not in face["hint"] and "outside the gamut" not in face["ro"] and "gamut" not in face["ro"],
+              f"{tag} after restoring a chord étude that carried a gamut, the neck and the readout say nothing of a gamut — the card's drop reached them: {face}")
+        check(sorted(set(face["sel"])) == [0, 4, 7, 11], f"{tag} …and the neck draws Cmaj7 WHOLE — the dropped gamut narrows nothing: {face['sel']}")
+        check(not errs7, f"{tag} the cold page raised errors: {errs7[:2]}")
+        ctx7.close()
+        # THE SAME DEFECT, night 59's shape: a v1 étude (object dyad, tones R,5) — the card re-derives a triad and says so;
+        # the READOUT had kept "this dyad's stack" (the stale outer value landing after the correction). Pinned on the face.
+        n61_v1 = n61_file.replace('"v":2', '"v":1').replace('"tones":[1,3,5,7]', '"object":"dyad","tones":[1,5]').replace('"id":"', '"id":"n61v1-', 1)
+        ctx8 = pw.new_context(viewport={"width": 1280, "height": 900}); page8 = ctx8.new_page(); errs8 = []; page8.on("pageerror", lambda e: errs8.append(str(e)))
+        page8.goto(html_path.as_uri()); page8.wait_for_selector("#cards", state="attached"); page8.wait_for_timeout(200)
+        import_text(page8, n61_v1, "night61-v1.atchart.md")
+        page8.click('#histList .hist [data-cap="apply"]'); page8.wait_for_timeout(500)
+        face8 = page8.evaluate("() => ({ card: document.getElementById('hcObj').value, ro: document.getElementById('roLine').textContent, hint: document.getElementById('fdHint').textContent })")
+        check(face8["card"] == "triad" and "dyad" not in face8["ro"] and "triad" in face8["ro"] and "dyad" not in face8["hint"],
+              f"{tag} after a v1 restore the readout names the object the card derived — never the stale saved word: {face8}")
+        check(not errs8, f"{tag} the cold page raised errors: {errs8[:2]}")
+        ctx8.close()
+        fdsel61 = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi).sort((a, b) => a - b)")
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+        for s_ in (4, 3, 2):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true":
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(150)
+        page.click("#fieldSvg"); page.wait_for_timeout(100)
+        # step the window to the string's last stop — the box stays put at the end (engine/position.mjs step)
+        last = None
+        for _ in range(40):
+            page.keyboard.press("ArrowRight"); page.wait_for_timeout(60)
+            now = fdsel61()
+            if now == last: break
+            last = now
+        check(last is not None and len(last) < 7, f"{tag} at the string's end the window holds fewer than the seven degrees: {last}")
+        c_major = [0, 2, 4, 5, 7, 9, 11]
+        held = {c_major.index(m % 12) + 1 for m in last if m % 12 in c_major}
+        lacking = [dg for dg in (1, 2, 3, 4, 5, 6, 7) if dg not in held]
+        check(len(lacking) >= 1, f"{tag} …and lacks at least one degree: held {sorted(held)}")
+        page.select_option("#hcGamut", str(lacking[0])); page.wait_for_timeout(250)
+        hint61 = page.inner_text("#fdHint"); ro61 = page.inner_text("#roLine")
+        check(fdsel61() == [] and "the gamut leaves nothing in this window" in hint61, f"{tag} a gamut of the degree the end-window lacks EMPTIES it, and the neck says so: {fdsel61()} {hint61!r}")
+        check("the gamut leaves nothing in this window" in ro61, f"{tag} …and the readout says the same (rule 10): {ro61[:200]!r}")
+        page.select_option("#hcGamut", "1,2,3,4,5,6,7"); page.wait_for_timeout(150)
+        for _ in range(40):
+            page.keyboard.press("ArrowLeft"); page.wait_for_timeout(40)
+        for s_ in (4, 3, 2):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true":
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(150)
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.
