@@ -171,6 +171,33 @@ export const pickOf = (cfg) => {
   try { objectOffsets(cfg.object, pk); return pk; }
   catch { return defaultPick(cfg.object); }
 };
+/** TONES IS THE TRUTH; OBJECT IS THE NAME THE TONES MAKE (night 59, 261012 — Daniel's Centricity
+ * re-cut, first half). Until tonight the object was chosen and the tones were a filter on it ("pick
+ * from R, 3, 5, 7"); now the tones are the stored material and the object is DERIVED from them — an
+ * input too (choosing one populates the tones, defaultPick), but never the stored truth.
+ *
+ * THE DERIVATION, and the tie it names (rule 11 — proposed, shipped, Daniel's to reverse):
+ *   null                  → "scale" (the scale path; its material is the gamut)
+ *   exactly a preset's own default — the guide tones [3,7] → "dyad"; R + the guide tones [1,3,7] → "shell"
+ *   anything else         → the SMALLEST stack (STACK_DEPTH) whose degrees hold every tone: triad up to
+ *                           the 5th, tetrad up to the 7th, ninth, eleventh, thirteenth.
+ * So R,5 names a TRIAD narrowed to two, not a dyad — a dyad IS the guide tones, by its own default —
+ * and R,3,7 is a shell, not a tetrad narrowed to three. Behaviour is identical either way (the pick is
+ * the same and objectOffsets accepts it); only the LABEL is decided, and it is decided here, once,
+ * not left for a menu to break arbitrarily. Every object's default pick names it back. */
+export function objectOf(tones) {
+  if (tones == null) return "scale";
+  if (!Array.isArray(tones) || !tones.length) throw new Error("objectOf: a chord object needs at least one tone");
+  const sorted = [...tones].map(Number).sort((a, b) => a - b);
+  if (new Set(sorted).size !== sorted.length) throw new Error(`objectOf: tones must be distinct, not ${renderPick(tones)}`);
+  const all = objectDegrees("thirteenth");
+  for (const d of sorted) if (!all.includes(d)) throw new Error(`objectOf: ${d} is not a chord degree — the roles are ${all.map(roleWord).join(", ")}`);
+  const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  for (const preset of ["dyad", "shell"]) if (same(sorted, [...defaultPick(preset)].sort((a, b) => a - b))) return preset;
+  const top = sorted[sorted.length - 1];
+  for (const [name, depth] of Object.entries(STACK_DEPTH)) if (top <= 2 * depth - 1) return name;
+  throw new Error(`objectOf: no stack holds ${renderPick(tones)}`);
+}
 /** degrees → the figure notation the face shows ("R,3,7") and back */
 export const renderPick = (pick) => (pick || []).map(roleWord).join(",");
 export const degreeOfTone = (t) => (t === "R" ? 1 : Number(t));

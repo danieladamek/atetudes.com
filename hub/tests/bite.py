@@ -1087,12 +1087,14 @@ def m38_a_tone_the_object_cannot_hold_slips_through():
         "    if (!objectDegrees(\"thirteenth\").includes(d))\n      throw new Error(`objectOffsets: ${roleWord(d)} is not a tone of a ${object}")
     try:
         p.write_text(mutated)
-        build()
-        r = suite()
-        hit = "a tone the object cannot hold refuses by name" in r.stdout
+        # RE-TARGETED 261013 (night 59): the FACE no longer reaches this refusal — the object is derived from the
+        # tones, so the pair a board hands objectOffsets is consistent by construction — but the engine still
+        # refuses a mismatched pair by name, and the 260917 engine pins say so. The mutation bites THERE now.
+        r = sh("node", "--test", "engine/tests/selection.test.mjs")
+        hit = "is not a tone of a" in (r.stdout + r.stderr) or "refuses" in (r.stdout + r.stderr)
         record("a tone the object cannot hold slips through unrefused",
                r.returncode != 0 and hit,
-               "suite exit %d; the item-1 refusal pin bit: %s" % (r.returncode, hit))
+               "engine exit %d; the 260917 refusal pin bit: %s" % (r.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -1844,8 +1846,8 @@ def m78_a_second_spelling_override_creeps_in():
 def m79_the_snapshot_strips_the_tuning_again():
     # the field report's exact line: the export describes the étude AS IF IN STANDARD
     p, original, mutated = patch("hub/modules/notepad-card.mjs",
-        "        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),",
-        "        snapshot: () => { const { tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },")
+        "        snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },",   # re-anchored 261013 (night 59): the line strips the derived label now
+        "        snapshot: () => { const { object: _object, dyad: _dyad, tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },")
     try:
         p.write_text(mutated)
         build()
@@ -2118,6 +2120,41 @@ def m95_a_mixer_row_returns_to_the_transport_card():
         build()
         shutil.copyfile(str(REPO / "hub/build/tetradetudes.html"), str(REPO / "static/studies/tetradetudes/study.html"))
 
+def m96_the_derivation_forgets_the_presets():
+    # night 59: objectOf forgets that a preset's own default names it — R,3,7 comes back as a tetrad narrowed to three,
+    # 3,7 as a tetrad narrowed to two. The engine test AND the gate's derivation cases must bite.
+    p, original, mutated = patch("engine/selection.mjs",
+        '  for (const preset of ["dyad", "shell"]) if (same(sorted, [...defaultPick(preset)].sort((a, b) => a - b))) return preset;',
+        '  // (the presets forgotten)')
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/selection.test.mjs")
+        eng = r.returncode != 0 and "NIGHT 59" in (r.stdout + r.stderr)
+        build()
+        g = suite()
+        hit = "names a shell" in g.stdout or "names a dyad" in g.stdout
+        record("the derivation forgets the presets — R,3,7 is no longer a shell, 3,7 no longer a dyad",
+               eng and g.returncode != 0 and hit, "engine bit: %s; suite exit %d; the derivation pin bit: %s" % (eng, g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m97_the_snapshot_stores_the_object_again():
+    # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
+    p, original, mutated = patch("hub/modules/notepad-card.mjs",
+        "        snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },",
+        "        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),   // (the object stored again)")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "stores the tones and no object" in g.stdout
+        record("the snapshot stores the derived object again — only tones is stored, or it is not",
+               g.returncode != 0 and hit, "suite exit %d; the export pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 
 
 
@@ -2251,7 +2288,8 @@ def main():
                m88_a_member_reaches_the_neck_without_its_role, m89_the_supply_reads_standard_tuning, m90_the_field_cannot_carry_it_returns,
                m91_an_overlay_returns_to_the_chart_line, m92_the_cap_returns_under_line,
                m93_the_snapshot_allowlist_forgets_the_new_settings, m94_the_sounded_bass_needs_a_string_again,
-               m95_a_mixer_row_returns_to_the_transport_card)
+               m95_a_mixer_row_returns_to_the_transport_card,
+               m96_the_derivation_forgets_the_presets, m97_the_snapshot_stores_the_object_again)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

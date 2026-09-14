@@ -9298,7 +9298,7 @@ const notepadCard = {
     let surface = null;
     surface = createNotepadSurface({
       adapter: {
-        app: doorId, version: 1,
+        app: doorId, version: 2,   // v2 (night 59): the payload carries no `object`; v1 payloads are read, their object a label
         /* v0.9's wording, adopted 260911 (item 1 / D12): "Save note", not
          * "Save entry" — the label derives from this noun, never hand-set */
         nouns: { item: "note", apply: "Restore étude" },
@@ -9310,7 +9310,11 @@ const notepadCard = {
          * in standard carries `tuning: null` EXPLICITLY (a restore returns the neck to standard),
          * while an entry from before this night carries no key at all and is tuning-blind: its
          * restore leaves the live tuning where it is — nothing retro-interprets it. */
-        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),
+        /* ONLY TONES IS STORED (night 59 — the Centricity re-cut): the object is the name the tones make
+         * (selection.mjs objectOf), derived at the harmony card, so the snapshot drops it — and the legacy
+         * `dyad` alias with it. A payload from before tonight (v1) still carries an `object`; the card reads
+         * it as a label to compare, never as the truth, and says so once when they disagree. */
+        snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {

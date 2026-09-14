@@ -201,7 +201,11 @@ export default {
     /* v0.6.10 (261012, night 58 — the mixer strip): the voice and the harmony level, the reference tone, the
      * sounded bass and the bass level, the pad and its level leave the neck for a board of their own below it
      * (mixer-strip.mjs); the neck keeps its clock row and its tuning rows. Daniel's 261009 mockup, finished. */
-    blurb: "one tool that holds many études · v0.6.10",
+    /* v0.6.11 (261013, night 59 — the Centricity re-cut, first half): Tones is the stored truth and Object the
+     * name the tones make (a preset's own default wins exactly, else the smallest stack that holds them); under
+     * a scale Tones speaks the key's note names and fills from the gamut; only tones is stored (payload v2, a v1
+     * étude's object read as a label and the tones said to win, once); the 390 grid no longer clips its selects. */
+    blurb: "one tool that holds many études · v0.6.11",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

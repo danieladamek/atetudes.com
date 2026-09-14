@@ -21,7 +21,7 @@
 import { field } from "../../engine/field.mjs";
 import { CENTRE_SOURCES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
-import { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, objectOffsets, pickOf } from "../../engine/selection.mjs";
+import { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, objectOffsets, pickOf, tonePick, objectOf } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
 import { triads, tetrads, triadPairs, pentatonics, pentatonicRefusal, normalizeGamut, describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
 import { LEXICON } from "../lexicon.mjs";
@@ -40,6 +40,22 @@ const OBJECTS = [
   ["thirteenth", "13th chord", true], // mod7; Grip drops by a NAMED rule
   ["shell", "Shell", true],         // child 4: R + the guide tones
 ];
+
+/** note names → key degrees (night 59): the tokens are matched against the FIELD's own spelled names
+ * (case-insensitive, ♭/♯ or b/#), so the letters the face shows are the letters it accepts; a token
+ * that is not a note of this key refuses by name. Order is not identity; duplicates are one degree. */
+function parseNoteNames(text, fld) {
+  const norm = (x) => String(x).replace(/♭/g, "b").replace(/♯/g, "#").toLowerCase();
+  const names = fld.notes.map((n) => norm(n.name));
+  const toks = String(text || "").split(/[\s,·\-]+/).filter(Boolean);
+  const degrees = [];
+  for (const t of toks) {
+    const i = names.indexOf(norm(t));
+    if (i < 0) return { degrees: null, err: `"${t}" is not a note of this key — the notes are ${fld.notes.map((n) => n.name).join(" ")}` };
+    if (!degrees.includes(i + 1)) degrees.push(i + 1);
+  }
+  return { degrees: degrees.sort((a, b) => a - b), err: null };
+}
 
 export const harmonyCard = {
   id: "harmony-card",
@@ -113,7 +129,13 @@ export const harmonyCard = {
   <div class="hint" id="hcNote"></div>`,
 
   styles: `
-.hc-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:4px;align-items:end}
+/* THE 390 GRID (night 59 — the precondition, raised 260922): a 1fr track carries min-width:auto and cannot
+ * shrink below its select's longest option, so at 390 the Object select ran 100 px past the card's edge
+ * (measured 261013: its right at 366 against the card's 266). minmax(0,1fr) lets the tracks share the
+ * card; the two neighbours become 67 px each at 390 and the Key stays exactly as ruled (59 × 52, ratio
+ * 1.74, a shared bottom edge); a narrowed select shows the head of its value inside the control, which
+ * is better than a control cut off by the card. At 1280 nothing changes (133 / 123, as before). */
+.hc-grid3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:0 10px;margin-top:4px;align-items:end}
 .hc-srcseg{display:flex;gap:6px;margin-top:6px}
 .hc-srcseg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
   border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
@@ -151,6 +173,7 @@ export const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
+    let migrated = null;   // night 59: { saved, derived } when a restored entry's stored object is not what its tones make
     let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "root", tones: [1, 3, 5, 7],
       centreSrc: "fixed",     // the source, not a resolved value (260914)
       gamut: null };          // the stored key: degrees 1..7 sorted, or null = the whole field (night 48)
@@ -225,16 +248,31 @@ export const harmonyCard = {
        * text on the face with the refusal beside it \u2014 the figure field's
        * own manners (register 21). The label names the degrees this
        * object can hold, derived from its depth. */
+      /* TONES IS THE TRUTH (night 59 — Daniel's Centricity re-cut, first half): the field is visible in
+       * both modes and its VOCABULARY FOLLOWS THE OBJECT. Under a chord object it speaks ROLES against
+       * the chord root — R 3 5 7 9 11 13, any of them; the object is the name the tones make (objectOf)
+       * and re-names itself as they are edited. Under a scale it speaks NOTE NAMES, absolute in the key —
+       * the gamut's own letters (the whole field when none is set): a note name is the same note whatever
+       * chord is sounding, so nothing re-labels as the chart moves. Letters are a RENDERING; the stored
+       * value stays degrees (the gamut, 1..7 sorted, null = the whole field). */
       {
         const f = byId("hcTones"), lab = byId("hcTonesLab");
-        f.hidden = isScale; lab.hidden = isScale;
+        f.hidden = false; lab.hidden = false;
         if (!isScale) {
           const pick = pickOf(cfg);
           const says = parseTones(f.value);
           const saysPick = says.tones ? renderPick(says.tones.map(degreeOfTone)) : null;
           if (!tonesErr && saysPick !== renderPick(pick)) f.value = renderPick(pick);
-          lab.textContent = `Tones \u2014 pick from ${renderPick(objectDegrees(cfg.object)).split(",").join(", ")}`;
+          lab.textContent = "Tones \u2014 the material, by role against the chord root: R, 3, 5, 7, 9, 11, 13";
           f.placeholder = renderPick(defaultPick(cfg.object));
+        } else {
+          const fld = field({ key: cfg.key, scale: cfg.scale });
+          const degs = cfg.gamut || [1, 2, 3, 4, 5, 6, 7];
+          const letters = degs.map((dg) => fld.notes[dg - 1].name).join(" ");
+          const saysDegs = parseNoteNames(f.value, fld);
+          if (!tonesErr && !(saysDegs.degrees && saysDegs.degrees.join(",") === degs.join(","))) f.value = letters;
+          lab.textContent = `Tones \u2014 the material, by note in ${cfg.key} ${SHARED.scale.values[cfg.scale] || cfg.scale}`;
+          f.placeholder = [1, 2, 3, 4, 5, 6, 7].map((dg) => fld.notes[dg - 1].name).join(" ");
         }
       }
       /* THE REFERENCE. Under a scale it is the CENTRE — pick any note of the
@@ -287,11 +325,14 @@ export const harmonyCard = {
         byId("hcRefLab").textContent = follows
           ? "Centre — following the changes, each bar re-centres on its own chord"
           : "Centre — the note the field is read against";   // the ruled word (260914)
-        byId("hcNote").textContent = follows
+        /* a refused Tones edit under a scale (a letter that is not a note of the key) is said here, red, first —
+         * the face speaks for the field in both modes (night 59) */
+        byId("hcNote").style.color = tonesErr ? "#B82929" : "";
+        byId("hcNote").textContent = (tonesErr ? "tones: " + tonesErr + " " : "") + (follows
           ? "Each bar is read against its own chord's root — the colours and the bass move with the changes."
           : (cfg.ref
             ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the centre, not the key.`
-            : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is.")
+            : "The same seven notes; choose any of them as the centre and the field is re-read against it — which is what a mode is."))
           + gamutNote();
       } else {
         /* chord mode: the face speaks for the TONES — a refusal, by name and
@@ -309,9 +350,11 @@ export const harmonyCard = {
           const pick = pickOf(cfg);
           const whole = renderPick(pick) === renderPick(objectDegrees(cfg.object));
           note.textContent = (cfg.object === "shell"
-            ? "A shell is the root under the guide tones — R,3,7, the tones above; edit them and it is a pick like any other. "
-            : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point; a tone this object cannot hold is refused by name. `
+            ? "A shell is the root under the guide tones — R,3,7, the tones above; edit them and the object is re-named to what the tones make. "
+            : cfg.object === "dyad" ? "A dyad is the guide tones — 3,7; edit them and the object is re-named to what the tones make. "
+            : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point — or add a tone and the object is re-named to what the tones make. `
             : `The ${cfg.object} narrowed to ${renderPick(pick).split(",").join(" ")}. `)
+            + (migrated ? `This étude was saved as a ${migrated.saved}; its tones make a ${migrated.derived} — the tones are the truth. ` : "")
             + "The bass tone lives under the neck, beside the mixer that drives it." + gamutNote();
         }
       }
@@ -336,6 +379,19 @@ export const harmonyCard = {
          * object without one hears the default in the same dispatch */
         announce(d, CONFIG_CHANGED, { tones: cfg.tones });
       }
+      /* TONES IS THE TRUTH (night 59): tones that arrive NAME the object. A pre-cut entry (payload v1) also
+       * carries the object it was saved under; where that word is not what the tones make, the tones win
+       * and the face says so once — never a silent relabel (§4.4), never the stored word over the material.
+       * A payload without `object` (v2) derives silently, as it should. `object: "scale"` with no tones is
+       * the scale itself. */
+      if (("tones" in m || "dyad" in m) && Array.isArray(tonePick(cfg))) {
+        const derived = objectOf(tonePick(cfg));
+        if (derived !== cfg.object) {
+          if ("object" in m && m.object !== derived && m.object !== "scale") migrated = { saved: m.object, derived };
+          cfg = { ...cfg, object: derived }; changed = true;
+          announce(d, CONFIG_CHANGED, { object: derived });
+        }
+      }
       if (changed) render();
     });
 
@@ -350,20 +406,31 @@ export const harmonyCard = {
     /* choosing an object FILLS its tones (item 2's whole point for Shell:
      * R,3,7 appears, visibly) — a refused edit is forgotten with the object */
     byId("hcObj").addEventListener("change", (e) => {
-      tonesErr = null;
-      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value) }; push();
+      tonesErr = null; migrated = null;
+      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value) }; push();   // an object POPULATES the tones (night 59: a shortcut, not a cage)
     });
     /* THE TONES FIELD: parsed by the figure's parser, checked by the one
      * derivation (objectOffsets) — a refusal is a value on the face and the
      * last lawful pick stands; validation is live, as the figure's is */
     byId("hcTones").addEventListener("input", (e) => {
+      migrated = null;
+      if (cfg.object === "scale") {
+        /* under a scale the field speaks NOTE NAMES of the key; the stored value is the gamut's degrees */
+        const fld = field({ key: cfg.key, scale: cfg.scale });
+        const r = parseNoteNames(e.target.value, fld);
+        if (r.err) { tonesErr = r.err; render(); return; }
+        tonesErr = null;
+        cfg = { ...cfg, gamut: normalizeGamut(r.degrees) }; push();
+        return;
+      }
       const r = parseTones(e.target.value);
       if (r.err) { tonesErr = r.err; render(); return; }
       const pick = r.tones.map(degreeOfTone);
-      try { objectOffsets(cfg.object, pick); }
-      catch (err) { tonesErr = String(err.message || err).replace(/^objectOffsets: /, ""); render(); return; }
+      let derived;
+      try { derived = objectOf(pick); }
+      catch (err) { tonesErr = String(err.message || err).replace(/^objectOf: /, ""); render(); return; }
       tonesErr = null;
-      cfg = { ...cfg, tones: pick }; push();
+      cfg = { ...cfg, tones: pick, object: derived }; push();   // the object is the name the tones make
     });
     byId("hcRef").addEventListener("change", (e) => {
       const v = e.target.value;

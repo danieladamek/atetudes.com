@@ -552,6 +552,25 @@ test("THE FIGURE NAMES THE CAUSE AND THE WAY THROUGH when a role the placement D
   assert.match(nine.err, /9th/);
 });
 
+/* ---------------- night 59: Tones is the truth, Object is a derived label (Daniel, 261012; dispatch 261012e) ---------------- */
+test("NIGHT 59 — objectOf(tones): the name the tones make — a named preset when the tones are exactly its default, else the smallest stack that holds them; null is the scale; every currently reachable object round-trips", () => {
+  const { objectOf, defaultPick } = SEL;
+  assert.equal(objectOf(null), "scale", "no tones — the scale path");
+  assert.equal(objectOf([1, 3, 5]), "triad"); assert.equal(objectOf([1, 3, 5, 7]), "tetrad");
+  assert.equal(objectOf([1, 3, 5, 7, 9]), "ninth"); assert.equal(objectOf([1, 3, 5, 7, 9, 11]), "eleventh"); assert.equal(objectOf([1, 3, 5, 7, 9, 11, 13]), "thirteenth");
+  // the named presets win EXACTLY: the guide tones are a dyad, R + the guide tones a shell
+  assert.equal(objectOf([3, 7]), "dyad"); assert.equal(objectOf([7, 3]), "dyad", "order is not identity");
+  assert.equal(objectOf([1, 3, 7]), "shell");
+  // the tie, named: any other set is the SMALLEST stack that holds it, narrowed — never a dyad, never a shell
+  assert.equal(objectOf([1, 5]), "triad", "R and 5 is a triad narrowed to two, not a dyad (a dyad is the guide tones)");
+  assert.equal(objectOf([1, 3]), "triad"); assert.equal(objectOf([3, 5, 7]), "tetrad"); assert.equal(objectOf([1, 9]), "ninth"); assert.equal(objectOf([13]), "thirteenth");
+  // every object's own default pick names it back — the round trip the migration leans on
+  for (const o of ["dyad", "triad", "tetrad", "ninth", "eleventh", "thirteenth", "shell"]) assert.equal(objectOf(defaultPick(o)), o, o);
+  // and the derived object always HOLDS the tones: objectOffsets never refuses what objectOf named
+  for (const t of [[1, 5], [3, 7], [1, 3, 7], [1, 3, 5, 7, 9], [5, 11], [13]]) assert.doesNotThrow(() => objectOffsets(objectOf(t), t));
+  assert.throws(() => objectOf([]), /at least one tone/); assert.throws(() => objectOf([2]), /not a chord degree/); assert.throws(() => objectOf([1, 1]), /distinct/);
+});
+
 /* ---------------- night 56: the cap is a VOICING's rule — a line is uncapped (Daniel, 261012, on injection 261011c item 2) ---------------- */
 test("NIGHT 56 (ruled 261012): the per-string cap belongs to the placements that produce a VOICING — Grip keeps one per string; a LINE is uncapped, and Daniel's own case places all four tones on one string, in sequence", () => {
   const { capOf, UNCAPPED, orderBy, droppedRoleSentence } = SEL;

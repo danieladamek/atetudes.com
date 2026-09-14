@@ -1,3 +1,41 @@
+## 2026-09-13 — Night 59: Tones becomes the truth and Object becomes a label — the Centricity re-cut, first half; Multetudes v0.6.11 (Tetradetudes' build moved for the notepad's snapshot)
+
+- **Why (Daniel's 261011 mockup, dispatched 261012):** the Centricity card stored two things that could
+  disagree — an Object chosen from a list and a Tones field it policed (a 9 typed under a tetrad was refused
+  "not a tone of a tetrad"; under a scale the field was hidden). The mockup makes the tones the material and
+  the object a word for them. This night takes the first half: the derivation and the field; the Gamut
+  dropdown and the chip row are night 60's, untouched.
+- **The derivation, one site:** `objectOf(tones)` in `engine/selection.mjs` — null → scale; a preset's own
+  default wins exactly (3,7 → dyad, R,3,7 → shell); anything else the smallest stack that holds every tone
+  (triad · tetrad · ninth · eleventh · thirteenth). Every non-empty set of chord degrees has one, so nothing
+  refuses for the object's sake any more — a tone that is not a chord degree, an empty field and a duplicate
+  still refuse by name. Behaviour is unchanged either way (the pick is the pick); only the LABEL is decided,
+  once, here. Choosing an Object still populates Tones; editing Tones re-names the Object.
+- **The field, visible in both modes, in two vocabularies:** under a chord object *Tones — the material, by
+  role against the chord root* (R 3 5 7 9 11 13); under Object = scale *Tones — the material, by note in
+  C major*, showing the key's letters (the gamut fills it — a copy, not a translation; letters typed become
+  degrees, and survive a key change). The numerals never move across an Object change (`I · IV · vii° · iii`
+  through tetrad, ninth, shell, scale) — pinned on the chart line's romans.
+- **The 390 precondition:** the card's three-column grid used `1fr` tracks whose auto floor is the Object
+  select's longest option; at 390 the Object's right edge sat 100 px past the card. `minmax(0, 1fr)`; measured
+  before and after, nothing changes at 1280, the Key's 1.74 ratio and shared bottom edge hold at 390.
+- **The centre NOT retired — proof:** `field-board.mjs` diff empty; `hcRef` / `hcCentreSrc` / `cfg.ref` /
+  `cfg.centreSrc` untouched; centre = D in C major still re-roots the neck (D reads R, the legend reads
+  *against the reference tone*).
+- **Migration, proposed and shipped as proposed (rule 11, Daniel's to reverse):** only `tones` is stored; the
+  notepad's snapshot drops `object` (and the legacy `dyad` alias), payload `v` 1 → 2, the `.atchart` format
+  untouched (§2.6: entry contents are the entry's own). A v1 entry's `object` is a label to compare: where the
+  tones make another word the tones win and the card says so once — *This étude was saved as a dyad; its tones
+  make a triad — the tones are the truth.* Pinned with a v1 fixture imported cold. Open in the spec: a saved
+  gamut with a non-scale object — ruled 261013b for night 60.
+- **Gates:** engine red first (`objectOf is not a function`) then 704/704 · hub 12/12 · gate red first
+  `hub/tests/out/doors-n59-red-0913-1308.log` (15 failed, the night's by name) · door gate 21,361/0
+  (`doors-0913-1322.log`; a first run red on an old pin asserting the retired hidden field — updated, rule 7 —
+  and a refusal under a scale that never reached the face, fixed) · m96 (the derivation forgets the presets)
+  and m97 (the snapshot stores the object again) bite (`bite-m96-97-0913.log`) · chain 98/98, suite green
+  (`bite-0913-1344.log`, 13:44–20:02) · hugo 0 · check_site clean · renders 1280/390.
+- Report: `notes/working/Multetudes build run 261012e — night 59, Tones becomes the truth and Object becomes a label.md`.
+
 ## 2026-09-13 — DEPLOYED: night 58 live — the mixer strip and the row-count re-cut; Multetudes v0.6.10, Tetradetudes v0.6.5, Triadetudes' Mixer card; written from the run (the second run — the first, 34773107358, failed on the night's own chevron pin, re-stated in 61a09df)
 
 - record: run 34773674522 · success · commit 61a09df · fetched 2026-09-13T18:23Z · 6/6 studies byte-identical · digest 577e44bff535

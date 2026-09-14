@@ -2724,13 +2724,19 @@ console.log(JSON.stringify(out));
         st_pick = page.eval_on_selector_all("#stSvg ellipse", "e => e.length")
         check(st_pick == 24,
               f"{tag} 1: the staff speaks the pick in every bar — 3 heads × 8 bars (got {st_pick})")
-        # the refusal, BY NAME, in the object's own words — the drawn set unchanged
+        # UPDATED 261013 (night 59, rule 7): until tonight a tone the object could not hold was REFUSED by name
+        # ("13 is not a tone of a tetrad"). Now TONES IS THE TRUTH and the object is the name the tones make:
+        # R,3,13 under a tetrad re-names the object to a thirteenth and draws exactly those three. Junk and
+        # duplicates still refuse by name (below).
         page.fill("#hcTones", "R,3,13"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
-        hc_note = page.inner_text("#hcNote")
-        check("13 is not a tone of a tetrad" in hc_note and "a tetrad holds R, 3, 5, 7" in hc_note,
-              f"{tag} 1: a tone the object cannot hold refuses by name: {hc_note!r}")
-        check(roles() == ["3", "7", "R"],
-              f"{tag} 1: a refused pick leaves the last lawful one standing: {roles()}")
+        hc_note = page.inner_text("#hcNote"); obj_now = page.evaluate("() => document.getElementById('hcObj').value")
+        check(obj_now == "thirteenth" and "The thirteenth narrowed to R 3 13" in hc_note,
+              f"{tag} 1 (261013): a tone past the object's depth re-names the object to what the tones make: {obj_now!r} {hc_note!r}")
+        check(roles() == ["13", "3", "R"],
+              f"{tag} 1 (261013): the drawn set IS the tones: {roles()}")
+        page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        check(page.evaluate("() => document.getElementById('hcObj').value") == "shell" and roles() == ["3", "7", "R"],
+              f"{tag} 1 (261013): R,3,7 names a SHELL — the preset's own default wins the tie: {roles()}")
         # junk refuses in the FIGURE's own voice — one parser, one vocabulary
         page.fill("#hcTones", "R,Q"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
         hc_note = page.inner_text("#hcNote")
@@ -2755,9 +2761,11 @@ console.log(JSON.stringify(out));
         page.fill("#hcTones", "R,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
         check(roles() == ["7", "R"],
               f"{tag} 2: a shell edited is a pick like any other — nothing removed, nothing duplicated: {roles()}")
-        # a scale has no tones to pick: the field is hidden, not dead
+        # UPDATED 261013 (night 59, rule 7): a scale HAD no tones to pick and hid the field; now Tones is the
+        # truth in both modes — under a scale it speaks the key's NOTE NAMES (the gamut's letters, the whole
+        # field when none is set), visible, not dead
         page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
-        check(tones_field()["hidden"], f"{tag} 1: a scale hides the tones field — there is no stack to narrow")
+        check(not tones_field()["hidden"] and "by note" in page.inner_text("#hcTonesLab"), f"{tag} 1 (261013): under a scale the tones field speaks note names, visible: {tones_field()} {page.inner_text('#hcTonesLab')!r}")
         # ---- 260917 item 5: EACH PASSING CHORD NAMES ITS MODE, beside voice under the neck ----
         # Derived from the chord's degree in the scale (field.mjs's MODES
         # table, never re-tabled): bar 1 of the B♭ cycle is I → Ionian,
@@ -6384,6 +6392,77 @@ console.log(JSON.stringify(out));
             trRows: tr ? tr.querySelectorAll('.transport,.row2,.bpmrow').length : -1, mxRows: mx ? mx.querySelectorAll('.transport,.row2,.bpmrow').length : -1 }; }""")
         check(tcard["mixer"] and tcard["voiceInMixer"] and not tcard["voiceInTransport"] and tcard["slidersInMixer"] == 4, f"{tag} the Mixer card holds the voice and both levels; the Transport card holds neither: {tcard}")
         check(tcard["trRows"] == 3 and tcard["mxRows"] == 3, f"{tag} Transport 3 rows, Mixer 3 rows: {tcard}")
+
+    # ---------------- TONES BECOMES THE TRUTH, OBJECT A DERIVED LABEL (night 59, 261012e) ----------
+    # Daniel's Centricity re-cut, first half. Choosing an Object POPULATES Tones (a shortcut); editing Tones
+    # RE-NAMES the Object to what the tones make (objectOf — a preset's own default wins exactly, else the
+    # smallest stack that holds the tones); under a scale, Tones speaks NOTE NAMES of the key and fills from the
+    # gamut, stored as degrees. Only tones is stored (the payload drops `object`, v2); a v1 payload's object is a
+    # label to compare — the tones win, said once. The CENTRE is untouched (hcRef, hcCentreSrc, the four read
+    # sites); the numerals never move with an Object change. The 390 grid no longer clips its selects.
+    if door_id == "multetudes":
+        obj = lambda: page.evaluate("() => document.getElementById('hcObj').value")
+        tones = lambda: page.evaluate("() => ({ v: document.getElementById('hcTones').value, hidden: document.getElementById('hcTones').hidden, lab: document.getElementById('hcTonesLab').textContent })")
+        chips = lambda: page.evaluate("() => [...document.querySelectorAll('#tlScroll button .tl-rn')].map(b => b.textContent.trim())")   # the ROMANS — the symbol names the pick and may change; the numeral never does
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(200)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        numerals_before = chips()
+        check(tones()["v"] == "R,3,5,7" and "by role" in tones()["lab"], f"{tag} a chord object POPULATES Tones with roles: {tones()}")
+        # editing Tones re-names the Object — the derivation, on the face, case by case
+        for typed, want in (("R,3,5", "triad"), ("3,7", "dyad"), ("R,3,7", "shell"), ("R,5", "triad"), ("R,3,5,7,9", "ninth"), ("R,3,5,7", "tetrad")):
+            page.fill("#hcTones", typed); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
+            check(obj() == want, f"{tag} Tones {typed!r} names a {want}: the Object reads {obj()!r}")
+        check(chips() == numerals_before, f"{tag} the numerals never move with an Object change: {chips()} vs {numerals_before}")
+        # OBJECT = SCALE: Tones speaks note names, absolute in the key; the gamut fills it; letters are a rendering
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        t = tones()
+        check(not t["hidden"] and t["v"] == "C D E F G A B" and "by note" in t["lab"], f"{tag} under a scale Tones is the key's notes, whole field: {t}")
+        page.select_option("#hcGamut", ["2,3,5,6,7"]); page.wait_for_timeout(250)
+        check(tones()["v"] == "D E G A B", f"{tag} a gamut FILLS Tones with its letters: {tones()}")
+        page.fill("#hcTones", "C D F G A"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
+        gam_now = page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
+        check(gam_now == "1,2,4,5,6", f"{tag} typed letters store as DEGREES of the key: {gam_now!r}")
+        page.select_option("#hcKey", "G"); page.wait_for_timeout(250)
+        check(tones()["v"] == "G A C D E" and page.evaluate("() => document.getElementById('hcGamut').dataset.gamut") == "1,2,4,5,6", f"{tag} a key change keeps the degrees and re-renders the letters: {tones()}")
+        page.fill("#hcTones", "G A Q"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        check("is not a note of this key" in page.inner_text("#hcNote") or "Q" in page.inner_text("#hcNote"), f"{tag} a letter that is not in the key refuses by name: {page.inner_text('#hcNote')[:160]!r}")
+        page.select_option("#hcKey", "C"); page.select_option("#hcGamut", ["1,2,3,4,5,6,7"]); page.wait_for_timeout(200)
+        # under the SCALE object the chips read plain degrees (VII), under a chord object chord numerals (vii°) — the
+        # same degree in both, as before tonight (the before-capture shows it); what never moves is the DEGREE
+        degree = lambda r: [x.replace("°", "").replace("ø", "").upper() for x in r]
+        check(degree(chips()) == degree(numerals_before), f"{tag} the numerals' degrees are the key's and the scale's, not the object's: {chips()} vs {numerals_before}")
+        # THE CENTRE IS NOT RETIRED: the picker lives, and it re-roots the neck's palette
+        check(page.query_selector("#hcRef") is not None and page.query_selector("#hcCentreSrc") is not None and not page.evaluate("() => document.getElementById('hcRef').hidden"), f"{tag} the centre picker lives under a scale")
+        page.select_option("#hcRef", "mode:1"); page.wait_for_timeout(300)   # D, in C major
+        legend = page.inner_text("#fdLegend"); dlab = page.evaluate("() => { const d = [...document.querySelectorAll('#fieldSvg [data-midi]')].find(g => +g.dataset.midi % 12 === 2); return d ? (d.querySelector('text') || {}).textContent : null; }")
+        check("against the reference tone" in legend and dlab == "R", f"{tag} the centre re-roots the palette: legend {legend!r}, D reads {dlab!r}")
+        check("re-rooted" in page.inner_text("#hcNote") and "D Dorian" in page.inner_text("#hcNote"), f"{tag} the card says so in its own voice: {page.inner_text('#hcNote')[:160]!r}")
+        page.select_option("#hcRef", "mode:0"); page.wait_for_timeout(200)
+        # THE 390 GRID (the precondition): the selects fit the card, the Key untouched, the size pin green at 390
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
+        g390 = page.evaluate("""() => { const g = (id) => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return { w: +r.width.toFixed(1), h: +r.height.toFixed(1), right: Math.round(r.right), bottom: Math.round(r.bottom), font: parseFloat(getComputedStyle(e).fontSize) }; };
+          const c = document.getElementById('hcKey').closest('.card').getBoundingClientRect(); return { key: g('hcKey'), scale: g('hcScale'), obj: g('hcObj'), cardRight: Math.round(c.right), cardW: Math.round(c.width) }; }""")
+        check(g390["obj"]["right"] <= g390["cardRight"] and g390["scale"]["right"] <= g390["cardRight"], f"{tag} @390 the selects fit the card — no select runs past its edge: {g390}")
+        ratio390 = g390["key"]["h"] / g390["scale"]["h"]
+        check(1.6 <= ratio390 <= 1.9 and 27 <= g390["scale"]["h"] <= 32 and abs(g390["scale"]["h"] - g390["obj"]["h"]) < 1 and g390["key"]["bottom"] == g390["scale"]["bottom"] == g390["obj"]["bottom"] and g390["key"]["font"] > g390["scale"]["font"],
+              f"{tag} @390 the night-28 size pin holds — ratio {ratio390:.3f}, neighbours {g390['scale']['h']}, a shared bottom: {g390}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
+        # THE MIGRATION: export carries no object; a v1 payload (object: dyad, tones R,5) restores as the tones say, and says so
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        n59_file = export_newest(page)
+        check('"object"' not in n59_file and '"tones":[1,3,5,7]' in n59_file and '"v":2' in n59_file, f"{tag} the exported étude stores the tones and no object (payload v2): {n59_file[:300]!r}")
+        v1_file = n59_file.replace('"v":2', '"v":1').replace('"tones":[1,3,5,7]', '"object":"dyad","tones":[1,5]')
+        check('"object":"dyad"' in v1_file and '"v":1' in v1_file, f"{tag} the v1 fixture is what it claims")
+        ctx4 = pw.new_context(viewport={"width": 1280, "height": 900}); page4 = ctx4.new_page(); errs4 = []; page4.on("pageerror", lambda e: errs4.append(str(e)))
+        page4.goto(html_path.as_uri()); page4.wait_for_selector("#cards", state="attached"); page4.wait_for_timeout(200)
+        import_text(page4, v1_file, "night59-v1.atchart.md")
+        page4.click('#histList .hist [data-cap="apply"]'); page4.wait_for_timeout(400)
+        cold = page4.evaluate("() => ({ obj: document.getElementById('hcObj').value, tones: document.getElementById('hcTones').value, note: document.getElementById('hcNote').textContent })")
+        check(cold["obj"] == "triad" and cold["tones"] == "R,5" and "saved as a dyad" in cold["note"] and "make a triad" in cold["note"], f"{tag} a v1 étude saved as a dyad with tones R,5 restores as what its tones make, and says so once: {cold}")
+        check(not errs4, f"{tag} the cold page raised errors: {errs4[:2]}")
+        ctx4.close()
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
