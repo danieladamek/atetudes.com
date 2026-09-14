@@ -1,3 +1,47 @@
+## 2026-09-14 — Night 60: the Gamut becomes a dropdown and the chips become a readout — the Centricity re-cut, second half; Multetudes v0.6.12
+
+- **Why (Daniel's 261011 mockup, dispatched 261012, ruled 261013b):** night 59 made Tones the truth; this night
+  builds the surfaces. Daniel: *"they fix the tones that are played from the scale, so that would only be useful
+  when you have scale selected under object"* — a gamut narrows the scale, so the control is live in exactly
+  one state; and *"have the colour chip display be active there below the gamut dropdown … those colours light
+  up with the chords/notes as they are passing … and they stay fixed in Gamut mode."*
+- **The Gamut:** a SINGLE select of the same kind and type size as Scale and Object, at its own width (the box's
+  532 px at 1280 — its longest option is *F + G — 1 2 4 5 6 7 of C, omitting the 3*; not normalised, pinned);
+  disabled under a chord object with the reason on its own label (*Gamut — narrows the scale; a tetrad has
+  already narrowed it*); the whole field its own first option, by role — the 261011c stopgap (a way back inside
+  a multi-select) is gone and this option does its job. Selection by EQUALITY, said before it changed: night 48
+  lit every option the gamut contained and their union was the gamut; a single dropdown shows the one option
+  that equals it, an unnamed set by its own letters (*D E G A — 2 3 5 6 of C*), and the union's job passed to
+  the chip row. Choosing a chord object with a gamut set drops it and says so once.
+- **The chip row:** seven chips below the Gamut, the KEY's degrees in the §2.1 palette (the neck legend's own
+  table), named by note. Lit-ness is the FILL's opacity — the same rgb in every state, alpha 1 lit and the
+  neck's field opacity 0.28 unlit, pinned by computed colour in every state; the label keeps §2.1's text rule so
+  an unlit chip still names its note at AA (the mockup's whole-chip fade failed axe; proposed, Daniel's to
+  reverse). Under a scale the row holds the gamut's set and is a picker (a click toggles a degree; the seventh
+  chip is the other way back). Under a chord it is a readout of the walk's own NOTE — the bar's notes light as
+  they pass and hold until the next bar (no second source of what is sounding). Two standing marks in its
+  caption: the ORIGIN, *colour = function against the key* — the neck legend's own words, adopted, not coined —
+  and the MEANING, *held* / *following the changes* / *…stopped — the notes that last passed stay lit* (the
+  still frame after Stop is told from a held set by the words, never by a hue). Beside a re-rooted neck (centre
+  = D in C major) the row stays keyed to the key — D green, 2, while the neck's D reads R under *against the
+  reference tone* — both origins stated on the face in one frame (ruled 261012: the divergence is the lesson).
+- **The migration, ruled 261013b and built:** a saved gamut with a chord object drops the gamut, keeps the object
+  and its tones, and says once: *This étude was saved with a gamut (D E G A B); its object is a tetrad, and a
+  gamut narrows only the scale — the gamut is dropped, the tones are the truth.* The count of reachable saved
+  études in the repo holding the combination: **0** (the two oracles, the presets — no gamut); the one wild
+  shape is an export from v0.6.3 (night 48) through v0.6.11 saved under a chord object with a gamut set.
+- **Found and fixed (doctrine rule 3):** a saved SCALE étude applied into a page under a chord restored as that
+  chord — night 59's derivation guarded on an array of tones and skipped a null pick (v2 carries no object).
+  Derived null included now; pinned with a cold fixture; armed as m100. Also: field-board's two chord-mode gamut
+  sentences are unreachable under the one-state rule — left in place (the centre's file, untouched), night 61's
+  to retire by name.
+- **Gates:** engine 704/704 · hub 12/12 · red first `hub/tests/out/doors-n60-red-0913-2019.log` (7 by name) ·
+  first full run 21,716/7 (`doors-0913-2025.log`, each a finding, fixed) · door gate **21,729/0**
+  (`doors-0913-2056.log`) · singles m85 and m87 (re-targeted), m98, m99, m100 bite
+  (`bite-n60-singles-0913.log`, `bite-m87b-0913.log`) · chain **101/101**, suite green (`bite-0913-2138.log`,
+  21:38–04:29) · hugo 0 · check_site clean · renders 1280/390.
+- Report: `notes/working/Multetudes build run 261013 — night 60, the Gamut becomes a dropdown and the chips become a readout.md`.
+
 ## 2026-09-14 — DEPLOYED: night 59 live — Tones becomes the truth and Object becomes a label; Multetudes v0.6.11; Tetradetudes' build moved for the notepad's snapshot; written from the run
 
 - record: run 34794644626 · success · commit fa9d8dc · fetched 2026-09-14T01:13Z · 6/6 studies byte-identical · digest 095590960aca

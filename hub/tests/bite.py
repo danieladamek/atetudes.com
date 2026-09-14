@@ -1938,17 +1938,23 @@ def m84_a_restored_etude_acquires_a_gamut():
 
 
 def m85_the_omitted_role_places_quietly():
-    # a role the gamut omits is no longer named on the face — three notes drawn and called a tetrad
+    # a role the gamut omits is no longer named on the face — three notes drawn and called a tetrad.
+    # RE-TARGETED night 60 (rule 7): the chord-mode sentence ("the R of Cmaj7 is outside the gamut") is unreachable
+    # once the Gamut is live only at Object = scale — a gamut and a chord object never meet on the face — and so is
+    # the emptied-window sentence (under a scale the window spans the octave). Both stay in field-board.mjs,
+    # untouched tonight, for night 61 to retire by name. The species — the gamut's effect on the neck, never quietly
+    # lost — survives where the neck READS the gamut: the offer is narrowed by it (night 48's own line). Forget it,
+    # and the neck draws the whole field under a pentatonic; the night-48 pins for the selection under a scale bite.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        "        if (outsideGamut.length) parts.push(`the ${outsideGamut.join(\" and \")} of ${cur.symbol} is outside the gamut — a ${cfg.object} cannot be filled from it`);",
-        "          // (the gamut's absence not said)")
+        "      const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)",
+        "      const pool = materialIn(pos, run.strings, fld, null);   // (the gamut forgotten by the neck)")
     try:
         p.write_text(mutated)
         build()
         g = suite()
-        hit = "outside the pentatonic" in g.stdout and "refused by name" in g.stdout
-        record("a role the gamut omits places quietly — three notes called a tetrad", g.returncode != 0 and hit,
-               "suite exit %d; the by-name pin bit: %s" % (g.returncode, hit))
+        hit = "the selection under a scale must be the pentatonic's notes" in g.stdout or "draws that degree alone" in g.stdout
+        record("the neck forgets the gamut — the whole field offered under a pentatonic, the omitted notes drawn as material", g.returncode != 0 and hit,
+               "suite exit %d; the narrowing pin bit: %s" % (g.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -1969,17 +1975,22 @@ def m86_the_figure_reports_the_consequence_again():
 
 
 def m87_the_whole_field_option_goes_dark():
-    # the lighting predicate forgets that null contains every degree: the first option is dark in the state it represents
+    # the lighting predicate forgets that null contains every degree: the first option is dark in the state it represents.
+    # RE-TARGETED night 60 (rule 7), twice: with a SINGLE select the first option cannot go dark — a select with no option
+    # marked shows its first, and the first is the whole field (m87's first re-target, "null equals nothing", ran and
+    # did NOT bite for exactly that reason: bite-n60-singles-0913.log). The species survives inverted: the whole-field
+    # option shows while the gamut is a SET — an unnamed set (built on the chips) not appended by its own letters leaves
+    # nothing to match, and the browser shows the whole field over a gamut of four. The letters pin must bite.
     p, original, mutated = patch("hub/modules/harmony-card.mjs",
-        "        const has = (degs) => cfg.gamut == null ? degs.length === 7 : degs.every((x) => cfg.gamut.includes(x + 1));",
-        "        const has = (degs) => Array.isArray(cfg.gamut) && degs.every((x) => cfg.gamut.includes(x + 1));")
+        "        if (!matched && cfg.gamut) {",
+        "        if (false) {   // (the unnamed set not shown — the whole field stands in for it)")
     try:
         p.write_text(mutated)
         build()
         g = suite()
-        hit = "whole-field option must be LIT" in g.stdout
-        record("the whole-field option goes dark with no gamut set — the control shows nothing chosen while meaning the whole field",
-               g.returncode != 0 and hit, "suite exit %d; the lit pin bit: %s" % (g.returncode, hit))
+        hit = "the dropdown shows the set by its own letters" in g.stdout
+        record("the whole-field option shows over a set no option names — the dropdown lies while the gamut is four degrees",
+               g.returncode != 0 and hit, "suite exit %d; the letters pin bit: %s" % (g.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -2139,6 +2150,55 @@ def m96_the_derivation_forgets_the_presets():
         p.write_text(original)
 
 
+def m98_a_chip_hue_follows_lit_ness():
+    # night 60: lit-ness leaks into the HUE — an unlit chip goes silver. Golden rule 8; the palette pin must bite.
+    p, original, mutated = patch("hub/modules/harmony-card.mjs",
+        '        b.dataset.lit = String(isLit); b.dataset.pick = String(isScale);',
+        '        b.dataset.lit = String(isLit); b.dataset.pick = String(isScale); b.style.background = isLit ? FAM_COLOR[fam] : "#A9ABB4";   // (a hue for a state)')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "wear the neck legend's seven colours" in g.stdout or "never hue" in g.stdout
+        record("a chip's hue follows its lit-ness — an unlit chip goes silver, and silver is the 4th",
+               g.returncode != 0 and hit, "suite exit %d; the hue pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m99_the_dropped_gamut_goes_unsaid():
+    # night 60: a saved gamut with a chord object is dropped SILENTLY on restore — the removal CLAUDE.md forbids. The sentence pin must bite.
+    p, original, mutated = patch("hub/modules/harmony-card.mjs",
+        '        dropped = { letters: letterOfGamut(cfg.gamut), saved: true };',
+        '        dropped = null;   // (dropped without a word)')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "says so once, in night 59's vocabulary" in g.stdout
+        record("the dropped gamut goes unsaid — a restore removes it without a word",
+               g.returncode != 0 and hit, "suite exit %d; the sentence pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m100_the_derivation_skips_a_null_pick():
+    # night 60 (the night-59 defect, re-armed): the card derives the object only from an ARRAY of tones — a saved scale
+    # étude (tones null) restores as whatever the page was under. The scale-restore pin must bite.
+    p, original, mutated = patch("hub/modules/harmony-card.mjs",
+        '      if ("tones" in m || "dyad" in m) {\n        const derived = objectOf(tonePick(cfg));',
+        '      if (("tones" in m || "dyad" in m) && Array.isArray(tonePick(cfg))) {   // (null skipped again)\n        const derived = objectOf(tonePick(cfg));')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "restores as the scale it is" in g.stdout
+        record("the derivation skips a null pick — a saved scale étude restores as the chord the page was under",
+               g.returncode != 0 and hit, "suite exit %d; the scale-restore pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/modules/notepad-card.mjs",
@@ -2289,7 +2349,8 @@ def main():
                m91_an_overlay_returns_to_the_chart_line, m92_the_cap_returns_under_line,
                m93_the_snapshot_allowlist_forgets_the_new_settings, m94_the_sounded_bass_needs_a_string_again,
                m95_a_mixer_row_returns_to_the_transport_card,
-               m96_the_derivation_forgets_the_presets, m97_the_snapshot_stores_the_object_again)
+               m96_the_derivation_forgets_the_presets, m97_the_snapshot_stores_the_object_again,
+               m98_a_chip_hue_follows_lit_ness, m99_the_dropped_gamut_goes_unsaid, m100_the_derivation_skips_a_null_pick)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

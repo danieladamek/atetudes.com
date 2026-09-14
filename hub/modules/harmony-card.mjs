@@ -22,7 +22,9 @@ import { field } from "../../engine/field.mjs";
 import { CENTRE_SOURCES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
 import { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, objectOffsets, pickOf, tonePick, objectOf } from "../../engine/selection.mjs";
-import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
+import { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../bus.mjs";
+// the degree palette, stated once (night 60: the chip row wears it — the neck legend's own table)
+import { FAM, FAM_COLOR, FAM_TEXT } from "../palette.mjs";
 import { triads, tetrads, triadPairs, pentatonics, pentatonicRefusal, normalizeGamut, describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
 import { LEXICON } from "../lexicon.mjs";
 // the scale's one word (night 41's vocabulary) — one statement, nothing after the semicolon: the build binds exactly this form
@@ -63,7 +65,7 @@ export const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcTones", "hcCentreSrc", "hcGamut"],
+  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcTones", "hcCentreSrc", "hcGamut", "hcChips"],
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -99,15 +101,30 @@ export const harmonyCard = {
     <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
   </div>
   <!-- THE GAMUT (night 48, ruled by Daniel 261008 — the partial collection): what the material is
-       drawn FROM, beside Object (what shape) — the row directly under the three, full width,
-       because a multi-select is a list and a fourth grid cell would squeeze the three at 390.
-       Every option is DERIVED (pentatonics by the anhemitonic rule per scale, the seven stepwise
-       triad pairs, the seven stacks of each depth, the seven degrees); the union of what is chosen
-       is the gamut, a set of degrees; nothing chosen is the whole field. Harmonic minor's empty
-       pentatonic list REFUSES BY NAME in the list, never as an empty group. -->
+       drawn FROM, beside Object (what shape) — the row directly under the three, full width: the
+       width its contents need (Daniel, 261012: "the width it is currently is the proper width"),
+       never Scale's or Object's. Every option is DERIVED (pentatonics by the anhemitonic rule per
+       scale, the seven stepwise triad pairs, the seven stacks of each depth, the seven degrees).
+       Harmonic minor's empty pentatonic list REFUSES BY NAME in the list, never as an empty group.
+       NIGHT 60 (the Centricity re-cut, second half — ruled): a SINGLE select, the same KIND as Scale
+       and Object; live in exactly one state — a gamut narrows the scale, and under a chord object the
+       object has already narrowed it, so it is disabled with the reason on its own label; the
+       dropdown's own first option IS the whole field (the 261011c stopgap is gone — its job is this
+       option's). Selection is EQUALITY: the one option that equals the gamut; a set no option names
+       is shown by its own letters. Night 48's union-by-containment passed to the chip row below. -->
   <div class="hc-gamut" id="hcGamutBox">
     <label for="hcGamut" id="hcGamutLab"></label>
-    <select id="hcGamut" data-control="hcGamut" multiple size="5"></select>
+    <select id="hcGamut" data-control="hcGamut"></select>
+    <!-- THE CHIP ROW (night 60, Daniel 261012): seven chips, ALWAYS the key's seven degrees in the
+         §2.1 palette, named by note. Under a chord object they light AS THE NOTES PASS (the walk's own
+         NOTE — no second source of what is sounding) and hold the bar's notes until the next; under a
+         scale they hold the gamut's set and are a PICKER. LIT-NESS IS OPACITY (the neck's field-opacity
+         idiom), never a hue — golden rule 8. Two standing marks in the caption: the ORIGIN (the legend's
+         own words — the row stays keyed to the KEY while the neck re-roots, ruled 261012, so both
+         origins are stated) and the MEANING (following / held — the still frame after a stop is told
+         from a held set by the words, never by a colour). -->
+    <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
+    <div class="hint hc-chipcap" id="hcChipCap"></div>
   </div>
   <!-- THE TONES (260917, item 1 — ruled): every stacked object picks its
        tones in the FIGURE FIELD'S OWN NOTATION (R,3,5,7); the dyad's pair
@@ -163,7 +180,19 @@ export const harmonyCard = {
 #hcRef,#hcTones{width:100%}
 .hc-gamut{margin-top:8px}
 #hcGamutLab{display:block}
-#hcGamut{width:100%;font:inherit;font-size:12.5px}
+#hcGamut{width:100%}   /* night 60: the shell's select — Scale's own kind and type size; the width is its box's */
+#hcGamut:disabled{opacity:.45;cursor:not-allowed}
+/* THE CHIP ROW (night 60): seven across at every width — flex shares the box (26 px each at 390, 46 at
+ * 1280, capped square); the hue is the palette's and NEVER moves; lit-ness is the FILL's opacity (the
+ * neck's field opacity, on the fill alone — the label keeps §2.1's text rule, so an unlit chip still
+ * names its note at AA contrast; the fill and the text are set from the palette table, inline) */
+.hc-chips{display:flex;gap:6px;margin-top:8px}
+.hc-chip{flex:1 1 0;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;
+  font:inherit;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.hc-chip[data-pick="false"]{cursor:default}
+.hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
+.hc-chip .hc-chipname{font-size:14px;line-height:1.15}
+.hc-chipcap{margin-top:5px}
 #hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 
   mount(ctx) {
@@ -174,6 +203,9 @@ export const harmonyCard = {
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
     let migrated = null;   // night 59: { saved, derived } when a restored entry's stored object is not what its tones make
+    let dropped = null;    // night 60: the letters of a gamut dropped under a chord object — said once (ruled 261013b), never silent
+    let lit = new Set();   // night 60, chord objects: the key degrees the walk sounded since the bar began — the chips light as the notes pass
+    let running = false;   // CLOCK_STATE's running — the row's meaning mark says following / stopped
     let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "root", tones: [1, 3, 5, 7],
       centreSrc: "fixed",     // the source, not a resolved value (260914)
       gamut: null };          // the stored key: degrees 1..7 sorted, or null = the whole field (night 48)
@@ -190,6 +222,56 @@ export const harmonyCard = {
       }
     };
 
+    /* THE CHIP ROW (night 60): rendered on its own — the walk's NOTE arrives every beat, and a full render
+     * would rebuild the selects under an open dropdown. Seven chips, the KEY's degrees in the palette (one
+     * table, the neck legend's), named by note; lit = opacity 1, unlit = the neck's field opacity (the CSS
+     * rule keyed to data-lit); the hue NEVER moves with a state. Under a scale: held to the gamut's set, a
+     * picker (aria-pressed). Under a chord: a readout of the notes that passed since the bar began. */
+    const letterOfGamut = (gamut) => { const f = field({ key: cfg.key, scale: cfg.scale }); return gamut.map((dg) => f.notes[dg - 1].name).join(" "); };
+    /* LIT-NESS (night 60): the fill's opacity — 1 lit, the neck's FIELD OPACITY unlit (field-board.mjs draws an
+     * omitted dot at 0.28); the hue is the same rgb in both states, only the alpha moves. An unlit fill is a
+     * light mark, so it takes §2.1's dark text (the palette's own rule for 4, 6 and 7), bound, never restated. */
+    const FIELD_OPACITY = 0.28;
+    const DARK_TEXT = FAM_TEXT["4"];
+    const fade = (hex, a) => `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${a})`;
+    const renderChips = () => {
+      const row = byId("hcChips"), cap = byId("hcChipCap");
+      const isScale = cfg.object === "scale";
+      const fld = field({ key: cfg.key, scale: cfg.scale });
+      const on = isScale ? (cfg.gamut || [1, 2, 3, 4, 5, 6, 7]) : [...lit];
+      if (row.childElementCount !== 7) {
+        row.textContent = "";
+        for (let i = 0; i < 7; i++) {
+          const b = d.createElement("button"); b.type = "button"; b.className = "hc-chip"; b.dataset.deg = String(i + 1);
+          b.innerHTML = `<span class="hc-chipdeg">${i + 1}</span><span class="hc-chipname"></span>`;
+          b.addEventListener("click", () => {
+            if (cfg.object !== "scale") return;   // a readout under a chord — a click has no coherent meaning there
+            const set = new Set(cfg.gamut || [1, 2, 3, 4, 5, 6, 7]);
+            if (set.has(i + 1)) set.delete(i + 1); else set.add(i + 1);
+            dropped = null; migrated = null;
+            cfg = { ...cfg, gamut: normalizeGamut([...set]) }; push();
+          });
+          row.appendChild(b);
+        }
+      }
+      row.querySelectorAll(".hc-chip").forEach((b, i) => {
+        const fam = FAM[i];
+        const isLit = on.includes(i + 1);
+        b.style.backgroundColor = isLit ? FAM_COLOR[fam] : fade(FAM_COLOR[fam], FIELD_OPACITY);
+        b.style.color = isLit ? FAM_TEXT[fam] : DARK_TEXT;
+        b.querySelector(".hc-chipname").textContent = fld.notes[i].name;
+        b.dataset.lit = String(isLit); b.dataset.pick = String(isScale);
+        b.setAttribute("aria-label", `${fld.notes[i].name}, the key's ${i + 1}`);
+        if (isScale) b.setAttribute("aria-pressed", String(isLit)); else b.removeAttribute("aria-pressed");
+      });
+      /* the two standing marks: the ORIGIN in the legend's own words (adopted, not coined — the neck says
+       * "against the reference tone" when re-rooted, this row is always against the key, and both are
+       * on the face together, which is what makes the divergence legitimate); the MEANING, held or following */
+      cap.textContent = "colour = function against the key \u2014 "
+        + (isScale ? "held: the chosen set; click a note to change it"
+          : running ? "following the changes" : "following the changes, stopped \u2014 the notes that last passed stay lit");
+    };
+
     const render = () => {
       fill(byId("hcKey"), KEYS.map((k) => ({ value: k, label: k })), cfg.key);
       fill(byId("hcScale"), SCALES.map(([v, l]) => ({ value: v, label: l })), cfg.scale);
@@ -197,40 +279,40 @@ export const harmonyCard = {
         disabled: !live, title: live ? "" : "arrives with child 4 (dyads, and the chord vocabulary)" })),
         cfg.object);
       const isScale = cfg.object === "scale";
-      /* THE GAMUT LIST (night 48): rebuilt from the rules on every render — the field's own
-       * letters name the options; an option is LIT when the gamut wholly contains it, and the
-       * union of the lit options is the gamut (deselecting one narrows to what the rest cover) */
+      /* THE GAMUT LIST (night 48): rebuilt from the rules on every render — the field's own letters
+       * name the options. NIGHT 60: a SINGLE select. ONE STATE (ruled): a gamut narrows the scale; under
+       * a chord object the object has already narrowed it — disabled, with the reason on its own label.
+       * EQUALITY, said before it changed: night 48 lit every option the gamut CONTAINED and their union
+       * was the gamut; a single dropdown cannot show a union, so it shows the ONE option that EQUALS the
+       * gamut, and the union's job — a set, built a degree at a time — belongs to the chip row. */
       {
-        const sel = byId("hcGamut"); byId("hcGamutLab").textContent = LEXICON.gamut.caption;
+        const sel = byId("hcGamut"), lab = byId("hcGamutLab");
         const fld = field({ key: cfg.key, scale: cfg.scale });
         const letter = (deg) => fld.notes[deg].name;
-        /* LIT by containment — and null, the whole field, contains every degree, so an option that
-         * IS the whole field lights exactly when no gamut is set (injection 261011c, item 3): by its
-         * degree count, never by its index or its words (rule 12) */
-        const has = (degs) => cfg.gamut == null ? degs.length === 7 : degs.every((x) => cfg.gamut.includes(x + 1));
+        sel.disabled = !isScale;
+        lab.textContent = isScale ? LEXICON.gamut.caption
+          : `${LEXICON.gamut.caption} \u2014 narrows the scale; a ${cfg.object} has already narrowed it`;   // the role, never a caption (rules 12, 14)
+        const current = cfg.gamut == null ? "1,2,3,4,5,6,7" : cfg.gamut.join(",");
+        let matched = false;
         sel.textContent = "";
+        const opt = (parent, value, text, role) => {
+          const o = d.createElement("option"); o.value = value; o.textContent = text;
+          if (role) o.setAttribute("data-role", role);
+          if (value === current) { o.selected = true; matched = true; }
+          parent.appendChild(o); return o;
+        };
+        /* THE WHOLE FIELD — the dropdown's own first option, by ROLE (rule 12): all seven degrees, which
+         * normalizeGamut already reads as null. The 261011c stopgap (a way back in a multi-select) is gone;
+         * this option does its job. */
+        opt(sel, "1,2,3,4,5,6,7", `the whole field \u2014 ${[1, 2, 3, 4, 5, 6, 7].join(" ")} of ${letter(0)}`, "whole-field");
         const group = (label, items) => {
           const g = d.createElement("optgroup"); g.label = label;
           for (const it of items) {
-            const o = d.createElement("option"); o.value = it.degrees.map((x) => x + 1).join(","); o.textContent = it.label;
-            if (it.disabled) { o.disabled = true; o.value = ""; }
-            else o.selected = has(it.degrees);
-            g.appendChild(o);
+            if (it.disabled) { const o = d.createElement("option"); o.disabled = true; o.value = ""; o.textContent = it.label; g.appendChild(o); }
+            else opt(g, it.degrees.map((x) => x + 1).join(","), it.label);
           }
           sel.appendChild(g);
         };
-        /* THE WAY BACK (injection 261011c, item 3 — Daniel: "no obvious deselect"): ONE option,
-         * first, above every group, that IS the whole field. It carries all seven degrees, so a
-         * plain click (it alone) and a modifier-click (added to the union) both reach seven, which
-         * normalizeGamut already reads as null — the whole field, by the rule that exists. A
-         * STOPGAP: the control's own shape is night 54's; nothing else here changes. */
-        {
-          const all = [0, 1, 2, 3, 4, 5, 6];
-          const o = d.createElement("option"); o.value = all.map((x) => x + 1).join(",");
-          o.textContent = `the whole field — ${all.map((x) => x + 1).join(" ")} of ${letter(0)}`;
-          o.selected = has(all); o.setAttribute("data-role", "whole-field");
-          sel.appendChild(o);
-        }
         const pents = pentatonics(cfg.scale);
         group("pentatonics", pents.length
           ? pents.map((p) => ({ degrees: p.degrees, label: describeGamut(p.degrees.map((x) => x + 1), fld) }))
@@ -238,7 +320,13 @@ export const harmonyCard = {
         group("triad pairs", triadPairs().map((p) => ({ degrees: p.degrees, label: describeGamut(p.degrees.map((x) => x + 1), fld) })));
         group("triads", triads().map((t) => ({ degrees: t.degrees, label: `triad on ${letter(t.root)}` })));
         group("tetrads", tetrads().map((t) => ({ degrees: t.degrees, label: `tetrad on ${letter(t.root)}` })));
-        group("degrees", [0, 1, 2, 3, 4, 5, 6].map((x) => ({ degrees: [x], label: `${x + 1} — ${letter(x)}` })));
+        group("degrees", [0, 1, 2, 3, 4, 5, 6].map((x) => ({ degrees: [x], label: `${x + 1} \u2014 ${letter(x)}` })));
+        /* a set no named option equals (built from the chips): shown by its own letters, appended, selected */
+        if (!matched && cfg.gamut) {
+          const g = d.createElement("optgroup"); g.label = "chosen";
+          opt(g, current, `${cfg.gamut.map((dg) => letter(dg - 1)).join(" ")} \u2014 ${describeGamut(cfg.gamut, fld)}`, "chosen");
+          sel.appendChild(g);
+        }
         sel.setAttribute("data-gamut", cfg.gamut ? cfg.gamut.join(",") : "");
       }
       /* THE TONES FIELD (260917, item 1 \u2014 the dyad's six-pair menu became
@@ -355,9 +443,15 @@ export const harmonyCard = {
             : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point — or add a tone and the object is re-named to what the tones make. `
             : `The ${cfg.object} narrowed to ${renderPick(pick).split(",").join(" ")}. `)
             + (migrated ? `This étude was saved as a ${migrated.saved}; its tones make a ${migrated.derived} — the tones are the truth. ` : "")
+            /* THE DROPPED GAMUT (night 60, ruled 261013b): said once, in night 59's vocabulary — a saved one on a
+             * restore, a live one when a chord object is chosen; keep what makes the material, drop what shades it */
+            + (dropped ? (dropped.saved
+              ? `This étude was saved with a gamut (${dropped.letters}); its object is a ${cfg.object}, and a gamut narrows only the scale — the gamut is dropped, the tones are the truth. `
+              : `The gamut (${dropped.letters}) is dropped — a gamut narrows only the scale, and a ${cfg.object} has already narrowed it. `) : "")
             + "The bass tone lives under the neck, beside the mixer that drives it." + gamutNote();
         }
       }
+      renderChips();
     };
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
@@ -384,7 +478,11 @@ export const harmonyCard = {
        * and the face says so once — never a silent relabel (§4.4), never the stored word over the material.
        * A payload without `object` (v2) derives silently, as it should. `object: "scale"` with no tones is
        * the scale itself. */
-      if (("tones" in m || "dyad" in m) && Array.isArray(tonePick(cfg))) {
+      /* NIGHT 60 (a night-59 defect, found by the migration fixture): the pick is derived NULL INCLUDED — a saved
+       * scale étude carries `tones: null` and, since v2, no `object`; skipped, it restored as whatever object the
+       * page was under (a tetrad), and the gamut it carried was then "dropped" as a chord's. objectOf(null) is
+       * the scale, and always was; the guard here was the gap. */
+      if ("tones" in m || "dyad" in m) {
         const derived = objectOf(tonePick(cfg));
         if (derived !== cfg.object) {
           if ("object" in m && m.object !== derived && m.object !== "scale") migrated = { saved: m.object, derived };
@@ -392,22 +490,36 @@ export const harmonyCard = {
           announce(d, CONFIG_CHANGED, { object: derived });
         }
       }
+      /* THE MIGRATION (night 60, ruled 261013b): a saved gamut with a chord object — a combination the one-state
+       * rule forbids (nights 48–59 stored it). DROP THE GAMUT, keep the object and its tones (what sounds and
+       * draws), and say so once: the gamut only shaded the field, so nothing selected or sounding changes. */
+      if ("gamut" in m && cfg.gamut && cfg.object !== "scale") {
+        dropped = { letters: letterOfGamut(cfg.gamut), saved: true };
+        cfg = { ...cfg, gamut: null }; changed = true;
+        announce(d, CONFIG_CHANGED, { gamut: null });
+      }
       if (changed) render();
     });
 
     byId("hcKey").addEventListener("change", (e) => { cfg = { ...cfg, key: e.target.value }; push(); });
-    /* THE GAMUT (night 48): the union of what is chosen, a set of degrees — nothing chosen, or
-     * everything, is the whole field (null — the stored key is ABSENT for it, never []) */
+    /* THE GAMUT (night 48; night 60 a single select): the chosen option's degrees — the whole field's
+     * seven, or a set; seven, or none, is the whole field (null — the stored key is ABSENT for it, never []) */
     byId("hcGamut").addEventListener("change", (e) => {
-      const degs = [...e.target.selectedOptions].flatMap((o) => o.value ? o.value.split(",").map(Number) : []);
+      const degs = e.target.value ? e.target.value.split(",").map(Number) : [];
+      dropped = null;
       cfg = { ...cfg, gamut: normalizeGamut(degs) }; push();
     });
     byId("hcScale").addEventListener("change", (e) => { cfg = { ...cfg, scale: e.target.value }; push(); });
     /* choosing an object FILLS its tones (item 2's whole point for Shell:
      * R,3,7 appears, visibly) — a refused edit is forgotten with the object */
     byId("hcObj").addEventListener("change", (e) => {
-      tonesErr = null; migrated = null;
-      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value) }; push();   // an object POPULATES the tones (night 59: a shortcut, not a cage)
+      tonesErr = null; migrated = null; dropped = null;
+      /* ONE STATE (night 60, ruled): a gamut narrows the scale — a chord object has already narrowed it, so a
+       * gamut set under a scale is DROPPED when a chord is chosen, and said (never silent; ruled 261013b:
+       * keep what makes the material, drop what only shades it) */
+      const toChord = e.target.value !== "scale";
+      if (toChord && cfg.gamut) dropped = { letters: letterOfGamut(cfg.gamut), saved: false };
+      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value), gamut: toChord ? null : cfg.gamut }; push();   // an object POPULATES the tones (night 59: a shortcut, not a cage)
     });
     /* THE TONES FIELD: parsed by the figure's parser, checked by the one
      * derivation (objectOffsets) — a refusal is a value on the face and the
@@ -438,6 +550,22 @@ export const harmonyCard = {
       else cfg = { ...cfg, bass: v };
       push();
     });
+
+    /* THE READOUT'S SIGNAL (night 60, rule 6): the walk's own NOTE — a fretted note of the material (the bass
+     * and the pad are the chord's own tones, not the notes passing); its key degree lights a chip until the
+     * next bar. The walk (order 6) registers before this card (order 10), so on an advance its STEP listener
+     * runs first and the bar's immediate notes reach here BEFORE this card's own STEP listener — the row is
+     * therefore keyed to the STEP's index, not cleared on the event: a new index starts a new set. */
+    let litIndex = null;
+    listen(d, STEP_CHANGED, (m) => { if (!m || typeof m.index !== "number") return; if (m.index !== litIndex) { litIndex = m.index; lit = new Set(); renderChips(); } });
+    listen(d, NOTE, (m) => {
+      if (!m || typeof m.midi !== "number" || m.role === "bass" || m.role === "pad" || cfg.object === "scale") return;
+      const fld = field({ key: cfg.key, scale: cfg.scale });
+      const i = fld.pcs.indexOf(((m.midi % 12) + 12) % 12);
+      if (i < 0) return;   // a chord-supplied tone outside the key lights no key chip
+      lit.add(i + 1); renderChips();
+    });
+    listen(d, CLOCK_STATE, (m) => { if (!m || typeof m.running !== "boolean") return; running = m.running; renderChips(); });
 
     push();
   },

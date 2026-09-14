@@ -5919,6 +5919,11 @@ console.log(JSON.stringify(out));
     # pair reads `F + G` and omits its degree; a role the gamut omits refuses by name on the face;
     # a scale change the rule no longer yields refuses by name, never drops; a pre-tonight étude
     # restores to the whole field; a window the gamut empties says so.
+    # UPDATED night 60 (rule 7): the Gamut is a SINGLE select live only at Object = scale, so this block runs under
+    # the scale object; a chosen option is the one that EQUALS the gamut (not every option it contains); the union
+    # is built on the chip row; the chord-mode refusal ("Cmaj7's R is outside the pentatonic") is unreachable — a
+    # gamut and a chord never meet — and its pin became the gamut's effect where it is: the neck's selection under
+    # a scale is the gamut's notes; the emptied-window pin now REQUIRES the sentence (it had let ≤1 note pass).
     if door_id == "multetudes":
         import json as _json
         opts = lambda: page.evaluate("() => [...document.querySelectorAll('#hcGamut optgroup')].map(g => ({ label: g.label, items: [...g.querySelectorAll('option')].map(o => ({ v: o.value, t: o.textContent, on: o.selected, off: o.disabled })) }))")
@@ -5926,7 +5931,7 @@ console.log(JSON.stringify(out));
         pick = lambda values: page.select_option("#hcGamut", values)
         fdsel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi).sort((a, b) => a - b)")
         fddots = lambda: page.evaluate("() => document.querySelectorAll('#fieldSvg [data-midi]').length")
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
         check("hcGamut" in r["controlsPresent"] and page.inner_text("#hcGamutLab").strip() == "Gamut", f"{tag} the Gamut control is not mounted beside Object with the lexicon's caption")
         g0 = opts(); groups = {g["label"]: g["items"] for g in g0}
         check([g["label"] for g in g0] == ["pentatonics", "triad pairs", "triads", "tetrads", "degrees"], f"{tag} the gamut's groups: {[g['label'] for g in g0]}")
@@ -5937,7 +5942,7 @@ console.log(JSON.stringify(out));
         pair = next((o for o in groups["triad pairs"] if o["v"] == "1,2,4,5,6,7"), None)
         check(pair is not None and pair["t"] == "F + G — 1 2 4 5 6 7 of C, omitting the 3", f"{tag} IV + V reads F + G and omits the 3: {pair}")
         check(all("/" not in o["t"] for g in g0 for o in g["items"]), f"{tag} a slash in the gamut list — the pair takes +, the slash keeps its one meaning")
-        check(gamut_of() == "" and all(not o["on"] for g in g0 for o in g["items"]), f"{tag} nothing lit at boot — the whole field")
+        check(gamut_of() == "" and all(not o["on"] for g in g0 for o in g["items"]) and page.evaluate("() => document.getElementById('hcGamut').options[0].selected"), f"{tag} no named set chosen at boot — the whole field, its own option (night 60)")
         dots_whole = fddots(); sel_whole = fdsel()
         # a pentatonic: the offer narrows, the field's dots do not; the omitted degrees stay on the neck
         pick(["2,3,5,6,7"]); page.wait_for_timeout(300)
@@ -5949,15 +5954,13 @@ console.log(JSON.stringify(out));
         check("Gamut: G major pentatonic — 2 3 5 6 7 of C — C, F stay on the neck at field opacity." in page.inner_text("#hcNote"), f"{tag} the hint does not say what is lit: {page.inner_text('#hcNote')!r}")
         ro = page.inner_text("#neckReadout") if page.query_selector("#neckReadout") else page.evaluate("() => document.querySelector('[data-control=\"nrText\"], .nr-text, #nrText')?.innerText || document.body.innerText")
         check("gamut: G major pentatonic — 2 3 5 6 7 of C" in ro, f"{tag} the readout's sentence does not carry the gamut")
-        # a role the gamut omits refuses BY NAME: bar 1 is Cmaj7 — its R (C, degree 1) is outside {2,3,5,6,7}
-        hint = page.inner_text("#fdHint")
-        check("outside the gamut" in hint and "Cmaj7" in hint, f"{tag} Cmaj7's R (outside the pentatonic) is not refused by name on the face: {hint!r}")
-        check(len(fdsel()) < len(sel_whole) or len(fdsel()) == 3, f"{tag} the tetrad still draws four from a gamut that lacks its root: {fdsel()} vs {sel_whole}")
-        # the pair: F + G — 1 2 4 5 6 7 — the 3 stays out; the union of two picks is a set
+        # the gamut's effect where it is (rule 3): under a scale the neck's selection is the gamut's notes — C and F (pcs 0, 5) never drawn as selected
+        check(len(fdsel()) > 0 and all(m % 12 in (2, 4, 7, 9, 11) for m in fdsel()) and len(fdsel()) < len(sel_whole), f"{tag} the selection under a scale must be the pentatonic's notes and fewer than the whole field's: {fdsel()} vs {sel_whole}")
+        # the pair: F + G — 1 2 4 5 6 7 — the 3 stays out; the union is built on the CHIP ROW now (night 60): the 3 added makes every degree
         pick(["1,2,4,5,6,7"]); page.wait_for_timeout(300)
         check(gamut_of() == "1,2,4,5,6,7", f"{tag} the pair: {gamut_of()!r}")
-        pick(["1,2,4,5,6,7", "2,3,5,6,7"]); page.wait_for_timeout(300)
-        check(gamut_of() == "", f"{tag} the union of the pair and the pentatonic is every degree — the whole field, stored as ABSENT: {gamut_of()!r}")
+        page.click('#hcChips .hc-chip[data-deg="3"]'); page.wait_for_timeout(300)
+        check(gamut_of() == "", f"{tag} the pair plus its omitted degree is every degree — the whole field, stored as ABSENT: {gamut_of()!r}")
         # the scale change: a pentatonic chosen in major, harmonic minor withdraws its name — refused by name, the degrees stay
         pick(["1,2,3,5,6"]); page.wait_for_timeout(300)
         page.select_option("#hcScale", "harm"); page.wait_for_timeout(300)
@@ -5967,7 +5970,9 @@ console.log(JSON.stringify(out));
         check("not semitone-free" in note, f"{tag} …nor in the hint: {note!r}")
         g_h = {g["label"]: g["items"] for g in opts()}
         check(len(g_h["pentatonics"]) == 1 and g_h["pentatonics"][0]["off"] and g_h["pentatonics"][0]["t"] == "harmonic minor holds no semitone-free pentatonic", f"{tag} harmonic minor's empty list must refuse by name in the list: {g_h['pentatonics']}")
-        check(all(o["on"] for o in g_h["degrees"] if o["v"] in ("1", "2", "3", "5", "6")), f"{tag} the degrees still in force are not lit under harmonic minor")
+        chosen_h = page.evaluate("() => [...document.querySelectorAll('#hcGamut option')].filter(o => o.selected).map(o => ({ t: o.textContent, role: o.dataset.role }))")
+        check(len(chosen_h) == 1 and chosen_h[0]["role"] == "chosen" and "1 2 3 5 6 of C" in chosen_h[0]["t"] and [b for b in page.evaluate("() => [...document.querySelectorAll('#hcChips .hc-chip')].filter(b => b.dataset.lit === 'true').map(b => b.dataset.deg)")] == ["1", "2", "3", "5", "6"],
+              f"{tag} the degrees still in force under harmonic minor: shown by their own letters in the dropdown and lit on the chips: {chosen_h}")
         page.select_option("#hcScale", "major"); page.wait_for_timeout(200)
         # a pre-tonight étude restores to the WHOLE FIELD with no key present
         page.click('[data-cap="save"]'); page.wait_for_timeout(250)
@@ -5984,15 +5989,28 @@ console.log(JSON.stringify(out));
         # and the saved one restores its gamut
         rows = page.query_selector_all('#histList .hist [data-cap="apply"]'); rows[1].click(); page.wait_for_timeout(400)
         check(gamut_of() == "1,2,3,5,6", f"{tag} the saved gamut did not restore: {gamut_of()!r}")
-        # a window the gamut empties says so: one degree, out of the window
-        pick(["7"]); page.wait_for_timeout(300)
-        hint = page.inner_text("#fdHint")
-        check(gamut_of() == "7" and ("leaves nothing in this window" in hint or len(fdsel()) <= 1), f"{tag} a gamut that empties the box must say so: {hint!r} {fdsel()}")
+        # a window the gamut empties says so: one degree the window lacks — on ONE string (night 60: under a scale
+        # every degree sits somewhere in a four-string window, so the neck is narrowed to string 1, whose window
+        # holds no D), then the strings are restored
+        for s_ in (4, 3, 2):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true":
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+        # UPDATED night 60 (rule 7): under a scale the window spans the octave on every string (measured: one string,
+        # any single degree, exactly one note drawn — frets 3..13), so no gamut EMPTIES it; under a chord no gamut
+        # exists. The emptied-window sentence is unreachable now (night 61's to retire by name, with field-board's
+        # other dead gamut sentence). What IS reachable, and is the gamut's whole effect on the neck: the selection
+        # is the gamut's notes and nothing else — one degree draws that degree alone, one string or four.
+        pick(["2"]); page.wait_for_timeout(250)
+        one = fdsel(); hint = page.inner_text("#fdHint")
+        check(gamut_of() == "2" and len(one) >= 1 and all(m % 12 == 2 for m in one), f"{tag} a gamut of one degree draws that degree alone on the string — the gamut narrows the offer: {one} {hint!r}")
+        for s_ in (4, 3, 2):
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true":
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
         # back to the whole field; key change survival by degree
-        pick([]); page.wait_for_timeout(200); check(gamut_of() == "", f"{tag} deselecting everything is the whole field")
+        pick(["1,2,3,4,5,6,7"]); page.wait_for_timeout(200); check(gamut_of() == "", f"{tag} the whole-field option is the whole field")
         pick(["2,3,5,6,7"]); page.select_option("#hcKey", "G"); page.wait_for_timeout(300)
         check(gamut_of() == "2,3,5,6,7" and "D major pentatonic — 2 3 5 6 7 of G" in page.inner_text("#hcNote"), f"{tag} a gamut must survive a key change BY DEGREE: {gamut_of()!r} {page.inner_text('#hcNote')!r}")
-        pick([]); page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        pick(["1,2,3,4,5,6,7"]); page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
 
     # ---------------- INJECTION 261011c: a dropped role is not "not there"; the Gamut's way back ----------
     # Daniel's state: Bb Ionian, ONE string, arpeggiate, tones R,3,7,5, figure R-3-7-5 — a role the placement
@@ -6042,23 +6060,25 @@ console.log(JSON.stringify(out));
         for s_ in (4, 3, 2):
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true":
                 page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
-        # ITEM 3 — the way back: the first option IS the whole field
+        # ITEM 3 — the way back: the first option IS the whole field. UPDATED night 60 (rule 7): the stopgap (a way
+        # back inside a multi-select — a plain click and a modifier-click) is GONE; the dropdown's own first option
+        # does its job, chosen as any option is, and the chip row's seventh chip is the other way back.
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)   # the Gamut lives under a scale (night 60)
         gamut_of = lambda: page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
-        first = page.evaluate("() => { const o = document.querySelector('#hcGamut option'); return { role: o.dataset.role, value: o.value, text: o.textContent, selected: o.selected, first: o === document.getElementById('hcGamut').options[0] }; }")
-        check(first["role"] == "whole-field" and first["first"] and first["value"] == "1,2,3,4,5,6,7", f"{tag} the first option must be the whole field, by role: {first}")
+        first = page.evaluate("() => { const o = document.querySelector('#hcGamut option'); return { role: o.dataset.role, value: o.value, text: o.textContent, selected: o.selected, first: o === document.getElementById('hcGamut').options[0], multiple: document.getElementById('hcGamut').multiple }; }")
+        check(first["role"] == "whole-field" and first["first"] and first["value"] == "1,2,3,4,5,6,7" and not first["multiple"], f"{tag} the first option must be the whole field, by role, in a single select: {first}")
         check(first["selected"] and gamut_of() == "", f"{tag} with no gamut set the whole-field option must be LIT: {first} {gamut_of()!r}")
         check("Gamut" not in first["text"] and "whole field" in first["text"], f"{tag} rule 14 / the app's own phrasing: {first['text']!r}")
         page.select_option("#hcGamut", ["2,3,5,6,7"]); page.wait_for_timeout(250)
         check(gamut_of() == "2,3,5,6,7" and not page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} with a pentatonic set the whole-field option must NOT be lit: {gamut_of()!r}")
-        # a PLAIN click on the first option: it alone → all seven → the whole field
-        page.click('#hcGamut option[data-role="whole-field"]'); page.wait_for_timeout(300)
-        check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} a plain click on the first option must land on the whole field and light it: {gamut_of()!r}")
-        # a MODIFIER click: added to the union → still all seven → the whole field
+        # choosing the first option, as any option is chosen → all seven → the whole field
+        page.select_option("#hcGamut", "1,2,3,4,5,6,7"); page.wait_for_timeout(300)
+        check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} choosing the first option must land on the whole field and light it: {gamut_of()!r}")
+        # the other way back: the pair set plus its omitted degree, on the chips → all seven → the whole field
         page.select_option("#hcGamut", ["1,2,4,5,6,7"]); page.wait_for_timeout(250); check(gamut_of() == "1,2,4,5,6,7", f"{tag} the pair set: {gamut_of()!r}")
-        page.click('#hcGamut option[data-role="whole-field"]', modifiers=["Meta"]); page.wait_for_timeout(300)
-        if gamut_of() != "":   # a modifier-click on an option is not honoured by every driver: the union itself is what the item asserts
-            page.select_option("#hcGamut", ["1,2,4,5,6,7", "1,2,3,4,5,6,7"]); page.wait_for_timeout(300)
-        check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} the whole-field option ADDED to a union must still land on the whole field: {gamut_of()!r}")
+        page.click('#hcChips .hc-chip[data-deg="3"]'); page.wait_for_timeout(300)
+        check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} the seventh chip completes the field and lights the whole-field option: {gamut_of()!r}")
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
 
     # ---------------- THE NECK AT 390 (night 51, 261011): fewer frets, full size ----------
     # Measured before the change: a 332 px wrap, the rail's 170 px beside the neck, the SVG 150 px
@@ -6463,6 +6483,138 @@ console.log(JSON.stringify(out));
         check(not errs4, f"{tag} the cold page raised errors: {errs4[:2]}")
         ctx4.close()
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
+
+    # ---------------- THE GAMUT BECOMES A DROPDOWN AND THE CHIPS BECOME A READOUT (night 60, 261012f) ----------
+    # Daniel's Centricity re-cut, second half. The Gamut is a SINGLE select — the same KIND as Scale and Object,
+    # NOT the same width (its box's, its contents') — live in exactly one state (Object = scale) and disabled with
+    # its reason on its own label otherwise. Selection is EQUALITY, said before it changed: a single dropdown shows
+    # the ONE option that equals the gamut; night 48's lit-by-containment (the union was the gamut) passed to the
+    # chip row, which is a set. The 261011c stopgap is gone — the dropdown's own first option IS the whole field.
+    # Seven chips below it: the KEY's degrees in the §2.1 palette (the neck legend's own swatches, one table), lit
+    # by OPACITY (the neck's field-opacity idiom, 0.28) and NEVER by hue — a picker at Object = scale, a readout
+    # that lights as the notes pass under a chord object, from the walk's own NOTE (no second source). Two standing
+    # marks: the ORIGIN in the legend's words ("colour = function against the key") and the MEANING (following /
+    # held). The row stays keyed to the key while the neck re-roots (ruled 261012). A saved gamut with a chord
+    # object DROPS the gamut and says so once (ruled 261013b); choosing a chord with a gamut set does the same.
+    if door_id == "multetudes":
+        # bg = the fill's rgb triple (the HUE, alpha stripped); op = the fill's alpha (lit-ness) — read from the computed style
+        chips = lambda: page.evaluate("""() => [...document.querySelectorAll('#hcChips .hc-chip')].map(b => { const cs = getComputedStyle(b); const m = cs.backgroundColor.match(/rgba?\\(([^)]*)\\)/); const parts = m ? m[1].split(',').map(x => x.trim()) : [];
+          return { deg: b.dataset.deg, lit: b.dataset.lit, pick: b.dataset.pick, bg: 'rgb(' + parts.slice(0, 3).join(', ') + ')', op: parts.length > 3 ? parts[3] : '1', pressed: b.getAttribute('aria-pressed'), name: (b.querySelector('.hc-chipname') || {}).textContent || '' }; })""")
+        gsel = lambda: page.evaluate("""() => { const e = document.getElementById('hcGamut'), s = document.getElementById('hcScale'); const r = e.getBoundingClientRect(), box = document.getElementById('hcGamutBox').getBoundingClientRect();
+          return { tag: e.tagName, multiple: e.multiple, disabled: e.disabled, w: Math.round(r.width), boxW: Math.round(box.width), scaleW: Math.round(s.getBoundingClientRect().width), font: getComputedStyle(e).fontSize, scaleFont: getComputedStyle(s).fontSize,
+            selected: [...e.options].filter(o => o.selected).map(o => o.value), chosen: [...e.options].filter(o => o.selected).map(o => o.textContent), first: { role: e.options[0].dataset.role, v: e.options[0].value, t: e.options[0].textContent, on: e.options[0].selected },
+            wholeField: [...e.options].filter(o => o.dataset.role === 'whole-field').length, n: e.options.length, groups: [...e.querySelectorAll('optgroup')].map(g => g.label) }; }""")
+        gamut_of = lambda: page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
+        cap = lambda: page.inner_text("#hcChipCap")
+        legend_bg = lambda: page.evaluate("() => [...document.querySelectorAll('#fdLegend i')].map(i => getComputedStyle(i).backgroundColor)")
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        check("hcChips" in r["controlsPresent"] and page.query_selector("#hcChips") is not None, f"{tag} the chip row is not mounted as a control (rule 8)")
+        g = gsel()
+        check(g["tag"] == "SELECT" and not g["multiple"] and not g["disabled"] and g["font"] == g["scaleFont"], f"{tag} the Gamut is a SINGLE select of the same kind as Scale, live under a scale: {g}")
+        check(g["w"] == g["boxW"] and g["w"] > 2 * g["scaleW"], f"{tag} the Gamut keeps its own width — its box's, its contents' — not Scale's (do not normalise): {g}")
+        check(g["first"]["role"] == "whole-field" and g["first"]["on"] and g["first"]["v"] == "1,2,3,4,5,6,7" and "whole field" in g["first"]["t"] and g["selected"] == ["1,2,3,4,5,6,7"] and g["wholeField"] == 1,
+              f"{tag} the whole field is the dropdown's own first option — one, selected alone with no gamut set: {g}")
+        check(g["groups"] == ["pentatonics", "triad pairs", "triads", "tetrads", "degrees"], f"{tag} the derived groups, in order: {g['groups']}")
+        # EQUALITY: exactly the option that equals the gamut is selected — not the nine that contain a pentatonic
+        page.select_option("#hcGamut", "2,3,5,6,7"); page.wait_for_timeout(250)
+        g = gsel(); check(gamut_of() == "2,3,5,6,7" and g["selected"] == ["2,3,5,6,7"], f"{tag} a single dropdown shows the ONE option that EQUALS the gamut: {g['selected']}")
+        # THE CHIP ROW under a scale: seven, the key's degrees, the legend's colours, lit by opacity to the set; a picker
+        c = chips(); legend = legend_bg(); hues0 = [x["bg"] for x in c]
+        check(len(c) == 7 and [x["deg"] for x in c] == ["1", "2", "3", "4", "5", "6", "7"] and [x["name"] for x in c] == ["C", "D", "E", "F", "G", "A", "B"], f"{tag} seven chips, the key's degrees, named by NOTE: {[(x['deg'], x['name']) for x in c]}")
+        check(len(legend) == 7 and hues0 == legend, f"{tag} the chips wear the neck legend's seven colours in family order — one palette: {hues0} vs {legend}")
+        check([x["lit"] for x in c] == ["false", "true", "true", "false", "true", "true", "true"], f"{tag} under a scale the chips are held to the gamut's set: {[x['lit'] for x in c]}")
+        check(all((x["lit"] == "true" and x["op"] == "1") or (x["lit"] == "false" and abs(float(x["op"]) - 0.28) < 0.01) for x in c), f"{tag} lit-ness is the FILL's OPACITY — 1 lit, the neck's field opacity 0.28 unlit, the rgb the same: {[(x['lit'], x['op']) for x in c]}")
+        check(all(x["pick"] == "true" and x["pressed"] == x["lit"] for x in c), f"{tag} under a scale the row is a picker and says which are pressed: {[(x['pick'], x['pressed']) for x in c]}")
+        check("colour = function against the key" in cap() and "held" in cap(), f"{tag} the two standing marks under a scale — the origin in the legend's words, the meaning 'held': {cap()!r}")
+        # a click toggles the degree; the dropdown follows by EQUALITY — a set no option names gets its own letters
+        page.click('#hcChips .hc-chip[data-deg="7"]'); page.wait_for_timeout(250)
+        g = gsel(); check(gamut_of() == "2,3,5,6" and g["selected"] == ["2,3,5,6"] and g["chosen"] == ["D E G A — 2 3 5 6 of C"], f"{tag} a chip click narrows the gamut and the dropdown shows the set by its own letters: {gamut_of()!r} {g['chosen']}")
+        check([x["bg"] for x in chips()] == hues0 and page.evaluate("() => document.querySelector('#hcChips .hc-chip[data-deg=\"7\"]').dataset.lit") == "false", f"{tag} a pick changes opacity, never hue: {[x['bg'] for x in chips()]}")
+        page.click('#hcChips .hc-chip[data-deg="7"]'); page.wait_for_timeout(250)
+        g = gsel(); check(gamut_of() == "2,3,5,6,7" and g["chosen"] == ["G major pentatonic — 2 3 5 6 7 of C"] and all("—" not in o or "D E G A —" not in o for o in page.evaluate("() => [...document.querySelectorAll('#hcGamut option')].map(o => o.textContent)")), f"{tag} the set back to a named one: the named option, and the letters option gone: {g['chosen']}")
+        # THE WAY BACK: the chips complete the seven — the whole field, the first option lit (the 261011c job, done by the dropdown's own option now)
+        page.click('#hcChips .hc-chip[data-deg="1"]'); page.click('#hcChips .hc-chip[data-deg="4"]'); page.wait_for_timeout(250)
+        g = gsel(); check(gamut_of() == "" and g["first"]["on"] and g["selected"] == ["1,2,3,4,5,6,7"] and all(x["lit"] == "true" for x in chips()), f"{tag} completing the seven lands on the whole field and lights its option: {gamut_of()!r} {g['selected']}")
+        # ONE STATE: a chord object disables the Gamut with its reason on its own label; a gamut set is DROPPED, said once
+        page.select_option("#hcGamut", "2,3,5,6,7"); page.wait_for_timeout(200)
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(300)
+        g = gsel(); lab = page.inner_text("#hcGamutLab"); note = page.inner_text("#hcNote")
+        check(g["disabled"] and "narrows the scale" in lab and "already narrowed" in lab, f"{tag} under a chord the Gamut is disabled with its reason on its own label: {lab!r}")
+        check("Object" not in lab and "Scale" not in lab and "Tones" not in lab, f"{tag} rule 14 — the reason quotes a caption: {lab!r}")
+        check(gamut_of() == "" and g["first"]["on"], f"{tag} choosing a chord object drops the gamut — a gamut narrows only the scale: {gamut_of()!r}")
+        check("D E G A B" in note and "dropped" in note and "narrows only the scale" in note, f"{tag} …and says so once, naming what was dropped: {note!r}")
+        check(page.evaluate("() => document.getElementById('hcTones').value") == "R,3,5,7", f"{tag} the tones survive the drop untouched")
+        # under a chord the chips are a READOUT: not a picker, the same hues; they light as the notes pass, from the walk's NOTE
+        c = chips(); check(all(x["pick"] == "false" and x["pressed"] is None for x in c) and [x["bg"] for x in c] == hues0, f"{tag} under a chord the row is a readout in the same hues: {[(x['pick'], x['pressed'], x['bg']) for x in c]}")
+        check("following the changes" in cap() and "colour = function against the key" in cap() and "held" not in cap(), f"{tag} the meaning mark under a chord: {cap()!r}")
+        page.click('#hcChips .hc-chip[data-deg="2"]'); page.wait_for_timeout(150)
+        check(gamut_of() == "" and page.evaluate("() => document.getElementById('hcObj').value") == "tetrad", f"{tag} a click under a chord changes nothing")
+        page.evaluate("() => { window.__n60 = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass' && e.detail.role !== 'pad') window.__n60.push(e.detail.midi); }); }")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); page.wait_for_timeout(300)
+        page.evaluate("() => { window.__n60 = []; }")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(2500)
+        heard = page.evaluate("() => window.__n60.slice()")
+        c_major = [0, 2, 4, 5, 7, 9, 11]
+        heard_degs = sorted({str(c_major.index(m % 12) + 1) for m in heard if m % 12 in c_major})
+        lit_now = sorted(x["deg"] for x in chips() if x["lit"] == "true")
+        check(len(heard) > 0 and lit_now == heard_degs, f"{tag} the chips light exactly the key degrees the walk sounded for the bar: lit {lit_now}, heard {heard} → {heard_degs}")
+        check([x["bg"] for x in chips()] == hues0, f"{tag} lighting as the notes pass changes no hue: {[x['bg'] for x in chips()]}")
+        page.evaluate("() => { window.__n60 = []; }")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); page.wait_for_timeout(2500)
+        heard2 = page.evaluate("() => window.__n60.slice()"); heard2_degs = sorted({str(c_major.index(m % 12) + 1) for m in heard2 if m % 12 in c_major})
+        lit2 = sorted(x["deg"] for x in chips() if x["lit"] == "true")
+        check(len(heard2) > 0 and lit2 == heard2_degs and lit2 != lit_now, f"{tag} the next bar clears the row and lights its own notes: lit {lit2}, heard {heard2_degs}, before {lit_now}")
+        check("stopped" in cap(), f"{tag} stopped, the row says so — the still frame is told from held by the mark, never by hue: {cap()!r}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:play', { detail: { run: true } }))"); page.wait_for_timeout(600)
+        check("following the changes" in cap() and "stopped" not in cap(), f"{tag} running, the row follows: {cap()!r}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:clock', { detail: { run: false } }))"); page.wait_for_timeout(400)
+        check("stopped" in cap(), f"{tag} …and stopped again: {cap()!r}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(600)
+        # THE ROW BESIDE A RE-ROOTED NECK: the chips stay keyed to the KEY while the neck re-roots — both origins stated
+        page.select_option("#hcObj", "scale"); page.select_option("#hcRef", "mode:1"); page.wait_for_timeout(300)   # centre D, in C major
+        legend_txt = page.inner_text("#fdLegend"); d_neck = page.evaluate("() => { const d = [...document.querySelectorAll('#fieldSvg [data-midi]')].find(g => +g.dataset.midi % 12 === 2); return d ? (d.querySelector('text') || {}).textContent : null; }")
+        c = chips()
+        check("against the reference tone" in legend_txt and d_neck == "R", f"{tag} the neck re-roots on the centre: {legend_txt!r} D reads {d_neck!r}")
+        check(c[1]["name"] == "D" and c[1]["bg"] == legend_bg()[1] and [x["bg"] for x in c] == hues0 and "against the key" in cap(), f"{tag} the row stays keyed to the key — D is still the 2's colour, and the row says its origin: {c[1]} {cap()!r}")
+        page.select_option("#hcRef", "mode:0"); page.wait_for_timeout(200)
+        # THE MIGRATION (ruled 261013b): a saved gamut with a chord object drops the gamut, keeps the tones, says so once
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        n60_file = export_newest(page)
+        n60_json = n60_file[n60_file.find('"app"'):][:300]
+        check('"gamut":null' in n60_file and '"tones":[1,3,5,7]' in n60_file, f"{tag} the export under a chord carries no gamut (the stored absence, null): {n60_json!r}")
+        mixed = n60_file.replace('"gamut":null', '"gamut":[2,3,5,6,7]')
+        check('"gamut":[2,3,5,6,7]' in mixed, f"{tag} the fixture is what it claims")
+        ctx5 = pw.new_context(viewport={"width": 1280, "height": 900}); page5 = ctx5.new_page(); errs5 = []; page5.on("pageerror", lambda e: errs5.append(str(e)))
+        page5.goto(html_path.as_uri()); page5.wait_for_selector("#cards", state="attached"); page5.wait_for_timeout(200)
+        import_text(page5, mixed, "night60-mixed.atchart.md")
+        page5.click('#histList .hist [data-cap="apply"]'); page5.wait_for_timeout(400)
+        cold = page5.evaluate("() => ({ obj: document.getElementById('hcObj').value, tones: document.getElementById('hcTones').value, gamut: document.getElementById('hcGamut').dataset.gamut, note: document.getElementById('hcNote').textContent, lit: [...document.querySelectorAll('#hcChips .hc-chip')].map(b => b.dataset.lit) })")
+        check(cold["obj"] == "tetrad" and cold["tones"] == "R,3,5,7" and cold["gamut"] == "", f"{tag} a saved gamut with a chord object restores with the gamut DROPPED and the tones untouched: {cold}")
+        check("saved with a gamut" in cold["note"] and "D E G A B" in cold["note"] and "dropped" in cold["note"] and "the tones are the truth" in cold["note"], f"{tag} …and says so once, in night 59's vocabulary: {cold['note']!r}")
+        check(not errs5, f"{tag} the cold page raised errors: {errs5[:2]}")
+        # A NIGHT-59 DEFECT, found tonight: a saved SCALE étude (tones null, no object since v2) applied into a page under a
+        # chord restored as that chord — the derivation skipped a null pick — and its gamut was then dropped as a chord's.
+        # Pinned where the effect is: the scale entry restores as the scale it is, its gamut intact, no drop sentence.
+        ctx5.close()
+        ctx6 = pw.new_context(viewport={"width": 1280, "height": 900}); page5b = ctx6.new_page(); errs5b = []; page5b.on("pageerror", lambda e: errs5b.append(str(e)))   # its own context: one entry in the history, its own id
+        page5b.goto(html_path.as_uri()); page5b.wait_for_selector("#cards", state="attached"); page5b.wait_for_timeout(200)
+        scale_file = n60_file.replace('"tones":[1,3,5,7]', '"tones":null').replace('"gamut":null', '"gamut":[2,3,5,6,7]').replace('"id":"', '"id":"n60scale-', 1)
+        check('"tones":null' in scale_file, f"{tag} the scale fixture is what it claims")
+        check(page5b.evaluate("() => document.getElementById('hcObj').value") == "tetrad", f"{tag} the cold page boots under a chord — the case that hid the defect")
+        import_text(page5b, scale_file, "night60-scale.atchart.md")
+        page5b.click('#histList .hist [data-cap="apply"]'); page5b.wait_for_timeout(400)
+        cold2 = page5b.evaluate("() => ({ obj: document.getElementById('hcObj').value, gamut: document.getElementById('hcGamut').dataset.gamut, note: document.getElementById('hcNote').textContent, lit: [...document.querySelectorAll('#hcChips .hc-chip')].filter(b => b.dataset.lit === 'true').map(b => b.dataset.deg) })")
+        check(cold2["obj"] == "scale" and cold2["gamut"] == "2,3,5,6,7" and "dropped" not in cold2["note"] and cold2["lit"] == ["2", "3", "5", "6", "7"], f"{tag} a saved scale étude restores as the scale it is, its gamut intact and held on the chips: {cold2}")
+        check(not errs5b, f"{tag} the cold page raised errors: {errs5b[:2]}")
+        ctx6.close()
+        # 390: the row fits the card, seven across, and the card's height is measured
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
+        m390 = page.evaluate("""() => { const c = document.getElementById('hcKey').closest('.card').getBoundingClientRect(); const cs = [...document.querySelectorAll('#hcChips .hc-chip')].map(b => b.getBoundingClientRect());
+          const g = document.getElementById('hcGamut').getBoundingClientRect(); return { cardW: Math.round(c.width), cardH: Math.round(c.height), cardRight: Math.round(c.right), chipRights: cs.map(r => Math.round(r.right)), chipW: cs.map(r => +r.width.toFixed(1)), rows: new Set(cs.map(r => Math.round(r.top))).size, gamutRight: Math.round(g.right), gamutW: Math.round(g.width) }; }""")
+        check(all(x <= m390["cardRight"] for x in m390["chipRights"]) and m390["rows"] == 1 and min(m390["chipW"]) >= 22 and m390["gamutRight"] <= m390["cardRight"], f"{tag} @390 seven chips in one row inside the card, the dropdown inside the card: {m390}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

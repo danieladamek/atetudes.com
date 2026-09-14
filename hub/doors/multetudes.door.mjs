@@ -205,7 +205,13 @@ export default {
      * name the tones make (a preset's own default wins exactly, else the smallest stack that holds them); under
      * a scale Tones speaks the key's note names and fills from the gamut; only tones is stored (payload v2, a v1
      * étude's object read as a label and the tones said to win, once); the 390 grid no longer clips its selects. */
-    blurb: "one tool that holds many études · v0.6.11",
+    /* v0.6.12 (261013, night 60 — the Centricity re-cut, second half): the Gamut is a single dropdown of the
+     * same kind as Scale and Object, live only under a scale (disabled with its reason otherwise), choosing the
+     * one option that equals the gamut; the whole field is its own first option (the 261011c stopgap gone);
+     * seven key-degree chips below it in the palette, lit by opacity — a picker under a scale, a readout of the
+     * notes passing under a chord — with two standing marks (against the key; following / held); a saved gamut
+     * under a chord object is dropped and said (ruled 261013b). */
+    blurb: "one tool that holds many études · v0.6.12",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
