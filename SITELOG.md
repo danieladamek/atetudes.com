@@ -1,3 +1,14 @@
+## 2026-09-14 — DEPLOYED: night 60 live — the Gamut becomes a dropdown and the chips become a readout; Multetudes v0.6.12; written from the run
+
+- record: run 34828354908 · success · commit 3ebc4ba · fetched 2026-09-14T09:40Z · 6/6 studies byte-identical · digest 1c500091e577
+- Actions run 34828354908 green on `3ebc4ba` — https://github.com/danieladamek/atetudes.com/actions/runs/34828354908 (created 2026-09-14T09:30:38Z, finished 2026-09-14T09:40:10Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 89e1b704dca7 · live 89e1b704dca7 — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 9a37556973aa · live 9a37556973aa — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-14 — Night 60: the Gamut becomes a dropdown and the chips become a readout — the Centricity re-cut, second half; Multetudes v0.6.12
 
 - **Why (Daniel's 261011 mockup, dispatched 261012, ruled 261013b):** night 59 made Tones the truth; this night
