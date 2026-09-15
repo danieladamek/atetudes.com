@@ -291,20 +291,15 @@ export const fieldBoard = {
 #fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
 /* THE HEADER MINI (night 62; was .fd-undermini in the under-neck row): the same buttons, in the header
- * beside the readout. At phone width the shell's readhead grid would seat a mini in column 2 beside a
- * shrinking readout; the neck's is on a row of its OWN below the title-and-readout row (stack, do not
- * shrink — measured: 13 px beside the readout at 390). Id-scoped so it out-ranks the shell's :has(.mini)
- * rules for this board alone; the other boards' minis keep the shell's layout. */
+ * beside the readout. At phone width the mini is on a row of its OWN below the title-and-readout row
+ * (stack, do not shrink — measured: 13 px beside the readout at 390); since night 63 that is the shell's
+ * readhead grammar for every board with a mini, not this board's own rule. */
 .fd-headmini{display:inline-flex;gap:4px;flex:0 0 auto}
 .fd-headmini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 .fd-headmini button:hover{border-color:var(--ink)}
-@media (max-width:480px){
-#fdHead{grid-template-columns:auto minmax(0,1fr)}
-#fdHead>span:first-child{grid-column:1}
-#fdHead #fdMode{grid-column:2}
-#fdHead #fdMini{grid-column:1 / -1;justify-content:flex-start;margin-top:4px}
-}
+/* the neck's own 390 stack rules (night 62) RETIRED night 63: the shell's readhead grammar stacks every board's mini
+ * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
 /* the glyph alone (261014c): the mini's own button box — padding 2px 8px, the same line-height — so the
  * repeat reads as one of the cluster's buttons beside the bar split, not a text button with a glyph in it */
 #fdRepeat{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);

@@ -217,7 +217,9 @@ export default {
     /* v0.6.14 (261014b, night 62 — the transport comes up): the neck's own mini moves from the under-neck row to
      * the header beside the readout (on its own row at phone width — stack, do not shrink); a seventh view of the
      * one clock takes a seat in the mixer strip's header. No transport behaviour, no state, no family constant. */
-    blurb: "one tool that holds many études · v0.6.14",
+    /* v0.6.15 (261014d, night 63 — repeat joins the mini): repeat is the transport's state on the bus (CONFIG
+     * {repeat}, replayed), shown and set from every transport view — the neck's own button one view among them. */
+    blurb: "one tool that holds many études · v0.6.15",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

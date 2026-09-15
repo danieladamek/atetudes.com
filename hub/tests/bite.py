@@ -2271,14 +2271,19 @@ def m105_the_neck_mini_shrinks_the_readout_at_390():
     # the readout shrinking to its ellipsis and the title taking its own row. The 390 stack pin must bite.
     # (first form removed only the mini's own-row rule and did NOT bite — the neck's other three rules still held the
     #  readout on the title's row and the shell dropped the mini to the next row; the whole block is the mutation)
-    p, original, mutated = patch("hub/modules/field-board.mjs",
-        "@media (max-width:480px){\n#fdHead{grid-template-columns:auto minmax(0,1fr)}\n#fdHead>span:first-child{grid-column:1}\n#fdHead #fdMode{grid-column:2}\n#fdHead #fdMini{grid-column:1 / -1;justify-content:flex-start;margin-top:4px}\n}",
-        "/* (the shell's default at phone width — the mini beside a shrinking readout, the title on its own row) */")
+    # RE-TARGETED night 63: the stack lives in the shell's readhead grammar now (every board with a mini); the mutation
+    # puts the mini back beside the readout there — the neck's 390 pin (and the 260920 chord-whole pin) must bite.
+    # (a mutation of the mini's own row rule did NOT bite: at 390 a 158 px cluster never fits beside a ≥140 px box in a
+    #  266 px header, so it wraps by geometry. The shrink the grammar guards against is the BOX's floor — remove it and
+    #  the box shrinks to sit beside the mini, the chord clipped: the neck's stack pin and the chord-whole pin bite.)
+    p, original, mutated = patch("hub/tools/build.mjs",
+        "  .board .bh.readhead .readbox{flex:1 1 140px}",
+        "  .board .bh.readhead .readbox{flex:1 1 0;min-width:0}   /* (no floor — the box shrinks beside the mini) */")
     try:
         p.write_text(mutated)
         build()
         g = suite()
-        hit = "13 px is not a seat" in g.stdout or "shrinks for nothing" in g.stdout
+        hit = "13 px is not a seat" in g.stdout or "shrinks for nothing" in g.stdout or "the chord whole" in g.stdout
         record("the neck's mini shrinks the readout at 390 — beside it instead of below it",
                g.returncode != 0 and hit, "suite exit %d; the stack pin bit: %s" % (g.returncode, hit))
     finally:
@@ -2301,6 +2306,40 @@ def m106_the_repeat_button_loses_its_name():
         hit = "a glyph with a NAME" in g.stdout
         record("the repeat button loses its name — a glyph alone, nothing for a reader to read",
                g.returncode != 0 and hit, "suite exit %d; the name pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m107_the_mini_keeps_repeat_to_itself():
+    # night 63: a mini's repeat toggles a PRIVATE copy — painted on its own button, announced to no one. The fork
+    # night 55 deleted, arriving as state: the agreement pin (every view reads it) must bite.
+    p, original, mutated = patch("hub/mini.mjs",
+        '      else if (role === "repeat") announce(d, CONFIG_CHANGED, { repeat: !repeat });',
+        '      else if (role === "repeat") { repeat = !repeat; sync(); }   // (kept to itself)')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "EVERY view and the neck's own button read ON" in g.stdout
+        record("the mini keeps repeat to itself — one view toggles, the others and the walk never hear",
+               g.returncode != 0 and hit, "suite exit %d; the agreement pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m108_the_mini_stops_hearing_repeat():
+    # night 63: the mini no longer reads repeat from CONFIG — the neck's own button toggles and no view follows, and a
+    # late-mounted view would boot blind. The agreement pin (off at the neck's button, every view off) must bite.
+    p, original, mutated = patch("hub/mini.mjs",
+        '    if (m && typeof m.repeat === "boolean") { repeat = m.repeat; sync(); }',
+        '    // (repeat unheard)')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "every view reads OFF" in g.stdout or "EVERY view and the neck's own button read ON" in g.stdout or "is VISIBLE, named" in g.stdout
+        record("the mini stops hearing repeat — the neck toggles and no view follows",
+               g.returncode != 0 and hit, "suite exit %d; the agreement pin bit: %s" % (g.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -2459,7 +2498,7 @@ def main():
                m98_a_chip_hue_follows_lit_ness, m99_the_dropped_gamut_goes_unsaid, m100_the_derivation_skips_a_null_pick,
                m101_the_emptied_window_goes_unsaid, m102_the_dropped_gamut_never_reaches_the_neck,
                m103_a_correction_lands_inside_the_dispatch_again, m104_the_mixer_loses_its_view, m105_the_neck_mini_shrinks_the_readout_at_390,
-               m106_the_repeat_button_loses_its_name)
+               m106_the_repeat_button_loses_its_name, m107_the_mini_keeps_repeat_to_itself, m108_the_mini_stops_hearing_repeat)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

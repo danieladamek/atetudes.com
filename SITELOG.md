@@ -1,3 +1,43 @@
+## 2026-09-15 — Night 63: repeat joins the mini and becomes a transport state; the header wraps at phone width; Multetudes v0.6.15, Tetradetudes v0.6.6
+
+- **Why (Daniel, 261014):** the same transport set, repeat included, on the staff and the keys views — both carried
+  ⏮ ▶ ⏹ ⏭ and lacked only repeat, for a structural reason: `hub/mini.mjs`'s buttons were stateless bus requests
+  and repeat was one board's setting (the neck's `cfg.repeat`).
+- **Repeat moved onto the bus.** It rides on `CONFIG {repeat}` — the message the neck's board already adopts, the
+  walk already consults at the bar boundary, the notepad already snapshots, and the bus already REPLAYS to a late
+  subscriber. That is the answer to the mount-mid-repeat question (rule 11): a view mounted after the last
+  announcement hears the current value on subscribe. Pinned at the mechanism (`hub/tests/bus-replay.test.mjs`, a
+  minimal document: a listener subscribed after two announces hears the merged last CONFIG once; STEP replays
+  nothing — night 62's finding) and on the door (the replay store reads `repeat: true` after any view toggles).
+- **The mini:** a fifth button, 🔁, after the reference's four unchanged, named by its word (`aria-label`),
+  announcing `CONFIG {repeat}` and painting `aria-pressed` and the pressed look (the neck's idiom, inline) from what
+  it hears back; addressed by `data-role="repeat"`, never by glyph. **Shown only where the bus carries the state:**
+  the hosts are computed from the sources — seven — and the three in the tetradetudes door keep the button hidden,
+  because nothing there consults repeat (its transport is the pass-walker); a control nobody consults is a lie.
+  Its header updated, not replaced: the mini holds its own copies of what it reads back from the bus — the
+  position, the clock's running and now repeat — *"kept honest by the move: repeat stopped being one board's
+  setting the night it joined; no view owns it, every view reads it."* No timer, no markup, no piece of the walk.
+  The neck keeps its clock-row button as one more view (ruled 261015 since: the clock-row copy goes at night 64).
+- **The agreement pin:** 🔁 at the mixer's view → every view, the neck's own button and the replayed CONFIG read
+  on; off at the neck's → every view off; on from the staff's, off from the keys'; pressed, every copy paints alike.
+- **Found and fixed at 390 (doctrine rule 3):** with five buttons the cluster is 158 px; under the shell's readhead
+  grid the staff's and keys' readouts shrank to 98 px and ellipsised the CHORD ("Bbm…") while the 260920 pin still
+  called it whole — it measured the span's rectangle, not the ellipsis. The pin now reads the clip point. A fixed
+  grid could not serve all three boards (the staff's long title left a shared row 93 px), so the shell's readhead
+  grammar (`hub/tools/build.mjs`) is a WRAPPING header at ≤ 480 px: the box stays beside its title where it has
+  ≥ 140 px (the neck 171, the keys 173) and takes a full row where it has not (the staff 266); the mini always a
+  row of its own — derived from the content, never a per-board rule. The neck's own night-62 stack rules retired
+  to it (one site).
+- **Both doors moved** (the shared mini): tetradetudes' face unchanged — the hidden button, and a grammar it does
+  not reach. A first hub run refused it because `mini.mjs`'s comments named an id that door prunes (`#fdRepeat`;
+  the prune check reads comments) — reworded to the role.
+- **Gates:** engine 704/704 · hub 14/14 · red first `hub/tests/out/doors-n63-red-0915-0052.log` (the night's by name)
+  · the two doors 6,432/0 (`doors-n63-doors-0915-0111.log`; a first run 6,432/6 — four-button pins from nights 62
+  and Shell 4, rewritten) · door gate **21,903/0** (`doors-0915-0119.log`) · singles m105 (re-targeted to the
+  readout's floor), m107, m108 bite (`bite-n63-singles-0915.log`, `bite-m105c-0915.log`) · chain **109/109**, suite
+  green (`bite-0915-0158.log`, 01:58–09:59) · hugo 0 · check_site clean · renders both doors, 1280/390.
+- Report: `notes/working/Multetudes build run 261014d — night 63, repeat joins the mini and becomes a transport state.md`.
+
 ## 2026-09-15 — DEPLOYED: night 62 live — the transport comes up to the header and takes a seat at the mixer; the repeat button loses its word; Multetudes v0.6.14; written from the run
 
 - record: run 34933576639 · success · commit 11a0434 · fetched 2026-09-15T05:49Z · 6/6 studies byte-identical · digest 9a236ae99c31

@@ -72,10 +72,10 @@ const ROW_WRAPPER = {
  * occupy at the header's right — an in-flow row must end before it. AT PHONE
  * WIDTH title, box, mini and band cannot share one row and the readout must stay
  * ONE line beside its title (no extra row, no dropped title — the ruling), so the
- * header becomes a grid: a board WITH a mini already needs a second row there and
- * the box shares it with the mini (box left, shrinking to its ellipsis; mini
- * right) while the title keeps the first row; a board WITHOUT one (the neck)
- * keeps title and box on its single row. Collapsed, the mini hides with the rest
+ * header becomes a grid: title and box keep their single row on every board;
+ * a board WITH a mini gives the mini a row of its own below (night 63 — until
+ * then the box shared the mini's row and shrank to its ellipsis, which with a
+ * five-button mini ate the chord; night 62 had stacked the neck's alone). Collapsed, the mini hides with the rest
  * of the board (the !important outranks a module's own #id rule, as the shell's
  * collapse rules do); the readout stays. */
 const READOUT_GRAMMAR = {
@@ -93,12 +93,17 @@ const READOUT_GRAMMAR = {
 .readbox .readdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
 .readbox .readmode{font-weight:600}
 @media (max-width:480px){
-  .board .bh.readhead{display:grid!important;grid-template-columns:auto minmax(0,1fr);align-items:center}
+  /* NIGHT 63 (261014d — measured): with repeat the mini is five buttons, 158 px, and a readout sharing its row
+   * at 390 shrank to 98 px and ellipsised the CHORD ("Bbm…") on the staff and the keys — the shrink night 62
+   * refused for the neck; and a fixed grid cannot serve all three boards, because the staff's long title
+   * ("The étude — end to end") leaves a shared row 93 px for the box. So the header WRAPS: the box stays beside
+   * its title where it has room (at least 140 px — the neck, the keys) and drops to a full row of its own where
+   * it has not (the staff); the mini ALWAYS takes a full row below — stack, do not shrink, derived from the
+   * content, never a per-board rule. */
+  .board .bh.readhead{display:flex!important;flex-wrap:wrap;align-items:center}
   .board .bh.readhead .headspace{display:none}
-  .board .bh.readhead:has(.mini){grid-template-columns:minmax(0,1fr) auto}
-  .board .bh.readhead:has(.mini)>span:first-child{grid-column:1 / -1}
-  .board .bh.readhead:has(.mini) .readbox{grid-column:1}
-  .board .bh.readhead:has(.mini) .mini{grid-column:2;justify-content:flex-end}
+  .board .bh.readhead .readbox{flex:1 1 140px}
+  .board .bh.readhead .mini{flex:0 0 100%;justify-content:flex-start;margin-top:4px}
 }
 .clpsd>.bh.readhead .mini{display:none!important}
 `,

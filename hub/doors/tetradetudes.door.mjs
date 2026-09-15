@@ -117,7 +117,10 @@ export default {
     /* v0.6.5 (261012, night 58 — the row-count re-cut): the mixer leaves the Transport card for a Mixer card
      * of its own (voice · chord · bass); the Transport card is the clock (play · BPM · sig). ROW_COUNTS re-cut
      * across the family; every id, message and state as before. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.5",
+    /* v0.6.6 (261014d, night 63): hub/mini.mjs gained repeat as the transport's state on the bus; this door's
+     * transport consults no repeat, so its three transport views keep the button hidden — nothing here changes on
+     * the face; the build moves because the shared mini does. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.6",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

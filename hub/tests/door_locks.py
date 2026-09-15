@@ -2875,9 +2875,13 @@ console.log(JSON.stringify(out));
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(250)
         clear = page.evaluate("""(ids) => ids.map(id => { const box = document.getElementById(id); const bd = box.closest('.board'); const r = (e) => e.getBoundingClientRect();
           const mini = bd.querySelector('.bh .mini'); const info = bd.querySelector('.infoBtn') || bd.querySelector('.clpsBtn');
-          const ch = box.querySelector('.readchord'); const title = bd.querySelector('.bh span');
+          const ch = box.querySelector('.readchord'); const title = bd.querySelector('.bh span'); const t = box.querySelector('.readtext');
           return { id, w: Math.round(r(box).width), clearsMini: !mini || r(box).right <= r(mini).left || r(box).bottom <= r(mini).top + 1, clearsBtn: r(box).right <= r(info).left, oneLine: r(box).height < 40,   /* night 62: the neck's mini stacks BELOW the box at phone width — clear means no overlap, right or below */
-            chordWhole: r(ch).right <= r(box).right - 1, neckOneRow: !!mini || Math.abs(r(box).top - r(title).top) < 12 }; })""", ro_ids)
+            /* night 63 (rule 7, doctrine rule 3): the span's rect fits while the ellipsis has eaten the chord's tail ("Bbm…") — whole means the
+             * chord ends before the clip point of the text it lives in (the ellipsis glyph ≈ 16 px at this size) */
+            chordWhole: r(ch).right <= r(box).right - 1 && (t.scrollWidth <= t.clientWidth || r(ch).right <= r(t).right - 16),
+            /* night 63: the box keeps its title's row where it has room (≥ 140 px) and takes a full row where it has not (the staff's long title) */
+            neckOneRow: Math.abs(r(box).top - r(title).top) < 12 || r(box).width >= 200 }; })""", ro_ids)
         check(all(c["w"] > 60 and c["clearsMini"] and c["clearsBtn"] and c["oneLine"] and c["chordWhole"] and c["neckOneRow"] for c in clear),
               f"{tag} 3 (260920): at 390 the readout is visible, uncovered, one line, the chord whole, on all three boards — and the neck's stays beside its title: {clear}")
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(250)
@@ -5371,11 +5375,13 @@ console.log(JSON.stringify(out));
           return bs.findIndex(b => b.classList.contains('tl-cur')); }""")
         if page.inner_text("#metroBtn") == "Stop":       # start from a stopped clock
             page.click("#metroBtn"); page.wait_for_timeout(80)
-        # every strip carries the full cluster
+        # every strip carries the full cluster — the reference's four FIRST; since night 63 (261014d, rule 7) a fifth,
+        # repeat, rides in every mini and is shown only where the bus carries the state (hidden in this door: its
+        # transport consults no repeat — the night-63 block pins that)
         for host in ("#tlMini", "#scMini", "#kbMini"):
             roles = page.eval_on_selector_all(f"{host} button", "e => e.map(x => x.dataset.role)")
-            check(roles == ["prev", "play", "stop", "next"],
-                  f"{tag} {host} is not the ⏮ ▶ ⏹ ⏭ cluster: {roles}")
+            check(roles[:4] == ["prev", "play", "stop", "next"] and roles[4:] == ["repeat"],
+                  f"{tag} {host} is not the ⏮ ▶ ⏹ ⏭ cluster with repeat fifth: {roles}")
         # ⏭ on a strip steps the ONE pass (the mini owns no timer, it asks the bus)
         was = tl_at()
         page.click("#tlMini button[data-role=next]")
@@ -6724,7 +6730,7 @@ console.log(JSON.stringify(out));
           return { inHeader: mini.closest('.bh') === head, afterBox: !!(box.compareDocumentPosition(mini) & Node.DOCUMENT_POSITION_FOLLOWING), inRow: !!mini.closest('.fd-railrow'),
             mini: R(mini), box: R(box), title: R(title), info: R(info), buttons: [...mini.querySelectorAll('button')].map(b => b.dataset.role) }; }""")
         s1 = seat()
-        check(s1["inHeader"] and s1["afterBox"] and not s1["inRow"] and s1["buttons"] == ["prev", "play", "stop", "next"], f"{tag} #fdMini sits in the neck's header after the readout, out of the under-neck row, with its four buttons: {s1}")
+        check(s1["inHeader"] and s1["afterBox"] and not s1["inRow"] and s1["buttons"][:4] == ["prev", "play", "stop", "next"], f"{tag} #fdMini sits in the neck's header after the readout, out of the under-neck row, with the reference's four first (repeat fifth since night 63): {s1}")
         check(s1["mini"]["l"] >= s1["box"]["r"] and abs(s1["mini"]["t"] + s1["mini"]["h"] / 2 - (s1["box"]["t"] + s1["box"]["h"] / 2)) < 8 and s1["mini"]["r"] <= s1["info"]["l"], f"{tag} @1280 the mini sits on the readout's row, right of it and left of the ⓘ band: {s1}")
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
         s2 = seat()
@@ -6741,7 +6747,7 @@ console.log(JSON.stringify(out));
         mx = page.evaluate("""() => { const m = document.getElementById('mxMini'); if (!m) return null; const R = (e) => { const r = e.getBoundingClientRect(); return { l: Math.round(r.left), t: Math.round(r.top), r: Math.round(r.right), b: Math.round(r.bottom) }; };
           const head = m.closest('.bh'); const board = head && head.closest('.board'); const title = head && head.querySelector('span');
           return { inHeader: !!head, mixer: !!board && (title || {}).textContent === 'Mixer', buttons: [...m.querySelectorAll('button')].map(b => b.dataset.role), mini: R(m), title: R(title), overRow: [...board.querySelectorAll('.mx-row')].some(r => { const rr = r.getBoundingClientRect(), mr = m.getBoundingClientRect(); return mr.bottom > rr.top + 1 && mr.top < rr.bottom - 1; }) }; }""")
-        check(mx is not None and "mxMini" in r["controlsPresent"] and mx["inHeader"] and mx["mixer"] and mx["buttons"] == ["prev", "play", "stop", "next"] and not mx["overRow"] and abs(mx["mini"]["t"] - mx["title"]["t"]) < 12, f"{tag} the mixer's header carries a view of the transport, beside its title, over no row: {mx}")
+        check(mx is not None and "mxMini" in r["controlsPresent"] and mx["inHeader"] and mx["mixer"] and mx["buttons"][:4] == ["prev", "play", "stop", "next"] and not mx["overRow"] and abs(mx["mini"]["t"] - mx["title"]["t"]) < 12, f"{tag} the mixer's header carries a view of the transport, beside its title, over no row (the four first; repeat fifth since night 63): {mx}")
         # ONE CLOCK, MANY VIEWS: every host a module's source mounts the mini in is LIVE in this door with the four
         # buttons — the hosts are computed from the sources (rule 6: never a hand-kept count; the dispatch's census of
         # five missed the staff board's #stMini, found by this very pin — with the mixer's the door carries seven)
@@ -6749,8 +6755,8 @@ console.log(JSON.stringify(out));
         hosts62 = sorted(set(h for p in (REPO / "hub" / "modules").glob("*.mjs") for h in _re62.findall(r'mountMini\(ctx, byId\("(\w+)"\)\)', p.read_text())))
         live62 = page.evaluate("(ids) => ids.map(id => { const e = document.getElementById(id); return [id, e ? [...e.querySelectorAll('button')].map(b => b.dataset.role).join(' ') : null]; })", hosts62)
         here62 = [(h, v) for h, v in live62 if f'id="{h}"' in html_path.read_text()]   # the hosts THIS door carries (the chart line's, the keyboard's and the score's are other doors')
-        check(len(hosts62) >= 7 and "mxMini" in hosts62 and "fdMini" in hosts62 and len(here62) >= 4 and all(v == "prev play stop next" for _, v in here62),
-              f"{tag} every mounted mini this door carries is live with its four buttons — one clock, {len(hosts62)} views in the family, {len(here62)} in this door: {live62}")
+        check(len(hosts62) >= 7 and "mxMini" in hosts62 and "fdMini" in hosts62 and len(here62) >= 4 and all(v.startswith("prev play stop next") for _, v in here62),
+              f"{tag} every mounted mini this door carries is live with the reference's four buttons first — one clock, {len(hosts62)} views in the family, {len(here62)} in this door: {live62}")
         # THE AGREEMENT: play at the mixer's view — both read playing (the one sign the mini reads back: Play greyed); stop at the neck's — both read stopped
         grey = lambda: page.evaluate("() => ['fdMini', 'mxMini'].map(id => { const b = document.querySelector('#' + id + ' button[data-role=\"play\"]'); return b ? b.style.color : null; })")   # null when a host is missing — the pin fails by name, the leg does not crash (rule 2)
         running = lambda: page.evaluate("() => (document.__atetudesLast && document.__atetudesLast.get('atetudes:clock-state') || {}).running")
@@ -6776,6 +6782,62 @@ console.log(JSON.stringify(out));
           return { oneRow: Math.abs(R(m).top - R(t).top) < 12, inside: R(m).right <= R(board).right, rows: board.querySelectorAll('.mx-row').length, overRow: [...board.querySelectorAll('.mx-row')].some(r => R(m).bottom > R(r).top + 1) }; }""")
         check(mx390["oneRow"] and mx390["inside"] and not mx390["overRow"] and mx390["rows"] == 3, f"{tag} @390 the mixer's mini shares the header row with the title, inside the board, over no row; the strip's three rows stand: {mx390}")
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
+
+    # ---------------- REPEAT JOINS THE MINI AND BECOMES A TRANSPORT STATE (night 63, 261014d) ----------
+    # Daniel wants the same transport set, repeat included, on the staff and the keys views. Repeat was one board's
+    # setting (field-board's cfg.repeat, painted on #fdRepeat); a fifth stateless request in mini.mjs's BUTTONS would
+    # have reached into one module's config from every host. So repeat MOVED ONTO THE BUS: it rides on CONFIG
+    # {repeat} — the message the neck's board already adopts, the walk already consults, and the bus already REPLAYS
+    # to a late subscriber (bus.mjs REPLAYED) — which is the answer to the mount-mid-repeat question: a view that
+    # mounts after the last announcement hears the current value on subscribe. The mini shows its repeat button
+    # only where the bus carries the state (a boolean `repeat` heard on CONFIG); a door whose transport consults no
+    # repeat (tetradetudes) keeps the button hidden — a control nobody consults is a lie (rule 10). Hosts computed
+    # from the sources (never hand-counted); addressed by data-role, never by glyph; an accessible name on every copy.
+    if door_id == "multetudes":
+        import re as _re63
+        hosts63 = sorted(set(h for p in (REPO / "hub" / "modules").glob("*.mjs") for h in _re63.findall(r'mountMini\(ctx, byId\("(\w+)"\)\)', p.read_text())))
+        built63 = html_path.read_text()
+        here63 = [h for h in hosts63 if f'id="{h}"' in built63]
+        minis = lambda: page.evaluate("""(ids) => ids.map(id => { const m = document.getElementById(id); const rb = m.querySelector('button[data-role="repeat"]');
+          return { id, roles: [...m.querySelectorAll('button')].map(b => b.dataset.role), glyphs: [...m.querySelectorAll('button')].slice(0, 4).map(b => b.textContent), titles: [...m.querySelectorAll('button')].slice(0, 4).map(b => b.title),
+            repeat: rb ? { hidden: rb.hidden || getComputedStyle(rb).display === 'none', name: rb.getAttribute('aria-label'), pressed: rb.getAttribute('aria-pressed'), glyphAddr: false } : null }; })""", here63)
+        m0 = minis()
+        check(len(here63) >= 4 and "fdMini" in here63 and "mxMini" in here63 and "stMini" in here63 and "kyMini" in here63, f"{tag} the hosts this door carries, computed from the sources: {here63}")
+        check(all(m["roles"] == ["prev", "play", "stop", "next", "repeat"] for m in m0), f"{tag} every mini carries the four requests byte for byte and repeat fifth: {[(m['id'], m['roles']) for m in m0]}")
+        check(all(m["glyphs"] == ["⏮", "▶", "⏹", "⏭"] and m["titles"] == ["previous chord", "play the étude", "stop", "next chord"] for m in m0), f"{tag} the four existing buttons are the reference's, unchanged: {[(m['id'], m['glyphs'], m['titles']) for m in m0]}")
+        check(all(m["repeat"] and not m["repeat"]["hidden"] and m["repeat"]["name"] and "repeat" in m["repeat"]["name"] and m["repeat"]["pressed"] in ("true", "false") for m in m0),
+              f"{tag} in a door whose transport consults repeat, every mini's repeat is VISIBLE, named, and says its state: {[(m['id'], m['repeat']) for m in m0]}")
+        # ONE STATE, MANY VIEWS: toggle at the mixer's view — every view, the neck's own button, and the replay store read it
+        pressed = lambda: page.evaluate("(ids) => Object.fromEntries(ids.map(id => { const b = document.querySelector('#' + id + ' button[data-role=\"repeat\"]'); return [id, b ? b.getAttribute('aria-pressed') : null]; }).concat([['fdRepeat', document.getElementById('fdRepeat').getAttribute('aria-pressed')]]))", here63)   # null for a missing button: fails by name, never crashes (rule 2)
+        replay = lambda: page.evaluate("() => (document.__atetudesLast && document.__atetudesLast.get('atetudes:config') || {}).repeat")
+        if any(v == "true" for v in pressed().values()):
+            page.click("#fdRepeat"); page.wait_for_timeout(200)
+        check(all(v == "false" for v in pressed().values()) and replay() is False, f"{tag} every view reads repeat OFF before the test: {pressed()} replay {replay()}")
+        page.click('#mxMini button[data-role="repeat"]'); page.wait_for_timeout(250)
+        check(all(v == "true" for v in pressed().values()) and replay() is True, f"{tag} repeat at the mixer's view: EVERY view and the neck's own button read ON, and the replayed CONFIG carries it — a view mounting now would hear it on subscribe: {pressed()} replay {replay()}")
+        page.click("#fdRepeat"); page.wait_for_timeout(250)
+        check(all(v == "false" for v in pressed().values()) and replay() is False, f"{tag} repeat off at the neck's button: every view reads OFF: {pressed()} replay {replay()}")
+        page.click('#stMini button[data-role="repeat"]'); page.wait_for_timeout(250)
+        check(all(v == "true" for v in pressed().values()), f"{tag} on again from the staff's view: {pressed()}")
+        page.click('#kyMini button[data-role="repeat"]'); page.wait_for_timeout(250)
+        check(all(v == "false" for v in pressed().values()), f"{tag} off again from the keys' view: {pressed()}")
+        # the pressed paint is the neck's idiom on every copy, inline — no hue: ink on white pressed, as #fdRepeat paints
+        page.click('#fdMini button[data-role="repeat"]'); page.wait_for_timeout(250)
+        paint = page.evaluate("(ids) => ids.map(id => getComputedStyle(document.querySelector('#' + id + ' button[data-role=\"repeat\"]')).backgroundColor)", here63)
+        check(len(set(paint)) == 1 and paint[0] == page.evaluate("() => getComputedStyle(document.getElementById('fdRepeat')).backgroundColor"), f"{tag} pressed, every copy paints as the neck's button does: {paint}")
+        page.click("#fdRepeat"); page.wait_for_timeout(200)
+        # 390: the staff and keys readouts keep one line beside a five-button mini, the chord whole (the 260920 pin re-runs the geometry; here the mini's own row)
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
+        g390 = page.evaluate("(ids) => ids.map(id => { const m = document.getElementById(id); const R = (e) => e.getBoundingClientRect(); const bd = m.closest('.board'); return { id, w: Math.round(R(m).width), inside: R(m).right <= R(bd).right, oneRow: R(m).height < 40 }; })", here63)
+        check(all(x["inside"] and x["oneRow"] and x["w"] >= 140 for x in g390), f"{tag} @390 five buttons in one row inside every board: {g390}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
+    if door_id == "tetradetudes":
+        import re as _re63b
+        hosts63b = sorted(set(h for p in (REPO / "hub" / "modules").glob("*.mjs") for h in _re63b.findall(r'mountMini\(ctx, byId\("(\w+)"\)\)', p.read_text())))
+        here63b = [h for h in hosts63b if f'id="{h}"' in html_path.read_text()]
+        rep63b = page.evaluate("""(ids) => ids.map(id => { const m = document.getElementById(id); const rb = m.querySelector('button[data-role="repeat"]'); return { id, visible: [...m.querySelectorAll('button')].filter(b => !b.hidden && getComputedStyle(b).display !== 'none').map(b => b.dataset.role), repeatHidden: !rb || rb.hidden || getComputedStyle(rb).display === 'none' }; })""", here63b)
+        check(len(here63b) >= 3 and all(x["visible"] == ["prev", "play", "stop", "next"] and x["repeatHidden"] for x in rep63b), f"{tag} no transport here consults repeat, so no mini shows it — the bus carries no repeat state: {rep63b}")
+        check(page.evaluate("() => (document.__atetudesLast && document.__atetudesLast.get('atetudes:config') || {}).repeat") is None, f"{tag} …and the replayed CONFIG carries no repeat key in this door")
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
