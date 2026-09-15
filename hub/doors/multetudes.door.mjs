@@ -214,7 +214,10 @@ export default {
     /* v0.6.13 (261014, night 61): a correction the Centricity card makes while hearing a message (the object the
      * tones make, a gamut dropped under a chord) is announced after that message has reached everyone — the
      * readout had kept the stale object and the dropped gamut, painted, while the card and the neck said otherwise. */
-    blurb: "one tool that holds many études · v0.6.13",
+    /* v0.6.14 (261014b, night 62 — the transport comes up): the neck's own mini moves from the under-neck row to
+     * the header beside the readout (on its own row at phone width — stack, do not shrink); a seventh view of the
+     * one clock takes a seat in the mixer strip's header. No transport behaviour, no state, no family constant. */
+    blurb: "one tool that holds many études · v0.6.14",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

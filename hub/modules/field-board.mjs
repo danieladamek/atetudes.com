@@ -124,8 +124,17 @@ export const fieldBoard = {
        AFTER the title span so nothing about the collapsed summary changes.
        Content unchanged: the dot, the chord, its mode — the strip is
        scanned, the box is read. -->
-  <div class="bh readhead"><span>On the neck</span><div class="readbox" id="fdMode" data-control="fdMode"
-        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span></div>
+  <!-- THE TRANSPORT COMES UP (night 62, 261014b — Daniel: "buried down there under … very hard to find";
+       "right there in the header … right next to where the chord and the mode are displayed"): #fdMini,
+       the neck's OWN mini (the 260919 clock row's, a view of the one clock through the bus — hub/mini.mjs,
+       mounted here as in five other hosts), moves within this board from the under-neck row to this header,
+       in flow after the readout. Measured before the move: 785.6 px free beside the readout at 1280, 13 px
+       at 390 — so at phone width the mini STACKS on its own row under the title-and-readout row (night 51's
+       answer: stack, do not shrink); the readout keeps its ruled one row beside its title and gives up
+       nothing. The shell's readhead grammar would seat a header mini beside a shrinking readout at ≤480 px
+       (the keys board's layout); this board's own id-scoped rules below out-rank it for the neck. -->
+  <div class="bh readhead" id="fdHead"><span>On the neck</span><div class="readbox" id="fdMode" data-control="fdMode"
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span><span class="headspace"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -193,10 +202,16 @@ export const fieldBoard = {
       <!-- THE CLOCK CLOSES RANKS (260919, item 2 — ruled): transport, repeat,
            bar split, bpm, metronome — one functional family, contiguous, in
            that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
-           the Metronome card's state, the mini stays a view that asks. -->
-      <span class="mini fd-undermini" id="fdMini" data-control="fdMini"></span>
-      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false"
-        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257; repeat</button>
+           the Metronome card's state, the mini stays a view that asks.
+           NIGHT 62 (261014b): the transport went UP to the header (above) —
+           this row is now repeat · bar split · bpm · metronome, in that order,
+           closed up behind it: no gap where a control was. -->
+      <!-- THE REPEAT BUTTON LOSES ITS WORD (injection 261014c — Daniel, from the live app): the glyph alone
+           on the face; the word it lost is its accessible NAME (aria-label — a glyph-only button has none, and
+           axe fails it: night 57's pad slider, twice). Addressed by id and data-control everywhere, never by
+           the glyph (rule 12 — night 20's hunt). aria-pressed and the pressed paint (the build) unchanged. -->
+      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false" aria-label="repeat the current bar"
+        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257;</button>
       <span class="fd-lab2">bar split</span>
       <select id="fdSplit" data-control="fdSplit"
         title="the bar split — a bar's chords take these slots in order"></select>
@@ -275,12 +290,25 @@ export const fieldBoard = {
 .fd-underneck{display:block}
 #fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
-.fd-undermini{display:inline-flex;gap:4px;margin-left:6px}
-.fd-undermini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+/* THE HEADER MINI (night 62; was .fd-undermini in the under-neck row): the same buttons, in the header
+ * beside the readout. At phone width the shell's readhead grid would seat a mini in column 2 beside a
+ * shrinking readout; the neck's is on a row of its OWN below the title-and-readout row (stack, do not
+ * shrink — measured: 13 px beside the readout at 390). Id-scoped so it out-ranks the shell's :has(.mini)
+ * rules for this board alone; the other boards' minis keep the shell's layout. */
+.fd-headmini{display:inline-flex;gap:4px;flex:0 0 auto}
+.fd-headmini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
-.fd-undermini button:hover{border-color:var(--ink)}
-#fdRepeat{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);
-  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;margin-left:2px}
+.fd-headmini button:hover{border-color:var(--ink)}
+@media (max-width:480px){
+#fdHead{grid-template-columns:auto minmax(0,1fr)}
+#fdHead>span:first-child{grid-column:1}
+#fdHead #fdMode{grid-column:2}
+#fdHead #fdMini{grid-column:1 / -1;justify-content:flex-start;margin-top:4px}
+}
+/* the glyph alone (261014c): the mini's own button box — padding 2px 8px, the same line-height — so the
+ * repeat reads as one of the cluster's buttons beside the bar split, not a text button with a glyph in it */
+#fdRepeat{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;margin-left:0}
 #fdRepeat:hover{border-color:var(--ink)}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}

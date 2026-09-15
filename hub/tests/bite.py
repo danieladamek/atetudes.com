@@ -2250,6 +2250,61 @@ def m103_a_correction_lands_inside_the_dispatch_again():
         p.write_text(original)
 
 
+def m104_the_mixer_loses_its_view():
+    # night 62: the mixer strip's mount of the mini (the seventh view) is gone — the seat is empty; the agreement pin (both views) must bite.
+    p, original, mutated = patch("hub/modules/mixer-strip.mjs",
+        '    mountMini(ctx, byId("mxMini"));',
+        '    // (no view at the mixer)')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "carries a view of the transport" in g.stdout or "both views read stopped before" in g.stdout
+        record("the mixer loses its view — the seat is empty and the two views cannot agree",
+               g.returncode != 0 and hit, "suite exit %d; the mixer-view pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m105_the_neck_mini_shrinks_the_readout_at_390():
+    # night 62: the neck's own stacking rule goes — the shell's grid seats the mini BESIDE the readout at phone width,
+    # the readout shrinking to its ellipsis and the title taking its own row. The 390 stack pin must bite.
+    # (first form removed only the mini's own-row rule and did NOT bite — the neck's other three rules still held the
+    #  readout on the title's row and the shell dropped the mini to the next row; the whole block is the mutation)
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "@media (max-width:480px){\n#fdHead{grid-template-columns:auto minmax(0,1fr)}\n#fdHead>span:first-child{grid-column:1}\n#fdHead #fdMode{grid-column:2}\n#fdHead #fdMini{grid-column:1 / -1;justify-content:flex-start;margin-top:4px}\n}",
+        "/* (the shell's default at phone width — the mini beside a shrinking readout, the title on its own row) */")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "13 px is not a seat" in g.stdout or "shrinks for nothing" in g.stdout
+        record("the neck's mini shrinks the readout at 390 — beside it instead of below it",
+               g.returncode != 0 and hit, "suite exit %d; the stack pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m106_the_repeat_button_loses_its_name():
+    # injection 261014c: the glyph-only repeat button loses its name. FOUND (bite-m106b, doors-m106-probe-0914.log): axe does
+    # NOT fail a button whose only content is an emoji — a glyph is text to the button-name rule — and `title` is a name
+    # too; so the injection's premise ("axe will say so") holds for a bare slider, not for a text glyph. What holds the
+    # explicit word on this button is the gate's own name pin (a glyph with a NAME — the aria-label). The mutation removes
+    # both attributes; the pin must bite.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false" aria-label="repeat the current bar"\n        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257;</button>',
+        '      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false">&#128257;</button>   <!-- (nameless) -->')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "a glyph with a NAME" in g.stdout
+        record("the repeat button loses its name — a glyph alone, nothing for a reader to read",
+               g.returncode != 0 and hit, "suite exit %d; the name pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/modules/notepad-card.mjs",
@@ -2403,7 +2458,8 @@ def main():
                m96_the_derivation_forgets_the_presets, m97_the_snapshot_stores_the_object_again,
                m98_a_chip_hue_follows_lit_ness, m99_the_dropped_gamut_goes_unsaid, m100_the_derivation_skips_a_null_pick,
                m101_the_emptied_window_goes_unsaid, m102_the_dropped_gamut_never_reaches_the_neck,
-               m103_a_correction_lands_inside_the_dispatch_again)
+               m103_a_correction_lands_inside_the_dispatch_again, m104_the_mixer_loses_its_view, m105_the_neck_mini_shrinks_the_readout_at_390,
+               m106_the_repeat_button_loses_its_name)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

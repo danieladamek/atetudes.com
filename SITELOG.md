@@ -1,3 +1,34 @@
+## 2026-09-15 — Night 62: the transport comes up to the header and takes a seat at the mixer — and the repeat button loses its word (injection 261014c); Multetudes v0.6.14
+
+- **Why (Daniel, 261014):** the transport was *"buried down there under … very hard to find"* — a UX defect on
+  the control a player reaches for most; and *"a second view is what I intended"* (ruled): a transport view per
+  surface is the established pattern of `hub/mini.mjs`, mounted in every host that has a surface.
+- **Item 1 — the neck's own transport moves up, within its board.** `#fdMini` left the under-neck clock row for the
+  neck's header, in flow after the readout (*"right next to where the chord and the mode are displayed"*).
+  Measured first: 785.6 px free beside the readout at 1280, **13 px at 390** — not a seat; so at phone width the
+  neck's own id-scoped rules keep title and readout on their one row and give the transport a full row below
+  (night 51's answer: stack, do not shrink — the readout still ends 13 px before the band, unchanged). The row it
+  left runs repeat · bar split · bpm · metronome, closed up; the 260919 clock-row pin rewritten to say so, the 260920
+  readout pin taught that a mini below it clears it.
+- **Item 2 — a view at the mixer.** `mountMini` mounted in the mixer strip's header (`#mxMini`), hidden when the
+  strip collapses; `mini.mjs` untouched, no state, no behaviour. **A census finding:** the dispatch counted five
+  existing mounts; the sources hold six (`staff-board.mjs`'s `#stMini` was missed) — the mixer's is the **seventh**.
+  The gate computes the hosts from the sources and checks every one this door carries is live (rule 6 — the PO's
+  correction is in the dispatch). `ROW_COUNTS` untouched: the mixer is a board outside every `<h2>` region.
+- **The agreement pin:** ▶ at the mixer's view and both views read playing (`CLOCK_STATE.running`, Play greyed);
+  ⏹ at the neck's and both read stopped; ⏭ at one moves the one position, ⏮ at the other moves it back — the
+  position read from the canonical STEP event, which the bus does not replay.
+- **Injection 261014c — the repeat button loses its word:** `🔁 repeat` → `🔁`, with the word as its accessible
+  name (`aria-label`), in the mini's button box (32 × 22.5 beside 29 × 22.5), `aria-pressed` and the pressed paint
+  untouched; addressed by id everywhere — no gate line matched it by glyph or text; no sentence quotes its caption.
+  Found: axe accepts an emoji as a button's text, so the explicit word is held by the gate's own name pin.
+  Repeat does not join the mini tonight (night 63's).
+- **Gates:** engine 704/704 · hub 12/12 · red first `hub/tests/out/doors-n62-red-0914-1532.log` (6 by name) ·
+  door 2,452/0 (`doors-n62-multetudes-0914-1601.log`) · door gate **21,878/0** (`doors-0914-1619.log`) · m104,
+  m105, m106 bite (`bite-n62-singles-0914.log`, `bite-n62-singles-b-0914.log`, `bite-m106c-0914.log`) · chain
+  **107/107**, suite green (`bite-0914-1657.log`, 16:57–00:38) · hugo 0 · check_site clean · renders 1280/390.
+- Report: `notes/working/Multetudes build run 261014b — night 62, the transport comes up to the header and takes a seat at the mixer.md`.
+
 ## 2026-09-14 — DEPLOYED: night 61 live — the census answered, the Key already weighted, two sentences that turned out reachable; Multetudes v0.6.13; written from the run
 
 - record: run 34892134001 · success · commit 147e95a · fetched 2026-09-14T20:28Z · 6/6 studies byte-identical · digest 8c5c42bc6ab1

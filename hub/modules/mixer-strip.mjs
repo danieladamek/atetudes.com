@@ -22,6 +22,7 @@ import { referenceChoicesFor, soundedChoicesFor } from "../../engine/reference.m
 import { pickOf } from "../../engine/selection.mjs";
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { CONFIG_CHANGED, MIXER, listen, announce } from "../bus.mjs";
+import { mountMini } from "../mini.mjs";
 
 export const mixerStrip = {
   id: "mixer-strip",
@@ -29,11 +30,16 @@ export const mixerStrip = {
   requires: { surface: "multetudes" },
   mount_point: "boards",
   order: 18.5,
-  controls: ["fdVoice", "fdHarmVol", "fdHarmMute", "fdBass2", "fdSounded", "fdBassVol", "fdBassMute",
+  controls: ["mxMini", "fdVoice", "fdHarmVol", "fdHarmMute", "fdBass2", "fdSounded", "fdBassVol", "fdBassMute",
     "fdPad", "fdPadVol", "fdPadMute"],
 
   markup: `
-  <div class="bh"><span>Mixer</span><span class="mx-headspace"></span></div>
+  <!-- A SEVENTH VIEW OF THE TRANSPORT (night 62, 261014b — Daniel, ruled: "a second view is what I intended";
+       "the user can start and stop wherever they are"): hub/mini.mjs's cluster mounted in this board's header,
+       as the chart line, the neck, the keyboard, the keys, the staff and the score mount it — a VIEW of the one clock
+       through the bus, no state here (rule 10; the fork night 55 deleted was a copy with its own float, not a
+       sixth view). Collapsed, it hides with the strip, as the readhead minis do. -->
+  <div class="bh"><span>Mixer</span><span class="mini" id="mxMini" data-control="mxMini"></span><span class="mx-headspace"></span></div>
   <span class="clpsum">the mixer — the voice, the reference tone, the sounded bass, the pad, and each bus's level</span>
   <div class="mx-row">
     <span class="mx-lab">voice</span>
@@ -80,6 +86,11 @@ export const mixerStrip = {
    * styles only its own markup); the level row is the shell's .bpmrow with a mute icon per slider */
   styles: `
 .mx-headspace{flex:1 1 auto}
+#mxMini{display:flex;gap:4px;flex:0 0 auto;margin-left:12px}
+#mxMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;text-transform:none;letter-spacing:0}
+#mxMini button:hover{border-color:var(--ink)}
+.clpsd>.bh #mxMini{display:none}
 .mx-row{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;font-size:12px;color:var(--gray);flex-wrap:wrap}
 .mx-row+.mx-row{border-top:1px solid var(--line);margin-top:7px}
 .mx-row select{width:auto;font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;color:var(--ink)}
@@ -126,6 +137,7 @@ export const mixerStrip = {
         if (k in m && JSON.stringify(m[k]) !== JSON.stringify(cfg[k])) { cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] }; changed = true; }
       if (changed) paint();
     });
+    mountMini(ctx, byId("mxMini"));   // ⏮ ▶ ⏹ ⏭ at the mixer — the seventh view of the one clock (night 62)
     byId("fdBass2").addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { bass: e.target.value }));
     byId("fdSounded").addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { sounded: e.target.value }));
     byId("fdPad").addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { pad: !!e.target.checked }));

@@ -2876,7 +2876,7 @@ console.log(JSON.stringify(out));
         clear = page.evaluate("""(ids) => ids.map(id => { const box = document.getElementById(id); const bd = box.closest('.board'); const r = (e) => e.getBoundingClientRect();
           const mini = bd.querySelector('.bh .mini'); const info = bd.querySelector('.infoBtn') || bd.querySelector('.clpsBtn');
           const ch = box.querySelector('.readchord'); const title = bd.querySelector('.bh span');
-          return { id, w: Math.round(r(box).width), clearsMini: !mini || r(box).right <= r(mini).left, clearsBtn: r(box).right <= r(info).left, oneLine: r(box).height < 40,
+          return { id, w: Math.round(r(box).width), clearsMini: !mini || r(box).right <= r(mini).left || r(box).bottom <= r(mini).top + 1, clearsBtn: r(box).right <= r(info).left, oneLine: r(box).height < 40,   /* night 62: the neck's mini stacks BELOW the box at phone width — clear means no overlap, right or below */
             chordWhole: r(ch).right <= r(box).right - 1, neckOneRow: !!mini || Math.abs(r(box).top - r(title).top) < 12 }; })""", ro_ids)
         check(all(c["w"] > 60 and c["clearsMini"] and c["clearsBtn"] and c["oneLine"] and c["chordWhole"] and c["neckOneRow"] for c in clear),
               f"{tag} 3 (260920): at 390 the readout is visible, uncovered, one line, the chord whole, on all three boards — and the neck's stays beside its title: {clear}")
@@ -2893,10 +2893,15 @@ console.log(JSON.stringify(out));
         check("progressionOf(" in ro_src and "chordAt(" in ro_src and "MODES[" in ro_src,
               f"{tag} 3 (260920): each instance derives through progressionOf/chordAt and the one MODES table")
 
-        # THE CLOCK CLOSES RANKS (item 2): transport, repeat, bar split, bpm, metronome — contiguous, in that order
-        clock = page.evaluate("""() => ['fdMini','fdRepeat','fdSplit','fdBpm','fdMetChk'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().left))""")
-        check(all(clock[i] >= clock[i - 1] for i in range(1, 5)) and page.evaluate("() => document.getElementById('fdMini').closest('.fd-railrow') === document.getElementById('fdMetChk').closest('.fd-railrow')"),
-              f"{tag} 2 (260919): the clock row runs transport · repeat · bar split · bpm · metronome, in one row: {clock}")
+        # THE CLOCK CLOSES RANKS (item 2): transport, repeat, bar split, bpm, metronome — contiguous, in that order.
+        # REWRITTEN night 62 (261014b, rule 7 — Daniel: the transport was "buried down there … very hard to find"): the
+        # transport (#fdMini, the neck's own mini) moved UP to the neck's header beside the readout; the row it left
+        # runs repeat · bar split · bpm · metronome, contiguous, in that order, closed up behind it — no gap where a
+        # control was. The mini is pinned in the header by the night-62 block; here the row is pinned without it.
+        clock = page.evaluate("""() => ['fdRepeat','fdSplit','fdBpm','fdMetChk'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().left))""")
+        row_first = page.evaluate("() => { const r = document.getElementById('fdRepeat').closest('.fd-railrow'); return { first: r.firstElementChild.id, mini: !!r.querySelector('.mini'), sameRow: r === document.getElementById('fdMetChk').closest('.fd-railrow') }; }")
+        check(all(clock[i] >= clock[i - 1] for i in range(1, 4)) and row_first["sameRow"] and row_first["first"] == "fdRepeat" and not row_first["mini"],
+              f"{tag} 2 (260919, rewritten 261014b): the clock row runs repeat · bar split · bpm · metronome in one row, repeat first, the transport gone up to the header: {clock} {row_first}")
         # THE TRUNCATION ORDER (item 1): at phone width a long name ellipsises the MODE; the chord survives whole.
         # Measured on the artifact 260919: at 390 the box is 215px and "Ebmaj7#11 — Eb Lydian" is 189 — it FITS;
         # the dispatch's "Ebmaj7#11 — Eb Lyd…" needs 360 (box 197). A pin that never truncates proves nothing.
@@ -5474,6 +5479,12 @@ console.log(JSON.stringify(out));
     if door_id == "multetudes" and page.query_selector("#stMode") is not None:
         page.evaluate("() => document.getElementById('stMode').closest('.board').querySelector('.clpsBtn').click()")
         page.wait_for_timeout(80); readhead_shut_for_check = True
+    # night 62: the mixer strip's header carries a mini with its own collapse rule (`.clpsd>.bh #mxMini`) — the same
+    # species of state rule; the mixer is collapsed for the check and re-opened after, as the staff board is
+    mixer_shut_for_check = False
+    if door_id == "multetudes" and page.query_selector("#mxMini") is not None:
+        page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()")
+        page.wait_for_timeout(80); mixer_shut_for_check = True
 
     # ---------------- 4. no orphan selector ---------------------------------
     selectors = page.evaluate(SELECTOR_JS)
@@ -5493,6 +5504,9 @@ console.log(JSON.stringify(out));
           f"       a rule that survives its markup is the trace §4.2.1 forbids")
     if readhead_shut_for_check:
         page.evaluate("() => document.getElementById('stMode').closest('.board').querySelector('.clpsBtn').click()")
+        page.wait_for_timeout(80)
+    if mixer_shut_for_check:
+        page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()")
         page.wait_for_timeout(80)
 
     check(not errors and not [c for c in console if c[0] in ("error", "warning")],
@@ -6689,6 +6703,79 @@ console.log(JSON.stringify(out));
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true":
                 page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(150)
         page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+
+    # ---------------- THE TRANSPORT COMES UP, AND TAKES A SEAT AT THE MIXER (night 62, 261014b) ----------
+    # Daniel: the transport is "buried down there under … very hard to find". Item 1: #fdMini — the neck's own mini,
+    # the 260919 clock row's — moves within its board to the header beside the readout ("right next to where the
+    # chord and the mode are displayed"). Measured first (n62repro.py before): the seat beside the readout is 785.6 px
+    # at 1280 and 13 px at 390, so at phone width the mini STACKS on its own row under the title-and-readout row
+    # (night 51's answer) — the readout keeps its ruled one row beside its title and shrinks for nothing. The row it
+    # left runs repeat · bar split · bpm · metronome, closed up (the 260919 pin, rewritten). Item 2: a further mount of
+    # hub/mini.mjs's mountMini in the mixer strip's header — a view of the one clock through the bus, the pattern the
+    # other hosts use (tlMini, fdMini, kbMini, kyMini, scMini — and stMini, which the dispatch's census of five missed:
+    # the mixer's is the SEVENTH); no state added anywhere. The agreement pin: play
+    # at one view and both read playing, stop at the other and both read stopped — cheap because the architecture
+    # guarantees it, written because what guarantees it today is not what a later night will remember.
+    if door_id == "multetudes":
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
+        seat = lambda: page.evaluate("""() => { const R = (e) => { const r = e.getBoundingClientRect(); return { l: +r.left.toFixed(1), t: +r.top.toFixed(1), r: +r.right.toFixed(1), b: +r.bottom.toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; };
+          const mini = document.getElementById('fdMini'), box = document.getElementById('fdMode'); const head = box.closest('.bh'); const board = head.closest('.board');
+          const title = head.querySelector('span'); const info = board.querySelector('.infoBtn') || board.querySelector('.clpsBtn');
+          return { inHeader: mini.closest('.bh') === head, afterBox: !!(box.compareDocumentPosition(mini) & Node.DOCUMENT_POSITION_FOLLOWING), inRow: !!mini.closest('.fd-railrow'),
+            mini: R(mini), box: R(box), title: R(title), info: R(info), buttons: [...mini.querySelectorAll('button')].map(b => b.dataset.role) }; }""")
+        s1 = seat()
+        check(s1["inHeader"] and s1["afterBox"] and not s1["inRow"] and s1["buttons"] == ["prev", "play", "stop", "next"], f"{tag} #fdMini sits in the neck's header after the readout, out of the under-neck row, with its four buttons: {s1}")
+        check(s1["mini"]["l"] >= s1["box"]["r"] and abs(s1["mini"]["t"] + s1["mini"]["h"] / 2 - (s1["box"]["t"] + s1["box"]["h"] / 2)) < 8 and s1["mini"]["r"] <= s1["info"]["l"], f"{tag} @1280 the mini sits on the readout's row, right of it and left of the ⓘ band: {s1}")
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
+        s2 = seat()
+        check(abs(s2["box"]["t"] - s2["title"]["t"]) < 12 and s2["mini"]["t"] >= s2["box"]["b"] - 1, f"{tag} @390 the readout keeps its one row beside its title and the mini STACKS below it — 13 px is not a seat: {s2}")
+        check(s2["box"]["w"] >= 150 and s2["box"]["r"] <= s2["info"]["l"] and s2["mini"]["r"] <= s2["info"]["l"] + 60, f"{tag} @390 the readout shrinks for nothing and the mini has the row: {s2}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
+        # INJECTION 261014c — the repeat button loses its word: the glyph alone on the face, the word as its accessible
+        # NAME (never an exemption), aria-pressed unchanged, its box the mini's buttons' box; addressed by id, never by glyph
+        rp = page.evaluate("""() => { const b = document.getElementById('fdRepeat'); const m = document.querySelector('#fdMini button'); const R = (e) => e.getBoundingClientRect(); const cs = getComputedStyle(b), ms = getComputedStyle(m);
+          return { text: b.textContent.trim(), name: b.getAttribute('aria-label'), pressed: b.getAttribute('aria-pressed'), h: +R(b).height.toFixed(1), miniH: +R(m).height.toFixed(1), pad: cs.paddingLeft + ' ' + cs.paddingTop, miniPad: ms.paddingLeft + ' ' + ms.paddingTop }; }""")
+        check(len(rp["text"]) <= 2 and "repeat" not in rp["text"] and rp["name"] and "repeat" in rp["name"] and rp["pressed"] in ("true", "false"), f"{tag} the repeat button is a glyph with a NAME and its pressed state: {rp}")
+        check(abs(rp["h"] - rp["miniH"]) <= 2 and rp["pad"] == rp["miniPad"], f"{tag} the glyph button wears the mini's button box: {rp}")
+        # ITEM 2 — the seventh view, in the mixer's header
+        mx = page.evaluate("""() => { const m = document.getElementById('mxMini'); if (!m) return null; const R = (e) => { const r = e.getBoundingClientRect(); return { l: Math.round(r.left), t: Math.round(r.top), r: Math.round(r.right), b: Math.round(r.bottom) }; };
+          const head = m.closest('.bh'); const board = head && head.closest('.board'); const title = head && head.querySelector('span');
+          return { inHeader: !!head, mixer: !!board && (title || {}).textContent === 'Mixer', buttons: [...m.querySelectorAll('button')].map(b => b.dataset.role), mini: R(m), title: R(title), overRow: [...board.querySelectorAll('.mx-row')].some(r => { const rr = r.getBoundingClientRect(), mr = m.getBoundingClientRect(); return mr.bottom > rr.top + 1 && mr.top < rr.bottom - 1; }) }; }""")
+        check(mx is not None and "mxMini" in r["controlsPresent"] and mx["inHeader"] and mx["mixer"] and mx["buttons"] == ["prev", "play", "stop", "next"] and not mx["overRow"] and abs(mx["mini"]["t"] - mx["title"]["t"]) < 12, f"{tag} the mixer's header carries a view of the transport, beside its title, over no row: {mx}")
+        # ONE CLOCK, MANY VIEWS: every host a module's source mounts the mini in is LIVE in this door with the four
+        # buttons — the hosts are computed from the sources (rule 6: never a hand-kept count; the dispatch's census of
+        # five missed the staff board's #stMini, found by this very pin — with the mixer's the door carries seven)
+        import re as _re62
+        hosts62 = sorted(set(h for p in (REPO / "hub" / "modules").glob("*.mjs") for h in _re62.findall(r'mountMini\(ctx, byId\("(\w+)"\)\)', p.read_text())))
+        live62 = page.evaluate("(ids) => ids.map(id => { const e = document.getElementById(id); return [id, e ? [...e.querySelectorAll('button')].map(b => b.dataset.role).join(' ') : null]; })", hosts62)
+        here62 = [(h, v) for h, v in live62 if f'id="{h}"' in html_path.read_text()]   # the hosts THIS door carries (the chart line's, the keyboard's and the score's are other doors')
+        check(len(hosts62) >= 7 and "mxMini" in hosts62 and "fdMini" in hosts62 and len(here62) >= 4 and all(v == "prev play stop next" for _, v in here62),
+              f"{tag} every mounted mini this door carries is live with its four buttons — one clock, {len(hosts62)} views in the family, {len(here62)} in this door: {live62}")
+        # THE AGREEMENT: play at the mixer's view — both read playing (the one sign the mini reads back: Play greyed); stop at the neck's — both read stopped
+        grey = lambda: page.evaluate("() => ['fdMini', 'mxMini'].map(id => { const b = document.querySelector('#' + id + ' button[data-role=\"play\"]'); return b ? b.style.color : null; })")   # null when a host is missing — the pin fails by name, the leg does not crash (rule 2)
+        running = lambda: page.evaluate("() => (document.__atetudesLast && document.__atetudesLast.get('atetudes:clock-state') || {}).running")
+        check(grey() == ["", ""] and not running(), f"{tag} both views read stopped before the test: {grey()} {running()}")
+        page.click('#mxMini button[data-role="play"]'); page.wait_for_timeout(500)
+        check(running() is True and grey() == ["var(--gray)", "var(--gray)"], f"{tag} play at the mixer's view: the one clock runs and BOTH views read playing: running {running()} {grey()}")
+        page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(400)
+        check(running() is False and grey() == ["", ""], f"{tag} stop at the neck's view: the one clock stops and BOTH views read stopped: running {running()} {grey()}")
+        # STEP is event-shaped, not replayed (bus.mjs) — the position is read from the canonical STEP the owner announces
+        page.evaluate("() => { window.__idx62 = null; document.addEventListener('atetudes:step', e => { if (e.detail && e.detail.request !== true && typeof e.detail.index === 'number') window.__idx62 = e.detail.index; }); }")
+        idx = lambda: page.evaluate("() => window.__idx62")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(200)
+        page.click('#mxMini button[data-role="next"]'); page.wait_for_timeout(250)
+        check(idx() == 1, f"{tag} next at the mixer's view moves the one position: {idx()}")
+        page.click('#fdMini button[data-role="prev"]'); page.wait_for_timeout(250)
+        check(idx() == 0, f"{tag} prev at the neck's view moves it back: {idx()}")
+        # collapsed, the mixer's mini hides with the rest of the strip (the readhead minis' rule, the strip's own)
+        page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()"); page.wait_for_timeout(120)
+        check(page.evaluate("() => getComputedStyle(document.getElementById('mxMini')).display") == "none", f"{tag} the collapsed mixer hides its mini")
+        page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()"); page.wait_for_timeout(120)
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
+        mx390 = page.evaluate("""() => { const m = document.getElementById('mxMini'); const R = (e) => e.getBoundingClientRect(); const head = m.closest('.bh'); const board = head.closest('.board'); const t = head.querySelector('span');
+          return { oneRow: Math.abs(R(m).top - R(t).top) < 12, inside: R(m).right <= R(board).right, rows: board.querySelectorAll('.mx-row').length, overRow: [...board.querySelectorAll('.mx-row')].some(r => R(m).bottom > R(r).top + 1) }; }""")
+        check(mx390["oneRow"] and mx390["inside"] and not mx390["overRow"] and mx390["rows"] == 3, f"{tag} @390 the mixer's mini shares the header row with the title, inside the board, over no row; the strip's three rows stand: {mx390}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
