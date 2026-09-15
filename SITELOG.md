@@ -1,3 +1,14 @@
+## 2026-09-15 — DEPLOYED: night 63 live — repeat joins the mini and becomes a transport state; Multetudes v0.6.15, Tetradetudes v0.6.6; two studies moved; written from the run
+
+- record: run 34985464750 · success · commit 8e10119 · fetched 2026-09-15T15:10Z · 6/6 studies byte-identical · digest 05b3b2034cf3
+- Actions run 34985464750 green on `8e10119` — https://github.com/danieladamek/atetudes.com/actions/runs/34985464750 (created 2026-09-15T15:00:17Z, finished 2026-09-15T15:10:08Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo ec2f5737b71a · live ec2f5737b71a — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 9cf184f2739d · live 9cf184f2739d — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-15 — Night 63: repeat joins the mini and becomes a transport state; the header wraps at phone width; Multetudes v0.6.15, Tetradetudes v0.6.6
 
 - **Why (Daniel, 261014):** the same transport set, repeat included, on the staff and the keys views — both carried
