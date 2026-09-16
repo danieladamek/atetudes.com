@@ -1,3 +1,14 @@
+## 2026-09-16 — DEPLOYED: night 64 live — Object and Tones cross to Progression, every mini seated right, the clock-row repeat gone; Multetudes v0.6.16, Tetradetudes v0.6.7; two studies moved; written from the run
+
+- record: run 35045811234 · success · commit 3799199 · fetched 2026-09-16T02:03Z · 6/6 studies byte-identical · digest a6014c456b77
+- Actions run 35045811234 green on `3799199` — https://github.com/danieladamek/atetudes.com/actions/runs/35045811234 (created 2026-09-16T01:53:01Z, finished 2026-09-16T02:02:52Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 06e2d2eaf701 · live 06e2d2eaf701 — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo ed75914f2c3b · live ed75914f2c3b — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-15 — Night 64: Object and Tones cross to Progression — one editor per card, Tones read-only under a scale and typed in roles; every mini seated right (injection 261015); the clock-row repeat goes (ruling 261015); Multetudes v0.6.16, Tetradetudes v0.6.7
 
 - **Why (dispatch 261014e):** the étude section re-staged — the object belongs to the progression, not to the
