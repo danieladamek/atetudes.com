@@ -38,8 +38,9 @@ export const mixerStrip = {
        "the user can start and stop wherever they are"): hub/mini.mjs's cluster mounted in this board's header,
        as the chart line, the neck, the keyboard, the keys, the staff and the score mount it — a VIEW of the one clock
        through the bus, no state here (rule 10; the fork night 55 deleted was a copy with its own float, not a
-       sixth view). Collapsed, it hides with the strip, as the readhead minis do. -->
-  <div class="bh"><span>Mixer</span><span class="mini" id="mxMini" data-control="mxMini"></span><span class="mx-headspace"></span></div>
+       sixth view). Collapsed, it hides with the strip, as the readhead minis do. Seated after the spacer, at the
+       header's right (injection 261015 — every mini sits right). -->
+  <div class="bh mx-head"><span>Mixer</span><span class="mx-headspace"></span><span class="mini" id="mxMini" data-control="mxMini"></span></div>
   <span class="clpsum">the mixer — the voice, the reference tone, the sounded bass, the pad, and each bus's level</span>
   <div class="mx-row">
     <span class="mx-lab">voice</span>
@@ -86,6 +87,7 @@ export const mixerStrip = {
    * styles only its own markup); the level row is the shell's .bpmrow with a mute icon per slider */
   styles: `
 .mx-headspace{flex:1 1 auto}
+.mx-head{padding-right:40px}   /* the shell's chevron band at the header's right (no ⓘ on this board) — a right-seated mini ends before it (injection 261015, measured: 19 px under it without this) */
 #mxMini{display:flex;gap:4px;flex:0 0 auto;margin-left:12px}
 #mxMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;text-transform:none;letter-spacing:0}

@@ -103,7 +103,10 @@ const READOUT_GRAMMAR = {
   .board .bh.readhead{display:flex!important;flex-wrap:wrap;align-items:center}
   .board .bh.readhead .headspace{display:none}
   .board .bh.readhead .readbox{flex:1 1 140px}
-  .board .bh.readhead .mini{flex:0 0 100%;justify-content:flex-start;margin-top:4px}
+  /* right, as at every width (injection 261015): margin-left:auto seats the mini at the row's right whatever its
+   * width — a board's own #xxMini{flex:0 0 auto} (an id) out-ranks a class rule's basis, so a full-row basis
+   * could not be relied on; at 390 no five-button mini fits beside a 140 px box, so it wraps to its own row */
+  .board .bh.readhead .mini{flex:0 0 auto;margin-left:auto;margin-top:4px}
 }
 .clpsd>.bh.readhead .mini{display:none!important}
 `,

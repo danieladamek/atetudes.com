@@ -1,3 +1,55 @@
+## 2026-09-15 — Night 64: Object and Tones cross to Progression — one editor per card, Tones read-only under a scale and typed in roles; every mini seated right (injection 261015); the clock-row repeat goes (ruling 261015); Multetudes v0.6.16, Tetradetudes v0.6.7
+
+- **Why (dispatch 261014e):** the étude section re-staged — the object belongs to the progression, not to the
+  centricity. Centricity keeps the key, the scale, the gamut and its chips, and the centre; Progression owns the
+  object and its tones. One editor per card.
+- **The pause condition, confirmed first:** the letters' reach (`parseNoteNames` through `normalizeGamut`) and the
+  chips' reach (one toggle at a time through the same function) are the same space — the subsets of the key's seven,
+  none and all collapsed to the whole field. Pinned on `1,4,6`, a set no named option holds: four clicks from the
+  whole field reach it, four more return. No set is lost, so the read-only Tones shipped.
+- **The move (three sites):** `hub/modules/progression-card.mjs` gains Object and Tones at its top, above Source,
+  stacked (a narrow column's own idiom — two selects side by side would clip the object's longest name at 390), with
+  the `OBJECTS` table, night 59's tones rules verbatim and the state: `cfg.tones` the stored truth, `cfg.object` a
+  derived label; key, scale and gamut are mirrors, for the letters. The ids `hcObj` / `hcTones` are kept — every pin,
+  message and saved étude addresses them. `hub/modules/harmony-card.mjs` loses them: a two-track grid (Key · Scale),
+  `object` a mirror and no longer announced, `push` announcing its own half only; the gamut drop under a chord is one
+  rule at one site, deriving the message's own object through the engine's one function (`objectOf(tonePick(m))`),
+  never a stored mirror — a v2 scale étude restored into a page under a chord had lost its gamut to a stale mirror,
+  found and fixed on the gate. `hub/bus.mjs` gains `announceAfter` — night 61's deferred correction, one site now
+  that two cards need it.
+- **The ruling made true:** at Object = scale, Tones READS the field's notes (repainted from the model, never edited
+  into the gamut) under the label *Tones — the material, by note in C major; typed by role*, and is TYPED in roles:
+  `R,3,5` derives a triad and leaves scale; note names set no gamut and are refused, red, by a sentence drawn from
+  night 59's vocabulary and standing on the face (`#pgObjNote`) — it names no caption (rule 14). The refusal is
+  cleared when the field's mirrors move (a standing refusal had outlived the model beneath it). Progression is fully
+  live under a scale — bars, readout, Source, Cycle, Start on, the centre picker; follows and a pedal pinned. Only
+  the tones are stored: the snapshot carries `"tones"` and no `"object"`, re-asserted.
+- **After:** Centricity 562 × 466 (chord) / 499 (scale) at 1280, 250 × 482 / 516 at 390; Progression the same —
+  the row grew (366 → 466 under a chord) because the stacked pair and its note are taller than the select and field
+  were in Centricity's grid. Reported, not tuned. The Gamut, the chips and the centre untouched; ROW_COUNTS untouched.
+- **Injection 261015 — every mini sits right.** The census computed (`grep -oh 'mountMini(ctx, byId("[A-Za-z]*"))'
+  hub/modules/*.mjs | sort -u`): seven hosts. The neck's and the mixer's sat left, and the neck's slid with the
+  readout's text (355 in C, 370 in F♯); the mixer's ran 19 px under the shell's chevron; at 390 the staff's and keys'
+  own-row minis sat left because an id rule out-ranked the shell's basis. Fixed by the order of two spans
+  (`field-board.mjs`, `mixer-strip.mjs`), a band padding on the mixer's head, and the shell's row rule seating the
+  mini by `margin-left:auto` (`hub/tools/build.mjs`). After: 13 · 21 · 13 · 47 px from the band at 1280, the neck's
+  left edge 977 in C and in F♯, every mini right on its own row at 390. Pinned in both doors; armed as m110.
+- **Ruling 261015 — a view is per surface.** Night 63 left two repeats on the neck: the header mini's and the clock
+  row's `#fdRepeat`, a lone glyph among worded controls. The clock-row button goes, with its paint and its handler;
+  `cfg.repeat` stays a mirror so the neck's own announce carries the value. The clock row is bar split · bpm ·
+  metronome; the 260919 comment updated, not deleted. Every address moved to the mini's repeat by role
+  (`#fdMini button[data-role="repeat"]`): the 260913 walk-repeat leg, the night-63 agreement pins, the night-58 seat
+  list, the injection-261014c pin, m106.
+- **Both doors moved** (the shared bus, mini and shell): tetradetudes' face unchanged.
+- **Gates:** engine 704/704 · hub 14/14 (two runs refused on the way: an import line carrying a trailing comment,
+  and a backtick in a CSS comment inside `build.mjs`'s template string — both fixed) · red first
+  `hub/tests/out/doors-n64-red-0915-1017.log` (6,321/6, the night's by name) · the two doors 6,454/8 → 6,456/3 →
+  **6,456/0** (`doors-n64-doors-0915-1046.log`) · door gate **21,929/0** (`doors-0915-1102.log`), re-run at the close
+  **21,929/0 (`doors-n64-close-0915-2044.log`)** · singles m99, m100, m102, m103, m106 (re-anchored), m110 and m109 (two sites) bite
+  (`bite-n64-singles-0915.log`, `bite-m109b-0915.log`) · chain **110/111 on the run (`bite-0915-1205.log`, 12:05–20:30, all 111 ran; a SIGTERM after the last, sources clean) — m108 red by a 30 s timeout, not a named line (a deaf mini never shows repeat, the 260913 leg hung on the click); the leg now names a hidden toggle, m108 bites (`bite-m108-close-0915.log`); harness-only, the chain not re-run** · hugo 0 · check_site clean · renders
+  both doors, 1280/390.
+- Report: `notes/working/Multetudes build run 261014e — night 64, Object and Tones cross to Progression.md`.
+
 ## 2026-09-15 — DEPLOYED: night 63 live — repeat joins the mini and becomes a transport state; Multetudes v0.6.15, Tetradetudes v0.6.6; two studies moved; written from the run
 
 - record: run 34985464750 · success · commit 8e10119 · fetched 2026-09-15T15:10Z · 6/6 studies byte-identical · digest 05b3b2034cf3

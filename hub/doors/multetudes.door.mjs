@@ -219,7 +219,11 @@ export default {
      * one clock takes a seat in the mixer strip's header. No transport behaviour, no state, no family constant. */
     /* v0.6.15 (261014d, night 63 — repeat joins the mini): repeat is the transport's state on the bus (CONFIG
      * {repeat}, replayed), shown and set from every transport view — the neck's own button one view among them. */
-    blurb: "one tool that holds many études · v0.6.15",
+    /* v0.6.16 (261014e, night 64 — the étude section re-staged, part one): Object and Tones cross from Centricity to
+     * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
+     * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
+     * the header mini's, is gone (ruling 261015). */
+    blurb: "one tool that holds many études · v0.6.16",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

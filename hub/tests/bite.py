@@ -2169,7 +2169,7 @@ def m98_a_chip_hue_follows_lit_ness():
 def m99_the_dropped_gamut_goes_unsaid():
     # night 60: a saved gamut with a chord object is dropped SILENTLY on restore — the removal CLAUDE.md forbids. The sentence pin must bite.
     p, original, mutated = patch("hub/modules/harmony-card.mjs",
-        '        dropped = { letters: letterOfGamut(cfg.gamut), saved: true };',
+        '        dropped = { letters: letterOfGamut(cfg.gamut), saved: "gamut" in m };',
         '        dropped = null;   // (dropped without a word)')
     try:
         p.write_text(mutated)
@@ -2185,7 +2185,8 @@ def m99_the_dropped_gamut_goes_unsaid():
 def m100_the_derivation_skips_a_null_pick():
     # night 60 (the night-59 defect, re-armed): the card derives the object only from an ARRAY of tones — a saved scale
     # étude (tones null) restores as whatever the page was under. The scale-restore pin must bite.
-    p, original, mutated = patch("hub/modules/harmony-card.mjs",
+    # re-anchored night 64: the derivation crossed to Progression with the object
+    p, original, mutated = patch("hub/modules/progression-card.mjs",
         '      if ("tones" in m || "dyad" in m) {\n        const derived = objectOf(tonePick(cfg));',
         '      if (("tones" in m || "dyad" in m) && Array.isArray(tonePick(cfg))) {   // (null skipped again)\n        const derived = objectOf(tonePick(cfg));')
     try:
@@ -2220,7 +2221,7 @@ def m102_the_dropped_gamut_never_reaches_the_neck():
     # night 61: the card drops a restored gamut under a chord but no longer ANNOUNCES the drop — the neck keeps the gamut
     # the card let go (§4.4's silent divergence: the chord partial, "outside the gamut" painted). The face pin must bite.
     p, original, mutated = patch("hub/modules/harmony-card.mjs",
-        "        correct({ gamut: null });",
+        "        announceAfter(d, CONFIG_CHANGED, { gamut: null });",
         "        // (the drop kept to the card)")
     try:
         p.write_text(mutated)
@@ -2236,9 +2237,10 @@ def m102_the_dropped_gamut_never_reaches_the_neck():
 def m103_a_correction_lands_inside_the_dispatch_again():
     # night 61: the card's corrections go back to being announced from INSIDE its listener — the readout hears them
     # before the message they correct and keeps the stale value (the dyad over a triad; the dropped gamut). Both face pins must bite.
-    p, original, mutated = patch("hub/modules/harmony-card.mjs",
-        "    const correct = (patch) => d.defaultView.queueMicrotask(() => announce(d, CONFIG_CHANGED, patch));",
-        "    const correct = (patch) => announce(d, CONFIG_CHANGED, patch);   // (inside the dispatch again)")
+    # re-anchored night 64: the deferred correction is the bus's one helper now (two cards use it)
+    p, original, mutated = patch("hub/bus.mjs",
+        "  doc.defaultView.queueMicrotask(() => announce(doc, name, detail));",
+        "  announce(doc, name, detail);   // (inside the dispatch again)")
     try:
         p.write_text(mutated)
         build()
@@ -2296,14 +2298,15 @@ def m106_the_repeat_button_loses_its_name():
     # too; so the injection's premise ("axe will say so") holds for a bare slider, not for a text glyph. What holds the
     # explicit word on this button is the gate's own name pin (a glyph with a NAME — the aria-label). The mutation removes
     # both attributes; the pin must bite.
-    p, original, mutated = patch("hub/modules/field-board.mjs",
-        '      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false" aria-label="repeat the current bar"\n        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257;</button>',
-        '      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false">&#128257;</button>   <!-- (nameless) -->')
+    # re-anchored night 64 (ruling 261015): the clock-row button went; the name lives on the mini's repeat, in every host
+    p, original, mutated = patch("hub/mini.mjs",
+        '      b.setAttribute("aria-label", title); b.setAttribute("aria-pressed", "false"); b.hidden = true;',
+        '      b.setAttribute("aria-pressed", "false"); b.hidden = true;   // (nameless)')
     try:
         p.write_text(mutated)
         build()
         g = suite()
-        hit = "a glyph with a NAME" in g.stdout
+        hit = "is VISIBLE, named" in g.stdout or "named, with its state" in g.stdout
         record("the repeat button loses its name — a glyph alone, nothing for a reader to read",
                g.returncode != 0 and hit, "suite exit %d; the name pin bit: %s" % (g.returncode, hit))
     finally:
@@ -2337,9 +2340,49 @@ def m108_the_mini_stops_hearing_repeat():
         p.write_text(mutated)
         build()
         g = suite()
-        hit = "every view reads OFF" in g.stdout or "EVERY view and the neck's own button read ON" in g.stdout or "is VISIBLE, named" in g.stdout
+        # night 64's close: a deaf mini never SHOWS repeat, and the 260913 walk-repeat leg (which runs first) names that
+        # instead of hanging on the click — its line is the bite this mutation reaches first.
+        hit = "every view reads OFF" in g.stdout or "EVERY view and the neck's own button read ON" in g.stdout or "is VISIBLE, named" in g.stdout \
+            or "HIDES repeat" in g.stdout
         record("the mini stops hearing repeat — the neck toggles and no view follows",
                g.returncode != 0 and hit, "suite exit %d; the agreement pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m109_typing_roles_under_a_scale_stays_scale():
+    # night 64 (ruled §3b): typed roles no longer leave scale — the derived object is thrown away under a scale. The exit pin
+    # must bite. FIRST FORM (the handler alone) did NOT bite: the card's own listener re-derives the object from the announced
+    # tones and corrects it — the exit is enforced at two sites, so the mutation closes both.
+    p, original, mutated = patch("hub/modules/progression-card.mjs",
+        "      cfg = { ...cfg, tones: pick, object: derived }; push();   // the object is the name the tones make",
+        '      cfg = { ...cfg, tones: pick, object: cfg.object === "scale" ? "scale" : derived }; push();   // (no exit from scale)')
+    p2, original2, mutated2 = patch("hub/modules/progression-card.mjs",
+        "        if (derived !== cfg.object) {\n          if (\"object\" in m && m.object !== derived && m.object !== \"scale\") migrated = { saved: m.object, derived };",
+        "        if (derived !== cfg.object && cfg.object !== \"scale\") {   // (a scale never re-derives)\n          if (\"object\" in m && m.object !== derived && m.object !== \"scale\") migrated = { saved: m.object, derived };")
+    try:
+        p.write_text(mutated); p.write_text(p.read_text().replace(original2[original2.index("        if (derived !== cfg.object) {"):original2.index("        if (derived !== cfg.object) {") + len("        if (derived !== cfg.object) {\n          if (\"object\" in m && m.object !== derived && m.object !== \"scale\") migrated = { saved: m.object, derived };")], "        if (derived !== cfg.object && cfg.object !== \"scale\") {   // (a scale never re-derives)\n          if (\"object\" in m && m.object !== derived && m.object !== \"scale\") migrated = { saved: m.object, derived };"))
+        build()
+        g = suite()
+        hit = "derives the object and LEAVES scale" in g.stdout
+        record("typing roles under a scale stays scale — the ruled exit is gone",
+               g.returncode != 0 and hit, "suite exit %d; the exit pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m110_the_neck_transport_slides_again():
+    # injection 261015: the neck's mini goes back before the header's spacer — it sits after the readout and slides with its text.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '<span class="headspace"></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>',
+        '<span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span><span class="headspace"></span></div>')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "does not slide with the readout" in g.stdout or "sits at the RIGHT of its header" in g.stdout
+        record("the neck's transport slides again — seated after the readout, its place a function of the chord's name",
+               g.returncode != 0 and hit, "suite exit %d; the position pin bit: %s" % (g.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -2498,7 +2541,8 @@ def main():
                m98_a_chip_hue_follows_lit_ness, m99_the_dropped_gamut_goes_unsaid, m100_the_derivation_skips_a_null_pick,
                m101_the_emptied_window_goes_unsaid, m102_the_dropped_gamut_never_reaches_the_neck,
                m103_a_correction_lands_inside_the_dispatch_again, m104_the_mixer_loses_its_view, m105_the_neck_mini_shrinks_the_readout_at_390,
-               m106_the_repeat_button_loses_its_name, m107_the_mini_keeps_repeat_to_itself, m108_the_mini_stops_hearing_repeat)
+               m106_the_repeat_button_loses_its_name, m107_the_mini_keeps_repeat_to_itself, m108_the_mini_stops_hearing_repeat,
+               m109_typing_roles_under_a_scale_stays_scale, m110_the_neck_transport_slides_again)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

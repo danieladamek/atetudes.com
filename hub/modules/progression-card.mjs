@@ -23,7 +23,27 @@
 import { CYCLES } from "../../engine/tetrad-sequence.mjs";
 import { STRUCTURES } from "../../engine/structures.mjs";
 import { progressionOf, chartBodyOf } from "../../engine/progression.mjs";
-import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
+import { CONFIG_CHANGED, listen, announce, announceAfter } from "../bus.mjs";
+import { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, pickOf, tonePick, objectOf } from "../../engine/selection.mjs";
+import { field } from "../../engine/field.mjs";
+import { SHARED } from "../../engine/shared-config.mjs";
+
+/* THE OBJECT AND ITS TONES (night 64, 261014e — from harmony-card.mjs, where they lived since v0.9): Daniel —
+ * "Object really does belong to Progression, because that is what the progression is acting on." The table and
+ * the rules came verbatim; what changed is the ruling in §3b: ONE EDITOR PER CARD — Centricity edits the field,
+ * this card edits the object. At Object = scale the Tones field READS the field's notes and is TYPED in roles;
+ * typing roles derives an object and leaves scale (the exit). Typed note names set no gamut any more. */
+const OBJECTS = [
+  ["scale", "Scale or mode", true],
+  ["dyad", "Dyad", true],           // child 4: two chord tones, by role — since 260917 picked in the Tones field
+  ["triad", "Triad", true],
+  ["tetrad", "Tetrad", true],
+  ["ninth", "9th chord", true],     // 260914 item 3: depth is data —
+  ["eleventh", "11th chord", true], // offsets 2i to the named extension,
+  ["thirteenth", "13th chord", true], // mod7; Grip drops by a NAMED rule
+  ["shell", "Shell", true],         // child 4: R + the guide tones
+];
+
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
@@ -34,10 +54,19 @@ export const progressionCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 11,
-  controls: ["pgSrcSeg", "pgCycle", "pgForm", "pgCustom", "pgChartBtn", "pgStart"],
+  controls: ["hcObj", "hcTones", "pgSrcSeg", "pgCycle", "pgForm", "pgCustom", "pgChartBtn", "pgStart"],   // hcObj, hcTones: night 64, their ids kept (every pin, message and saved étude addresses them)
 
   markup: `
   <h2>Progression</h2>
+  <!-- OBJECT AND TONES FIRST, above Source (night 64): they are what the progression acts on, so they are read
+       before how it moves. STACKED, not adjacent — this card is a narrow column (281 px at 1280, 250 at 390) and
+       its own idiom is label-above-control at full width; two selects side by side would clip the object's
+       longest name at 390. Object still POPULATES Tones; editing Tones re-names the Object (night 59). -->
+  <label>Object</label>
+  <select id="hcObj" data-control="hcObj"></select>
+  <label id="hcTonesLab">Tones</label>
+  <input type="text" id="hcTones" data-control="hcTones" autocomplete="off">
+  <div class="hint" id="pgObjNote"></div>
   <label>Source</label>
   <div class="seg" id="pgSrcSeg" data-control="pgSrcSeg">
     <button data-src="cycle" class="on">cycle</button>
@@ -70,7 +99,8 @@ export const progressionCard = {
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
 #pgSrcSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 #pgNote.pg-err{color:#B82929;font-weight:bold}
-#pgCycle,#pgForm,#pgStart,#pgCustom{width:100%}
+#pgCycle,#pgForm,#pgStart,#pgCustom,#hcObj,#hcTones{width:100%}
+#pgObjNote{margin:6px 0 10px}
 #pgChartBtn{font:inherit;font-size:12px;margin-top:6px;padding:4px 10px;
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
 #pgChartBtn:hover:not(:disabled){border-color:var(--ink)}
@@ -80,8 +110,11 @@ export const progressionCard = {
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE — the progression half. key/scale are MIRRORS (harmony owns
      * them) held only to validate and to phrase the note. */
-    let cfg = { source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
-    let key = "Bb", scale = "major";
+    let cfg = { object: "tetrad", tones: [1, 3, 5, 7],   // night 64: the object (a derived label — only tones is stored) and its tones
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+    let key = "Bb", scale = "major", gamut = null;   // key/scale/gamut are MIRRORS (Centricity owns them) — the tones' letters under a scale
+    let migrated = null;   // night 59: { saved, derived } when a restored entry's stored object is not what its tones make
+    let tonesErr = null;   // the tones field's standing refusal, by name
     let padChart = null;                  // the note's chart body, announced by the notepad
 
     const fill = (sel, items, cur) => {
@@ -94,8 +127,54 @@ export const progressionCard = {
     fill(byId("pgCycle"), Object.entries(CYCLES).map(([id, c]) => [id, c.name]), cfg.cycle);
     fill(byId("pgForm"), STRUCTURES.map((s) => [s.id, s.name]), cfg.form);
     fill(byId("pgStart"), ORD.map((o, i) => [String(i), `${o} — ${ROMAN[i]}`]), String(cfg.start));
+    {
+      const sel = byId("hcObj");
+      for (const [v, l, live] of OBJECTS) { const o = d.createElement("option"); o.value = v; o.textContent = l; if (!live) { o.disabled = true; o.title = "arrives with child 4 (dyads, and the chord vocabulary)"; } sel.appendChild(o); }
+    }
 
     const render = () => {
+      /* THE OBJECT AND ITS TONES (night 64 — from the harmony card, night 59's rules): a chord object's tones
+       * speak ROLES against the chord root and the object is the name the tones make; under a scale the field
+       * READS the field's notes (the gamut's letters, the whole field when none is set) and is TYPED in roles —
+       * the first control where read and write differ (§3b, Daniel: "a reasonable trade") — said on the face. */
+      byId("hcObj").value = cfg.object;
+      const isScale = cfg.object === "scale";
+      {
+        const f = byId("hcTones"), lab = byId("hcTonesLab");
+        if (!isScale) {
+          const pick = pickOf(cfg);
+          const says = parseTones(f.value);
+          const saysPick = says.tones ? renderPick(says.tones.map(degreeOfTone)) : null;
+          if (!tonesErr && saysPick !== renderPick(pick)) f.value = renderPick(pick);
+          lab.textContent = "Tones \u2014 the material, by role against the chord root: R, 3, 5, 7, 9, 11, 13";
+          f.placeholder = renderPick(defaultPick(cfg.object));
+        } else {
+          const fld = field({ key, scale });
+          const degs = gamut || [1, 2, 3, 4, 5, 6, 7];
+          const letters = degs.map((dg) => fld.notes[dg - 1].name).join(" ");
+          if (!tonesErr) f.value = letters;   // a READOUT of the field: repainted from the model, never edited into the gamut
+          lab.textContent = `Tones \u2014 the material, by note in ${key} ${SHARED.scale.values[scale] || scale}; typed by role`;
+          f.placeholder = "R,3,5";
+        }
+      }
+      {
+        const note = byId("pgObjNote");
+        if (tonesErr) { note.style.color = "#B82929"; note.textContent = "tones: " + tonesErr; }
+        else if (isScale) {
+          note.style.color = "";
+          note.textContent = `Under a scale the tones read as notes of ${key} ${SHARED.scale.values[scale] || scale} and are typed as roles \u2014 type R, 3, 5 and the tones make a triad and leave the scale; the field is narrowed from its own notes, where the field is.`;
+        } else {
+          note.style.color = "";
+          const pick = pickOf(cfg);
+          const whole = renderPick(pick) === renderPick(objectDegrees(cfg.object));
+          note.textContent = (cfg.object === "shell"
+            ? "A shell is the root under the guide tones — R,3,7, the tones above; edit them and the object is re-named to what the tones make. "
+            : cfg.object === "dyad" ? "A dyad is the guide tones — 3,7; edit them and the object is re-named to what the tones make. "
+            : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point — or add a tone and the object is re-named to what the tones make. `
+            : `The ${cfg.object} narrowed to ${renderPick(pick).split(",").join(" ")}. `)
+            + (migrated ? `This étude was saved as a ${migrated.saved}; its tones make a ${migrated.derived} — the tones are the truth.` : "");
+        }
+      }
       for (const b of byId("pgSrcSeg").querySelectorAll("button"))
         b.classList.toggle("on", b.dataset.src === cfg.source);
       const show = (cls, on) => {
@@ -131,15 +210,64 @@ export const progressionCard = {
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, { ...cfg }); };
 
-    const MINE = ["source", "cycle", "form", "custom", "start"];
+    const MINE = ["object", "tones", "source", "cycle", "form", "custom", "start"];   // object, tones: night 64
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of MINE) if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
-      if ("key" in m && m.key !== key) { key = m.key; changed = true; }
-      if ("scale" in m && m.scale !== scale) { scale = m.scale; changed = true; }
+      for (const k of MINE) if (k in m && !same(m[k], cfg[k])) { cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] }; changed = true; }
+      /* the field's mirrors — and a standing refusal in the Tones field is stale once the field it was typed against
+       * moves (a key, scale or gamut change repaints the readout; the refused text must not outlive the model) */
+      if ("key" in m && m.key !== key) { key = m.key; tonesErr = null; changed = true; }
+      if ("scale" in m && m.scale !== scale) { scale = m.scale; tonesErr = null; changed = true; }
+      if ("gamut" in m && !same(m.gamut || null, gamut)) { gamut = m.gamut ? [...m.gamut] : null; tonesErr = null; changed = true; }
       if ("chart" in m && m.chart !== padChart) { padChart = m.chart; changed = true; }
+      /* a saved étude's `dyad` arrives as the pick (tonePick is the one alias site); an OBJECT arriving without a
+       * pick (a preset) takes its default — a triad preset must not inherit a dyad's [3,7] */
+      if (!("tones" in m) && Array.isArray(m.dyad) && !same(m.dyad, cfg.tones)) {
+        cfg = { ...cfg, tones: [...m.dyad] }; changed = true;
+      } else if ("object" in m && !("tones" in m) && !("dyad" in m) && changed) {
+        cfg = { ...cfg, tones: defaultPick(cfg.object) }; tonesErr = null;
+        announceAfter(d, CONFIG_CHANGED, { tones: cfg.tones });   // the owner SAYS the pick it derived — after the message, not inside it
+      }
+      /* TONES IS THE TRUTH (night 59): tones that arrive NAME the object; a v1 entry's stored object is a label to
+       * compare — where it is not what the tones make, the tones win and the face says so once. NULL INCLUDED
+       * (night 60): a saved scale étude carries tones: null, and objectOf(null) is the scale. */
+      if ("tones" in m || "dyad" in m) {
+        const derived = objectOf(tonePick(cfg));
+        if (derived !== cfg.object) {
+          if ("object" in m && m.object !== derived && m.object !== "scale") migrated = { saved: m.object, derived };
+          cfg = { ...cfg, object: derived }; changed = true;
+          announceAfter(d, CONFIG_CHANGED, { object: derived });
+        }
+      }
       if (changed) render();
+    });
+
+    /* choosing an object FILLS its tones (night 59: a shortcut, not a cage) — a refused edit is forgotten with the object */
+    byId("hcObj").addEventListener("change", (e) => {
+      tonesErr = null; migrated = null;
+      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value) }; push();
+    });
+    /* THE TONES FIELD: typed in ROLES in every state (night 64, one editor per card); parsed by the figure's parser,
+     * named by the one derivation — a refusal is a value on the face and the last lawful pick stands. Under a scale
+     * the refusal says the read/write difference: the field reads notes, is typed in roles, and the gamut is set
+     * where the field is. */
+    byId("hcTones").addEventListener("input", (e) => {
+      migrated = null;
+      const r = parseTones(e.target.value);
+      if (r.err) {
+        tonesErr = cfg.object === "scale"
+          ? `${r.err} \u2014 under a scale the tones read as notes and are typed as roles (R, 3, 5); the field is narrowed from its own notes, where the field is`
+          : r.err;
+        render(); return;
+      }
+      const pick = r.tones.map(degreeOfTone);
+      let derived;
+      try { derived = objectOf(pick); }
+      catch (err) { tonesErr = String(err.message || err).replace(/^objectOf: /, ""); render(); return; }
+      tonesErr = null;
+      cfg = { ...cfg, tones: pick, object: derived }; push();   // the object is the name the tones make
     });
 
     byId("pgSrcSeg").addEventListener("click", (e) => {

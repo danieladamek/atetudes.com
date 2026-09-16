@@ -111,7 +111,7 @@ export const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdMini", "fdRepeat", "fdMode",
+    "fdAllTones", "fdBpm", "fdMini", "fdMode",
     "fdTuning", "fdTuneNames", "fdTuneName", "fdTuneAll"],
 
   markup: `
@@ -128,13 +128,15 @@ export const fieldBoard = {
        "right there in the header … right next to where the chord and the mode are displayed"): #fdMini,
        the neck's OWN mini (the 260919 clock row's, a view of the one clock through the bus — hub/mini.mjs,
        mounted here as in five other hosts), moves within this board from the under-neck row to this header,
-       in flow after the readout. Measured before the move: 785.6 px free beside the readout at 1280, 13 px
+       in flow after the readout — and since night 64 (injection 261015) AFTER THE SPACER, at the header's right: seated
+       right after the readout it slid with the readout's text (15 px between C and F♯ — a control's position must
+       not be a function of a neighbouring string's length, rule 12). Measured before the move: 785.6 px free beside the readout at 1280, 13 px
        at 390 — so at phone width the mini STACKS on its own row under the title-and-readout row (night 51's
        answer: stack, do not shrink); the readout keeps its ruled one row beside its title and gives up
        nothing. The shell's readhead grammar would seat a header mini beside a shrinking readout at ≤480 px
        (the keys board's layout); this board's own id-scoped rules below out-rank it for the neck. -->
   <div class="bh readhead" id="fdHead"><span>On the neck</span><div class="readbox" id="fdMode" data-control="fdMode"
-        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span><span class="headspace"></span></div>
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -204,14 +206,15 @@ export const fieldBoard = {
            that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
            the Metronome card's state, the mini stays a view that asks.
            NIGHT 62 (261014b): the transport went UP to the header (above) —
-           this row is now repeat · bar split · bpm · metronome, in that order,
-           closed up behind it: no gap where a control was. -->
-      <!-- THE REPEAT BUTTON LOSES ITS WORD (injection 261014c — Daniel, from the live app): the glyph alone
-           on the face; the word it lost is its accessible NAME (aria-label — a glyph-only button has none, and
-           axe fails it: night 57's pad slider, twice). Addressed by id and data-control everywhere, never by
-           the glyph (rule 12 — night 20's hunt). aria-pressed and the pressed paint (the build) unchanged. -->
-      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false" aria-label="repeat the current bar"
-        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257;</button>
+           the row became repeat · bar split · bpm · metronome, closed up behind
+           it. NIGHT 64 (ruling 261015): REPEAT LEFT TOO — night 63 made it the
+           transport's state on the bus, shown in every mini including the
+           header's above, and a view is PER SURFACE: a second copy on this board
+           was a duplicate (not night 55's fork — the two agreed), and as a lone
+           glyph among worded controls it had stopped reading as a control at
+           all. The row is now bar split · bpm · metronome, in that order; the
+           clock still closes ranks, with its transport in the header. The
+           injection-261014c button (the glyph with its name) went with it. -->
       <span class="fd-lab2">bar split</span>
       <select id="fdSplit" data-control="fdSplit"
         title="the bar split — a bar's chords take these slots in order"></select>
@@ -300,11 +303,6 @@ export const fieldBoard = {
 .fd-headmini button:hover{border-color:var(--ink)}
 /* the neck's own 390 stack rules (night 62) RETIRED night 63: the shell's readhead grammar stacks every board's mini
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
-/* the glyph alone (261014c): the mini's own button box — padding 2px 8px, the same line-height — so the
- * repeat reads as one of the cluster's buttons beside the bar split, not a text button with a glyph in it */
-#fdRepeat{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
-  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;margin-left:0}
-#fdRepeat:hover{border-color:var(--ink)}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
@@ -965,15 +963,8 @@ export const fieldBoard = {
         atLab.lastChild.textContent = cfg.object === "scale"
           ? " all tones — a scale takes the whole box" : " all tones";
       }
-      /* the repeat toggle paints from the same build — pressed state
-       * styled inline (the orphan-check dodge, tonight's established one) */
-      {
-        const rb = byId("fdRepeat");
-        rb.setAttribute("aria-pressed", cfg.repeat ? "true" : "false");
-        rb.style.background = cfg.repeat ? "var(--ink)" : "";
-        rb.style.color = cfg.repeat ? "#fff" : "";
-        rb.style.borderColor = cfg.repeat ? "var(--ink)" : "";
-      }
+      /* the repeat toggle's paint left with the clock-row button (night 64, ruling 261015): repeat is painted by
+       * every mini from the bus; cfg.repeat stays a MIRROR here so this board's own announce carries the current value */
       /* THE MODE LINE (260917, item 5): under a scale, this bar's chord
        * degree names its mode from the one table; a root off the key says so;
        * a chord object leaves the line empty (the display is the scale's) */
@@ -1289,9 +1280,6 @@ export const fieldBoard = {
     byId("fdFigIn").addEventListener("input", (e) => { cfg = { ...cfg, figure: e.target.value }; push(); });
     byId("fdAllTones").addEventListener("change", (e) => {
       cfg = { ...cfg, take: e.target.checked ? "all" : "one" }; push();
-    });
-    byId("fdRepeat").addEventListener("click", () => {
-      cfg = { ...cfg, repeat: !cfg.repeat }; push();
     });
 
     byId("fdRailBtn").addEventListener("click", () => {

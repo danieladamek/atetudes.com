@@ -120,7 +120,9 @@ export default {
     /* v0.6.6 (261014d, night 63): hub/mini.mjs gained repeat as the transport's state on the bus; this door's
      * transport consults no repeat, so its three transport views keep the button hidden — nothing here changes on
      * the face; the build moves because the shared mini does. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.6",
+    /* v0.6.7 (261014e, night 64): the bus gained announceAfter and the readout grammar right-justifies a mini's own
+     * row — shared files; nothing on this door's face moves. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.7",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

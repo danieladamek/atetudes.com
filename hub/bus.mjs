@@ -135,6 +135,17 @@ export function announce(doc, name, detail) {
   doc.dispatchEvent(new Ev(name, { detail: copy }));
 }
 
+/** A CORRECTION LANDS AFTER THE MESSAGE IT CORRECTS (night 61, found on the face; shared here night 64 because
+ * two cards need it — Centricity for a gamut it drops, Progression for the object the tones make). An owner
+ * hearing a message may correct it; announced from INSIDE its listener the correction is delivered while the
+ * outer message is still being delivered, and a listener registered later hears the correction FIRST and the
+ * stale outer value LAST. So it is announced in a microtask: after the outer dispatch has reached everyone,
+ * before anything is painted. */
+export function announceAfter(doc, name, detail) {
+  if (!doc.defaultView) return;
+  doc.defaultView.queueMicrotask(() => announce(doc, name, detail));
+}
+
 /** Listen for a message. Returns an unsubscribe, so a module can be mounted
  * more than once without leaking listeners. */
 export function listen(doc, name, fn) {

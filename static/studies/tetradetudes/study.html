@@ -4067,6 +4067,17 @@ function announce(doc, name, detail) {
   doc.dispatchEvent(new Ev(name, { detail: copy }));
 }
 
+/** A CORRECTION LANDS AFTER THE MESSAGE IT CORRECTS (night 61, found on the face; shared here night 64 because
+ * two cards need it — Centricity for a gamut it drops, Progression for the object the tones make). An owner
+ * hearing a message may correct it; announced from INSIDE its listener the correction is delivered while the
+ * outer message is still being delivered, and a listener registered later hears the correction FIRST and the
+ * stale outer value LAST. So it is announced in a microtask: after the outer dispatch has reached everyone,
+ * before anything is painted. */
+function announceAfter(doc, name, detail) {
+  if (!doc.defaultView) return;
+  doc.defaultView.queueMicrotask(() => announce(doc, name, detail));
+}
+
 /** Listen for a message. Returns an unsubscribe, so a module can be mounted
  * more than once without leaking listeners. */
 function listen(doc, name, fn) {
@@ -4077,7 +4088,7 @@ function listen(doc, name, fn) {
     fn(JSON.parse(JSON.stringify(lastOf(doc).get(name))));
   return () => doc.removeEventListener(name, h);
 }
-return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, NOTE, BEAT, announce, listen };
+return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, NOTE, BEAT, announce, announceAfter, listen };
 })();
 
 /* ===== hub/modules/audio-card.mjs ===== */
@@ -10839,7 +10850,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.6","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.7","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

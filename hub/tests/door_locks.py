@@ -1513,8 +1513,17 @@ def run_door(pw, door_id):
         # repetitions produce N bars of the SAME chord's notes at the
         # AudioContext with ZERO advances, and switching off resumes the
         # progression at the RIGHT bar.
-        if not page.evaluate("() => !!document.getElementById('fdRepeat')"):
+        # RE-ADDRESSED night 64 (ruling 261015, rule 12): the clock-row button went; repeat is the neck's mini's, by ROLE
+        # SAYS ITS REASON (night 64's close, from hub/tests/out/bite-0915-1205.log): the mini shows repeat only once CONFIG
+        # carries it, so a mini deaf to CONFIG keeps the button hidden — this leg then hung 30 s on the click and aborted
+        # the door before the agreement pin could run (m108 read NO BITE on a red suite). Presence and visibility are
+        # two claims; a hidden toggle is named here, not timed out.
+        _rep = '#fdMini button[data-role="repeat"]'
+        _present = page.evaluate("() => !!document.querySelector('#fdMini button[data-role=\"repeat\"]')")
+        if not _present:
             check(False, f"{tag} the repeat toggle is absent from this build")
+        elif not page.is_visible(_rep):
+            check(False, f"{tag} the neck's mini HIDES repeat — CONFIG never carried a boolean repeat to it, so no view can show or set it")
         else:
             # boot restore at ENTRY — the leg inherits whatever bar the
             # previous block parked on, and 'resumes at bar 2' is only
@@ -1525,8 +1534,8 @@ def run_door(pw, door_id):
             page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
             page.fill("#fdBpm", "240"); page.dispatch_event("#fdBpm", "change")
             page.wait_for_timeout(150)
-            page.click("#fdRepeat"); page.wait_for_timeout(150)
-            check(page.get_attribute("#fdRepeat", "aria-pressed") == "true",
+            page.click('#fdMini button[data-role="repeat"]'); page.wait_for_timeout(150)
+            check(page.get_attribute('#fdMini button[data-role="repeat"]', "aria-pressed") == "true",
                   f"{tag} the toggle reads pressed")
             page.evaluate("""() => {
               if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
@@ -1567,7 +1576,7 @@ def run_door(pw, door_id):
               const all = [...document.querySelectorAll('#tlScroll button')];
               return all.indexOf(c); }""")
             page.evaluate("() => { window.__adv = [] }")
-            page.click("#fdRepeat")
+            page.click('#fdMini button[data-role="repeat"]')
             page.wait_for_timeout(1400)
             rp2 = page.evaluate("() => window.__adv.map(a => a.i)")
             page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
@@ -2729,7 +2738,7 @@ console.log(JSON.stringify(out));
         # R,3,13 under a tetrad re-names the object to a thirteenth and draws exactly those three. Junk and
         # duplicates still refuse by name (below).
         page.fill("#hcTones", "R,3,13"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
-        hc_note = page.inner_text("#hcNote"); obj_now = page.evaluate("() => document.getElementById('hcObj').value")
+        hc_note = page.inner_text("#pgObjNote"); obj_now = page.evaluate("() => document.getElementById('hcObj').value")   # night 64: the tones' sentences are Progression's
         check(obj_now == "thirteenth" and "The thirteenth narrowed to R 3 13" in hc_note,
               f"{tag} 1 (261013): a tone past the object's depth re-names the object to what the tones make: {obj_now!r} {hc_note!r}")
         check(roles() == ["13", "3", "R"],
@@ -2739,7 +2748,7 @@ console.log(JSON.stringify(out));
               f"{tag} 1 (261013): R,3,7 names a SHELL — the preset's own default wins the tie: {roles()}")
         # junk refuses in the FIGURE's own voice — one parser, one vocabulary
         page.fill("#hcTones", "R,Q"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
-        hc_note = page.inner_text("#hcNote")
+        hc_note = page.inner_text("#pgObjNote")
         check('"Q" is not a tone — tones are R, 3, 5, 7, 9, 11, 13' in hc_note,
               f"{tag} 1: junk is refused in the figure field's own words: {hc_note!r}")
         # an extension picks its own depth's worth: a 9th chord narrowed to R,3,7,9
@@ -2902,10 +2911,12 @@ console.log(JSON.stringify(out));
         # transport (#fdMini, the neck's own mini) moved UP to the neck's header beside the readout; the row it left
         # runs repeat · bar split · bpm · metronome, contiguous, in that order, closed up behind it — no gap where a
         # control was. The mini is pinned in the header by the night-62 block; here the row is pinned without it.
-        clock = page.evaluate("""() => ['fdRepeat','fdSplit','fdBpm','fdMetChk'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().left))""")
-        row_first = page.evaluate("() => { const r = document.getElementById('fdRepeat').closest('.fd-railrow'); return { first: r.firstElementChild.id, mini: !!r.querySelector('.mini'), sameRow: r === document.getElementById('fdMetChk').closest('.fd-railrow') }; }")
-        check(all(clock[i] >= clock[i - 1] for i in range(1, 4)) and row_first["sameRow"] and row_first["first"] == "fdRepeat" and not row_first["mini"],
-              f"{tag} 2 (260919, rewritten 261014b): the clock row runs repeat · bar split · bpm · metronome in one row, repeat first, the transport gone up to the header: {clock} {row_first}")
+        # RE-CUT AGAIN night 64 (ruling 261015 — a view is per surface; the clock-row repeat was a duplicate of the header
+        # mini's): the row is bar split · bpm · metronome, in that order, no repeat and no mini in it.
+        clock = page.evaluate("""() => ['fdSplit','fdBpm','fdMetChk'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().left))""")
+        row_first = page.evaluate("() => { const r = document.getElementById('fdSplit').closest('.fd-railrow'); return { repeat: !!(r.querySelector('#fdRepeat') || r.querySelector('button[data-role=\"repeat\"]')), mini: !!r.querySelector('.mini'), sameRow: r === document.getElementById('fdMetChk').closest('.fd-railrow') }; }")
+        check(all(clock[i] >= clock[i - 1] for i in range(1, 3)) and row_first["sameRow"] and not row_first["repeat"] and not row_first["mini"],
+              f"{tag} 2 (260919, re-cut 261014b and 261015): the clock row runs bar split · bpm · metronome in one row — repeat and the transport both live in the header mini: {clock} {row_first}")
         # THE TRUNCATION ORDER (item 1): at phone width a long name ellipsises the MODE; the chord survives whole.
         # Measured on the artifact 260919: at 390 the box is 215px and "Ebmaj7#11 — Eb Lydian" is 189 — it FITS;
         # the dispatch's "Ebmaj7#11 — Eb Lyd…" needs 360 (box 197). A pin that never truncates proves nothing.
@@ -3049,17 +3060,17 @@ console.log(JSON.stringify(out));
         key = page.evaluate("""() => { const g = (id) => { const e = document.getElementById(id); const cs = getComputedStyle(e);
             const r = e.getBoundingClientRect(); return { color: cs.color, weight: cs.fontWeight, h: r.height, bottom: Math.round(r.bottom), font: parseFloat(cs.fontSize) }; };
           const k = document.getElementById('hcKey'); const card = k.closest('.card');
-          return { key: g('hcKey'), scale: g('hcScale'), obj: g('hcObj'), name: k.getAttribute('aria-label'),
+          return { key: g('hcKey'), scale: g('hcScale'), name: k.getAttribute('aria-label'),   /* night 64: Object left the card for Progression — Scale is the one neighbour */
             keyCaption: [...card.querySelectorAll('label')].some(l => l.textContent.trim() === 'Key') }; }""")
         check(key["key"]["color"] == "rgb(184, 41, 41)" and int(key["key"]["weight"]) >= 600,
               f"{tag} 1 (260918): the key reads in the degree palette's R, bold: {key['key']}")
         ratio = key["key"]["h"] / key["scale"]["h"]
         check(1.6 <= ratio <= 1.9 and key["key"]["font"] > key["scale"]["font"],
               f"{tag} 1 (260922): the field wears its weight — its height is 1.6–1.9× its neighbours' (ratio {ratio:.3f}) and its type is larger: {key}")
-        check(abs(key["scale"]["h"] - key["obj"]["h"]) < 1 and key["scale"]["font"] == key["obj"]["font"] == 13 and 27 <= key["scale"]["h"] <= 32,
-              f"{tag} 1 (260922): the neighbours are the baseline and did not move — Scale and Object the same 13px field: {key}")
-        check(key["key"]["bottom"] == key["scale"]["bottom"] == key["obj"]["bottom"],
-              f"{tag} 1 (260922): the three fields share a BOTTOM edge (ruled) and the Key rises above it: {key}")
+        check(key["scale"]["font"] == 13 and 27 <= key["scale"]["h"] <= 32,
+              f"{tag} 1 (260922, re-cut 261014e): the neighbour is the baseline and did not move — Scale the same 13px field (Object crossed to Progression at night 64): {key}")
+        check(key["key"]["bottom"] == key["scale"]["bottom"],
+              f"{tag} 1 (260922): the fields share a BOTTOM edge (ruled) and the Key rises above it: {key}")
         check(key["name"] == "Centricity" and not key["keyCaption"],
               f"{tag} 1 (260922): the caption is gone and the select keeps its NAME — the card's own word: {key['name']!r}, caption {key['keyCaption']}")
         # ---- 260917 item 4: the card's bass window is closed in chord mode, the CENTRE stays in scale mode ----
@@ -6389,7 +6400,7 @@ console.log(JSON.stringify(out));
           const neck = boards.find(b => b.querySelector('#fieldSvg'));
           const ids = ['fdVoice','fdHarmVol','fdHarmMute','fdBass2','fdSounded','fdBassVol','fdBassMute','fdPad','fdPadVol','fdPadMute'];
           const inMixer = ids.filter(i => mixer && mixer.querySelector('#' + i)), inNeck = ids.filter(i => neck && neck.querySelector('#' + i));
-          const clock = ['fdMini','fdRepeat','fdSplit','fdBpm','fdMetChk'].filter(i => neck && neck.querySelector('#' + i));
+          const clock = ['fdMini','fdSplit','fdBpm','fdMetChk'].filter(i => neck && neck.querySelector('#' + i));   // night 64: the clock-row repeat went (ruling 261015)
           const rows = mixer ? mixer.querySelectorAll('.mx-row').length : 0;
           /* the CLAIM (re-stated 261013 after CI): the strip has a header, so the chevron sits in the header BAND and over
            * none of the strip's rows — not "inside the .bh box to the pixel": CI's Linux Chromium sets the 11 px header
@@ -6403,7 +6414,7 @@ console.log(JSON.stringify(out));
           return { mixer: !!mixer, inMixer, inNeck, clock, rows, chevronInHeader, order, pairrows: neck ? neck.querySelectorAll('.fd-pairrow').length : -1 }; }""")
         check(seat["mixer"] and seat["rows"] == 3, f"{tag} the Mixer board exists below the neck with three rows: {seat}")
         check(len(seat["inMixer"]) == 10 and not seat["inNeck"], f"{tag} the ten mixer controls live in the Mixer board and none in the neck: {seat}")
-        check(len(seat["clock"]) == 5 and seat["pairrows"] == 0, f"{tag} the neck keeps its clock row (the 260919 ruling) and no mixer row: {seat}")
+        check(len(seat["clock"]) == 4 and seat["pairrows"] == 0, f"{tag} the neck keeps its clock row (the 260919 ruling; four members since the clock-row repeat went, ruling 261015) and no mixer row: {seat}")
         check(seat["order"] == 1, f"{tag} the Mixer board is the one right after the neck: order {seat['order']}")
         check(seat["chevronInHeader"], f"{tag} the strip has a header, so the shell's chevron sits in it")
         # a level moved in the strip still moves the bus: the harmony level at zero starts no chord source
@@ -6459,13 +6470,23 @@ console.log(JSON.stringify(out));
         check(not t["hidden"] and t["v"] == "C D E F G A B" and "by note" in t["lab"], f"{tag} under a scale Tones is the key's notes, whole field: {t}")
         page.select_option("#hcGamut", ["2,3,5,6,7"]); page.wait_for_timeout(250)
         check(tones()["v"] == "D E G A B", f"{tag} a gamut FILLS Tones with its letters: {tones()}")
+        # REWRITTEN night 64 (rule 7 — ruled 261014, §3b: ONE EDITOR PER CARD): typed LETTERS no longer set the gamut — Tones
+        # is the object's editor, typed in roles in every state; under a scale it READS the field's notes. The chips are the
+        # field's editor (the night-64 block confirms they reach every set the letters could).
         page.fill("#hcTones", "C D F G A"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
         gam_now = page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
-        check(gam_now == "1,2,4,5,6", f"{tag} typed letters store as DEGREES of the key: {gam_now!r}")
+        check(gam_now == "2,3,5,6,7" and page.evaluate("() => document.getElementById('hcObj').value") == "scale", f"{tag} typed letters set NO gamut and leave no scale (one editor per card, night 64): {gam_now!r}")
+        obj_note = page.evaluate("() => (document.getElementById('pgObjNote') || {}).textContent || ''")   # '' when the note is not in the build: fails by name, never crashes (rule 2)
+        check("typed as roles" in obj_note, f"{tag} …and the face says why — read as notes, typed as roles: {obj_note[:200]!r}")
+        for dg in (1, 3, 4, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]'); page.wait_for_timeout(120)
+        page.wait_for_timeout(250)
+        gam_chips = page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
+        check(gam_chips == "1,2,4,5,6", f"{tag} the same set from the chips: {gam_chips!r}")
         page.select_option("#hcKey", "G"); page.wait_for_timeout(250)
         check(tones()["v"] == "G A C D E" and page.evaluate("() => document.getElementById('hcGamut').dataset.gamut") == "1,2,4,5,6", f"{tag} a key change keeps the degrees and re-renders the letters: {tones()}")
         page.fill("#hcTones", "G A Q"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
-        check("is not a note of this key" in page.inner_text("#hcNote") or "Q" in page.inner_text("#hcNote"), f"{tag} a letter that is not in the key refuses by name: {page.inner_text('#hcNote')[:160]!r}")
+        obj_note2 = page.evaluate("() => (document.getElementById('pgObjNote') || {}).textContent || ''")
+        check("typed as roles" in obj_note2 and page.evaluate("() => document.getElementById('hcObj').value") == "scale", f"{tag} letters under a scale refuse by the read/write sentence: {obj_note2[:200]!r}")
         page.select_option("#hcKey", "C"); page.select_option("#hcGamut", ["1,2,3,4,5,6,7"]); page.wait_for_timeout(200)
         # under the SCALE object the chips read plain degrees (VII), under a chord object chord numerals (vii°) — the
         # same degree in both, as before tonight (the before-capture shows it); what never moves is the DEGREE
@@ -6481,10 +6502,10 @@ console.log(JSON.stringify(out));
         # THE 390 GRID (the precondition): the selects fit the card, the Key untouched, the size pin green at 390
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
         g390 = page.evaluate("""() => { const g = (id) => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return { w: +r.width.toFixed(1), h: +r.height.toFixed(1), right: Math.round(r.right), bottom: Math.round(r.bottom), font: parseFloat(getComputedStyle(e).fontSize) }; };
-          const c = document.getElementById('hcKey').closest('.card').getBoundingClientRect(); return { key: g('hcKey'), scale: g('hcScale'), obj: g('hcObj'), cardRight: Math.round(c.right), cardW: Math.round(c.width) }; }""")
-        check(g390["obj"]["right"] <= g390["cardRight"] and g390["scale"]["right"] <= g390["cardRight"], f"{tag} @390 the selects fit the card — no select runs past its edge: {g390}")
+          const c = document.getElementById('hcKey').closest('.card').getBoundingClientRect(); return { key: g('hcKey'), scale: g('hcScale'), cardRight: Math.round(c.right), cardW: Math.round(c.width) }; }""")   # night 64: Object crossed to Progression — two tracks
+        check(g390["scale"]["right"] <= g390["cardRight"], f"{tag} @390 the selects fit the card — no select runs past its edge: {g390}")
         ratio390 = g390["key"]["h"] / g390["scale"]["h"]
-        check(1.6 <= ratio390 <= 1.9 and 27 <= g390["scale"]["h"] <= 32 and abs(g390["scale"]["h"] - g390["obj"]["h"]) < 1 and g390["key"]["bottom"] == g390["scale"]["bottom"] == g390["obj"]["bottom"] and g390["key"]["font"] > g390["scale"]["font"],
+        check(1.6 <= ratio390 <= 1.9 and 27 <= g390["scale"]["h"] <= 32 and g390["key"]["bottom"] == g390["scale"]["bottom"] and g390["key"]["font"] > g390["scale"]["font"],
               f"{tag} @390 the night-28 size pin holds — ratio {ratio390:.3f}, neighbours {g390['scale']['h']}, a shared bottom: {g390}")
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
         # THE MIGRATION: export carries no object; a v1 payload (object: dyad, tones R,5) restores as the tones say, and says so
@@ -6498,7 +6519,7 @@ console.log(JSON.stringify(out));
         page4.goto(html_path.as_uri()); page4.wait_for_selector("#cards", state="attached"); page4.wait_for_timeout(200)
         import_text(page4, v1_file, "night59-v1.atchart.md")
         page4.click('#histList .hist [data-cap="apply"]'); page4.wait_for_timeout(400)
-        cold = page4.evaluate("() => ({ obj: document.getElementById('hcObj').value, tones: document.getElementById('hcTones').value, note: document.getElementById('hcNote').textContent })")
+        cold = page4.evaluate("() => ({ obj: document.getElementById('hcObj').value, tones: document.getElementById('hcTones').value, note: document.getElementById('pgObjNote').textContent })")   # night 64: the object's sentence is Progression's
         check(cold["obj"] == "triad" and cold["tones"] == "R,5" and "saved as a dyad" in cold["note"] and "make a triad" in cold["note"], f"{tag} a v1 étude saved as a dyad with tones R,5 restores as what its tones make, and says so once: {cold}")
         check(not errs4, f"{tag} the cold page raised errors: {errs4[:2]}")
         ctx4.close()
@@ -6737,12 +6758,12 @@ console.log(JSON.stringify(out));
         check(abs(s2["box"]["t"] - s2["title"]["t"]) < 12 and s2["mini"]["t"] >= s2["box"]["b"] - 1, f"{tag} @390 the readout keeps its one row beside its title and the mini STACKS below it — 13 px is not a seat: {s2}")
         check(s2["box"]["w"] >= 150 and s2["box"]["r"] <= s2["info"]["l"] and s2["mini"]["r"] <= s2["info"]["l"] + 60, f"{tag} @390 the readout shrinks for nothing and the mini has the row: {s2}")
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
-        # INJECTION 261014c — the repeat button loses its word: the glyph alone on the face, the word as its accessible
-        # NAME (never an exemption), aria-pressed unchanged, its box the mini's buttons' box; addressed by id, never by glyph
-        rp = page.evaluate("""() => { const b = document.getElementById('fdRepeat'); const m = document.querySelector('#fdMini button'); const R = (e) => e.getBoundingClientRect(); const cs = getComputedStyle(b), ms = getComputedStyle(m);
-          return { text: b.textContent.trim(), name: b.getAttribute('aria-label'), pressed: b.getAttribute('aria-pressed'), h: +R(b).height.toFixed(1), miniH: +R(m).height.toFixed(1), pad: cs.paddingLeft + ' ' + cs.paddingTop, miniPad: ms.paddingLeft + ' ' + ms.paddingTop }; }""")
-        check(len(rp["text"]) <= 2 and "repeat" not in rp["text"] and rp["name"] and "repeat" in rp["name"] and rp["pressed"] in ("true", "false"), f"{tag} the repeat button is a glyph with a NAME and its pressed state: {rp}")
-        check(abs(rp["h"] - rp["miniH"]) <= 2 and rp["pad"] == rp["miniPad"], f"{tag} the glyph button wears the mini's button box: {rp}")
+        # INJECTION 261014c (the repeat button loses its word) — SUPERSEDED by ruling 261015 (night 64): a view is per surface,
+        # and the clock-row copy was a duplicate of the header mini's. The neck holds exactly ONE repeat — the mini's, by role,
+        # a glyph with a NAME among glyphs; #fdRepeat is gone.
+        rp = page.evaluate("""() => { const neck = document.getElementById('fieldSvg').closest('.board'); const reps = [...neck.querySelectorAll('button[data-role="repeat"]')];
+          return { fdRepeat: !!document.getElementById('fdRepeat'), count: reps.length, inMini: reps.length === 1 && reps[0].closest('#fdMini') !== null, name: reps[0] ? reps[0].getAttribute('aria-label') : null, pressed: reps[0] ? reps[0].getAttribute('aria-pressed') : null }; }""")
+        check(not rp["fdRepeat"] and rp["count"] == 1 and rp["inMini"] and rp["name"] and "repeat" in rp["name"] and rp["pressed"] in ("true", "false"), f"{tag} the neck holds one repeat — the header mini's, named, with its state (ruling 261015): {rp}")
         # ITEM 2 — the seventh view, in the mixer's header
         mx = page.evaluate("""() => { const m = document.getElementById('mxMini'); if (!m) return null; const R = (e) => { const r = e.getBoundingClientRect(); return { l: Math.round(r.left), t: Math.round(r.top), r: Math.round(r.right), b: Math.round(r.bottom) }; };
           const head = m.closest('.bh'); const board = head && head.closest('.board'); const title = head && head.querySelector('span');
@@ -6808,14 +6829,14 @@ console.log(JSON.stringify(out));
         check(all(m["repeat"] and not m["repeat"]["hidden"] and m["repeat"]["name"] and "repeat" in m["repeat"]["name"] and m["repeat"]["pressed"] in ("true", "false") for m in m0),
               f"{tag} in a door whose transport consults repeat, every mini's repeat is VISIBLE, named, and says its state: {[(m['id'], m['repeat']) for m in m0]}")
         # ONE STATE, MANY VIEWS: toggle at the mixer's view — every view, the neck's own button, and the replay store read it
-        pressed = lambda: page.evaluate("(ids) => Object.fromEntries(ids.map(id => { const b = document.querySelector('#' + id + ' button[data-role=\"repeat\"]'); return [id, b ? b.getAttribute('aria-pressed') : null]; }).concat([['fdRepeat', document.getElementById('fdRepeat').getAttribute('aria-pressed')]]))", here63)   # null for a missing button: fails by name, never crashes (rule 2)
+        pressed = lambda: page.evaluate("(ids) => Object.fromEntries(ids.map(id => { const b = document.querySelector('#' + id + ' button[data-role=\"repeat\"]'); return [id, b ? b.getAttribute('aria-pressed') : null]; }))", here63)   # null for a missing button: fails by name, never crashes (rule 2); the clock-row copy went at night 64
         replay = lambda: page.evaluate("() => (document.__atetudesLast && document.__atetudesLast.get('atetudes:config') || {}).repeat")
         if any(v == "true" for v in pressed().values()):
-            page.click("#fdRepeat"); page.wait_for_timeout(200)
+            page.click('#fdMini button[data-role="repeat"]'); page.wait_for_timeout(200)
         check(all(v == "false" for v in pressed().values()) and replay() is False, f"{tag} every view reads repeat OFF before the test: {pressed()} replay {replay()}")
         page.click('#mxMini button[data-role="repeat"]'); page.wait_for_timeout(250)
         check(all(v == "true" for v in pressed().values()) and replay() is True, f"{tag} repeat at the mixer's view: EVERY view and the neck's own button read ON, and the replayed CONFIG carries it — a view mounting now would hear it on subscribe: {pressed()} replay {replay()}")
-        page.click("#fdRepeat"); page.wait_for_timeout(250)
+        page.click('#fdMini button[data-role="repeat"]'); page.wait_for_timeout(250)
         check(all(v == "false" for v in pressed().values()) and replay() is False, f"{tag} repeat off at the neck's button: every view reads OFF: {pressed()} replay {replay()}")
         page.click('#stMini button[data-role="repeat"]'); page.wait_for_timeout(250)
         check(all(v == "true" for v in pressed().values()), f"{tag} on again from the staff's view: {pressed()}")
@@ -6824,8 +6845,8 @@ console.log(JSON.stringify(out));
         # the pressed paint is the neck's idiom on every copy, inline — no hue: ink on white pressed, as #fdRepeat paints
         page.click('#fdMini button[data-role="repeat"]'); page.wait_for_timeout(250)
         paint = page.evaluate("(ids) => ids.map(id => getComputedStyle(document.querySelector('#' + id + ' button[data-role=\"repeat\"]')).backgroundColor)", here63)
-        check(len(set(paint)) == 1 and paint[0] == page.evaluate("() => getComputedStyle(document.getElementById('fdRepeat')).backgroundColor"), f"{tag} pressed, every copy paints as the neck's button does: {paint}")
-        page.click("#fdRepeat"); page.wait_for_timeout(200)
+        check(len(set(paint)) == 1 and paint[0] != "rgba(0, 0, 0, 0)" and paint[0] != "rgb(255, 255, 255)", f"{tag} pressed, every copy paints alike — the ink fill, one look (the clock-row button it once matched went at night 64): {paint}")
+        page.click('#fdMini button[data-role="repeat"]'); page.wait_for_timeout(200)
         # 390: the staff and keys readouts keep one line beside a five-button mini, the chord whole (the 260920 pin re-runs the geometry; here the mini's own row)
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
         g390 = page.evaluate("(ids) => ids.map(id => { const m = document.getElementById(id); const R = (e) => e.getBoundingClientRect(); const bd = m.closest('.board'); return { id, w: Math.round(R(m).width), inside: R(m).right <= R(bd).right, oneRow: R(m).height < 40 }; })", here63)
@@ -6838,6 +6859,100 @@ console.log(JSON.stringify(out));
         rep63b = page.evaluate("""(ids) => ids.map(id => { const m = document.getElementById(id); const rb = m.querySelector('button[data-role="repeat"]'); return { id, visible: [...m.querySelectorAll('button')].filter(b => !b.hidden && getComputedStyle(b).display !== 'none').map(b => b.dataset.role), repeatHidden: !rb || rb.hidden || getComputedStyle(rb).display === 'none' }; })""", here63b)
         check(len(here63b) >= 3 and all(x["visible"] == ["prev", "play", "stop", "next"] and x["repeatHidden"] for x in rep63b), f"{tag} no transport here consults repeat, so no mini shows it — the bus carries no repeat state: {rep63b}")
         check(page.evaluate("() => (document.__atetudesLast && document.__atetudesLast.get('atetudes:config') || {}).repeat") is None, f"{tag} …and the replayed CONFIG carries no repeat key in this door")
+
+    # ---------------- OBJECT AND TONES CROSS TO PROGRESSION (night 64, 261014e) ----------
+    # Daniel: "Object really does belong to Progression, because that is what the progression is acting on." Object and
+    # Tones leave Centricity for the top of the Progression card, above Source; Centricity keeps the key, the scale, the
+    # field (the Gamut, the chips) and the centre. §3b, RULED: Progression stays fully LIVE at Object = scale — the pedal
+    # and the follows études need chords to exist there; ONE EDITOR PER CARD — Centricity owns the field, Progression owns
+    # the object: at Object = scale Tones READS the field's notes and is TYPED in roles, and typing roles derives an object
+    # and leaves scale (Daniel: "once Tones are edited it necessarily changes from scale to the derived object"). The
+    # affordance that died — typing note names to set a gamut — is only lawful because the chips reach every set the
+    # letters could; confirmed below before the read-only Tones stands. Only tones is stored; Object stays derived.
+    if door_id == "multetudes":
+        seats64 = lambda: page.evaluate("""() => { const at = (id) => { const e = document.getElementById(id); if (!e) return null; const c = e.closest('.card'); return { card: c ? (c.querySelector('h2') || {}).textContent : null, top: Math.round(e.getBoundingClientRect().top), inside: e.getBoundingClientRect().right <= c.getBoundingClientRect().right }; };
+          return { obj: at('hcObj'), tones: at('hcTones'), src: at('pgSrcSeg'), key: at('hcKey'), scale: at('hcScale'), gamut: at('hcGamut'), chips: at('hcChips'), ref: at('hcRef'), gridSelects: document.querySelectorAll('.hc-grid label, .hc-grid select').length }; }""")
+        s64 = seats64()
+        check(s64["obj"]["card"] == "Progression" and s64["tones"]["card"] == "Progression" and s64["obj"]["top"] < s64["tones"]["top"] < s64["src"]["top"], f"{tag} Object and Tones sit at the top of the Progression card, Object first, Tones with it, above Source: {s64}")
+        check(all(s64[k]["card"] == "Centricity" for k in ("key", "scale", "gamut", "chips", "ref")), f"{tag} Centricity keeps the key, the scale, the field and the centre — nothing about what is played from it: {s64}")
+        # THE RULING NOT YET TRUE IN THE CODE, NOW TRUE: at Object = scale Tones reads the field's notes and is typed in roles
+        obj64 = lambda: page.evaluate("() => document.getElementById('hcObj').value")
+        tones64 = lambda: page.evaluate("() => { const n = document.getElementById('pgObjNote'); return { v: document.getElementById('hcTones').value, lab: document.getElementById('hcTonesLab').textContent, note: n ? n.textContent : '', red: n ? getComputedStyle(n).color : '' }; }")
+        gam64 = lambda: page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        page.select_option("#hcGamut", "2,3,5,6,7"); page.wait_for_timeout(250)
+        t = tones64()
+        check(t["v"] == "D E G A B" and "by note" in t["lab"] and "typed" in t["lab"].lower() and "role" in t["lab"].lower(), f"{tag} under a scale Tones READS the gamut's notes and its label says it is typed in roles: {t}")
+        check("read as notes" in t["note"] and "typed as roles" in t["note"] and "the tones make" in t["note"], f"{tag} the face says read and write differ, in night 59's vocabulary: {t['note']!r}")
+        page.fill("#hcTones", "R,3,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(300)
+        check(obj64() == "triad" and tones64()["v"] == "R,3,5" and gam64() == "", f"{tag} typing roles under a scale derives the object and LEAVES scale (the gamut dropped as a chord's, said in Centricity): obj {obj64()!r} tones {tones64()['v']!r} gamut {gam64()!r}")
+        check("dropped" in page.inner_text("#hcNote") and "D E G A B" in page.inner_text("#hcNote"), f"{tag} …Centricity says the gamut it let go: {page.inner_text('#hcNote')[:200]!r}")
+        page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        page.fill("#hcTones", "D E G"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
+        t2 = tones64()
+        check(obj64() == "scale" and gam64() == "" and "typed as roles" in t2["note"] and t2["red"] == "rgb(184, 41, 41)", f"{tag} typing NOTE NAMES under a scale sets no gamut — refused, red, by the read/write sentence: {t2}")
+        # THE CONFIRMATION (the pause condition): the letters could name any subset of the seven; the chips reach the same
+        # space — an arbitrary set no named option holds, one degree at a time, from the whole field and back
+        page.select_option("#hcGamut", "1,2,3,4,5,6,7"); page.wait_for_timeout(150)
+        for dg in (2, 3, 5, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]'); page.wait_for_timeout(120)
+        page.wait_for_timeout(200)
+        chosen64 = page.evaluate("() => (document.querySelector('#hcGamut option:checked') || {}).textContent")
+        check(gam64() == "1,4,6" and chosen64 == "C F A — 1 4 6 of C" and tones64()["v"] == "C F A", f"{tag} the chips reach a set no named option holds — the parser's space is the subsets of seven and so is the chips': gamut {gam64()!r} option {chosen64!r} tones {tones64()['v']!r}")
+        for dg in (2, 3, 5, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]'); page.wait_for_timeout(120)
+        page.wait_for_timeout(200); check(gam64() == "", f"{tag} …and back to the whole field one degree at a time: {gam64()!r}")
+        # PROGRESSION STAYS LIVE AT OBJECT = SCALE: the chart line has bars, the readout names the bar's chord, the two centre études work
+        live64 = page.evaluate("() => ({ chips: document.querySelectorAll('#tlScroll button').length, ro: document.getElementById('fdMode').textContent, srcOn: [...document.querySelectorAll('#pgSrcSeg button')].some(b => b.classList.contains('on')), cycleDisabled: document.getElementById('pgCycle').disabled, startDisabled: document.getElementById('pgStart').disabled, centreVisible: !document.getElementById('hcCentreSrc').hidden })")
+        check(live64["chips"] >= 2 and live64["ro"].strip() and live64["srcOn"] and not live64["cycleDisabled"] and not live64["startDisabled"] and live64["centreVisible"], f"{tag} at Object = scale the Progression is fully live and the centre picker is on the face: {live64}")
+        page.click('#hcCentreSrc button[data-src="follows"]'); page.wait_for_timeout(300)
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); page.wait_for_timeout(300)
+        # under follows the MATERIAL anchors in key space and the READING re-derives per bar (engine/reference.mjs): the
+        # readout names bar 2's chord and its mode read against that chord's root — F Lydian in C major
+        fol = page.evaluate("() => ({ note: document.getElementById('hcNote').textContent, bar: document.getElementById('fdMode').textContent })")
+        check("read against its own chord" in fol["note"] and fol["bar"].startswith("F") and "Lydian" in fol["bar"], f"{tag} follows the changes: bar 2 is F and reads F Lydian — the chords exist at Object = scale and each bar re-centres its reading: {fol}")
+        page.click('#hcCentreSrc button[data-src="fixed"]'); page.select_option("#hcRef", "mode:1"); page.wait_for_timeout(300)
+        ped = page.evaluate("() => ({ note: document.getElementById('hcNote').textContent, dlab: (() => { const d = [...document.querySelectorAll('#fieldSvg [data-midi]')].find(g => +g.dataset.midi % 12 === 2); return d ? (d.querySelector('text') || {}).textContent : null; })(), bar: document.getElementById('fdMode').textContent })")
+        check("re-rooted" in ped["note"] and ped["dlab"] == "R" and ped["bar"].strip(), f"{tag} a pedal: D reads R on a fixed field while the bar's chord still passes underneath: {ped}")
+        page.select_option("#hcRef", "mode:0"); page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(200)
+        # ONLY TONES IS STORED — the snapshot, re-asserted where the seat moved
+        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200); page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        n64_file = export_newest(page)
+        n64_json = n64_file[n64_file.find('"app"'):][:200]
+        check('"object"' not in n64_file and '"tones":[1,3,5,7]' in n64_file, f"{tag} the move re-promoted nothing: the export stores the tones and no object: {n64_json!r}")
+        # 390: both cards; the moved controls inside their card
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
+        s390 = seats64()
+        check(s390["obj"]["inside"] and s390["tones"]["inside"] and s390["obj"]["card"] == "Progression", f"{tag} @390 Object and Tones sit inside the Progression card: {s390}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+
+    # ---------------- INJECTION 261015: every mini to the right; ruling 261015: one repeat per surface ----------
+    # Daniel: "the neck and mixer are justified left and the staff and piano to the right. All should be on the right."
+    # The cause was the order of two spans; the neck's mini sat right after the readout, whose text is the bar's chord and
+    # mode, so THE TRANSPORT SLID as the chart moved (rule 12 in a new dress: a control's position must not be a function
+    # of a neighbouring string's length). The hosts are computed from the sources; every one this door carries sits at the
+    # right of its header at 1280, and its left edge does not move with the readout; at 390 the mini's own row is right-
+    # justified. The three hosts in the tetradetudes door are MEASURED there, not assumed.
+    import re as _re64
+    hosts64 = sorted(set(h for p in (REPO / "hub" / "modules").glob("*.mjs") for h in _re64.findall(r'mountMini\(ctx, byId\("(\w+)"\)\)', p.read_text())))
+    here64 = [h for h in hosts64 if f'id="{h}"' in html_path.read_text()]
+    if not here64:
+        print(f"  {tag} carries no transport view — the injection's seat pins do not apply here")
+    right = lambda: page.evaluate("""(ids) => ids.map(id => { const m = document.getElementById(id); const R = (e) => e.getBoundingClientRect(); const board = m.closest('.board') || m.closest('.card') || m.parentElement; const info = board.querySelector('.infoBtn') || board.querySelector('.clpsBtn');
+      const edge = info && Math.abs(R(info).top - R(m).top) < 20 ? R(info).left : R(board).right - 12; return { id, gapRight: Math.round(edge - R(m).right), l: Math.round(R(m).left) }; })""", here64)
+    r1280 = right() if here64 else []
+    if here64:
+        check(len(here64) >= 3 and all(x["gapRight"] <= 60 for x in r1280), f"{tag} every mini this door carries sits at the RIGHT of its header at 1280 — hosts computed from the sources: {r1280}")
+    if door_id == "multetudes":
+        lefts = {}
+        for k in ("C", "F#"):
+            page.select_option("#hcKey", k); page.wait_for_timeout(250); lefts[k] = page.evaluate("() => Math.round(document.getElementById('fdMini').getBoundingClientRect().left)")
+        check(lefts["C"] == lefts["F#"], f"{tag} the neck's transport does not slide with the readout's text — the same left edge in C and in F#: {lefts}")
+        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(150)
+    if here64:
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
+        r390 = right()
+        check(all(x["gapRight"] <= 80 for x in r390), f"{tag} @390 every mini sits at the right of its row: {r390}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

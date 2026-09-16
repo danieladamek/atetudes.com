@@ -138,7 +138,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   .board .bh.readhead{display:flex!important;flex-wrap:wrap;align-items:center}
   .board .bh.readhead .headspace{display:none}
   .board .bh.readhead .readbox{flex:1 1 140px}
-  .board .bh.readhead .mini{flex:0 0 100%;justify-content:flex-start;margin-top:4px}
+  /* right, as at every width (injection 261015): margin-left:auto seats the mini at the row's right whatever its
+   * width — a board's own #xxMini{flex:0 0 auto} (an id) out-ranks a class rule's basis, so a full-row basis
+   * could not be relied on; at 390 no five-button mini fits beside a 140 px box, so it wraps to its own row */
+  .board .bh.readhead .mini{flex:0 0 auto;margin-left:auto;margin-top:4px}
 }
 .clpsd>.bh.readhead .mini{display:none!important}
 
@@ -186,11 +189,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-headmini button:hover{border-color:var(--ink)}
 /* the neck's own 390 stack rules (night 62) RETIRED night 63: the shell's readhead grammar stacks every board's mini
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
-/* the glyph alone (261014c): the mini's own button box — padding 2px 8px, the same line-height — so the
- * repeat reads as one of the cluster's buttons beside the bar split, not a text button with a glyph in it */
-#fdRepeat{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
-  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;margin-left:0}
-#fdRepeat:hover{border-color:var(--ink)}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
@@ -267,7 +265,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * card; the two neighbours become 67 px each at 390 and the Key stays exactly as ruled (59 × 52, ratio
  * 1.74, a shared bottom edge); a narrowed select shows the head of its value inside the control, which
  * is better than a control cut off by the card. At 1280 nothing changes (133 / 123, as before). */
-.hc-grid3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:0 10px;margin-top:4px;align-items:end}
+.hc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 10px;margin-top:4px;align-items:end}   /* night 64: two tracks — Object left */
 .hc-srcseg{display:flex;gap:6px;margin-top:6px}
 .hc-srcseg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
   border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
@@ -292,7 +290,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * the three fields share a BOTTOM edge (ruled: bottom-aligned) and the Key
  * rises above it. */
 #hcKey{color:var(--red);font-weight:bold;font-size:18px;height:2.9em;padding:0 6px}
-#hcRef,#hcTones{width:100%}
+#hcRef{width:100%}
 .hc-gamut{margin-top:8px}
 #hcGamutLab{display:block}
 #hcGamut{width:100%}   /* night 60: the shell's select — Scale's own kind and type size; the width is its box's */
@@ -308,7 +306,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
 .hc-chip .hc-chipname{font-size:14px;line-height:1.15}
 .hc-chipcap{margin-top:5px}
-#hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}
+#hcRefLab[hidden],#hcRef[hidden]{display:none}
 
 #kySvg{width:100%;height:auto;display:block}
 #kySvg rect{cursor:pointer}
@@ -345,6 +343,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 #beatLamp span.acc{background:var(--red)}
 
 .mx-headspace{flex:1 1 auto}
+.mx-head{padding-right:40px}   /* the shell's chevron band at the header's right (no ⓘ on this board) — a right-seated mini ends before it (injection 261015, measured: 19 px under it without this) */
 #mxMini{display:flex;gap:4px;flex:0 0 auto;margin-left:12px}
 #mxMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;text-transform:none;letter-spacing:0}
@@ -440,7 +439,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
 #pgSrcSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 #pgNote.pg-err{color:#B82929;font-weight:bold}
-#pgCycle,#pgForm,#pgStart,#pgCustom{width:100%}
+#pgCycle,#pgForm,#pgStart,#pgCustom,#hcObj,#hcTones{width:100%}
+#pgObjNote{margin:6px 0 10px}
 #pgChartBtn{font:inherit;font-size:12px;margin-top:6px;padding:4px 10px;
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
 #pgChartBtn:hover:not(:disabled){border-color:var(--ink)}
@@ -568,7 +568,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        Pitch-Class Set (centreless by definition), Key/Centricity (a slash
        label on the card that just had one split). -->
   <h2>Centricity</h2>
-  <div class="hc-grid3">
+  <!-- NIGHT 64 (261014e — Daniel: "Object really does belong to Progression, because that is what the
+       progression is acting on"): Object and Tones left this card for the top of the Progression card.
+       Centricity is exactly what its name claims — the key, the scale, the field (the Gamut, the chips) and what
+       the field is read against. The grid is two tracks now. -->
+  <div class="hc-grid">
     <!-- THE KEY'S CAPTION IS GONE (260922, night 28 — ruled 260921): "Key" named an
          APPEARANCE (this collection happens to be a key) where the control's ROLE is
          the field's centre, and it will not hold once a chromatic collection lands
@@ -577,7 +581,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
          is Daniel's and open. -->
     <div><select id="hcKey" data-control="hcKey" aria-label="Centricity"></select></div>
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
-    <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
   </div>
   <!-- THE GAMUT (night 48, ruled by Daniel 261008 — the partial collection): what the material is
        drawn FROM, beside Object (what shape) — the row directly under the three, full width: the
@@ -605,12 +608,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
     <div class="hint hc-chipcap" id="hcChipCap"></div>
   </div>
-  <!-- THE TONES (260917, item 1 — ruled): every stacked object picks its
-       tones in the FIGURE FIELD'S OWN NOTATION (R,3,5,7); the dyad's pair
-       menu became this field. Shell is a PRESET of it (item 2): choosing
-       Shell fills R,3,7 visibly. Hidden under a scale — no stack to narrow. -->
-  <label id="hcTonesLab" hidden>Tones</label>
-  <input type="text" id="hcTones" data-control="hcTones" autocomplete="off" hidden>
+  <!-- THE TONES (260917) left with the Object for the Progression card at night 64 — one editor per card:
+       this card edits the FIELD (the Gamut, the chips); the object's tones are edited where the object is. -->
   <!-- THE CENTRE (scale mode). In chord mode the bass WINDOW here is
        CLOSED (260917, item 4 — register 31): the bass is a note you sound
        and lives under the neck beside the mixer that drives it. One state,
@@ -625,6 +624,15 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div class="hint" id="hcNote"></div></div>
 <div class="card">
   <h2>Progression</h2>
+  <!-- OBJECT AND TONES FIRST, above Source (night 64): they are what the progression acts on, so they are read
+       before how it moves. STACKED, not adjacent — this card is a narrow column (281 px at 1280, 250 at 390) and
+       its own idiom is label-above-control at full width; two selects side by side would clip the object's
+       longest name at 390. Object still POPULATES Tones; editing Tones re-names the Object (night 59). -->
+  <label>Object</label>
+  <select id="hcObj" data-control="hcObj"></select>
+  <label id="hcTonesLab">Tones</label>
+  <input type="text" id="hcTones" data-control="hcTones" autocomplete="off">
+  <div class="hint" id="pgObjNote"></div>
   <label>Source</label>
   <div class="seg" id="pgSrcSeg" data-control="pgSrcSeg">
     <button data-src="cycle" class="on">cycle</button>
@@ -673,13 +681,15 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        "right there in the header … right next to where the chord and the mode are displayed"): #fdMini,
        the neck's OWN mini (the 260919 clock row's, a view of the one clock through the bus — hub/mini.mjs,
        mounted here as in five other hosts), moves within this board from the under-neck row to this header,
-       in flow after the readout. Measured before the move: 785.6 px free beside the readout at 1280, 13 px
+       in flow after the readout — and since night 64 (injection 261015) AFTER THE SPACER, at the header's right: seated
+       right after the readout it slid with the readout's text (15 px between C and F♯ — a control's position must
+       not be a function of a neighbouring string's length, rule 12). Measured before the move: 785.6 px free beside the readout at 1280, 13 px
        at 390 — so at phone width the mini STACKS on its own row under the title-and-readout row (night 51's
        answer: stack, do not shrink); the readout keeps its ruled one row beside its title and gives up
        nothing. The shell's readhead grammar would seat a header mini beside a shrinking readout at ≤480 px
        (the keys board's layout); this board's own id-scoped rules below out-rank it for the neck. -->
   <div class="bh readhead" id="fdHead"><span>On the neck</span><div class="readbox" id="fdMode" data-control="fdMode"
-        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span><span class="headspace"></span></div>
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -749,14 +759,15 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
            that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
            the Metronome card's state, the mini stays a view that asks.
            NIGHT 62 (261014b): the transport went UP to the header (above) —
-           this row is now repeat · bar split · bpm · metronome, in that order,
-           closed up behind it: no gap where a control was. -->
-      <!-- THE REPEAT BUTTON LOSES ITS WORD (injection 261014c — Daniel, from the live app): the glyph alone
-           on the face; the word it lost is its accessible NAME (aria-label — a glyph-only button has none, and
-           axe fails it: night 57's pad slider, twice). Addressed by id and data-control everywhere, never by
-           the glyph (rule 12 — night 20's hunt). aria-pressed and the pressed paint (the build) unchanged. -->
-      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false" aria-label="repeat the current bar"
-        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257;</button>
+           the row became repeat · bar split · bpm · metronome, closed up behind
+           it. NIGHT 64 (ruling 261015): REPEAT LEFT TOO — night 63 made it the
+           transport's state on the bus, shown in every mini including the
+           header's above, and a view is PER SURFACE: a second copy on this board
+           was a duplicate (not night 55's fork — the two agreed), and as a lone
+           glyph among worded controls it had stopped reading as a control at
+           all. The row is now bar split · bpm · metronome, in that order; the
+           clock still closes ranks, with its transport in the header. The
+           injection-261014c button (the glyph with its name) went with it. -->
       <span class="fd-lab2">bar split</span>
       <select id="fdSplit" data-control="fdSplit"
         title="the bar split — a bar's chords take these slots in order"></select>
@@ -806,8 +817,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        "the user can start and stop wherever they are"): hub/mini.mjs's cluster mounted in this board's header,
        as the chart line, the neck, the keyboard, the keys, the staff and the score mount it — a VIEW of the one clock
        through the bus, no state here (rule 10; the fork night 55 deleted was a copy with its own float, not a
-       sixth view). Collapsed, it hides with the strip, as the readhead minis do. -->
-  <div class="bh"><span>Mixer</span><span class="mini" id="mxMini" data-control="mxMini"></span><span class="mx-headspace"></span></div>
+       sixth view). Collapsed, it hides with the strip, as the readhead minis do. Seated after the spacer, at the
+       header's right (injection 261015 — every mini sits right). -->
+  <div class="bh mx-head"><span>Mixer</span><span class="mx-headspace"></span><span class="mini" id="mxMini" data-control="mxMini"></span></div>
   <span class="clpsum">the mixer — the voice, the reference tone, the sounded bass, the pad, and each bus's level</span>
   <div class="mx-row">
     <span class="mx-lab">voice</span>
@@ -4385,6 +4397,17 @@ function announce(doc, name, detail) {
   doc.dispatchEvent(new Ev(name, { detail: copy }));
 }
 
+/** A CORRECTION LANDS AFTER THE MESSAGE IT CORRECTS (night 61, found on the face; shared here night 64 because
+ * two cards need it — Centricity for a gamut it drops, Progression for the object the tones make). An owner
+ * hearing a message may correct it; announced from INSIDE its listener the correction is delivered while the
+ * outer message is still being delivered, and a listener registered later hears the correction FIRST and the
+ * stale outer value LAST. So it is announced in a microtask: after the outer dispatch has reached everyone,
+ * before anything is painted. */
+function announceAfter(doc, name, detail) {
+  if (!doc.defaultView) return;
+  doc.defaultView.queueMicrotask(() => announce(doc, name, detail));
+}
+
 /** Listen for a message. Returns an unsubscribe, so a module can be mounted
  * more than once without leaking listeners. */
 function listen(doc, name, fn) {
@@ -4395,7 +4418,7 @@ function listen(doc, name, fn) {
     fn(JSON.parse(JSON.stringify(lastOf(doc).get(name))));
   return () => doc.removeEventListener(name, h);
 }
-return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, NOTE, BEAT, announce, listen };
+return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, NOTE, BEAT, announce, announceAfter, listen };
 })();
 
 /* ===== hub/modules/audio-card.mjs ===== */
@@ -8721,7 +8744,7 @@ const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdMini", "fdRepeat", "fdMode",
+    "fdAllTones", "fdBpm", "fdMini", "fdMode",
     "fdTuning", "fdTuneNames", "fdTuneName", "fdTuneAll"],
 
   markup: `
@@ -8738,13 +8761,15 @@ const fieldBoard = {
        "right there in the header … right next to where the chord and the mode are displayed"): #fdMini,
        the neck's OWN mini (the 260919 clock row's, a view of the one clock through the bus — hub/mini.mjs,
        mounted here as in five other hosts), moves within this board from the under-neck row to this header,
-       in flow after the readout. Measured before the move: 785.6 px free beside the readout at 1280, 13 px
+       in flow after the readout — and since night 64 (injection 261015) AFTER THE SPACER, at the header's right: seated
+       right after the readout it slid with the readout's text (15 px between C and F♯ — a control's position must
+       not be a function of a neighbouring string's length, rule 12). Measured before the move: 785.6 px free beside the readout at 1280, 13 px
        at 390 — so at phone width the mini STACKS on its own row under the title-and-readout row (night 51's
        answer: stack, do not shrink); the readout keeps its ruled one row beside its title and gives up
        nothing. The shell's readhead grammar would seat a header mini beside a shrinking readout at ≤480 px
        (the keys board's layout); this board's own id-scoped rules below out-rank it for the neck. -->
   <div class="bh readhead" id="fdHead"><span>On the neck</span><div class="readbox" id="fdMode" data-control="fdMode"
-        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span><span class="headspace"></span></div>
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -8814,14 +8839,15 @@ const fieldBoard = {
            that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
            the Metronome card's state, the mini stays a view that asks.
            NIGHT 62 (261014b): the transport went UP to the header (above) —
-           this row is now repeat · bar split · bpm · metronome, in that order,
-           closed up behind it: no gap where a control was. -->
-      <!-- THE REPEAT BUTTON LOSES ITS WORD (injection 261014c — Daniel, from the live app): the glyph alone
-           on the face; the word it lost is its accessible NAME (aria-label — a glyph-only button has none, and
-           axe fails it: night 57's pad slider, twice). Addressed by id and data-control everywhere, never by
-           the glyph (rule 12 — night 20's hunt). aria-pressed and the pressed paint (the build) unchanged. -->
-      <button id="fdRepeat" data-control="fdRepeat" aria-pressed="false" aria-label="repeat the current bar"
-        title="repeat the current bar until this is turned off — clicking another chip follows, and the loop repeats the new bar">&#128257;</button>
+           the row became repeat · bar split · bpm · metronome, closed up behind
+           it. NIGHT 64 (ruling 261015): REPEAT LEFT TOO — night 63 made it the
+           transport's state on the bus, shown in every mini including the
+           header's above, and a view is PER SURFACE: a second copy on this board
+           was a duplicate (not night 55's fork — the two agreed), and as a lone
+           glyph among worded controls it had stopped reading as a control at
+           all. The row is now bar split · bpm · metronome, in that order; the
+           clock still closes ranks, with its transport in the header. The
+           injection-261014c button (the glyph with its name) went with it. -->
       <span class="fd-lab2">bar split</span>
       <select id="fdSplit" data-control="fdSplit"
         title="the bar split — a bar's chords take these slots in order"></select>
@@ -8910,11 +8936,6 @@ const fieldBoard = {
 .fd-headmini button:hover{border-color:var(--ink)}
 /* the neck's own 390 stack rules (night 62) RETIRED night 63: the shell's readhead grammar stacks every board's mini
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
-/* the glyph alone (261014c): the mini's own button box — padding 2px 8px, the same line-height — so the
- * repeat reads as one of the cluster's buttons beside the bar split, not a text button with a glyph in it */
-#fdRepeat{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
-  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;margin-left:0}
-#fdRepeat:hover{border-color:var(--ink)}
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
 .fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
@@ -9575,15 +9596,8 @@ const fieldBoard = {
         atLab.lastChild.textContent = cfg.object === "scale"
           ? " all tones — a scale takes the whole box" : " all tones";
       }
-      /* the repeat toggle paints from the same build — pressed state
-       * styled inline (the orphan-check dodge, tonight's established one) */
-      {
-        const rb = byId("fdRepeat");
-        rb.setAttribute("aria-pressed", cfg.repeat ? "true" : "false");
-        rb.style.background = cfg.repeat ? "var(--ink)" : "";
-        rb.style.color = cfg.repeat ? "#fff" : "";
-        rb.style.borderColor = cfg.repeat ? "var(--ink)" : "";
-      }
+      /* the repeat toggle's paint left with the clock-row button (night 64, ruling 261015): repeat is painted by
+       * every mini from the bus; cfg.repeat stays a MIRROR here so this board's own announce carries the current value */
       /* THE MODE LINE (260917, item 5): under a scale, this bar's chord
        * degree names its mode from the one table; a root off the key says so;
        * a chord object leaves the line empty (the display is the scale's) */
@@ -9900,9 +9914,6 @@ const fieldBoard = {
     byId("fdAllTones").addEventListener("change", (e) => {
       cfg = { ...cfg, take: e.target.checked ? "all" : "one" }; push();
     });
-    byId("fdRepeat").addEventListener("click", () => {
-      cfg = { ...cfg, repeat: !cfg.repeat }; push();
-    });
 
     byId("fdRailBtn").addEventListener("click", () => {
       const r = byId("fdRail");
@@ -10096,8 +10107,8 @@ const __m_hub_modules_harmony_card_mjs = (() => {
 const { field } = __m_engine_field_mjs;
 const { CENTRE_SOURCES } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
-const { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, objectOffsets, pickOf, tonePick, objectOf } = __m_engine_selection_mjs;
-const { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
+const { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce, announceAfter } = __m_hub_bus_mjs;
+const { objectOf, tonePick } = __m_engine_selection_mjs;
 const { FAM, FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 const { triads, tetrads, triadPairs, pentatonics, pentatonicRefusal, normalizeGamut, describeGamut, pentatonicBreak } = __m_engine_gamut_mjs;
 const { LEXICON } = __m_hub_lexicon_mjs;
@@ -10126,6 +10137,7 @@ const { SHARED } = __m_engine_shared_config_mjs;
 
 
 
+// the engine's one derivation — read here for a decision (the gamut drop), never stored: night 64
 
 // the degree palette, stated once (night 60: the chip row wears it — the neck legend's own table)
 
@@ -10135,32 +10147,10 @@ const { SHARED } = __m_engine_shared_config_mjs;
 
 const KEYS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const SCALES = [["major", "Major"], ["harm", "Harmonic minor"], ["mel", "Melodic minor"]];
-const OBJECTS = [
-  ["scale", "Scale or mode", true],
-  ["dyad", "Dyad", true],           // child 4: two chord tones, by role — since 260917 picked in the Tones field
-  ["triad", "Triad", true],
-  ["tetrad", "Tetrad", true],
-  ["ninth", "9th chord", true],     // 260914 item 3: depth is data —
-  ["eleventh", "11th chord", true], // offsets 2i to the named extension,
-  ["thirteenth", "13th chord", true], // mod7; Grip drops by a NAMED rule
-  ["shell", "Shell", true],         // child 4: R + the guide tones
-];
 
 /** note names → key degrees (night 59): the tokens are matched against the FIELD's own spelled names
  * (case-insensitive, ♭/♯ or b/#), so the letters the face shows are the letters it accepts; a token
  * that is not a note of this key refuses by name. Order is not identity; duplicates are one degree. */
-function parseNoteNames(text, fld) {
-  const norm = (x) => String(x).replace(/♭/g, "b").replace(/♯/g, "#").toLowerCase();
-  const names = fld.notes.map((n) => norm(n.name));
-  const toks = String(text || "").split(/[\s,·\-]+/).filter(Boolean);
-  const degrees = [];
-  for (const t of toks) {
-    const i = names.indexOf(norm(t));
-    if (i < 0) return { degrees: null, err: `"${t}" is not a note of this key — the notes are ${fld.notes.map((n) => n.name).join(" ")}` };
-    if (!degrees.includes(i + 1)) degrees.push(i + 1);
-  }
-  return { degrees: degrees.sort((a, b) => a - b), err: null };
-}
 
 const harmonyCard = {
   id: "harmony-card",
@@ -10168,7 +10158,7 @@ const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcObj", "hcRef", "hcTones", "hcCentreSrc", "hcGamut", "hcChips"],
+  controls: ["hcKey", "hcScale", "hcRef", "hcCentreSrc", "hcGamut", "hcChips"],   // night 64: Object and Tones crossed to Progression
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -10192,7 +10182,11 @@ const harmonyCard = {
        Pitch-Class Set (centreless by definition), Key/Centricity (a slash
        label on the card that just had one split). -->
   <h2>Centricity</h2>
-  <div class="hc-grid3">
+  <!-- NIGHT 64 (261014e — Daniel: "Object really does belong to Progression, because that is what the
+       progression is acting on"): Object and Tones left this card for the top of the Progression card.
+       Centricity is exactly what its name claims — the key, the scale, the field (the Gamut, the chips) and what
+       the field is read against. The grid is two tracks now. -->
+  <div class="hc-grid">
     <!-- THE KEY'S CAPTION IS GONE (260922, night 28 — ruled 260921): "Key" named an
          APPEARANCE (this collection happens to be a key) where the control's ROLE is
          the field's centre, and it will not hold once a chromatic collection lands
@@ -10201,7 +10195,6 @@ const harmonyCard = {
          is Daniel's and open. -->
     <div><select id="hcKey" data-control="hcKey" aria-label="Centricity"></select></div>
     <div><label>Scale</label><select id="hcScale" data-control="hcScale"></select></div>
-    <div><label>Object</label><select id="hcObj" data-control="hcObj"></select></div>
   </div>
   <!-- THE GAMUT (night 48, ruled by Daniel 261008 — the partial collection): what the material is
        drawn FROM, beside Object (what shape) — the row directly under the three, full width: the
@@ -10229,12 +10222,8 @@ const harmonyCard = {
     <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
     <div class="hint hc-chipcap" id="hcChipCap"></div>
   </div>
-  <!-- THE TONES (260917, item 1 — ruled): every stacked object picks its
-       tones in the FIGURE FIELD'S OWN NOTATION (R,3,5,7); the dyad's pair
-       menu became this field. Shell is a PRESET of it (item 2): choosing
-       Shell fills R,3,7 visibly. Hidden under a scale — no stack to narrow. -->
-  <label id="hcTonesLab" hidden>Tones</label>
-  <input type="text" id="hcTones" data-control="hcTones" autocomplete="off" hidden>
+  <!-- THE TONES (260917) left with the Object for the Progression card at night 64 — one editor per card:
+       this card edits the FIELD (the Gamut, the chips); the object's tones are edited where the object is. -->
   <!-- THE CENTRE (scale mode). In chord mode the bass WINDOW here is
        CLOSED (260917, item 4 — register 31): the bass is a note you sound
        and lives under the neck beside the mixer that drives it. One state,
@@ -10255,7 +10244,7 @@ const harmonyCard = {
  * card; the two neighbours become 67 px each at 390 and the Key stays exactly as ruled (59 × 52, ratio
  * 1.74, a shared bottom edge); a narrowed select shows the head of its value inside the control, which
  * is better than a control cut off by the card. At 1280 nothing changes (133 / 123, as before). */
-.hc-grid3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:0 10px;margin-top:4px;align-items:end}
+.hc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 10px;margin-top:4px;align-items:end}   /* night 64: two tracks — Object left */
 .hc-srcseg{display:flex;gap:6px;margin-top:6px}
 .hc-srcseg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
   border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
@@ -10280,7 +10269,7 @@ const harmonyCard = {
  * the three fields share a BOTTOM edge (ruled: bottom-aligned) and the Key
  * rises above it. */
 #hcKey{color:var(--red);font-weight:bold;font-size:18px;height:2.9em;padding:0 6px}
-#hcRef,#hcTones{width:100%}
+#hcRef{width:100%}
 .hc-gamut{margin-top:8px}
 #hcGamutLab{display:block}
 #hcGamut{width:100%}   /* night 60: the shell's select — Scale's own kind and type size; the width is its box's */
@@ -10296,7 +10285,7 @@ const harmonyCard = {
 .hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
 .hc-chip .hc-chipname{font-size:14px;line-height:1.15}
 .hc-chipcap{margin-top:5px}
-#hcTonesLab[hidden],#hcTones[hidden],#hcRefLab[hidden],#hcRef[hidden]{display:none}`,
+#hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -10305,15 +10294,13 @@ const harmonyCard = {
      * and its selector disabled until that engine lands. */
     /* THE BOOT STATE (register entry 11, ruled 2026-08-28): v0.9's opening
      * frame — the B♭ major tetrad block — as far as the engine allows. */
-    let migrated = null;   // night 59: { saved, derived } when a restored entry's stored object is not what its tones make
     let dropped = null;    // night 60: the letters of a gamut dropped under a chord object — said once (ruled 261013b), never silent
     let lit = new Set();   // night 60, chord objects: the key degrees the walk sounded since the bar began — the chips light as the notes pass
     let running = false;   // CLOCK_STATE's running — the row's meaning mark says following / stopped
-    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "root", tones: [1, 3, 5, 7],
+    let cfg = { key: "Bb", scale: "major", object: "tetrad", ref: 0, bass: "root",   // object: a MIRROR since night 64 (Progression owns it) — read for the one-state rules, never announced here
       centreSrc: "fixed",     // the source, not a resolved value (260914)
       gamut: null };          // the stored key: degrees 1..7 sorted, or null = the whole field (night 48)
 
-    let tonesErr = null;   // the tones field's standing refusal, by name (null when the field is lawful)
     const fill = (sel, items, current) => {
       sel.textContent = "";
       for (const it of items) {
@@ -10351,7 +10338,7 @@ const harmonyCard = {
             if (cfg.object !== "scale") return;   // a readout under a chord — a click has no coherent meaning there
             const set = new Set(cfg.gamut || [1, 2, 3, 4, 5, 6, 7]);
             if (set.has(i + 1)) set.delete(i + 1); else set.add(i + 1);
-            dropped = null; migrated = null;
+            dropped = null;
             cfg = { ...cfg, gamut: normalizeGamut([...set]) }; push();
           });
           row.appendChild(b);
@@ -10378,9 +10365,6 @@ const harmonyCard = {
     const render = () => {
       fill(byId("hcKey"), KEYS.map((k) => ({ value: k, label: k })), cfg.key);
       fill(byId("hcScale"), SCALES.map(([v, l]) => ({ value: v, label: l })), cfg.scale);
-      fill(byId("hcObj"), OBJECTS.map(([v, l, live]) => ({ value: v, label: l,
-        disabled: !live, title: live ? "" : "arrives with child 4 (dyads, and the chord vocabulary)" })),
-        cfg.object);
       const isScale = cfg.object === "scale";
       /* THE GAMUT LIST (night 48): rebuilt from the rules on every render — the field's own letters
        * name the options. NIGHT 60: a SINGLE select. ONE STATE (ruled): a gamut narrows the scale; under
@@ -10431,40 +10415,6 @@ const harmonyCard = {
           sel.appendChild(g);
         }
         sel.setAttribute("data-gamut", cfg.gamut ? cfg.gamut.join(",") : "");
-      }
-      /* THE TONES FIELD (260917, item 1 \u2014 the dyad's six-pair menu became
-       * this): the pick in the figure's notation. The field is repainted
-       * from the model only when it does not already SAY the current pick
-       * (a caret mid-edit is never moved), and a refused edit keeps its
-       * text on the face with the refusal beside it \u2014 the figure field's
-       * own manners (register 21). The label names the degrees this
-       * object can hold, derived from its depth. */
-      /* TONES IS THE TRUTH (night 59 — Daniel's Centricity re-cut, first half): the field is visible in
-       * both modes and its VOCABULARY FOLLOWS THE OBJECT. Under a chord object it speaks ROLES against
-       * the chord root — R 3 5 7 9 11 13, any of them; the object is the name the tones make (objectOf)
-       * and re-names itself as they are edited. Under a scale it speaks NOTE NAMES, absolute in the key —
-       * the gamut's own letters (the whole field when none is set): a note name is the same note whatever
-       * chord is sounding, so nothing re-labels as the chart moves. Letters are a RENDERING; the stored
-       * value stays degrees (the gamut, 1..7 sorted, null = the whole field). */
-      {
-        const f = byId("hcTones"), lab = byId("hcTonesLab");
-        f.hidden = false; lab.hidden = false;
-        if (!isScale) {
-          const pick = pickOf(cfg);
-          const says = parseTones(f.value);
-          const saysPick = says.tones ? renderPick(says.tones.map(degreeOfTone)) : null;
-          if (!tonesErr && saysPick !== renderPick(pick)) f.value = renderPick(pick);
-          lab.textContent = "Tones \u2014 the material, by role against the chord root: R, 3, 5, 7, 9, 11, 13";
-          f.placeholder = renderPick(defaultPick(cfg.object));
-        } else {
-          const fld = field({ key: cfg.key, scale: cfg.scale });
-          const degs = cfg.gamut || [1, 2, 3, 4, 5, 6, 7];
-          const letters = degs.map((dg) => fld.notes[dg - 1].name).join(" ");
-          const saysDegs = parseNoteNames(f.value, fld);
-          if (!tonesErr && !(saysDegs.degrees && saysDegs.degrees.join(",") === degs.join(","))) f.value = letters;
-          lab.textContent = `Tones \u2014 the material, by note in ${cfg.key} ${SHARED.scale.values[cfg.scale] || cfg.scale}`;
-          f.placeholder = [1, 2, 3, 4, 5, 6, 7].map((dg) => fld.notes[dg - 1].name).join(" ");
-        }
       }
       /* THE REFERENCE. Under a scale it is the CENTRE — pick any note of the
        * collection and the field is re-read against it, which is what a mode
@@ -10518,8 +10468,8 @@ const harmonyCard = {
           : "Centre — the note the field is read against";   // the ruled word (260914)
         /* a refused Tones edit under a scale (a letter that is not a note of the key) is said here, red, first —
          * the face speaks for the field in both modes (night 59) */
-        byId("hcNote").style.color = tonesErr ? "#B82929" : "";
-        byId("hcNote").textContent = (tonesErr ? "tones: " + tonesErr + " " : "") + (follows
+        byId("hcNote").style.color = "";
+        byId("hcNote").textContent = (follows
           ? "Each bar is read against its own chord's root — the colours and the bass move with the changes."
           : (cfg.ref
             ? `The same seven notes, re-rooted: ${f.notes[cfg.ref].name} ${MODES[cfg.scale][cfg.ref]} — degree colours and labels follow the centre, not the key.`
@@ -10533,82 +10483,44 @@ const harmonyCard = {
          * lives on the surviving view under the neck. */
         byId("hcRef").disabled = false;
         const note = byId("hcNote");
-        if (tonesErr) {
-          note.textContent = "tones: " + tonesErr;
-          note.style.color = "#B82929";
-        } else {
-          note.style.color = "";
-          const pick = pickOf(cfg);
-          const whole = renderPick(pick) === renderPick(objectDegrees(cfg.object));
-          note.textContent = (cfg.object === "shell"
-            ? "A shell is the root under the guide tones — R,3,7, the tones above; edit them and the object is re-named to what the tones make. "
-            : cfg.object === "dyad" ? "A dyad is the guide tones — 3,7; edit them and the object is re-named to what the tones make. "
-            : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point — or add a tone and the object is re-named to what the tones make. `
-            : `The ${cfg.object} narrowed to ${renderPick(pick).split(",").join(" ")}. `)
-            + (migrated ? `This étude was saved as a ${migrated.saved}; its tones make a ${migrated.derived} — the tones are the truth. ` : "")
-            /* THE DROPPED GAMUT (night 60, ruled 261013b): said once, in night 59's vocabulary — a saved one on a
-             * restore, a live one when a chord object is chosen; keep what makes the material, drop what shades it */
-            + (dropped ? (dropped.saved
-              ? `This étude was saved with a gamut (${dropped.letters}); its object is a ${cfg.object}, and a gamut narrows only the scale — the gamut is dropped, the tones are the truth. `
-              : `The gamut (${dropped.letters}) is dropped — a gamut narrows only the scale, and a ${cfg.object} has already narrowed it. `) : "")
-            + "The bass tone lives under the neck, beside the mixer that drives it." + gamutNote();
-        }
+        note.style.color = "";
+        /* chord mode (night 64: the tones' sentences went with the object to Progression): the field's own word,
+         * the dropped gamut said once (ruled 261013b), and where the bass lives */
+        note.textContent = "The field is the key's seven; a gamut narrows it under a scale. "
+          + (dropped ? (dropped.saved
+            ? `This étude was saved with a gamut (${dropped.letters}); its object is a ${cfg.object}, and a gamut narrows only the scale — the gamut is dropped, the tones are the truth. `
+            : `The gamut (${dropped.letters}) is dropped — a gamut narrows only the scale, and a ${cfg.object} has already narrowed it. `) : "")
+          + "The bass tone lives under the neck, beside the mixer that drives it." + gamutNote();
       }
       renderChips();
     };
 
-    const push = () => { render(); announce(d, CONFIG_CHANGED, cfg); };
+    /* this card announces ITS OWN half only (night 64): the object and its tones are Progression's to announce */
+    const push = () => { render(); announce(d, CONFIG_CHANGED, { key: cfg.key, scale: cfg.scale, ref: cfg.ref, bass: cfg.bass, centreSrc: cfg.centreSrc, gamut: cfg.gamut }); };
 
-    const MINE = ["key", "scale", "object", "ref", "bass", "tones", "centreSrc", "gamut"];   // gamut joined night 48
+    const MINE = ["key", "scale", "object", "ref", "bass", "centreSrc", "gamut"];   // gamut joined night 48; tones left night 64 (object stays as a mirror)
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-    /* A CORRECTION LANDS AFTER THE MESSAGE IT CORRECTS (night 61 — a defect of nights 59 and 60, found on the face):
-     * this card owns the harmony half and, hearing a message, may correct it — the object the tones make, a gamut
-     * dropped under a chord, a default pick. Announced from INSIDE the listener, the correction is dispatched while
-     * the outer message is still being delivered: a listener registered after this card (the readout, order 19)
-     * hears the correction FIRST and the stale outer value LAST, and keeps it — the readout said "this dyad's stack"
-     * over a triad, and "the R of Cmaj7 is outside the gamut" over a gamut the card had dropped, while the card and
-     * the neck said otherwise (§4.4's silent divergence, painted). So a correction is announced in a microtask:
-     * after the outer dispatch has reached everyone, before anything is painted. */
-    const correct = (patch) => d.defaultView.queueMicrotask(() => announce(d, CONFIG_CHANGED, patch));
+    /* a correction is announced AFTER the message it corrects — hub/bus.mjs announceAfter (night 61's finding, one site since night 64) */
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
       for (const k of MINE) if (k in m && !same(m[k], cfg[k])) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
-      /* a saved étude's `dyad` arrives as the pick (tonePick is the one
-       * alias site); an OBJECT arriving without a pick (a preset) takes its
-       * default — a triad preset must not inherit a dyad's [3,7] */
-      if (!("tones" in m) && Array.isArray(m.dyad) && !same(m.dyad, cfg.tones)) {
-        cfg = { ...cfg, tones: [...m.dyad] }; changed = true;
-      } else if ("object" in m && !("tones" in m) && !("dyad" in m) && changed) {
-        cfg = { ...cfg, tones: defaultPick(cfg.object) }; tonesErr = null;
-        /* the owner SAYS the pick it derived — every mirror that heard the
-         * object without one hears the default in the same task (night 61: after the message, not inside it) */
-        correct({ tones: cfg.tones });
-      }
-      /* TONES IS THE TRUTH (night 59): tones that arrive NAME the object. A pre-cut entry (payload v1) also
-       * carries the object it was saved under; where that word is not what the tones make, the tones win
-       * and the face says so once — never a silent relabel (§4.4), never the stored word over the material.
-       * A payload without `object` (v2) derives silently, as it should. `object: "scale"` with no tones is
-       * the scale itself. */
-      /* NIGHT 60 (a night-59 defect, found by the migration fixture): the pick is derived NULL INCLUDED — a saved
-       * scale étude carries `tones: null` and, since v2, no `object`; skipped, it restored as whatever object the
-       * page was under (a tetrad), and the gamut it carried was then "dropped" as a chord's. objectOf(null) is
-       * the scale, and always was; the guard here was the gap. */
-      if ("tones" in m || "dyad" in m) {
-        const derived = objectOf(tonePick(cfg));
-        if (derived !== cfg.object) {
-          if ("object" in m && m.object !== derived && m.object !== "scale") migrated = { saved: m.object, derived };
-          cfg = { ...cfg, object: derived }; changed = true;
-          correct({ object: derived });
-        }
-      }
       /* THE MIGRATION (night 60, ruled 261013b): a saved gamut with a chord object — a combination the one-state
        * rule forbids (nights 48–59 stored it). DROP THE GAMUT, keep the object and its tones (what sounds and
        * draws), and say so once: the gamut only shaded the field, so nothing selected or sounding changes. */
-      if ("gamut" in m && cfg.gamut && cfg.object !== "scale") {
-        dropped = { letters: letterOfGamut(cfg.gamut), saved: true };
+      /* NIGHT 64: the object is Progression's — a live change to a chord with a gamut set drops it too (the one-state
+       * rule, one site), and `saved` is whether the message carried the gamut (a restore). The object THIS message
+       * implies is read from the message itself: a v1 entry says it; a v2 entry carries tones and no object, and the
+       * owner's derived object lands only after this dispatch — so the decision derives it through the engine's one
+       * function (never stored here; the mirror `cfg.object` is the owner's to set). Found by the night-61 fixture: a
+       * scale étude restored into a page under a chord lost its gamut to the stale mirror. */
+      const said = "object" in m ? m.object
+        : ("tones" in m || "dyad" in m) ? (() => { try { return objectOf(tonePick(m)); } catch (_) { return cfg.object; } })()
+        : cfg.object;
+      if (("gamut" in m || "object" in m || "tones" in m) && cfg.gamut && said !== "scale") {
+        dropped = { letters: letterOfGamut(cfg.gamut), saved: "gamut" in m };
         cfg = { ...cfg, gamut: null }; changed = true;
-        correct({ gamut: null });
+        announceAfter(d, CONFIG_CHANGED, { gamut: null });
       }
       if (changed) render();
     });
@@ -10622,40 +10534,6 @@ const harmonyCard = {
       cfg = { ...cfg, gamut: normalizeGamut(degs) }; push();
     });
     byId("hcScale").addEventListener("change", (e) => { cfg = { ...cfg, scale: e.target.value }; push(); });
-    /* choosing an object FILLS its tones (item 2's whole point for Shell:
-     * R,3,7 appears, visibly) — a refused edit is forgotten with the object */
-    byId("hcObj").addEventListener("change", (e) => {
-      tonesErr = null; migrated = null; dropped = null;
-      /* ONE STATE (night 60, ruled): a gamut narrows the scale — a chord object has already narrowed it, so a
-       * gamut set under a scale is DROPPED when a chord is chosen, and said (never silent; ruled 261013b:
-       * keep what makes the material, drop what only shades it) */
-      const toChord = e.target.value !== "scale";
-      if (toChord && cfg.gamut) dropped = { letters: letterOfGamut(cfg.gamut), saved: false };
-      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value), gamut: toChord ? null : cfg.gamut }; push();   // an object POPULATES the tones (night 59: a shortcut, not a cage)
-    });
-    /* THE TONES FIELD: parsed by the figure's parser, checked by the one
-     * derivation (objectOffsets) — a refusal is a value on the face and the
-     * last lawful pick stands; validation is live, as the figure's is */
-    byId("hcTones").addEventListener("input", (e) => {
-      migrated = null;
-      if (cfg.object === "scale") {
-        /* under a scale the field speaks NOTE NAMES of the key; the stored value is the gamut's degrees */
-        const fld = field({ key: cfg.key, scale: cfg.scale });
-        const r = parseNoteNames(e.target.value, fld);
-        if (r.err) { tonesErr = r.err; render(); return; }
-        tonesErr = null;
-        cfg = { ...cfg, gamut: normalizeGamut(r.degrees) }; push();
-        return;
-      }
-      const r = parseTones(e.target.value);
-      if (r.err) { tonesErr = r.err; render(); return; }
-      const pick = r.tones.map(degreeOfTone);
-      let derived;
-      try { derived = objectOf(pick); }
-      catch (err) { tonesErr = String(err.message || err).replace(/^objectOf: /, ""); render(); return; }
-      tonesErr = null;
-      cfg = { ...cfg, tones: pick, object: derived }; push();   // the object is the name the tones make
-    });
     byId("hcRef").addEventListener("change", (e) => {
       const v = e.target.value;
       if (v.startsWith("mode:")) cfg = { ...cfg, ref: +v.slice(5) };
@@ -11373,8 +11251,9 @@ const mixerStrip = {
        "the user can start and stop wherever they are"): hub/mini.mjs's cluster mounted in this board's header,
        as the chart line, the neck, the keyboard, the keys, the staff and the score mount it — a VIEW of the one clock
        through the bus, no state here (rule 10; the fork night 55 deleted was a copy with its own float, not a
-       sixth view). Collapsed, it hides with the strip, as the readhead minis do. -->
-  <div class="bh"><span>Mixer</span><span class="mini" id="mxMini" data-control="mxMini"></span><span class="mx-headspace"></span></div>
+       sixth view). Collapsed, it hides with the strip, as the readhead minis do. Seated after the spacer, at the
+       header's right (injection 261015 — every mini sits right). -->
+  <div class="bh mx-head"><span>Mixer</span><span class="mx-headspace"></span><span class="mini" id="mxMini" data-control="mxMini"></span></div>
   <span class="clpsum">the mixer — the voice, the reference tone, the sounded bass, the pad, and each bus's level</span>
   <div class="mx-row">
     <span class="mx-lab">voice</span>
@@ -11421,6 +11300,7 @@ const mixerStrip = {
    * styles only its own markup); the level row is the shell's .bpmrow with a mute icon per slider */
   styles: `
 .mx-headspace{flex:1 1 auto}
+.mx-head{padding-right:40px}   /* the shell's chevron band at the header's right (no ⓘ on this board) — a right-seated mini ends before it (injection 261015, measured: 19 px under it without this) */
 #mxMini{display:flex;gap:4px;flex:0 0 auto;margin-left:12px}
 #mxMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;text-transform:none;letter-spacing:0}
@@ -14064,7 +13944,10 @@ const __m_hub_modules_progression_card_mjs = (() => {
 const { CYCLES } = __m_engine_tetrad_sequence_mjs;
 const { STRUCTURES } = __m_engine_structures_mjs;
 const { progressionOf, chartBodyOf } = __m_engine_progression_mjs;
-const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
+const { CONFIG_CHANGED, listen, announce, announceAfter } = __m_hub_bus_mjs;
+const { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, pickOf, tonePick, objectOf } = __m_engine_selection_mjs;
+const { field } = __m_engine_field_mjs;
+const { SHARED } = __m_engine_shared_config_mjs;
 /* progression-card.mjs — v0.9's PROGRESSION card, LIVE (child 7).
  *
  * THE OWNER of the progression half of the configuration: source (cycle ·
@@ -14091,6 +13974,26 @@ const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
 
 
 
+
+
+
+/* THE OBJECT AND ITS TONES (night 64, 261014e — from harmony-card.mjs, where they lived since v0.9): Daniel —
+ * "Object really does belong to Progression, because that is what the progression is acting on." The table and
+ * the rules came verbatim; what changed is the ruling in §3b: ONE EDITOR PER CARD — Centricity edits the field,
+ * this card edits the object. At Object = scale the Tones field READS the field's notes and is TYPED in roles;
+ * typing roles derives an object and leaves scale (the exit). Typed note names set no gamut any more. */
+const OBJECTS = [
+  ["scale", "Scale or mode", true],
+  ["dyad", "Dyad", true],           // child 4: two chord tones, by role — since 260917 picked in the Tones field
+  ["triad", "Triad", true],
+  ["tetrad", "Tetrad", true],
+  ["ninth", "9th chord", true],     // 260914 item 3: depth is data —
+  ["eleventh", "11th chord", true], // offsets 2i to the named extension,
+  ["thirteenth", "13th chord", true], // mod7; Grip drops by a NAMED rule
+  ["shell", "Shell", true],         // child 4: R + the guide tones
+];
+
+
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
 
@@ -14100,10 +14003,19 @@ const progressionCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 11,
-  controls: ["pgSrcSeg", "pgCycle", "pgForm", "pgCustom", "pgChartBtn", "pgStart"],
+  controls: ["hcObj", "hcTones", "pgSrcSeg", "pgCycle", "pgForm", "pgCustom", "pgChartBtn", "pgStart"],   // hcObj, hcTones: night 64, their ids kept (every pin, message and saved étude addresses them)
 
   markup: `
   <h2>Progression</h2>
+  <!-- OBJECT AND TONES FIRST, above Source (night 64): they are what the progression acts on, so they are read
+       before how it moves. STACKED, not adjacent — this card is a narrow column (281 px at 1280, 250 at 390) and
+       its own idiom is label-above-control at full width; two selects side by side would clip the object's
+       longest name at 390. Object still POPULATES Tones; editing Tones re-names the Object (night 59). -->
+  <label>Object</label>
+  <select id="hcObj" data-control="hcObj"></select>
+  <label id="hcTonesLab">Tones</label>
+  <input type="text" id="hcTones" data-control="hcTones" autocomplete="off">
+  <div class="hint" id="pgObjNote"></div>
   <label>Source</label>
   <div class="seg" id="pgSrcSeg" data-control="pgSrcSeg">
     <button data-src="cycle" class="on">cycle</button>
@@ -14136,7 +14048,8 @@ const progressionCard = {
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
 #pgSrcSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 #pgNote.pg-err{color:#B82929;font-weight:bold}
-#pgCycle,#pgForm,#pgStart,#pgCustom{width:100%}
+#pgCycle,#pgForm,#pgStart,#pgCustom,#hcObj,#hcTones{width:100%}
+#pgObjNote{margin:6px 0 10px}
 #pgChartBtn{font:inherit;font-size:12px;margin-top:6px;padding:4px 10px;
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
 #pgChartBtn:hover:not(:disabled){border-color:var(--ink)}
@@ -14146,8 +14059,11 @@ const progressionCard = {
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE — the progression half. key/scale are MIRRORS (harmony owns
      * them) held only to validate and to phrase the note. */
-    let cfg = { source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
-    let key = "Bb", scale = "major";
+    let cfg = { object: "tetrad", tones: [1, 3, 5, 7],   // night 64: the object (a derived label — only tones is stored) and its tones
+      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 };
+    let key = "Bb", scale = "major", gamut = null;   // key/scale/gamut are MIRRORS (Centricity owns them) — the tones' letters under a scale
+    let migrated = null;   // night 59: { saved, derived } when a restored entry's stored object is not what its tones make
+    let tonesErr = null;   // the tones field's standing refusal, by name
     let padChart = null;                  // the note's chart body, announced by the notepad
 
     const fill = (sel, items, cur) => {
@@ -14160,8 +14076,54 @@ const progressionCard = {
     fill(byId("pgCycle"), Object.entries(CYCLES).map(([id, c]) => [id, c.name]), cfg.cycle);
     fill(byId("pgForm"), STRUCTURES.map((s) => [s.id, s.name]), cfg.form);
     fill(byId("pgStart"), ORD.map((o, i) => [String(i), `${o} — ${ROMAN[i]}`]), String(cfg.start));
+    {
+      const sel = byId("hcObj");
+      for (const [v, l, live] of OBJECTS) { const o = d.createElement("option"); o.value = v; o.textContent = l; if (!live) { o.disabled = true; o.title = "arrives with child 4 (dyads, and the chord vocabulary)"; } sel.appendChild(o); }
+    }
 
     const render = () => {
+      /* THE OBJECT AND ITS TONES (night 64 — from the harmony card, night 59's rules): a chord object's tones
+       * speak ROLES against the chord root and the object is the name the tones make; under a scale the field
+       * READS the field's notes (the gamut's letters, the whole field when none is set) and is TYPED in roles —
+       * the first control where read and write differ (§3b, Daniel: "a reasonable trade") — said on the face. */
+      byId("hcObj").value = cfg.object;
+      const isScale = cfg.object === "scale";
+      {
+        const f = byId("hcTones"), lab = byId("hcTonesLab");
+        if (!isScale) {
+          const pick = pickOf(cfg);
+          const says = parseTones(f.value);
+          const saysPick = says.tones ? renderPick(says.tones.map(degreeOfTone)) : null;
+          if (!tonesErr && saysPick !== renderPick(pick)) f.value = renderPick(pick);
+          lab.textContent = "Tones \u2014 the material, by role against the chord root: R, 3, 5, 7, 9, 11, 13";
+          f.placeholder = renderPick(defaultPick(cfg.object));
+        } else {
+          const fld = field({ key, scale });
+          const degs = gamut || [1, 2, 3, 4, 5, 6, 7];
+          const letters = degs.map((dg) => fld.notes[dg - 1].name).join(" ");
+          if (!tonesErr) f.value = letters;   // a READOUT of the field: repainted from the model, never edited into the gamut
+          lab.textContent = `Tones \u2014 the material, by note in ${key} ${SHARED.scale.values[scale] || scale}; typed by role`;
+          f.placeholder = "R,3,5";
+        }
+      }
+      {
+        const note = byId("pgObjNote");
+        if (tonesErr) { note.style.color = "#B82929"; note.textContent = "tones: " + tonesErr; }
+        else if (isScale) {
+          note.style.color = "";
+          note.textContent = `Under a scale the tones read as notes of ${key} ${SHARED.scale.values[scale] || scale} and are typed as roles \u2014 type R, 3, 5 and the tones make a triad and leave the scale; the field is narrowed from its own notes, where the field is.`;
+        } else {
+          note.style.color = "";
+          const pick = pickOf(cfg);
+          const whole = renderPick(pick) === renderPick(objectDegrees(cfg.object));
+          note.textContent = (cfg.object === "shell"
+            ? "A shell is the root under the guide tones — R,3,7, the tones above; edit them and the object is re-named to what the tones make. "
+            : cfg.object === "dyad" ? "A dyad is the guide tones — 3,7; edit them and the object is re-named to what the tones make. "
+            : whole ? `The whole ${cfg.object}. Narrow it above — fewer tones is the point — or add a tone and the object is re-named to what the tones make. `
+            : `The ${cfg.object} narrowed to ${renderPick(pick).split(",").join(" ")}. `)
+            + (migrated ? `This étude was saved as a ${migrated.saved}; its tones make a ${migrated.derived} — the tones are the truth.` : "");
+        }
+      }
       for (const b of byId("pgSrcSeg").querySelectorAll("button"))
         b.classList.toggle("on", b.dataset.src === cfg.source);
       const show = (cls, on) => {
@@ -14197,15 +14159,64 @@ const progressionCard = {
 
     const push = () => { render(); announce(d, CONFIG_CHANGED, { ...cfg }); };
 
-    const MINE = ["source", "cycle", "form", "custom", "start"];
+    const MINE = ["object", "tones", "source", "cycle", "form", "custom", "start"];   // object, tones: night 64
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
-      for (const k of MINE) if (k in m && m[k] !== cfg[k]) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
-      if ("key" in m && m.key !== key) { key = m.key; changed = true; }
-      if ("scale" in m && m.scale !== scale) { scale = m.scale; changed = true; }
+      for (const k of MINE) if (k in m && !same(m[k], cfg[k])) { cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] }; changed = true; }
+      /* the field's mirrors — and a standing refusal in the Tones field is stale once the field it was typed against
+       * moves (a key, scale or gamut change repaints the readout; the refused text must not outlive the model) */
+      if ("key" in m && m.key !== key) { key = m.key; tonesErr = null; changed = true; }
+      if ("scale" in m && m.scale !== scale) { scale = m.scale; tonesErr = null; changed = true; }
+      if ("gamut" in m && !same(m.gamut || null, gamut)) { gamut = m.gamut ? [...m.gamut] : null; tonesErr = null; changed = true; }
       if ("chart" in m && m.chart !== padChart) { padChart = m.chart; changed = true; }
+      /* a saved étude's `dyad` arrives as the pick (tonePick is the one alias site); an OBJECT arriving without a
+       * pick (a preset) takes its default — a triad preset must not inherit a dyad's [3,7] */
+      if (!("tones" in m) && Array.isArray(m.dyad) && !same(m.dyad, cfg.tones)) {
+        cfg = { ...cfg, tones: [...m.dyad] }; changed = true;
+      } else if ("object" in m && !("tones" in m) && !("dyad" in m) && changed) {
+        cfg = { ...cfg, tones: defaultPick(cfg.object) }; tonesErr = null;
+        announceAfter(d, CONFIG_CHANGED, { tones: cfg.tones });   // the owner SAYS the pick it derived — after the message, not inside it
+      }
+      /* TONES IS THE TRUTH (night 59): tones that arrive NAME the object; a v1 entry's stored object is a label to
+       * compare — where it is not what the tones make, the tones win and the face says so once. NULL INCLUDED
+       * (night 60): a saved scale étude carries tones: null, and objectOf(null) is the scale. */
+      if ("tones" in m || "dyad" in m) {
+        const derived = objectOf(tonePick(cfg));
+        if (derived !== cfg.object) {
+          if ("object" in m && m.object !== derived && m.object !== "scale") migrated = { saved: m.object, derived };
+          cfg = { ...cfg, object: derived }; changed = true;
+          announceAfter(d, CONFIG_CHANGED, { object: derived });
+        }
+      }
       if (changed) render();
+    });
+
+    /* choosing an object FILLS its tones (night 59: a shortcut, not a cage) — a refused edit is forgotten with the object */
+    byId("hcObj").addEventListener("change", (e) => {
+      tonesErr = null; migrated = null;
+      cfg = { ...cfg, object: e.target.value, tones: defaultPick(e.target.value) }; push();
+    });
+    /* THE TONES FIELD: typed in ROLES in every state (night 64, one editor per card); parsed by the figure's parser,
+     * named by the one derivation — a refusal is a value on the face and the last lawful pick stands. Under a scale
+     * the refusal says the read/write difference: the field reads notes, is typed in roles, and the gamut is set
+     * where the field is. */
+    byId("hcTones").addEventListener("input", (e) => {
+      migrated = null;
+      const r = parseTones(e.target.value);
+      if (r.err) {
+        tonesErr = cfg.object === "scale"
+          ? `${r.err} \u2014 under a scale the tones read as notes and are typed as roles (R, 3, 5); the field is narrowed from its own notes, where the field is`
+          : r.err;
+        render(); return;
+      }
+      const pick = r.tones.map(degreeOfTone);
+      let derived;
+      try { derived = objectOf(pick); }
+      catch (err) { tonesErr = String(err.message || err).replace(/^objectOf: /, ""); render(); return; }
+      tonesErr = null;
+      cfg = { ...cfg, tones: pick, object: derived }; push();   // the object is the name the tones make
     });
 
     byId("pgSrcSeg").addEventListener("click", (e) => {
@@ -15341,7 +15352,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.15","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.16","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>
