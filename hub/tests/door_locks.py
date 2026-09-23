@@ -5578,15 +5578,20 @@ console.log(JSON.stringify(out));
     # an exemption is never counted as a pass). Anything new — a control born tonight
     # without a role or a name — is red on arrival: that is the instrument's job.
     AXE_FLOOR = ["wcag2a", "wcag2aa"]
+    # THE CARD'S OWN FIVE ARE STATED ONCE (night 53, 261022 — rule 6): the metronome card's two
+    # unlabelled sliders and three caption-less selects were exempted BY DOOR, four times over, and
+    # the fifth door (metronome) arrived red on exactly those five — a hand-kept list that the
+    # resolver's census could compute. The card's five now apply to every door the census lists
+    # (every door reaches hub/modules/metronome-card.mjs — the first block of every door); a door
+    # without the card would fail loud on a stale exemption, which is the check working.
+    METRO_CARD_EXEMPT = {"label": {"#bpmRange", "#clickVolR"}, "select-name": {"#meterSel", "#subSel", "#voiceSel"}}
     AXE_EXEMPT = {   # rule → { door → set of axe target selectors }, all reported 260923
-        "label": {   # range sliders with no label: the metronome's, the neck's mixer's
-            "multetudes": {"#bpmRange", "#clickVolR"},   # #fdHarmVol / #fdBassVol RETIRED 261012 (night 58): named in the mixer strip
-            "tetradetudes": {"#bpmRange", "#clickVolR", "#bpmRange2", "#chordVolR", "#bassVolR"},
-            "scribe": {"#bpmRange", "#clickVolR"}, "plain": {"#bpmRange", "#clickVolR"}},
+        "label": {   # range sliders with no label: the neck's mixer's (the metronome's: METRO_CARD_EXEMPT)
+            "multetudes": set(),   # #fdHarmVol / #fdBassVol RETIRED 261012 (night 58): named in the mixer strip
+            "tetradetudes": {"#bpmRange2", "#chordVolR", "#bassVolR"}},
         "select-name": {   # selects with a visible caption not associated, or none (item 1's list)
-            "multetudes": {"#meterSel", "#subSel", "#voiceSel", "#hcScale", "#hcObj", "#pgCycle", "#pgStart", "#psSel", "#fdVoice"},
-            "tetradetudes": {"#meterSel", "#subSel", "#voiceSel", "#meterSel2", "#splitSel", "#keySel", "#scaleSel", "#progSel", "#startSel", "#bottomSel", "#extSel", "#figSel"},
-            "scribe": {"#meterSel", "#subSel", "#voiceSel"}, "plain": {"#meterSel", "#subSel", "#voiceSel"}},
+            "multetudes": {"#hcScale", "#hcObj", "#pgCycle", "#pgStart", "#psSel", "#fdVoice"},
+            "tetradetudes": {"#meterSel2", "#splitSel", "#keySel", "#scaleSel", "#progSel", "#startSel", "#bottomSel", "#extSel", "#figSel"}},
         # color-contrast: the neck's four captions were EXEMPT here 260923 (#B9B9BF, 1.87:1 on the
         # card ground); fixed the same night to the ramp's --gray (4.51:1) — the exemption RETIRED,
         # as the loud-both-ways check demands. axe now gates the captions at AA.
@@ -5601,13 +5606,14 @@ console.log(JSON.stringify(out));
           .then(r => ({ passes: r.passes.length, violations: r.violations.map(v => ({ id: v.id, impact: v.impact, targets: v.nodes.map(n => n.target.join(' ')) })) }))""", AXE_FLOOR)
         failed, exempt_hits, seen = [], 0, {}
         for v in res["violations"]:
-            allowed = AXE_EXEMPT.get(v["id"], {}).get(door_id, set())
+            allowed = AXE_EXEMPT.get(v["id"], {}).get(door_id, set()) | METRO_CARD_EXEMPT.get(v["id"], set())
             for t in v["targets"]:
                 if t in allowed:
                     exempt_hits += 1; seen.setdefault(v["id"], set()).add(t)
                 else:
                     failed.append(f"{v['id']}[{v['impact']}] {t}")
-        stale = [f"{rule} {t}" for rule, doors in AXE_EXEMPT.items() for t in doors.get(door_id, set()) if t not in seen.get(rule, set())]
+        stale = [f"{rule} {t}" for rule, doors in AXE_EXEMPT.items() for t in doors.get(door_id, set()) if t not in seen.get(rule, set())] \
+            + [f"{rule} {t}" for rule, ts in METRO_CARD_EXEMPT.items() for t in ts if t not in seen.get(rule, set())]
         check(not failed, f"{tag} axe @{aw}: {len(failed)} WCAG 2 A/AA violation(s) not on the 260923 exemption list — a control without a role or a name is red on arrival: {failed[:8]}")
         check(not stale, f"{tag} axe @{aw}: {len(stale)} exemption(s) match nothing — the finding was fixed, retire its exemption: {stale[:6]}")
         n_ex_rules = len({r for r in seen})

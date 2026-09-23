@@ -2491,6 +2491,15 @@ def main():
     logp = open_log(args.log or (HUB / "tests" / "out" / f"bite-{stamp}.log"))
     log_line(f"log: {logp}")
     log_line("hub bite harness — every stage-2 assertion must be seen to fail\n")
+    # THE ACCOUNT PREFLIGHT (night 53, 261022 — item 0a): the chain is the night's longest step and
+    # its commit can only land under the account that owns origin. Night 58 learned that at hour six.
+    # tools/preflight.py derives the expected handle from origin's URL and REFUSES; the chain does
+    # not start on a refusal. It never switches the account — that is the human's (night 58's ruling).
+    pf = sh("python3", str(REPO / "tools" / "preflight.py"), "account")
+    log_line("preflight " + (pf.stdout + pf.stderr).strip())
+    if pf.returncode:
+        log_line("the chain does not start — the account preflight refused (see the line above)")
+        return 2
     fns = (m1_shell_styles_a_module, m2_module_styles_another_module,
                m3_styles_shipped_regardless_of_reach, m4_markup_shipped_regardless_of_reach,
                m5_dynamic_import_and_lookup_by_string, m6_new_module_no_door_edited,

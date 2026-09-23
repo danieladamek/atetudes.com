@@ -1,3 +1,49 @@
+## 2026-09-22 — Night 53: the metronome door — built, gated, diffed, rendered, and STOPPED at the publish step; the active-account preflight and the lock measured (item 0); no published study moved
+
+- **The pilot's verdict (dispatch 261011, re-headed 261022):** `hub/doors/metronome.door.mjs` (`{notepad:true}`, the
+  page's own words as its present) builds, the census sees it by construction (five doors; a mutation to
+  `engine/notepad-surface.mjs` gates it, one to `hub/modules/field-board.mjs` does not — from bite's per-mutation
+  log), and its gate is **6.66 s, 6,423/0 — scribe-sized, the good case** (plain 4, scribe 7, tetradetudes 95,
+  multetudes 266). **Its output is a different page** from `static/studies/metronome/study.html`: the same 29
+  controls, zero errors, but the shell's composition (the metronome on its own row, the pad seated inside the log
+  board), the shell's white ground against the Spec's grey, chevrons and summaries, the card's own prose in place of
+  the host's (the appliance saying *the étude subscribes to this grid*), the page's two hints gone, the empty-log
+  sentence the module's, the lamp's first dot red at rest, and at 390 the log header clipped by the title field.
+  Twelve differences, every one explained, seven visible. *Any UI change to the metronome* is not in this night, so
+  the door's output does NOT replace the published file, the census entry stays `detected`, and the door's text
+  waits in the run note for the ruling. Two engine modules the page never carried (`open-string`, `tunings`) are
+  reached because `notepad-card.mjs` imports them — the hand page's copy of the card LOGIC is older than the module
+  (host-conformance pins the markup, not the script): a drift finding. With a `metronome` door on the tree above the
+  hand page the carrier census pin goes red on exactly those two — the instrument working. **Children 2 and 3 should
+  be scheduled off the ruling on the visible differences, not off the seconds.**
+- **Item 0(a), `tools/preflight.py` (new):** the active GitHub handle (`gh api user`) must be origin's owner,
+  DERIVED from origin's URL (rule 6); a mismatch REFUSES (exit 2) naming both handles and the human's remedy, pointing
+  at night 58's ruling; the tool never switches the account. Nine-pin `selftest` red-first without touching the
+  machine; hooked into `hub/tests/bite.py` `main()` so the chain does not start on a refusal (the line rides the
+  chain log: *preflight account: active GitHub handle danieladamek is origin's owner danieladamek — proceed*).
+- **Item 0(b), the stale `index.lock`, measured:** the one on the tree at session start (0 bytes, no host git) was held
+  open by `com.apple.Virtualization.VirtualMachine` — the Cowork device bridge's VM, started at 12:36, with 949 files
+  of this repo open. Git run INSIDE that VM against the host's `.git` leaves the lock; the host cannot see the
+  process. The 24 corpses and 27 of the 51 `tmp_obj_*` cluster on 260816 22:01–22:07 beside `HEAD.lock` and
+  `maintenance.lock` copies — sessions killed mid-write on the outage evening. `preflight.py lock` reports age, size,
+  holder and host git, refuses on a running git or a young lock, names an old one STALE with the one-line remedy and
+  never removes it. Proposed, not done: clear `.git/_stale_locks/` and `git gc` the garbage (Daniel's yes); Cowork
+  sessions not to run git against this checkout. Tonight's lock removed by hand before the commit after re-reading
+  its holder.
+- **The gate learned the fifth door:** axe's 260923 exemptions were keyed by door, by hand, four times over, and the
+  metronome door arrived red on the metronome card's own five nodes (two unlabelled sliders, three caption-less
+  selects). Rule 6: the card's five are stated once and applied to every door the census lists, loud both ways; the
+  per-door extras stay per door (`hub/tests/door_locks.py`). The count did not move: 6,423 both ways on the
+  metronome door; the four doors' 21,929 unmoved.
+- **ROW_COUNTS untouched.** `tools/reinline.py` still governs the metronome and the three other carriers.
+- **Gates:** preflight selftest 9/9 (`hub/tests/out/preflight-n53-0922-1333.log`) · engine 704/704 (with the door
+  702/704, the census pin's two) · hub 14/14 · metronome door 6,423/2 → **6,423/0** (`doors-n53-metronome-0922-1334.log`,
+  `…-1336b.log`) · five doors **28,351/0** (`doors-n53-full-0922-1336.log`, 7:56) · four doors after the door's removal
+  **21,929/0** (`doors-n53-four-0922-1402.log`) · singles m37 and m110 as the census proofs (`bite-n53-singles-0922.log`,
+  `bite-n53-single-m110-0922.log`) · chain ****111/111**, suite green (`hub/tests/out/bite-0922-1410.log`, 14:10–22:35; its first line the account preflight)** · renders `notes/working/shots-261022-n53/{page,door}-{1280,390}.png`,
+  zero errors · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261022 — night 53, door the metronome appliance (the pilot stops at the publish step).md`.
+
 ## 2026-09-16 — DEPLOYED: night 64 live — Object and Tones cross to Progression, every mini seated right, the clock-row repeat gone; Multetudes v0.6.16, Tetradetudes v0.6.7; two studies moved; written from the run
 
 - record: run 35045811234 · success · commit 3799199 · fetched 2026-09-16T02:03Z · 6/6 studies byte-identical · digest a6014c456b77
