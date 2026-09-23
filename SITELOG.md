@@ -1,3 +1,14 @@
+## 2026-09-23 — DEPLOYED: night 53 live — the preflight and the axe restatement; the metronome door not published; no study moved; written from the run
+
+- record: run 35814966229 · success · commit 5dc4ec2 · fetched 2026-09-23T03:46Z · 6/6 studies byte-identical · digest 151cf8a0c2da
+- Actions run 35814966229 green on `5dc4ec2` — https://github.com/danieladamek/atetudes.com/actions/runs/35814966229 (created 2026-09-23T03:35:57Z, finished 2026-09-23T03:46:09Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 06e2d2eaf701 · live 06e2d2eaf701 — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo ed75914f2c3b · live ed75914f2c3b — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-22 — Night 53: the metronome door — built, gated, diffed, rendered, and STOPPED at the publish step; the active-account preflight and the lock measured (item 0); no published study moved
 
 - **The pilot's verdict (dispatch 261011, re-headed 261022):** `hub/doors/metronome.door.mjs` (`{notepad:true}`, the
