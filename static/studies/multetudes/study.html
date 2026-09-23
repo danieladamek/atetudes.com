@@ -162,7 +162,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
    or the buttons paint on, clipped mid-glyph in the 30px strip (260909, item 1) */
 #fdRail.fd-shut>.fd-cap,#fdRail.fd-shut>.seg,#fdRail.fd-shut>.hint,
 #fdRail.fd-shut>#fdFigIn{display:none}
-.fd-railtop{display:flex;justify-content:flex-end;margin-bottom:2px}
+.fd-railtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.fd-railname{font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)}
+.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:none}   /* a 30 px shut column has no room for a word */
+@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:inline}}   /* shut at phone width is a full-width row */
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -694,7 +697,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
     <div class="fd-rail" id="fdRail">
-      <div class="fd-railtop"><button id="fdRailBtn" data-control="fdRailBtn"
+      <!-- THE RAIL IS NAMED FOR WHAT IT IS (261023, night 65 — motif approved by Daniel 261022, recorded by PO
+           ruling 261023): it holds the motif's parts — placement, the take, movement, the figure. The name is
+           the rail's, not the button's (rule 12); the button keeps its own title. -->
+      <div class="fd-railtop"><span class="fd-railname" id="fdRailName">Motif</span><button id="fdRailBtn" data-control="fdRailBtn"
         title="collapse this rail">›</button></div>
       <div class="fd-cap">Placement</div>
       <!-- TAKE LIVES HERE NOW (260913, item 1 — D8): "every occurrence in
@@ -8774,7 +8780,10 @@ const fieldBoard = {
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
     <div class="fd-rail" id="fdRail">
-      <div class="fd-railtop"><button id="fdRailBtn" data-control="fdRailBtn"
+      <!-- THE RAIL IS NAMED FOR WHAT IT IS (261023, night 65 — motif approved by Daniel 261022, recorded by PO
+           ruling 261023): it holds the motif's parts — placement, the take, movement, the figure. The name is
+           the rail's, not the button's (rule 12); the button keeps its own title. -->
+      <div class="fd-railtop"><span class="fd-railname" id="fdRailName">Motif</span><button id="fdRailBtn" data-control="fdRailBtn"
         title="collapse this rail">›</button></div>
       <div class="fd-cap">Placement</div>
       <!-- TAKE LIVES HERE NOW (260913, item 1 — D8): "every occurrence in
@@ -8909,7 +8918,10 @@ const fieldBoard = {
    or the buttons paint on, clipped mid-glyph in the 30px strip (260909, item 1) */
 #fdRail.fd-shut>.fd-cap,#fdRail.fd-shut>.seg,#fdRail.fd-shut>.hint,
 #fdRail.fd-shut>#fdFigIn{display:none}
-.fd-railtop{display:flex;justify-content:flex-end;margin-bottom:2px}
+.fd-railtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.fd-railname{font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)}
+.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:none}   /* a 30 px shut column has no room for a word */
+@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:inline}}   /* shut at phone width is a full-width row */
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -11455,6 +11467,7 @@ const neckReadout = {
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       centreSrc: "fixed",
+      movement: "strum",   // 261023 (night 65): mirrored so the readout can SAY the motif's movement
       /* the figure (260919, item 3): mirrored so the readout can SAY it — the
        * one piece of state it never carried; the hint's clause moved here */
       address: "pattern", figure: "" };
@@ -11610,8 +11623,19 @@ const neckReadout = {
         /* THE FIGURE, in the readout's voice (260919, item 3 — moved from the
          * hint; the readout never mentioned it): derived here through the same
          * orderBy the neck uses, never read from the neck */
+        /* THE MOVEMENT, in the readout's voice (261023, night 65 — the motif's third part: the readout said the
+         * placement and the figure and never said strum or arpeggiate). Stated as the neck resolves it: a figure
+         * that resolves sequences the notes whatever the switch says (the neck greys strum then), and a scale
+         * with no figure is a run with nothing to move (the neck greys both) — said, not guessed. */
+        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent }) : null;
+        if (fgm && fgm.order && fgm.order.length)
+          bits.push(`<b>arpeggiated</b> <span class="ro-dim">(in sequence — the figure orders it)</span>`);
+        else if (cfg.object !== "scale")
+          bits.push(/^arpeggi/.test(String(cfg.movement))   // a restored v0.1.0 étude says "arpeggio"
+            ? `<b>arpeggiated</b> <span class="ro-dim">(in sequence, low to high)</span>`
+            : `<b>strummed</b> <span class="ro-dim">(together)</span>`);
         if (String(cfg.figure || "").trim()) {
-          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+          const fg = fgm;   // 260923: the window, for the approach reach; 261011c: what the placement dropped
           if (fg.order && fg.order.length)
             bits.push(`figure <b>${fg.order.length} steps</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""})</span>`);
           else if (fg.err) bits.push(`<span style="color:#B82929">figure: ${fg.err}</span>`);   // the refusal reaches the readout too (rule 10, 261011c)
@@ -15352,7 +15376,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.16","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.17","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

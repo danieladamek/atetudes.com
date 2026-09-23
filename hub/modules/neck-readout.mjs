@@ -53,6 +53,7 @@ export const neckReadout = {
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       centreSrc: "fixed",
+      movement: "strum",   // 261023 (night 65): mirrored so the readout can SAY the motif's movement
       /* the figure (260919, item 3): mirrored so the readout can SAY it — the
        * one piece of state it never carried; the hint's clause moved here */
       address: "pattern", figure: "" };
@@ -208,8 +209,19 @@ export const neckReadout = {
         /* THE FIGURE, in the readout's voice (260919, item 3 — moved from the
          * hint; the readout never mentioned it): derived here through the same
          * orderBy the neck uses, never read from the neck */
+        /* THE MOVEMENT, in the readout's voice (261023, night 65 — the motif's third part: the readout said the
+         * placement and the figure and never said strum or arpeggiate). Stated as the neck resolves it: a figure
+         * that resolves sequences the notes whatever the switch says (the neck greys strum then), and a scale
+         * with no figure is a run with nothing to move (the neck greys both) — said, not guessed. */
+        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent }) : null;
+        if (fgm && fgm.order && fgm.order.length)
+          bits.push(`<b>arpeggiated</b> <span class="ro-dim">(in sequence — the figure orders it)</span>`);
+        else if (cfg.object !== "scale")
+          bits.push(/^arpeggi/.test(String(cfg.movement))   // a restored v0.1.0 étude says "arpeggio"
+            ? `<b>arpeggiated</b> <span class="ro-dim">(in sequence, low to high)</span>`
+            : `<b>strummed</b> <span class="ro-dim">(together)</span>`);
         if (String(cfg.figure || "").trim()) {
-          const fg = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+          const fg = fgm;   // 260923: the window, for the approach reach; 261011c: what the placement dropped
           if (fg.order && fg.order.length)
             bits.push(`figure <b>${fg.order.length} steps</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""})</span>`);
           else if (fg.err) bits.push(`<span style="color:#B82929">figure: ${fg.err}</span>`);   // the refusal reaches the readout too (rule 10, 261011c)

@@ -2387,6 +2387,39 @@ def m110_the_neck_transport_slides_again():
         p.write_text(original)
 
 
+def m111_the_motif_rail_goes_nameless_again():
+    # night 65: the rail loses its name — a bare chevron again, the motif's parts with no whole. The rail-name pin must bite.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        '<span class="fd-railname" id="fdRailName">Motif</span>',
+        '<span class="fd-railname" id="fdRailName"></span>')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the neck's rail is headed Motif" in g.stdout
+        record("the motif's rail goes nameless again — the parts with no whole",
+               g.returncode != 0 and hit, "suite exit %d; the rail-name pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m112_the_readout_forgets_the_movement():
+    # night 65: the readout's switch-driven movement clause is dropped — it speaks two thirds of the motif again (strum and
+    # arpeggiate unsaid unless a figure orders the notes). The movement pin must bite.
+    p, original, mutated = patch("hub/modules/neck-readout.mjs",
+        '        else if (cfg.object !== "scale")\n          bits.push(/^arpeggi/',
+        '        else if (false)   // (the movement unsaid)\n          bits.push(/^arpeggi/')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the readout says the movement" in g.stdout or "the readout follows" in g.stdout
+        record("the readout forgets the movement — two thirds of the motif, again",
+               g.returncode != 0 and hit, "suite exit %d; the movement pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/modules/notepad-card.mjs",
@@ -2551,7 +2584,8 @@ def main():
                m101_the_emptied_window_goes_unsaid, m102_the_dropped_gamut_never_reaches_the_neck,
                m103_a_correction_lands_inside_the_dispatch_again, m104_the_mixer_loses_its_view, m105_the_neck_mini_shrinks_the_readout_at_390,
                m106_the_repeat_button_loses_its_name, m107_the_mini_keeps_repeat_to_itself, m108_the_mini_stops_hearing_repeat,
-               m109_typing_roles_under_a_scale_stays_scale, m110_the_neck_transport_slides_again)
+               m109_typing_roles_under_a_scale_stays_scale, m110_the_neck_transport_slides_again,
+               m111_the_motif_rail_goes_nameless_again, m112_the_readout_forgets_the_movement)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

@@ -141,7 +141,10 @@ export const fieldBoard = {
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
     <div class="fd-rail" id="fdRail">
-      <div class="fd-railtop"><button id="fdRailBtn" data-control="fdRailBtn"
+      <!-- THE RAIL IS NAMED FOR WHAT IT IS (261023, night 65 — motif approved by Daniel 261022, recorded by PO
+           ruling 261023): it holds the motif's parts — placement, the take, movement, the figure. The name is
+           the rail's, not the button's (rule 12); the button keeps its own title. -->
+      <div class="fd-railtop"><span class="fd-railname" id="fdRailName">Motif</span><button id="fdRailBtn" data-control="fdRailBtn"
         title="collapse this rail">›</button></div>
       <div class="fd-cap">Placement</div>
       <!-- TAKE LIVES HERE NOW (260913, item 1 — D8): "every occurrence in
@@ -276,7 +279,10 @@ export const fieldBoard = {
    or the buttons paint on, clipped mid-glyph in the 30px strip (260909, item 1) */
 #fdRail.fd-shut>.fd-cap,#fdRail.fd-shut>.seg,#fdRail.fd-shut>.hint,
 #fdRail.fd-shut>#fdFigIn{display:none}
-.fd-railtop{display:flex;justify-content:flex-end;margin-bottom:2px}
+.fd-railtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.fd-railname{font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)}
+.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:none}   /* a 30 px shut column has no room for a word */
+@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:inline}}   /* shut at phone width is a full-width row */
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}

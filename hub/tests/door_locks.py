@@ -6960,6 +6960,44 @@ console.log(JSON.stringify(out));
         check(all(x["gapRight"] <= 80 for x in r390), f"{tag} @390 every mini sits at the right of its row: {r390}")
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
 
+    # ---------------- NIGHT 65 (261023): THE MOTIF IS NAMED — the rail says what it is; the readout says the movement ----------
+    # `motif` (approved by Daniel 261022, recorded by PO ruling 261023 in the multetudes spec notes) names the span
+    # Take/Movement → figure. Two faces follow. (1) The neck's side rail is headed Motif — the RAIL's name, not the
+    # button's (rule 12): visible, in the rail's own top band, clear of the neck's set/pattern column headers; a shut
+    # rail at 1280 is a 30 px column and hides the word. (2) The readout said the placement and the figure and never
+    # the movement: it now says strummed (together) / arpeggiated (in sequence), and under a resolving figure says the
+    # figure orders it — as the neck resolves it (strum greyed then). Asserted at the effect: the readout's own line.
+    if 'id="fdRail"' in html_path.read_text() and 'id="roLine"' in html_path.read_text():
+        ctx65 = pw.new_context(viewport={"width": 1280, "height": 900}); p65 = ctx65.new_page(); errs65 = []; p65.on("pageerror", lambda e: errs65.append(str(e)))
+        p65.goto(html_path.as_uri()); p65.wait_for_selector("#cards", state="attached"); p65.wait_for_timeout(300)
+        rail65 = p65.evaluate("""() => { const R = e => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; };
+          const n = document.getElementById('fdRailName'), top = document.querySelector('#fdRail > .fd-railtop');
+          const heads = [...document.querySelectorAll('#fieldSvg text')].filter(t => /^(set|pattern)$/i.test(t.textContent.trim())).map(t => R(t));
+          return { text: n ? n.textContent.trim() : null, inTop: !!(n && top && top.contains(n)), visible: !!(n && n.offsetWidth > 0),
+            name: n ? R(n) : null, heads, btnTitle: document.getElementById('fdRailBtn').title }; }""")
+        check(rail65["text"] == "Motif" and rail65["inTop"] and rail65["visible"],
+              f"{tag} night 65: the neck's rail is headed Motif, visible, in the rail's own top band: {rail65['text']!r} inTop {rail65['inTop']} visible {rail65['visible']}")
+        clear65 = all(h["r"] <= rail65["name"]["l"] or h["l"] >= rail65["name"]["r"] or h["b"] <= rail65["name"]["t"] or h["t"] >= rail65["name"]["b"] for h in rail65["heads"]) if rail65["name"] else False
+        check(len(rail65["heads"]) == 2 and clear65, f"{tag} night 65: the Motif name overlaps neither of the neck's set/pattern headers in the same band: heads {len(rail65['heads'])} clear {clear65}")
+        check(rail65["btnTitle"] == "collapse this rail", f"{tag} night 65: the button keeps its own name — the word names the rail (rule 12): {rail65['btnTitle']!r}")
+        ro65 = lambda: p65.inner_text("#roLine")
+        check("strummed (together)" in ro65() and "arpeggiated" not in ro65(), f"{tag} night 65: the readout says the movement — strummed (together): {ro65()[-200:]!r}")
+        p65.click('#fdMoveSeg button[data-move="arpeggiate"]'); p65.wait_for_timeout(200)
+        check("arpeggiated (in sequence, low to high)" in ro65() and "strummed" not in ro65(), f"{tag} night 65: arpeggiate at the neck, the readout follows: {ro65()[-200:]!r}")
+        p65.fill("#fdFigIn", "4,3,4,3,2,1"); p65.dispatch_event("#fdFigIn", "change"); p65.wait_for_timeout(250)
+        check("the figure orders it" in ro65() and "figure 6 steps" in ro65(), f"{tag} night 65: under a resolving figure the readout says the figure orders the movement: {ro65()[-240:]!r}")
+        order65 = ro65()
+        check(order65.index("grip") < order65.index("arpeggiated") < order65.index("figure 6 steps"),
+              f"{tag} night 65: the readout speaks the motif in its order — placement, movement, figure: {order65[-240:]!r}")
+        p65.click("#fdRailBtn"); p65.wait_for_timeout(150)
+        check(p65.evaluate("() => getComputedStyle(document.getElementById('fdRailName')).display") == "none",
+              f"{tag} night 65: a shut rail at 1280 (a 30 px column) hides the word")
+        p65.set_viewport_size({"width": 390, "height": 900}); p65.wait_for_timeout(200)
+        check(p65.evaluate("() => getComputedStyle(document.getElementById('fdRailName')).display") != "none",
+              f"{tag} night 65: shut at 390 the rail is a full-width row and keeps its name")
+        check(not errs65, f"{tag} night 65: no page errors: {errs65[:3]}")
+        ctx65.close()
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

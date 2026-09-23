@@ -1,3 +1,19 @@
+## 2026-09-23 — Night 65: the motif is named — the neck's rail headed Motif, the readout says the movement; the Settings card is night 66; Multetudes v0.6.17
+
+- **Why:** Daniel approved `motif` 261022 — the smallest unit of an étude that keeps its identity while the changes
+  move under it; the name of the span Take/Movement → figure, not a new step. PO ruling 261023: it is recorded in the
+  multetudes spec notes beside the chain's terms, NOT in the Design Spec, which defines none of them (night 65's stop);
+  the Spec is unchanged at v1.4. Update Log 261023.1.
+- **The rail** (`hub/modules/field-board.mjs`): headed Motif — the rail's name, not the button's (rule 12); in the
+  rail's top band, 62 px clear of the neck's set/pattern headers at 1280, in a different band at 390; hidden only
+  in the 30 px shut column at 1280. Figure keeps its name.
+- **The readout** (`hub/modules/neck-readout.mjs`): it said the placement and the figure and never the movement —
+  confirmed absent before building. It now says *strummed (together)*, *arpeggiated (in sequence, low to high)*, or
+  under a resolving figure *arpeggiated (in sequence — the figure orders it)*; nothing under a scale with no figure.
+- **Split, by the licence:** the Settings card is night 66.
+- **Gates:** engine 704/704 · hub 14/14 · multetudes 2,492/0 (`doors-n65-mult-0923-0728.log`) · door gate **22,005/0** (`doors-n65-full-0923-0746.log`; night 64 21,929) · m111, m112 bite (`bite-n65-m111_…-0923.log`, `bite-n65-m112_…-0923.log`) · chain **113/113**, suite green (`bite-0923-0754.log`, 07:54–18:40) · renders `shots-261023-n65/{rail,neck}-{1280,390}.png`, zero page errors · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261023 — night 65, the motif is named (the Settings card is night 66).md`.
+
 ## 2026-09-23 — DEPLOYED: night 53 live — the preflight and the axe restatement; the metronome door not published; no study moved; written from the run
 
 - record: run 35814966229 · success · commit 5dc4ec2 · fetched 2026-09-23T03:46Z · 6/6 studies byte-identical · digest 151cf8a0c2da
