@@ -1,3 +1,14 @@
+## 2026-09-24 — DEPLOYED: night 66 live — Presets becomes Settings; Multetudes v0.6.18, Tetradetudes v0.6.8; two studies moved; written from the run
+
+- record: run 36000708463 · success · commit bf24bcc · fetched 2026-09-24T12:52Z · 6/6 studies byte-identical · digest d9624d60a335
+- Actions run 36000708463 green on `bf24bcc` — https://github.com/danieladamek/atetudes.com/actions/runs/36000708463 (created 2026-09-24T12:42:00Z, finished 2026-09-24T12:52:19Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 1c2cf55fa4f0 · live 1c2cf55fa4f0 — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo faa884963884 · live faa884963884 — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-24 — Night 66: Presets becomes Settings — the card says what the étude is, from the one record the practice log saves; the shut Motif rail keeps its word; Multetudes v0.6.18, Tetradetudes v0.6.8
 
 - **Why (Daniel, 261014):** one place to read back the étude, and it "should echo what then gets saved in the
