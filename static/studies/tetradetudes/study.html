@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tetradetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "tetradetudes", lock {"material":"tetrad","notepad":true,"audio":true,"transport":true}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, engine/tunings.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, engine/tunings.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs tetradetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -9088,6 +9088,64 @@ function steppedAll(tuning, dir) {
 return { STANDARD_NAME, NAMED_TUNINGS, SPELLING_OVERRIDES, totalOffsets, nameOf, readTuning, shiftWords, describeTuning, openLabel, canStep, stepped, canStepAll, steppedAll };
 })();
 
+/* ===== hub/etude-record.mjs ===== */
+const __m_hub_etude_record_mjs = (() => {
+const { CONFIG_CHANGED, CLOCK_STATE, listen } = __m_hub_bus_mjs;
+/* etude-record.mjs — WHAT THE ÉTUDE IS, computed once (night 66, 261024).
+ *
+ * Daniel, 261014: the Settings card is "a complete view of the étude the user has just structured", and "all of
+ * that content should echo what then gets saved in the practice log". They are THE SAME LIST (rule 6). This file
+ * is the one place it is computed:
+ *
+ *   etudeRecord(doc).snapshot()   the configuration a practice-log entry saves — notepad-card's snapshot, moved
+ *                                 here verbatim (the merged CONFIG_CHANGED, less the derived object and its legacy
+ *                                 alias, plus the clock's bpm and meter)
+ *   describe(snapshot)            that same object, in a musician's words — the Settings card's face; it lives in
+ *                                 the card's own describer module so the engine modules it needs reach only the door that
+ *                                 shows it (a first build here put them in every door that saves notes: scribe
+ *                                 280 → 372 kB)
+ *
+ * ONE RECORD PER DOCUMENT: the notepad's save and the card's description read the same instance, so they cannot
+ * disagree — not two readers that happen to agree today. A key the snapshot carries and this file has no words
+ * for is still SAID (under "also"), so a setting added in a later night appears on the face the moment it reaches
+ * the log, and never in one without the other.
+ *
+ * WHAT THE LOG DOES NOT CARRY is not listed here by hand (that would be the hand-kept list rule 6 forbids): it is
+ * measured, per night, by driving every control the resolver renders and reading the saved entry
+ * (notes/working/scripts/n66snap.py). Night 66's census: the metronome card's subdivision, accents, click voice,
+ * click level and mute, the neck's metronome switch, and the whole mixer do not reach the log — they ride the
+ * clock, the mixer, or no message at all. Whether they should is a question of who OWNS a setting: proposed to
+ * the PO, not settled here.
+ */
+
+const RECORDS = new WeakMap();
+
+/** the one record for this document — created on first ask, listening from then (both messages are replayed) */
+function etudeRecord(doc) {
+  let r = RECORDS.get(doc);
+  if (r) return r;
+  let cfg = {};
+  let bpm = null, meter = null;
+  const subs = new Set();
+  const changed = () => { for (const fn of subs) fn(); };
+  listen(doc, CONFIG_CHANGED, (m) => { if (m && typeof m === "object") { cfg = { ...cfg, ...m }; changed(); } });
+  listen(doc, CLOCK_STATE, (m) => {
+    if (m && typeof m.bpm === "number") bpm = m.bpm;
+    if (m && typeof m.meter === "number") meter = m.meter;
+    changed();
+  });
+  r = {
+    /* ONLY TONES IS STORED (night 59): the object is the name the tones make, so the snapshot drops it and the
+     * legacy `dyad` alias with it */
+    snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
+    onChange: (fn) => { subs.add(fn); return () => subs.delete(fn); },
+  };
+  RECORDS.set(doc, r);
+  return r;
+}
+return { etudeRecord };
+})();
+
 /* ===== hub/modules/notepad-card.mjs ===== */
 const __m_hub_modules_notepad_card_mjs = (() => {
 const { createNotepadSurface } = __m_engine_notepad_surface_mjs;
@@ -9096,6 +9154,7 @@ const { setLabel } = __m_engine_open_string_mjs;
 const { describeTuning } = __m_engine_tunings_mjs;
 const { fromTriadetudesV1 } = __m_engine_notepad_mjs;
 const { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
+const { etudeRecord } = __m_hub_etude_record_mjs;
 const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
 /* notepad-card.mjs — THE GATE CASE: the smallest real module that contributes
  * script, markup AND styles, and the one a door must be able to prune whole.
@@ -9127,6 +9186,7 @@ const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
  * every card that owns a piece of it re-renders from the message (§4.2.3).
  * This card reaches into nothing.
  */
+
 
 
 
@@ -9278,10 +9338,11 @@ const notepadCard = {
     /* the last configuration heard on the bus, merged across its owners — the
      * harmony panel, Shape & Motion, and the clock's tempo. This is what an
      * entry snapshots. Nothing here is read from another module. */
-    let cfg = {};
-    let bpm = null, meter = null;
-    listen(d, CONFIG_CHANGED, (m) => { if (m) cfg = { ...cfg, ...m }; });
-    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; if (m && typeof m.meter === "number") meter = m.meter; });
+    /* MOVED 261024 (night 66, rule 7 — the record, not a second reader): this merge and the clock's bpm/meter
+     * were kept here, and the snapshot below read them. They now live in hub/etude-record.mjs, the ONE place
+     * "what the étude is" is computed, because the Settings card describes the same object on its face — the
+     * log and the description are one list (Daniel, 261014), so they share one instance per document. */
+    const record = etudeRecord(d);
 
     const view = d.defaultView;
     const storage = {
@@ -9369,7 +9430,7 @@ const notepadCard = {
          * (selection.mjs objectOf), derived at the harmony card, so the snapshot drops it — and the legacy
          * `dyad` alias with it. A payload from before tonight (v1) still carries an `object`; the card reads
          * it as a label to compare, never as the truth, and says so once when they disagree. */
-        snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
+        snapshot: () => record.snapshot(),   // hub/etude-record.mjs — the one computation (night 66)
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {
@@ -10850,7 +10911,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.7","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.8","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

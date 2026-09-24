@@ -1,3 +1,21 @@
+## 2026-09-24 — Night 66: Presets becomes Settings — the card says what the étude is, from the one record the practice log saves; the shut Motif rail keeps its word; Multetudes v0.6.18, Tetradetudes v0.6.8
+
+- **Why (Daniel, 261014):** one place to read back the étude, and it "should echo what then gets saved in the
+  practice log". One list (rule 6): `hub/etude-record.mjs` holds the snapshot (moved from `notepad-card.mjs`
+  verbatim); the notepad's save and the card's description read the same instance per page; the words live in
+  `hub/etude-describe.mjs`, imported only by the card. A key the log carries without words is still said.
+- **The census, measured by saving entries:** the log carries key, scale, gamut, centre, tones, progression,
+  window, the motif's parts, repeat, reference, bass, pad, tuning, bar split, bpm and meter. It does NOT carry the
+  metronome card's subdivision, accents, click voice/level/mute, the neck's metronome switch, or the mixer — they
+  ride no message the log hears. Closing that is an ownership decision, proposed to the PO.
+- **The face renames, the module id does not.** No leg hunted the card by its caption; the v0.9 section census gained
+  `presets → settings` in its rename table.
+- **Item 0:** a shut rail keeps `Motif` — down the 30 px column at 1280, across the bar at 390. Night 65's hide undone.
+- **Item 0b:** `.git/_stale_locks` and 51 garbage objects removed, `git gc` (4.04 MiB, garbage 0); `AGENTS.md`
+  ignored and reduced to a pointer at CLAUDE.md.
+- **Gates:** engine 704/704 · hub 14/14 · the two published doors 6,582/2 → **6,582/0** (`doors-n66-two-0923-2155.log`, `…-2203b.log` — a CSS rule matching nothing at boot, and the record naming the describer's path in a door that prunes it) · door gate **22,318/0** (`doors-n66-full-0923-2230.log`; night 65 22,005) · m113, m114, m115 bite (`bite-n66-m11{3,4,5}_…log`) · chain **116/116**, suite green (`bite-0923-2238.log`, 22:38–07:41) — a first start refused at its anchor preflight (m79 and m97 still pointed at the snapshot line that moved to the record; re-anchored) · renders `shots-261024-n66/`, zero page errors · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261024 — night 66, the Settings card and the Motif label survives the fold.md`.
+
 ## 2026-09-23 — DEPLOYED: night 65 live — the motif is named; Multetudes v0.6.17; one study moved; written from the run
 
 - record: run 35934757041 · success · commit f51be5e · fetched 2026-09-23T23:50Z · 6/6 studies byte-identical · digest 8da9e06f0195

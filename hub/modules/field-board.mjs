@@ -281,8 +281,13 @@ export const fieldBoard = {
 #fdRail.fd-shut>#fdFigIn{display:none}
 .fd-railtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
 .fd-railname{font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)}
-.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:none}   /* a 30 px shut column has no room for a word */
-@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:inline}}   /* shut at phone width is a full-width row */
+/* THE WORD SURVIVES THE FOLD (261024, night 66 item 0 — Daniel: "an indicator next to the side collapse"). Night 65 hid
+ * it here — "a 30 px shut column has no room for a word" — which defeated the label's only job: saying something is
+ * THERE when the rail is shut. The column has no width and plenty of height, so the word runs down it; at phone width
+ * the shut rail is a full-width 30 px bar and the word reads across (the existing 600 px breakpoint). */
+.fd-rail.fd-shut>.fd-railtop{flex-direction:column;align-items:center;gap:8px}
+.fd-rail.fd-shut>.fd-railtop>.fd-railname{writing-mode:vertical-rl;order:2}
+@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop{flex-direction:row;justify-content:space-between}.fd-rail.fd-shut>.fd-railtop>.fd-railname{writing-mode:horizontal-tb;order:0}}
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}

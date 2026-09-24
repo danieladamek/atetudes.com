@@ -34,6 +34,7 @@ import { setLabel } from "../../engine/open-string.mjs";
 import { describeTuning } from "../../engine/tunings.mjs";
 import { fromTriadetudesV1 } from "../../engine/notepad.mjs";
 import { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } from "../bus.mjs";
+import { etudeRecord } from "../etude-record.mjs";
 import { SHARED, pcOfKey } from "../../engine/shared-config.mjs";
 
 /** the three four-string groups' labels under standard tuning — derived from the opens by the
@@ -180,10 +181,11 @@ export const notepadCard = {
     /* the last configuration heard on the bus, merged across its owners — the
      * harmony panel, Shape & Motion, and the clock's tempo. This is what an
      * entry snapshots. Nothing here is read from another module. */
-    let cfg = {};
-    let bpm = null, meter = null;
-    listen(d, CONFIG_CHANGED, (m) => { if (m) cfg = { ...cfg, ...m }; });
-    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; if (m && typeof m.meter === "number") meter = m.meter; });
+    /* MOVED 261024 (night 66, rule 7 — the record, not a second reader): this merge and the clock's bpm/meter
+     * were kept here, and the snapshot below read them. They now live in hub/etude-record.mjs, the ONE place
+     * "what the étude is" is computed, because the Settings card describes the same object on its face — the
+     * log and the description are one list (Daniel, 261014), so they share one instance per document. */
+    const record = etudeRecord(d);
 
     const view = d.defaultView;
     const storage = {
@@ -271,7 +273,7 @@ export const notepadCard = {
          * (selection.mjs objectOf), derived at the harmony card, so the snapshot drops it — and the legacy
          * `dyad` alias with it. A payload from before tonight (v1) still carries an `object`; the card reads
          * it as a label to compare, never as the truth, and says so once when they disagree. */
-        snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
+        snapshot: () => record.snapshot(),   // hub/etude-record.mjs — the one computation (night 66)
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {

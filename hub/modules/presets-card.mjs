@@ -18,6 +18,8 @@ import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
+import { etudeRecord } from "../etude-record.mjs";
+import { describe } from "../etude-describe.mjs";
 
 /* label · the config it seeds. `take` defaults back to "one" exactly as v0.9
  * resets it, so a preset states only what it means. */
@@ -45,11 +47,17 @@ export const presetsCard = {
   order: 12,
   controls: ["psSel"],
 
+  /* THE SETTINGS CARD (261024, night 66 — Daniel, 261014: "a complete view of the étude the user has just
+   * structured… all of that content should echo what then gets saved in the practice log"). The FACE renames;
+   * the module id `presets-card` does not — an id is an address, a caption an appearance (rule 12), and every
+   * seat, lock and pin addresses the id. The picker and its trace are unchanged. Below the rule, the étude
+   * described from hub/etude-record.mjs — the SAME record the practice log saves, one instance per page. */
   markup: `
-  <h2>Presets</h2>
+  <h2>Settings</h2>
   <label>Start from</label>
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
+  <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
   <div class="hint ps-note info">A preset seeds every control and leaves them all live. The journal
   page's exercises are here as the engine grows into them; the key, the scale and the reference stay
   whatever you set them to.</div>`,
@@ -58,7 +66,9 @@ export const presetsCard = {
 .ps-note{margin-top:8px}
 #psSel{width:100%}
 .ps-trace{margin-top:6px;color:var(--gray)}
-.ps-trace b{font-weight:600;color:var(--ink)}`,
+.ps-trace b{font-weight:600;color:var(--ink)}
+.ps-desc{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;line-height:1.45}
+.ps-desc .ps-line{margin:0 0 3px}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -99,6 +109,19 @@ export const presetsCard = {
       sel.value = "";                      // v0.9's own behaviour: seed, then release
       paintTrace();
     });
+    /* THE DESCRIPTION: the record's snapshot, described — repainted whenever the record hears the bus */
+    const record = etudeRecord(d), desc = byId("psDesc");
+    const paintDesc = () => {
+      desc.textContent = "";
+      for (const { part, text } of describe(record.snapshot())) {
+        const line = d.createElement("div");
+        line.className = "ps-line";
+        if (part === "also") line.style.color = "var(--gray)";   // inline: a rule for it would match nothing at boot (the door's CSS check)
+        line.dataset.part = part; line.textContent = text;
+        desc.appendChild(line);
+      }
+    };
+    record.onChange(paintDesc); paintDesc();
     /* the trace re-derives on every config move — drift is a comparison,
      * never a flag */
     listen(d, CONFIG_CHANGED, (m) => {

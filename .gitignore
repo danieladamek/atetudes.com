@@ -29,3 +29,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# AGENTS.md — ruled unwanted 261024 (recreated by the ChatGPT app on contact); the contract is CLAUDE.md
+AGENTS.md

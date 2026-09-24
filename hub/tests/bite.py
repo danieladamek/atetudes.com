@@ -1845,9 +1845,9 @@ def m78_a_second_spelling_override_creeps_in():
 
 def m79_the_snapshot_strips_the_tuning_again():
     # the field report's exact line: the export describes the étude AS IF IN STANDARD
-    p, original, mutated = patch("hub/modules/notepad-card.mjs",
-        "        snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },",   # re-anchored 261013 (night 59): the line strips the derived label now
-        "        snapshot: () => { const { object: _object, dyad: _dyad, tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },")
+    p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
+        "    snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },",   # re-anchored 261013 (night 59): the line strips the derived label now
+        "    snapshot: () => { const { object: _object, dyad: _dyad, tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },")
     try:
         p.write_text(mutated)
         build()
@@ -2420,11 +2420,59 @@ def m112_the_readout_forgets_the_movement():
         p.write_text(original)
 
 
+def m113_the_settings_card_reads_its_own_list():
+    # night 66: the card describes its OWN merge of the bus (a second reader) instead of the log's record — no clock in it. The one-list pin must bite.
+    p, original, mutated = patch('hub/modules/presets-card.mjs',
+        'for (const { part, text } of describe(record.snapshot())) {',
+        'for (const { part, text } of describe(live)) {   // (a second reader)')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the face states the tempo and key the saved entry stores" in g.stdout or "ONE LIST" in g.stdout
+        record("the Settings card reads its own list — a second reader beside the log's",
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m114_a_setting_without_words_leaves_the_face():
+    # night 66: describe drops the keys it has no words for — a later setting would reach the log and never the face. The one-list pin must bite.
+    p, original, mutated = patch('hub/etude-describe.mjs',
+        '  if (also.length) say(',
+        '  if (false) say(')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "ONE LIST" in g.stdout
+        record('a setting without words leaves the face — in the log, not on the card',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m115_the_shut_rail_hides_its_name_again():
+    # night 66: night 65's hide returns — a shut rail at 1280 hides Motif, the label's only job defeated. The fold pin must bite.
+    p, original, mutated = patch('hub/modules/field-board.mjs',
+        '.fd-rail.fd-shut>.fd-railtop>.fd-railname{writing-mode:vertical-rl;order:2}',
+        '.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:none}')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "keeps Motif legible" in g.stdout
+        record('the shut rail hides its name again — nothing says the motif is there',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
-    p, original, mutated = patch("hub/modules/notepad-card.mjs",
-        "        snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },",
-        "        snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),   // (the object stored again)")
+    p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
+        "    snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },",
+        "    snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),   // (the object stored again)")
     try:
         p.write_text(mutated)
         build()
@@ -2585,7 +2633,9 @@ def main():
                m103_a_correction_lands_inside_the_dispatch_again, m104_the_mixer_loses_its_view, m105_the_neck_mini_shrinks_the_readout_at_390,
                m106_the_repeat_button_loses_its_name, m107_the_mini_keeps_repeat_to_itself, m108_the_mini_stops_hearing_repeat,
                m109_typing_roles_under_a_scale_stays_scale, m110_the_neck_transport_slides_again,
-               m111_the_motif_rail_goes_nameless_again, m112_the_readout_forgets_the_movement)
+               m111_the_motif_rail_goes_nameless_again, m112_the_readout_forgets_the_movement,
+               m113_the_settings_card_reads_its_own_list, m114_a_setting_without_words_leaves_the_face,
+               m115_the_shut_rail_hides_its_name_again)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

@@ -3882,7 +3882,9 @@ console.log(JSON.stringify(out));
         # keeps the section's identity while its name moves; the census
         # compares identity, not spelling. 260914: v0.9's "harmony" is the
         # door's "centricity" (register 27).
-        RENAMED = { "harmony": "centricity" }
+        # 261024 (night 66): v0.9's "presets" is the door's "settings" — Daniel, 261014, the card says everything the
+        # étude is; the picker it held is unchanged and still found by its control (#psSel), never by the caption.
+        RENAMED = { "harmony": "centricity", "presets": "settings" }
         got = got + [k for k, v in RENAMED.items() if v in got]
         for t in want:
             check(t in got, f"{tag} v0.9 section {t!r} is missing from the door "
@@ -6989,14 +6991,57 @@ console.log(JSON.stringify(out));
         order65 = ro65()
         check(order65.index("grip") < order65.index("arpeggiated") < order65.index("figure 6 steps"),
               f"{tag} night 65: the readout speaks the motif in its order — placement, movement, figure: {order65[-240:]!r}")
+        # REWRITTEN night 66 (261024 item 0, rule 7): night 65 pinned that a shut rail at 1280 HIDES the word — the label's
+        # only job is to say something is there WHEN SHUT (Daniel: "an indicator next to the side collapse"). Now: shut,
+        # the word is legible at both widths — down the 30 px column at 1280, across the 30 px bar at 390 — and inside the rail.
+        shut65 = """() => { const n = document.getElementById('fdRailName'), R = n.getBoundingClientRect(), rl = document.getElementById('fdRail').getBoundingClientRect();
+          return { shown: getComputedStyle(n).display !== 'none' && R.width > 0 && R.height > 0, wm: getComputedStyle(n).writingMode, text: n.textContent.trim(),
+            inside: R.left >= rl.left - 0.5 && R.right <= rl.right + 0.5 && R.top >= rl.top - 0.5 && R.bottom <= rl.bottom + 0.5, railW: Math.round(rl.width) }; }"""
         p65.click("#fdRailBtn"); p65.wait_for_timeout(150)
-        check(p65.evaluate("() => getComputedStyle(document.getElementById('fdRailName')).display") == "none",
-              f"{tag} night 65: a shut rail at 1280 (a 30 px column) hides the word")
+        s1280 = p65.evaluate(shut65)
+        check(s1280["shown"] and s1280["text"] == "Motif" and s1280["inside"] and s1280["wm"].startswith("vertical") and s1280["railW"] <= 32,
+              f"{tag} night 66: a shut rail at 1280 keeps Motif legible — down its 30 px column, inside it, the neck's width untaken: {s1280}")
         p65.set_viewport_size({"width": 390, "height": 900}); p65.wait_for_timeout(200)
-        check(p65.evaluate("() => getComputedStyle(document.getElementById('fdRailName')).display") != "none",
-              f"{tag} night 65: shut at 390 the rail is a full-width row and keeps its name")
+        s390 = p65.evaluate(shut65)
+        check(s390["shown"] and s390["inside"] and s390["wm"] == "horizontal-tb",
+              f"{tag} night 66: shut at 390 the rail is a full-width bar and the word reads across it: {s390}")
         check(not errs65, f"{tag} night 65: no page errors: {errs65[:3]}")
         ctx65.close()
+
+    # ---------------- NIGHT 66 (261024): THE SETTINGS CARD SAYS WHAT THE ÉTUDE IS — the log's own list, on the face ----------
+    # Daniel, 261014: the description "should echo what then gets saved in the practice log" — ONE list (rule 6). The
+    # card's description and the log's snapshot come from ONE record per page (hub/etude-record.mjs). Proven at the
+    # effect, not by reading code: (1) a setting nobody has written words for, announced on the bus, appears BOTH in a
+    # saved entry and on the face; (2) the tempo and the key the face states are the ones the saved entry stores;
+    # (3) absence reads as absence — the whole field, no bass sounding, no pad. The card is found by its control (#psSel),
+    # never by its caption (rule 12); the caption itself is pinned once, as the rename's claim.
+    if 'id="psDesc"' in html_path.read_text():
+        ctx66 = pw.new_context(viewport={"width": 1280, "height": 900}); p66 = ctx66.new_page(); errs66 = []; p66.on("pageerror", lambda e: errs66.append(str(e)))
+        p66.goto(html_path.as_uri()); p66.wait_for_selector("#cards", state="attached"); p66.wait_for_timeout(300)
+        card66 = p66.evaluate("() => { const c = document.getElementById('psSel').closest('.card'); return { h2: c.querySelector('h2').textContent.trim(), desc: !!c.querySelector('#psDesc') }; }")
+        check(card66["h2"] == "Settings" and card66["desc"], f"{tag} night 66: the card holding the preset picker is headed Settings and carries the description: {card66}")
+        d66 = lambda: p66.inner_text("#psDesc")
+        check("the whole field" in d66() and "no bass sounds; no pad" in d66(),
+              f"{tag} night 66: absence reads as absence — the whole field, no bass sounding, no pad: {d66()!r}")
+        p66.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { zzNight66: 7 } }))"); p66.wait_for_timeout(150)
+        p66.fill("#bpmRange", "131"); p66.dispatch_event("#bpmRange", "input"); p66.dispatch_event("#bpmRange", "change")
+        p66.select_option("#hcKey", "D"); p66.wait_for_timeout(300)
+        p66.fill("#journalIn", "night 66"); p66.click("#saveEntry"); p66.wait_for_timeout(300)
+        log66 = json.loads(p66.evaluate("() => localStorage.getItem('multetudes.v1.log')"))
+        ents66 = log66.get("entries", log66) if isinstance(log66, dict) else log66
+        saved66 = ents66[-1]["payload"]["data"]
+        face66 = d66()
+        check(saved66.get("zzNight66") == 7 and "zzNight66 7" in face66,
+              f"{tag} night 66: ONE LIST — a setting with no words yet reaches the saved entry AND the face, never one without the other: saved {saved66.get('zzNight66')!r}, face {face66[-120:]!r}")
+        check(saved66.get("bpm") == 131 and f"{saved66.get('bpm')} bpm" in face66 and saved66.get("key") == "D" and face66.split(chr(10))[1].startswith("D "),
+              f"{tag} night 66: the face states the tempo and key the saved entry stores: saved bpm {saved66.get('bpm')} key {saved66.get('key')!r}; face {face66[:80]!r}")
+        check("object" not in saved66, f"{tag} night 66: only the tones are stored — the object stays derived: {sorted(saved66)}")
+        for w66 in (390,):
+            p66.set_viewport_size({"width": w66, "height": 900}); p66.wait_for_timeout(200)
+            box66 = p66.evaluate("() => { const c = document.getElementById('psSel').closest('.card').getBoundingClientRect(), d = document.getElementById('psDesc').getBoundingClientRect(); return { inside: d.left >= c.left && d.right <= c.right + 0.5, over: document.getElementById('psDesc').scrollWidth > document.getElementById('psDesc').clientWidth + 1 }; }")
+            check(box66["inside"] and not box66["over"], f"{tag} night 66: at {w66} the description is a column inside its card, nothing overflowing: {box66}")
+        check(not errs66, f"{tag} night 66: no page errors: {errs66[:3]}")
+        ctx66.close()
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

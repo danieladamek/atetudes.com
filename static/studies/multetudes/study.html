@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/modules/notepad-card.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -164,8 +164,13 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 #fdRail.fd-shut>#fdFigIn{display:none}
 .fd-railtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
 .fd-railname{font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)}
-.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:none}   /* a 30 px shut column has no room for a word */
-@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:inline}}   /* shut at phone width is a full-width row */
+/* THE WORD SURVIVES THE FOLD (261024, night 66 item 0 — Daniel: "an indicator next to the side collapse"). Night 65 hid
+ * it here — "a 30 px shut column has no room for a word" — which defeated the label's only job: saying something is
+ * THERE when the rail is shut. The column has no width and plenty of height, so the word runs down it; at phone width
+ * the shut rail is a full-width 30 px bar and the word reads across (the existing 600 px breakpoint). */
+.fd-rail.fd-shut>.fd-railtop{flex-direction:column;align-items:center;gap:8px}
+.fd-rail.fd-shut>.fd-railtop>.fd-railname{writing-mode:vertical-rl;order:2}
+@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop{flex-direction:row;justify-content:space-between}.fd-rail.fd-shut>.fd-railtop>.fd-railname{writing-mode:horizontal-tb;order:0}}
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -429,6 +434,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 #psSel{width:100%}
 .ps-trace{margin-top:6px;color:var(--gray)}
 .ps-trace b{font-weight:600;color:var(--ink)}
+.ps-desc{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;line-height:1.45}
+.ps-desc .ps-line{margin:0 0 3px}
 
 .pg-hid{display:none}
 #pgNote{margin-top:8px}
@@ -655,10 +662,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <select id="pgStart" data-control="pgStart" class="pg-cyc"></select>
   <div class="hint" id="pgNote"></div></div>
 <div class="card">
-  <h2>Presets</h2>
+  <h2>Settings</h2>
   <label>Start from</label>
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
+  <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
   <div class="hint ps-note info">A preset seeds every control and leaves them all live. The journal
   page's exercises are here as the engine grows into them; the key, the scale and the reference stay
   whatever you set them to.</div></div>
@@ -8920,8 +8928,13 @@ const fieldBoard = {
 #fdRail.fd-shut>#fdFigIn{display:none}
 .fd-railtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
 .fd-railname{font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)}
-.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:none}   /* a 30 px shut column has no room for a word */
-@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop>.fd-railname{display:inline}}   /* shut at phone width is a full-width row */
+/* THE WORD SURVIVES THE FOLD (261024, night 66 item 0 — Daniel: "an indicator next to the side collapse"). Night 65 hid
+ * it here — "a 30 px shut column has no room for a word" — which defeated the label's only job: saying something is
+ * THERE when the rail is shut. The column has no width and plenty of height, so the word runs down it; at phone width
+ * the shut rail is a full-width 30 px bar and the word reads across (the existing 600 px breakpoint). */
+.fd-rail.fd-shut>.fd-railtop{flex-direction:column;align-items:center;gap:8px}
+.fd-rail.fd-shut>.fd-railtop>.fd-railname{writing-mode:vertical-rl;order:2}
+@media (max-width:600px){.fd-rail.fd-shut>.fd-railtop{flex-direction:row;justify-content:space-between}.fd-rail.fd-shut>.fd-railtop>.fd-railname{writing-mode:horizontal-tb;order:0}}
 #fdRailBtn{font:inherit;font-size:11px;line-height:1;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;color:var(--gray)}
 .fd-placerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -13413,6 +13426,64 @@ function createNotepadSurface(opts) {
 return { CAPABILITIES, createNotepadSurface };
 })();
 
+/* ===== hub/etude-record.mjs ===== */
+const __m_hub_etude_record_mjs = (() => {
+const { CONFIG_CHANGED, CLOCK_STATE, listen } = __m_hub_bus_mjs;
+/* etude-record.mjs — WHAT THE ÉTUDE IS, computed once (night 66, 261024).
+ *
+ * Daniel, 261014: the Settings card is "a complete view of the étude the user has just structured", and "all of
+ * that content should echo what then gets saved in the practice log". They are THE SAME LIST (rule 6). This file
+ * is the one place it is computed:
+ *
+ *   etudeRecord(doc).snapshot()   the configuration a practice-log entry saves — notepad-card's snapshot, moved
+ *                                 here verbatim (the merged CONFIG_CHANGED, less the derived object and its legacy
+ *                                 alias, plus the clock's bpm and meter)
+ *   describe(snapshot)            that same object, in a musician's words — the Settings card's face; it lives in
+ *                                 the card's own describer module so the engine modules it needs reach only the door that
+ *                                 shows it (a first build here put them in every door that saves notes: scribe
+ *                                 280 → 372 kB)
+ *
+ * ONE RECORD PER DOCUMENT: the notepad's save and the card's description read the same instance, so they cannot
+ * disagree — not two readers that happen to agree today. A key the snapshot carries and this file has no words
+ * for is still SAID (under "also"), so a setting added in a later night appears on the face the moment it reaches
+ * the log, and never in one without the other.
+ *
+ * WHAT THE LOG DOES NOT CARRY is not listed here by hand (that would be the hand-kept list rule 6 forbids): it is
+ * measured, per night, by driving every control the resolver renders and reading the saved entry
+ * (notes/working/scripts/n66snap.py). Night 66's census: the metronome card's subdivision, accents, click voice,
+ * click level and mute, the neck's metronome switch, and the whole mixer do not reach the log — they ride the
+ * clock, the mixer, or no message at all. Whether they should is a question of who OWNS a setting: proposed to
+ * the PO, not settled here.
+ */
+
+const RECORDS = new WeakMap();
+
+/** the one record for this document — created on first ask, listening from then (both messages are replayed) */
+function etudeRecord(doc) {
+  let r = RECORDS.get(doc);
+  if (r) return r;
+  let cfg = {};
+  let bpm = null, meter = null;
+  const subs = new Set();
+  const changed = () => { for (const fn of subs) fn(); };
+  listen(doc, CONFIG_CHANGED, (m) => { if (m && typeof m === "object") { cfg = { ...cfg, ...m }; changed(); } });
+  listen(doc, CLOCK_STATE, (m) => {
+    if (m && typeof m.bpm === "number") bpm = m.bpm;
+    if (m && typeof m.meter === "number") meter = m.meter;
+    changed();
+  });
+  r = {
+    /* ONLY TONES IS STORED (night 59): the object is the name the tones make, so the snapshot drops it and the
+     * legacy `dyad` alias with it */
+    snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
+    onChange: (fn) => { subs.add(fn); return () => subs.delete(fn); },
+  };
+  RECORDS.set(doc, r);
+  return r;
+}
+return { etudeRecord };
+})();
+
 /* ===== hub/modules/notepad-card.mjs ===== */
 const __m_hub_modules_notepad_card_mjs = (() => {
 const { createNotepadSurface } = __m_engine_notepad_surface_mjs;
@@ -13421,6 +13492,7 @@ const { setLabel } = __m_engine_open_string_mjs;
 const { describeTuning } = __m_engine_tunings_mjs;
 const { fromTriadetudesV1 } = __m_engine_notepad_mjs;
 const { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
+const { etudeRecord } = __m_hub_etude_record_mjs;
 const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
 /* notepad-card.mjs — THE GATE CASE: the smallest real module that contributes
  * script, markup AND styles, and the one a door must be able to prune whole.
@@ -13452,6 +13524,7 @@ const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
  * every card that owns a piece of it re-renders from the message (§4.2.3).
  * This card reaches into nothing.
  */
+
 
 
 
@@ -13603,10 +13676,11 @@ const notepadCard = {
     /* the last configuration heard on the bus, merged across its owners — the
      * harmony panel, Shape & Motion, and the clock's tempo. This is what an
      * entry snapshots. Nothing here is read from another module. */
-    let cfg = {};
-    let bpm = null, meter = null;
-    listen(d, CONFIG_CHANGED, (m) => { if (m) cfg = { ...cfg, ...m }; });
-    listen(d, CLOCK_STATE, (m) => { if (m && typeof m.bpm === "number") bpm = m.bpm; if (m && typeof m.meter === "number") meter = m.meter; });
+    /* MOVED 261024 (night 66, rule 7 — the record, not a second reader): this merge and the clock's bpm/meter
+     * were kept here, and the snapshot below read them. They now live in hub/etude-record.mjs, the ONE place
+     * "what the étude is" is computed, because the Settings card describes the same object on its face — the
+     * log and the description are one list (Daniel, 261014), so they share one instance per document. */
+    const record = etudeRecord(d);
 
     const view = d.defaultView;
     const storage = {
@@ -13694,7 +13768,7 @@ const notepadCard = {
          * (selection.mjs objectOf), derived at the harmony card, so the snapshot drops it — and the legacy
          * `dyad` alias with it. A payload from before tonight (v1) still carries an `object`; the card reads
          * it as a label to compare, never as the truth, and says so once when they disagree. */
-        snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
+        snapshot: () => record.snapshot(),   // hub/etude-record.mjs — the one computation (night 66)
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
          * the message; the tempo goes to the clock owner as a request. */
         apply: (data) => {
@@ -13825,12 +13899,100 @@ const notepadCard = {
 return { SET_LABELS, notepadCard };
 })();
 
+/* ===== hub/etude-describe.mjs ===== */
+const __m_hub_etude_describe_mjs = (() => {
+const { objectOf, tonePick } = __m_engine_selection_mjs;
+const { describeTuning } = __m_engine_tunings_mjs;
+/* etude-describe.mjs — the étude, in a musician's words (night 66, 261024): describe(snapshot) for the Settings
+ * card. The SNAPSHOT comes from hub/etude-record.mjs — the one record the practice log saves; this file only
+ * words it, so the face and the log cannot hold different lists. Kept apart from the record so the engine
+ * modules it needs (selection, tunings) reach only the door that shows the card. */
+
+
+/* ---------------- the description: the snapshot, in a musician's words ---------------- */
+
+const SCALE = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
+const OBJECT = { scale: "the scale itself", dyad: "a dyad", triad: "a triad", tetrad: "a tetrad", ninth: "a 9th chord",
+  eleventh: "an 11th chord", thirteenth: "a 13th chord", shell: "a shell" };
+const CYCLE = { scale: "the scale's own chords, step by step", thirds: "a cycle of thirds", fourths: "a cycle of fourths",
+  fifths: "a cycle of fifths", sixths: "a cycle of sixths" };
+const FORM = { "ii-V-I": "a ii–V–I", "ii-V-i": "a minor ii–V–i", turnaround: "the I–vi–ii–V turnaround",
+  "blues-12": "a twelve-bar blues", "rhythm-a": "the A section of rhythm changes", "cycle-4ths": "a cycle of fourths" };
+const NUMERAL = ["I", "II", "III", "IV", "V", "VI", "VII"];
+const UNDER = { none: null, root: "the root", third: "a 3rd below", fifth: "a 5th below" };
+const underWord = (v) => (v in UNDER ? UNDER[v] : /^tone:(\d)$/.test(String(v)) ? `the ${ordinal(+String(v).slice(5))} in the bass` : String(v));
+const ordinal = (n) => (n === 1 ? "root" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
+const role = (d) => (Number(d) === 1 ? "R" : String(d));
+const degreesOf = (g) => (Array.isArray(g) ? g : String(g).split(",")).map((x) => String(x).trim()).filter(Boolean);
+
+/** the keys this file has words for — anything else in a snapshot is said under "also", never dropped */
+const DESCRIBED = ["bpm", "meter", "split", "key", "scale", "gamut", "ref", "centreSrc", "tones", "dyad",
+  "source", "cycle", "form", "custom", "start", "chart", "strings", "startDeg", "nearFret", "notesPer", "take",
+  "movement", "address", "figure", "repeat", "bass", "sounded", "pad", "tuning"];
+
+/** [{ part, text }] — one line per part of the étude, in the order a player builds it */
+function describe(s) {
+  const out = [];
+  const say = (part, text) => out.push({ part, text });
+  // the clock
+  const tempo = typeof s.bpm === "number" ? `${s.bpm} bpm` : "the clock's own tempo";
+  const bar = typeof s.meter === "number" ? `, ${s.meter}/4` : "";
+  const split = s.split && s.split !== "4" ? ` — each bar split ${s.split}` : " — one chord to a bar";
+  say("tempo", `${tempo}${bar}${split}`);
+  // the field and its centre
+  const field = s.gamut == null ? "the whole field" : `narrowed to degrees ${degreesOf(s.gamut).join(" ")}`;
+  say("field", `${s.key || "C"} ${SCALE[s.scale] || s.scale || "major"} — ${field}`);
+  const centre = s.centreSrc === "follows" ? "each bar read against its own chord's root"
+    : Number(s.ref) ? `centred on degree ${Number(s.ref) + 1} of the key` : "centred on the key";
+  say("centre", centre);
+  // the object: DERIVED from the tones, never stored (night 59)
+  const pick = tonePick(s);
+  let obj;
+  try { obj = objectOf(pick); } catch (e) { obj = null; }
+  say("object", pick == null ? "the scale itself — every note the field offers"
+    : `${OBJECT[obj] || "a chord"} — ${pick.map(role).join(" ")}`);
+  // the progression
+  const start = Number.isInteger(s.start) ? ` from ${NUMERAL[s.start] || s.start}` : "";
+  say("progression", s.source === "custom" ? (String(s.custom || "").trim() ? `your own chart: ${s.custom.trim()}` : "your own chart — empty")
+    : s.source === "form" ? `${FORM[s.form] || s.form}${start}`
+    : `${CYCLE[s.cycle] || s.cycle || "a cycle"}${start}`);
+  // the window (position)
+  if (Number.isInteger(s.startDeg) || Number.isInteger(s.nearFret))
+    say("window", `the window framed from the ${ordinal((s.startDeg ?? 0) + 1)} of the key, near fret ${s.nearFret ?? "—"}`);
+  // the motif (the span Take/Movement → figure — motif, 261022): placement, the take, movement, figure
+  const strings = Array.isArray(s.strings) ? `strings ${s.strings.join("–")}` : "the neck's strings";
+  const place = s.notesPer === 1 || s.notesPer == null ? "grip" : "line";
+  const take = s.take === "all" ? "every occurrence" : "one of each";
+  const figured = String(s.figure || "").trim();
+  const move = figured ? "arpeggiated in the figure's order" : /^arpeggi/.test(String(s.movement)) ? "arpeggiated" : "strummed";
+  const fig = figured ? `, ${figured.replace(/\s+/g, "")} (${s.address === "tones" ? "by tone" : "by string"})` : ", no figure";
+  say("motif", `a motif of ${place}, ${take}, ${move}${fig} — on ${strings}`);
+  say("repeat", s.repeat ? "repeating the current bar" : "running through the chart");
+  // under the harmony
+  const fretted = underWord(s.bass ?? "root");
+  say("reference", fretted ? `fretted under it: ${fretted}` : "nothing fretted under it");
+  const sounded = underWord(s.sounded ?? "none");
+  say("sound", `${sounded ? `the bass sounds ${sounded}` : "no bass sounds"}; ${s.pad ? "a pad holds the chord" : "no pad"}`);
+  // the neck
+  say("tuning", s.tuning == null ? "standard tuning" : (describeTuning(s.tuning) || "a tuning of its own"));
+  // a chart written in the pad (the notepad's ```chart block): the progression the étude runs, when one is written
+  if (s.chart != null && String(s.chart).trim()) say("chart", `a chart written in the notes: ${String(s.chart).trim().split(/\s+/).length} symbols`);
+  // anything the log carries that this file has no words for — SAID, never dropped
+  const also = Object.keys(s).filter((k) => !DESCRIBED.includes(k)).sort();
+  if (also.length) say("also", also.map((k) => `${k} ${JSON.stringify(s[k])}`).join(" · "));
+  return out;
+}
+return { DESCRIBED, describe };
+})();
+
 /* ===== hub/modules/presets-card.mjs ===== */
 const __m_hub_modules_presets_card_mjs = (() => {
 const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
+const { etudeRecord } = __m_hub_etude_record_mjs;
+const { describe } = __m_hub_etude_describe_mjs;
 /* presets-card.mjs — v0.9's PRESETS card, LIVE (Multetudes surface,
  * 2026-08-29).
  *
@@ -13847,6 +14009,8 @@ const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
  * selection and asserted to produce a non-empty, lawful take, so a recipe
  * that stops building fails here at import, not in Daniel's browser.
  */
+
+
 
 
 
@@ -13877,11 +14041,17 @@ const presetsCard = {
   order: 12,
   controls: ["psSel"],
 
+  /* THE SETTINGS CARD (261024, night 66 — Daniel, 261014: "a complete view of the étude the user has just
+   * structured… all of that content should echo what then gets saved in the practice log"). The FACE renames;
+   * the module id `presets-card` does not — an id is an address, a caption an appearance (rule 12), and every
+   * seat, lock and pin addresses the id. The picker and its trace are unchanged. Below the rule, the étude
+   * described from hub/etude-record.mjs — the SAME record the practice log saves, one instance per page. */
   markup: `
-  <h2>Presets</h2>
+  <h2>Settings</h2>
   <label>Start from</label>
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
+  <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
   <div class="hint ps-note info">A preset seeds every control and leaves them all live. The journal
   page's exercises are here as the engine grows into them; the key, the scale and the reference stay
   whatever you set them to.</div>`,
@@ -13890,7 +14060,9 @@ const presetsCard = {
 .ps-note{margin-top:8px}
 #psSel{width:100%}
 .ps-trace{margin-top:6px;color:var(--gray)}
-.ps-trace b{font-weight:600;color:var(--ink)}`,
+.ps-trace b{font-weight:600;color:var(--ink)}
+.ps-desc{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;line-height:1.45}
+.ps-desc .ps-line{margin:0 0 3px}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -13931,6 +14103,19 @@ const presetsCard = {
       sel.value = "";                      // v0.9's own behaviour: seed, then release
       paintTrace();
     });
+    /* THE DESCRIPTION: the record's snapshot, described — repainted whenever the record hears the bus */
+    const record = etudeRecord(d), desc = byId("psDesc");
+    const paintDesc = () => {
+      desc.textContent = "";
+      for (const { part, text } of describe(record.snapshot())) {
+        const line = d.createElement("div");
+        line.className = "ps-line";
+        if (part === "also") line.style.color = "var(--gray)";   // inline: a rule for it would match nothing at boot (the door's CSS check)
+        line.dataset.part = part; line.textContent = text;
+        desc.appendChild(line);
+      }
+    };
+    record.onChange(paintDesc); paintDesc();
     /* the trace re-derives on every config move — drift is a comparison,
      * never a flag */
     listen(d, CONFIG_CHANGED, (m) => {
@@ -15376,7 +15561,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.17","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.18","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>
