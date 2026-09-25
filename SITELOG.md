@@ -1,3 +1,14 @@
+## 2026-09-25 — DEPLOYED: night 67 live — the header slot stacks at 390; the clock joins the transport; Multetudes v0.6.19, Tetradetudes v0.6.9; two studies moved; written from the run
+
+- record: run 36086818607 · success · commit d08c3b3 · fetched 2026-09-25T02:45Z · 6/6 studies byte-identical · digest 869faa3a89d1
+- Actions run 36086818607 green on `d08c3b3` — https://github.com/danieladamek/atetudes.com/actions/runs/36086818607 (created 2026-09-25T02:34:33Z, finished 2026-09-25T02:44:51Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 60880af0d78a · live 60880af0d78a — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo b372070c62c5 · live b372070c62c5 — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-24 — Night 67: the shell's header slot no longer covers the header's words at 390 (it did on two published pages); the clock joins the transport in the neck's header; Multetudes v0.6.19, Tetradetudes v0.6.9
 
 - **Item 1 (night 53's #8, PO ruling 261024):** the shell sat a panel's header slot (the notepad's title field) absolute
