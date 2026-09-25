@@ -1,3 +1,14 @@
+## 2026-09-25 — DEPLOYED: night 68 live — the page fits the phone; Multetudes v0.6.20; one study moved; written from the run
+
+- record: run 36146745161 · success · commit c5ae479 · fetched 2026-09-25T14:30Z · 6/6 studies byte-identical · digest 8289d174617f
+- Actions run 36146745161 green on `c5ae479` — https://github.com/danieladamek/atetudes.com/actions/runs/36146745161 (created 2026-09-25T14:19:50Z, finished 2026-09-25T14:30:13Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 82229e91f76f · live 82229e91f76f — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo b372070c62c5 · live b372070c62c5 — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-25 — Night 68: the page fits the phone — the card rows stack below 600 px (the published multetudes was 790 px wide at 390); a page-width check in every door; Multetudes v0.6.20
 
 - **Why (ruling 261025, doctrine):** a width check measures the PAGE, not an element. Night 67 found the published
