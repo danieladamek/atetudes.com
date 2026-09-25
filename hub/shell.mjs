@@ -227,8 +227,27 @@ function initCollapse(doc) {
     if (slot) {
       // placement styled inline: a stylesheet rule would orphan the CSS
       // check in every door whose modules declare no slot
-      slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
-      p.appendChild(slot);
+      /* STACK, DO NOT SHRINK (261024b, night 67 item 1 — night 53's #8, PO ruling 261024): the slot sat
+       * ABSOLUTE in the header band with nothing reserving its room, so where the band is narrow it lay over
+       * the header's own words — at 390 the title field covered 99 px of "Practice log — 0 saved" in scribe
+       * AND in the published tetradetudes, 59 px of "Notepad" in the published multetudes. The seat is now
+       * MEASURED, never a per-page rule: the slot takes the band only while the header's words end left of it;
+       * otherwise it drops into the flow on a line of its own directly under the header (night 51's answer).
+       * Re-measured on resize. It is placed after the header either way, so the flow seat is under the words. */
+      (header && header.nextElementSibling ? header.nextElementSibling : p.lastChild).after(slot);
+      const seat = () => {
+        slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
+        slot.style.margin = ""; slot.style.maxWidth = "";
+        if (!header || !slot.getClientRects().length) return;
+        const words = doc.createRange(); words.selectNodeContents(header);
+        const ink = words.getBoundingClientRect(), at = slot.getBoundingClientRect(), box = p.getBoundingClientRect();
+        if (ink.right + 8 > at.left || at.left < box.left) {
+          slot.style.position = "static"; slot.style.margin = "2px 0 8px"; slot.style.maxWidth = "100%";
+        }
+      };
+      seat();
+      const view = doc.defaultView;
+      if (view) { view.addEventListener("resize", seat); view.requestAnimationFrame(seat); }
     }
     /* ROW COLLAPSE (260917, night 22 item 6a — ruled, night 21's option b):
      * cards sharing a declared row collapse TOGETHER. Cards in a row are

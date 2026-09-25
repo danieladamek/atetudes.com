@@ -191,6 +191,13 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * beside the readout. At phone width the mini is on a row of its OWN below the title-and-readout row
  * (stack, do not shrink — measured: 13 px beside the readout at 390); since night 63 that is the shell's
  * readhead grammar for every board with a mini, not this board's own rule. */
+/* THE CLOCK IN THE HEADER (night 67): bar split · bpm · metronome, left of the transport. At 1280 it takes 283 px of
+ * a 615 px seat; at phone width the header already stacks the mini (the shell's readhead grammar), and the clock
+ * takes a row of its OWN between the readout and the mini — three rows, stack, do not shrink (night 51). */
+.fd-headclock{display:inline-flex;gap:9px;align-items:center;flex:0 0 auto;margin-right:14px;font-size:12px;
+  color:var(--gray);font-weight:normal;letter-spacing:0;text-transform:none}
+.fd-headclock select{width:auto;font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;color:var(--ink)}
+@media (max-width:480px){.fd-headclock{flex:1 1 100%;min-width:0;flex-wrap:wrap;row-gap:6px;margin:6px 0 0}}
 .fd-headmini{display:inline-flex;gap:4px;flex:0 0 auto}
 .fd-headmini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -199,8 +206,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
-.fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
-  border:1px solid var(--line);border-radius:6px;color:var(--ink)}
+/* .fd-railrow select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
+ * clock; its look travelled with it as .fd-headclock select. A rule that matches nothing fails the door's CSS check. */
 .fd-lab2{font-size:12px;color:var(--gray)}
 /* the cells (item 5, 261009): the between-cell gap was 10px against a 2px within-cell gap
  * and still failed — a cell is ~98px and 10px is a third of one button, so the eye read an
@@ -700,7 +707,24 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        nothing. The shell's readhead grammar would seat a header mini beside a shrinking readout at ≤480 px
        (the keys board's layout); this board's own id-scoped rules below out-rank it for the neck. -->
   <div class="bh readhead" id="fdHead"><span>On the neck</span><div class="readbox" id="fdMode" data-control="fdMode"
-        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><!-- THE CLOCK CLOSES RANKS (260919, item 2 — ruled): transport, repeat,
+             bar split, bpm, metronome — one functional family, contiguous, in
+             that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
+             the Metronome card's state, the mini stays a view that asks.
+             NIGHT 62 (261014b): the transport went UP to the header (above) —
+             the row became repeat · bar split · bpm · metronome, closed up behind
+             it. NIGHT 64 (ruling 261015): REPEAT LEFT TOO — night 63 made it the
+             transport's state on the bus, shown in every mini including the
+             header's above, and a view is PER SURFACE: a second copy on this board
+             was a duplicate (not night 55's fork — the two agreed), and as a lone
+             glyph among worded controls it had stopped reading as a control at
+             all. The row is now bar split · bpm · metronome, in that order; the
+             clock still closes ranks, with its transport in the header. The
+             injection-261014c button (the glyph with its name) went with it.
+             NIGHT 67 (261024b — Daniel, 261023: "up to the left of the transport in the neck view"): the row
+             LEFT THIS BAND for the neck's header, seated just left of the mini — the clock and its transport
+             one idea again (night 58's constant: a Transport card IS the clock). Same controls, same ids, same
+             messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock"><span class="fd-lab2">bar split</span><select id="fdSplit" data-control="fdSplit"  title="the bar split — a bar's chords take these slots in order"></select><span class="fd-lab2">bpm</span><input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"  title="the tempo — one state, two views; the Metronome card owns the clock"><label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label><span class="fd-pulse" id="fdPulse"></span></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -767,30 +791,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        reference with the bass slider. Layout only — the tracking
        semantics are the 260906 pins', untouched. -->
   <div class="fd-underneck">
-    <div class="fd-railrow">
-      <!-- THE CLOCK CLOSES RANKS (260919, item 2 — ruled): transport, repeat,
-           bar split, bpm, metronome — one functional family, contiguous, in
-           that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
-           the Metronome card's state, the mini stays a view that asks.
-           NIGHT 62 (261014b): the transport went UP to the header (above) —
-           the row became repeat · bar split · bpm · metronome, closed up behind
-           it. NIGHT 64 (ruling 261015): REPEAT LEFT TOO — night 63 made it the
-           transport's state on the bus, shown in every mini including the
-           header's above, and a view is PER SURFACE: a second copy on this board
-           was a duplicate (not night 55's fork — the two agreed), and as a lone
-           glyph among worded controls it had stopped reading as a control at
-           all. The row is now bar split · bpm · metronome, in that order; the
-           clock still closes ranks, with its transport in the header. The
-           injection-261014c button (the glyph with its name) went with it. -->
-      <span class="fd-lab2">bar split</span>
-      <select id="fdSplit" data-control="fdSplit"
-        title="the bar split — a bar's chords take these slots in order"></select>
-      <span class="fd-lab2">bpm</span>
-      <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
-        title="the tempo — one state, two views; the Metronome card owns the clock">
-      <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-      <span class="fd-pulse" id="fdPulse"></span>
-    </div>
     <!-- THE MIXER ROWS LEFT THE NECK (night 58, 261012): the voice and the harmony level, the reference tone,
          the sounded bass and the bass level, the pad and its level are mixer-strip.mjs, the board below
          this one — Daniel's 261009 mockup. The neck keeps the clock row above (the 260919 ruling) and the
@@ -8783,7 +8783,24 @@ const fieldBoard = {
        nothing. The shell's readhead grammar would seat a header mini beside a shrinking readout at ≤480 px
        (the keys board's layout); this board's own id-scoped rules below out-rank it for the neck. -->
   <div class="bh readhead" id="fdHead"><span>On the neck</span><div class="readbox" id="fdMode" data-control="fdMode"
-        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
+        title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><!-- THE CLOCK CLOSES RANKS (260919, item 2 — ruled): transport, repeat,
+             bar split, bpm, metronome — one functional family, contiguous, in
+             that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
+             the Metronome card's state, the mini stays a view that asks.
+             NIGHT 62 (261014b): the transport went UP to the header (above) —
+             the row became repeat · bar split · bpm · metronome, closed up behind
+             it. NIGHT 64 (ruling 261015): REPEAT LEFT TOO — night 63 made it the
+             transport's state on the bus, shown in every mini including the
+             header's above, and a view is PER SURFACE: a second copy on this board
+             was a duplicate (not night 55's fork — the two agreed), and as a lone
+             glyph among worded controls it had stopped reading as a control at
+             all. The row is now bar split · bpm · metronome, in that order; the
+             clock still closes ranks, with its transport in the header. The
+             injection-261014c button (the glyph with its name) went with it.
+             NIGHT 67 (261024b — Daniel, 261023: "up to the left of the transport in the neck view"): the row
+             LEFT THIS BAND for the neck's header, seated just left of the mini — the clock and its transport
+             one idea again (night 58's constant: a Transport card IS the clock). Same controls, same ids, same
+             messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock"><span class="fd-lab2">bar split</span><select id="fdSplit" data-control="fdSplit"  title="the bar split — a bar's chords take these slots in order"></select><span class="fd-lab2">bpm</span><input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"  title="the tempo — one state, two views; the Metronome card owns the clock"><label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label><span class="fd-pulse" id="fdPulse"></span></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -8850,30 +8867,6 @@ const fieldBoard = {
        reference with the bass slider. Layout only — the tracking
        semantics are the 260906 pins', untouched. -->
   <div class="fd-underneck">
-    <div class="fd-railrow">
-      <!-- THE CLOCK CLOSES RANKS (260919, item 2 — ruled): transport, repeat,
-           bar split, bpm, metronome — one functional family, contiguous, in
-           that order. Layout only: the checkbox and bpm stay SECOND VIEWS of
-           the Metronome card's state, the mini stays a view that asks.
-           NIGHT 62 (261014b): the transport went UP to the header (above) —
-           the row became repeat · bar split · bpm · metronome, closed up behind
-           it. NIGHT 64 (ruling 261015): REPEAT LEFT TOO — night 63 made it the
-           transport's state on the bus, shown in every mini including the
-           header's above, and a view is PER SURFACE: a second copy on this board
-           was a duplicate (not night 55's fork — the two agreed), and as a lone
-           glyph among worded controls it had stopped reading as a control at
-           all. The row is now bar split · bpm · metronome, in that order; the
-           clock still closes ranks, with its transport in the header. The
-           injection-261014c button (the glyph with its name) went with it. -->
-      <span class="fd-lab2">bar split</span>
-      <select id="fdSplit" data-control="fdSplit"
-        title="the bar split — a bar's chords take these slots in order"></select>
-      <span class="fd-lab2">bpm</span>
-      <input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"
-        title="the tempo — one state, two views; the Metronome card owns the clock">
-      <label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label>
-      <span class="fd-pulse" id="fdPulse"></span>
-    </div>
     <!-- THE MIXER ROWS LEFT THE NECK (night 58, 261012): the voice and the harmony level, the reference tone,
          the sounded bass and the bass level, the pad and its level are mixer-strip.mjs, the board below
          this one — Daniel's 261009 mockup. The neck keeps the clock row above (the 260919 ruling) and the
@@ -8955,6 +8948,13 @@ const fieldBoard = {
  * beside the readout. At phone width the mini is on a row of its OWN below the title-and-readout row
  * (stack, do not shrink — measured: 13 px beside the readout at 390); since night 63 that is the shell's
  * readhead grammar for every board with a mini, not this board's own rule. */
+/* THE CLOCK IN THE HEADER (night 67): bar split · bpm · metronome, left of the transport. At 1280 it takes 283 px of
+ * a 615 px seat; at phone width the header already stacks the mini (the shell's readhead grammar), and the clock
+ * takes a row of its OWN between the readout and the mini — three rows, stack, do not shrink (night 51). */
+.fd-headclock{display:inline-flex;gap:9px;align-items:center;flex:0 0 auto;margin-right:14px;font-size:12px;
+  color:var(--gray);font-weight:normal;letter-spacing:0;text-transform:none}
+.fd-headclock select{width:auto;font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;color:var(--ink)}
+@media (max-width:480px){.fd-headclock{flex:1 1 100%;min-width:0;flex-wrap:wrap;row-gap:6px;margin:6px 0 0}}
 .fd-headmini{display:inline-flex;gap:4px;flex:0 0 auto}
 .fd-headmini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
@@ -8963,8 +8963,8 @@ const fieldBoard = {
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
 .fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
   border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
-.fd-railrow select{width:auto;font:inherit;font-size:12px;padding:3px 6px;
-  border:1px solid var(--line);border-radius:6px;color:var(--ink)}
+/* .fd-railrow select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
+ * clock; its look travelled with it as .fd-headclock select. A rule that matches nothing fails the door's CSS check. */
 .fd-lab2{font-size:12px;color:var(--gray)}
 /* the cells (item 5, 261009): the between-cell gap was 10px against a 2px within-cell gap
  * and still failed — a cell is ~98px and 10px is a third of one button, so the eye read an
@@ -15455,8 +15455,27 @@ function initCollapse(doc) {
     if (slot) {
       // placement styled inline: a stylesheet rule would orphan the CSS
       // check in every door whose modules declare no slot
-      slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
-      p.appendChild(slot);
+      /* STACK, DO NOT SHRINK (261024b, night 67 item 1 — night 53's #8, PO ruling 261024): the slot sat
+       * ABSOLUTE in the header band with nothing reserving its room, so where the band is narrow it lay over
+       * the header's own words — at 390 the title field covered 99 px of "Practice log — 0 saved" in scribe
+       * AND in the published tetradetudes, 59 px of "Notepad" in the published multetudes. The seat is now
+       * MEASURED, never a per-page rule: the slot takes the band only while the header's words end left of it;
+       * otherwise it drops into the flow on a line of its own directly under the header (night 51's answer).
+       * Re-measured on resize. It is placed after the header either way, so the flow seat is under the words. */
+      (header && header.nextElementSibling ? header.nextElementSibling : p.lastChild).after(slot);
+      const seat = () => {
+        slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
+        slot.style.margin = ""; slot.style.maxWidth = "";
+        if (!header || !slot.getClientRects().length) return;
+        const words = doc.createRange(); words.selectNodeContents(header);
+        const ink = words.getBoundingClientRect(), at = slot.getBoundingClientRect(), box = p.getBoundingClientRect();
+        if (ink.right + 8 > at.left || at.left < box.left) {
+          slot.style.position = "static"; slot.style.margin = "2px 0 8px"; slot.style.maxWidth = "100%";
+        }
+      };
+      seat();
+      const view = doc.defaultView;
+      if (view) { view.addEventListener("resize", seat); view.requestAnimationFrame(seat); }
     }
     /* ROW COLLAPSE (260917, night 22 item 6a — ruled, night 21's option b):
      * cards sharing a declared row collapse TOGETHER. Cards in a row are
@@ -15561,7 +15580,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.18","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.19","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

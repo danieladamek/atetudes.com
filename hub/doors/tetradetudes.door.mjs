@@ -102,6 +102,8 @@ export default {
     /* v0.6.0 (261002, night 38): ONE ADDRESS FAMILY — the figure's pattern address is
      * real string numbers (multetudes' own), slots retired to a saved-étude alias; a set
      * change refuses a stale figure by name and OFFERS the shift. Multetudes unmoved. */
+    /* v0.6.9 (261024b, night 67): the shell's header slot is seated by measurement — at 390 the log's title field
+     * no longer covers "Practice log — 0 saved" (99 px did before); nothing else on this face moved. */
     /* v0.6.1 (261005, night 41): SHARE WHAT YOU MAKE — a note carries the family's shared
      * config (key · scale · progression · start-on · string set · bpm · meter) beside its own
      * settings; a foreign note is OFFERED here (four-string sets only — a partial is named). */
@@ -124,7 +126,7 @@ export default {
      * Settings card also reads — the saved entry is byte-for-byte the same shape; nothing on this face moved. */
     /* v0.6.7 (261014e, night 64): the bus gained announceAfter and the readout grammar right-justifies a mini's own
      * row — shared files; nothing on this door's face moves. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.8",
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.9",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

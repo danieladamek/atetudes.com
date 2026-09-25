@@ -10805,8 +10805,27 @@ function initCollapse(doc) {
     if (slot) {
       // placement styled inline: a stylesheet rule would orphan the CSS
       // check in every door whose modules declare no slot
-      slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
-      p.appendChild(slot);
+      /* STACK, DO NOT SHRINK (261024b, night 67 item 1 — night 53's #8, PO ruling 261024): the slot sat
+       * ABSOLUTE in the header band with nothing reserving its room, so where the band is narrow it lay over
+       * the header's own words — at 390 the title field covered 99 px of "Practice log — 0 saved" in scribe
+       * AND in the published tetradetudes, 59 px of "Notepad" in the published multetudes. The seat is now
+       * MEASURED, never a per-page rule: the slot takes the band only while the header's words end left of it;
+       * otherwise it drops into the flow on a line of its own directly under the header (night 51's answer).
+       * Re-measured on resize. It is placed after the header either way, so the flow seat is under the words. */
+      (header && header.nextElementSibling ? header.nextElementSibling : p.lastChild).after(slot);
+      const seat = () => {
+        slot.style.position = "absolute"; slot.style.top = "8px"; slot.style.right = "66px";
+        slot.style.margin = ""; slot.style.maxWidth = "";
+        if (!header || !slot.getClientRects().length) return;
+        const words = doc.createRange(); words.selectNodeContents(header);
+        const ink = words.getBoundingClientRect(), at = slot.getBoundingClientRect(), box = p.getBoundingClientRect();
+        if (ink.right + 8 > at.left || at.left < box.left) {
+          slot.style.position = "static"; slot.style.margin = "2px 0 8px"; slot.style.maxWidth = "100%";
+        }
+      };
+      seat();
+      const view = doc.defaultView;
+      if (view) { view.addEventListener("resize", seat); view.requestAnimationFrame(seat); }
     }
     /* ROW COLLAPSE (260917, night 22 item 6a — ruled, night 21's option b):
      * cards sharing a declared row collapse TOGETHER. Cards in a row are
@@ -10911,7 +10930,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.8","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.9","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

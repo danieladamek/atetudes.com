@@ -2913,8 +2913,10 @@ console.log(JSON.stringify(out));
         # control was. The mini is pinned in the header by the night-62 block; here the row is pinned without it.
         # RE-CUT AGAIN night 64 (ruling 261015 — a view is per surface; the clock-row repeat was a duplicate of the header
         # mini's): the row is bar split · bpm · metronome, in that order, no repeat and no mini in it.
+        # MOVED night 67 (261024b — Daniel, 261023): the row joined the transport in the neck's header (#fdClock, left of
+        # the mini); the claim stands — the same three, in that order, one row, no repeat and no mini inside it.
         clock = page.evaluate("""() => ['fdSplit','fdBpm','fdMetChk'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().left))""")
-        row_first = page.evaluate("() => { const r = document.getElementById('fdSplit').closest('.fd-railrow'); return { repeat: !!(r.querySelector('#fdRepeat') || r.querySelector('button[data-role=\"repeat\"]')), mini: !!r.querySelector('.mini'), sameRow: r === document.getElementById('fdMetChk').closest('.fd-railrow') }; }")
+        row_first = page.evaluate("() => { const r = document.getElementById('fdSplit').closest('.fd-headclock'); return { repeat: !!(r.querySelector('#fdRepeat') || r.querySelector('button[data-role=\"repeat\"]')), mini: !!r.querySelector('.mini'), sameRow: r === document.getElementById('fdMetChk').closest('.fd-headclock') }; }")
         check(all(clock[i] >= clock[i - 1] for i in range(1, 3)) and row_first["sameRow"] and not row_first["repeat"] and not row_first["mini"],
               f"{tag} 2 (260919, re-cut 261014b and 261015): the clock row runs bar split · bpm · metronome in one row — repeat and the transport both live in the header mini: {clock} {row_first}")
         # THE TRUNCATION ORDER (item 1): at phone width a long name ellipsises the MODE; the chord survives whole.
@@ -7042,6 +7044,57 @@ console.log(JSON.stringify(out));
             check(box66["inside"] and not box66["over"], f"{tag} night 66: at {w66} the description is a column inside its card, nothing overflowing: {box66}")
         check(not errs66, f"{tag} night 66: no page errors: {errs66[:3]}")
         ctx66.close()
+
+    # ---------------- NIGHT 67 (261024b) ITEM 1: THE HEADER SLOT NEVER COVERS THE HEADER'S WORDS — every door ----------
+    # Night 53's #8 (PO ruling 261024: a precondition on the re-inline epic). The shell sat a panel's header slot (the
+    # notepad's title field) ABSOLUTE in the header band with nothing reserving its room: at 390 it covered 99 px of
+    # "Practice log — 0 saved" in scribe and the published tetradetudes, 59 px of "Notepad" in the published multetudes.
+    # The seat is measured now (hub/shell.mjs). Pinned in EVERY door that carries a slot, both widths: the header's words
+    # and the slot never overlap in one band, and the slot stays inside its panel. The next door inherits the pin.
+    if 'data-header-slot' in html_path.read_text():
+        ctx67 = pw.new_context(viewport={"width": 1280, "height": 900}); p67 = ctx67.new_page()
+        p67.goto(html_path.as_uri()); p67.wait_for_selector("#cards", state="attached"); p67.wait_for_timeout(300)
+        slot67 = """() => [...document.querySelectorAll('[data-header-slot]')].filter(s => s.getClientRects().length).map(s => {
+          const p = s.closest('.card, .board'), h = p.querySelector('h2') || p.querySelector('.bh'), rr = document.createRange(); rr.selectNodeContents(h);
+          const a = rr.getBoundingClientRect(), b = s.getBoundingClientRect(), c = p.getBoundingClientRect();
+          const cover = a.bottom > b.top && a.top < b.bottom && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0;
+          return { id: s.id, cover, inside: b.left >= c.left - 0.5 && b.right <= c.right + 0.5, words: h.textContent.replace(/\s+/g, ' ').trim().slice(0, 30) }; })"""
+        # guarded on the RENDERED page: the shell's own inlined source names the attribute in every door (plain renders no slot)
+        n67 = p67.evaluate("() => document.querySelectorAll('[data-header-slot]').length")
+        if not n67: print(f"  {tag} renders no header slot — the night-67 slot pin does not apply here")
+        for w67 in ((1280, 390) if n67 else ()):
+            p67.set_viewport_size({"width": w67, "height": 900}); p67.wait_for_timeout(250)
+            got67 = p67.evaluate(slot67)
+            check(got67 and all(not g["cover"] and g["inside"] for g in got67),
+                  f"{tag} night 67: at {w67} a header slot never covers its header's words and stays inside its panel: {got67}")
+        ctx67.close()
+
+    # ---------------- NIGHT 67 (261024b) ITEM 2: THE CLOCK JOINS THE TRANSPORT IN THE NECK'S HEADER ----------
+    # Bar split · bpm · metronome ARE the clock (night 58's constant: a Transport card IS the clock). They left the
+    # under-neck band for the neck's header, just left of its mini. 1280: one band, left of the transport, not sliding
+    # with the readout's text. 390: three rows — the readout, the clock, the transport — the clock inside the header
+    # (stack, do not shrink). The under-neck band opens with the tuning rows; no gap where a row was.
+    if 'id="fdClock"' in html_path.read_text():
+        ctx67b = pw.new_context(viewport={"width": 1280, "height": 900}); p67b = ctx67b.new_page()
+        p67b.goto(html_path.as_uri()); p67b.wait_for_selector("#cards", state="attached"); p67b.wait_for_timeout(300)
+        clk67 = """() => { const R = id => document.getElementById(id).getBoundingClientRect(), h = R('fdHead'), c = R('fdClock'), m = R('fdMini'), r = R('fdMode');
+          const inHead = ['fdSplit','fdBpm','fdMetChk'].every(id => document.getElementById('fdHead').contains(document.getElementById(id)));
+          const u = document.querySelector('.fd-underneck');
+          return { inHead, left: Math.round(c.left), clockRight: Math.round(c.right), headRight: Math.round(h.right), miniLeft: Math.round(m.left),
+            oneBand: c.top < m.bottom && m.top < c.bottom, readTop: Math.round(r.top), clockTop: Math.round(c.top), miniTop: Math.round(m.top),
+            underFirst: u.firstElementChild.className }; }"""
+        a67 = p67b.evaluate(clk67)
+        check(a67["inHead"] and a67["oneBand"] and a67["clockRight"] <= a67["miniLeft"],
+              f"{tag} night 67: at 1280 bar split, bpm and the metronome sit in the neck's header, one band with the transport, left of it: {a67}")
+        check("fd-tunerow" in a67["underFirst"], f"{tag} night 67: the under-neck band opens with the tuning rows — no gap where the clock row was: {a67['underFirst']!r}")
+        p67b.select_option("#hcKey", "F#"); p67b.wait_for_timeout(250)
+        b67 = p67b.evaluate(clk67)
+        check(b67["left"] == a67["left"], f"{tag} night 67: the clock does not slide with the readout's text (C {a67['left']}, F# {b67['left']})")
+        p67b.set_viewport_size({"width": 390, "height": 900}); p67b.wait_for_timeout(300)
+        c67 = p67b.evaluate(clk67)
+        check(c67["readTop"] < c67["clockTop"] < c67["miniTop"] and c67["clockRight"] <= c67["headRight"] + 0.5,
+              f"{tag} night 67: at 390 the header stacks three rows — readout, clock, transport — the clock inside the header: {c67}")
+        ctx67b.close()
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

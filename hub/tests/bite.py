@@ -2373,9 +2373,11 @@ def m109_typing_roles_under_a_scale_stays_scale():
 
 def m110_the_neck_transport_slides_again():
     # injection 261015: the neck's mini goes back before the header's spacer — it sits after the readout and slides with its text.
+    # re-anchored 261024b (night 67): the clock now sits between the spacer and the mini, so the mutation removes the
+    # spacer — the clock and the transport then pack against the readout and slide with its text.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        '<span class="headspace"></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>',
-        '<span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span><span class="headspace"></span></div>')
+        '<span class="headspace"></span>',
+        '')
     try:
         p.write_text(mutated)
         build()
@@ -2464,6 +2466,38 @@ def m115_the_shut_rail_hides_its_name_again():
         hit = "keeps Motif legible" in g.stdout
         record('the shut rail hides its name again — nothing says the motif is there',
                g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m116_the_header_slot_sits_on_the_words_again():
+    # night 67: the shell seats the header slot absolute whatever the band's width — night 53's #8 returns. The pin must bite.
+    p, original, mutated = patch("hub/shell.mjs",
+        '          slot.style.position = "static"; slot.style.margin = "2px 0 8px"; slot.style.maxWidth = "100%";',
+        '          /* (the slot stays on the words) */')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "a header slot never covers its header's words" in g.stdout
+        record("the header slot sits on the words again — the title field over the log's header at phone width",
+               g.returncode != 0 and hit, "suite exit %d; the slot pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m117_the_clock_overruns_the_header_at_390():
+    # night 67: the clock's phone-width row loses its wrap — it runs out of the header instead of stacking. The pin must bite.
+    p, original, mutated = patch("hub/modules/field-board.mjs",
+        "@media (max-width:480px){.fd-headclock{flex:1 1 100%;min-width:0;flex-wrap:wrap;row-gap:6px;margin:6px 0 0}}",
+        "@media (max-width:480px){.fd-headclock{flex:1 1 100%;margin:6px 0 0}}")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the header stacks three rows" in g.stdout
+        record("the clock overruns the neck's header at 390 — shrunk out of its box instead of stacked",
+               g.returncode != 0 and hit, "suite exit %d; the stack pin bit: %s" % (g.returncode, hit))
     finally:
         p.write_text(original)
 
@@ -2635,7 +2669,8 @@ def main():
                m109_typing_roles_under_a_scale_stays_scale, m110_the_neck_transport_slides_again,
                m111_the_motif_rail_goes_nameless_again, m112_the_readout_forgets_the_movement,
                m113_the_settings_card_reads_its_own_list, m114_a_setting_without_words_leaves_the_face,
-               m115_the_shut_rail_hides_its_name_again)
+               m115_the_shut_rail_hides_its_name_again, m116_the_header_slot_sits_on_the_words_again,
+               m117_the_clock_overruns_the_header_at_390)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

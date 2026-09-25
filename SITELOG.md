@@ -1,3 +1,18 @@
+## 2026-09-24 — Night 67: the shell's header slot no longer covers the header's words at 390 (it did on two published pages); the clock joins the transport in the neck's header; Multetudes v0.6.19, Tetradetudes v0.6.9
+
+- **Item 1 (night 53's #8, PO ruling 261024):** the shell sat a panel's header slot (the notepad's title field) absolute
+  with no room reserved. At 390 it covered 99 px of "Practice log — 0 saved" in scribe and the **published**
+  tetradetudes, 59 px of "Notepad" in the **published** multetudes. `hub/shell.mjs` now seats it by measurement: in the
+  band while the words end left of it, otherwise on its own line under the header; re-measured on resize. 1280 unchanged.
+  Pinned in every door that renders a slot.
+- **Item 2:** bar split · bpm · metronome moved from the under-neck band into the neck's header, just left of the
+  transport (the clock one idea again — night 58's constant). 1280: a 615 px seat, the clock 283 px, not sliding with the
+  readout. 390: three rows — readout, clock, transport — stack, do not shrink. Same ids and messages; the under-neck band
+  opens with the tuning rows. ROW_COUNTS unchanged.
+- **Found, not fixed (for a ruling):** the published multetudes is 790 px wide at 390 — no card row stacks. Night 68.
+- **Gates:** engine 704/704 · hub 14/14 · the two published doors 6,035/1 → 6,596/2 → **6,594/0** (`doors-n67-two-0924-0757.log`, `…-0802b.log`, `…-0810c.log` — the 260919 clock-row pin re-sited to the header, `.fd-railrow select` retired) · plain+scribe 15,746/0 (`doors-n67-plain-…log` — the slot pin guarded on the rendered page) · door gate **22,339/0** (`doors-n67-full-0924-0840b.log`) · m116, m117 bite; m110 re-anchored (the clock now sits between the spacer and the mini) and bites · chain **118/118**, suite green (`bite-0924-1216.log`, 12:16–21:33; a first run killed at m8 when the session ended — the file restored, rebuilt, restarted) · renders `shots-261024b-n67/`, zero page errors · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261024b — night 67, the shell's 390 clip, and the clock joins the transport.md`.
+
 ## 2026-09-24 — DEPLOYED: night 66 live — Presets becomes Settings; Multetudes v0.6.18, Tetradetudes v0.6.8; two studies moved; written from the run
 
 - record: run 36000708463 · success · commit bf24bcc · fetched 2026-09-24T12:52Z · 6/6 studies byte-identical · digest d9624d60a335
