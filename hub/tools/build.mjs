@@ -51,6 +51,11 @@ const ROW_WRAPPER = {
     `<div class="cardrow" style="grid-template-columns:${template}">${inner}\n</div>`,
   styles: `
 .cardrow{display:grid;gap:12px;margin-bottom:12px;align-items:stretch}
+/* STACK, DO NOT SHRINK (261025, night 68 — ruling 261025): a row's inline template (1fr 3fr, 2fr 1fr 1fr) held at
+ * every width, so at 390 the published multetudes laid its cards side by side and the PAGE was 790 px wide. Below the
+ * shell's existing 600 px breakpoint (the one field-board.mjs already stacks its rail at — one width, not a second
+ * source) every row is one column. !important because the template is inline. Nothing at 1280 is touched. */
+@media (max-width:600px){.cardrow{grid-template-columns:1fr!important}}
 `,
 };
 

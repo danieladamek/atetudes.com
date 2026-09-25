@@ -7096,6 +7096,20 @@ console.log(JSON.stringify(out));
               f"{tag} night 67: at 390 the header stacks three rows — readout, clock, transport — the clock inside the header: {c67}")
         ctx67b.close()
 
+    # ---------------- NIGHT 68 (261025): THE PAGE FITS THE PHONE — measured on the DOCUMENT, every door ----------
+    # RULING 261025, doctrine: A WIDTH CHECK MEASURES THE PAGE, NOT AN ELEMENT. An element that fits inside a page that
+    # does not fit is not a passing check. Night 67 found the published multetudes 790 px wide at 390 — no card row
+    # stacked — while every 390 check before it measured one element and passed. This is the family check: the
+    # document's scroll width never exceeds the viewport, at 390 and at 1280, in every door (no door is exempt; a door
+    # with no rows still has a page).
+    ctx68 = pw.new_context(viewport={"width": 390, "height": 900}); p68 = ctx68.new_page()
+    p68.goto(html_path.as_uri()); p68.wait_for_selector("#cards", state="attached"); p68.wait_for_timeout(400)
+    for w68 in (390, 1280):
+        p68.set_viewport_size({"width": w68, "height": 900}); p68.wait_for_timeout(300)
+        pw68 = p68.evaluate("() => ({ docW: document.documentElement.scrollWidth, vw: window.innerWidth })")
+        check(pw68["docW"] <= pw68["vw"], f"{tag} night 68: at {w68} the PAGE fits the viewport — document scroll width {pw68['docW']} px in a {pw68['vw']} px window")
+    ctx68.close()
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

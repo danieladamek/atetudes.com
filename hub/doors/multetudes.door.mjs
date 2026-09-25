@@ -170,6 +170,8 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.20 (261025, night 68 — approved by Daniel 261025 having seen the full-page shots): the card rows stack below 600 px (the row
+     * primitive's stack rule); at 390 the page was 790 px wide. Nothing at 1280 moved (pixel-identical). */
     /* v0.6.19 (261024b, night 67): the clock (bar split · bpm · metronome) joins the transport in the neck's header;
      * the shell's header slot is seated by measurement — it stacks under the header's words at phone width. */
     /* v0.6.1 (261009, the tuning-strip injection): a global stepper moves all six strings from where
@@ -229,7 +231,7 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.19",
+    blurb: "one tool that holds many études · v0.6.20",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

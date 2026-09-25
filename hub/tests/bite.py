@@ -2502,6 +2502,23 @@ def m117_the_clock_overruns_the_header_at_390():
         p.write_text(original)
 
 
+def m118_the_rows_stop_stacking_at_390():
+    # night 68: the row primitive loses its stack rule — every row holds its template at 390 and the PAGE overflows
+    # (the published multetudes was 790 px wide). The page-width check must bite.
+    p, original, mutated = patch("hub/tools/build.mjs",
+        "@media (max-width:600px){.cardrow{grid-template-columns:1fr!important}}",
+        "/* (the rows no longer stack) */")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the PAGE fits the viewport" in g.stdout
+        record("the rows stop stacking at 390 — the page runs off the side of the phone",
+               g.returncode != 0 and hit, "suite exit %d; the page-width check bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
@@ -2670,7 +2687,7 @@ def main():
                m111_the_motif_rail_goes_nameless_again, m112_the_readout_forgets_the_movement,
                m113_the_settings_card_reads_its_own_list, m114_a_setting_without_words_leaves_the_face,
                m115_the_shut_rail_hides_its_name_again, m116_the_header_slot_sits_on_the_words_again,
-               m117_the_clock_overruns_the_header_at_390)
+               m117_the_clock_overruns_the_header_at_390, m118_the_rows_stop_stacking_at_390)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

@@ -1,3 +1,19 @@
+## 2026-09-25 — Night 68: the page fits the phone — the card rows stack below 600 px (the published multetudes was 790 px wide at 390); a page-width check in every door; Multetudes v0.6.20
+
+- **Why (ruling 261025, doctrine):** a width check measures the PAGE, not an element. Night 67 found the published
+  multetudes 790 px wide on a 390 viewport — no card row stacked — while every earlier 390 check measured one element.
+- **The check** (`hub/tests/door_locks.py`, every door, no exemption): the document's scroll width never exceeds the
+  viewport, at 390 and 1280. Red on the published build (`hub/tests/out/doors-n68-red-0924-2145.log`, 22,347/1 —
+  multetudes, 790 px), green on the fix (`doors-n68-green-0924-2155.log`, 22,347/0). m118 re-arms it.
+- **The fix** (`hub/tools/build.mjs`, the row primitive): below the shell's existing 600 px breakpoint every card row
+  is one column — stack, do not shrink. Only multetudes declares rows, so only multetudes moves.
+- **Approved by Daniel (261025)** having seen full-page before/after shots of every published study at 390 and 1280
+  (`notes/working/shots-261025-n68/`): multetudes 790 → 390 px at 390; all six pixel-identical at 1280. ROW_COUNTS
+  unchanged. Not the shelf's white space (1280), untouched.
+- **Gates:** engine 704/704 · hub 14/14 · door gate 22,347/0 · m118 bites · chain **119/119**, suite green
+  (`bite-0924-2211.log`, 22:11–07:41) · 24 full-page loads, zero page errors.
+- Report: `notes/working/Multetudes build run 261025 — night 68, the page fits the phone (STOPPED before the commit — awaiting Daniel).md`.
+
 ## 2026-09-25 — DEPLOYED: night 67 live — the header slot stacks at 390; the clock joins the transport; Multetudes v0.6.19, Tetradetudes v0.6.9; two studies moved; written from the run
 
 - record: run 36086818607 · success · commit d08c3b3 · fetched 2026-09-25T02:45Z · 6/6 studies byte-identical · digest 869faa3a89d1
