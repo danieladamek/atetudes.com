@@ -1,3 +1,26 @@
+## 2026-09-25 — Night 69: the clock is a view — mounted on the neck (unchanged) and in Progression (two declared rows); an eighth mini in Settings; the readout's fourth host under Centricity's chips; a held chip's ring; row 2 at 3fr 2fr 2fr; Multetudes v0.6.21
+
+- **Why (PO ruling 261026, D5 and E1 approved):** the transport was a primitive and the clock was hand-written markup
+  in one board — the only reason it could live in one place. `hub/clock.mjs` (new) is ONE clock view: `clockMarkup`
+  interpolated into a host's own markup (so the resolver still sees every declared control; the neck keeps its four
+  ids) and `mountClock` wiring it by data-role to the bus — no state, no timer. Its look is the clock grammar in
+  `hub/tools/build.mjs`. A split set at one view is now painted at every other.
+- **The neck did not move:** its header pixel-identical to the published page at 1280 and 390.
+- **Progression** carries a second clock view in two DECLARED rows (bar split · bpm, then metronome · pulse); a late
+  view paints the current state from the bus's replay. **Settings** carries an eighth mini (the host list computed).
+  **Centricity** carries the readout's fourth host in its body under the chip legend — the box whole, only its seat new.
+  Row 2 re-proportioned 2fr 1fr 1fr → 3fr 2fr 2fr (Centricity 562 → 482, approved); the v0.9 proportion pin holds the
+  ruled 3:2:2. ROW_COUNTS unchanged.
+- **The chip ring:** a held chip wears an inset ink ring over its full fill (a mark, not a hue — golden rule 8).
+- **Stopped before the commit** on two differences from the approved picture; **both ruled ACCEPTED AS BUILT by PO
+  ruling 261026b:** (1) Settings' transport sits under the title at every width — the picture's 390 inline seat was a
+  mockup artefact; (2) the ring stands — on F it is redundant, not broken. The offset ring is filed, not built.
+- **Gates:** engine 704/704 · hub 14/14 · multetudes 2,509/1 (the proportion pin, rewritten for the ruled row) →
+  2,522/0 · door gate **22,578/0** (`hub/tests/out/doors-n69-full-0925-1203.log`), night 68's page-width check green at
+  390 and 1280 in every door · m119–m123 bite, m16 re-anchored · chain **124/124**, suite green
+  (`hub/tests/out/bite-0925-1216.log`, 12:16–22:24) · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261026 — night 69, the clock is a view (STOPPED before the commit — two differences from the approved picture).md`.
+
 ## 2026-09-25 — DEPLOYED: night 68 live — the page fits the phone; Multetudes v0.6.20; one study moved; written from the run
 
 - record: run 36146745161 · success · commit c5ae479 · fetched 2026-09-25T14:30Z · 6/6 studies byte-identical · digest 8289d174617f

@@ -54,6 +54,7 @@ import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
 import { SPLITS } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
+import { clockMarkup, mountClock } from "../clock.mjs";
 import { mountReadout } from "../readout.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
@@ -153,7 +154,7 @@ export const fieldBoard = {
              NIGHT 67 (261024b — Daniel, 261023: "up to the left of the transport in the neck view"): the row
              LEFT THIS BAND for the neck's header, seated just left of the mini — the clock and its transport
              one idea again (night 58's constant: a Transport card IS the clock). Same controls, same ids, same
-             messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock"><span class="fd-lab2">bar split</span><select id="fdSplit" data-control="fdSplit"  title="the bar split — a bar's chords take these slots in order"></select><span class="fd-lab2">bpm</span><input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"  title="the tempo — one state, two views; the Metronome card owns the clock"><label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label><span class="fd-pulse" id="fdPulse"></span></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
+             messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock">${clockMarkup({ ids: { split: "fdSplit", bpm: "fdBpm", click: "fdMetChk", pulse: "fdPulse" } })}</span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -295,8 +296,7 @@ export const fieldBoard = {
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
 .fd-underneck{display:block}
-#fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
-  border-radius:6px;color:var(--ink)}
+/* #fdBpm's box and the pulse's dot moved to the clock grammar (night 69, hub/tools/build.mjs CLOCK_GRAMMAR) */
 /* THE HEADER MINI (night 62; was .fd-undermini in the under-neck row): the same buttons, in the header
  * beside the readout. At phone width the mini is on a row of its OWN below the title-and-readout row
  * (stack, do not shrink — measured: 13 px beside the readout at 390); since night 63 that is the shell's
@@ -350,7 +350,6 @@ export const fieldBoard = {
  * The mixer-column basis (380px, margin-left:auto) is gone with the seat. */
 /* the readout's seat and box are the SHELL's grammar since 260920 (night 26 item 3):
  * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
-.fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 .fd-legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
 .fd-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;
   margin-right:3px}
@@ -1300,54 +1299,16 @@ export const fieldBoard = {
     });
 
     /* ---- the transport rail and the mixer: bus views, never owners ---- */
-    byId("fdMetChk").addEventListener("change", (e) =>
-      announce(d, CLOCK, { click: e.target.checked }));
-    /* bpm — the metronome checkbox's OWN idiom, copied exactly (260913,
-     * item 3a): the view ASKS through CLOCK and paints only what the owner
-     * echoes back through CLOCK_STATE, so it can never hold a value the
-     * clock does not — a typed 999 comes back as the owner's clamp. */
-    byId("fdBpm").addEventListener("change", (e) => {
-      const v = +e.target.value;
-      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
-    });
-    listen(d, CLOCK_STATE, (m) => {
-      if (m && typeof m.click === "boolean") byId("fdMetChk").checked = m.click;
-      if (m && typeof m.bpm === "number") byId("fdBpm").value = m.bpm;
-    });
+    /* ---- the clock: ONE view, mounted (night 69, hub/clock.mjs) — its wiring moved there verbatim; this board
+     * keeps its four ids, passed to the markup, so every gate and the control census still reach them (rule 10) ---- */
+    mountClock(ctx, byId("fdClock"));
     /* the bass / reference — Harmony's second view (260913, item 3b), the
      * same shape: announce the change, paint from the announced state. The
      * choices fill from the engine's own list, stated once. */
     /* the reference / sounded bass / pad announce from mixer-strip.mjs (night 58); this board adopts them from the bus */
     mountMini(ctx, byId("fdMini"));
     mountReadout(ctx, byId("fdMode"));   // 260920: the shared readout, its own derivation
-    let pulseT = null;
-    listen(d, BEAT, (ev) => {
-      if (ev && ev.sub) return;   // the pulse is the beat's, not the subdivision's (260929)
-      const p = byId("fdPulse");
-      p.style.background = "#B82929";
-      if (pulseT) d.defaultView.clearTimeout(pulseT);
-      pulseT = d.defaultView.setTimeout(() => { p.style.background = ""; }, 70);
-    });
-    {
-      const sp = byId("fdSplit");
-      const fillSplits = (meter) => {
-        const cur = sp.value;
-        sp.textContent = "";
-        for (const opt of (SPLITS[meter] || SPLITS[4] || []).map((x) => (Array.isArray(x) ? x.join("+") : String(x)))) {
-          const o = d.createElement("option"); o.value = opt; o.textContent = opt;
-          sp.appendChild(o);
-        }
-        if ([...sp.options].some((o) => o.value === cur)) sp.value = cur;
-      };
-      fillSplits(4);
-      /* LIVE (child 7): the split is how a bar's chords take their beats —
-       * announced as the parsed slots; the walk and the chart line adopt */
-      sp.addEventListener("change", (e) =>
-        announce(d, CONFIG_CHANGED, { split: e.target.value.split("+").map(Number) }));
-      listen(d, CLOCK_STATE, (m) => {
-        if (m && typeof m.meter === "number") fillSplits(m.meter);
-      });
-    }
+    /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */
 
     listen(d, CONFIG_CHANGED, (m) => {

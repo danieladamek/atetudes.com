@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -150,6 +150,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 }
 .clpsd>.bh.readhead .mini{display:none!important}
 
+.clk-lab{font-size:12px;color:var(--gray)}
+.clk-bpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
+.clk-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
+
 
 
 #fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
@@ -190,8 +195,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
 .fd-underneck{display:block}
-#fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
-  border-radius:6px;color:var(--ink)}
+/* #fdBpm's box and the pulse's dot moved to the clock grammar (night 69, hub/tools/build.mjs CLOCK_GRAMMAR) */
 /* THE HEADER MINI (night 62; was .fd-undermini in the under-neck row): the same buttons, in the header
  * beside the readout. At phone width the mini is on a row of its OWN below the title-and-readout row
  * (stack, do not shrink — measured: 13 px beside the readout at 390); since night 63 that is the shell's
@@ -245,7 +249,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * The mixer-column basis (380px, margin-left:auto) is gone with the seat. */
 /* the readout's seat and box are the SHELL's grammar since 260920 (night 26 item 3):
  * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
-.fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 .fd-legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
 .fd-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;
   margin-right:3px}
@@ -326,6 +329,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
 .hc-chip .hc-chipname{font-size:14px;line-height:1.15}
 .hc-chipcap{margin-top:5px}
+.hc-readseat{display:flex;margin:8px 0 4px}   /* the SEAT only: the box inside is the readout grammar's, unrestyled */
 #hcRefLab[hidden],#hcRef[hidden]{display:none}
 
 #kySvg{width:100%;height:auto;display:block}
@@ -442,6 +446,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   #noteCol{padding-left:0;order:1;margin-bottom:12px}
 }
 
+.ps-miniseat{margin:0 0 8px}
+#psMini{display:flex;gap:4px}
+#psMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#psMini button:hover{border-color:var(--ink)}
 .ps-note{margin-top:8px}
 #psSel{width:100%}
 .ps-trace{margin-top:6px;color:var(--gray)}
@@ -449,6 +457,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .ps-desc{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;line-height:1.45}
 .ps-desc .ps-line{margin:0 0 3px}
 
+.pg-clock{margin:0 0 10px}
+.pg-clock .clk-row{display:flex;align-items:center;gap:9px}
+.pg-clock .clk-row+.clk-row{margin-top:2px}
 .pg-hid{display:none}
 #pgNote{margin-top:8px}
 /* the seg's visual grammar, scoped to this module's own markup (260905):
@@ -578,7 +589,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       <div class="hint" id="handoffNote" data-control="handoffNote"></div>
     </div></div>
 </div>
-<div class="cardrow" style="grid-template-columns:2fr 1fr 1fr"><div class="card">
+<div class="cardrow" style="grid-template-columns:3fr 2fr 2fr"><div class="card">
   <!-- CENTRICITY (260914, ruled): the card holds Key, Scale, Object and
        the centre — it defines the MATERIAL and what organises it; the card
        that defines harmony is Progression, beside it. "Centricity" is the
@@ -629,6 +640,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
          from a held set by the words, never by a colour). -->
     <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
     <div class="hint hc-chipcap" id="hcChipCap"></div>
+    <!-- THE READOUT'S FOURTH HOST — IN THE BODY (night 69, ruling 261026 §6): one grammar, two seats. On the neck,
+         the staff and the keys the box LABELS a diagram, so it sits in the header; here the box IS THE SUBJECT and
+         the chips describe it, so it sits with them. The box is hub/readout.mjs's, whole; this is only its seat. -->
+    <div class="hc-readseat"><div class="readbox" id="hcMode" data-control="hcMode"
+      title="this bar's chord, and the mode it is in the context of the chosen scale"></div></div>
   </div>
   <!-- THE TONES (260917) left with the Object for the Progression card at night 64 — one editor per card:
        this card edits the FIELD (the Gamut, the chips); the object's tones are edited where the object is. -->
@@ -646,6 +662,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div class="hint" id="hcNote"></div></div>
 <div class="card">
   <h2>Progression</h2>
+  <!-- THE CLOCK, SEATED HERE (night 69 — ruling 261026, D5 approved): a second VIEW of the clock (hub/clock.mjs),
+       addressed by data-role, owning nothing. TWO DECLARED ROWS — bar split · bpm, then the click · its pulse —
+       Daniel's grouping, a wrapper per row, never a wrap flex finds. The neck keeps its own view. -->
+  <div class="pg-clock" id="pgClock" data-control="pgClock"><span class="clk-row"><span class="clk-lab">bar split</span><select data-role="split"  title="the bar split — a bar's chords take these slots in order"></select><span class="clk-lab">bpm</span><input type="number" class="clk-bpm" data-role="bpm" min="15" max="300" step="1"  title="the tempo — one state, two views; the Metronome card owns the clock"></span><span class="clk-row"><label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" data-role="click"> metronome</label><span class="clk-pulse" data-role="pulse"></span></span></div>
   <!-- OBJECT AND TONES FIRST, above Source (night 64): they are what the progression acts on, so they are read
        before how it moves. STACKED, not adjacent — this card is a narrow column (281 px at 1280, 250 at 390) and
        its own idiom is label-above-control at full width; two selects side by side would clip the object's
@@ -675,6 +695,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div class="hint" id="pgNote"></div></div>
 <div class="card">
   <h2>Settings</h2>
+  <!-- A VIEW OF THE TRANSPORT (night 69 — ruling 261026, D5 approved): one more mini host (hub/mini.mjs). One press,
+       one state, every view — the host list is computed from the sources wherever it is counted. -->
+  <div class="ps-miniseat"><span class="mini" id="psMini" data-control="psMini"></span></div>
   <label>Start from</label>
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
@@ -729,7 +752,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
              NIGHT 67 (261024b — Daniel, 261023: "up to the left of the transport in the neck view"): the row
              LEFT THIS BAND for the neck's header, seated just left of the mini — the clock and its transport
              one idea again (night 58's constant: a Transport card IS the clock). Same controls, same ids, same
-             messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock"><span class="fd-lab2">bar split</span><select id="fdSplit" data-control="fdSplit"  title="the bar split — a bar's chords take these slots in order"></select><span class="fd-lab2">bpm</span><input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"  title="the tempo — one state, two views; the Metronome card owns the clock"><label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label><span class="fd-pulse" id="fdPulse"></span></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
+             messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock"><span class="clk-lab">bar split</span><select data-role="split" id="fdSplit" data-control="fdSplit"  title="the bar split — a bar's chords take these slots in order"></select><span class="clk-lab">bpm</span><input type="number" class="clk-bpm" data-role="bpm" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"  title="the tempo — one state, two views; the Metronome card owns the clock"><label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" data-role="click" id="fdMetChk" data-control="fdMetChk"> metronome</label><span class="clk-pulse" data-role="pulse" id="fdPulse"></span></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -8415,6 +8438,102 @@ function mountMini(ctx, host) {
 return { mountMini };
 })();
 
+/* ===== hub/clock.mjs ===== */
+const __m_hub_clock_mjs = (() => {
+const { CONFIG_CHANGED, CLOCK, CLOCK_STATE, BEAT, listen, announce } = __m_hub_bus_mjs;
+const { SPLITS } = __m_engine_drill_mjs;
+/* clock.mjs — the CLOCK VIEW: bar split · bpm · the click · its pulse, built once and mounted in any host
+ * (night 69, 261026 — PO ruling 261026: the clock becomes a mountable view, beside the mini).
+ *
+ * WHY IT EXISTS. The transport was always a primitive (mini.mjs: one file, many hosts, the id on the host and
+ * data-role inside). The clock was hand-written markup inside one board with fixed ids, so it could live in one
+ * place only — not by doctrine (260919's "the clock closes ranks" governs a BAND, re-scoped by ruling 261026)
+ * but by mechanics. This file is the mechanics fixed: ONE clock view, N mounts (rule 6).
+ *
+ *   clockMarkup({ ids, rows })   the view's markup, as a string a host module interpolates into its OWN static
+ *                                markup — so the resolver still sees every declared control (a control declared
+ *                                by a module must be IN that module's markup). `ids` is optional: a host that
+ *                                has always addressed these controls by id keeps its ids (rule 10 — nothing a
+ *                                gate or the control census reaches is re-pointed); a new host passes none and
+ *                                is addressed by data-role only, which is what makes a second seat legal.
+ *                                `rows: 2` DECLARES the break — split · bpm, then the click · pulse (Daniel's
+ *                                grouping, 261026) — a wrapper per row, never a wrap flex happens to find.
+ *   mountClock(ctx, host)        wires every control inside `host` by data-role, to the bus and nothing else.
+ *
+ * A VIEW, NOT AN OWNER: no state, no timer. The split is announced as CONFIG {split} and painted back from it;
+ * bpm and the click ask through CLOCK and paint only what the owner echoes on CLOCK_STATE (so a view can never
+ * hold a value the clock does not). CONFIG_CHANGED and CLOCK_STATE are REPLAYED to a late subscriber (bus.mjs),
+ * so a view mounted after the last announcement paints the current values on subscribe — no special case.
+ * The pulse flashes on the BEAT (not replayed: a beat is an event, not a state).
+ *
+ * Its styles are page grammar shipped by the build to any door that reaches this file (hub/tools/build.mjs
+ * CLOCK_GRAMMAR), as the readout's are — so no host copies them.
+ */
+
+
+const TITLE = {
+  split: "the bar split — a bar's chords take these slots in order",
+  bpm: "the tempo — one state, two views; the Metronome card owns the clock",
+  click: "the click — one state, two views; the Metronome card's Sound is the other",
+};
+
+function clockMarkup({ ids = null, rows = 1 } = {}) {
+  const ctl = (k) => (ids && ids[k] ? ` id="${ids[k]}" data-control="${ids[k]}"` : "");
+  const split = `<span class="clk-lab">bar split</span><select data-role="split"${ctl("split")}  title="${TITLE.split}"></select>`;
+  const bpm = `<span class="clk-lab">bpm</span><input type="number" class="clk-bpm" data-role="bpm"${ctl("bpm")} min="15" max="300" step="1"  title="${TITLE.bpm}">`;
+  const click = `<label class="chk" title="${TITLE.click}"><input type="checkbox" data-role="click"${ctl("click")}> metronome</label>`;
+  const pulse = `<span class="clk-pulse" data-role="pulse"${ids && ids.pulse ? ` id="${ids.pulse}"` : ""}></span>`;
+  return rows === 2
+    ? `<span class="clk-row">${split}${bpm}</span><span class="clk-row">${click}${pulse}</span>`
+    : `${split}${bpm}${click}${pulse}`;
+}
+
+function mountClock(ctx, host) {
+  const d = ctx.doc, view = d.defaultView;
+  const q = (role) => host.querySelector(`[data-role="${role}"]`);
+  const sp = q("split"), bpm = q("bpm"), click = q("click"), pulse = q("pulse");
+  let split = null;   // the last split heard, as the select's value ("2+2"), painted once the options exist
+  const fillSplits = (meter) => {
+    const cur = sp.value;
+    sp.textContent = "";
+    for (const opt of (SPLITS[meter] || SPLITS[4] || []).map((x) => (Array.isArray(x) ? x.join("+") : String(x)))) {
+      const o = d.createElement("option"); o.value = opt; o.textContent = opt;
+      sp.appendChild(o);
+    }
+    const want = split ?? cur;
+    if ([...sp.options].some((o) => o.value === want)) sp.value = want;
+  };
+  fillSplits(4);
+  sp.addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { split: e.target.value.split("+").map(Number) }));
+  click.addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
+  bpm.addEventListener("change", (e) => {
+    const v = +e.target.value;
+    if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+  });
+  listen(d, CLOCK_STATE, (m) => {
+    if (!m) return;
+    if (typeof m.click === "boolean") click.checked = m.click;
+    if (typeof m.bpm === "number") bpm.value = m.bpm;
+    if (typeof m.meter === "number") fillSplits(m.meter);
+  });
+  /* ONE STATE, EVERY VIEW (night 69): a split set at one view is painted at every other — before tonight the one
+   * view announced and never painted back, which was invisible while it was the only view */
+  listen(d, CONFIG_CHANGED, (m) => {
+    if (!m || !Array.isArray(m.split)) return;
+    split = m.split.join("+");
+    if ([...sp.options].some((o) => o.value === split)) sp.value = split;
+  });
+  let pulseT = null;
+  listen(d, BEAT, (ev) => {
+    if (ev && ev.sub) return;   // the pulse is the beat's, not the subdivision's (260929)
+    pulse.style.background = "#B82929";
+    if (pulseT) view.clearTimeout(pulseT);
+    pulseT = view.setTimeout(() => { pulse.style.background = ""; }, 70);
+  });
+}
+return { clockMarkup, mountClock };
+})();
+
 /* ===== engine/degree-palette.mjs ===== */
 const __m_engine_degree_palette_mjs = (() => {
 /* degree-palette.mjs — THE DEGREE PALETTE, stated once, where every carrier can reach it
@@ -8647,6 +8766,7 @@ const { NOTE_VOICE_NAMES } = __m_engine_voices_mjs;
 const { SPLITS } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
+const { clockMarkup, mountClock } = __m_hub_clock_mjs;
 const { mountReadout } = __m_hub_readout_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { FAM_COLOR, FAM_TEXT, FAM, ANNOTATION_GRAY } = __m_hub_palette_mjs;
@@ -8700,6 +8820,7 @@ const { starburst } = __m_hub_marks_mjs;
 
 
 // 260917 item 5: the mode names, the one table
+
 
 
 
@@ -8805,7 +8926,7 @@ const fieldBoard = {
              NIGHT 67 (261024b — Daniel, 261023: "up to the left of the transport in the neck view"): the row
              LEFT THIS BAND for the neck's header, seated just left of the mini — the clock and its transport
              one idea again (night 58's constant: a Transport card IS the clock). Same controls, same ids, same
-             messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock"><span class="fd-lab2">bar split</span><select id="fdSplit" data-control="fdSplit"  title="the bar split — a bar's chords take these slots in order"></select><span class="fd-lab2">bpm</span><input type="number" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"  title="the tempo — one state, two views; the Metronome card owns the clock"><label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" id="fdMetChk" data-control="fdMetChk"> metronome</label><span class="fd-pulse" id="fdPulse"></span></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
+             messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock">${clockMarkup({ ids: { split: "fdSplit", bpm: "fdBpm", click: "fdMetChk", pulse: "fdPulse" } })}</span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
@@ -8947,8 +9068,7 @@ const fieldBoard = {
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
 .fd-underneck{display:block}
-#fdBpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
-  border-radius:6px;color:var(--ink)}
+/* #fdBpm's box and the pulse's dot moved to the clock grammar (night 69, hub/tools/build.mjs CLOCK_GRAMMAR) */
 /* THE HEADER MINI (night 62; was .fd-undermini in the under-neck row): the same buttons, in the header
  * beside the readout. At phone width the mini is on a row of its OWN below the title-and-readout row
  * (stack, do not shrink — measured: 13 px beside the readout at 390); since night 63 that is the shell's
@@ -9002,7 +9122,6 @@ const fieldBoard = {
  * The mixer-column basis (380px, margin-left:auto) is gone with the seat. */
 /* the readout's seat and box are the SHELL's grammar since 260920 (night 26 item 3):
  * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
-.fd-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 .fd-legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
 .fd-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;
   margin-right:3px}
@@ -9952,54 +10071,16 @@ const fieldBoard = {
     });
 
     /* ---- the transport rail and the mixer: bus views, never owners ---- */
-    byId("fdMetChk").addEventListener("change", (e) =>
-      announce(d, CLOCK, { click: e.target.checked }));
-    /* bpm — the metronome checkbox's OWN idiom, copied exactly (260913,
-     * item 3a): the view ASKS through CLOCK and paints only what the owner
-     * echoes back through CLOCK_STATE, so it can never hold a value the
-     * clock does not — a typed 999 comes back as the owner's clamp. */
-    byId("fdBpm").addEventListener("change", (e) => {
-      const v = +e.target.value;
-      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
-    });
-    listen(d, CLOCK_STATE, (m) => {
-      if (m && typeof m.click === "boolean") byId("fdMetChk").checked = m.click;
-      if (m && typeof m.bpm === "number") byId("fdBpm").value = m.bpm;
-    });
+    /* ---- the clock: ONE view, mounted (night 69, hub/clock.mjs) — its wiring moved there verbatim; this board
+     * keeps its four ids, passed to the markup, so every gate and the control census still reach them (rule 10) ---- */
+    mountClock(ctx, byId("fdClock"));
     /* the bass / reference — Harmony's second view (260913, item 3b), the
      * same shape: announce the change, paint from the announced state. The
      * choices fill from the engine's own list, stated once. */
     /* the reference / sounded bass / pad announce from mixer-strip.mjs (night 58); this board adopts them from the bus */
     mountMini(ctx, byId("fdMini"));
     mountReadout(ctx, byId("fdMode"));   // 260920: the shared readout, its own derivation
-    let pulseT = null;
-    listen(d, BEAT, (ev) => {
-      if (ev && ev.sub) return;   // the pulse is the beat's, not the subdivision's (260929)
-      const p = byId("fdPulse");
-      p.style.background = "#B82929";
-      if (pulseT) d.defaultView.clearTimeout(pulseT);
-      pulseT = d.defaultView.setTimeout(() => { p.style.background = ""; }, 70);
-    });
-    {
-      const sp = byId("fdSplit");
-      const fillSplits = (meter) => {
-        const cur = sp.value;
-        sp.textContent = "";
-        for (const opt of (SPLITS[meter] || SPLITS[4] || []).map((x) => (Array.isArray(x) ? x.join("+") : String(x)))) {
-          const o = d.createElement("option"); o.value = opt; o.textContent = opt;
-          sp.appendChild(o);
-        }
-        if ([...sp.options].some((o) => o.value === cur)) sp.value = cur;
-      };
-      fillSplits(4);
-      /* LIVE (child 7): the split is how a bar's chords take their beats —
-       * announced as the parsed slots; the walk and the chart line adopt */
-      sp.addEventListener("change", (e) =>
-        announce(d, CONFIG_CHANGED, { split: e.target.value.split("+").map(Number) }));
-      listen(d, CLOCK_STATE, (m) => {
-        if (m && typeof m.meter === "number") fillSplits(m.meter);
-      });
-    }
+    /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */
 
     listen(d, CONFIG_CHANGED, (m) => {
@@ -10138,6 +10219,7 @@ const { field } = __m_engine_field_mjs;
 const { CENTRE_SOURCES } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce, announceAfter } = __m_hub_bus_mjs;
+const { mountReadout } = __m_hub_readout_mjs;
 const { objectOf, tonePick } = __m_engine_selection_mjs;
 const { FAM, FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 const { triads, tetrads, triadPairs, pentatonics, pentatonicRefusal, normalizeGamut, describeGamut, pentatonicBreak } = __m_engine_gamut_mjs;
@@ -10167,6 +10249,7 @@ const { SHARED } = __m_engine_shared_config_mjs;
 
 
 
+
 // the engine's one derivation — read here for a decision (the gamut drop), never stored: night 64
 
 // the degree palette, stated once (night 60: the chip row wears it — the neck legend's own table)
@@ -10188,7 +10271,7 @@ const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcRef", "hcCentreSrc", "hcGamut", "hcChips"],   // night 64: Object and Tones crossed to Progression
+  controls: ["hcKey", "hcScale", "hcRef", "hcCentreSrc", "hcGamut", "hcChips", "hcMode"],   // night 64: Object and Tones crossed to Progression
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -10251,6 +10334,11 @@ const harmonyCard = {
          from a held set by the words, never by a colour). -->
     <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
     <div class="hint hc-chipcap" id="hcChipCap"></div>
+    <!-- THE READOUT'S FOURTH HOST — IN THE BODY (night 69, ruling 261026 §6): one grammar, two seats. On the neck,
+         the staff and the keys the box LABELS a diagram, so it sits in the header; here the box IS THE SUBJECT and
+         the chips describe it, so it sits with them. The box is hub/readout.mjs's, whole; this is only its seat. -->
+    <div class="hc-readseat"><div class="readbox" id="hcMode" data-control="hcMode"
+      title="this bar's chord, and the mode it is in the context of the chosen scale"></div></div>
   </div>
   <!-- THE TONES (260917) left with the Object for the Progression card at night 64 — one editor per card:
        this card edits the FIELD (the Gamut, the chips); the object's tones are edited where the object is. -->
@@ -10315,9 +10403,11 @@ const harmonyCard = {
 .hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
 .hc-chip .hc-chipname{font-size:14px;line-height:1.15}
 .hc-chipcap{margin-top:5px}
+.hc-readseat{display:flex;margin:8px 0 4px}   /* the SEAT only: the box inside is the readout grammar's, unrestyled */
 #hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 
   mount(ctx) {
+    mountReadout(ctx, ctx.byId("hcMode"));   // night 69: the readout's fourth host
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE (§4.2.3): the harmony half. `ref` re-roots the field (a mode);
      * `bass` is the reference under a chord and is child 5's — held at "none"
@@ -10380,6 +10470,11 @@ const harmonyCard = {
         b.style.backgroundColor = isLit ? FAM_COLOR[fam] : fade(FAM_COLOR[fam], FIELD_OPACITY);
         b.style.color = isLit ? FAM_TEXT[fam] : DARK_TEXT;
         b.querySelector(".hc-chipname").textContent = fld.notes[i].name;
+        /* THE RING — PROPOSED (night 69, item 5; Daniel: "an outline on top of the reduced opacity might be
+         * sufficient"): a lit chip also wears an inset ring in ink — a mark of weight, not a hue (golden rule 8: the
+         * fill keeps its degree colour, the ring is the neutral ink). Inset, so the layout never moves and a focus
+         * outline (outside) never collides. */
+        b.style.boxShadow = isLit ? "inset 0 0 0 2px var(--ink)" : "";
         b.dataset.lit = String(isLit); b.dataset.pick = String(isScale);
         b.setAttribute("aria-label", `${fld.notes[i].name}, the key's ${i + 1}`);
         if (isScale) b.setAttribute("aria-pressed", String(isLit)); else b.removeAttribute("aria-pressed");
@@ -13996,6 +14091,7 @@ const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
+const { mountMini } = __m_hub_mini_mjs;
 const { etudeRecord } = __m_hub_etude_record_mjs;
 const { describe } = __m_hub_etude_describe_mjs;
 /* presets-card.mjs — v0.9's PRESETS card, LIVE (Multetudes surface,
@@ -14014,6 +14110,7 @@ const { describe } = __m_hub_etude_describe_mjs;
  * selection and asserted to produce a non-empty, lawful take, so a recipe
  * that stops building fails here at import, not in Daniel's browser.
  */
+
 
 
 
@@ -14044,7 +14141,7 @@ const presetsCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 12,
-  controls: ["psSel"],
+  controls: ["psMini", "psSel"],
 
   /* THE SETTINGS CARD (261024, night 66 — Daniel, 261014: "a complete view of the étude the user has just
    * structured… all of that content should echo what then gets saved in the practice log"). The FACE renames;
@@ -14053,6 +14150,9 @@ const presetsCard = {
    * described from hub/etude-record.mjs — the SAME record the practice log saves, one instance per page. */
   markup: `
   <h2>Settings</h2>
+  <!-- A VIEW OF THE TRANSPORT (night 69 — ruling 261026, D5 approved): one more mini host (hub/mini.mjs). One press,
+       one state, every view — the host list is computed from the sources wherever it is counted. -->
+  <div class="ps-miniseat"><span class="mini" id="psMini" data-control="psMini"></span></div>
   <label>Start from</label>
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
@@ -14062,6 +14162,10 @@ const presetsCard = {
   whatever you set them to.</div>`,
 
   styles: `
+.ps-miniseat{margin:0 0 8px}
+#psMini{display:flex;gap:4px}
+#psMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#psMini button:hover{border-color:var(--ink)}
 .ps-note{margin-top:8px}
 #psSel{width:100%}
 .ps-trace{margin-top:6px;color:var(--gray)}
@@ -14070,6 +14174,7 @@ const presetsCard = {
 .ps-desc .ps-line{margin:0 0 3px}`,
 
   mount(ctx) {
+    mountMini(ctx, ctx.byId("psMini"));
     const d = ctx.doc, byId = ctx.byId;
     const sel = byId("psSel");
     sel.textContent = "";
@@ -14159,6 +14264,7 @@ const { CYCLES } = __m_engine_tetrad_sequence_mjs;
 const { STRUCTURES } = __m_engine_structures_mjs;
 const { progressionOf, chartBodyOf } = __m_engine_progression_mjs;
 const { CONFIG_CHANGED, listen, announce, announceAfter } = __m_hub_bus_mjs;
+const { clockMarkup, mountClock } = __m_hub_clock_mjs;
 const { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, pickOf, tonePick, objectOf } = __m_engine_selection_mjs;
 const { field } = __m_engine_field_mjs;
 const { SHARED } = __m_engine_shared_config_mjs;
@@ -14184,6 +14290,7 @@ const { SHARED } = __m_engine_shared_config_mjs;
  * hold the tonic bar. "From the note's chart" copies the pad's own chart
  * fence into the line — §8's one handoff channel, closing.
  */
+
 
 
 
@@ -14217,10 +14324,14 @@ const progressionCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 11,
-  controls: ["hcObj", "hcTones", "pgSrcSeg", "pgCycle", "pgForm", "pgCustom", "pgChartBtn", "pgStart"],   // hcObj, hcTones: night 64, their ids kept (every pin, message and saved étude addresses them)
+  controls: ["pgClock", "hcObj", "hcTones", "pgSrcSeg", "pgCycle", "pgForm", "pgCustom", "pgChartBtn", "pgStart"],   // hcObj, hcTones: night 64, their ids kept (every pin, message and saved étude addresses them)
 
   markup: `
   <h2>Progression</h2>
+  <!-- THE CLOCK, SEATED HERE (night 69 — ruling 261026, D5 approved): a second VIEW of the clock (hub/clock.mjs),
+       addressed by data-role, owning nothing. TWO DECLARED ROWS — bar split · bpm, then the click · its pulse —
+       Daniel's grouping, a wrapper per row, never a wrap flex finds. The neck keeps its own view. -->
+  <div class="pg-clock" id="pgClock" data-control="pgClock">${clockMarkup({ rows: 2 })}</div>
   <!-- OBJECT AND TONES FIRST, above Source (night 64): they are what the progression acts on, so they are read
        before how it moves. STACKED, not adjacent — this card is a narrow column (281 px at 1280, 250 at 390) and
        its own idiom is label-above-control at full width; two selects side by side would clip the object's
@@ -14250,6 +14361,9 @@ const progressionCard = {
   <div class="hint" id="pgNote"></div>`,
 
   styles: `
+.pg-clock{margin:0 0 10px}
+.pg-clock .clk-row{display:flex;align-items:center;gap:9px}
+.pg-clock .clk-row+.clk-row{margin-top:2px}
 .pg-hid{display:none}
 #pgNote{margin-top:8px}
 /* the seg's visual grammar, scoped to this module's own markup (260905):
@@ -14270,6 +14384,7 @@ const progressionCard = {
 #pgChartBtn:disabled{color:var(--gray);cursor:default}`,
 
   mount(ctx) {
+    mountClock(ctx, ctx.byId("pgClock"));   // night 69: a view of the one clock
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE — the progression half. key/scale are MIRRORS (harmony owns
      * them) held only to validate and to phrase the note. */
@@ -15585,7 +15700,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.20","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.21","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

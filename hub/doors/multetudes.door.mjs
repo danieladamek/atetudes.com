@@ -63,7 +63,10 @@ export default {
   rows: [
     { template: "1fr 3fr",
       cards: ["metronome-card", { part: "notepad-card#pad", heading: "Notepad" }] },
-    { template: "2fr 1fr 1fr", cards: ["harmony-card", "progression-card", "presets-card"] },
+    /* 261026 (night 69, ruling 261026 §4 — LOAD-BEARING): 2fr 1fr 1fr → 3fr 2fr 2fr. At 2fr 1fr 1fr Progression's header
+     * has 185 px usable and the clock's first row needs ~214, so bpm broke to its own line; at 3fr 2fr 2fr it has 255.
+     * Centricity narrows 562 → 482 — approved explicitly. Not the shelf's white space (1280 heights), untouched. */
+    { template: "3fr 2fr 2fr", cards: ["harmony-card", "progression-card", "presets-card"] },
   ],
   present: {
     title: "Multetudes",
@@ -170,6 +173,9 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.21 (261026, night 69): the clock is a view (hub/clock.mjs) — the neck unchanged, Progression carries a
+     * second view in two declared rows; Settings an eighth mini; Centricity the readout's fourth host under the chips
+     * and a held chip's ring (proposed); row 2 re-proportioned 3fr 2fr 2fr. */
     /* v0.6.20 (261025, night 68 — approved by Daniel 261025 having seen the full-page shots): the card rows stack below 600 px (the row
      * primitive's stack rule); at 390 the page was 790 px wide. Nothing at 1280 moved (pixel-identical). */
     /* v0.6.19 (261024b, night 67): the clock (bar split · bpm · metronome) joins the transport in the neck's header;
@@ -231,7 +237,7 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.20",
+    blurb: "one tool that holds many études · v0.6.21",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

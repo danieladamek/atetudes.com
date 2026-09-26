@@ -3835,8 +3835,12 @@ console.log(JSON.stringify(out));
                 ("row 1 (metronome | journal)", ".row1 > *", "#cards .cardrow:nth-of-type(1) > *"),
                 ("row 2 (harmony | progression | presets)", ".row2 > *", "#cards .cardrow:nth-of-type(2) > *"),
             ]
+            # RULED DIVERGENCE (261026, night 69 — ruling 261026 §4, rule 7): row 2 was re-proportioned 2fr 1fr 1fr →
+            # 3fr 2fr 2fr so Progression's clock fits its declared rows (185 px usable → 255). The comparison stands for
+            # every other row; row 2 is now held to the RULED proportions, not v0.9's — a drift from 3:2:2 still fails.
+            RULED = {"row 2 (harmony | progression | presets)": [3 / 7, 2 / 7, 2 / 7]}
             for name, psel, dsel in pairs:
-                a = row_ratios(proto, psel)
+                a = RULED.get(name) or row_ratios(proto, psel)
                 b = row_ratios(page, dsel)
                 if strict:
                     check(len(a) == len(b) and all(abs(x - y) < 0.025 for x, y in zip(a, b)),
@@ -7109,6 +7113,65 @@ console.log(JSON.stringify(out));
         pw68 = p68.evaluate("() => ({ docW: document.documentElement.scrollWidth, vw: window.innerWidth })")
         check(pw68["docW"] <= pw68["vw"], f"{tag} night 68: at {w68} the PAGE fits the viewport — document scroll width {pw68['docW']} px in a {pw68['vw']} px window")
     ctx68.close()
+
+    # ---------------- NIGHT 69 (261026): THE CLOCK IS A VIEW — mounted twice; the eighth mini; the readout's fourth host ----------
+    # Ruling 261026. hub/clock.mjs is ONE clock view; the neck mounts it with its own ids (every gate reaches them
+    # unchanged) and Progression mounts it again, addressed by data-role, in TWO DECLARED ROWS (split · bpm, then the
+    # click · its pulse). Settings carries an eighth mini host. Centricity carries the readout's fourth host, in the
+    # BODY under the chip legend — the box whole, only its seat new. Asserted at the effect.
+    if 'id="pgClock"' in html_path.read_text():
+        ctx69 = pw.new_context(viewport={"width": 1280, "height": 900}); p69 = ctx69.new_page(); errs69 = []; p69.on("pageerror", lambda e: errs69.append(str(e)))
+        p69.goto(html_path.as_uri()); p69.wait_for_selector("#cards", state="attached"); p69.wait_for_timeout(400)
+        pg69 = lambda role: f"#pgClock [data-role=\"{role}\"]"
+        # a LATE view paints the current state on subscribe: its inputs start empty in the markup, so a value here is the replay's
+        boot69 = p69.evaluate("() => { const q = r => document.querySelector('#pgClock [data-role=\"' + r + '\"]'); return { bpm: q('bpm').value, neck: document.getElementById('fdBpm').value, click: q('click').checked, neckClick: document.getElementById('fdMetChk').checked, splits: q('split').options.length, ids: [...document.querySelectorAll('#pgClock [id]')].map(e => e.id) }; }")
+        check(boot69["bpm"] != "" and boot69["bpm"] == boot69["neck"] and boot69["click"] == boot69["neckClick"] and boot69["splits"] > 1,
+              f"{tag} night 69: a clock view mounted with nothing touched paints the clock's current state (the bus replays it): {boot69}")
+        check(boot69["ids"] == [], f"{tag} night 69: the second clock view carries no ids — addressed by data-role only: {boot69['ids']}")
+        rows69 = lambda: p69.evaluate("""() => { const rs = [...document.querySelectorAll('#pgClock .clk-row')]; const role = e => e.dataset.role || (e.querySelector('[data-role]') || {}).dataset?.role;
+          return rs.map(r => ({ roles: [...r.querySelectorAll('[data-role]')].map(e => e.dataset.role), top: Math.round(r.getBoundingClientRect().top), bottom: Math.round(r.getBoundingClientRect().bottom),
+            oneLine: [...r.children].every(c => { const a = c.getBoundingClientRect(), b = r.getBoundingClientRect(); return a.top >= b.top - 1 && a.bottom <= b.bottom + 1; }) })); }""")
+        for w69 in (1280, 390):
+            p69.set_viewport_size({"width": w69, "height": 900}); p69.wait_for_timeout(250)
+            r69 = rows69()
+            check(len(r69) == 2 and r69[0]["roles"] == ["split", "bpm"] and r69[1]["roles"] == ["click", "pulse"] and all(r["oneLine"] for r in r69) and r69[0]["bottom"] <= r69[1]["top"] + 1,
+                  f"{tag} night 69: at {w69} Progression's clock is two DECLARED rows — bar split · bpm, then the click · its pulse — each on one line: {r69}")
+        p69.set_viewport_size({"width": 1280, "height": 900}); p69.wait_for_timeout(200)
+        # ONE STATE, EVERY VIEW: set at one view, read at the other
+        p69.select_option(pg69("split"), "2+2"); p69.wait_for_timeout(200)
+        check(p69.evaluate("() => document.getElementById('fdSplit').value") == "2+2", f"{tag} night 69: a split set at Progression's clock is the neck's split too")
+        p69.fill(pg69("bpm"), "131"); p69.dispatch_event(pg69("bpm"), "change"); p69.wait_for_timeout(250)
+        check(p69.evaluate("() => document.getElementById('fdBpm').value") == "131" and p69.evaluate("() => document.getElementById('bpmVal').textContent.trim()") == "131",
+              f"{tag} night 69: bpm typed at Progression's clock reaches the clock and every view paints it (the neck, the Metronome card)")
+        p69.click("#fdMetChk"); p69.wait_for_timeout(200)
+        check(p69.evaluate("() => document.querySelector('#pgClock [data-role=\"click\"]').checked") == p69.evaluate("() => document.getElementById('fdMetChk').checked"),
+              f"{tag} night 69: the click toggled at the neck is painted at Progression's view")
+        # THE EIGHTH MINI: computed from the sources, never typed
+        import re as _re69
+        hosts69 = sorted(set(h for f in (REPO / "hub" / "modules").glob("*.mjs") for h in _re69.findall(r'mountMini\(ctx, (?:ctx\.)?byId\("(\w+)"\)\)', f.read_text())))
+        check("psMini" in hosts69 and p69.evaluate("() => document.querySelectorAll('#psMini button').length") == 5,
+              f"{tag} night 69: Settings carries a mini — a host computed from the sources ({len(hosts69)}: {hosts69}), its five buttons")
+        p69.click('#psMini button[data-role="play"]'); p69.wait_for_timeout(300)
+        running69 = p69.evaluate("() => [...document.querySelectorAll('[id$=\"Mini\"] button[data-role=\"play\"]')].filter(b => b.offsetParent).map(b => b.style.color)")
+        p69.click('#fdMini button[data-role="stop"]'); p69.wait_for_timeout(200)
+        check(running69 and all(c == "var(--gray)" for c in running69), f"{tag} night 69: play at Settings' mini — one clock runs and every visible mini reads playing: {running69}")
+        # THE READOUT'S FOURTH HOST, IN THE BODY under the chip legend
+        seat69 = p69.evaluate("""() => { const m = document.getElementById('hcMode'), cap = document.getElementById('hcChipCap'), card = m.closest('.card');
+          return { inBody: !card.querySelector('h2').contains(m), afterLegend: !!(cap.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING),
+            text: m.innerText.trim(), neck: document.getElementById('fdMode').innerText.trim(), box: getComputedStyle(m).borderTopStyle !== 'none' }; }""")
+        check(seat69["inBody"] and seat69["afterLegend"] and seat69["box"] and seat69["text"] and seat69["text"] == seat69["neck"],
+              f"{tag} night 69: Centricity carries the readout in its body under the chip legend, the box whole, saying what the neck says: {seat69}")
+        p69.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); p69.wait_for_timeout(300)
+        check(p69.inner_text("#hcMode").strip() == p69.inner_text("#fdMode").strip() and p69.inner_text("#hcMode").strip() != seat69["text"],
+              f"{tag} night 69: the fourth readout follows the bar: {p69.inner_text('#hcMode')!r}")
+        # THE RING (proposed): a held chip wears an inset ink ring; its fill keeps its degree's hue (golden rule 8)
+        p69.select_option("#hcObj", "scale"); p69.wait_for_timeout(300)
+        ring69 = p69.evaluate("""() => [...document.querySelectorAll('#hcChips .hc-chip')].map(b => ({ lit: b.dataset.lit, ring: b.style.boxShadow, bg: getComputedStyle(b).backgroundColor }))""")
+        held69 = [r for r in ring69 if r["lit"] == "true"]
+        check(held69 and all("inset" in r["ring"] for r in held69) and all(r["ring"] == "" for r in ring69 if r["lit"] != "true"),
+              f"{tag} night 69: a held chip wears an inset ring and an unheld one none (a mark, not a hue): {ring69}")
+        check(not errs69, f"{tag} night 69: no page errors: {errs69[:3]}")
+        ctx69.close()
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

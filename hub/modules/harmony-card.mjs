@@ -22,6 +22,7 @@ import { field } from "../../engine/field.mjs";
 import { CENTRE_SOURCES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
 import { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce, announceAfter } from "../bus.mjs";
+import { mountReadout } from "../readout.mjs";
 // the engine's one derivation — read here for a decision (the gamut drop), never stored: night 64
 import { objectOf, tonePick } from "../../engine/selection.mjs";
 // the degree palette, stated once (night 60: the chip row wears it — the neck legend's own table)
@@ -44,7 +45,7 @@ export const harmonyCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 10,
-  controls: ["hcKey", "hcScale", "hcRef", "hcCentreSrc", "hcGamut", "hcChips"],   // night 64: Object and Tones crossed to Progression
+  controls: ["hcKey", "hcScale", "hcRef", "hcCentreSrc", "hcGamut", "hcChips", "hcMode"],   // night 64: Object and Tones crossed to Progression
 
   /* v0.9's card, structurally verbatim: two captioned pairs on a two-up grid,
    * then the reference across the full width because its options carry a note
@@ -107,6 +108,11 @@ export const harmonyCard = {
          from a held set by the words, never by a colour). -->
     <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
     <div class="hint hc-chipcap" id="hcChipCap"></div>
+    <!-- THE READOUT'S FOURTH HOST — IN THE BODY (night 69, ruling 261026 §6): one grammar, two seats. On the neck,
+         the staff and the keys the box LABELS a diagram, so it sits in the header; here the box IS THE SUBJECT and
+         the chips describe it, so it sits with them. The box is hub/readout.mjs's, whole; this is only its seat. -->
+    <div class="hc-readseat"><div class="readbox" id="hcMode" data-control="hcMode"
+      title="this bar's chord, and the mode it is in the context of the chosen scale"></div></div>
   </div>
   <!-- THE TONES (260917) left with the Object for the Progression card at night 64 — one editor per card:
        this card edits the FIELD (the Gamut, the chips); the object's tones are edited where the object is. -->
@@ -171,9 +177,11 @@ export const harmonyCard = {
 .hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
 .hc-chip .hc-chipname{font-size:14px;line-height:1.15}
 .hc-chipcap{margin-top:5px}
+.hc-readseat{display:flex;margin:8px 0 4px}   /* the SEAT only: the box inside is the readout grammar's, unrestyled */
 #hcRefLab[hidden],#hcRef[hidden]{display:none}`,
 
   mount(ctx) {
+    mountReadout(ctx, ctx.byId("hcMode"));   // night 69: the readout's fourth host
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE (§4.2.3): the harmony half. `ref` re-roots the field (a mode);
      * `bass` is the reference under a chord and is child 5's — held at "none"
@@ -236,6 +244,11 @@ export const harmonyCard = {
         b.style.backgroundColor = isLit ? FAM_COLOR[fam] : fade(FAM_COLOR[fam], FIELD_OPACITY);
         b.style.color = isLit ? FAM_TEXT[fam] : DARK_TEXT;
         b.querySelector(".hc-chipname").textContent = fld.notes[i].name;
+        /* THE RING — PROPOSED (night 69, item 5; Daniel: "an outline on top of the reduced opacity might be
+         * sufficient"): a lit chip also wears an inset ring in ink — a mark of weight, not a hue (golden rule 8: the
+         * fill keeps its degree colour, the ring is the neutral ink). Inset, so the layout never moves and a focus
+         * outline (outside) never collides. */
+        b.style.boxShadow = isLit ? "inset 0 0 0 2px var(--ink)" : "";
         b.dataset.lit = String(isLit); b.dataset.pick = String(isScale);
         b.setAttribute("aria-label", `${fld.notes[i].name}, the key's ${i + 1}`);
         if (isScale) b.setAttribute("aria-pressed", String(isLit)); else b.removeAttribute("aria-pressed");

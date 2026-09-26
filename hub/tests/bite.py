@@ -570,18 +570,18 @@ def m15_scale_material_silently_halved():
 
 
 # ---------------------------------------------------------------- mutation 16
+FIND16 = '      cards: ["metronome-card", { part: "notepad-card#pad", heading: "Notepad" }] },\n    /* 261026 (night 69, ruling 261026 §4 — LOAD-BEARING): 2fr 1fr 1fr → 3fr 2fr 2fr. At 2fr 1fr 1fr Progression\'s header\n     * has 185 px usable and the clock\'s first row needs ~214, so bpm broke to its own line; at 3fr 2fr 2fr it has 255.\n     * Centricity narrows 562 → 482 — approved explicitly. Not the shelf\'s white space (1280 heights), untouched. */\n    { template: "3fr 2fr 2fr", cards: ["harmony-card", "progression-card", "presets-card"] },'
+REPL16 = '      cards: ["metronome-card", "harmony-card"] },\n    /* 261026 (night 69, ruling 261026 §4 — LOAD-BEARING): 2fr 1fr 1fr → 3fr 2fr 2fr. At 2fr 1fr 1fr Progression\'s header\n     * has 185 px usable and the clock\'s first row needs ~214, so bpm broke to its own line; at 3fr 2fr 2fr it has 255.\n     * Centricity narrows 562 → 482 — approved explicitly. Not the shelf\'s white space (1280 heights), untouched. */\n    { template: "3fr 2fr 2fr", cards: [{ part: "notepad-card#pad", heading: "Notepad" }, "progression-card", "presets-card"] },'
 # MULTETUDES surface: a card moved between rows. The first red run of the diff
 # gate proved width ratios alone measure nothing here — the seating identity
 # check (who sits in each row, read off each card's own controls) is what must
 # bite, and this keeps it mutation-proven.
 def m16_card_moved_between_rows():
+    # re-anchored 261026 (night 69): row 2's template became 3fr 2fr 2fr with its reason comment between the rows, so the
+    # anchor is the whole span from row 1's cards to row 2's — the same swap: harmony into row 1, the pad into row 2.
     p, original, mutated = patch("hub/doors/multetudes.door.mjs",
-        '    { template: "1fr 3fr",\n'
-        '      cards: ["metronome-card", { part: "notepad-card#pad", heading: "Notepad" }] },\n'
-        '    { template: "2fr 1fr 1fr", cards: ["harmony-card", "progression-card", "presets-card"] },',
-        '    { template: "1fr 3fr",\n'
-        '      cards: ["metronome-card", "harmony-card"] },\n'
-        '    { template: "2fr 1fr 1fr", cards: [{ part: "notepad-card#pad", heading: "Notepad" }, "progression-card", "presets-card"] },')
+        FIND16,
+        REPL16)
     try:
         p.write_text(mutated)
         build()
@@ -2519,6 +2519,86 @@ def m118_the_rows_stop_stacking_at_390():
         p.write_text(original)
 
 
+def m119_a_late_clock_view_paints_nothing():
+    # night 69: the clock view stops painting bpm from the clock's echo — a view mounted late shows an empty box. The late-mount pin must bite.
+    p, original, mutated = patch('hub/clock.mjs',
+        '    if (typeof m.bpm === "number") bpm.value = m.bpm;',
+        '    // (bpm unpainted)')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "paints the clock's current state" in g.stdout
+        record("a late clock view paints nothing — an empty bpm box beside the neck's 72",
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m120_the_declared_break_is_left_to_flex():
+    # night 69: Progression's clock loses its declared rows — one run, wherever flex breaks it. The two-rows pin must bite.
+    p, original, mutated = patch('hub/clock.mjs',
+        '  return rows === 2\n',
+        '  return false\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "two DECLARED rows" in g.stdout
+        record('the declared break is left to flex — the clock wraps wherever it lands',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m121_the_eighth_mini_is_never_mounted():
+    # night 69: Settings seats a mini host and never mounts it — an empty span. The eighth-host pin must bite.
+    p, original, mutated = patch('hub/modules/presets-card.mjs',
+        '    mountMini(ctx, ctx.byId("psMini"));\n',
+        '\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "Settings carries a mini" in g.stdout
+        record('the eighth mini is never mounted — a seat with no transport in it',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m122_the_held_chip_loses_its_ring():
+    # night 69: the ring is dropped — held and unheld read alike again. The ring pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        '        b.style.boxShadow = isLit ? "inset 0 0 0 2px var(--ink)" : "";',
+        '        b.style.boxShadow = "";')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "wears an inset ring" in g.stdout
+        record('the held chip loses its ring — held and unheld alike again',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m123_the_fourth_readout_is_never_mounted():
+    # night 69: Centricity seats the readout box and never mounts it — an empty box. The fourth-host pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        '    mountReadout(ctx, ctx.byId("hcMode"));   // night 69: the readout\'s fourth host\n',
+        '\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "carries the readout in its body" in g.stdout
+        record('the fourth readout is never mounted — an empty box under the chips',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
@@ -2687,7 +2767,9 @@ def main():
                m111_the_motif_rail_goes_nameless_again, m112_the_readout_forgets_the_movement,
                m113_the_settings_card_reads_its_own_list, m114_a_setting_without_words_leaves_the_face,
                m115_the_shut_rail_hides_its_name_again, m116_the_header_slot_sits_on_the_words_again,
-               m117_the_clock_overruns_the_header_at_390, m118_the_rows_stop_stacking_at_390)
+               m117_the_clock_overruns_the_header_at_390, m118_the_rows_stop_stacking_at_390,
+               m119_a_late_clock_view_paints_nothing, m120_the_declared_break_is_left_to_flex, m121_the_eighth_mini_is_never_mounted,
+               m122_the_held_chip_loses_its_ring, m123_the_fourth_readout_is_never_mounted)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

@@ -24,6 +24,7 @@ import { CYCLES } from "../../engine/tetrad-sequence.mjs";
 import { STRUCTURES } from "../../engine/structures.mjs";
 import { progressionOf, chartBodyOf } from "../../engine/progression.mjs";
 import { CONFIG_CHANGED, listen, announce, announceAfter } from "../bus.mjs";
+import { clockMarkup, mountClock } from "../clock.mjs";
 import { parseTones, degreeOfTone, renderPick, defaultPick, objectDegrees, pickOf, tonePick, objectOf } from "../../engine/selection.mjs";
 import { field } from "../../engine/field.mjs";
 import { SHARED } from "../../engine/shared-config.mjs";
@@ -54,10 +55,14 @@ export const progressionCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 11,
-  controls: ["hcObj", "hcTones", "pgSrcSeg", "pgCycle", "pgForm", "pgCustom", "pgChartBtn", "pgStart"],   // hcObj, hcTones: night 64, their ids kept (every pin, message and saved étude addresses them)
+  controls: ["pgClock", "hcObj", "hcTones", "pgSrcSeg", "pgCycle", "pgForm", "pgCustom", "pgChartBtn", "pgStart"],   // hcObj, hcTones: night 64, their ids kept (every pin, message and saved étude addresses them)
 
   markup: `
   <h2>Progression</h2>
+  <!-- THE CLOCK, SEATED HERE (night 69 — ruling 261026, D5 approved): a second VIEW of the clock (hub/clock.mjs),
+       addressed by data-role, owning nothing. TWO DECLARED ROWS — bar split · bpm, then the click · its pulse —
+       Daniel's grouping, a wrapper per row, never a wrap flex finds. The neck keeps its own view. -->
+  <div class="pg-clock" id="pgClock" data-control="pgClock">${clockMarkup({ rows: 2 })}</div>
   <!-- OBJECT AND TONES FIRST, above Source (night 64): they are what the progression acts on, so they are read
        before how it moves. STACKED, not adjacent — this card is a narrow column (281 px at 1280, 250 at 390) and
        its own idiom is label-above-control at full width; two selects side by side would clip the object's
@@ -87,6 +92,9 @@ export const progressionCard = {
   <div class="hint" id="pgNote"></div>`,
 
   styles: `
+.pg-clock{margin:0 0 10px}
+.pg-clock .clk-row{display:flex;align-items:center;gap:9px}
+.pg-clock .clk-row+.clk-row{margin-top:2px}
 .pg-hid{display:none}
 #pgNote{margin-top:8px}
 /* the seg's visual grammar, scoped to this module's own markup (260905):
@@ -107,6 +115,7 @@ export const progressionCard = {
 #pgChartBtn:disabled{color:var(--gray);cursor:default}`,
 
   mount(ctx) {
+    mountClock(ctx, ctx.byId("pgClock"));   // night 69: a view of the one clock
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE — the progression half. key/scale are MIRRORS (harmony owns
      * them) held only to validate and to phrase the note. */

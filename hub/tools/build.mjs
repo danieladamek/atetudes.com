@@ -117,6 +117,19 @@ const READOUT_GRAMMAR = {
 `,
 };
 
+/* THE CLOCK GRAMMAR (261026, night 69): the clock view's own look, stated ONCE — shipped to any door that reaches
+ * hub/clock.mjs, as the readout's grammar is. The bpm box and the pulse's dot were the neck's (#fdBpm, .fd-pulse),
+ * byte for byte; the caption's look is the neck's .fd-lab2. A host seats the view; it never restyles it. */
+const CLOCK_GRAMMAR = {
+  reaches: "hub/clock.mjs",
+  styles: `
+.clk-lab{font-size:12px;color:var(--gray)}
+.clk-bpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
+.clk-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
+`,
+};
+
 /* NAMED PARTS (the parts primitive, 2026-08-30 — register entry 4's route):
  * a module's markup may mark regions as a named part —
  *
@@ -292,6 +305,7 @@ async function build(id) {
         .map((k) => shell.WRAPPERS[k].styles).join("\n")
     + (rows.length ? ROW_WRAPPER.styles : "")
     + (r.filesIn.includes(READOUT_GRAMMAR.reaches) ? READOUT_GRAMMAR.styles : "")
+    + (r.filesIn.includes(CLOCK_GRAMMAR.reaches) ? CLOCK_GRAMMAR.styles : "")
     + mods.map((m) => m.styles ?? "").join("\n");
   /* a rows-only door still carries a .cards element (hidden, empty) so the
    * shell's always-shipped .cards rule has something to match — the orphan

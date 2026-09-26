@@ -18,6 +18,7 @@ import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
+import { mountMini } from "../mini.mjs";
 import { etudeRecord } from "../etude-record.mjs";
 import { describe } from "../etude-describe.mjs";
 
@@ -45,7 +46,7 @@ export const presetsCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 12,
-  controls: ["psSel"],
+  controls: ["psMini", "psSel"],
 
   /* THE SETTINGS CARD (261024, night 66 — Daniel, 261014: "a complete view of the étude the user has just
    * structured… all of that content should echo what then gets saved in the practice log"). The FACE renames;
@@ -54,6 +55,9 @@ export const presetsCard = {
    * described from hub/etude-record.mjs — the SAME record the practice log saves, one instance per page. */
   markup: `
   <h2>Settings</h2>
+  <!-- A VIEW OF THE TRANSPORT (night 69 — ruling 261026, D5 approved): one more mini host (hub/mini.mjs). One press,
+       one state, every view — the host list is computed from the sources wherever it is counted. -->
+  <div class="ps-miniseat"><span class="mini" id="psMini" data-control="psMini"></span></div>
   <label>Start from</label>
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
@@ -63,6 +67,10 @@ export const presetsCard = {
   whatever you set them to.</div>`,
 
   styles: `
+.ps-miniseat{margin:0 0 8px}
+#psMini{display:flex;gap:4px}
+#psMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#psMini button:hover{border-color:var(--ink)}
 .ps-note{margin-top:8px}
 #psSel{width:100%}
 .ps-trace{margin-top:6px;color:var(--gray)}
@@ -71,6 +79,7 @@ export const presetsCard = {
 .ps-desc .ps-line{margin:0 0 3px}`,
 
   mount(ctx) {
+    mountMini(ctx, ctx.byId("psMini"));
     const d = ctx.doc, byId = ctx.byId;
     const sel = byId("psSel");
     sel.textContent = "";
