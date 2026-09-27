@@ -1,3 +1,14 @@
+## 2026-09-27 — DEPLOYED: night 71 live — the chip row says the chord role; Multetudes v0.6.23; one study moved; written from the run
+
+- record: run 36332169211 · success · commit b2911c9 · fetched 2026-09-27T16:19Z · 6/6 studies byte-identical · digest 9d3146446922
+- Actions run 36332169211 green on `b2911c9` — https://github.com/danieladamek/atetudes.com/actions/runs/36332169211 (created 2026-09-27T16:09:13Z, finished 2026-09-27T16:19:18Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo cfcca8dce522 · live cfcca8dce522 — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 29c625848058 · live 29c625848058 — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-27 — Night 71: the chip row says the chord role — each lit chord tone's role above its chip, the chord's numeral under the root; one role speller (stackRole) and a numeral spelled by the roman grammar; the harness reads a broken build whole; Multetudes v0.6.23
 
 - **Rulings 261028, 261029, 261029b.** Night 71 first STOPPED: the three role tables do not consolidate — *an interval
