@@ -23,6 +23,8 @@ import { CENTRE_SOURCES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
 import { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce, announceAfter } from "../bus.mjs";
 import { mountReadout, chordNow } from "../readout.mjs";
+import { stackRole } from "../../engine/role.mjs";
+import { grammarRoman } from "../../engine/numeral.mjs";
 // the engine's one derivation — read here for a decision (the gamut drop), never stored: night 64
 import { objectOf, tonePick } from "../../engine/selection.mjs";
 // the degree palette, stated once (night 60: the chip row wears it — the neck legend's own table)
@@ -106,7 +108,13 @@ export const harmonyCard = {
          own words — the row stays keyed to the KEY while the neck re-roots, ruled 261012, so both
          origins are stated) and the MEANING (following / held — the still frame after a stop is told
          from a held set by the words, never by a colour). -->
+    <!-- THE CHORD ROLE (night 71 — Daniel's approved layout; ruling 261028): above each chip that is a CHORD TONE, its
+         role in the chord (spelled by engine/role.mjs, the symbol's own speller, so the two cannot disagree); below the
+         root, the chord's numeral in the key, travelling with it and clamped inside the row. Presence is the cue:
+         only chord tones wear a role. Quiet under a scale and before the bar sounds; both rows keep their height. -->
+    <div class="hc-rowwrap"><div class="hc-roles" id="hcRoles" aria-hidden="true"></div>
     <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
+    <div class="hc-numeral" id="hcNumeral"><span class="hc-numtext"></span></div></div>
     <div class="hint hc-chipcap" id="hcChipCap"></div>
     <!-- THE READOUT'S FOURTH HOST — IN THE BODY (night 69, ruling 261026 §6): one grammar, two seats. On the neck,
          the staff and the keys the box LABELS a diagram, so it sits in the header; here the box IS THE SUBJECT and
@@ -175,7 +183,12 @@ export const harmonyCard = {
  * 8 px) and the free space was shared equally on top: held chips grew wider than unheld ones and the row moved at 390
  * (hidden at 1280 by max-width). With a basis at least the widest border, every chip starts equal and ends at
  * (C − 6·gap)/7 — independent of the basis — so the unheld row is unchanged. If the row pin goes red, look here. */
-.hc-chips{display:flex;gap:6px;margin-top:8px}
+.hc-rowwrap{position:relative;margin-top:4px}
+.hc-roles{display:flex;gap:6px;height:14px}
+.hc-roles>span{flex:1 1 8px;min-width:0;max-width:46px;text-align:center;font-size:11px;font-weight:500;line-height:14px;color:var(--gray)}
+.hc-numeral{position:relative;height:16px;margin-top:3px}
+.hc-numtext{position:absolute;top:0;white-space:nowrap;font-size:12px;line-height:16px;color:var(--gray)}
+.hc-chips{display:flex;gap:6px;margin-top:4px}
 .hc-chip{flex:1 1 8px;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;box-sizing:border-box;background-clip:padding-box;
   font:inherit;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
 .hc-chip[data-pick="false"]{cursor:default}
@@ -188,11 +201,11 @@ export const harmonyCard = {
   mount(ctx) {
     mountReadout(ctx, ctx.byId("hcMode"));   // night 69: the readout's fourth host
     /* the chord ROOT for the chip mark (night 70): the readout's own derivation, one source — its degree in the key */
-    let rootDeg = -1;
+    let rootDeg = -1, chordNowNow = null;
     const rootOf = (now) => (now && now.cur && typeof now.cur.degree === "number" ? now.cur.degree : -1);
     let renderChipsLater = () => {};
-    const chordNowFn = chordNow(ctx, (now) => { rootDeg = rootOf(now); renderChipsLater(); });
-    rootDeg = rootOf(chordNowFn());
+    const chordNowFn = chordNow(ctx, (now) => { chordNowNow = now; rootDeg = rootOf(now); renderChipsLater(); });
+    chordNowNow = chordNowFn(); rootDeg = rootOf(chordNowNow);
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE (§4.2.3): the harmony half. `ref` re-roots the field (a mode);
      * `bass` is the reference under a chord and is child 5's — held at "none"
@@ -271,6 +284,31 @@ export const harmonyCard = {
         b.setAttribute("aria-label", `${fld.notes[i].name}, the key's ${i + 1}`);
         if (isScale) b.setAttribute("aria-pressed", String(isLit)); else b.removeAttribute("aria-pressed");
       });
+      /* THE CHORD ROLE and THE NUMERAL (night 71): from the readout's own derivation (chordNow — the chord, its tones,
+       * its degree from progressionOf, which takes the key and scale only: the centre cannot move a numeral; its numeral
+       * spelled by the roman grammar, engine/numeral.mjs — ruling 261029b). A tone's
+       * role is stackRole(its stack degree, its distance above the root) — the chord symbol's own speller. Labelled:
+       * a chip that is LIT and a CHORD TONE. The numeral: while the root chip is lit. Otherwise quiet. */
+      {
+        const roles = byId("hcRoles"), num = byId("hcNumeral").querySelector(".hc-numtext");
+        const cur = chordNowNow && chordNowNow.cur;
+        const tones = !isScale && cur && Array.isArray(cur.tones) ? cur.tones : [];
+        const roleAt = new Map();
+        for (const t of tones)
+          if (typeof t.keyDeg === "number" && t.keyDeg >= 0)
+            roleAt.set(t.keyDeg, stackRole(t.role === "R" ? 1 : Number(t.role), (((t.pc - cur.rootPc) % 12) + 12) % 12));
+        if (roles.children.length !== 7) { roles.textContent = ""; for (let i = 0; i < 7; i++) roles.appendChild(d.createElement("span")); }
+        [...roles.children].forEach((s, i) => { s.textContent = on.includes(i + 1) && roleAt.has(i) ? roleAt.get(i) : ""; s.dataset.deg = String(i + 1); });
+        const rootChip = row.querySelector(`.hc-chip[data-deg="${rootDeg + 1}"]`);
+        const showNum = !isScale && cur && rootDeg >= 0 && on.includes(rootDeg + 1) && rootChip;
+        num.textContent = showNum ? grammarRoman(cur) : "";   // ruling 261029b: the roman GRAMMAR spells it (IVmaj7, ii7, viiø7)
+        if (showNum) {
+          /* CLAMP FIRST: centred under the root, stopped at the row's edges — never cut (night 25's "surviving whole") */
+          const box = byId("hcNumeral").getBoundingClientRect(), c = rootChip.getBoundingClientRect(), w = num.getBoundingClientRect().width;
+          const centre = c.left + c.width / 2 - box.left;
+          num.style.left = Math.max(0, Math.min(box.width - w, centre - w / 2)) + "px";
+        }
+      }
       /* the two standing marks: the ORIGIN in the legend's own words (adopted, not coined — the neck says
        * "against the reference tone" when re-rooted, this row is always against the key, and both are
        * on the face together, which is what makes the divergence legitimate); the MEANING, held or following */

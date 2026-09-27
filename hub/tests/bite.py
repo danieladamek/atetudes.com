@@ -106,12 +106,33 @@ def build():
     which is what happened the first time mutation 4 was written."""
     r = sh("node", "hub/tools/build.mjs")
     if r.returncode != 0:
-        raise BuildBroken(r.stderr.strip().splitlines()[-1] if r.stderr.strip() else "build failed")
+        raise broken_from(r)
     return r
 
 
 class BuildBroken(Exception):
-    pass
+    """a broken build, carrying its WHOLE error output as .full (night 71, ruling 261029b). The message stays one line
+    for the log; a mutation that must read WHY the build broke reads .full. Until night 71 the harness kept only the
+    LAST line — Node's version banner — so every load-time refusal read as a bare "Node.js v20…": a pin whose effect is
+    a module refusing to load was unverifiable (m132 recorded NO BITE on a refusal that fired)."""
+    def __init__(self, line, full):
+        super().__init__(line); self.full = full
+
+
+def broken_from(r):
+    err = (r.stderr or "").strip()
+    return BuildBroken(err.splitlines()[-1] if err else "build failed", err + "\n" + (r.stdout or ""))
+
+
+# THE GUARD (rule 3, night 71): the fix itself asserted, at import — a harness that regresses to one line refuses to run
+class _R:
+    returncode = 1
+    stdout = ""
+    stderr = "file:///x/engine/role.mjs:58\n    throw new Error(\"role: an interval named a role\")\n\nError: role: an interval named a role\n\nNode.js v20.11.0"
+_g = broken_from(_R())
+assert "role: an interval named a role" in _g.full and str(_g).startswith("Node.js"), \
+    "bite.py: a broken build must keep its WHOLE error output (.full) — the last line alone is Node's banner"
+del _g, _R
 
 
 # THE REACH CENSUS (night 50, 261010): which doors a mutation can move. Measured first — the
@@ -2663,6 +2684,106 @@ def m127_the_chip_basis_returns_to_zero():
         p.write_text(original)
 
 
+def m128_a_tension_wears_a_role():
+    # night 71: a lit chip that is NOT a chord tone wears a role — the presence cue spent. The chord-tones-only pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        's.textContent = on.includes(i + 1) && roleAt.has(i) ? roleAt.get(i) : "";',
+        's.textContent = on.includes(i + 1) ? (roleAt.get(i) || "9") : "";')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "only the chord tones wear a role" in g.stdout
+        record('a tension wears a role — every lit chip labelled, the presence cue spent',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m129_the_chip_spells_by_interval_alone():
+    # night 71: the chip spells its role from the interval alone (the old context-free table) — b5 under a readout saying #11. The agreement pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        'roleAt.set(t.keyDeg, stackRole(t.role === "R" ? 1 : Number(t.role), (((t.pc - cur.rootPc) % 12) + 12) % 12));',
+        'roleAt.set(t.keyDeg, { 0: "R", 1: "b9", 2: "9", 3: "b3", 4: "3", 5: "11", 6: "b5", 7: "5", 8: "#5", 9: "6", 10: "b7", 11: "7" }[(((t.pc - cur.rootPc) % 12) + 12) % 12]);')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the chip\'s spelling and the readout\'s symbol agree" in g.stdout
+        record('the chip spells by interval alone — b5 under a readout saying #11',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m130_the_numeral_escapes_the_card():
+    # night 71: the numeral is placed past the row's edge — it runs out of the card. The inside-the-card pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        'num.style.left = Math.max(0, Math.min(box.width - w, centre - w / 2)) + "px";',
+        'num.style.left = (centre - w / 2 + 600) + "px";')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "is present and INSIDE the card" in g.stdout
+        record("the numeral escapes the card — pushed past the row's edge",
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m131_the_row_speaks_under_a_scale():
+    # night 71: the numeral is shown under a scale — the row does not go quiet. The quiet pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        'const showNum = !isScale && cur && rootDeg >= 0',
+        'const showNum = cur && rootDeg >= 0')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the row goes quiet" in g.stdout
+        record('the row speaks under a scale — a numeral with no chord',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m132_spellrole_loses_the_degree():
+    # night 71 — THE DOCTRINE: stackRole ignores the stack degree and spells from the interval alone. Its own load-time
+    # assertion ("an interval named a role") must refuse the module, so the build breaks and says why.
+    p, original, mutated = patch("engine/role.mjs",
+        "  const ref = MAJOR[(degree - 1) % 7];",
+        "  const ref = MAJOR[[0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6][((semitones % 12) + 12) % 12]];   // (the degree ignored: the interval alone)")
+    try:
+        p.write_text(mutated)
+        try:
+            build(); hit = False; why = "the build went through"
+        except BuildBroken as e:
+            why = e.full; hit = "role:" in why or "stackRole" in why   # the WHOLE output (night 71 — the last line was Node's banner)
+        record("stackRole loses the degree — the interval alone names the role",
+               hit, "the build refused: %s" % next((l.strip() for l in why.splitlines() if "role:" in l), why.strip().splitlines()[-1] if why.strip() else "")[:140])
+    finally:
+        p.write_text(original)
+
+
+def m133_the_numeral_does_not_parse():
+    # night 71 (ruling 261029b): the numeral writes the minor seventh "-7" (the chord-symbol speller's habit) — a roman the
+    # grammar rejects. The numeral module's own load-time parse check must refuse it, so the build breaks and says why.
+    p, original, mutated = patch("engine/numeral.mjs",
+        "  else if (seventh === 10 || seventh === 9) out += \"7\";",
+        "  else if (seventh === 10 || seventh === 9) out += minor && fifth === 7 ? \"-7\" : \"7\";   // (the speller's -7)")
+    try:
+        p.write_text(mutated)
+        try:
+            build(); hit = False; why = "the build went through"
+        except BuildBroken as e:
+            why = e.full; hit = "numeral:" in why
+        record("the numeral does not parse — ii-7, a roman the grammar rejects",
+               hit, "the build refused: %s" % next((l.strip() for l in why.splitlines() if "numeral:" in l), "")[:140])
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
@@ -2835,7 +2956,10 @@ def main():
                m119_a_late_clock_view_paints_nothing, m120_the_declared_break_is_left_to_flex, m121_the_eighth_mini_is_never_mounted,
                m122_the_held_chip_loses_its_ring, m123_the_fourth_readout_is_never_mounted,
                m124_the_held_chip_loses_its_solid_mark, m125_the_root_is_solid_like_the_rest,
-               m126_the_fill_paints_under_the_border, m127_the_chip_basis_returns_to_zero)
+               m126_the_fill_paints_under_the_border, m127_the_chip_basis_returns_to_zero,
+               m128_a_tension_wears_a_role, m129_the_chip_spells_by_interval_alone, m130_the_numeral_escapes_the_card,
+               m131_the_row_speaks_under_a_scale, m132_spellrole_loses_the_degree,
+               m133_the_numeral_does_not_parse)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

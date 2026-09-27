@@ -159,6 +159,15 @@ engine/
 │                        from standard — down flat, up sharp, unmoved natural; the twelve names
 │                        the only table; a leaf, so a card can take a set's label without the
 │                        tetrad tree (pure)
+├── numeral.mjs          THE CHORD'S NUMERAL, spelled by the roman GRAMMAR
+│                        (night 71, ruling 261029b): grammarRoman — case the
+│                        third, the mark the fifth, the suffix the seventh;
+│                        every emitted numeral parses (pure)
+├── role.mjs             THE CHORD ROLE, spelled once (night 71, ruling 261028):
+│                        stackRole(degree, semitones) — an interval does not
+│                        name a chord role, the stack position does; the
+│                        accidental computed against the major distance. The
+│                        chord symbol and the chip row's labels read it (pure)
 ├── roman.mjs            ONE ROMAN SPELLING, one named reduction (261006 ruling): functionRoman —
 │                        the chip's function-only spelling from the full roman (viiø7 → vii°),
 │                        asserted equal to progression.mjs's on every diatonic tetrad (pure)

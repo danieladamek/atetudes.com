@@ -1,3 +1,30 @@
+## 2026-09-27 — Night 71: the chip row says the chord role — each lit chord tone's role above its chip, the chord's numeral under the root; one role speller (stackRole) and a numeral spelled by the roman grammar; the harness reads a broken build whole; Multetudes v0.6.23
+
+- **Rulings 261028, 261029, 261029b.** Night 71 first STOPPED: the three role tables do not consolidate — *an interval
+  does not name a chord role; the stack position does* (5 semitones is 11 or 4; 6 is b5 or #11). Step A approved.
+- **`engine/role.mjs` — `stackRole(degree, semitones)`** (named so because `chord.mjs` already exports a different
+  `spellRole`, byte-pinned into hand pages): the accidental computed against the major distance. The chord symbol
+  (`reference.mjs`) spells every slot through it — identical output over all 2,048 interval sets — and the chip labels
+  read it, so a chip can never say b5 under a readout saying #11. **The named second vocabulary:**
+  `engine/upper-structure.mjs` (triadetudes only, byte-pinned) keeps its own tables until step B; untouched tonight.
+- **The numeral — `engine/numeral.mjs`, `grammarRoman`:** spelled by the roman GRAMMAR (`ROMAN_RE`) — case the third,
+  the mark the fifth, the suffix the seventh: `IVmaj7`, `ii7`, `viiø7`, `vii°7`. Every numeral the door can produce is
+  asserted to parse (`engine/tests/numeral.test.mjs`, the whole enumeration). Centred under the root, clamped inside
+  the card; quiet under a scale.
+- **The harness finding:** `bite.py` kept only the LAST line of a broken build's output — Node's banner — so a load-time
+  refusal was unreadable; m132 recorded NO BITE on a refusal that fired. Fixed (the whole output kept) and guarded at
+  import. It could only ever produce a false NEGATIVE, so the chain stands at **132/133 + m132 proven separately**. The
+  class it exposes — every load-time block in the engine never mutation-proven — is listed in the run note, proposed,
+  none fixed.
+- **The roman estate** (filed, not consolidated): four spellers disagree; `tetrad-sequence`'s `romanOf` and the Python
+  generator emit `-7`, which the grammar rejects; `chord.mjs:285`'s docstring documents `parseRoman("iim7")`, which
+  returns null.
+- **Gates:** engine 707/707 · hub 14/14 · door gate **22,957/0** (`hub/tests/out/doors-n71-final-0927-1059.log`) —
+  night 68's page width and night 70's row pin green · chain **132/133** (`hub/tests/out/bite-0926-2258.log`), m132
+  proven alone (`bite-n71-m132-proven.log`), m133 (a numeral that does not parse) bites, m128–m131 re-bitten after the
+  numeral change · triadetudes' census unmoved, tetradetudes byte-identical · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261028 — night 71, the chord role (STOPPED — the role tables do not consolidate cleanly; mapped).md`.
+
 ## 2026-09-27 — DEPLOYED: night 70 live — the chip row's ratified mark; Multetudes v0.6.22, Tetradetudes v0.6.10; two studies moved; written from the run
 
 - record: run 36287195108 · success · commit 6a82754 · fetched 2026-09-27T02:10Z · 6/6 studies byte-identical · digest fad395ba595f

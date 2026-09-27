@@ -54,6 +54,7 @@
  */
 import { field, notesOn, degAgainst } from "./field.mjs";
 import { parseChord } from "./chord.mjs";
+import { stackRole } from "./role.mjs";
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
 const mod7 = (x) => ((x % 7) + 7) % 7;
@@ -214,37 +215,40 @@ export function placeReference(kind, chordDeg, fld, strings, pos, pick) {
  * carries — never a set-to-name table. Returns null when no rule speaks. */
 function assembleSuffix(rel) {
   const has = (iv) => rel.includes(iv);
-  const third = has(4) ? "maj" : has(3) ? "min" : null;
+  /* EVERY SLOT SPELLED BY stackRole (night 71, ruling 261028 — an interval does not name a chord role; the stack
+   * position does): the third, the fifth and the seventh are named by the slot they fill, and the 6-semitone tone
+   * over a perfect fifth is the ELEVENTH slot's — so the symbol and the chip row read one speller. */
+  const third = has(4) ? stackRole(3, 4) : has(3) ? stackRole(3, 3) : null;
   // 6 is the b5 only when no perfect fifth claims the slot; over one it is #11
-  const fifth = has(7) ? "P" : has(6) ? "b5" : has(8) ? "#5" : null;
-  const seventh = has(11) ? "maj7" : has(10) ? "b7" : null;
+  const fifth = has(7) ? stackRole(5, 7) : has(6) ? stackRole(5, 6) : has(8) ? stackRole(5, 8) : null;
+  const seventh = has(11) ? stackRole(7, 11) : has(10) ? stackRole(7, 10) : null;
   const nine = has(2), eleven = has(5), thirteen = has(9);
 
   let base;
-  if (seventh === "maj7") {
-    base = third === "min" ? (nine ? "mMaj7add9" : "mMaj7")
+  if (seventh === "7") {
+    base = third === "b3" ? (nine ? "mMaj7add9" : "mMaj7")
       : nine ? "maj9" : "maj7";
   } else if (seventh === "b7") {
-    if (third === "min") base = thirteen ? "m13" : eleven ? "m11" : nine ? "m9" : "m7";
+    if (third === "b3") base = thirteen ? "m13" : eleven ? "m11" : nine ? "m9" : "m7";
     else if (third === null && eleven) base = nine ? "9sus4" : "7sus4";
     else base = thirteen ? "13" : eleven ? "11" : nine ? "9" : "7";
   } else if (third === null && !thirteen) {
     // no third, no seventh: the suspensions own these shapes
-    if (nine && fifth === "P" && !eleven) base = "sus2";
-    else if (eleven && fifth === "P" && !nine) base = "sus4";
+    if (nine && fifth === "5" && !eleven) base = "sus2";
+    else if (eleven && fifth === "5" && !nine) base = "sus4";
     else return null;
   } else if (third !== null) {
-    if (thirteen && fifth === "P") base = third === "min" ? "m6" : "6";
-    else if (thirteen && fifth === "b5" && third === "min") base = "dim7";
-    else base = third === "min" ? (fifth === "b5" ? "dim" : "m")
+    if (thirteen && fifth === "5") base = third === "b3" ? "m6" : "6";
+    else if (thirteen && fifth === "b5" && third === "b3") base = "dim7";
+    else base = third === "b3" ? (fifth === "b5" ? "dim" : "m")
       : fifth === "#5" ? "aug" : "";
     if (nine && !seventh && base !== "dim7") base += "add9";
   } else return null;
 
   // the altered/absent slots, said out loud in the symbol
-  if (fifth === "b5" && !["dim", "dim7"].includes(base.replace("add9", ""))) base += "b5";
-  if (fifth === "#5" && base !== "aug") base += "#5";
-  if (fifth === "P" && has(6)) base += "#11";
+  if (fifth === "b5" && !["dim", "dim7"].includes(base.replace("add9", ""))) base += fifth;
+  if (fifth === "#5" && base !== "aug") base += fifth;
+  if (fifth === "5" && has(6)) base += stackRole(11, 6);
   if (third === null && !base.includes("sus")) base += "no3";
   if (fifth === null && !base.includes("no3")) base += "no5";
   else if (fifth === null && base.includes("no3")) base += "no5";

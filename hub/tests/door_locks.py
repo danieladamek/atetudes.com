@@ -7215,6 +7215,45 @@ console.log(JSON.stringify(out));
                   f"{tag} night 70: at {w70b} holding a chord (solid and dashed marks on) does not move the chip row — every box unchanged: {untouched} → {held}")
     ctx70.close()
 
+    # ---------------- NIGHT 71 (261028, ruling 261028): THE CHIP ROW SAYS THE CHORD ROLE ----------
+    # Above each LIT chip that is a CHORD TONE, its role in the chord — spelled by engine/role.mjs, the chord symbol's own
+    # speller, so a chip can never read b5 under a readout saying #11 (asserted here, where the effect is, rule 3). Below
+    # the root, the chord's numeral, inside the card at every width. Under a scale the row goes quiet.
+    if 'id="hcRoles"' in html_path.read_text():
+        ctx71 = pw.new_context(viewport={"width": 1280, "height": 900}); p71 = ctx71.new_page(); errs71 = []; p71.on("pageerror", lambda e: errs71.append(str(e)))
+        st71 = """() => { const card = document.getElementById('hcChips').closest('.card').getBoundingClientRect(), n = document.querySelector('#hcNumeral .hc-numtext'), r = n.getBoundingClientRect();
+          return { roles: [...document.querySelectorAll('#hcRoles > span')].map(s => s.textContent), numeral: n.textContent, readout: document.getElementById('hcMode').innerText.trim(),
+            inside: !n.textContent || (r.left >= card.left - 0.5 && r.right <= card.right + 0.5) }; }"""
+        def hold71(idx, obj="tetrad"):
+            p71.goto(html_path.as_uri()); p71.wait_for_selector("#cards", state="attached"); p71.wait_for_timeout(300)
+            if obj != "tetrad": p71.select_option("#hcObj", obj); p71.wait_for_timeout(250)
+            p71.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", idx); p71.wait_for_timeout(250)
+            for m in (58, 60, 62, 63, 65, 67, 69):   # every note of the key: every chord tone is lit
+                p71.evaluate("(m) => document.dispatchEvent(new CustomEvent('atetudes:note', { detail: { midi: m, role: 'chord' } }))", m)
+            p71.wait_for_timeout(250); return p71.evaluate(st71)
+        for w71 in (1280, 390):
+            p71.set_viewport_size({"width": w71, "height": 900})
+            e71 = hold71(1)
+            check(e71["roles"] == ["5", "", "7", "R", "", "3", ""] and e71["readout"].startswith("Ebmaj7"),
+                  f"{tag} night 71: at {w71}, Ebmaj7 in Bb — only the chord tones wear a role (5 · 7 · R · 3), the rest none: {e71}")
+            a71 = hold71(2)
+            check(a71["roles"][3] == "b5" and "b5" in a71["readout"] and a71["inside"],
+                  f"{tag} night 71: at {w71}, Am7b5 — the 4th chip reads b5 and so does the readout's symbol: {a71}")
+            x71 = hold71(1, "eleventh")
+            sym = x71["readout"].split(" ")[0]
+            roles_x = [r for r in x71["roles"] if r]
+            check(("#11" in sym) == ("#11" in roles_x) and ("b5" in sym or "b5" not in roles_x),
+                  f"{tag} night 71: at {w71}, an eleventh on IV — the chip's spelling and the readout's symbol agree (#11, never b5 under #11): {sym} vs {roles_x}")
+            for idx in (0, 1, 2, 6):
+                q71 = hold71(idx)
+                check(q71["numeral"] and q71["inside"], f"{tag} night 71: at {w71} the numeral of bar {idx + 1} is present and INSIDE the card: {q71}")
+            p71.goto(html_path.as_uri()); p71.wait_for_selector("#cards", state="attached"); p71.wait_for_timeout(300)
+            p71.select_option("#hcObj", "scale"); p71.wait_for_timeout(300)
+            s71 = p71.evaluate(st71)
+            check(not any(s71["roles"]) and not s71["numeral"], f"{tag} night 71: at {w71}, under a scale the row goes quiet — no role, no numeral: {s71}")
+        check(not errs71, f"{tag} night 71: no page errors: {errs71[:3]}")
+        ctx71.close()
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

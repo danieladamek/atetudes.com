@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -327,7 +327,12 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * 8 px) and the free space was shared equally on top: held chips grew wider than unheld ones and the row moved at 390
  * (hidden at 1280 by max-width). With a basis at least the widest border, every chip starts equal and ends at
  * (C − 6·gap)/7 — independent of the basis — so the unheld row is unchanged. If the row pin goes red, look here. */
-.hc-chips{display:flex;gap:6px;margin-top:8px}
+.hc-rowwrap{position:relative;margin-top:4px}
+.hc-roles{display:flex;gap:6px;height:14px}
+.hc-roles>span{flex:1 1 8px;min-width:0;max-width:46px;text-align:center;font-size:11px;font-weight:500;line-height:14px;color:var(--gray)}
+.hc-numeral{position:relative;height:16px;margin-top:3px}
+.hc-numtext{position:absolute;top:0;white-space:nowrap;font-size:12px;line-height:16px;color:var(--gray)}
+.hc-chips{display:flex;gap:6px;margin-top:4px}
 .hc-chip{flex:1 1 8px;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;box-sizing:border-box;background-clip:padding-box;
   font:inherit;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
 .hc-chip[data-pick="false"]{cursor:default}
@@ -643,7 +648,13 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
          own words — the row stays keyed to the KEY while the neck re-roots, ruled 261012, so both
          origins are stated) and the MEANING (following / held — the still frame after a stop is told
          from a held set by the words, never by a colour). -->
+    <!-- THE CHORD ROLE (night 71 — Daniel's approved layout; ruling 261028): above each chip that is a CHORD TONE, its
+         role in the chord (spelled by engine/role.mjs, the symbol's own speller, so the two cannot disagree); below the
+         root, the chord's numeral in the key, travelling with it and clamped inside the row. Presence is the cue:
+         only chord tones wear a role. Quiet under a scale and before the bar sounds; both rows keep their height. -->
+    <div class="hc-rowwrap"><div class="hc-roles" id="hcRoles" aria-hidden="true"></div>
     <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
+    <div class="hc-numeral" id="hcNumeral"><span class="hc-numtext"></span></div></div>
     <div class="hint hc-chipcap" id="hcChipCap"></div>
     <!-- THE READOUT'S FOURTH HOST — IN THE BODY (night 69, ruling 261026 §6): one grammar, two seats. On the neck,
          the staff and the keys the box LABELS a diagram, so it sits in the header; here the box IS THE SUBJECT and
@@ -6832,10 +6843,75 @@ function chordSymbol(root, quality) {
 return { STRUCTURES, CHORD_ROOTS, CHORD_QUALITIES, GLYPHS, resolveStructure, chartBody, chartFence, changesLine, chordSymbol };
 })();
 
+/* ===== engine/role.mjs ===== */
+const __m_engine_role_mjs = (() => {
+const { SCALE_STEPS } = __m_engine_chord_mjs;
+/* role.mjs — THE ROLE A TONE WEARS IN A CHORD, spelled once (night 71, 261028 — PO ruling 261028).
+ *
+ * NAMED stackRole, NOT spellRole (the name the ruling approved): engine/chord.mjs already exports a spellRole — it
+ * spells a tone's NOTE NAME (the 7th of C7 is Bb) from the root's letter — and chord.mjs is pinned byte for byte into
+ * the hand-authored studies, so it cannot be renamed. Two exports of one name for two different things is a trap; the
+ * name here says the doctrine instead: the STACK position names the role.
+ *
+ * *** AN INTERVAL DOES NOT NAME A CHORD ROLE. THE STACK POSITION DOES. ***
+ *
+ * Five semitones above a root is the 11 of a tetrad's stack or the 4 of a sus chord; six is the b5 of a diminished
+ * fifth or the #11 over a perfect one. So semitones → role is not a function, and a table keyed by the interval alone
+ * must pick one answer arbitrarily. stackRole takes BOTH facts — the stack degree the tone fills (1, 3, 5, 7, 9, 11,
+ * 13, or 2, 4, 6 where a chord carries them) and its distance above the root — and COMPUTES the accidental: the
+ * distance measured against the major scale's own distance for that degree (golden rule 1: computed, never chosen).
+ *   stackRole(5, 6)  → "b5"    stackRole(11, 6) → "#11"    stackRole(7, 9) → "bb7"    stackRole(1, 0) → "R"
+ *
+ * THE SOURCE FOR ANYTHING NEW. Its consumers tonight: the chord symbol (reference.mjs's assembly) and the chip row's
+ * role labels — both on one face, so they agree by construction.
+ *
+ * THE ONE NAMED SECOND VOCABULARY (outstanding, step B of ruling 261028): engine/upper-structure.mjs keeps its own
+ * label tables (LABEL_SEMIS / LABEL_LETTER / IV_LABEL). It serves only triadetudes — a hand-authored published page
+ * that the carrier census pins byte for byte — so it moves onto this function when triadetudes becomes a door, or by
+ * a re-copy ruled separately. It is named HERE and in the step-B item only. A THIRD vocabulary must never appear.
+ */
+
+/* the major scale's distance above its root for degrees 1…7 — DERIVED from the one scale table, not typed */
+const MAJOR = SCALE_STEPS.major.slice(0, 6).reduce((acc, s) => acc.concat(acc[acc.length - 1] + s), [0]);
+
+/** the role of a tone that fills stack `degree` (1…13) at `semitones` above the chord's root */
+function stackRole(degree, semitones) {
+  if (!Number.isInteger(degree) || degree < 1 || degree > 13)
+    throw new Error(`stackRole: a stack degree is 1…13, not ${degree}`);
+  if (!Number.isInteger(semitones)) throw new Error(`stackRole: semitones must be an integer, not ${semitones}`);
+  const ref = MAJOR[(degree - 1) % 7];
+  let d = (((semitones - ref) % 12) + 12) % 12;
+  if (d > 6) d -= 12;
+  if (degree === 1) {
+    if (d !== 0) throw new Error(`stackRole: the root is 0 semitones above itself, not ${semitones}`);
+    return "R";
+  }
+  if (Math.abs(d) > 2) throw new Error(`stackRole: ${semitones} semitones cannot fill degree ${degree} (${d > 0 ? "+" : ""}${d} from its major distance)`);
+  return (d < 0 ? "b".repeat(-d) : "#".repeat(d)) + degree;
+}
+
+/* ---------------- load-time assertions (golden rule 1, site form) ---------------- */
+{
+  if (MAJOR.join(",") !== "0,2,4,5,7,9,11") throw new Error(`role: the major reference did not derive to 0,2,4,5,7,9,11 — ${MAJOR}`);
+  const cases = [[1, 0, "R"], [3, 4, "3"], [3, 3, "b3"], [5, 7, "5"], [5, 6, "b5"], [5, 8, "#5"], [7, 11, "7"], [7, 10, "b7"],
+    [7, 9, "bb7"], [9, 2, "9"], [9, 1, "b9"], [9, 3, "#9"], [11, 5, "11"], [11, 6, "#11"], [13, 9, "13"], [13, 8, "b13"],
+    [4, 5, "4"], [2, 2, "2"], [6, 9, "6"]];
+  for (const [deg, st, want] of cases) {
+    const got = stackRole(deg, st);
+    if (got !== want) throw new Error(`role: stackRole(${deg}, ${st}) is "${got}", not "${want}"`);
+  }
+  // THE DOCTRINE, asserted: one interval, two stack positions, two roles
+  if (stackRole(5, 6) === stackRole(11, 6) || stackRole(11, 5) === stackRole(4, 5))
+    throw new Error("role: an interval named a role on its own — the stack position must decide it");
+}
+return { stackRole };
+})();
+
 /* ===== engine/reference.mjs ===== */
 const __m_engine_reference_mjs = (() => {
 const { field, notesOn, degAgainst } = __m_engine_field_mjs;
 const { parseChord } = __m_engine_chord_mjs;
+const { stackRole } = __m_engine_role_mjs;
 /* reference.mjs — THE REFERENCE TONE, fretted and named (Multetudes child 5).
  *
  * v0.9's placeBass, re-derived (read at line 712, not guessed), with the
@@ -6890,6 +6966,7 @@ const { parseChord } = __m_engine_chord_mjs;
  *
  * Pure: no DOM, no globals, load-time structural assertions.
  */
+
 
 
 const mod12 = (x) => ((x % 12) + 12) % 12;
@@ -7051,37 +7128,40 @@ function placeReference(kind, chordDeg, fld, strings, pos, pick) {
  * carries — never a set-to-name table. Returns null when no rule speaks. */
 function assembleSuffix(rel) {
   const has = (iv) => rel.includes(iv);
-  const third = has(4) ? "maj" : has(3) ? "min" : null;
+  /* EVERY SLOT SPELLED BY stackRole (night 71, ruling 261028 — an interval does not name a chord role; the stack
+   * position does): the third, the fifth and the seventh are named by the slot they fill, and the 6-semitone tone
+   * over a perfect fifth is the ELEVENTH slot's — so the symbol and the chip row read one speller. */
+  const third = has(4) ? stackRole(3, 4) : has(3) ? stackRole(3, 3) : null;
   // 6 is the b5 only when no perfect fifth claims the slot; over one it is #11
-  const fifth = has(7) ? "P" : has(6) ? "b5" : has(8) ? "#5" : null;
-  const seventh = has(11) ? "maj7" : has(10) ? "b7" : null;
+  const fifth = has(7) ? stackRole(5, 7) : has(6) ? stackRole(5, 6) : has(8) ? stackRole(5, 8) : null;
+  const seventh = has(11) ? stackRole(7, 11) : has(10) ? stackRole(7, 10) : null;
   const nine = has(2), eleven = has(5), thirteen = has(9);
 
   let base;
-  if (seventh === "maj7") {
-    base = third === "min" ? (nine ? "mMaj7add9" : "mMaj7")
+  if (seventh === "7") {
+    base = third === "b3" ? (nine ? "mMaj7add9" : "mMaj7")
       : nine ? "maj9" : "maj7";
   } else if (seventh === "b7") {
-    if (third === "min") base = thirteen ? "m13" : eleven ? "m11" : nine ? "m9" : "m7";
+    if (third === "b3") base = thirteen ? "m13" : eleven ? "m11" : nine ? "m9" : "m7";
     else if (third === null && eleven) base = nine ? "9sus4" : "7sus4";
     else base = thirteen ? "13" : eleven ? "11" : nine ? "9" : "7";
   } else if (third === null && !thirteen) {
     // no third, no seventh: the suspensions own these shapes
-    if (nine && fifth === "P" && !eleven) base = "sus2";
-    else if (eleven && fifth === "P" && !nine) base = "sus4";
+    if (nine && fifth === "5" && !eleven) base = "sus2";
+    else if (eleven && fifth === "5" && !nine) base = "sus4";
     else return null;
   } else if (third !== null) {
-    if (thirteen && fifth === "P") base = third === "min" ? "m6" : "6";
-    else if (thirteen && fifth === "b5" && third === "min") base = "dim7";
-    else base = third === "min" ? (fifth === "b5" ? "dim" : "m")
+    if (thirteen && fifth === "5") base = third === "b3" ? "m6" : "6";
+    else if (thirteen && fifth === "b5" && third === "b3") base = "dim7";
+    else base = third === "b3" ? (fifth === "b5" ? "dim" : "m")
       : fifth === "#5" ? "aug" : "";
     if (nine && !seventh && base !== "dim7") base += "add9";
   } else return null;
 
   // the altered/absent slots, said out loud in the symbol
-  if (fifth === "b5" && !["dim", "dim7"].includes(base.replace("add9", ""))) base += "b5";
-  if (fifth === "#5" && base !== "aug") base += "#5";
-  if (fifth === "P" && has(6)) base += "#11";
+  if (fifth === "b5" && !["dim", "dim7"].includes(base.replace("add9", ""))) base += fifth;
+  if (fifth === "#5" && base !== "aug") base += fifth;
+  if (fifth === "5" && has(6)) base += stackRole(11, 6);
   if (third === null && !base.includes("sus")) base += "no3";
   if (fifth === null && !base.includes("no3")) base += "no5";
   else if (fifth === null && base.includes("no3")) base += "no5";
@@ -10173,6 +10253,64 @@ const fieldBoard = {
 return { deriveField, fieldBoard };
 })();
 
+/* ===== engine/numeral.mjs ===== */
+const __m_engine_numeral_mjs = (() => {
+const { parseRoman } = __m_engine_chord_mjs;
+/* numeral.mjs — THE CHORD'S NUMERAL, spelled by the roman GRAMMAR (night 71, PO ruling 261029b).
+ *
+ * The grammar is engine/chord.mjs's ROMAN_RE — the parser this codebase reads romans with — and an emitted roman must
+ * parse. It is smaller than a chord symbol because CASE carries the third and the SUFFIX carries the seventh:
+ *   major triad + maj7 → IVmaj7    minor triad + b7 → ii7 (lower case already says minor)    dominant → V7
+ *   half-diminished → viiø7        diminished seventh → vii°7      augmented → III+    triads → I, ii, vii°
+ * Read off the chord's own tones (the readout's derivation: its roles and pitch classes) — case from the third, the
+ * mark from the fifth, the suffix from the seventh. No table of chord names.
+ *
+ * WHY NOT AN EXISTING SPELLER (the roman estate, night 71's run note): tetrad-sequence.mjs's romanOf writes the minor
+ * seventh "-7", which the grammar REJECTS (the same reason "∆7" was refused); progression.mjs's inner romanOf spells the
+ * triad only. Neither is changed tonight — tetradetudes' published labels do not move. Consolidating the family's roman
+ * spellers is filed, not done.
+ */
+
+const NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"];
+const mod12 = (x) => ((x % 12) + 12) % 12;
+
+/** the numeral for a chord in the key: `degree` 0…6 (or < 0 for an off-key root), `rootPc`, and its `tones`
+ * ({ role: "R" | "3" | "5" | "7" | …, pc }). Returns "—" for an off-key root. */
+function grammarRoman({ degree, rootPc, tones }) {
+  if (!(degree >= 0 && degree <= 6)) return "—";
+  const at = (role) => {
+    const t = (tones || []).find((x) => String(x.role) === role);
+    return t ? mod12(t.pc - rootPc) : null;
+  };
+  const third = at("3"), fifth = at("5"), seventh = at("7");
+  const minor = third === 3;
+  let out = minor ? NUMERALS[degree].toLowerCase() : NUMERALS[degree];
+  if (fifth === 6) out += seventh === 10 ? "ø" : "°";
+  else if (fifth === 8) out += "+";
+  if (seventh === 11) out += "maj7";
+  else if (seventh === 10 || seventh === 9) out += "7";
+  return out;
+}
+
+/* ---------------- load-time assertions (golden rule 1, site form) ---------------- */
+{
+  const cases = [
+    [{ degree: 3, rootPc: 3, tones: [{ role: "R", pc: 3 }, { role: "3", pc: 7 }, { role: "5", pc: 10 }, { role: "7", pc: 2 }] }, "IVmaj7"],
+    [{ degree: 1, rootPc: 0, tones: [{ role: "R", pc: 0 }, { role: "3", pc: 3 }, { role: "5", pc: 7 }, { role: "7", pc: 10 }] }, "ii7"],
+    [{ degree: 4, rootPc: 5, tones: [{ role: "R", pc: 5 }, { role: "3", pc: 9 }, { role: "5", pc: 0 }, { role: "7", pc: 3 }] }, "V7"],
+    [{ degree: 6, rootPc: 9, tones: [{ role: "R", pc: 9 }, { role: "3", pc: 0 }, { role: "5", pc: 3 }, { role: "7", pc: 7 }] }, "viiø7"],
+    [{ degree: 6, rootPc: 11, tones: [{ role: "R", pc: 11 }, { role: "3", pc: 2 }, { role: "5", pc: 5 }, { role: "7", pc: 8 }] }, "vii°7"],
+    [{ degree: 0, rootPc: 0, tones: [{ role: "R", pc: 0 }, { role: "3", pc: 4 }, { role: "5", pc: 7 }] }, "I"],
+  ];
+  for (const [c, want] of cases) {
+    const got = grammarRoman(c);
+    if (got !== want) throw new Error(`numeral: expected ${want}, spelled ${got}`);
+    if (parseRoman(got) === null) throw new Error(`numeral: "${got}" does not parse against the roman grammar`);
+  }
+}
+return { grammarRoman };
+})();
+
 /* ===== hub/lexicon.mjs ===== */
 const __m_hub_lexicon_mjs = (() => {
 /* lexicon.mjs — THE FAMILY'S CONTROL VOCABULARY, stated once (260926, night 32).
@@ -10245,6 +10383,8 @@ const { CENTRE_SOURCES } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce, announceAfter } = __m_hub_bus_mjs;
 const { mountReadout, chordNow } = __m_hub_readout_mjs;
+const { stackRole } = __m_engine_role_mjs;
+const { grammarRoman } = __m_engine_numeral_mjs;
 const { objectOf, tonePick } = __m_engine_selection_mjs;
 const { FAM, FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 const { triads, tetrads, triadPairs, pentatonics, pentatonicRefusal, normalizeGamut, describeGamut, pentatonicBreak } = __m_engine_gamut_mjs;
@@ -10270,6 +10410,8 @@ const { SHARED } = __m_engine_shared_config_mjs;
  * Dyad and Shell appear in the Object list DISABLED — child 4's engine.
  * Visibly inert, not absent: the menu is the model's, the grey is tonight's.
  */
+
+
 
 
 
@@ -10357,7 +10499,13 @@ const harmonyCard = {
          own words — the row stays keyed to the KEY while the neck re-roots, ruled 261012, so both
          origins are stated) and the MEANING (following / held — the still frame after a stop is told
          from a held set by the words, never by a colour). -->
+    <!-- THE CHORD ROLE (night 71 — Daniel's approved layout; ruling 261028): above each chip that is a CHORD TONE, its
+         role in the chord (spelled by engine/role.mjs, the symbol's own speller, so the two cannot disagree); below the
+         root, the chord's numeral in the key, travelling with it and clamped inside the row. Presence is the cue:
+         only chord tones wear a role. Quiet under a scale and before the bar sounds; both rows keep their height. -->
+    <div class="hc-rowwrap"><div class="hc-roles" id="hcRoles" aria-hidden="true"></div>
     <div class="hc-chips" id="hcChips" data-control="hcChips" role="group" aria-labelledby="hcChipCap"></div>
+    <div class="hc-numeral" id="hcNumeral"><span class="hc-numtext"></span></div></div>
     <div class="hint hc-chipcap" id="hcChipCap"></div>
     <!-- THE READOUT'S FOURTH HOST — IN THE BODY (night 69, ruling 261026 §6): one grammar, two seats. On the neck,
          the staff and the keys the box LABELS a diagram, so it sits in the header; here the box IS THE SUBJECT and
@@ -10426,7 +10574,12 @@ const harmonyCard = {
  * 8 px) and the free space was shared equally on top: held chips grew wider than unheld ones and the row moved at 390
  * (hidden at 1280 by max-width). With a basis at least the widest border, every chip starts equal and ends at
  * (C − 6·gap)/7 — independent of the basis — so the unheld row is unchanged. If the row pin goes red, look here. */
-.hc-chips{display:flex;gap:6px;margin-top:8px}
+.hc-rowwrap{position:relative;margin-top:4px}
+.hc-roles{display:flex;gap:6px;height:14px}
+.hc-roles>span{flex:1 1 8px;min-width:0;max-width:46px;text-align:center;font-size:11px;font-weight:500;line-height:14px;color:var(--gray)}
+.hc-numeral{position:relative;height:16px;margin-top:3px}
+.hc-numtext{position:absolute;top:0;white-space:nowrap;font-size:12px;line-height:16px;color:var(--gray)}
+.hc-chips{display:flex;gap:6px;margin-top:4px}
 .hc-chip{flex:1 1 8px;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;box-sizing:border-box;background-clip:padding-box;
   font:inherit;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
 .hc-chip[data-pick="false"]{cursor:default}
@@ -10439,11 +10592,11 @@ const harmonyCard = {
   mount(ctx) {
     mountReadout(ctx, ctx.byId("hcMode"));   // night 69: the readout's fourth host
     /* the chord ROOT for the chip mark (night 70): the readout's own derivation, one source — its degree in the key */
-    let rootDeg = -1;
+    let rootDeg = -1, chordNowNow = null;
     const rootOf = (now) => (now && now.cur && typeof now.cur.degree === "number" ? now.cur.degree : -1);
     let renderChipsLater = () => {};
-    const chordNowFn = chordNow(ctx, (now) => { rootDeg = rootOf(now); renderChipsLater(); });
-    rootDeg = rootOf(chordNowFn());
+    const chordNowFn = chordNow(ctx, (now) => { chordNowNow = now; rootDeg = rootOf(now); renderChipsLater(); });
+    chordNowNow = chordNowFn(); rootDeg = rootOf(chordNowNow);
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE (§4.2.3): the harmony half. `ref` re-roots the field (a mode);
      * `bass` is the reference under a chord and is child 5's — held at "none"
@@ -10522,6 +10675,31 @@ const harmonyCard = {
         b.setAttribute("aria-label", `${fld.notes[i].name}, the key's ${i + 1}`);
         if (isScale) b.setAttribute("aria-pressed", String(isLit)); else b.removeAttribute("aria-pressed");
       });
+      /* THE CHORD ROLE and THE NUMERAL (night 71): from the readout's own derivation (chordNow — the chord, its tones,
+       * its degree from progressionOf, which takes the key and scale only: the centre cannot move a numeral; its numeral
+       * spelled by the roman grammar, engine/numeral.mjs — ruling 261029b). A tone's
+       * role is stackRole(its stack degree, its distance above the root) — the chord symbol's own speller. Labelled:
+       * a chip that is LIT and a CHORD TONE. The numeral: while the root chip is lit. Otherwise quiet. */
+      {
+        const roles = byId("hcRoles"), num = byId("hcNumeral").querySelector(".hc-numtext");
+        const cur = chordNowNow && chordNowNow.cur;
+        const tones = !isScale && cur && Array.isArray(cur.tones) ? cur.tones : [];
+        const roleAt = new Map();
+        for (const t of tones)
+          if (typeof t.keyDeg === "number" && t.keyDeg >= 0)
+            roleAt.set(t.keyDeg, stackRole(t.role === "R" ? 1 : Number(t.role), (((t.pc - cur.rootPc) % 12) + 12) % 12));
+        if (roles.children.length !== 7) { roles.textContent = ""; for (let i = 0; i < 7; i++) roles.appendChild(d.createElement("span")); }
+        [...roles.children].forEach((s, i) => { s.textContent = on.includes(i + 1) && roleAt.has(i) ? roleAt.get(i) : ""; s.dataset.deg = String(i + 1); });
+        const rootChip = row.querySelector(`.hc-chip[data-deg="${rootDeg + 1}"]`);
+        const showNum = !isScale && cur && rootDeg >= 0 && on.includes(rootDeg + 1) && rootChip;
+        num.textContent = showNum ? grammarRoman(cur) : "";   // ruling 261029b: the roman GRAMMAR spells it (IVmaj7, ii7, viiø7)
+        if (showNum) {
+          /* CLAMP FIRST: centred under the root, stopped at the row's edges — never cut (night 25's "surviving whole") */
+          const box = byId("hcNumeral").getBoundingClientRect(), c = rootChip.getBoundingClientRect(), w = num.getBoundingClientRect().width;
+          const centre = c.left + c.width / 2 - box.left;
+          num.style.left = Math.max(0, Math.min(box.width - w, centre - w / 2)) + "px";
+        }
+      }
       /* the two standing marks: the ORIGIN in the legend's own words (adopted, not coined — the neck says
        * "against the reference tone" when re-rooted, this row is always against the key, and both are
        * on the face together, which is what makes the divergence legitimate); the MEANING, held or following */
@@ -15744,7 +15922,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.22","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.23","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>
