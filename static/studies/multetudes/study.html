@@ -322,8 +322,13 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * 1280, capped square); the hue is the palette's and NEVER moves; lit-ness is the FILL's opacity (the
  * neck's field opacity, on the fill alone — the label keeps §2.1's text rule, so an unlit chip still
  * names its note at AA contrast; the fill and the text are set from the palette table, inline) */
+/* THE FLEX BASIS IS 8 px — TWICE THE WIDEST BORDER THE MARK USES (the root's 4 px dashed; night 70, PO ruling 261027).
+ * A flex item can never be smaller than its own border, so with a basis of 0 each chip started from its border (0, 4 or
+ * 8 px) and the free space was shared equally on top: held chips grew wider than unheld ones and the row moved at 390
+ * (hidden at 1280 by max-width). With a basis at least the widest border, every chip starts equal and ends at
+ * (C − 6·gap)/7 — independent of the basis — so the unheld row is unchanged. If the row pin goes red, look here. */
 .hc-chips{display:flex;gap:6px;margin-top:8px}
-.hc-chip{flex:1 1 0;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;
+.hc-chip{flex:1 1 8px;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;box-sizing:border-box;background-clip:padding-box;
   font:inherit;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
 .hc-chip[data-pick="false"]{cursor:default}
 .hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
@@ -8384,6 +8389,14 @@ const BUTTONS = [
  * state on the bus). The sentence this used to end with — "never another
  * module's state" — is kept honest by the move: repeat stopped being one
  * board's setting the night it joined; no view owns it, every view reads it. */
+/* TWO SHAPES, ON PURPOSE (night 70, 261027 — recorded where the next session will look). The mini is a MOUNT:
+ * mountMini(ctx, host) fills an empty host at run time, which works because the host span is the only declared control
+ * and its buttons are addressed by data-role. The clock view (night 69) is NOT a mount and must not be
+ * "corrected" into one: its controls are DECLARED by the host module (the neck's four ids reach the control census and
+ * every gate), and the resolver requires a control a module declares to be IN that module's static markup
+ * (the resolver's own check). A door that carries the mini but not the clock prunes that module, and the build's
+ * prune check reads comments — so this comment names the clock by role — no path and no exported name of it. So the clock is a markup FUNCTION the host interpolates into its OWN markup, plus a separate
+ * wiring call — both named in the clock's own file, not here. Same idea (one view, many seats), shaped by what the host declares. */
 function mountMini(ctx, host) {
   const d = ctx.doc;
   let cur = 0, running = false, repeat = null;   // repeat: null until the bus says — the button hidden until then
@@ -8667,23 +8680,43 @@ const BOOT = () => ({ key: "Bb", scale: "major", ref: 0, object: "tetrad",
 /** Fill `host` (a declared `.readbox` element) with the readout and wire it
  * to the bus. Returns the instance's own paint, for a board that wants to
  * repaint in step with its own render (it re-derives; it is handed nothing). */
-function mountReadout(ctx, host) {
+/** THE CHORD NOW, ONE DERIVATION (night 70, 261027): the instance's mirror of the configuration and the position,
+ * and the chord it names — exported so another surface that must agree with the readout (the chip row's root and roles,
+ * sitting directly under Centricity's readout) reads the SAME derivation, never a second one that can disagree
+ * (§4.4). Each caller gets its own mirror, as each readout instance always did; `onChange` fires with
+ * { fld, cur, cfg, index } — or { err } when the configuration cannot name a chord. */
+function chordNow(ctx, onChange) {
   const d = ctx.doc;
   let cfg = BOOT(), index = 0;
+  const derive = () => {
+    try {
+      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      const prog = progressionOf(cfg, cfg.key, cfg.scale);
+      return { fld, cur: chordAt(prog, index, fld, cfg.object, pickOf(cfg)), cfg, index };
+    } catch (e) { return { err: String(e && e.message || e), cfg, index }; }
+  };
+  listen(d, CONFIG_CHANGED, (m) => {
+    if (!m) return;
+    let changed = false;
+    for (const k of Object.keys(cfg)) if (k in m) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+    if (changed) onChange(derive());
+  });
+  listen(d, STEP_CHANGED, (m) => {
+    if (!m || m.request === true) return;
+    if (typeof m.index === "number" && m.index !== index) { index = m.index; onChange(derive()); }
+  });
+  return derive;
+}
+
+function mountReadout(ctx, host) {
+  const d = ctx.doc;
   host.textContent = "";
   const text = d.createElement("span"); text.className = "readtext"; host.appendChild(text);
 
-  const paint = () => {
+  const paint = (now) => {
     text.textContent = "";
-    let fld, cur;
-    try {
-      fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
-      const prog = progressionOf(cfg, cfg.key, cfg.scale);
-      cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-    } catch (e) {
-      text.textContent = String(e && e.message || e);
-      return;
-    }
+    if (now.err) { text.textContent = now.err; return; }
+    const { fld, cur, cfg } = now;
     if (cur.degree >= 0) {
       const dot = d.createElement("i"); dot.className = "readdot";
       dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[cur.degree]);
@@ -8697,20 +8730,12 @@ function mountReadout(ctx, host) {
     text.appendChild(ch); text.appendChild(md);
   };
 
-  listen(d, CONFIG_CHANGED, (m) => {
-    if (!m) return;
-    let changed = false;
-    for (const k of Object.keys(cfg)) if (k in m) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
-    if (changed) paint();
-  });
-  listen(d, STEP_CHANGED, (m) => {
-    if (!m || m.request === true) return;
-    if (typeof m.index === "number" && m.index !== index) { index = m.index; paint(); }
-  });
-  paint();
-  return paint;
+  const now = chordNow(ctx, paint);
+  const repaint = () => paint(now());
+  repaint();
+  return repaint;
 }
-return { mountReadout };
+return { chordNow, mountReadout };
 })();
 
 /* ===== hub/marks.mjs ===== */
@@ -10219,7 +10244,7 @@ const { field } = __m_engine_field_mjs;
 const { CENTRE_SOURCES } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce, announceAfter } = __m_hub_bus_mjs;
-const { mountReadout } = __m_hub_readout_mjs;
+const { mountReadout, chordNow } = __m_hub_readout_mjs;
 const { objectOf, tonePick } = __m_engine_selection_mjs;
 const { FAM, FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 const { triads, tetrads, triadPairs, pentatonics, pentatonicRefusal, normalizeGamut, describeGamut, pentatonicBreak } = __m_engine_gamut_mjs;
@@ -10396,8 +10421,13 @@ const harmonyCard = {
  * 1280, capped square); the hue is the palette's and NEVER moves; lit-ness is the FILL's opacity (the
  * neck's field opacity, on the fill alone — the label keeps §2.1's text rule, so an unlit chip still
  * names its note at AA contrast; the fill and the text are set from the palette table, inline) */
+/* THE FLEX BASIS IS 8 px — TWICE THE WIDEST BORDER THE MARK USES (the root's 4 px dashed; night 70, PO ruling 261027).
+ * A flex item can never be smaller than its own border, so with a basis of 0 each chip started from its border (0, 4 or
+ * 8 px) and the free space was shared equally on top: held chips grew wider than unheld ones and the row moved at 390
+ * (hidden at 1280 by max-width). With a basis at least the widest border, every chip starts equal and ends at
+ * (C − 6·gap)/7 — independent of the basis — so the unheld row is unchanged. If the row pin goes red, look here. */
 .hc-chips{display:flex;gap:6px;margin-top:8px}
-.hc-chip{flex:1 1 0;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;
+.hc-chip{flex:1 1 8px;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;box-sizing:border-box;background-clip:padding-box;
   font:inherit;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
 .hc-chip[data-pick="false"]{cursor:default}
 .hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
@@ -10408,6 +10438,12 @@ const harmonyCard = {
 
   mount(ctx) {
     mountReadout(ctx, ctx.byId("hcMode"));   // night 69: the readout's fourth host
+    /* the chord ROOT for the chip mark (night 70): the readout's own derivation, one source — its degree in the key */
+    let rootDeg = -1;
+    const rootOf = (now) => (now && now.cur && typeof now.cur.degree === "number" ? now.cur.degree : -1);
+    let renderChipsLater = () => {};
+    const chordNowFn = chordNow(ctx, (now) => { rootDeg = rootOf(now); renderChipsLater(); });
+    rootDeg = rootOf(chordNowFn());
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE (§4.2.3): the harmony half. `ref` re-roots the field (a mode);
      * `bass` is the reference under a chord and is child 5's — held at "none"
@@ -10470,11 +10506,18 @@ const harmonyCard = {
         b.style.backgroundColor = isLit ? FAM_COLOR[fam] : fade(FAM_COLOR[fam], FIELD_OPACITY);
         b.style.color = isLit ? FAM_TEXT[fam] : DARK_TEXT;
         b.querySelector(".hc-chipname").textContent = fld.notes[i].name;
-        /* THE RING — PROPOSED (night 69, item 5; Daniel: "an outline on top of the reduced opacity might be
-         * sufficient"): a lit chip also wears an inset ring in ink — a mark of weight, not a hue (golden rule 8: the
-         * fill keeps its degree colour, the ring is the neutral ink). Inset, so the layout never moves and a focus
-         * outline (outside) never collides. */
-        b.style.boxShadow = isLit ? "inset 0 0 0 2px var(--ink)" : "";
+        /* THE MARK — RATIFIED 261026c (night 70; replaces night 69's inset ring, rule 7): HELD is WEIGHT, the chord
+         * ROOT is TEXTURE — one mechanism, the border's style varies. held: 2 px SOLID ink border + a 2 px white inset
+         * band; held AND the chord root: 4 px DASHED + the same band. Nothing is a hue (golden rule 8). The border
+         * (not a box-shadow) because only a border takes a dash; box-sizing:border-box holds the outer size; and
+         * background-clip:padding-box (the chip's CSS) keeps the fill out from under the border, so the dash GAPS
+         * show the card's ground — without it a dashed ink ring vanishes on the ink-black 5. `outline` stays free for
+         * focus. THE ROOT is the readout's own derivation (hub/readout.mjs chordNow) — never a second one; under a
+         * scale there is no chord root and no chip is dashed. */
+        const isRoot = isLit && !isScale && rootDeg === i;
+        b.style.border = isLit ? (isRoot ? "4px dashed var(--ink)" : "2px solid var(--ink)") : "";
+        b.style.boxShadow = isLit ? "inset 0 0 0 2px #fff" : "";
+        b.dataset.root = String(isRoot);
         b.dataset.lit = String(isLit); b.dataset.pick = String(isScale);
         b.setAttribute("aria-label", `${fld.notes[i].name}, the key's ${i + 1}`);
         if (isScale) b.setAttribute("aria-pressed", String(isLit)); else b.removeAttribute("aria-pressed");
@@ -10486,6 +10529,7 @@ const harmonyCard = {
         + (isScale ? "held: the chosen set; click a note to change it"
           : running ? "following the changes" : "following the changes, stopped \u2014 the notes that last passed stay lit");
     };
+    renderChipsLater = renderChips;   // night 70: the root's changes repaint the row
 
     const render = () => {
       fill(byId("hcKey"), KEYS.map((k) => ({ value: k, label: k })), cfg.key);
@@ -15700,7 +15744,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.21","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.22","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

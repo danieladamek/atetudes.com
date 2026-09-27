@@ -173,6 +173,9 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.22 (261027, night 70): the chip row's ratified mark — held a 2 px solid ink border and a white band, the
+     * chord root 4 px dashed (the root from the readout's own derivation); the chip's flex basis 8 px (PO ruling
+     * 261027) so a held chord never moves the row. The unheld row is unchanged. */
     /* v0.6.21 (261026, night 69): the clock is a view (hub/clock.mjs) — the neck unchanged, Progression carries a
      * second view in two declared rows; Settings an eighth mini; Centricity the readout's fourth host under the chips
      * and a held chip's ring (proposed); row 2 re-proportioned 3fr 2fr 2fr. */
@@ -237,7 +240,7 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.21",
+    blurb: "one tool that holds many études · v0.6.22",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

@@ -4643,6 +4643,14 @@ const BUTTONS = [
  * state on the bus). The sentence this used to end with — "never another
  * module's state" — is kept honest by the move: repeat stopped being one
  * board's setting the night it joined; no view owns it, every view reads it. */
+/* TWO SHAPES, ON PURPOSE (night 70, 261027 — recorded where the next session will look). The mini is a MOUNT:
+ * mountMini(ctx, host) fills an empty host at run time, which works because the host span is the only declared control
+ * and its buttons are addressed by data-role. The clock view (night 69) is NOT a mount and must not be
+ * "corrected" into one: its controls are DECLARED by the host module (the neck's four ids reach the control census and
+ * every gate), and the resolver requires a control a module declares to be IN that module's static markup
+ * (the resolver's own check). A door that carries the mini but not the clock prunes that module, and the build's
+ * prune check reads comments — so this comment names the clock by role — no path and no exported name of it. So the clock is a markup FUNCTION the host interpolates into its OWN markup, plus a separate
+ * wiring call — both named in the clock's own file, not here. Same idea (one view, many seats), shaped by what the host declares. */
 function mountMini(ctx, host) {
   const d = ctx.doc;
   let cur = 0, running = false, repeat = null;   // repeat: null until the bus says — the button hidden until then
@@ -10930,7 +10938,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.9","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.10","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

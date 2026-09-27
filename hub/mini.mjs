@@ -54,6 +54,14 @@ const BUTTONS = [
  * state on the bus). The sentence this used to end with — "never another
  * module's state" — is kept honest by the move: repeat stopped being one
  * board's setting the night it joined; no view owns it, every view reads it. */
+/* TWO SHAPES, ON PURPOSE (night 70, 261027 — recorded where the next session will look). The mini is a MOUNT:
+ * mountMini(ctx, host) fills an empty host at run time, which works because the host span is the only declared control
+ * and its buttons are addressed by data-role. The clock view (night 69) is NOT a mount and must not be
+ * "corrected" into one: its controls are DECLARED by the host module (the neck's four ids reach the control census and
+ * every gate), and the resolver requires a control a module declares to be IN that module's static markup
+ * (the resolver's own check). A door that carries the mini but not the clock prunes that module, and the build's
+ * prune check reads comments — so this comment names the clock by role — no path and no exported name of it. So the clock is a markup FUNCTION the host interpolates into its OWN markup, plus a separate
+ * wiring call — both named in the clock's own file, not here. Same idea (one view, many seats), shaped by what the host declares. */
 export function mountMini(ctx, host) {
   const d = ctx.doc;
   let cur = 0, running = false, repeat = null;   // repeat: null until the bus says — the button hidden until then

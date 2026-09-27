@@ -22,7 +22,7 @@ import { field } from "../../engine/field.mjs";
 import { CENTRE_SOURCES } from "../../engine/reference.mjs";
 import { MODES } from "../../engine/field.mjs";
 import { CONFIG_CHANGED, NOTE, STEP_CHANGED, CLOCK_STATE, listen, announce, announceAfter } from "../bus.mjs";
-import { mountReadout } from "../readout.mjs";
+import { mountReadout, chordNow } from "../readout.mjs";
 // the engine's one derivation — read here for a decision (the gamut drop), never stored: night 64
 import { objectOf, tonePick } from "../../engine/selection.mjs";
 // the degree palette, stated once (night 60: the chip row wears it — the neck legend's own table)
@@ -170,8 +170,13 @@ export const harmonyCard = {
  * 1280, capped square); the hue is the palette's and NEVER moves; lit-ness is the FILL's opacity (the
  * neck's field opacity, on the fill alone — the label keeps §2.1's text rule, so an unlit chip still
  * names its note at AA contrast; the fill and the text are set from the palette table, inline) */
+/* THE FLEX BASIS IS 8 px — TWICE THE WIDEST BORDER THE MARK USES (the root's 4 px dashed; night 70, PO ruling 261027).
+ * A flex item can never be smaller than its own border, so with a basis of 0 each chip started from its border (0, 4 or
+ * 8 px) and the free space was shared equally on top: held chips grew wider than unheld ones and the row moved at 390
+ * (hidden at 1280 by max-width). With a basis at least the widest border, every chip starts equal and ends at
+ * (C − 6·gap)/7 — independent of the basis — so the unheld row is unchanged. If the row pin goes red, look here. */
 .hc-chips{display:flex;gap:6px;margin-top:8px}
-.hc-chip{flex:1 1 0;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;
+.hc-chip{flex:1 1 8px;min-width:0;max-width:46px;aspect-ratio:1;min-height:34px;border:0;border-radius:8px;padding:0;box-sizing:border-box;background-clip:padding-box;
   font:inherit;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
 .hc-chip[data-pick="false"]{cursor:default}
 .hc-chip .hc-chipdeg{font-size:9px;font-weight:500;line-height:1;opacity:.72}
@@ -182,6 +187,12 @@ export const harmonyCard = {
 
   mount(ctx) {
     mountReadout(ctx, ctx.byId("hcMode"));   // night 69: the readout's fourth host
+    /* the chord ROOT for the chip mark (night 70): the readout's own derivation, one source — its degree in the key */
+    let rootDeg = -1;
+    const rootOf = (now) => (now && now.cur && typeof now.cur.degree === "number" ? now.cur.degree : -1);
+    let renderChipsLater = () => {};
+    const chordNowFn = chordNow(ctx, (now) => { rootDeg = rootOf(now); renderChipsLater(); });
+    rootDeg = rootOf(chordNowFn());
     const d = ctx.doc, byId = ctx.byId;
     /* PRIVATE (§4.2.3): the harmony half. `ref` re-roots the field (a mode);
      * `bass` is the reference under a chord and is child 5's — held at "none"
@@ -244,11 +255,18 @@ export const harmonyCard = {
         b.style.backgroundColor = isLit ? FAM_COLOR[fam] : fade(FAM_COLOR[fam], FIELD_OPACITY);
         b.style.color = isLit ? FAM_TEXT[fam] : DARK_TEXT;
         b.querySelector(".hc-chipname").textContent = fld.notes[i].name;
-        /* THE RING — PROPOSED (night 69, item 5; Daniel: "an outline on top of the reduced opacity might be
-         * sufficient"): a lit chip also wears an inset ring in ink — a mark of weight, not a hue (golden rule 8: the
-         * fill keeps its degree colour, the ring is the neutral ink). Inset, so the layout never moves and a focus
-         * outline (outside) never collides. */
-        b.style.boxShadow = isLit ? "inset 0 0 0 2px var(--ink)" : "";
+        /* THE MARK — RATIFIED 261026c (night 70; replaces night 69's inset ring, rule 7): HELD is WEIGHT, the chord
+         * ROOT is TEXTURE — one mechanism, the border's style varies. held: 2 px SOLID ink border + a 2 px white inset
+         * band; held AND the chord root: 4 px DASHED + the same band. Nothing is a hue (golden rule 8). The border
+         * (not a box-shadow) because only a border takes a dash; box-sizing:border-box holds the outer size; and
+         * background-clip:padding-box (the chip's CSS) keeps the fill out from under the border, so the dash GAPS
+         * show the card's ground — without it a dashed ink ring vanishes on the ink-black 5. `outline` stays free for
+         * focus. THE ROOT is the readout's own derivation (hub/readout.mjs chordNow) — never a second one; under a
+         * scale there is no chord root and no chip is dashed. */
+        const isRoot = isLit && !isScale && rootDeg === i;
+        b.style.border = isLit ? (isRoot ? "4px dashed var(--ink)" : "2px solid var(--ink)") : "";
+        b.style.boxShadow = isLit ? "inset 0 0 0 2px #fff" : "";
+        b.dataset.root = String(isRoot);
         b.dataset.lit = String(isLit); b.dataset.pick = String(isScale);
         b.setAttribute("aria-label", `${fld.notes[i].name}, the key's ${i + 1}`);
         if (isScale) b.setAttribute("aria-pressed", String(isLit)); else b.removeAttribute("aria-pressed");
@@ -260,6 +278,7 @@ export const harmonyCard = {
         + (isScale ? "held: the chosen set; click a note to change it"
           : running ? "following the changes" : "following the changes, stopped \u2014 the notes that last passed stay lit");
     };
+    renderChipsLater = renderChips;   // night 70: the root's changes repaint the row
 
     const render = () => {
       fill(byId("hcKey"), KEYS.map((k) => ({ value: k, label: k })), cfg.key);

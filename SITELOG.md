@@ -1,3 +1,24 @@
+## 2026-09-26 — Night 70: the chip row's ratified mark — held a solid ink border and a white band, the chord root dashed; the chip's flex basis so a held chord never moves the row; Multetudes v0.6.22, Tetradetudes v0.6.10
+
+- **The mark (ratified 261026c):** held = 2 px solid ink border + a 2 px white inset band; held AND the chord root = 4 px
+  dashed; unheld unchanged. `box-sizing:border-box` and `background-clip:padding-box` — the clip is why the dashed root's
+  gaps show the card's ground on the ink-black 5. Nothing is a hue (golden rule 8). Replaces night 69's inset ring.
+- **The root from ONE source:** `hub/readout.mjs` now exports `chordNow` — the readout's own derivation, lifted out of
+  `mountReadout` (now one caller of it); the chip row is the second. Under a scale no chip is dashed.
+- **The second item — the flex basis (PO ruling 261027):** night 70 first STOPPED because a held chord moved the row at
+  390 (a flex item cannot be smaller than its border; the chips were `flex:1 1 0`). Approved and applied:
+  `.hc-chip{flex:1 1 8px}` — twice the widest border — so every chip starts equal. The unheld row is identical to night
+  69's live build at 390 and 1280. A permanent pin, in every door with a chip row, at both widths.
+- **Also:** the shelf's white space re-measured into its item (Centricity 206 px empty, Settings 132 at 1280); the
+  Centricity select clip measured GONE at 390 (for the PO to close); a comment in `hub/mini.mjs` on why the clock is
+  markup and the mini a mount. The chord-role labels (item 5) NOT started — its own pass.
+- **Tetradetudes' bytes** moved on the mini's comment alone; its face is unchanged.
+- **Gates:** engine 704/704 · hub 14/14 · door gate **22,630/0** (`hub/tests/out/doors-n70-full-0926-1008.log`),
+  night 68's page-width check green at 390 and 1280 · m124–m127 bite (the solid mark, the dashed root, the padding-box
+  clip, the basis back to 0); m43 and m122 re-anchored · chain **128/128**, suite green
+  (`hub/tests/out/bite-0926-1016.log`, 10:16–20:58) · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261027 — night 70, the chip mark (STOPPED — the row moves at 390; item 5 not started).md`.
+
 ## 2026-09-26 — DEPLOYED: night 69 live — the clock is a view; Multetudes v0.6.21; one study moved; written from the run
 
 - record: run 36215987892 · success · commit 6bc65c3 · fetched 2026-09-26T03:59Z · 6/6 studies byte-identical · digest 61b64f46a0f2

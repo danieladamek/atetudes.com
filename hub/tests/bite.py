@@ -1187,8 +1187,8 @@ def m43_a_readout_copies_the_necks_box():
     # the neck's box text. The three still agree, so an agreement-only pin would
     # pass; the detached-box pin (and the source pin) must bite.
     p, original, mutated = patch("hub/readout.mjs",
-        '    text.textContent = "";\n    let fld, cur;',
-        '    text.textContent = "";\n    if (host.id !== "fdMode") { const n = d.getElementById("fdMode"); text.textContent = n ? n.textContent : ""; return; }\n    let fld, cur;')
+        '    text.textContent = "";\n    if (now.err) { text.textContent = now.err; return; }',   # re-anchored night 70: the paint now reads chordNow's result
+        '    text.textContent = "";\n    if (host.id !== "fdMode") { const n = d.getElementById("fdMode"); text.textContent = n ? n.textContent : ""; return; }\n    if (now.err) { text.textContent = now.err; return; }')
     try:
         p.write_text(mutated)
         build()
@@ -2570,13 +2570,13 @@ def m121_the_eighth_mini_is_never_mounted():
 def m122_the_held_chip_loses_its_ring():
     # night 69: the ring is dropped — held and unheld read alike again. The ring pin must bite.
     p, original, mutated = patch('hub/modules/harmony-card.mjs',
-        '        b.style.boxShadow = isLit ? "inset 0 0 0 2px var(--ink)" : "";',
+        '        b.style.boxShadow = isLit ? "inset 0 0 0 2px #fff" : "";',   # re-anchored night 70: the ring became the ratified mark's white band
         '        b.style.boxShadow = "";')
     try:
         p.write_text(mutated)
         build()
         g = suite()
-        hit = "wears an inset ring" in g.stdout
+        hit = "the white band" in g.stdout
         record('the held chip loses its ring — held and unheld alike again',
                g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
     finally:
@@ -2594,6 +2594,70 @@ def m123_the_fourth_readout_is_never_mounted():
         g = suite()
         hit = "carries the readout in its body" in g.stdout
         record('the fourth readout is never mounted — an empty box under the chips',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m124_the_held_chip_loses_its_solid_mark():
+    # night 70: a held chip that is not the root wears no border — held and unheld alike again. The mark pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        'b.style.border = isLit ? (isRoot ? "4px dashed var(--ink)" : "2px solid var(--ink)") : "";',
+        'b.style.border = isLit ? (isRoot ? "4px dashed var(--ink)" : "") : "";')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "wears the 2 px solid mark" in g.stdout
+        record('the held chip loses its solid mark — held reads as unheld',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m125_the_root_is_solid_like_the_rest():
+    # night 70: the root's dash becomes solid — the root reads as merely held. The root pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        '(isRoot ? "4px dashed var(--ink)"',
+        '(isRoot ? "4px solid var(--ink)"')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "wears the 4 px dashed mark" in g.stdout
+        record('the root is solid like the rest — no texture tells it apart',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m126_the_fill_paints_under_the_border():
+    # night 70: background-clip:padding-box is dropped — the fill paints under the border and the dashed ink ring vanishes on the ink 5. The clip pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        'box-sizing:border-box;background-clip:padding-box;',
+        'box-sizing:border-box;')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "clipped to its padding box" in g.stdout
+        record('the fill paints under the border — the dashed root disappears on the ink 5',
+               g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m127_the_chip_basis_returns_to_zero():
+    # night 70: the chip's flex basis goes back to 0 — held chips grow and the row moves at 390. The row pin must bite.
+    p, original, mutated = patch('hub/modules/harmony-card.mjs',
+        '.hc-chip{flex:1 1 8px;',
+        '.hc-chip{flex:1 1 0;')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "does not move the chip row" in g.stdout
+        record('the chip basis returns to zero — the row moves at 390 when a chord is held',
                g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
     finally:
         p.write_text(original)
@@ -2769,7 +2833,9 @@ def main():
                m115_the_shut_rail_hides_its_name_again, m116_the_header_slot_sits_on_the_words_again,
                m117_the_clock_overruns_the_header_at_390, m118_the_rows_stop_stacking_at_390,
                m119_a_late_clock_view_paints_nothing, m120_the_declared_break_is_left_to_flex, m121_the_eighth_mini_is_never_mounted,
-               m122_the_held_chip_loses_its_ring, m123_the_fourth_readout_is_never_mounted)
+               m122_the_held_chip_loses_its_ring, m123_the_fourth_readout_is_never_mounted,
+               m124_the_held_chip_loses_its_solid_mark, m125_the_root_is_solid_like_the_rest,
+               m126_the_fill_paints_under_the_border, m127_the_chip_basis_returns_to_zero)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

@@ -7164,14 +7164,56 @@ console.log(JSON.stringify(out));
         p69.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); p69.wait_for_timeout(300)
         check(p69.inner_text("#hcMode").strip() == p69.inner_text("#fdMode").strip() and p69.inner_text("#hcMode").strip() != seat69["text"],
               f"{tag} night 69: the fourth readout follows the bar: {p69.inner_text('#hcMode')!r}")
-        # THE RING (proposed): a held chip wears an inset ink ring; its fill keeps its degree's hue (golden rule 8)
+        # THE RING (night 69, proposed) — REWRITTEN night 70 (rule 7; ratified 261026c): held = 2 px SOLID ink border + a
+        # white inset band; held AND the chord root = 4 px DASHED; the fill's degree colour untouched (golden rule 8).
         p69.select_option("#hcObj", "scale"); p69.wait_for_timeout(300)
-        ring69 = p69.evaluate("""() => [...document.querySelectorAll('#hcChips .hc-chip')].map(b => ({ lit: b.dataset.lit, ring: b.style.boxShadow, bg: getComputedStyle(b).backgroundColor }))""")
+        ring69 = p69.evaluate("""() => [...document.querySelectorAll('#hcChips .hc-chip')].map(b => ({ lit: b.dataset.lit, root: b.dataset.root, bs: getComputedStyle(b).borderTopStyle, bw: getComputedStyle(b).borderTopWidth, band: b.style.boxShadow, clip: getComputedStyle(b).backgroundClip }))""")
         held69 = [r for r in ring69 if r["lit"] == "true"]
-        check(held69 and all("inset" in r["ring"] for r in held69) and all(r["ring"] == "" for r in ring69 if r["lit"] != "true"),
-              f"{tag} night 69: a held chip wears an inset ring and an unheld one none (a mark, not a hue): {ring69}")
+        check(held69 and all(r["bs"] == "solid" and r["bw"] == "2px" and "inset" in r["band"] and r["root"] == "false" for r in held69)
+              and all(r["bs"] == "none" for r in ring69 if r["lit"] != "true") and all(r["clip"] == "padding-box" for r in ring69),
+              f"{tag} night 70: under a scale a held chip wears the 2 px solid mark and the white band, no chip is the root, and every fill is clipped to its padding box: {ring69}")
+        p69.select_option("#hcObj", "tetrad"); p69.wait_for_timeout(250)
+        # THE ROOT, on the ink 5 (F7 in Bb — the case that defeated night 69's ring), sourced from the readout's derivation
+        row70 = "() => [...document.querySelectorAll('#hcChips .hc-chip')].map(b => { const c = b.getBoundingClientRect(); return [Math.round(c.left*10)/10, Math.round(c.width*10)/10, Math.round(c.height*10)/10]; })"
+        for w70 in (1280, 390):
+            p69.set_viewport_size({"width": w70, "height": 900}); p69.wait_for_timeout(250)
+            p69.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); p69.wait_for_timeout(250)
+            before70 = p69.evaluate(row70)
+            p69.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))"); p69.wait_for_timeout(250)
+            for m70 in (65, 69, 72, 63):
+                p69.evaluate("(m) => document.dispatchEvent(new CustomEvent('atetudes:note', { detail: { midi: m, role: 'chord' } }))", m70)
+            p69.wait_for_timeout(200)
+            f70 = p69.evaluate("() => [...document.querySelectorAll('#hcChips .hc-chip')].map(b => ({ n: b.querySelector('.hc-chipname').textContent, root: b.dataset.root, bs: getComputedStyle(b).borderTopStyle, bw: getComputedStyle(b).borderTopWidth }))")
+            roots70 = [c for c in f70 if c["root"] == "true"]
+            check(p69.inner_text("#hcMode").startswith("F7") and len(roots70) == 1 and roots70[0]["n"] == "F" and roots70[0]["bs"] == "dashed" and roots70[0]["bw"] == "4px",
+                  f"{tag} night 70: at {w70}, F7 in Bb — the root chip (the ink 5, named by the readout's own derivation) wears the 4 px dashed mark: {f70}")
+            # (the row-stays-still claim MOVED to its own family block below — every door with a chip row, night 70's resume)
+        p69.set_viewport_size({"width": 1280, "height": 900}); p69.wait_for_timeout(200)
         check(not errs69, f"{tag} night 69: no page errors: {errs69[:3]}")
         ctx69.close()
+
+    # ---------------- NIGHT 70 (261027, PO ruling 261027): A HELD CHIP NEVER MOVES THE ROW — every door with a chip row ----------
+    # PERMANENT. The chip is flex:1 1 8px because a flex item can never be smaller than its own border: at a zero basis the
+    # held marks (2 px solid, 4 px dashed) grew their chips and the row moved at 390 — hidden at 1280 by max-width, which is
+    # where the PO measured. So this pin runs at BOTH widths, in every door the rendered page shows a chip row in (decided
+    # from the page, never a typed list), and compares an untouched row with the same row holding a chord.
+    ctx70 = pw.new_context(viewport={"width": 1280, "height": 900}); p70 = ctx70.new_page()
+    p70.goto(html_path.as_uri()); p70.wait_for_selector("#cards", state="attached"); p70.wait_for_timeout(300)
+    if not p70.evaluate("() => document.querySelectorAll('.hc-chip').length"):
+        print(f"  {tag} renders no chip row — the night-70 row pin does not apply here")
+    else:
+        row70b = "() => [...document.querySelectorAll('.hc-chip')].map(b => { const c = b.getBoundingClientRect(); return [Math.round(c.left*100)/100, Math.round(c.width*100)/100, Math.round(c.height*100)/100]; })"
+        for w70b in (390, 1280):
+            p70.set_viewport_size({"width": w70b, "height": 900}); p70.goto(html_path.as_uri()); p70.wait_for_selector("#cards", state="attached"); p70.wait_for_timeout(400)
+            untouched = p70.evaluate(row70b)
+            p70.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))"); p70.wait_for_timeout(250)
+            for m in (65, 69, 72, 63):
+                p70.evaluate("(m) => document.dispatchEvent(new CustomEvent('atetudes:note', { detail: { midi: m, role: 'chord' } }))", m)
+            p70.wait_for_timeout(200)
+            held = p70.evaluate(row70b); marks = p70.evaluate("() => [...document.querySelectorAll('.hc-chip')].map(b => getComputedStyle(b).borderTopStyle)")
+            check("dashed" in marks and "solid" in marks and held == untouched,
+                  f"{tag} night 70: at {w70b} holding a chord (solid and dashed marks on) does not move the chip row — every box unchanged: {untouched} → {held}")
+    ctx70.close()
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

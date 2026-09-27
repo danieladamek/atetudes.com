@@ -41,23 +41,43 @@ const BOOT = () => ({ key: "Bb", scale: "major", ref: 0, object: "tetrad",
 /** Fill `host` (a declared `.readbox` element) with the readout and wire it
  * to the bus. Returns the instance's own paint, for a board that wants to
  * repaint in step with its own render (it re-derives; it is handed nothing). */
-export function mountReadout(ctx, host) {
+/** THE CHORD NOW, ONE DERIVATION (night 70, 261027): the instance's mirror of the configuration and the position,
+ * and the chord it names — exported so another surface that must agree with the readout (the chip row's root and roles,
+ * sitting directly under Centricity's readout) reads the SAME derivation, never a second one that can disagree
+ * (§4.4). Each caller gets its own mirror, as each readout instance always did; `onChange` fires with
+ * { fld, cur, cfg, index } — or { err } when the configuration cannot name a chord. */
+export function chordNow(ctx, onChange) {
   const d = ctx.doc;
   let cfg = BOOT(), index = 0;
+  const derive = () => {
+    try {
+      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+      const prog = progressionOf(cfg, cfg.key, cfg.scale);
+      return { fld, cur: chordAt(prog, index, fld, cfg.object, pickOf(cfg)), cfg, index };
+    } catch (e) { return { err: String(e && e.message || e), cfg, index }; }
+  };
+  listen(d, CONFIG_CHANGED, (m) => {
+    if (!m) return;
+    let changed = false;
+    for (const k of Object.keys(cfg)) if (k in m) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+    if (changed) onChange(derive());
+  });
+  listen(d, STEP_CHANGED, (m) => {
+    if (!m || m.request === true) return;
+    if (typeof m.index === "number" && m.index !== index) { index = m.index; onChange(derive()); }
+  });
+  return derive;
+}
+
+export function mountReadout(ctx, host) {
+  const d = ctx.doc;
   host.textContent = "";
   const text = d.createElement("span"); text.className = "readtext"; host.appendChild(text);
 
-  const paint = () => {
+  const paint = (now) => {
     text.textContent = "";
-    let fld, cur;
-    try {
-      fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
-      const prog = progressionOf(cfg, cfg.key, cfg.scale);
-      cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-    } catch (e) {
-      text.textContent = String(e && e.message || e);
-      return;
-    }
+    if (now.err) { text.textContent = now.err; return; }
+    const { fld, cur, cfg } = now;
     if (cur.degree >= 0) {
       const dot = d.createElement("i"); dot.className = "readdot";
       dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[cur.degree]);
@@ -71,16 +91,8 @@ export function mountReadout(ctx, host) {
     text.appendChild(ch); text.appendChild(md);
   };
 
-  listen(d, CONFIG_CHANGED, (m) => {
-    if (!m) return;
-    let changed = false;
-    for (const k of Object.keys(cfg)) if (k in m) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
-    if (changed) paint();
-  });
-  listen(d, STEP_CHANGED, (m) => {
-    if (!m || m.request === true) return;
-    if (typeof m.index === "number" && m.index !== index) { index = m.index; paint(); }
-  });
-  paint();
-  return paint;
+  const now = chordNow(ctx, paint);
+  const repaint = () => paint(now());
+  repaint();
+  return repaint;
 }
