@@ -1,3 +1,14 @@
+## 2026-09-27 — DEPLOYED: night 70 live — the chip row's ratified mark; Multetudes v0.6.22, Tetradetudes v0.6.10; two studies moved; written from the run
+
+- record: run 36287195108 · success · commit 6a82754 · fetched 2026-09-27T02:10Z · 6/6 studies byte-identical · digest fad395ba595f
+- Actions run 36287195108 green on `6a82754` — https://github.com/danieladamek/atetudes.com/actions/runs/36287195108 (created 2026-09-27T01:59:48Z, finished 2026-09-27T02:10:12Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 1a730dc0fdc2 · live 1a730dc0fdc2 — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 29c625848058 · live 29c625848058 — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-26 — Night 70: the chip row's ratified mark — held a solid ink border and a white band, the chord root dashed; the chip's flex basis so a held chord never moves the row; Multetudes v0.6.22, Tetradetudes v0.6.10
 
 - **The mark (ratified 261026c):** held = 2 px solid ink border + a 2 px white inset band; held AND the chord root = 4 px
