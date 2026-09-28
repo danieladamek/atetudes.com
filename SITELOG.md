@@ -1,3 +1,14 @@
+## 2026-09-28 — DEPLOYED: night 72 live — the chip row across the wrap; Line + arpeggiate; tempo 120; Multetudes v0.6.24, Tetradetudes v0.6.11; two studies moved; written from the run
+
+- record: run 36444275699 · success · commit 268594a · fetched 2026-09-28T15:44Z · 6/6 studies byte-identical · digest 41966062f8dc
+- Actions run 36444275699 green on `268594a` — https://github.com/danieladamek/atetudes.com/actions/runs/36444275699 (created 2026-09-28T15:31:50Z, finished 2026-09-28T15:43:46Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 2917fdcc946c · live 2917fdcc946c — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 83842d05edd2 · live 83842d05edd2 — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-28 — Night 72: the chip row stays lit across the wrap; the neck opens on Line, arpeggiated; the tempo opens at 120; Multetudes v0.6.24, Tetradetudes v0.6.11
 
 - **A — the chip row went dark "when the chord repeats" (Daniel, live).** Measured: the trigger is the WRAP. The row
