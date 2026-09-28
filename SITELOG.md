@@ -1,3 +1,26 @@
+## 2026-09-28 — Night 72: the chip row stays lit across the wrap; the neck opens on Line, arpeggiated; the tempo opens at 120; Multetudes v0.6.24, Tetradetudes v0.6.11
+
+- **A — the chip row went dark "when the chord repeats" (Daniel, live).** Measured: the trigger is the WRAP. The row
+  keyed its lit set to a step REQUEST's raw index (8 from the last bar, −1 from the first); the owner echoed the
+  wrapped index (0, 7), so the row cleared a second time after the new bar's notes had lit it. Every cycle comes home,
+  so the wrap always landed on the first bar's chord. The audio was never affected. Fixed in the chip row
+  (`hub/modules/harmony-card.mjs`): an echo that answers a request belongs to the same move. Pinned (the whole bar
+  lit, its roles and numeral) for next from bar 8, prev from bar 1, the wrap playing and a custom repeat, at 1280 and 390.
+- **B — a ruled default: the neck opens on Line, arpeggiated** (Daniel, 2026-09-27: "default the neck to 'line' rather
+  than grip"). Under Grip a chord whose tones collide on a string lost one (Bb melodic minor, Dbmaj7#5); Line places
+  every tone, and a line is arpeggiated. Only `notesPer` and `movement` moved, at the owner and every mirror; key,
+  object, strings, window and bar unchanged (divergence register 11, addendum). Every save since v0.1.0 carries both
+  keys, so saved études open as saved.
+- **C — a ruled default: the tempo opens at 120** (Daniel, 2026-09-27). One constant, `hub/tempo.mjs`, replaces eleven
+  hand-typed 72s. The metronome card's markup keeps its pinned `72` (carried verbatim by the hand-authored metronome
+  study, which does not move) and paints the face from the constant at mount (PO ruling, option a). Tetradetudes opens
+  at 120 too (it shares the card). The engine's own default, the published metronome study and saved études did not move.
+- **Found, not fixed:** custom charts show no chord-role labels (night 71's gap — their tones carry no key degree).
+- **Gates:** engine 707/707 · hub 14/14 · door gate **22,995/0** (`hub/tests/out/doors-n72-final-0928-1021.log`) ·
+  chain **136/138** (`hub/tests/out/bite-0927-2054.log`) — the two misses (m14, m24) were checks written for the old
+  Grip boot, re-aimed by setting the old state explicitly, and both bite alone; m134–m138 bite · hugo 0 · check_site clean.
+- Report: `notes/working/Multetudes build run 261031 — night 72, the chip row relights (STOPPED — item C touches a pinned file).md`.
+
 ## 2026-09-27 — DEPLOYED: night 71 live — the chip row says the chord role; Multetudes v0.6.23; one study moved; written from the run
 
 - record: run 36332169211 · success · commit b2911c9 · fetched 2026-09-27T16:19Z · 6/6 studies byte-identical · digest 9d3146446922

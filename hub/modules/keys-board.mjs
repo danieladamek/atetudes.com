@@ -58,7 +58,7 @@ export const keysBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], bass: "root",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, centreSrc: "fixed" };
     let index = 0;
     let pulseTimers = [];       // the sounding-note pulse (260911, item 4 — field-board's idiom)

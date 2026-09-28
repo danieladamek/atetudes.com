@@ -173,6 +173,8 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.24 (261031, night 72): the chip row stays lit across the wrap (it keyed to a request's unwrapped index); the
+     * neck opens on Line, arpeggiated (Daniel 2026-09-27, register 11 amended); the tempo opens at 120 (hub/tempo.mjs). */
     /* v0.6.23 (261028, night 71): the chip row says the chord role — each lit chord tone's role above its chip,
      * spelled by engine/role.mjs's stackRole (the chord symbol's own speller; ruling 261028), the chord's numeral under
      * the root spelled by the roman grammar (engine/numeral.mjs; ruling 261029b: IVmaj7, ii7, viiø7), clamped inside the
@@ -244,7 +246,7 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.23",
+    blurb: "one tool that holds many études · v0.6.24",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

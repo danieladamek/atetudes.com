@@ -49,11 +49,11 @@ export const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], sounded: "none", pad: false,   // night 57
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], sounded: "none", pad: false,   // night 57
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       centreSrc: "fixed",
-      movement: "strum",   // 261023 (night 65): mirrored so the readout can SAY the motif's movement
+      movement: "arpeggiate",   // night 72 (was strum) · 261023 (night 65): mirrored so the readout can SAY the motif's movement
       /* the figure (260919, item 3): mirrored so the readout can SAY it — the
        * one piece of state it never carried; the hint's clause moved here */
       address: "pattern", figure: "" };

@@ -172,8 +172,8 @@ export const fieldBoard = {
            the label moved. -->
       <div class="fd-placerow">
         <div class="seg" id="fdNSeg" data-control="fdNSeg">
-          <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-          <button data-nps="3" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
+          <button data-nps="1" title="one note per string — only what can sound together">Grip</button>
+          <button data-nps="3" class="on" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
         </div>
         <label class="chk fd-alltones" id="fdAllTonesLab"
           title="every occurrence in the box — off, one of each tone"><input
@@ -185,9 +185,9 @@ export const fieldBoard = {
              strum (note-events has always staggered it), so the movement
              wears the truer word; the old engine strum flag (the harmony
              bed) was renamed bed in the same pass -->
-        <button data-move="strum" class="on"
+        <button data-move="strum"
           title="the notes sound together — a chord">strum</button>
-        <button data-move="arpeggiate"
+        <button data-move="arpeggiate" class="on"
           title="the notes sound in sequence, low to high across the bar">arpeggiate</button>
       </div>
       <div class="fd-cap">The figure is</div>
@@ -398,7 +398,8 @@ export const fieldBoard = {
        * fact, owned here because the neck is where the instrument is; every other board
        * builds its field with it. Item 1 made it state; tonight it gets a face. */
       tuning: null,
-      object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root", sounded: "none", pad: false,   // night 57: the sounded bass and the pad, absent by default
+      object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], bass: "root", sounded: "none", pad: false,   /* 261031 (night 72 — Daniel, 2026-09-27): the neck opens on LINE, ARPEGGIATED (was Grip + strum); register 11 amended */
+        // night 57: the sounded bass and the pad, absent by default
       /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
        * Harmony is doing movement (partial) duty here which it shouldn't
        * be."). Take is MATERIAL — which notes exist (one of each · every
@@ -406,7 +407,7 @@ export const fieldBoard = {
        * sequence — lives HERE with Placement and The Figure, where the
        * motion lives: block · arpeggio, his two words. A typed figure still
        * sequences regardless (the night-7 ruling, now in its proper home). */
-      movement: "strum", repeat: false, centreSrc: "fixed",
+      movement: "arpeggiate", repeat: false, centreSrc: "fixed",   // night 72: arpeggiate (a line is not held together)
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */

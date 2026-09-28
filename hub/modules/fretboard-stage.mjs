@@ -28,6 +28,7 @@ import { parseFigure, figureEvents, toneIndexOf, playbackWord } from "../../engi
 import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } from "../bus.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
 import { FAM_COLOR, FAM_TEXT, FAM } from "../palette.mjs";
+import { DEFAULT_BPM } from "../tempo.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
@@ -105,7 +106,7 @@ export const fretboardStage = {
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
     let pass = null, dots = [], step = 0, ctxLayer = null, zoneLayer = null, pulseLayer = null;
     let echoAttack = false;   // the next show()'s echo is attack-borne — see the announce
-    let bpm = 72, durBeats = 2;            // the clock's, heard on the bus — for the pulse and Follow-the-line
+    let bpm = DEFAULT_BPM, durBeats = 2;            // the clock's, heard on the bus — for the pulse and Follow-the-line
     let pulseTimers = [];
     /* the WINDOW MODE is display state — the stage's own, not config */
     let win = "full";

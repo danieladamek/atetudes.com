@@ -788,7 +788,7 @@ def m24_the_boot_refuses_its_second_bar():
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "must place its grip whole" in r.stdout
+        hit = "must place its grip whole" in r.stdout   # night 72: the refusal case now runs under an explicit Grip
         record("the boot refuses its second bar",
                r.returncode != 0 and hit,
                "suite exit %d; the boot-placement pin bit: %s" % (r.returncode, hit))
@@ -2784,6 +2784,87 @@ def m133_the_numeral_does_not_parse():
         p.write_text(original)
 
 
+def m134_the_row_clears_again_at_the_wrap():
+    # night 72: the owed echo clears the row a second time — the wrap (next from bar 8, prev from bar 1, playing home)
+    # leaves the chip row dark while the card names the chord. The wrap pins must bite.
+    p, original, mutated = patch("hub/modules/harmony-card.mjs",
+        "      if (echoOwed) { echoOwed = false; litIndex = m.index; return; }\n",
+        "      echoOwed = false;   // (the echo clears again)\n")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "night 72" in g.stdout and ("the row stays lit" in g.stdout or "every bar ends with its row lit" in g.stdout)
+        record("the row clears again at the wrap — dark on the bar the card names",
+               g.returncode != 0 and hit, "suite exit %d; the wrap pins bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m135_the_neck_opens_on_grip_again():
+    # night 72: the OWNER's placement default goes back to Grip (register 11's lesson: a mirror's default is masked by the replay, so the owner is mutated). The boot pin must bite.
+    p, original, mutated = patch('hub/modules/field-board.mjs',
+        'object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], bass: "root", sounded: "none", pad: false,',
+        'object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root", sounded: "none", pad: false,')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "placed as a line and arpeggiated" in g.stdout
+        record("the neck opens on Grip again — the owner's default reverted",
+               g.returncode != 0 and hit, "suite exit %d; the boot pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m136_the_neck_opens_strummed_again():
+    # night 72: the OWNER's movement default goes back to strum. The boot pin must bite.
+    p, original, mutated = patch('hub/modules/field-board.mjs',
+        '      movement: "arpeggiate", repeat: false, centreSrc: "fixed",',
+        '      movement: "strum", repeat: false, centreSrc: "fixed",')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "placed as a line and arpeggiated" in g.stdout or "the neck opens arpeggiated" in g.stdout
+        record("the neck opens strummed again — the owner's movement reverted",
+               g.returncode != 0 and hit, "suite exit %d; the boot pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m137_the_tempo_constant_moves():
+    # night 72: the ONE constant moves (120 -> 90) — every face must move with it, so the boot-tempo pin must bite: proof
+    # that no face still types its own number.
+    p, original, mutated = patch("hub/tempo.mjs", "export const DEFAULT_BPM = 120;", "export const DEFAULT_BPM = 90;")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the boot tempo is 120" in g.stdout
+        record("the tempo constant moves — every face must follow it",
+               g.returncode != 0 and hit, "suite exit %d; the tempo pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m138_the_tempo_paint_is_removed():
+    # night 72 (approval 261031b): the card's boot paint from the constant is removed — the face falls back to the markup's
+    # pinned 72 while the clock runs at 120. The boot-tempo pin must catch it.
+    p, original, mutated = patch("hub/modules/metronome-card.mjs",
+        '    byId("bpmRange").value = core.bpm; byId("bpmVal").textContent = core.bpm;\n',
+        '    // (the boot paint removed — the face shows the pinned 72)\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "the boot tempo is 120" in g.stdout
+        record("the tempo paint is removed — the face falls back to the pinned 72",
+               g.returncode != 0 and hit, "suite exit %d; the tempo pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
@@ -2959,7 +3040,9 @@ def main():
                m126_the_fill_paints_under_the_border, m127_the_chip_basis_returns_to_zero,
                m128_a_tension_wears_a_role, m129_the_chip_spells_by_interval_alone, m130_the_numeral_escapes_the_card,
                m131_the_row_speaks_under_a_scale, m132_spellrole_loses_the_degree,
-               m133_the_numeral_does_not_parse)
+               m133_the_numeral_does_not_parse, m134_the_row_clears_again_at_the_wrap,
+               m135_the_neck_opens_on_grip_again, m136_the_neck_opens_strummed_again,
+               m137_the_tempo_constant_moves, m138_the_tempo_paint_is_removed)
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors

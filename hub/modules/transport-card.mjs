@@ -27,6 +27,7 @@
  */
 import { createTransportCore, patternOf, SPLITS } from "../../engine/transport.mjs";
 import { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } from "../bus.mjs";
+import { DEFAULT_BPM } from "../tempo.mjs";
 
 const METERS = Object.keys(SPLITS).map(Number).sort((a, b) => a - b);
 
@@ -54,8 +55,8 @@ export const transportCard = {
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
-    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="72">
-    <span class="trVal" id="bpmVal2">72</span>
+    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="${DEFAULT_BPM}">
+    <span class="trVal" id="bpmVal2">${DEFAULT_BPM}</span>
   </div>
   <div class="row2 alignEnd trSig">
     <div><label>Time sig</label>
@@ -93,7 +94,7 @@ export const transportCard = {
     const d = ctx.doc, byId = ctx.byId;
     const present = ctx.door.present || {};
 
-    let steps = 8, meter = 4, splitIdx = 0, bpm = 72, running = false;
+    let steps = 8, meter = 4, splitIdx = 0, bpm = DEFAULT_BPM, running = false;
     let core = createTransportCore({ meter, splitIdx, steps, countIn: false });
     let armed = false, position = 0;
     let armFrom = null, armAt = 0;   // metroOwner: see setPlaying

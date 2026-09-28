@@ -51,6 +51,7 @@ import { placeReference, centreDegreeOf, centreMaterialRef, reRead, soundedBass 
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE,
   listen, announce } from "../bus.mjs";
+import { DEFAULT_BPM } from "../tempo.mjs";
 
 export const etudeWalk = {
   id: "etude-walk",
@@ -65,10 +66,10 @@ export const etudeWalk = {
   mount(ctx) {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, sounded: "none", pad: false,   // night 57
-      tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, sounded: "none", pad: false,   // night 57
+      tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "arpeggiate", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
-    let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
+    let meter = 4, bpm = DEFAULT_BPM;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
     let armed = false;
     let spent = 0;          // beats this chord has consumed; its own downbeat counts as 1

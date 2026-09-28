@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tetradetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "tetradetudes", lock {"material":"tetrad","notepad":true,"audio":true,"transport":true}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, engine/tunings.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, engine/tunings.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs tetradetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -355,8 +355,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
-    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="72">
-    <span class="trVal" id="bpmVal2">72</span>
+    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="120">
+    <span class="trVal" id="bpmVal2">120</span>
   </div>
   <div class="row2 alignEnd trSig">
     <div><label>Time sig</label>
@@ -4091,6 +4091,20 @@ function listen(doc, name, fn) {
 return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, NOTE, BEAT, announce, announceAfter, listen };
 })();
 
+/* ===== hub/tempo.mjs ===== */
+const __m_hub_tempo_mjs = (() => {
+/* tempo.mjs — THE HUB'S DEFAULT TEMPO, stated once (night 72, 261031 — Daniel, 2026-09-27: "reset the metronome
+ * default to 120"). The metronome card owns the clock and boots it at this value; every mirror that holds a tempo before
+ * the clock's first CLOCK_STATE arrives (the walk, the audio, the transport card, the stage, the staff) and every piece of
+ * markup that shows it (a range's value, a readout's text) reads THIS — one fact, derived once (rule 6). It was the hand-
+ * typed 72 in eleven hub sites.
+ *
+ * NOT MOVED: the engine's own argument default (a library default carried into published pages), the published metronome
+ * study (it moves when it becomes a door), and saved études and handoffs (they open at the tempo they saved). */
+const DEFAULT_BPM = 120;
+return { DEFAULT_BPM };
+})();
+
 /* ===== hub/modules/audio-card.mjs ===== */
 const __m_hub_modules_audio_card_mjs = (() => {
 const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES } = __m_engine_voices_mjs;
@@ -4098,6 +4112,7 @@ const { tetradPass } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } = __m_hub_bus_mjs;
+const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* audio-card.mjs — the hub's ears: an AudioContext, a mixer, and nothing else.
  *
  * `engine/voices.mjs` describes the voices as data; this realises them as
@@ -4133,6 +4148,7 @@ const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, li
 
 
 
+
 const audioCard = {
   id: "audio-card",
   layer: "surface",
@@ -4157,7 +4173,7 @@ const audioCard = {
     let on = false, voice = NOTE_VOICE_NAMES[0], clickOn = true;
     let chordVol = 1, bassVol = 1, padVol = 1;   // night 57: the pad's bus
     let cfg = null, pass = null, live = 0;
-    let bpm = 72, durBeats = 2;                       // the clock's, heard on the bus
+    let bpm = DEFAULT_BPM, durBeats = 2;                       // the clock's, heard on the bus
 
     /* ---- the context, created on a GESTURE and never before ---- */
     const audio = () => {
@@ -5101,6 +5117,7 @@ const { keysOf } = __m_engine_voice_identity_mjs;
 const { parseFigure, figureEvents, toneIndexOf, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, ATTACK, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { FAM_COLOR, FAM_TEXT, FAM } = __m_hub_palette_mjs;
+const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* fretboard-stage.mjs — the neck, the dots, the armed rings, the transitions.
  *
  * The stage the frozen study calls its crown jewel, rebuilt as a door
@@ -5130,6 +5147,7 @@ const { FAM_COLOR, FAM_TEXT, FAM } = __m_hub_palette_mjs;
 
 
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* THE REFERENCE'S GEOMETRY, verbatim: a 15-fret neck across a 1160-wide
@@ -5207,7 +5225,7 @@ const fretboardStage = {
     let cfg = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0 };
     let pass = null, dots = [], step = 0, ctxLayer = null, zoneLayer = null, pulseLayer = null;
     let echoAttack = false;   // the next show()'s echo is attack-borne — see the announce
-    let bpm = 72, durBeats = 2;            // the clock's, heard on the bus — for the pulse and Follow-the-line
+    let bpm = DEFAULT_BPM, durBeats = 2;            // the clock's, heard on the bus — for the pulse and Follow-the-line
     let pulseTimers = [];
     /* the WINDOW MODE is display state — the stage's own, not config */
     let win = "full";
@@ -5997,6 +6015,7 @@ return { createMetroCore, createTapTempo, SUB_OFFSETS };
 const __m_hub_modules_metronome_card_mjs = (() => {
 const { createMetroCore, createTapTempo } = __m_engine_metronome_mjs;
 const { BEAT, CLOCK, CLOCK_STATE, announce, listen } = __m_hub_bus_mjs;
+const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* metronome-card.mjs — the family constant as a door contribution.
  *
  * The metronome is the one card every At-Etudes app carries, first block, this
@@ -6015,6 +6034,7 @@ const { BEAT, CLOCK, CLOCK_STATE, announce, listen } = __m_hub_bus_mjs;
  * why a door could not prune it. Ownership moved with the module, and the
  * resolver now enforces that it stays moved.
  */
+
 
 
 const metronomeCard = {
@@ -6099,7 +6119,13 @@ const metronomeCard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    const core = createMetroCore({ bpm: 72, meter: 4 });
+    const core = createMetroCore({ bpm: DEFAULT_BPM, meter: 4 });
+    /* THE BOOT TEMPO IS PAINTED FROM THE CONSTANT (night 72, PO ruling on item C, option a): the markup above keeps its
+     * value="72" and its readout "72" because those bytes are PINNED into the hand-authored published metronome study
+     * (host-conformance: a hand page carrying this card carries its markup verbatim), and that study does not move until
+     * it becomes a door. So the card paints the face from hub/tempo.mjs here, at mount, before anything reads it: the 72
+     * in the markup is a pinned artefact, never shown once the script runs. */
+    byId("bpmRange").value = core.bpm; byId("bpmVal").textContent = core.bpm;
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
     /* THE CLICK'S ON/OFF — the clock owner's state, riding CLOCK_STATE.click
@@ -9614,6 +9640,7 @@ const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 const { FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
+const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* score-board.mjs — "The étude — end to end": the reference's grand-staff score
  * at four voices.
  *
@@ -9643,6 +9670,7 @@ const { FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 
 
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
@@ -9773,7 +9801,7 @@ const scoreBoard = {
         let figErr = null;
         try {
           events = figureEvents(s, { parsed: parsedFig.err ? null : parsedFig.pattern,
-            address: cfg.address || "pattern", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: 72,
+            address: cfg.address || "pattern", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: DEFAULT_BPM,
             ctx: { scalePcs: scaleNotes(cfg.key, cfg.scale).map((n) => n.pc), tonicPc: scaleNotes(cfg.key, cfg.scale)[0].pc,
               open: pass.opens, nfrets: 15, set: pass.set.strings } });   // the pass's opens (night 44)
         } catch (e) { events = null; figErr = e && e.message ? e.message : String(e); }
@@ -10339,6 +10367,7 @@ return { familyCostClause, PLACE_LABEL, placementWords, placementDependency, nar
 const __m_hub_modules_transport_card_mjs = (() => {
 const { createTransportCore, patternOf, SPLITS } = __m_engine_transport_mjs;
 const { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } = __m_hub_bus_mjs;
+const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* transport-card.mjs — the reference page's Transport card, ported.
  *
  * `static/studies/triadetudes/study.html` is the layout specification, and this
@@ -10368,6 +10397,7 @@ const { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, ann
  */
 
 
+
 const METERS = Object.keys(SPLITS).map(Number).sort((a, b) => a - b);
 
 const transportCard = {
@@ -10394,8 +10424,8 @@ const transportCard = {
   </div>
   <div class="bpmrow">
     <span class="trLab">BPM</span>
-    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="72">
-    <span class="trVal" id="bpmVal2">72</span>
+    <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="${DEFAULT_BPM}">
+    <span class="trVal" id="bpmVal2">${DEFAULT_BPM}</span>
   </div>
   <div class="row2 alignEnd trSig">
     <div><label>Time sig</label>
@@ -10433,7 +10463,7 @@ const transportCard = {
     const d = ctx.doc, byId = ctx.byId;
     const present = ctx.door.present || {};
 
-    let steps = 8, meter = 4, splitIdx = 0, bpm = 72, running = false;
+    let steps = 8, meter = 4, splitIdx = 0, bpm = DEFAULT_BPM, running = false;
     let core = createTransportCore({ meter, splitIdx, steps, countIn: false });
     let armed = false, position = 0;
     let armFrom = null, armAt = 0;   // metroOwner: see setPlaying
@@ -10938,7 +10968,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.10","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.11","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

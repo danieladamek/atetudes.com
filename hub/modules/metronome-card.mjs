@@ -18,6 +18,7 @@
  */
 import { createMetroCore, createTapTempo } from "../../engine/metronome.mjs";
 import { BEAT, CLOCK, CLOCK_STATE, announce, listen } from "../bus.mjs";
+import { DEFAULT_BPM } from "../tempo.mjs";
 
 export const metronomeCard = {
   id: "metronome-card",
@@ -101,7 +102,13 @@ export const metronomeCard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    const core = createMetroCore({ bpm: 72, meter: 4 });
+    const core = createMetroCore({ bpm: DEFAULT_BPM, meter: 4 });
+    /* THE BOOT TEMPO IS PAINTED FROM THE CONSTANT (night 72, PO ruling on item C, option a): the markup above keeps its
+     * value="72" and its readout "72" because those bytes are PINNED into the hand-authored published metronome study
+     * (host-conformance: a hand page carrying this card carries its markup verbatim), and that study does not move until
+     * it becomes a door. So the card paints the face from hub/tempo.mjs here, at mount, before anything reads it: the 72
+     * in the markup is a pinned artefact, never shown once the script runs. */
+    byId("bpmRange").value = core.bpm; byId("bpmVal").textContent = core.bpm;
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
     /* THE CLICK'S ON/OFF — the clock owner's state, riding CLOCK_STATE.click

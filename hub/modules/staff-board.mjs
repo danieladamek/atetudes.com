@@ -68,8 +68,8 @@ export const staffBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
-      movement: "strum",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], bass: "root",
+      movement: "arpeggiate",   // night 72: the neck opens on Line, arpeggiated
       address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null,
       centreSrc: "fixed" };

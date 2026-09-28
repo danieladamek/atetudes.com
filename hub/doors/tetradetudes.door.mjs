@@ -102,6 +102,8 @@ export default {
     /* v0.6.0 (261002, night 38): ONE ADDRESS FAMILY — the figure's pattern address is
      * real string numbers (multetudes' own), slots retired to a saved-étude alias; a set
      * change refuses a stale figure by name and OFFERS the shift. Multetudes unmoved. */
+    /* v0.6.11 (261031, night 72): the tempo opens at 120 — the hub's one default (hub/tempo.mjs, Daniel 2026-09-27),
+     * read by the shared metronome card and this door's transport card. Nothing else on this face moved. */
     /* v0.6.10 (261027, night 70): bytes only — the mini's source gained a comment (why the clock is markup and the
      * mini a mount); the shared readout's derivation was lifted into an exported function. Nothing on this face moved. */
     /* v0.6.9 (261024b, night 67): the shell's header slot is seated by measurement — at 390 the log's title field
@@ -128,7 +130,7 @@ export default {
      * Settings card also reads — the saved entry is byte-for-byte the same shape; nothing on this face moved. */
     /* v0.6.7 (261014e, night 64): the bus gained announceAfter and the readout grammar right-justifies a mini's own
      * row — shared files; nothing on this door's face moves. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.10",
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.11",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

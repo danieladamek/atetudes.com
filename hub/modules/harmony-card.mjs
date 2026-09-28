@@ -502,8 +502,22 @@ export const harmonyCard = {
      * next bar. The walk (order 6) registers before this card (order 10), so on an advance its STEP listener
      * runs first and the bar's immediate notes reach here BEFORE this card's own STEP listener — the row is
      * therefore keyed to the STEP's index, not cleared on the event: a new index starts a new set. */
-    let litIndex = null;
-    listen(d, STEP_CHANGED, (m) => { if (!m || typeof m.index !== "number") return; if (m.index !== litIndex) { litIndex = m.index; lit = new Set(); renderChips(); } });
+    /* NIGHT 72 (261031 — Daniel: "when the transition is to the same chord it clears the chips"). MEASURED: this listener
+     * used to take a REQUEST's index as the new bar — but a request is not wrapped (next from the last bar asks for 8,
+     * prev from the first for -1) and the owner's echo carries the wrapped index (0, 7). The row cleared at the request,
+     * the walk's notes for the new bar lit it (inside the echo's own dispatch, before this listener), and then the echo's
+     * index differed from the request's and the row CLEARED AGAIN. The repeated chord was the wrap's correlate: every
+     * cycle comes home. Now: a REQUEST opens the new bar's set and owes an echo; the owner's echo that answers it belongs
+     * to the same move, whatever index it wraps to, and never clears a second time. An echo nobody requested (the boot
+     * echo, a config reset) still starts a new set by its index. The row's meaning is unchanged (night 60): the notes that
+     * passed since the bar began. */
+    let litIndex = null, echoOwed = false;
+    listen(d, STEP_CHANGED, (m) => {
+      if (!m || typeof m.index !== "number") return;
+      if (m.request === true) { echoOwed = true; litIndex = null; lit = new Set(); renderChips(); return; }
+      if (echoOwed) { echoOwed = false; litIndex = m.index; return; }
+      if (m.index !== litIndex) { litIndex = m.index; lit = new Set(); renderChips(); }
+    });
     listen(d, NOTE, (m) => {
       if (!m || typeof m.midi !== "number" || m.role === "bass" || m.role === "pad" || cfg.object === "scale") return;
       const fld = field({ key: cfg.key, scale: cfg.scale });

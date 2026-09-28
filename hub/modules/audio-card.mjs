@@ -36,6 +36,7 @@ import { tetradPass } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
 import { parseFigure, figureEvents, playbackWord } from "../../engine/figure.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } from "../bus.mjs";
+import { DEFAULT_BPM } from "../tempo.mjs";
 
 export const audioCard = {
   id: "audio-card",
@@ -61,7 +62,7 @@ export const audioCard = {
     let on = false, voice = NOTE_VOICE_NAMES[0], clickOn = true;
     let chordVol = 1, bassVol = 1, padVol = 1;   // night 57: the pad's bus
     let cfg = null, pass = null, live = 0;
-    let bpm = 72, durBeats = 2;                       // the clock's, heard on the bus
+    let bpm = DEFAULT_BPM, durBeats = 2;                       // the clock's, heard on the bus
 
     /* ---- the context, created on a GESTURE and never before ---- */
     const audio = () => {

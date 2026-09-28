@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -786,8 +786,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
            the label moved. -->
       <div class="fd-placerow">
         <div class="seg" id="fdNSeg" data-control="fdNSeg">
-          <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-          <button data-nps="3" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
+          <button data-nps="1" title="one note per string — only what can sound together">Grip</button>
+          <button data-nps="3" class="on" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
         </div>
         <label class="chk fd-alltones" id="fdAllTonesLab"
           title="every occurrence in the box — off, one of each tone"><input
@@ -799,9 +799,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
              strum (note-events has always staggered it), so the movement
              wears the truer word; the old engine strum flag (the harmony
              bed) was renamed bed in the same pass -->
-        <button data-move="strum" class="on"
+        <button data-move="strum"
           title="the notes sound together — a chord">strum</button>
-        <button data-move="arpeggiate"
+        <button data-move="arpeggiate" class="on"
           title="the notes sound in sequence, low to high across the bar">arpeggiate</button>
       </div>
       <div class="fd-cap">The figure is</div>
@@ -4479,6 +4479,20 @@ function listen(doc, name, fn) {
 return { CONFIG_CHANGED, STEP_CHANGED, CLOCK, CLOCK_STATE, PLAY, MIXER, ATTACK, NOTE, BEAT, announce, announceAfter, listen };
 })();
 
+/* ===== hub/tempo.mjs ===== */
+const __m_hub_tempo_mjs = (() => {
+/* tempo.mjs — THE HUB'S DEFAULT TEMPO, stated once (night 72, 261031 — Daniel, 2026-09-27: "reset the metronome
+ * default to 120"). The metronome card owns the clock and boots it at this value; every mirror that holds a tempo before
+ * the clock's first CLOCK_STATE arrives (the walk, the audio, the transport card, the stage, the staff) and every piece of
+ * markup that shows it (a range's value, a readout's text) reads THIS — one fact, derived once (rule 6). It was the hand-
+ * typed 72 in eleven hub sites.
+ *
+ * NOT MOVED: the engine's own argument default (a library default carried into published pages), the published metronome
+ * study (it moves when it becomes a door), and saved études and handoffs (they open at the tempo they saved). */
+const DEFAULT_BPM = 120;
+return { DEFAULT_BPM };
+})();
+
 /* ===== hub/modules/audio-card.mjs ===== */
 const __m_hub_modules_audio_card_mjs = (() => {
 const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES } = __m_engine_voices_mjs;
@@ -4486,6 +4500,7 @@ const { tetradPass } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, listen } = __m_hub_bus_mjs;
+const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* audio-card.mjs — the hub's ears: an AudioContext, a mixer, and nothing else.
  *
  * `engine/voices.mjs` describes the voices as data; this realises them as
@@ -4521,6 +4536,7 @@ const { CONFIG_CHANGED, STEP_CHANGED, BEAT, MIXER, CLOCK_STATE, ATTACK, NOTE, li
 
 
 
+
 const audioCard = {
   id: "audio-card",
   layer: "surface",
@@ -4545,7 +4561,7 @@ const audioCard = {
     let on = false, voice = NOTE_VOICE_NAMES[0], clickOn = true;
     let chordVol = 1, bassVol = 1, padVol = 1;   // night 57: the pad's bus
     let cfg = null, pass = null, live = 0;
-    let bpm = 72, durBeats = 2;                       // the clock's, heard on the bus
+    let bpm = DEFAULT_BPM, durBeats = 2;                       // the clock's, heard on the bus
 
     /* ---- the context, created on a GESTURE and never before ---- */
     const audio = () => {
@@ -7603,6 +7619,7 @@ const { bassSeat, padSeat } = __m_engine_voices_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead, soundedBass } = __m_engine_reference_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, listen, announce } = __m_hub_bus_mjs;
+const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* etude-walk.mjs — THE WALK (child 7; the TIME DIMENSION 260902): Play
  * walks the bars, and THE FIGURE WALKS THE SELECTION ACROSS THE CHORD'S
  * BEATS — Daniel's headline finding was that it did not: every note was
@@ -7655,6 +7672,7 @@ const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, list
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 
+
 const etudeWalk = {
   id: "etude-walk",
   layer: "surface",
@@ -7668,10 +7686,10 @@ const etudeWalk = {
   mount(ctx) {
     const d = ctx.doc;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, sounded: "none", pad: false,   // night 57
-      tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "strum", repeat: false, centreSrc: "fixed",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, sounded: "none", pad: false,   // night 57
+      tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "arpeggiate", repeat: false, centreSrc: "fixed",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
-    let meter = 4, bpm = 72;      // adopted from CLOCK_STATE — the metronome owns both
+    let meter = 4, bpm = DEFAULT_BPM;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
     let armed = false;
     let spent = 0;          // beats this chord has consumed; its own downbeat counts as 1
@@ -8754,7 +8772,7 @@ const { CONFIG_CHANGED, STEP_CHANGED, listen } = __m_hub_bus_mjs;
 /** the configuration the readout needs, mirrored — the boot values are the
  * family's (harmony announces them; every mirror boots to the same) */
 const BOOT = () => ({ key: "Bb", scale: "major", ref: 0, object: "tetrad",
-  take: "one", notesPer: 1, tones: [1, 3, 5, 7],
+  take: "one", notesPer: 3, tones: [1, 3, 5, 7],   // night 72: the neck opens on Line
   source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 });
 
 /** Fill `host` (a declared `.readbox` element) with the readout and wire it
@@ -9049,8 +9067,8 @@ const fieldBoard = {
            the label moved. -->
       <div class="fd-placerow">
         <div class="seg" id="fdNSeg" data-control="fdNSeg">
-          <button data-nps="1" class="on" title="one note per string — only what can sound together">Grip</button>
-          <button data-nps="3" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
+          <button data-nps="1" title="one note per string — only what can sound together">Grip</button>
+          <button data-nps="3" class="on" title="a line along the set — every tone the chord has on a string, one after another; no hand holds them together, so nothing caps a string">Line</button>
         </div>
         <label class="chk fd-alltones" id="fdAllTonesLab"
           title="every occurrence in the box — off, one of each tone"><input
@@ -9062,9 +9080,9 @@ const fieldBoard = {
              strum (note-events has always staggered it), so the movement
              wears the truer word; the old engine strum flag (the harmony
              bed) was renamed bed in the same pass -->
-        <button data-move="strum" class="on"
+        <button data-move="strum"
           title="the notes sound together — a chord">strum</button>
-        <button data-move="arpeggiate"
+        <button data-move="arpeggiate" class="on"
           title="the notes sound in sequence, low to high across the bar">arpeggiate</button>
       </div>
       <div class="fd-cap">The figure is</div>
@@ -9275,7 +9293,8 @@ const fieldBoard = {
        * fact, owned here because the neck is where the instrument is; every other board
        * builds its field with it. Item 1 made it state; tonight it gets a face. */
       tuning: null,
-      object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root", sounded: "none", pad: false,   // night 57: the sounded bass and the pad, absent by default
+      object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], bass: "root", sounded: "none", pad: false,   /* 261031 (night 72 — Daniel, 2026-09-27): the neck opens on LINE, ARPEGGIATED (was Grip + strum); register 11 amended */
+        // night 57: the sounded bass and the pad, absent by default
       /* THE MOVEMENT (260905, Daniel's model correction: "The Take field in
        * Harmony is doing movement (partial) duty here which it shouldn't
        * be."). Take is MATERIAL — which notes exist (one of each · every
@@ -9283,7 +9302,7 @@ const fieldBoard = {
        * sequence — lives HERE with Placement and The Figure, where the
        * motion lives: block · arpeggio, his two words. A typed figure still
        * sequences regardless (the night-7 ruling, now in its proper home). */
-      movement: "strum", repeat: false, centreSrc: "fixed",
+      movement: "arpeggiate", repeat: false, centreSrc: "fixed",   // night 72: arpeggiate (a line is not held together)
       /* the figure (child 3b): the address vocabulary and the user's text,
        * verbatim — every consumer parses through selection.mjs's orderBy,
        * nothing pre-digested */
@@ -10893,8 +10912,22 @@ const harmonyCard = {
      * next bar. The walk (order 6) registers before this card (order 10), so on an advance its STEP listener
      * runs first and the bar's immediate notes reach here BEFORE this card's own STEP listener — the row is
      * therefore keyed to the STEP's index, not cleared on the event: a new index starts a new set. */
-    let litIndex = null;
-    listen(d, STEP_CHANGED, (m) => { if (!m || typeof m.index !== "number") return; if (m.index !== litIndex) { litIndex = m.index; lit = new Set(); renderChips(); } });
+    /* NIGHT 72 (261031 — Daniel: "when the transition is to the same chord it clears the chips"). MEASURED: this listener
+     * used to take a REQUEST's index as the new bar — but a request is not wrapped (next from the last bar asks for 8,
+     * prev from the first for -1) and the owner's echo carries the wrapped index (0, 7). The row cleared at the request,
+     * the walk's notes for the new bar lit it (inside the echo's own dispatch, before this listener), and then the echo's
+     * index differed from the request's and the row CLEARED AGAIN. The repeated chord was the wrap's correlate: every
+     * cycle comes home. Now: a REQUEST opens the new bar's set and owes an echo; the owner's echo that answers it belongs
+     * to the same move, whatever index it wraps to, and never clears a second time. An echo nobody requested (the boot
+     * echo, a config reset) still starts a new set by its index. The row's meaning is unchanged (night 60): the notes that
+     * passed since the bar began. */
+    let litIndex = null, echoOwed = false;
+    listen(d, STEP_CHANGED, (m) => {
+      if (!m || typeof m.index !== "number") return;
+      if (m.request === true) { echoOwed = true; litIndex = null; lit = new Set(); renderChips(); return; }
+      if (echoOwed) { echoOwed = false; litIndex = m.index; return; }
+      if (m.index !== litIndex) { litIndex = m.index; lit = new Set(); renderChips(); }
+    });
     listen(d, NOTE, (m) => {
       if (!m || typeof m.midi !== "number" || m.role === "bass" || m.role === "pad" || cfg.object === "scale") return;
       const fld = field({ key: cfg.key, scale: cfg.scale });
@@ -10983,7 +11016,7 @@ const keysBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], bass: "root",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, centreSrc: "fixed" };
     let index = 0;
     let pulseTimers = [];       // the sounding-note pulse (260911, item 4 — field-board's idiom)
@@ -11259,6 +11292,7 @@ return { createMetroCore, createTapTempo, SUB_OFFSETS };
 const __m_hub_modules_metronome_card_mjs = (() => {
 const { createMetroCore, createTapTempo } = __m_engine_metronome_mjs;
 const { BEAT, CLOCK, CLOCK_STATE, announce, listen } = __m_hub_bus_mjs;
+const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* metronome-card.mjs — the family constant as a door contribution.
  *
  * The metronome is the one card every At-Etudes app carries, first block, this
@@ -11277,6 +11311,7 @@ const { BEAT, CLOCK, CLOCK_STATE, announce, listen } = __m_hub_bus_mjs;
  * why a door could not prune it. Ownership moved with the module, and the
  * resolver now enforces that it stays moved.
  */
+
 
 
 const metronomeCard = {
@@ -11361,7 +11396,13 @@ const metronomeCard = {
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
-    const core = createMetroCore({ bpm: 72, meter: 4 });
+    const core = createMetroCore({ bpm: DEFAULT_BPM, meter: 4 });
+    /* THE BOOT TEMPO IS PAINTED FROM THE CONSTANT (night 72, PO ruling on item C, option a): the markup above keeps its
+     * value="72" and its readout "72" because those bytes are PINNED into the hand-authored published metronome study
+     * (host-conformance: a hand page carrying this card carries its markup verbatim), and that study does not move until
+     * it becomes a door. So the card paints the face from hub/tempo.mjs here, at mount, before anything reads it: the 72
+     * in the markup is a pinned artefact, never shown once the script runs. */
+    byId("bpmRange").value = core.bpm; byId("bpmVal").textContent = core.bpm;
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
     /* THE CLICK'S ON/OFF — the clock owner's state, riding CLOCK_STATE.click
@@ -11798,11 +11839,11 @@ const neckReadout = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], sounded: "none", pad: false,   // night 57
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], sounded: "none", pad: false,   // night 57
       bass: "root" ,
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0,
       centreSrc: "fixed",
-      movement: "strum",   // 261023 (night 65): mirrored so the readout can SAY the motif's movement
+      movement: "arpeggiate",   // night 72 (was strum) · 261023 (night 65): mirrored so the readout can SAY the motif's movement
       /* the figure (260919, item 3): mirrored so the readout can SAY it — the
        * one piece of state it never carried; the hint's clause moved here */
       address: "pattern", figure: "" };
@@ -14875,8 +14916,8 @@ const staffBoard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 1, tones: [1, 3, 5, 7], bass: "root",
-      movement: "strum",
+      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, tones: [1, 3, 5, 7], bass: "root",
+      movement: "arpeggiate",   // night 72: the neck opens on Line, arpeggiated
       address: "pattern", figure: "",
       source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null,
       centreSrc: "fixed" };
@@ -15922,7 +15963,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.23","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.24","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

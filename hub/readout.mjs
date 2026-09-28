@@ -35,7 +35,7 @@ import { CONFIG_CHANGED, STEP_CHANGED, listen } from "./bus.mjs";
 /** the configuration the readout needs, mirrored — the boot values are the
  * family's (harmony announces them; every mirror boots to the same) */
 const BOOT = () => ({ key: "Bb", scale: "major", ref: 0, object: "tetrad",
-  take: "one", notesPer: 1, tones: [1, 3, 5, 7],
+  take: "one", notesPer: 3, tones: [1, 3, 5, 7],   // night 72: the neck opens on Line
   source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 });
 
 /** Fill `host` (a declared `.readbox` element) with the readout and wire it

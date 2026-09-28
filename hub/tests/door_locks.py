@@ -294,8 +294,11 @@ def run_door(pw, door_id):
               f"{tag} the boot run is not 4-3-2-1: {boot_hint!r}")
         check("from the 5th on string 4, frets 3–7" in boot_hint,
               f"{tag} the boot window is not v0.9's (the 6th at the fifth position): {boot_hint!r}")
-        check("grip" in boot_hint and "1+1+1+1 across the set" in boot_hint,
-              f"{tag} the boot object is not the tetrad block: {boot_hint!r}")
+        # RE-PINNED night 72 (261031 — register 11's addendum, Daniel 2026-09-27: "default the neck to 'line' rather than
+        # grip"): the tetrad, the run, the window and the single bar are unchanged; the placement is LINE and the movement
+        # ARPEGGIATE — the only two things that moved.
+        check("line, one of each" in boot_hint and "1+1+1+1 across the set" in boot_hint and "arpeggiated" in boot_hint,
+              f"{tag} the boot object is not the tetrad, placed as a line and arpeggiated: {boot_hint!r}")
         # child 7: the boot étude is v0.9's — the cycling-4ths walk, derived
         # to eight bars, IDENTIFIED chip by chip (a count-only pin hid a
         # wrong chord for two nights; a wrong line must name itself)
@@ -338,14 +341,19 @@ def run_door(pw, door_id):
         # (register 11 — same four notes, untouched above) AND places every
         # bar. Asserted bar by bar, each chord NAMED — this is exactly how
         # the Gm7 boot survived two green nights: nothing walked the bars.
-        for ci in range(8):
-            page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(120)
-            chip = page.eval_on_selector_all("#tlScroll button.tl-cur",
-                "es => es.map(e => e.getAttribute('data-tlchip'))")
-            n_sel = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
-            check(n_sel == 4 and "no placement fits" not in page.inner_text("#fdHint"),
-                  f"{tag} boot bar {ci + 1} ({chip}) must place its grip whole: "
-                  f"{n_sel} notes drawn — {page.inner_text('#fdHint')[:160]!r}")
+        # RE-AIMED night 72 (ruling on the chain's misses): the boot is LINE now, and Line places what Grip refuses — so the
+        # refusal case is kept by SETTING Grip explicitly (m24's window regression still refuses bar 2 under it), and the
+        # Line boot gets its own walk: every bar places under the placement the page actually opens on.
+        for place72, word72 in (("1", "grip"), ("3", "line")):
+            page.click(f'#fdNSeg button[data-nps="{place72}"]'); page.wait_for_timeout(120)
+            for ci in range(8):
+                page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(120)
+                chip = page.eval_on_selector_all("#tlScroll button.tl-cur",
+                    "es => es.map(e => e.getAttribute('data-tlchip'))")
+                n_sel = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
+                check(n_sel == 4 and "no placement fits" not in page.inner_text("#fdHint"),
+                      f"{tag} boot bar {ci + 1} ({chip}) must place its {word72} whole: "
+                      f"{n_sel} notes drawn — {page.inner_text('#fdHint')[:160]!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.wait_for_timeout(120)
@@ -370,15 +378,17 @@ def run_door(pw, door_id):
               f"{tag} the neck's dots did not follow the key — the D at midi 62 must wear R in D major: {d_lab}")
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(120)   # back to the boot key
         # a field dot SOUNDS (floor F3): clicking one announces NOTE with its midi
-        note_probe = """() => { window.__fdNote = null;
-          document.addEventListener('atetudes:note', e => window.__fdNote = e.detail.midi); }"""
+        # REWRITTEN night 72 (rule 7): the probe kept only the LAST note, and since the neck opens arpeggiated an audition's
+        # timed notes may still be sounding when the dot is clicked — the claim is that the click ANNOUNCES its note
+        note_probe = """() => { window.__fdNotes = []; window.__fdNote = null;
+          document.addEventListener('atetudes:note', e => { window.__fdNotes.push(e.detail.midi); window.__fdNote = e.detail.midi; }); }"""
         page.evaluate(note_probe)
         first_midi = page.evaluate("""() => +document.querySelector('#fieldSvg [data-midi]').dataset.midi""")
         dot = page.query_selector("#fieldSvg [data-midi] circle")
         dot.scroll_into_view_if_needed()
         dot.click(force=True)
         page.wait_for_timeout(80)
-        check(page.evaluate("() => window.__fdNote") == first_midi,
+        check(first_midi in page.evaluate("() => window.__fdNotes"),
               f"{tag} clicking a field dot did not announce its NOTE "
               f"({page.evaluate('() => window.__fdNote')} vs {first_midi})")
 
@@ -605,7 +615,10 @@ def run_door(pw, door_id):
               and "a scale takes the whole box" in at_scale["lab"],
               f"{tag} the off-switch must carry its reason on the label: {at_scale['lab']!r}")
         # the tetrad, one of each, Grip: a voicing — one per string, four roles
+        # RE-AIMED night 72 (ruling on the chain's misses): the neck OPENS on Line now, so the snapshot below was Line's and
+        # the Line click changed nothing — m14 went blind. The old state is SET explicitly: Grip, then the comparison.
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(120)
         grip = sel_dots()
         check(len(grip) == 4 and all(c == 1 for c in per_string(grip).values()),
               f"{tag} a tetrad voicing at Grip is four notes, one per string: {grip}")
@@ -616,6 +629,14 @@ def run_door(pw, door_id):
         check(addrs(sel_dots()) == addrs(grip),
               f"{tag} raising the ceiling CHANGED the voicing — Take and Placement have collapsed "
               f"({addrs(grip)} -> {addrs(sel_dots())})")
+        # PLACEMENT AND MOVEMENT ARE INDEPENDENT (night 72 — tonight's defaults PAIR Line with arpeggiate, they do not LINK
+        # them): with strum set explicitly, choosing Line leaves the movement strum
+        page.click('#fdMoveSeg button[data-move="strum"]'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps="3"]'); page.wait_for_timeout(120)
+        mv72 = page.evaluate("() => (document.querySelector('#fdMoveSeg button.on') || {}).dataset?.move || null")
+        check(mv72 == "strum", f"{tag} night 72: choosing Line left the movement alone — strum stays strum: {mv72!r}")
+        page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.wait_for_timeout(100)   # back to the boot's movement
         # every occurrence: the arpeggio doubles a string, and the two notes on
         # one string are distinct dots at distinct frets — on the neck
         page.check("#fdAllTones"); page.wait_for_timeout(100)
@@ -6989,13 +7010,16 @@ console.log(JSON.stringify(out));
         check(len(rail65["heads"]) == 2 and clear65, f"{tag} night 65: the Motif name overlaps neither of the neck's set/pattern headers in the same band: heads {len(rail65['heads'])} clear {clear65}")
         check(rail65["btnTitle"] == "collapse this rail", f"{tag} night 65: the button keeps its own name — the word names the rail (rule 12): {rail65['btnTitle']!r}")
         ro65 = lambda: p65.inner_text("#roLine")
+        # REWRITTEN night 72 (rule 7): the neck opens arpeggiated now; strum is asked for, then arpeggiate.
+        check("arpeggiated (in sequence, low to high)" in ro65(), f"{tag} night 72: the neck opens arpeggiated, and the readout says so: {ro65()[-200:]!r}")
+        p65.click('#fdMoveSeg button[data-move="strum"]'); p65.wait_for_timeout(200)
         check("strummed (together)" in ro65() and "arpeggiated" not in ro65(), f"{tag} night 65: the readout says the movement — strummed (together): {ro65()[-200:]!r}")
         p65.click('#fdMoveSeg button[data-move="arpeggiate"]'); p65.wait_for_timeout(200)
         check("arpeggiated (in sequence, low to high)" in ro65() and "strummed" not in ro65(), f"{tag} night 65: arpeggiate at the neck, the readout follows: {ro65()[-200:]!r}")
         p65.fill("#fdFigIn", "4,3,4,3,2,1"); p65.dispatch_event("#fdFigIn", "change"); p65.wait_for_timeout(250)
         check("the figure orders it" in ro65() and "figure 6 steps" in ro65(), f"{tag} night 65: under a resolving figure the readout says the figure orders the movement: {ro65()[-240:]!r}")
         order65 = ro65()
-        check(order65.index("grip") < order65.index("arpeggiated") < order65.index("figure 6 steps"),
+        check(order65.index("line") < order65.index("arpeggiated") < order65.index("figure 6 steps"),   # night 72: the placement opens on line
               f"{tag} night 65: the readout speaks the motif in its order — placement, movement, figure: {order65[-240:]!r}")
         # REWRITTEN night 66 (261024 item 0, rule 7): night 65 pinned that a shut rail at 1280 HIDES the word — the label's
         # only job is to say something is there WHEN SHUT (Daniel: "an indicator next to the side collapse"). Now: shut,
@@ -7253,6 +7277,70 @@ console.log(JSON.stringify(out));
             check(not any(s71["roles"]) and not s71["numeral"], f"{tag} night 71: at {w71}, under a scale the row goes quiet — no role, no numeral: {s71}")
         check(not errs71, f"{tag} night 71: no page errors: {errs71[:3]}")
         ctx71.close()
+
+    # ---------------- NIGHT 72 (261031) ITEM A: THE CHIP ROW STAYS LIT ACROSS THE WRAP ----------
+    # Daniel: "when the transition is to the same chord it clears the chips." Measured (night 72's run note): the row keyed
+    # its set to a STEP REQUEST's raw index — unwrapped (8 from the last bar, -1 from the first) — and the owner's echo then
+    # carried the wrapped index (0, 7), so the row cleared a SECOND time, after the new bar's notes had lit it. The repeated
+    # chord was the wrap's correlate: every cycle comes home. After every move the row shows the bar's sounded degrees lit,
+    # their roles and the numeral — the wrap stopped (next from bar 8, prev from bar 1), the wrap playing, a custom repeat
+    # played through; and a different-chord move as the control.
+    if 'id="hcRoles"' in html_path.read_text():
+        ctx72 = pw.new_context(viewport={"width": 1280, "height": 900}); p72 = ctx72.new_page(); errs72 = []; p72.on("pageerror", lambda e: errs72.append(str(e)))
+        row72 = "() => ({ lit: [...document.querySelectorAll('#hcChips .hc-chip')].filter(b => b.dataset.lit === 'true').length, roles: [...document.querySelectorAll('#hcRoles > span')].filter(s => s.textContent).length, num: document.querySelector('#hcNumeral .hc-numtext').textContent, readout: document.getElementById('hcMode').innerText.trim() })"
+        def open72():
+            # 240 bpm: a bar is one second, and under the default ARPEGGIATE (night 72, item B) the audition sounds the bar's
+            # notes in sequence across it — the row is read after the whole bar has passed, not at its first note
+            p72.goto(html_path.as_uri()); p72.wait_for_selector("#cards", state="attached"); p72.wait_for_timeout(400)
+            p72.fill("#fdBpm", "240"); p72.dispatch_event("#fdBpm", "change"); p72.wait_for_timeout(200)
+        def at72(i):
+            p72.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", i); p72.wait_for_timeout(500)
+        # THE WHOLE BAR, not most of it: every bar here is a seventh chord, one of each — four tones sounded, four lit, four
+        # roles. "At least 3" passed a row that lost the downbeat's note (the second clear under ARPEGGIATE erases only the
+        # notes already sounded) — m134 bit night 60's pins and not these, which is how the weakness was found (night 72).
+        def lit72(r): return r["lit"] == 4 and r["roles"] == 4 and r["num"]
+        for w72 in (1280, 390):
+            p72.set_viewport_size({"width": w72, "height": 900})
+            open72(); at72(7); p72.click('#fdMini button[data-role="next"]'); p72.wait_for_timeout(1400); r72 = p72.evaluate(row72)
+            check(lit72(r72), f"{tag} night 72: at {w72}, next from bar 8 to bar 1 (the same chord) — the row stays lit, roles and numeral shown: {r72}")
+            open72(); at72(0); p72.click('#fdMini button[data-role="prev"]'); p72.wait_for_timeout(1400); r72 = p72.evaluate(row72)
+            check(lit72(r72), f"{tag} night 72: at {w72}, prev from bar 1 to bar 8 (the same chord) — the row stays lit: {r72}")
+            open72(); at72(0); p72.click('#fdMini button[data-role="next"]'); p72.wait_for_timeout(1400); r72 = p72.evaluate(row72)
+            check(lit72(r72) and r72["readout"].startswith("Ebmaj7"), f"{tag} night 72: at {w72}, next from bar 1 to bar 2 (a different chord, the control) — lit: {r72}")
+        p72.set_viewport_size({"width": 1280, "height": 900})
+        # playing through the wrap, and a custom repeat played through — each bar judged by the OWNER's index (its last sample)
+        for label, prep in (("the wrap 8 -> 1 while playing", lambda: at72(6)),
+                            ("a custom | Cmaj7 | Cmaj7 | Fmaj7 | in C, played through", lambda: (p72.select_option("#hcKey", "C"), p72.wait_for_timeout(250),
+                              p72.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { source: 'custom', custom: 'Cmaj7 Cmaj7 Fmaj7' } }))"), p72.wait_for_timeout(300), at72(0)))):
+            open72(); prep()
+            p72.evaluate("() => { window.__bar72 = null; document.addEventListener('atetudes:step', e => { if (e.detail && e.detail.request !== true && typeof e.detail.index === 'number') window.__bar72 = e.detail.index; }); }")
+            p72.click('#fdMini button[data-role="play"]'); seen = []
+            for _ in range(22):
+                p72.wait_for_timeout(180); seen.append(p72.evaluate("() => [window.__bar72, document.getElementById('hcMode').innerText.trim().split(' ')[0], [...document.querySelectorAll('#hcChips .hc-chip')].filter(b => b.dataset.lit === 'true').length]"))
+            p72.click('#fdMini button[data-role="stop"]'); p72.wait_for_timeout(200)
+            ends = [seen[i] for i in range(len(seen) - 1) if seen[i][0] is not None and seen[i][0] != seen[i + 1][0]]
+            check(len(ends) >= 2 and all(e[2] == 4 for e in ends), f"{tag} night 72: {label} — every bar ends with its row lit (bar, chord, lit): {ends}")
+        check(not errs72, f"{tag} night 72: no page errors: {errs72[:3]}")
+        ctx72.close()
+
+    # ---------------- NIGHT 72 (261031) ITEM C: THE TEMPO OPENS AT 120 — every door with a metronome ----------
+    # Daniel, 2026-09-27: "reset the metronome default to 120." One named hub constant (hub/tempo.mjs); every face that
+    # shows or uses the tempo moves with it — asserted on each face that exists in this door, and on the HEARD beat.
+    if 'id="bpmRange"' in html_path.read_text():
+        ctx72c = pw.new_context(viewport={"width": 1280, "height": 900}); p72c = ctx72c.new_page()
+        p72c.goto(html_path.as_uri()); p72c.wait_for_selector("#cards", state="attached"); p72c.wait_for_timeout(500)
+        faces72 = p72c.evaluate("""() => { const v = (sel, prop) => { const e = document.querySelector(sel); return e ? (prop === 'text' ? e.textContent.trim() : e.value) : null; };
+          return { bpmRange: v('#bpmRange'), bpmVal: v('#bpmVal', 'text'), bpmRange2: v('#bpmRange2'), bpmVal2: v('#bpmVal2', 'text'), fdBpm: v('#fdBpm'),
+            pgClock: v('#pgClock [data-role="bpm"]'), settings: document.getElementById('psDesc') ? document.getElementById('psDesc').innerText.split('\\n')[0] : null }; }""")
+        present72 = {k: x for k, x in faces72.items() if x is not None}
+        check(present72 and all((x == "120" if k != "settings" else x.startswith("120 bpm")) for k, x in present72.items()),
+              f"{tag} night 72: the boot tempo is 120 on every face this door shows: {present72}")
+        p72c.evaluate("() => { window.__b72 = []; document.addEventListener('atetudes:beat', e => { if (!e.detail || !e.detail.sub) window.__b72.push(performance.now()); }); }")
+        p72c.click("#metroBtn"); p72c.wait_for_timeout(2300); p72c.click("#metroBtn")
+        ts72 = p72c.evaluate("() => window.__b72"); iv72 = [ts72[i + 1] - ts72[i] for i in range(len(ts72) - 1)]
+        med72 = sorted(iv72)[len(iv72) // 2] if iv72 else 0
+        check(len(iv72) >= 3 and 480 <= med72 <= 520, f"{tag} night 72: the heard beat is 500 ms at the boot tempo (median {med72:.0f} ms of {[round(x) for x in iv72]})")
+        ctx72c.close()
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,

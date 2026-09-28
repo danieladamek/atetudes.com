@@ -28,6 +28,7 @@ import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../
 import { mountMini } from "../mini.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
 import { FAM_COLOR, FAM_TEXT } from "../palette.mjs";
+import { DEFAULT_BPM } from "../tempo.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 const LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
@@ -158,7 +159,7 @@ export const scoreBoard = {
         let figErr = null;
         try {
           events = figureEvents(s, { parsed: parsedFig.err ? null : parsedFig.pattern,
-            address: cfg.address || "pattern", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: 72,
+            address: cfg.address || "pattern", playback: playbackWord(cfg.playback) || "strum", durBeats: beats, bpm: DEFAULT_BPM,
             ctx: { scalePcs: scaleNotes(cfg.key, cfg.scale).map((n) => n.pc), tonicPc: scaleNotes(cfg.key, cfg.scale)[0].pc,
               open: pass.opens, nfrets: 15, set: pass.set.strings } });   // the pass's opens (night 44)
         } catch (e) { events = null; figErr = e && e.message ? e.message : String(e); }
