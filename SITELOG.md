@@ -1,3 +1,14 @@
+## 2026-09-29 — DEPLOYED: night 75 live — harness only; no study moved (every hash equals night 72's); written from the run
+
+- record: run 36561981137 · success · commit 147e4ba · fetched 2026-09-29T11:38Z · 6/6 studies byte-identical · digest 03b31e47f73c
+- Actions run 36561981137 green on `147e4ba` — https://github.com/danieladamek/atetudes.com/actions/runs/36561981137 (created 2026-09-29T11:28:41Z, finished 2026-09-29T11:37:58Z).
+- metronome: repo 3ecf07b99a3a · live 3ecf07b99a3a — matches.
+- modes-from-pentatonic-boxes: repo 6dda49039160 · live 6dda49039160 — matches.
+- multetudes: repo 2917fdcc946c · live 2917fdcc946c — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 83842d05edd2 · live 83842d05edd2 — matches.
+- triadetudes: repo 2901317552a7 · live 2901317552a7 — matches.
+
 ## 2026-09-29 — Night 75: the full chain becomes a schedule, not a nightly cost; the gate's dead waits deleted (harness only — no study moved)
 
 - **Why (Daniel, 261032; PO rulings 261033, 261034):** a one-line change cost a 9–13 h chain. The full chain now runs
