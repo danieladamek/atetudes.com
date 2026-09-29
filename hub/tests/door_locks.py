@@ -344,23 +344,21 @@ def run_door(pw, door_id):
         # RE-AIMED night 72 (ruling on the chain's misses): the boot is LINE now, and Line places what Grip refuses — so the
         # refusal case is kept by SETTING Grip explicitly (m24's window regression still refuses bar 2 under it), and the
         # Line boot gets its own walk: every bar places under the placement the page actually opens on.
-        for place72, word72 in (("1", "grip"), ("3", "line")):
-            page.click(f'#fdNSeg button[data-nps="{place72}"]'); page.wait_for_timeout(120)
+        for place72, word72 in (("1", "grip whole"), ("3", "line whole")):   # the literal words: m24's target is "grip whole"
+            page.click(f'#fdNSeg button[data-nps="{place72}"]')
             for ci in range(8):
-                page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(120)
+                page.click(f'#tlScroll button >> nth={ci}')
                 chip = page.eval_on_selector_all("#tlScroll button.tl-cur",
                     "es => es.map(e => e.getAttribute('data-tlchip'))")
                 n_sel = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
                 check(n_sel == 4 and "no placement fits" not in page.inner_text("#fdHint"),
-                      f"{tag} boot bar {ci + 1} ({chip}) must place its {word72} whole: "
+                      f"{tag} boot bar {ci + 1} ({chip}) must place its {word72}: "
                       f"{n_sel} notes drawn — {page.inner_text('#fdHint')[:160]!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(120)
         # the field is the KEY: changing it re-derives every dot (the bus is
         # the wiring — harmony announces, the field derives from what it hears)
         page.select_option("#hcKey", "D")
-        page.wait_for_timeout(120)
         d_pcs = field_pcs(NAME_PC["D"])
         check(dots_now() == expect_dots(d_pcs) and root_dots_now() == expect_pc(d_pcs, NAME_PC["D"]),
               f"{tag} the field did not re-derive for D major: {dots_now()} dots, "
@@ -376,7 +374,7 @@ def run_door(pw, door_id):
         d_lab = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg g.fd-dot[data-midi="62"] text')].map(t => t.textContent)""")
         check(d_lab and all(x == "R" for x in d_lab),
               f"{tag} the neck's dots did not follow the key — the D at midi 62 must wear R in D major: {d_lab}")
-        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(120)   # back to the boot key
+        page.select_option("#hcKey", "Bb")   # back to the boot key
         # a field dot SOUNDS (floor F3): clicking one announces NOTE with its midi
         # REWRITTEN night 72 (rule 7): the probe kept only the LAST note, and since the neck opens arpeggiated an audition's
         # timed notes may still be sounding when the dot is clicked — the claim is that the click ANNOUNCES its note
@@ -387,7 +385,6 @@ def run_door(pw, door_id):
         dot = page.query_selector("#fieldSvg [data-midi] circle")
         dot.scroll_into_view_if_needed()
         dot.click(force=True)
-        page.wait_for_timeout(80)
         check(first_midi in page.evaluate("() => window.__fdNotes"),
               f"{tag} clicking a field dot did not announce its NOTE "
               f"({page.evaluate('() => window.__fdNote')} vs {first_midi})")
@@ -455,19 +452,19 @@ def run_door(pw, door_id):
         # the 6th — the values move with the ruled boot, the behaviour stands.
         h0, f0 = state(), frets_of()
         page.focus("#fieldSvg")
-        page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)
+        page.keyboard.press("ArrowRight")
         check(frets_of() != f0 or ord_of() != ("5th", "4"),
               f"{tag} ArrowRight did not step the window: {state()!r}")
         check(ord_of()[0] == "6th", f"{tag} one step from the 5th must start on the 6th: {state()!r}")
         check_window("after ArrowRight")
-        page.keyboard.press("ArrowLeft"); page.wait_for_timeout(80)
+        page.keyboard.press("ArrowLeft")
         check(state() == h0, f"{tag} step right then left did not return the same window")
         check_window("after ArrowLeft")
-        page.keyboard.press("ArrowRight"); page.wait_for_timeout(80)   # park on the 7th
+        page.keyboard.press("ArrowRight")   # park on the 7th
         stepped_ord = ord_of()[0]
         # dropping string 3: the set is a SET, the frame stays honest, and the
         # DESIGN SURVIVES — the start degree does not reset with the set
-        page.click('#fieldSvg [data-fdstr="3"]'); page.wait_for_timeout(100)
+        page.click('#fieldSvg [data-fdstr="3"]')
         check("(skipped)" in state(), f"{tag} a skipped run must say so: {state()!r}")
         check(ord_of()[0] == stepped_ord,
               f"{tag} changing the set RESET the design — the window must translate "
@@ -483,7 +480,7 @@ def run_door(pw, door_id):
             .filter(g => +g.dataset.fret >= lo && +g.dataset.fret <= hi);
           return dots.length && dots.every(g => +g.getAttribute('opacity') < 0.28); }""")
         check(dim3, f"{tag} the excluded string's dots inside the frame do not read as excluded")
-        page.click('#fieldSvg [data-fdstr="3"]'); page.wait_for_timeout(100)
+        page.click('#fieldSvg [data-fdstr="3"]')
         check("(skipped)" not in state(), f"{tag} re-adding string 3 did not restore the contiguous run")
         # ---- 260923 (night 29 item 2): THE SET SQUARES ARE CONTROLS. Role, name, pressed state
         # reflecting `on`, a hit target in the module's own idiom, a <title>, hover/focus in
@@ -499,15 +496,15 @@ def run_door(pw, door_id):
               f"{tag} 2 (260923): every set square is a named button with a title and an enlarged hit target: {sqs[:2]}")
         check(run_now == {4, 3, 2, 1} and all((q["pressed"] == "true") == (q["s"] in run_now) for q in sqs),
               f"{tag} 2 (260923): aria-pressed reflects the run (4 3 2 1 in): {[(q['s'], q['pressed']) for q in sqs]}")
-        page.hover('#fieldSvg .fd-str[data-fdstr="5"] .fd-hit'); page.wait_for_timeout(80)
+        page.hover('#fieldSvg .fd-str[data-fdstr="5"] .fd-hit')
         hov = page.evaluate("""() => { const cs = getComputedStyle(document.querySelector('#fieldSvg .fd-str[data-fdstr="5"] .fd-sq')); const rest = getComputedStyle(document.querySelector('#fieldSvg .fd-str[data-fdstr="6"] .fd-sq')); return { stroke: cs.stroke, w: parseFloat(cs.strokeWidth), restW: parseFloat(rest.strokeWidth) }; }""")
         check(hov["stroke"] == "rgb(33, 33, 38)" and hov["w"] > hov["restW"],
               f"{tag} 2 (260923): under the pointer the square's border takes INK and weight — neutral ink, never a degree colour: {hov}")
         page.mouse.move(5, 5)
-        page.focus('#fieldSvg .fd-str[data-fdstr="5"]'); page.keyboard.press("Space"); page.wait_for_timeout(200)
+        page.focus('#fieldSvg .fd-str[data-fdstr="5"]'); page.keyboard.press("Space")
         check("strings 5–4–3–2–1" in state() and page.get_attribute('#fieldSvg .fd-str[data-fdstr="5"]', "aria-pressed") == "true",
               f"{tag} 2 (260923): Space on a focused square includes its string, and the pressed state follows: {state()[:90]!r}")
-        page.focus('#fieldSvg .fd-str[data-fdstr="5"]'); page.keyboard.press("Enter"); page.wait_for_timeout(200)
+        page.focus('#fieldSvg .fd-str[data-fdstr="5"]'); page.keyboard.press("Enter")
         check("strings 4–3–2–1" in state(), f"{tag} 2 (260923): Enter toggles it back out: {state()[:90]!r}")
         gutter = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg text')].filter(t => /^\{/.test(t.textContent)).map(t => [t.getAttribute('role'), t.getAttribute('tabindex'), getComputedStyle(t).cursor])""")
         check(gutter and all(r is None and tb is None and c != "pointer" for r, tb, c in gutter),
@@ -522,12 +519,10 @@ def run_door(pw, door_id):
           document.addEventListener('atetudes:config', e => window.__fdCfg.push(e.detail)); }""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { setIndex: 1, families: ["drop2"] } }))""")
-        page.wait_for_timeout(120)
         check("strings 4–3–2–1" in state() and "5–4–3–2" not in state(),
               f"{tag} a live shape-half setIndex (no key) hijacked the field: {state()!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'D', setIndex: 0 } }))""")
-        page.wait_for_timeout(120)
         check("strings 6–5–4–3" in state() and "string 6" in state(),
               f"{tag} setIndex 0 did not migrate to the run it indexed: {state()!r}")
         echoed = page.evaluate("""() => window.__fdCfg.find(m => m && m.strings)""")
@@ -538,14 +533,14 @@ def run_door(pw, door_id):
         # SAVE, CHANGE, RESTORE: the étude restores byte-identically — the
         # hint reproduces exactly, and the stored entry's bytes never move
         saved_hint = state()   # the readout is the state's narration now (260919)
-        page.click("#saveEntry"); page.wait_for_timeout(120)
+        page.click("#saveEntry")
         entry_before = page.evaluate(
             "() => JSON.stringify(JSON.parse(localStorage.getItem('multetudes.v1.log')).entries[0])")
-        page.click('#fieldSvg [data-fdstr="2"]'); page.wait_for_timeout(100)
+        page.click('#fieldSvg [data-fdstr="2"]')
         check(state() != saved_hint, f"{tag} changing the set changed nothing to restore")
         # RE-AIMED BY ROLE 260916 (rule 12): was `>> text=Restore étude` — a
         # label the adapter composes and a redesign may reword
-        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
+        page.click(".hist .acts button[data-cap='apply']")
         check(state() == saved_hint,
               f"{tag} the restored étude is not the saved one:\n  saved    {saved_hint!r}\n  restored {state()!r}")
         check_window("after Restore")
@@ -553,14 +548,13 @@ def run_door(pw, door_id):
             "() => JSON.stringify(JSON.parse(localStorage.getItem('multetudes.v1.log')).entries[0])")
         check(entry_before == entry_after,
               f"{tag} restore rewrote the saved entry — no dual-write, no reinterpretation")
-        page.click(".hist .acts button.danger"); page.wait_for_timeout(100)
+        page.click(".hist .acts button.danger")
         check(page.eval_on_selector_all(".hist", "e => e.length") == 0,
               f"{tag} the exercise entry was not deleted — later notepad gates would miscount")
 
         # the recipes below were derived for C major — set it explicitly and
         # return to the boot state at the end
         page.select_option("#hcKey", "C")
-        page.wait_for_timeout(120)
 
         # ---- child 3a: the selection — object, take, placement, the recipes ----
         sel_dots = lambda: page.evaluate("""() =>
@@ -584,14 +578,13 @@ def run_door(pw, door_id):
                 .map(g => +g.dataset.fdstr)""")
             for s in sorted(set(cur) ^ set(target)):
                 page.click(f'#fieldSvg [data-fdstr="{s}"]')
-                page.wait_for_timeout(60)
 
         # R15 — the six-string scale box: every note the box offers, the reach
         # the only cap, PLACEMENT SWITCHED OFF WITH THE REASON ON THE LABEL
         set_strings([6, 5, 4, 3, 2, 1])
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 0, nearFret: 5 } }))""")
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "scale")
         r15 = sel_dots()
         check(12 <= len(r15) <= 18,
               f"{tag} R15: the six-string scale box offers 12–18 notes, not {len(r15)}")
@@ -617,15 +610,15 @@ def run_door(pw, door_id):
         # the tetrad, one of each, Grip: a voicing — one per string, four roles
         # RE-AIMED night 72 (ruling on the chain's misses): the neck OPENS on Line now, so the snapshot below was Line's and
         # the Line click changed nothing — m14 went blind. The old state is SET explicitly: Grip, then the comparison.
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(100)
-        page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(120)
+        page.select_option("#hcObj", "tetrad")
+        page.click('#fdNSeg button[data-nps="1"]')
         grip = sel_dots()
         check(len(grip) == 4 and all(c == 1 for c in per_string(grip).values()),
               f"{tag} a tetrad voicing at Grip is four notes, one per string: {grip}")
         check(sorted(d0["label"] for d0 in grip) == ["3", "5", "7", "R"],
               f"{tag} the four roles must all be worn: {[d0['label'] for d0 in grip]}")
         # TAKE IS NOT PLACEMENT, on the artifact: Line must not move a note
-        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"3\"]')
         check(addrs(sel_dots()) == addrs(grip),
               f"{tag} raising the ceiling CHANGED the voicing — Take and Placement have collapsed "
               f"({addrs(grip)} -> {addrs(sel_dots())})")
@@ -633,7 +626,7 @@ def run_door(pw, door_id):
         # them): with strum set explicitly, choosing Line leaves the movement strum
         page.click('#fdMoveSeg button[data-move="strum"]'); page.wait_for_timeout(100)
         page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(100)
-        page.click('#fdNSeg button[data-nps="3"]'); page.wait_for_timeout(120)
+        page.click('#fdNSeg button[data-nps="3"]')
         mv72 = page.evaluate("() => (document.querySelector('#fdMoveSeg button.on') || {}).dataset?.move || null")
         check(mv72 == "strum", f"{tag} night 72: choosing Line left the movement alone — strum stays strum: {mv72!r}")
         page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.wait_for_timeout(100)   # back to the boot's movement
@@ -654,7 +647,6 @@ def run_door(pw, door_id):
           return +g.dataset.selmidi; }""")
         page.evaluate("""() => document.querySelector('#fieldSvg .fd-sel circle')
           .dispatchEvent(new MouseEvent('click', { bubbles: true }))""")
-        page.wait_for_timeout(80)
         check(page.evaluate("() => window.__fdNote") == first_sel,
               f"{tag} clicking a selection dot did not announce its NOTE")
         # R7 — the fold: a triad on {3,2} at Line folds 2+1; and at Grip the
@@ -662,44 +654,44 @@ def run_door(pw, door_id):
         set_strings([3, 2])
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 0, nearFret: 5 } }))""")
-        page.click('#fdNSeg button[data-nps=\"1\"]'); page.wait_for_timeout(60)
-        page.uncheck("#fdAllTones"); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"1\"]')
+        page.uncheck("#fdAllTones")
         check("no placement fits" in hint(),
               f"{tag} a tetrad on two strings at one-per-string must refuse LOUDLY: {hint()!r}")
-        page.select_option("#hcObj", "triad"); page.wait_for_timeout(60)
-        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "triad")
+        page.click('#fdNSeg button[data-nps=\"3\"]')
         r7 = sel_dots()
         check(len(r7) == 3 and sorted(per_string(r7).values()) == [1, 2],
               f"{tag} R7: a triad folded onto two strings is 2+1, not {per_string(r7)}")
         # R5 — the scale, three per string, on two strings
         set_strings([4, 3])
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "scale")
         r5 = sel_dots()
         check(len(r5) == 6 and sorted(per_string(r5).values()) == [3, 3],
               f"{tag} R5: three notes per string on two strings is six notes, not {per_string(r5)}")
         # R11 — triad lines over {4,3,2}
         set_strings([4, 3, 2])
-        page.select_option("#hcObj", "triad"); page.wait_for_timeout(60)
-        page.check("#fdAllTones"); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "triad")
+        page.check("#fdAllTones")
         r11 = sel_dots()
         check(len(r11) >= 4 and all(c <= 3 for c in per_string(r11).values())
               and set(d0["label"] for d0 in r11) <= {"R", "3", "5"},
               f"{tag} R11: triad lines must be triad tones only, ≤3 per string: {r11}")
         # R14 — tetrad lines over {5,4,3,2}
         set_strings([5, 4, 3, 2])
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(100)
+        page.select_option("#hcObj", "tetrad")
         r14 = sel_dots()
         check(len(r14) >= 5 and any(c >= 2 for c in per_string(r14).values())
               and set(d0["label"] for d0 in r14) <= {"R", "3", "5", "7"},
               f"{tag} R14: tetrad lines must double somewhere and stay tetrad tones: {r14}")
         # leave the field as the door boots: R15
-        page.uncheck("#fdAllTones"); page.wait_for_timeout(30)
-        page.click('#fdNSeg button[data-nps=\"1\"]'); page.wait_for_timeout(30)
+        page.uncheck("#fdAllTones")
+        page.click('#fdNSeg button[data-nps=\"1\"]')
         set_strings([4, 3, 2, 1])
-        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(60)
+        page.select_option("#hcKey", "Bb")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 4, nearFret: 3 } }))""")
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(60)
+        page.select_option("#hcObj", "tetrad")
         check("from the 5th on string 4, frets 3–7" in state()
               and "grip" in state() and "1+1+1+1 across the set" in state(),
               f"{tag} the door did not return to its boot state for the shots: {state()!r}")
@@ -712,33 +704,31 @@ def run_door(pw, door_id):
         # never seeded (the key) is NOT drift — those stay the player's.
         ps_trace = ("() => { const t = document.getElementById('psTrace');"
                     " return t ? t.textContent : '(no #psTrace on this build)'; }")
-        page.select_option("#psSel", "12"); page.wait_for_timeout(250)   # R26 · a guide-tone dyad
+        page.select_option("#psSel", "12")   # R26 · a guide-tone dyad
         tr = page.evaluate(ps_trace)
         check("R26" in tr and "guide-tone" in tr and "modified" not in tr,
               f"{tag} the trace names the freshly seeded preset, unmodified: {tr!r}")
         check(page.eval_on_selector("#psSel", "e => e.value") == "",
               f"{tag} seed-then-release still stands — the select empties")
-        page.select_option("#hcKey", "D"); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "D")
         tr = page.evaluate(ps_trace)
         check("modified" not in tr,
               f"{tag} the KEY is not seeded — moving it is not drift: {tr!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { notesPer: 3 } }))""")
-        page.wait_for_timeout(200)
         tr = page.evaluate(ps_trace)
         check("R26" in tr and "· modified" in tr,
               f"{tag} drifting a SEEDED value derives 'modified': {tr!r}")
-        page.select_option("#psSel", "12"); page.wait_for_timeout(250)
+        page.select_option("#psSel", "12")
         tr = page.evaluate(ps_trace)
         check("modified" not in tr,
               f"{tag} re-seeding the preset clears the derived drift: {tr!r}")
         # full boot restore — this block moved key, object, dyad and the cap
-        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(120)
+        page.select_option("#hcKey", "Bb")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
                       object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260909 item 2: THE FIRST NOTE OF A NEW BAR RINGS ----
         # Measured: on an advance the walk's STEP listener runs before the
@@ -807,7 +797,6 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260911 item 6: THE VERTICAL DRAG, OUT OF THE WORMHOLE ----
         # Measured across three slow drags: the one-crossing jump is the
@@ -823,14 +812,13 @@ def run_door(pw, door_id):
                     " const m = t.match(/frets (\\d+)[–-](\\d+)/); const s2 = t.match(/strings ([\\d–-]+)/);"
                     " return (m ? m[1] + '-' + m[2] : '?') + ' on ' + (s2 ? s2[1] : '?'); }")
         page.evaluate("() => document.getElementById('fieldSvg').scrollIntoView({block:'center'})")
-        page.wait_for_timeout(200)
         def wh_drag(dy):
             g = page.evaluate("""() => { const g = document.querySelector('#fieldSvg .fd-grip');
               const r = g.getBoundingClientRect(); return { x: r.x + r.width/2, y: r.y + r.height/2 }; }""")
             page.mouse.move(g["x"], g["y"]); page.mouse.down()
             for wh_k in range(1, 11):
-                page.mouse.move(g["x"], g["y"] + dy * wh_k / 10); page.wait_for_timeout(40)
-            page.mouse.up(); page.wait_for_timeout(250)
+                page.mouse.move(g["x"], g["y"] + dy * wh_k / 10)
+            page.mouse.up()
         wh0 = page.evaluate(wh_state)
         wh_drag(+30); wh1 = page.evaluate(wh_state)
         wh_hint = page.inner_text("#fdHint")
@@ -850,7 +838,6 @@ def run_door(pw, door_id):
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
                       object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260914 item 2: THE CARD NAMES ITS PRINCIPLE ----
         # Harmony -> CENTRICITY (ruled): the card defines the material and
@@ -876,8 +863,8 @@ def run_door(pw, door_id):
         if not page.evaluate("() => !!document.getElementById('hcCentreSrc')"):
             check(False, f"{tag} the centre-source control is absent from this build")
         else:
-            page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
-            page.select_option("#fdBass2", "root"); page.wait_for_timeout(250)
+            page.select_option("#hcObj", "scale")
+            page.select_option("#fdBass2", "root")
             page.evaluate("""() => {
               if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
                 document.addEventListener('atetudes:note', e =>
@@ -929,7 +916,6 @@ def run_door(pw, door_id):
                   f"{tag} the readout says which source is in force: {ro[:100]!r}")
             page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
               .find(b => b.dataset.src === 'fixed').click(); }""")
-            page.wait_for_timeout(200)
             ro = page.inner_text("#roLine")
             check("a pedal under the moving chords" in ro,
                   f"{tag} …and the pedal names itself too: {ro[:100]!r}")
@@ -941,7 +927,6 @@ def run_door(pw, door_id):
                           centreSrc: 'fixed', source: 'cycle', custom: '' } }))""")
             page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
               { detail: { index: 0, request: true } }))""")
-            page.wait_for_timeout(250)
 
 
         # ---- 260915 item 4: THE CC-1 AUDIT'S ONE FINDING, PINNED ----
@@ -951,17 +936,16 @@ def run_door(pw, door_id):
         # scale -> follows -> chord left "Bass tone" dead with no reason on
         # any face (rule 10: the PAINT site is one of the three). The pin
         # walks that exact path.
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+        page.select_option("#hcObj", "scale")
         page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
           .find(x => x.dataset.src === 'follows').click(); }""")
-        page.wait_for_timeout(200)
         cc1 = page.evaluate("""() => ({
           dis: document.getElementById('hcRef').disabled,
           lab: document.getElementById('hcRefLab').textContent })""")
         check(cc1["dis"] is True and "following the changes" in cc1["lab"],
               f"{tag} CC-1(a): under follows the fixed pick is off WITH its reason "
               f"on its own label: {cc1}")
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "tetrad")
         # PIN REWRITTEN 260917 (item 4, register 31): in chord mode the card's
         # bass WINDOW is closed (hidden, never dead-with-no-reason); the bass
         # control lives under the neck and is live there — CC-1's audit fix
@@ -972,11 +956,10 @@ def run_door(pw, door_id):
           bass2dis: document.getElementById('fdBass2').disabled })""")
         check(cc1["hidden"] is True and cc1["labHidden"] is True and cc1["bass2dis"] is False,
               f"{tag} item 4: chord mode closes the card's bass window and the under-neck control is live: {cc1}")
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "scale")
         page.evaluate("""() => { [...document.querySelectorAll('#hcCentreSrc button')]
           .find(x => x.dataset.src === 'fixed').click(); }""")
-        page.wait_for_timeout(150)
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        page.select_option("#hcObj", "tetrad")
         # ---- 260914 item 3: THE STACKS GO PAST FOUR, AND THE DROP HAS A NAME ----
         # Depth is DATA (STACK_DEPTH), not a ternary; the grip drops by a
         # NAMED rule (5th first, then non-naming extensions 11-before-9;
@@ -1025,7 +1008,7 @@ def run_door(pw, door_id):
         check(len(c3nt["heard"]) == 4 and c3nt["heard"] == c3nt["drawn"],
               f"{tag} 3: SOUND = SIGHT — the walk sounds exactly the kept "
               f"four the neck draws ({c3nt})")
-        page.check("#fdMetChk"); page.wait_for_timeout(120)
+        page.check("#fdMetChk")
         # the 11th keeps its 11 — the naming extension is untouchable
         page.select_option("#hcObj", "eleventh"); page.wait_for_timeout(300)
         c3e = page.evaluate("""() => ({
@@ -1036,7 +1019,7 @@ def run_door(pw, door_id):
               and "the 5, 9 dropped by the grip rule" in c3e["hint"],
               f"{tag} 3: a 4-string 11th keeps its 11, dropping the 5 and 9: {c3e}")
         # Line has slots for all seven — nothing drops, nothing is said
-        page.select_option("#hcObj", "thirteenth"); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "thirteenth")
         page.evaluate("""() => { [...document.querySelectorAll('#fdNSeg button')]
           .find(x => x.dataset.nps === '3').click(); }""")
         page.wait_for_timeout(300)
@@ -1052,7 +1035,6 @@ def run_door(pw, door_id):
         # past the rule's reach: 2 slots for the kept four — refused BY NAME
         page.evaluate("""() => { [...document.querySelectorAll('#fdNSeg button')]
           .find(x => x.dataset.nps === '1').click(); }""")
-        page.wait_for_timeout(200)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { strings: [2, 1] } }))""")
         page.wait_for_timeout(300)
@@ -1061,16 +1043,15 @@ def run_door(pw, door_id):
               f"{tag} 3: two strings for the kept four REFUSES by name: {c3r[:140]!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { strings: [4, 3, 2, 1] } }))""")
-        page.wait_for_timeout(250)
         # the scale/Grip boundary untouched: the box is still the whole box
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "scale")
         c3s = page.evaluate("""() => ({
           n: document.querySelectorAll('#fieldSvg .fd-sel').length,
           hint: document.getElementById('fdHint').textContent })""")
         check(c3s["n"] >= 10 and "dropped by the grip rule" not in c3s["hint"],
               f"{tag} 3: the scale box is untouched by the grip rule "
               f"({c3s['n']} selected, no drop sentence)")
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "tetrad")
 
         # ---- 260913b item 4: THE CENTRE WORKS ----
         # Scale mode had a centre and nothing consumed it. Ruled: the bass
@@ -1080,8 +1061,8 @@ def run_door(pw, door_id):
         # once a figure resolves; Placement STAYS off (genuinely chord
         # voicing — the boundary the finding rests on); every disabled
         # control says why on its own label.
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
-        page.select_option("#hcRef", "mode:2"); page.wait_for_timeout(200)
+        page.select_option("#hcObj", "scale")
+        page.select_option("#hcRef", "mode:2")
         c4 = page.evaluate("""() => ({
           bass2: (document.getElementById('fdBass2') || {}).disabled,
           placeCap: (document.getElementById('fdNSeg') || {parentElement:{}}).parentElement
@@ -1153,7 +1134,6 @@ def run_door(pw, door_id):
               f"{tag} 4b: the compounds 9/11/13 reach the extensions: {fj4[:80]!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { figure: '2' } }))""")
-        page.wait_for_timeout(250)
         fj4 = page.inner_text("#fdFigNote")
         check("PATTERN" in fj4 and "switch it to pattern" in fj4,
               f"{tag} 4b: bare 2 keeps the mode-mismatch notice: {fj4[:90]!r}")
@@ -1174,7 +1154,6 @@ def run_door(pw, door_id):
                       source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(250)
 
         # ---- 260913b item 2: THE DOCUMENT'S TITLE, IN THE HEADER BAND ----
         # D11 unblocked and ruled: the field is the DOCUMENT's title (fills
@@ -1208,7 +1187,7 @@ def run_door(pw, door_id):
         # the typed title reaches the EXPORTED ARTIFACT: the success message
         # names the file it wrote (the 260911 channel), and the file's name
         # derives from the field
-        page.fill("#npTitle", "Dorian week 3"); page.wait_for_timeout(100)
+        page.fill("#npTitle", "Dorian week 3")
         page.fill("#journalIn", "a clean note for the title pin")
         page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
         page.click("#exportLog"); page.wait_for_timeout(300)
@@ -1216,7 +1195,7 @@ def run_door(pw, door_id):
         check("Dorian-week-3.atchart.md" in np_msg,
               f"{tag} the typed title names the exported file: {np_msg!r}")
         # empty falls back to the standing default — nothing that ships changes
-        page.fill("#npTitle", ""); page.wait_for_timeout(100)
+        page.fill("#npTitle", "")
         page.click("#exportLog"); page.wait_for_timeout(300)
         np_msg = page.evaluate("() => document.getElementById('exportMsg').textContent")
         # PIN SHARPENED 260916 (item 2, rule 7): the fallback name is asserted
@@ -1230,7 +1209,7 @@ def run_door(pw, door_id):
         # its name teaches distrust. {pad, title, entries} share one store.
         # Round-tripped AT THE ARTIFACT: type, reload the page, the title is
         # back, and it still drives file.name() through export's own channel.
-        page.fill("#npTitle", "Dorian week 3"); page.wait_for_timeout(100)
+        page.fill("#npTitle", "Dorian week 3")
         page.dispatch_event("#npTitle", "input")
         page.fill("#journalIn", "the note that keeps its name")
         page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(450)
@@ -1271,7 +1250,7 @@ def run_door(pw, door_id):
               f"{tag} 2: an untouched field writes v0.4.0's exact file name: {np2m!r}")
         # 2b: the entry filed under the untouched field carries the default
         # name in bold and its DERIVED summary on the line below (v0.9's row)
-        page.click("#saveEntry"); page.wait_for_timeout(200)
+        page.click("#saveEntry")
         row0 = page.evaluate("""() => { const r = document.querySelector('.hist');
           const b = r.querySelector('b'), s = r.querySelector('.sum');
           return { name: b && b.textContent, sum: s && s.textContent }; }""")
@@ -1285,7 +1264,7 @@ def run_door(pw, door_id):
         page.fill("#npTitle", "Dorian week 3"); page.dispatch_event("#npTitle", "input")
         page.fill("#journalIn", "the named note"); page.dispatch_event("#journalIn", "input")
         page.wait_for_timeout(400)
-        page.click("#saveEntry"); page.wait_for_timeout(200)
+        page.click("#saveEntry")
         row1 = page.evaluate("() => document.querySelector('.hist b').textContent")
         check(row1 == "Dorian week 3", f"{tag} 2b: the typed name names the entry: {row1!r}")
 
@@ -1308,7 +1287,7 @@ def run_door(pw, door_id):
         # reason lands in the row, in the same plain words Export uses
         page.fill("#journalIn", "with a chart\n```chart\n| Dm7 G7 |\n```")
         page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
-        page.click("#saveEntry"); page.wait_for_timeout(200)
+        page.click("#saveEntry")
         page.click(".hist .acts button[data-cap='entry-export']"); page.wait_for_timeout(300)
         row_msg = page.evaluate("() => document.querySelector('.hist .acts .emsg').textContent")
         check("a saved note holds a ```chart block" in row_msg and "move the chart into the pad" in row_msg,
@@ -1316,7 +1295,6 @@ def run_door(pw, door_id):
         n_del = page.evaluate("""() => { const d = document.querySelector('.hist .acts button[data-cap="delete"]');
           if (!d) return 0; d.click(); return 1; }""")
         check(n_del == 1, f"{tag} 3: the chart entry's Delete control was not found by role")
-        page.wait_for_timeout(150)
 
         # ---- 260916 item 1: RESTORE NEVER SILENTLY OVERWRITES THE PAD (first: it is live) ----
         # MEASURED at engine/notepad-surface.mjs:259 — `els.pad.value = en.text`
@@ -1326,7 +1304,7 @@ def run_door(pw, door_id):
         page.fill("#journalIn", "unsaved words that must survive"); page.dispatch_event("#journalIn", "input")
         page.wait_for_timeout(400)
         n_before = page.evaluate("() => JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length")
-        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(200)   # newest row: the named note
+        page.click(".hist .acts button[data-cap='apply']")   # newest row: the named note
         # PINS REWRITTEN 260917 (item 0b, rule 7): the confirm appears IN THE
         # ROW that was pressed — Daniel: "the restore doesn't occur BUT it
         # also doesn't indicate that it didn't restore". It was DISPLACED,
@@ -1348,15 +1326,15 @@ def run_door(pw, door_id):
         check(cf["labels"] == ["Save and restore", "Discard and restore", "keep writing"],
               f"{tag} 1: the row is worded for restoring: {cf['labels']}")
         # answer 1 — keep writing: nothing moves
-        page.click(".hist [data-cap='confirm-cancel']"); page.wait_for_timeout(100)
+        page.click(".hist [data-cap='confirm-cancel']")
         a1 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           shown: !!document.querySelector('.hist [data-cap="restore-confirm"]'),
           n: JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length })""")
         check(a1["pad"] == "unsaved words that must survive" and not a1["shown"] and a1["n"] == n_before,
               f"{tag} 1: keep writing keeps the text, restores nothing, files nothing: {a1}")
         # answer 2 — Discard and restore: the draft is dropped, the note returns
-        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
-        page.click(".hist [data-cap='confirm-discard']"); page.wait_for_timeout(250)
+        page.click(".hist .acts button[data-cap='apply']")
+        page.click(".hist [data-cap='confirm-discard']")
         a2 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           title: document.getElementById('npTitle').value,
           n: JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length })""")
@@ -1371,8 +1349,8 @@ def run_door(pw, door_id):
         page.wait_for_timeout(400)
         # (measured on the first run: the draft is not filed until confirm-save
         # is pressed, so at THIS click the named note is still row 0)
-        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(150)
-        page.click(".hist [data-cap='confirm-save']"); page.wait_for_timeout(250)
+        page.click(".hist .acts button[data-cap='apply']")
+        page.click(".hist [data-cap='confirm-save']")
         a3 = page.evaluate("""() => { const es = JSON.parse(localStorage.getItem('multetudes.v1.log')).entries;
           return { pad: document.getElementById('journalIn').value, n: es.length,
                    last: es.at(-1).text, lastName: es.at(-1).heading,
@@ -1384,7 +1362,7 @@ def run_door(pw, door_id):
               f"{tag} 0: restore → edit → save files under the restored name, and the restore that followed re-fills it: {a3}")
         # 6c: a just-restored note is not unsaved work — restoring ANOTHER
         # entry over it asks nothing (register 30; this changed shipped behaviour)
-        page.click(".hist .acts button[data-cap='apply'] >> nth=2"); page.wait_for_timeout(200)   # the default-named entry
+        page.click(".hist .acts button[data-cap='apply'] >> nth=2")   # the default-named entry
         a4 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           title: document.getElementById('npTitle').value,
           shown: !!document.querySelector('.hist [data-cap="restore-confirm"]') })""")
@@ -1396,7 +1374,7 @@ def run_door(pw, door_id):
         page.fill("#npTitle", "Phrygian week 4"); page.dispatch_event("#npTitle", "input")
         page.fill("#journalIn", "filed under a typed name"); page.dispatch_event("#journalIn", "input")
         page.wait_for_timeout(400)
-        page.click("#saveEntry"); page.wait_for_timeout(250)
+        page.click("#saveEntry")
         a5 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           title: document.getElementById('npTitle').value,
           stored: JSON.parse(localStorage.getItem('multetudes.v1.log')).title,
@@ -1406,14 +1384,14 @@ def run_door(pw, door_id):
         check(a5["title"] == np_default and a5["stored"] == "",
               f"{tag} 0c: on save the title returns to the dated default — the next note cannot inherit 'Phrygian week 4': {a5}")
         # 6c: Clear over a clean restored note asks nothing either
-        page.click(".hist .acts button[data-cap='apply']"); page.wait_for_timeout(200)
-        page.click("#clearPad"); page.wait_for_timeout(150)
+        page.click(".hist .acts button[data-cap='apply']")
+        page.click("#clearPad")
         a6 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           shown: getComputedStyle(document.getElementById('clearConfirm')).display !== 'none' })""")
         check(a6["pad"] == "" and not a6["shown"],
               f"{tag} 6c: Clear over a clean restored note clears without asking: {a6}")
         # the common case keeps no ceremony: an empty pad restores at once
-        page.click(".hist .acts button[data-cap='apply'] >> nth=1"); page.wait_for_timeout(200)
+        page.click(".hist .acts button[data-cap='apply'] >> nth=1")
         a7 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           shown: !!document.querySelector('.hist [data-cap="restore-confirm"]') })""")
         check(a7["pad"] != "" and not a7["shown"],
@@ -1422,7 +1400,6 @@ def run_door(pw, door_id):
         n_all = page.evaluate("""() => { const ds = [...document.querySelectorAll('.hist .acts button[data-cap="delete"]')];
           ds.forEach(d => d.click()); return ds.length; }""")
         check(n_all == 4, f"{tag} the cleanup found {n_all} Delete controls by role — expected this leg's four entries")
-        page.wait_for_timeout(200)
         page.fill("#npTitle", ""); page.dispatch_event("#npTitle", "input")
         page.fill("#journalIn", ""); page.dispatch_event("#journalIn", "input")
         page.wait_for_timeout(450)
@@ -1437,7 +1414,6 @@ def run_door(pw, door_id):
         # drawn dot, advance notes included.
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
         page.uncheck("#fdMetChk")
         page.fill("#fdBpm", "240"); page.dispatch_event("#fdBpm", "change")
         page.wait_for_timeout(150)
@@ -1508,7 +1484,7 @@ def run_door(pw, door_id):
                      ".map(b => ({ rn: (b.querySelector('.tl-rn') || {}).textContent || null,"
                      " slash: (b.querySelector('.tl-slash') || {}).textContent || null,"
                      " sym: b.getAttribute('data-tlchip') }))")
-        page.select_option("#fdBass2", "none"); page.wait_for_timeout(250)
+        page.select_option("#fdBass2", "none")
         chips0 = page.evaluate(chip_read)
         check(all(c["rn"] and c["slash"] is None for c in chips0),
               f"{tag} with no reference the chip is exactly what it was — roman, no "
@@ -1523,7 +1499,7 @@ def run_door(pw, door_id):
         chipsR = page.evaluate(chip_read)
         check(all(c["rn"] and c["slash"] is None for c in chipsR),
               f"{tag} a ROOT reference adds nothing to the spelling — no slash: {chipsR[:3]}")
-        page.select_option("#fdBass2", "none"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "none")
 
         # ---- 260913 item 4: REPEAT LOOPS THE CURRENT BAR ----
         # Ruled scope: the current bar, nothing else. Consulted only at the
@@ -1551,8 +1527,7 @@ def run_door(pw, door_id):
             # meaningful from bar 1 (the [2]-echo lesson, this same night)
             page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
               { detail: { index: 0, request: true } }))""")
-            page.wait_for_timeout(200)
-            page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
+            page.uncheck("#fdMetChk")
             page.fill("#fdBpm", "240"); page.dispatch_event("#fdBpm", "change")
             page.wait_for_timeout(150)
             page.click('#fdMini button[data-role="repeat"]'); page.wait_for_timeout(150)
@@ -1660,7 +1635,7 @@ def run_door(pw, door_id):
         check(ref_dot == 1,
               f"{tag} and the reference actually DRAWS — the view drives the state "
               f"({ref_dot} ref dots)")
-        page.select_option("#fdBass2", "none"); page.wait_for_timeout(150)
+        page.select_option("#fdBass2", "none")
         st3 = page.evaluate(u3)
         check(st3["bass2"] == "none" and st3["refDots"] == 0 and "over " not in st3["ro"],
               f"{tag} 'none' clears the state's consumers — no reference dot, no 'over' sentence: {st3}")
@@ -1671,7 +1646,6 @@ def run_door(pw, door_id):
               f"{tag} the under-neck ⏭ moved the strip's own chip")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260913 item 1: TAKE LIVES ON THE RAIL, THE VALUE UNCHANGED ----
         # D8 granted: "every occurrence in the box" is unstatable without
@@ -1688,10 +1662,10 @@ def run_door(pw, door_id):
         # the value proof discriminates at LINE (n=3): under Grip every
         # occurrence caps to one per string and equals one-of-each by count —
         # the capped case, not a defect (register 18)
-        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(150)
-        page.uncheck("#fdAllTones"); page.wait_for_timeout(150)
+        page.click('#fdNSeg button[data-nps=\"3\"]')
+        page.uncheck("#fdAllTones")
         one_dots = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
-        page.check("#fdAllTones"); page.wait_for_timeout(250)
+        page.check("#fdAllTones")
         all_dots = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
         all_word = page.inner_text("#roLine")
         check(one_dots == 4 and all_dots > one_dots,
@@ -1700,7 +1674,6 @@ def run_door(pw, door_id):
         check("one of each" in one_word and "every occurrence" in all_word,
               f"{tag} the face still speaks the take words")
         page.uncheck("#fdAllTones"); page.click('#fdNSeg button[data-nps=\"1\"]')
-        page.wait_for_timeout(200)
 
         # ---- 260913 item 2: THE RENAME HOLDS, AND THE OLD WORDS STILL LAND ----
         # The PO ruled the vocabulary (a block IS a strum): movement
@@ -1744,7 +1717,6 @@ def run_door(pw, door_id):
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(250)
 
         # ---- 260911 item 4: THE KEYS PULSE WHAT SOUNDS ----
         # The one board in the door without the idiom: keys-board announced
@@ -1755,7 +1727,7 @@ def run_door(pw, door_id):
         # note of a played pass — the reference's bass note included — must
         # find its drawn key and ring there; a note with no key to ring on
         # is named, which is the containment failing loudly.
-        page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "third")
         page.evaluate("""() => {
           if (!window.__kyRendersHooked) { window.__kyRendersHooked = true; window.__kyRenders = 0;
             new MutationObserver((mu) => { if (mu.some(x => x.removedNodes.length > 5)) window.__kyRenders++; })
@@ -1800,10 +1772,9 @@ def run_door(pw, door_id):
         check(all(r["rang"] for r in ky_rows),
               f"{tag} every sounded note RINGS at its key — silent: "
               f"{[r for r in ky_rows if not r['rang']]} (all: {ky_rows})")
-        page.select_option("#fdBass2", "none"); page.wait_for_timeout(150)
+        page.select_option("#fdBass2", "none")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260911 item 5: EVERY BAR WEARS THE FIGURE ----
         # Measured before fixing (the lead did not hold): at the PO's exact
@@ -1884,7 +1855,6 @@ console.log(JSON.stringify(out));
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(250)
 
         # ---- 260911 item 1: SIX CONTROLS, ONE ROW, v0.9's ORDER ----
         # The host never took the placement, so Copy and Palette auto-appended
@@ -1928,7 +1898,7 @@ console.log(JSON.stringify(out));
         # export success, clean pad
         page.fill("#journalIn", "a clean note for the export pin")
         page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
-        page.click("#exportLog"); page.wait_for_timeout(250)
+        page.click("#exportLog")
         np_t = page.evaluate(np_msg, "exportMsg")
         check("exported multetudes-journal-" in np_t and ".atchart.md" in np_t,
               f"{tag} export SUCCESS names the file it wrote, in export's own slot: {np_t!r}")
@@ -1936,13 +1906,13 @@ console.log(JSON.stringify(out));
         # naming the route (the pad's lift), not the spec
         page.fill("#journalIn", "take notes\n```chart\n| Dm7 G7 |\n```")
         page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(400)
-        page.click("#saveEntry"); page.wait_for_timeout(250)
-        page.click("#exportLog"); page.wait_for_timeout(250)
+        page.click("#saveEntry")
+        page.click("#exportLog")
         np_t = page.evaluate(np_msg, "exportMsg")
         check("a saved note holds a" in np_t and "move the chart into the pad" in np_t
               and "becomes the file's chart block" in np_t,
               f"{tag} export REFUSAL names the route in plain words: {np_t!r}")
-        page.click("#copyBtn"); page.wait_for_timeout(250)
+        page.click("#copyBtn")
         np_t = page.evaluate(np_msg, "copyMsg")
         check("move the chart into the pad" in np_t,
               f"{tag} copy's refusal prints in COPY's slot, same named route: {np_t!r}")
@@ -1953,7 +1923,6 @@ console.log(JSON.stringify(out));
         n_del = page.evaluate("""() => { const del = document.querySelector('.hist .acts button[data-cap="delete"]');
           if (!del) return 0; del.click(); return 1; }""")
         check(n_del == 1, f"{tag} the fence entry's Delete control was not found by role — the cleanup did not run")
-        page.wait_for_timeout(250)
         # copy on a clean pad: never silent — one of its two NAMED outcomes,
         # in its own slot (headless file:// usually has no clipboard grant)
         page.fill("#journalIn", "clean again"); page.dispatch_event("#journalIn", "input")
@@ -1964,8 +1933,8 @@ console.log(JSON.stringify(out));
               or np_t.startswith("clipboard unavailable — use Export"),
               f"{tag} copy is NEVER silent — one of its two named outcomes: {np_t!r}")
         # save's outcomes still speak in save's slot (the empty-note confirm)
-        page.click("#saveEntry"); page.wait_for_timeout(150)   # files 'clean again'
-        page.click("#saveEntry"); page.wait_for_timeout(150)   # empty pad: must confirm
+        page.click("#saveEntry")   # files 'clean again'
+        page.click("#saveEntry")   # empty pad: must confirm
         np_t = page.evaluate(np_msg, "saveMsg")
         check("captured without a note" in np_t,
               f"{tag} save's empty-pad confirmation, in save's slot: {np_t!r}")
@@ -1974,7 +1943,6 @@ console.log(JSON.stringify(out));
         n_del = page.evaluate("""() => { const ds = [...document.querySelectorAll('.hist .acts button[data-cap="delete"]')];
           ds.forEach(b => b.click()); return ds.length; }""")
         check(n_del == 2, f"{tag} the cleanup found {n_del} Delete controls by role — expected the leg's two entries")
-        page.wait_for_timeout(250)
 
         # ---- 260910 item 2: THE FIGURE REFUSES JUNK BY NAME ----
         # "R,Q" silently kept the R and dropped the Q — the eleventh silence,
@@ -1985,13 +1953,11 @@ console.log(JSON.stringify(out));
         # never errs, so nothing flashes while a figure is on its way.
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { address: 'tones', figure: 'R,Q' } }))""")
-        page.wait_for_timeout(200)
         fj = page.inner_text("#fdFigNote")
         check('"Q"' in fj and "not a tone" in fj,
               f"{tag} an unknown role is refused BY NAME on the face: {fj!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { figure: 'R,' } }))""")
-        page.wait_for_timeout(200)
         fj = page.inner_text("#fdFigNote")
         check("not a tone" not in fj and "not a string" not in fj,
               f"{tag} a trailing separator is UNFINISHED, not wrong — no error: {fj!r}")
@@ -2000,13 +1966,11 @@ console.log(JSON.stringify(out));
         # refusal — both loud, both named
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { address: 'pattern', figure: '8' } }))""")
-        page.wait_for_timeout(200)
         fj = page.inner_text("#fdFigNote")
         check('"8"' in fj and "not a string" in fj,
               f"{tag} the pattern alphabet refuses junk by name too: {fj!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { address: 'pattern', figure: '' } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260910 item 3: THE STAFF WRITES WHAT THE SCHEDULE SCHEDULES ----
         # Daniel: "currently it's only showing quarter notes." Register entry
@@ -2062,7 +2026,6 @@ console.log(JSON.stringify(out));
                                     "notesPer": 1, "source": "cycle", "custom": "", **st_cfg })
             page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
               { detail: { index: 0, request: true } }))""")
-            page.wait_for_timeout(250)
             got = page.evaluate(st_read)
             exp = st_exp[st_name]
             # REWRITTEN 260911 (item 5): every bar wears the figure now, so
@@ -2099,7 +2062,6 @@ console.log(JSON.stringify(out));
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(250)
 
         # ---- 260909 item 1: THE FOLD FOLDS EVERYTHING ----
         # Collapsing the rail left Grip/Line/block/arpeggio/pattern/tones
@@ -2108,7 +2070,6 @@ console.log(JSON.stringify(out));
         # artifact: with the rail shut, no rail descendant outside the railtop
         # is visible; open again, the buttons come back.
         page.evaluate("() => document.getElementById('fdRailBtn').click()")
-        page.wait_for_timeout(120)
         fold = page.evaluate("""() => {
           const rail = document.getElementById('fdRail');
           const leaks = [];
@@ -2124,7 +2085,6 @@ console.log(JSON.stringify(out));
         check(fold["n"] == 0,
               f"{tag} a shut rail shows NOTHING beyond its top — {fold['n']} visible: {fold['leaks']}")
         page.evaluate("() => document.getElementById('fdRailBtn').click()")
-        page.wait_for_timeout(120)
         back = page.evaluate("""() => {
           const b = [...document.querySelectorAll('#fdNSeg button, #fdMoveSeg button, #fdAddrSeg button')];
           return b.length === 6 && b.every(x => x.getBoundingClientRect().width > 0);
@@ -2139,8 +2099,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 5, nearFret: 5,
                       object: 'tetrad', take: 'all', notesPer: 1, source: 'cycle', custom: '' } }))""")
-        page.wait_for_timeout(200)
-        page.click('#tlScroll button >> nth=1'); page.wait_for_timeout(150)
+        page.click('#tlScroll button >> nth=1')
         hint_cb = page.inner_text("#fdHint")
         # PIN REWRITTEN 260923 (night 30, rule 7): the capped loss reads in Daniel's own
         # words now — "missing 7th — both R and 7 on string 2 — Line takes both" — and it
@@ -2157,7 +2116,6 @@ console.log(JSON.stringify(out));
                       object: 'tetrad', take: 'one', notesPer: 1, source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260908: THE PLAYTHROUGH MATRIX — the gate that walks what a
         # player walks. Six consecutive nights of green gates ended with
@@ -2177,17 +2135,15 @@ console.log(JSON.stringify(out));
         for mx_key in mx_keys + ["Bb"]:
             for mx_len in (3, 4, 6):
                 mx_set = list(range(mx_len, 0, -1))
-                page.select_option("#hcKey", mx_key); page.wait_for_timeout(80)
+                page.select_option("#hcKey", mx_key)
                 for mx_sd in range(7):
                     page.evaluate("""(d) => document.dispatchEvent(new CustomEvent('atetudes:config',
                       { detail: d }))""", { "strings": mx_set, "startDeg": mx_sd, "nearFret": 5,
                                             "object": "tetrad", "take": "one", "notesPer": 1,
                                             "source": "cycle", "custom": "" })
-                    page.wait_for_timeout(90)
                     n_bars = int(page.get_attribute("#tlScroll", "data-tlbars") or "8")
                     for mx_bar in range(min(n_bars, 8)):
                         page.click(f'#tlScroll button >> nth={mx_bar}')
-                        page.wait_for_timeout(70)
                         st = page.evaluate("""(bar) => {
                           const sel = document.querySelectorAll('#fieldSvg .fd-sel').length;
                           const ref = document.querySelector('#fieldSvg .fd-refusal');
@@ -2235,7 +2191,7 @@ console.log(JSON.stringify(out));
         # block stays real; clearing the figure restores everything. Walked
         # for both figure languages, derived where a figure can be (the
         # pattern off the set's own strings).
-        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(80)
+        page.select_option("#hcKey", "Bb")
         mx_contra = 0
         mx_figs = page.evaluate("""() => {
           const strs = [...document.querySelectorAll('#fieldSvg [data-fdstr]')]
@@ -2249,7 +2205,6 @@ console.log(JSON.stringify(out));
                                     "nearFret": 3, "object": "tetrad", "take": "one",
                                     "notesPer": 1, "movement": "strum", "address": mx_addr,
                                     "figure": mx_fig, "source": "cycle", "custom": "" })
-            page.wait_for_timeout(150)
             st = page.evaluate("""() => {
               const b = document.querySelector('#fdMoveSeg button[data-move="strum"]');
               const cap = document.getElementById('fdMoveSeg').previousElementSibling;
@@ -2267,7 +2222,6 @@ console.log(JSON.stringify(out));
             # an erring figure rules nothing — block stays real
             page.evaluate("""(v) => document.dispatchEvent(new CustomEvent('atetudes:config',
               { detail: { figure: v } }))""", mx_bad)
-            page.wait_for_timeout(120)
             st2 = page.evaluate("""() => {
               const b = document.querySelector('#fdMoveSeg button[data-move="strum"]');
               const cap = document.getElementById('fdMoveSeg').previousElementSibling;
@@ -2279,7 +2233,6 @@ console.log(JSON.stringify(out));
             # clearing restores
             page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
               { detail: { figure: '' } }))""")
-            page.wait_for_timeout(120)
             st3 = page.evaluate("""() => {
               const b = document.querySelector('#fdMoveSeg button[data-move="strum"]');
               const cap = document.getElementById('fdMoveSeg').previousElementSibling;
@@ -2297,10 +2250,9 @@ console.log(JSON.stringify(out));
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
                       object: 'tetrad', take: 'one', notesPer: 1, movement: 'strum',
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
-        page.wait_for_timeout(200)
         # the SOUND half, on Daniel's own configuration: refused bars silent,
         # placed bars sounding — one played pass, the NOTE stream as witness
-        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(80)
+        page.select_option("#hcKey", "Bb")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { strings: [3, 2, 1], startDeg: 5, nearFret: 0, object: 'triad',
                       take: 'one', notesPer: 1, source: 'cycle', custom: '' } }))""")
@@ -2313,13 +2265,12 @@ console.log(JSON.stringify(out));
         # and PARTIAL (the refusal named, the notes that fit drawn) — and SOUND = SIGHT over both
         placed_bars, partial_bars, drawn_counts = [], [], []
         for mx_bar in range(8):
-            page.click(f'#tlScroll button >> nth={mx_bar}'); page.wait_for_timeout(70)
+            page.click(f'#tlScroll button >> nth={mx_bar}')
             n_dr = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
             placed_bars.append(n_dr > 0); drawn_counts.append(n_dr)
             partial_bars.append(n_dr > 0 and page.query_selector("#fieldSvg .fd-refusal") is not None)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(120)
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
@@ -2377,7 +2328,6 @@ console.log(JSON.stringify(out));
         # AT THE AUDIOCONTEXT (the 260905 lesson — not at the message), both
         # sliders exercised.
         page.select_option("#fdBass2", "third"); page.uncheck("#fdMetChk")
-        page.wait_for_timeout(200)
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
@@ -2391,7 +2341,6 @@ console.log(JSON.stringify(out));
         def play_bar_counts():
             page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
               { detail: { index: 0, request: true } }))""")
-            page.wait_for_timeout(150)
             page.evaluate("() => { window.__raw = []; window.__nt = [] }")
             page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(600)
             page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
@@ -2402,21 +2351,18 @@ console.log(JSON.stringify(out));
               f"{tag} the baseline bar is four chord notes plus the fretted reference, "
               f"at the AudioContext: NOTEs/raw {base}")
         page.fill("#fdBassVol", "0"); page.dispatch_event("#fdBassVol", "input")
-        page.wait_for_timeout(100)
         muted_bass = play_bar_counts()
         check(muted_bass[1] == base[1] - 1,
               f"{tag} the bass slider at zero must drop EXACTLY the reference — "
               f"raw {base[1]} → {muted_bass[1]}")
         page.fill("#fdBassVol", "100"); page.dispatch_event("#fdBassVol", "input")
         page.fill("#fdHarmVol", "0"); page.dispatch_event("#fdHarmVol", "input")
-        page.wait_for_timeout(100)
         muted_chord = play_bar_counts()
         check(muted_chord[1] == 1,
               f"{tag} the chord slider at zero must leave the reference ALONE sounding: "
               f"raw {muted_chord[1]}")
         page.fill("#fdHarmVol", "100"); page.dispatch_event("#fdHarmVol", "input")
         page.select_option("#fdBass2", "none"); page.check("#fdMetChk")
-        page.wait_for_timeout(150)
 
         # ---- 260906 item 3: THE BOARD DRAWS THE ENGINE'S OWN SELECTION ----
         # Daniel reported Fmaj7#5 (D harm, cycling 4ths, bar 4, frets 6-10,
@@ -2447,25 +2393,21 @@ console.log(JSON.stringify(out));
               f"{tag} the engine itself must place all eight bars of Daniel's state: "
               f"{[(e['sym'], len(e['sel'])) for e in expected]}")
         page.select_option("#hcKey", "D"); page.select_option("#hcScale", "harm")
-        page.wait_for_timeout(150)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { strings: [6, 5, 4, 3, 2, 1], startDeg: 5, nearFret: 6 } }))""")
-        page.wait_for_timeout(200)
         for ci, exp in enumerate(expected):
-            page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(150)
+            page.click(f'#tlScroll button >> nth={ci}')
             drawn = sorted(page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-sel')]
               .map(g => g.querySelector('text').textContent.trim() + '@' + g.dataset.selstr + '/' + g.dataset.selfret)"""))
             check(drawn == exp["sel"],
                   f"{tag} bar {ci + 1} ({exp['sym']}): the board must draw the engine's own "
                   f"selection — drawn {drawn}, engine {exp['sel']}")
         page.select_option("#hcKey", "Bb"); page.select_option("#hcScale", "major")
-        page.wait_for_timeout(150)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
                       source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260906 item 1 + 260907 amendment: THE COVERAGE RULE in the
         # OCTAVE WINDOW, on Daniel's exact case. UPDATED 260907, reason: the
@@ -2478,7 +2420,6 @@ console.log(JSON.stringify(out));
           { detail: { key: 'C', strings: [3, 2, 1], startDeg: 5, nearFret: 2,
                       object: 'triad', take: 'all', notesPer: 1,
                       source: 'custom', custom: 'F' } }))""")
-        page.wait_for_timeout(250)
         fsel = page.evaluate("""() => [...document.querySelectorAll('#fieldSvg .fd-sel')]
           .map(g => g.querySelector('text').textContent.trim() + '@' + g.dataset.selstr + '/' + g.dataset.selfret)
           .sort()""")
@@ -2492,7 +2433,6 @@ console.log(JSON.stringify(out));
         # watched come back incomplete at this window — each complete now
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { take: 'one', source: 'custom', custom: 'F Dm Bdim' } }))""")
-        page.wait_for_timeout(250)
         # THE RULED CASE'S TRUE SHAPE under the amendment (stated in the 260907
         # report): all three chords were missing the CLASS F, and the octave
         # window restores it — IV completes. ii and vii° then meet a
@@ -2505,7 +2445,7 @@ console.log(JSON.stringify(out));
         expects = [("F", 3, None), ("Dm", 2, "occur only on string 2"),
                    ("Bdim", 2, "occur only on string 2")]
         for ci, (sym, want_n, want_msg) in enumerate(expects):
-            page.click(f'#tlScroll button >> nth={ci}'); page.wait_for_timeout(150)
+            page.click(f'#tlScroll button >> nth={ci}')
             n = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
             hint_c = page.inner_text("#fdHint")
             if want_msg is None:
@@ -2522,12 +2462,10 @@ console.log(JSON.stringify(out));
                       source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3,
                       object: 'tetrad', take: 'one', notesPer: 1,
                       source: 'cycle', custom: '' } }))""")
-        page.wait_for_timeout(200)
 
         # ---- 260905 item 1: THE SELECTED SEGMENT IS VISIBLE ----
         # Daniel could not tell Grip from Line: the .on class was applied all
@@ -2548,14 +2486,14 @@ console.log(JSON.stringify(out));
                   and st["onBg"] == "rgb(33, 33, 38)",
                   f"{tag} #{seg}: the chosen segment must WEAR its choice (ink on, "
                   f"one per group): {st}")
-        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"3\"]')
         line_on = page.evaluate("""() => {
           const b = [...document.querySelectorAll('#fdNSeg button')]
             .find(x => x.textContent.trim() === 'Line');
           return b.classList.contains('on') && getComputedStyle(b).backgroundColor; }""")
         check(line_on == "rgb(33, 33, 38)",
               f"{tag} the .on must FOLLOW a click, visibly: {line_on}")
-        page.click('#fdNSeg button[data-nps=\"1\"]'); page.wait_for_timeout(100)
+        page.click('#fdNSeg button[data-nps=\"1\"]')
 
         # ---- child 3b: the strings-address and the order bracket ----
         brackets = lambda: page.evaluate("""() =>
@@ -2569,10 +2507,9 @@ console.log(JSON.stringify(out));
               f"{tag} the order bracket must be always-on and faint before a figure: {b0}")
         # the item's case: every occurrence at Line doubles string 4, and
         # 4,3,4,3,2,1 walks its two notes low → high — THE REPEAT IS THE ORDINAL
-        page.check("#fdAllTones"); page.wait_for_timeout(80)
-        page.click('#fdNSeg button[data-nps=\"3\"]'); page.wait_for_timeout(100)
+        page.check("#fdAllTones")
+        page.click('#fdNSeg button[data-nps=\"3\"]')
         page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
-        page.wait_for_timeout(150)
         steps = [x.split("/") for x in figorder().split(",")]
         check(len(steps) == 6 and steps[0][0] == "4" and steps[2][0] == "4"
               and int(steps[2][1]) > int(steps[0][1]),
@@ -2603,21 +2540,20 @@ console.log(JSON.stringify(out));
         # old pattern-shaped figure is now refused by the mode-mismatch
         # notice instead of being half-read, so the block types the tones
         # alphabet; the mismatch itself is pinned in the 260902 block)
-        page.click('#fdAddrSeg button[data-addr=\"tones\"]'); page.wait_for_timeout(80)
+        page.click('#fdAddrSeg button[data-addr=\"tones\"]')
         page.fill("#fdFigIn", "R-3-5-7"); page.dispatch_event("#fdFigIn", "input")
-        page.wait_for_timeout(120)
         bt = brackets()
         typed = {k: v for k, v in bt.items() if v["text"] and "{" in v["text"] and v["fill"] == "#B9B9BF"}
         check(len(typed) >= 1, f"{tag} under tones the bracket is derived and greyed: {bt}")
         # refusals, loud on the face
-        page.click('#fdAddrSeg button[data-addr=\"pattern\"]'); page.wait_for_timeout(80)
+        page.click('#fdAddrSeg button[data-addr=\"pattern\"]')
         # PIN REWRITTEN 260918 (night 24, item 1 — rule 7): approaches are BUILT
         # (CR-1; Spec §2.6). Under the PATTERN address they still refuse, by
         # name, offering the switch — the mode-mismatch manners.
-        page.fill("#fdFigIn", "(-1,+2)4"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
+        page.fill("#fdFigIn", "(-1,+2)4"); page.dispatch_event("#fdFigIn", "input")
         check("name TONES" in page.inner_text("#fdFigNote") and "switch it to tones" in page.inner_text("#fdFigNote"),
               f"{tag} an approach under pattern refuses by name, offering tones: {page.inner_text('#fdFigNote')!r}")
-        page.fill("#fdFigIn", "5"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
+        page.fill("#fdFigIn", "5"); page.dispatch_event("#fdFigIn", "input")
         check("string 5 carries nothing" in page.inner_text("#fdFigNote"),
               f"{tag} an absent string must refuse by name: {page.inner_text('#fdFigNote')!r}")
 
@@ -2646,7 +2582,7 @@ console.log(JSON.stringify(out));
         # PIN REWRITTEN 260930 (night 36, rule 7): the key is B♭ major, so the key's ♭3 is D♭ — the
         # speller's letter is D, which in B♭ IS the 3rd degree: the altered degree is the 3rd, the
         # colour blue #2959A6, the interior ♭3 (the accidental read against major, a player's name).
-        page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input")
         apc = page.evaluate(ap_read)
         check(len(apc["aps"]) == 1 and apc["aps"][0]["chrom"] == "true" and apc["aps"][0]["shape"] == "polygon",
               f"{tag} §2.6 shape (v1.4): a CHROMATIC approach is a STARBURST: {apc['aps']}")
@@ -2669,7 +2605,7 @@ console.log(JSON.stringify(out));
         check(page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-appr polygon, #fieldSvg .fd-appr circle').length === 1 && document.querySelectorAll('#fieldSvg .fd-appr *').length === 1"),
               f"{tag} §2.6: no new ring — the approach group holds exactly its one hollow mark")
         # (-s)[3] — diatonic: the scale tone below the 3rd is the 2nd — green, its §2.1 colour
-        page.fill("#fdFigIn", "(-s)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        page.fill("#fdFigIn", "(-s)[3]"); page.dispatch_event("#fdFigIn", "input")
         apd = page.evaluate(ap_read)
         check(len(apd["aps"]) == 1 and apd["aps"][0]["chrom"] == "false" and apd["aps"][0]["deg"] == "2" and apd["aps"][0]["stroke"] == "#3C8B2F",
               f"{tag} §2.6 colour: a DIATONIC approach keeps its degree colour — the 2nd, green: {apd['aps']}")
@@ -2700,12 +2636,12 @@ console.log(JSON.stringify(out));
         # PIN REWRITTEN 260930 (v1.4): the cue-size head is a STARBURST in the altered degree's colour (D♭ → B♭'s 3rd, blue)
         check(len(st_ap) >= 1 and st_ap[0]["chrom"] == "chromatic" and st_ap[0]["shape"] == "polygon" and "#2959A6" in (st_ap[0]["fill"] + st_ap[0]["stroke"]) and st_ap[0]["cue"] and st_ap[0]["alters"] == "b3",
               f"{tag} §2.6 engraved (v1.4): the staff draws the chromatic approach as a cue-size STARBURST in the altered degree's colour: {st_ap[:2]}")
-        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(120)
-        page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(80)
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
+        page.click('#fdAddrSeg button[data-addr="pattern"]')
         # back to the boot state
-        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
-        page.uncheck("#fdAllTones"); page.wait_for_timeout(60)
-        page.click('#fdNSeg button[data-nps=\"1\"]'); page.wait_for_timeout(80)
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
+        page.uncheck("#fdAllTones")
+        page.click('#fdNSeg button[data-nps=\"1\"]')
 
         # ---- child 4: dyads, the shell, and the one derivation ----
         roles = lambda: sorted(set(page.eval_on_selector_all(
@@ -2717,11 +2653,11 @@ console.log(JSON.stringify(out));
         check(obj_state.get("dyad") is False and obj_state.get("shell") is False,
               f"{tag} dyad and shell must be live objects (child 4): {obj_state}")
         # the SHELL is R + the guide tones — three roles, never the 5th
-        page.select_option("#hcObj", "shell"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "shell")
         check(roles() == ["3", "7", "R"],
               f"{tag} a shell must wear exactly R, 3, 7 on the field: {roles()}")
         # the DYAD defaults to the guide tones, and its menu only shows here
-        page.select_option("#hcObj", "dyad"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "dyad")
         # PINS REWRITTEN 260917 (item 1, rule 7): the dyad's pair MENU is the
         # tones FIELD now — the figure field's own notation (R,3,5,7), one
         # way to name tones in the app — and it serves every stacked object
@@ -2731,23 +2667,23 @@ console.log(JSON.stringify(out));
         check(roles() == ["3", "7"],
               f"{tag} the default dyad is 3rd + 7th, nothing else: {roles()}")
         # any two tones by role: Root + 5th re-derives the field's dots
-        page.fill("#hcTones", "R,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
+        page.fill("#hcTones", "R,5"); page.dispatch_event("#hcTones", "input")
         check(roles() == ["5", "R"],
               f"{tag} the Root + 5th dyad must wear exactly R and 5: {roles()}")
         # the choice travels the bus: the staff re-derives from the same value
         st_n = page.eval_on_selector_all("#stSvg ellipse", "e => e.length")
         check(st_n == 16,
               f"{tag} the staff must speak the dyad in every bar — 2 heads × the derived 8 (got {st_n})")
-        page.fill("#hcTones", "3,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(80)
+        page.fill("#hcTones", "3,7"); page.dispatch_event("#hcTones", "input")
 
         # ---- 260917 item 1: TONE SELECTION extends to Triad, Tetrad and the extensions ----
         # Ruled: Triad picks three, Tetrad four, the extensions their depth's
         # worth; fewer is legitimate; a tone the object cannot hold refuses
         # BY NAME; the FIGURE FIELD'S notation and parser — never a second.
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "tetrad")
         check(tones_field()["value"] == "R,3,5,7" and not tones_field()["hidden"],
               f"{tag} 1: a tetrad's field fills with its whole stack: {tones_field()}")
-        page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input")
         check(roles() == ["3", "7", "R"],
               f"{tag} 1: a tetrad picked R,3,7 draws exactly those three: {roles()}")
         # the pick reaches the SOUND and the staff — one derivation, every board
@@ -2758,43 +2694,43 @@ console.log(JSON.stringify(out));
         # ("13 is not a tone of a tetrad"). Now TONES IS THE TRUTH and the object is the name the tones make:
         # R,3,13 under a tetrad re-names the object to a thirteenth and draws exactly those three. Junk and
         # duplicates still refuse by name (below).
-        page.fill("#hcTones", "R,3,13"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        page.fill("#hcTones", "R,3,13"); page.dispatch_event("#hcTones", "input")
         hc_note = page.inner_text("#pgObjNote"); obj_now = page.evaluate("() => document.getElementById('hcObj').value")   # night 64: the tones' sentences are Progression's
         check(obj_now == "thirteenth" and "The thirteenth narrowed to R 3 13" in hc_note,
               f"{tag} 1 (261013): a tone past the object's depth re-names the object to what the tones make: {obj_now!r} {hc_note!r}")
         check(roles() == ["13", "3", "R"],
               f"{tag} 1 (261013): the drawn set IS the tones: {roles()}")
-        page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input")
         check(page.evaluate("() => document.getElementById('hcObj').value") == "shell" and roles() == ["3", "7", "R"],
               f"{tag} 1 (261013): R,3,7 names a SHELL — the preset's own default wins the tie: {roles()}")
         # junk refuses in the FIGURE's own voice — one parser, one vocabulary
-        page.fill("#hcTones", "R,Q"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        page.fill("#hcTones", "R,Q"); page.dispatch_event("#hcTones", "input")
         hc_note = page.inner_text("#pgObjNote")
         check('"Q" is not a tone — tones are R, 3, 5, 7, 9, 11, 13' in hc_note,
               f"{tag} 1: junk is refused in the figure field's own words: {hc_note!r}")
         # an extension picks its own depth's worth: a 9th chord narrowed to R,3,7,9
-        page.select_option("#hcObj", "ninth"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "ninth")
         check(tones_field()["value"] == "R,3,5,7,9",
               f"{tag} 1: a 9th's field fills with five: {tones_field()}")
-        page.fill("#hcTones", "R,3,7,9"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
+        page.fill("#hcTones", "R,3,7,9"); page.dispatch_event("#hcTones", "input")
         check(roles() == ["3", "7", "9", "R"],
               f"{tag} 1: a 9th picked R,3,7,9 draws those four (no drop needed on four strings): {roles()}")
         # BUILT (proposed otherwise, rule 11): the grip's named drop still
         # applies to a hand-picked set that outruns the strings
-        page.fill("#hcTones", "R,3,5,7,9"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
+        page.fill("#hcTones", "R,3,5,7,9"); page.dispatch_event("#hcTones", "input")
         check("the 5 dropped by the grip rule" in page.inner_text("#fdHint"),
               f"{tag} 1: a hand-picked 9th on four strings drops the 5th by the rule and SAYS so: {page.inner_text('#fdHint')[:120]!r}")
         # ---- 260917 item 2: SHELL is a PRESET of the selector — choosing it fills R,3,7 visibly ----
-        page.select_option("#hcObj", "shell"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "shell")
         check(tones_field()["value"] == "R,3,7" and not tones_field()["hidden"] and roles() == ["3", "7", "R"],
               f"{tag} 2: Shell fills the tones as R,3,7, visibly — a player sees WHY a shell is a shell: {tones_field()} {roles()}")
-        page.fill("#hcTones", "R,7"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        page.fill("#hcTones", "R,7"); page.dispatch_event("#hcTones", "input")
         check(roles() == ["7", "R"],
               f"{tag} 2: a shell edited is a pick like any other — nothing removed, nothing duplicated: {roles()}")
         # UPDATED 261013 (night 59, rule 7): a scale HAD no tones to pick and hid the field; now Tones is the
         # truth in both modes — under a scale it speaks the key's NOTE NAMES (the gamut's letters, the whole
         # field when none is set), visible, not dead
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "scale")
         check(not tones_field()["hidden"] and "by note" in page.inner_text("#hcTonesLab"), f"{tag} 1 (261013): under a scale the tones field speaks note names, visible: {tones_field()} {page.inner_text('#hcTonesLab')!r}")
         # ---- 260917 item 5: EACH PASSING CHORD NAMES ITS MODE, beside voice under the neck ----
         # Derived from the chord's degree in the scale (field.mjs's MODES
@@ -2803,29 +2739,25 @@ console.log(JSON.stringify(out));
         fd_mode = lambda: page.evaluate("() => (document.getElementById('fdMode') || {}).textContent || ''")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
         check("Ionian" in fd_mode(), f"{tag} 5: under a scale, bar 1 (I) reads its mode beside voice: {fd_mode()!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 1, request: true } }))""")
-        page.wait_for_timeout(200)
         check("Lydian" in fd_mode(), f"{tag} 5: bar 2 (IV) reads Lydian: {fd_mode()!r}")
-        page.select_option("#hcScale", "harm"); page.wait_for_timeout(250)
+        page.select_option("#hcScale", "harm")
         check("Lydian" not in fd_mode() and fd_mode().strip() != "",
               f"{tag} 5: the mode name follows the SCALE — harmonic minor's fourth degree is not Lydian: {fd_mode()!r}")
-        page.select_option("#hcScale", "major"); page.wait_for_timeout(150)
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        page.select_option("#hcScale", "major")
+        page.select_option("#hcObj", "tetrad")
         # PIN REWRITTEN 260918 (item 2, register 33 — rule 7): the readout speaks
         # for EVERY object now — the chord AND its mode; night 22's gate on
         # the object was lifted by ruling ("everything you need to understand
         # the harmonic context"). Under a tetrad, bar 1: "Bbmaj7 — Bb Ionian".
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
         check(fd_mode().replace("\u00a0", " ").strip() == "Bbmaj7 — Bb Ionian",
               f"{tag} 2 (260918): under a chord object the readout names the chord AND its mode: {fd_mode()!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 1, request: true } }))""")
-        page.wait_for_timeout(200)
         check(fd_mode().strip() == "Ebmaj7 — Eb Lydian",
               f"{tag} 2 (260918): the bar turns and the readout follows: {fd_mode()!r}")
         # PINS REWRITTEN 260919 (night 25 item 1, rule 7): the readout is the
@@ -2865,13 +2797,11 @@ console.log(JSON.stringify(out));
         check(all(x and x["inBh"] and x["afterTitle"] and x["boxed"] for x in seats),
               f"{tag} 3 (260920): the readout sits in the header of all three boards, after each title: {seats}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 2, request: true } }))""")
-        page.wait_for_timeout(250)
         texts = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", ro_ids)
         check(len(set(texts)) == 1 and texts[0].startswith("Am7b5") and "Locrian" in texts[0],
               f"{tag} 3 (260920): after a STEP_CHANGED all three read the same bar — Am7b5, A Locrian: {texts}")
         page.evaluate("(ids) => ids.forEach(id => { document.getElementById(id).querySelector('.readtext').textContent = ''; })", ro_ids)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 3, request: true } }))""")
-        page.wait_for_timeout(250)
         texts2 = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", ro_ids)
         check(len(set(texts2)) == 1 and texts2[0].startswith("Dm7") and all(t for t in texts2),
               f"{tag} 3 (260920): EMPTIED, then stepped — every box refilled on its own derivation (no sibling to copy from): {texts2}")
@@ -2884,21 +2814,17 @@ console.log(JSON.stringify(out));
             others = [i for i in ro_ids if i != gone]
             page.evaluate("""(id) => { const e = document.getElementById(id); window.__roHold = [e, e.parentNode, e.nextSibling]; e.remove(); }""", gone)
             page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 4, request: true } }))""")
-            page.wait_for_timeout(250)
             got = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", others)
             check(all(t.startswith("Gm7") and "G Aeolian" in t for t in got),   # bar 5 of the cycle in B♭ is the vi
                   f"{tag} 2 (260921): with {gone} DETACHED the other two still derive bar 5 — Gm7, G Aeolian — on their own: {got}")
             page.evaluate("""() => { const [e, p, n] = window.__roHold; p.insertBefore(e, n); }""")
             page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 3, request: true } }))""")
-            page.wait_for_timeout(200)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'F' } }))""")
-        page.wait_for_timeout(250)
         texts3 = page.evaluate("(ids) => ids.map(id => document.getElementById(id).textContent)", ro_ids)
         check(len(set(texts3)) == 1 and texts3[0].startswith("Am7") and "A Phrygian" in texts3[0],
               f"{tag} 3 (260920): a CONFIG_CHANGED (key F) moves all three alike — bar 4 in F is Am7, A Phrygian: {texts3}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'Bb' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(250)
         # NOTHING COVERS THE READOUT at phone width (found on the 390 screenshot: the two
         # boards' absolutely positioned minis sat over the box). The box ends before the
         # board's mini and before the shell's ⓘ, on all three boards, at 390.
@@ -2944,10 +2870,8 @@ console.log(JSON.stringify(out));
         # Measured on the artifact 260919: at 390 the box is 215px and "Ebmaj7#11 — Eb Lydian" is 189 — it FITS;
         # the dispatch's "Ebmaj7#11 — Eb Lyd…" needs 360 (box 197). A pin that never truncates proves nothing.
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { source: 'custom', custom: 'Ebmaj7#11 Bbmaj7' } }))""")
-        page.wait_for_timeout(250)
         # the gate arrives here parked on bar 2 — the long name is bar 1's
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(250)
         page.set_viewport_size({"width": 360, "height": 900}); page.wait_for_timeout(250)
         trunc = page.evaluate("""() => { const box = document.getElementById('fdMode'), t = box.querySelector('.readtext'), ch = box.querySelector('.readchord'); const r = (e) => e.getBoundingClientRect();
           return { text: box.textContent, clipped: t.scrollWidth > t.clientWidth, chordWhole: r(ch).right <= r(box).right - 1, oneLine: r(box).height < 40 }; }""")
@@ -2955,7 +2879,6 @@ console.log(JSON.stringify(out));
               f"{tag} 1 (260919): at 360px the long name IS clipped, the CHORD survives whole and the line stays one — the ellipsis eats the mode: {trunc}")
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { source: 'cycle', custom: '' } }))""")
-        page.wait_for_timeout(250)
         # ---- 260919 item 3: THE PROSE SPLIT — the readout says what is, the hint says why not ----
         hint0 = page.inner_text("#fdHint")
         for dropped in ("the whole field", "Strings ", "the window from", "across the set", "Reference: string", "Placement is off"):
@@ -2966,16 +2889,15 @@ console.log(JSON.stringify(out));
         for kept in ("the whole field", "frame from the", "strings", "across the set"):   # the reference clause varies by state
             check(kept in ro0, f"{tag} 3 (260919): the readout still carries the state the hint dropped — {kept!r}: {ro0[:100]!r}")
         # the FIGURE clause moved into the readout (a gap, not a duplication): typed, its step count read back
-        page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(80)
-        page.fill("#fdFigIn", "R,3,7,5"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        page.click('#fdAddrSeg button[data-addr="tones"]')
+        page.fill("#fdFigIn", "R,3,7,5"); page.dispatch_event("#fdFigIn", "input")
         ro1 = page.inner_text("#roLine")
         check("figure 4 steps" in ro1 and "(tones)" in ro1,
               f"{tag} 3 (260919): the figure clause lives in the readout now — 4 typed steps read back: {ro1[-80:]!r}")
         check("Figure:" not in page.inner_text("#fdHint"), f"{tag} 3 (260919): …and no longer in the hint")
         # ---- 260919 item 4: the sentence names the centre an absolute degree speaks from ----
-        page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))""")
-        page.wait_for_timeout(250)
         fn = page.inner_text("#fdFigNote")
         check("approached from the key's ♭3" in fn,
               f"{tag} 4 (260919): on a non-tonic bar the readout names the centre the degree is measured from: {fn!r}")
@@ -2983,14 +2905,14 @@ console.log(JSON.stringify(out));
         # retired `|| key === "F"` special case existed for — the ♭3 approach (A♭) spells
         # with a FLAT on the staff, read from the approach head's own spelled name; the
         # flatness comes from the key signature (F major carries B♭), nothing said about F.
-        page.select_option("#hcKey", "F"); page.wait_for_timeout(250)
+        page.select_option("#hcKey", "F")
         f_heads = page.evaluate("""() => [...document.querySelectorAll('#stSvg [data-stapproach]')]
           .map(e => [e.dataset.stname, e.dataset.stapproach])""")
         check(f_heads and all(n == "Ab" and k == "chromatic" for n, k in f_heads),
               f"{tag} 2 (260920): in F major the ♭3 approach spells A♭ — a FLAT, from the key signature: {f_heads}")
         # ---- 260924 (night 31 item 1, RULE C): C harmonic minor's ♭2 approach spells D♭ on the staff,
         # not C♯ — the fewest-accidental neighbour, then the nearer, then the relative major's side
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "harm"); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "harm")
         page.fill("#fdFigIn", "(b2)[R]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(300)
         ch_heads = page.evaluate("""() => [...document.querySelectorAll('#stSvg [data-stapproach]')].map(e => e.dataset.stname)""")
         check(len(ch_heads) == 8 and all(n == "Db" for n in ch_heads),
@@ -3016,11 +2938,10 @@ console.log(JSON.stringify(out));
         # pin asserted the unconditional clause Daniel reported. The numbers carry the meaning.
         check("beyond the hand" in rr and "is at fret 6 (frets 3–7)" in rr and "window's edge" not in rr and "the reach is 2" in rr and page.query_selector("#fieldSvg [data-role='approach']") is None,
               f"{tag} 2 (260924): the reach REFUSES by name on the face — the target, the distance, the hand: {rr!r}")
-        page.select_option("#hcScale", "major"); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(150)
-        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(100)
-        page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(80)
+        page.select_option("#hcScale", "major"); page.select_option("#hcKey", "Bb")
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
+        page.click('#fdAddrSeg button[data-addr="pattern"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
         # ---- 260923 (night 30): THE BOARD STOPS LYING ABOUT WHAT IT PLACED. C major, Cmaj7,
         # strings 4–1, anchor 4, startDegree 1, frets 0–3: R and 7 both live only on string 2.
         CASE = "() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'C', scale: 'major', object: 'tetrad', source: 'custom', custom: 'Cmaj7', strings: [4, 3, 2, 1], startDeg: 1, nearFret: 0, take: %s, notesPer: %d } }))"
@@ -3041,7 +2962,7 @@ console.log(JSON.stringify(out));
               f"{tag} 1 (260923): with notes drawn the message sits clear of them and inside the neck, even at the nut: {g0}")
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { nearFret: 12 } }))"); page.wait_for_timeout(300); g1 = page.evaluate(GEO)
         check(g1 and g1["inside"] and g1["overlaps"] == 0, f"{tag} 1 (260923): …and at the far right of the neck: {g1}")
-        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { nearFret: 0 } }))"); page.wait_for_timeout(250)
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { nearFret: 0 } }))")
         page.evaluate(CASE % ("'one'", 1)); page.wait_for_timeout(300); c1 = page.evaluate(READ)
         check(c1["sel"] == "5@s3f0 R@s2f1 3@s1f0" and c1["staff"] == 3 and "no placement fits" in c1["overlay"] and "occur only on string 2" in c1["overlay"] and "Line takes both" in c1["overlay"],
               f"{tag} 3 (260923): one-of-each draws the PARTIAL beside its refusal — three notes, the refusal sentence verbatim: {c1}")
@@ -3055,16 +2976,15 @@ console.log(JSON.stringify(out));
         # the hint earns its space when something is refused: both reference strings in
         # the set, WITH a reference asked for (the gate arrives here with the bass elsewhere)
         bass_was = page.eval_on_selector("#fdBass2", "e => e.value")
-        page.select_option("#fdBass2", "root"); page.wait_for_timeout(120)
+        page.select_option("#fdBass2", "root")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [6, 5, 4, 3] } }))""")
         page.wait_for_timeout(300)
         hint1 = page.inner_text("#fdHint")
         # PIN REWRITTEN 261001 (night 37, item 2 — ruled): both strings taken is a named OFFER, not a refusal
         check("Reference offered unfretted: strings 5 and 6 are both in the set" in hint1 and "offered unfretted" in hint1,
               f"{tag} 3 (260919/261001): the hint says WHY and WHAT when the reference is offered unfretted: {hint1!r}")
-        page.select_option("#fdBass2", bass_was); page.wait_for_timeout(120)
+        page.select_option("#fdBass2", bass_was)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [4, 3, 2, 1] } }))""")
-        page.wait_for_timeout(250)
         # ---- 260918 item 1: THE KEY READS IN BOLD RED — the palette's R (this claim stands) ----
         # PIN REWRITTEN after CI (260918): an absolute 30px height was a platform
         # pixel — CI's Linux Chromium renders the select 29px tall. The claim is
@@ -3099,13 +3019,12 @@ console.log(JSON.stringify(out));
         # ---- 260917 item 4: the card's bass window is closed in chord mode, the CENTRE stays in scale mode ----
         hc_win = lambda: page.evaluate("() => ({ hidden: document.getElementById('hcRef').hidden, lab: document.getElementById('hcRefLab').textContent })")
         check(hc_win()["hidden"] is True, f"{tag} 4: chord mode — the card shows no bass window: {hc_win()}")
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+        page.select_option("#hcObj", "scale")
         check(hc_win()["hidden"] is False and hc_win()["lab"].startswith("Centre"),
               f"{tag} 4: scale mode — the card's select is the CENTRE and stays: {hc_win()}")
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        page.select_option("#hcObj", "tetrad")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(150)
         # the recipes the item names, each one exercised, none merely listed
         # R4 UPDATED 260907 (the octave amendment): the two-string window now
         # widens until the set covers the octave (5–11 here), so the guide-
@@ -3119,19 +3038,18 @@ console.log(JSON.stringify(out));
                             ("R11 · triad lines", ["3", "5", "R"]),
                             ("R17 · a shell", ["3", "7", "R"]),
                             ("R26 · a guide-tone dyad", ["3", "7"])]:
-            page.select_option("#psSel", label=label); page.wait_for_timeout(150)
+            page.select_option("#psSel", label=label)
             check(roles() == want,
                   f"{tag} recipe {label!r} must build wearing {want}: {roles()}")
             # (the starved-7th face pin retired 260907 with the amendment —
             # the 7th is IN the widened frame now, drawn and placed above)
         # back to the boot state (the recipes reseeded the run — restore it
         # over the bus, the same channel the harness already speaks)
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(60)
+        page.select_option("#hcObj", "tetrad")
         page.evaluate("""() => { const s = document.querySelector('#psSel'); s.selectedIndex = 0; }""")
-        page.uncheck("#fdAllTones"); page.wait_for_timeout(60)
+        page.uncheck("#fdAllTones")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, notesPer: 1 } }))""")
-        page.wait_for_timeout(120)
 
         # ---- child 5: the reference tone, fretted and named ----
         ref_el = lambda: page.evaluate("""() => { const g = document.querySelector('#fieldSvg .fd-ref');
@@ -3153,15 +3071,15 @@ console.log(JSON.stringify(out));
         # (measured on the first run: this leg runs after the two-views leg left
         # the bass at 'none' — the DEFAULT is pinned on the fresh page above;
         # here the root is chosen and its placement asserted)
-        page.select_option("#fdBass2", "root"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "root")
         check(ref_el() is not None and ref_el()["s"] == "6" and ref_el()["f"] == "6",
               f"{tag} item 3: the root in the bass is B♭ on string 6, fret 6, drawn: {ref_el()}")
-        page.select_option("#fdBass2", "none"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "none")
         check(ref_el() is None
               and page.eval_on_selector_all("#stSvg [data-strefmidi]", "e => e.length") == 0,
               f"{tag} 'none' clears the reference from the neck and the bass clef")
         # a chord TONE in the bass: the 3rd of B♭ (D) — placed, and the composite named
-        page.select_option("#fdBass2", "tone:3"); page.wait_for_timeout(250)
+        page.select_option("#fdBass2", "tone:3")
         rr3 = ref_el()
         ro3 = page.inner_text("#roLine")
         check(rr3 is not None and "over D" in ro3 and "the stack is Bbmaj7/D" not in ro3,
@@ -3171,13 +3089,12 @@ console.log(JSON.stringify(out));
         # so the G now sits INSIDE the box and the flag reads false. The
         # STRETCH behaviour keeps its own live demonstration below against
         # the old window, deliberately dispatched — updated, never relaxed.
-        page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "third")
         rr = ref_el()
         check(rr == {"s": "6", "f": "3", "st": "false"},
               f"{tag} a 3rd below B♭ must fret G on string 6 fret 3, in the 3–7 box: {rr}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 5, nearFret: 5 } }))""")
-        page.wait_for_timeout(200)
         rr = ref_el()
         # PIN REWRITTEN 260918 (night 24, item 3 — rule 7): NEARNESS GOVERNS THE
         # STRING now. From the 5–8 window's centre (6.67) the G on string 5 at
@@ -3190,7 +3107,6 @@ console.log(JSON.stringify(out));
               f"{tag} the stretch must be said in the readout: {page.inner_text('#roLine')!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 4, nearFret: 3 } }))""")
-        page.wait_for_timeout(200)
         ro = page.inner_text("#roLine")
         check("Gm9" in ro and "over G" in ro,
               f"{tag} the readout must name the composite (R19: the stack is Gm9): {ro!r}")
@@ -3205,17 +3121,15 @@ console.log(JSON.stringify(out));
               f"{tag} the bass clef must walk a 3rd below every bar of the cycle "
               f"(G C F B\u266d E\u266d A D G): {st_ref}")
         # R18's shape: a set that TAKES string 6 pushes the reference to 5
-        page.select_option("#fdBass2", "root"); page.wait_for_timeout(100)
+        page.select_option("#fdBass2", "root")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [6, 4, 3, 1], startDeg: 4, nearFret: 3 } }))""")
-        page.wait_for_timeout(200)
         rr = ref_el()
         check(rr is not None and rr["s"] == "5",
               f"{tag} with string 6 in the set the reference must sit on 5 (R18): {rr}")
         # both reference strings taken → REFUSED BY NAME on the face
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [6, 5, 4, 3], startDeg: 4, nearFret: 3 } }))""")
-        page.wait_for_timeout(200)
         # PIN REWRITTEN 261001 (night 37, item 2): a full set OFFERS the reference unfretted — the
         # reference's OWN mark (r 12, dashed 3 2.5, its degree colour), moved into the gutter BELOW
         # the strings and LEFT OF THE NUT, clear of both; it claims no string and asserts no fret.
@@ -3233,22 +3147,20 @@ console.log(JSON.stringify(out));
               f"{unf} {page.inner_text('#fdHint')!r}")
         # R19 as a preset seeds the whole sentence in one gesture
         page.select_option("#psSel", label="R19 · a tetrad over a third below")
-        page.wait_for_timeout(250)
         check(roles() == ["3", "5", "7", "R"] and "Gm9" in page.inner_text("#roLine"),
               f"{tag} R19 must build the tetrad and name Gm9: {roles()}, {page.inner_text('#roLine')!r}")
         # back to the boot state
-        page.select_option("#fdBass2", "none"); page.wait_for_timeout(60)
+        page.select_option("#fdBass2", "none")
         page.evaluate("""() => { const s = document.querySelector('#psSel'); s.selectedIndex = 0; }""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { key: 'Bb', strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3, notesPer: 1 } }))""")
-        page.wait_for_timeout(120)
 
         # ---- child 7: the progression — cycles, forms, typed changes ----
         tlline = lambda: page.get_attribute("#tlScroll", "data-tlline") or ""
         # THE FORM AND THE CASE RULE, on the face: ii–V–I in B♭ is Cm7 F7
         # B♭maj7 — the minor seventh. A dominant here is the signature defect.
-        page.click('#pgSrcSeg button[data-src=\"form\"]'); page.wait_for_timeout(150)
-        page.select_option("#pgForm", "ii-V-I"); page.wait_for_timeout(200)
+        page.click('#pgSrcSeg button[data-src=\"form\"]')
+        page.select_option("#pgForm", "ii-V-I")
         check(tlline() == "Cm7 F7 Bbmaj7",
               f"{tag} ii–V–I in B♭ must read Cm7 F7 Bbmaj7 on the chart line: {tlline()!r}")
         check(page.get_attribute("#tlScroll", "data-tlbars") == "2",
@@ -3256,7 +3168,7 @@ console.log(JSON.stringify(out));
         # Start on means nothing under a form — it must not stand there
         check(page.evaluate("() => getComputedStyle(document.querySelector('#pgStart')).display") == "none",
               f"{tag} 'Start on' must hide under a form — a control that means nothing misleads")
-        page.click('#pgSrcSeg button[data-src=\"cycle\"]'); page.wait_for_timeout(150)
+        page.click('#pgSrcSeg button[data-src=\"cycle\"]')
         check(page.evaluate("() => getComputedStyle(document.querySelector('#pgStart')).display") != "none",
               f"{tag} 'Start on' must show under a cycle")
         # NO BAR-COUNT CONTROL EXISTS — derived means underivable by hand
@@ -3265,8 +3177,8 @@ console.log(JSON.stringify(out));
               and "8 bars, derived" in page.inner_text("#pgNote"),
               f"{tag} the bar count must be derived and say so, with no control: {page.inner_text('#pgNote')!r}")
         # TWELVE-BAR BLUES: the off-key tone says WHICH absence it is, on two faces
-        page.click('#pgSrcSeg button[data-src=\"form\"]'); page.wait_for_timeout(100)
-        page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(200)
+        page.click('#pgSrcSeg button[data-src=\"form\"]')
+        page.select_option("#pgForm", "blues-12")
         check(tlline() == "Bb7 Eb7 Bb7 Bb7 Eb7 Eb7 Bb7 Bb7 F7 Eb7 Bb7 F7",
               f"{tag} twelve-bar blues in B♭, chip for chip: {tlline()!r}")
         # UPDATED 261011 (night 46, rule 7): the b7 of B♭7 was "not in the key — the field cannot carry it";
@@ -3279,19 +3191,17 @@ console.log(JSON.stringify(out));
         check("in this frame" not in page.inner_text("#roLine"),
               f"{tag} an off-key tone must not be misreported as a frame absence")
         # THE POSITION: a chip click jumps every mirror (the strip owns it)
-        page.click('#tlScroll button >> nth=8'); page.wait_for_timeout(150)
+        page.click('#tlScroll button >> nth=8')
         check("bar 9 of 12" in page.inner_text("#roLine") and "F7" in page.inner_text("#roLine"),
               f"{tag} chip 9 must put every mirror on F7: {page.inner_text('#roLine')!r}")
         check(page.eval_on_selector_all("#stSvg [data-stcur]", "es => es.map(e => +e.dataset.stcur)") == [8],
               f"{tag} the staff must shade the jumped-to bar")
         # TYPED CHANGES (G28 closes): romans by the case rule, refusal BY NAME
-        page.click('#pgSrcSeg button[data-src=\"custom\"]'); page.wait_for_timeout(100)
+        page.click('#pgSrcSeg button[data-src=\"custom\"]')
         page.fill("#pgCustom", "ii7 V7 Imaj7"); page.dispatch_event("#pgCustom", "input")
-        page.wait_for_timeout(200)
         check(tlline() == "Cm7 F7 Bbmaj7",
               f"{tag} typed romans must resolve by the case rule: {tlline()!r}")
         page.fill("#pgCustom", "Cm7 Qx7"); page.dispatch_event("#pgCustom", "input")
-        page.wait_for_timeout(200)
         note = page.inner_text("#pgNote")
         check("Qx7" in note and "neither" in note,
               f"{tag} a bad token must be refused BY NAME on the card's face: {note!r}")
@@ -3301,7 +3211,7 @@ console.log(JSON.stringify(out));
         page.dispatch_event("#journalIn", "input"); page.wait_for_timeout(500)
         check(page.evaluate("() => !document.querySelector('#pgChartBtn').disabled"),
               f"{tag} a chart in the pad must arm the read-back button")
-        page.click("#pgChartBtn"); page.wait_for_timeout(200)
+        page.click("#pgChartBtn")
         check(page.input_value("#pgCustom") == "| Cm7 F7 | Bbmaj7 |",
               f"{tag} the note's chart must land in the line BYTE-IDENTICAL: {page.input_value('#pgCustom')!r}")
         check(tlline() == "Cm7 F7 Bbmaj7" and page.get_attribute("#tlScroll", "data-tlbars") == "2",
@@ -3330,7 +3240,6 @@ console.log(JSON.stringify(out));
         page.click('#pgSrcSeg button[data-src=\"cycle\"]'); page.wait_for_timeout(120)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(120)
         page.evaluate("""() => {
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
@@ -3378,7 +3287,6 @@ console.log(JSON.stringify(out));
         page.uncheck("#fdAllTones"); page.click('#fdNSeg button[data-nps=\"1\"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(200)
         page.evaluate("() => { window.__nt = [] }")
         page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(350)
         page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
@@ -3410,7 +3318,6 @@ console.log(JSON.stringify(out));
         page.click('#fdNSeg button[data-nps=\"3\"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(150)
         page.evaluate("() => { window.__nt = [] }")
         page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(350)
         page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
@@ -3419,7 +3326,6 @@ console.log(JSON.stringify(out));
               f"{tag} every-occurrence + BLOCK must sound together — the material must "
               f"not decide the movement: {[(h['m'], round(h['t']-heard[0]['t'],1)) for h in heard[:8]]}")
         page.uncheck("#fdAllTones"); page.click('#fdNSeg button[data-nps=\"1\"]')
-        page.wait_for_timeout(150)
 
         # ---- 260905 item 5: THE PULSE — what you see pulsing is what you hear
         # (fretboard-stage's own ratified words; this board finally inherits
@@ -3489,7 +3395,6 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { strings: [3, 2, 1], startDeg: 5, nearFret: 0, object: 'triad',
                       take: 'one', notesPer: 1, source: 'cycle', custom: '' } }))""")
-        page.wait_for_timeout(250)
         aud_states = []
         for aud_bar in range(8):
             page.evaluate("() => { window.__nt = []; window.__raw = [] }")
@@ -3522,7 +3427,6 @@ console.log(JSON.stringify(out));
         # does not sound (the NOTE stream is the schedule; the slider is the mixer's)
         page.evaluate("""() => { const s = document.getElementById('fdHarmVol');
           s.value = 0; s.dispatchEvent(new Event('input', { bubbles: true })); }""")
-        page.wait_for_timeout(150)
         page.evaluate("() => { window.__nt = []; window.__raw = [] }")
         # crash-proof under a deaf-board mutation (m28 pins the window away
         # and every bar can refuse): a missing placed bar is a FAILURE here,
@@ -3538,7 +3442,6 @@ console.log(JSON.stringify(out));
                   f"raw starts, the schedule still announces (NOTEs {mix[0]}, raws {mix[1]})")
         page.evaluate("""() => { const s = document.getElementById('fdHarmVol');
           s.value = 100; s.dispatchEvent(new Event('input', { bubbles: true })); }""")
-        page.wait_for_timeout(150)
         # the ONE PLAIN ECHO (260910, found measuring item 1): the strip's
         # index-overflow reset announced without the attack flag — park on
         # bar 8, type a 4-bar custom, and audio-card's tetrad pass sounded a
@@ -3563,7 +3466,6 @@ console.log(JSON.stringify(out));
                       address: 'pattern', figure: '', source: 'cycle', custom: '' } }))""")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(250)
 
         # ---- 260905 item 3: THE SCHEDULE IS THE ONLY SOUNDING PATH ----
         # Daniel heard a full chord on beat one in arpeggio mode. Every
@@ -3605,10 +3507,9 @@ console.log(JSON.stringify(out));
               f"{tag} with the click muted, every raw audio start must BE an announced "
               f"NOTE — the walk's schedule is the only sounding path (NOTEs {counts[0]}, "
               f"raw starts {counts[1]})")
-        page.check("#fdMetChk"); page.wait_for_timeout(150)
+        page.check("#fdMetChk")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(120)
 
         # THE SPLIT, AT THE ARTIFACT: 1+1+1+1 must change when the next chord
         # ARRIVES — one bar per beat, not per metric bar (Daniel's finding:
@@ -3627,17 +3528,15 @@ console.log(JSON.stringify(out));
         page.wait_for_timeout(120)
         # THE MODE MISMATCH is named on the face, with the switch offered
         page.fill("#fdFigIn", "R-3-5-7"); page.dispatch_event("#fdFigIn", "input")
-        page.wait_for_timeout(150)
         note = page.inner_text("#fdFigNote")
         check("reads as a TONES figure" in note and "switch it to tones" in note,
               f"{tag} R-3-5-7 under pattern must name the likely mode, not report string 5: {note!r}")
-        page.click('#fdAddrSeg button[data-addr=\"tones\"]'); page.wait_for_timeout(120)
+        page.click('#fdAddrSeg button[data-addr=\"tones\"]')
         page.fill("#fdFigIn", "4,3,4,3,2,1"); page.dispatch_event("#fdFigIn", "input")
-        page.wait_for_timeout(150)
         check("reads as a string PATTERN" in page.inner_text("#fdFigNote"),
               f"{tag} the reverse mismatch must be named too: {page.inner_text('#fdFigNote')!r}")
-        page.click('#fdAddrSeg button[data-addr=\"pattern\"]'); page.wait_for_timeout(80)
-        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(80)
+        page.click('#fdAddrSeg button[data-addr=\"pattern\"]')
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
 
         # ---- 260905 item 2: TAKE IS MATERIAL, MOVEMENT IS THE RAIL'S ----
         # Daniel: "The Take field in Harmony is doing movement (partial) duty
@@ -3723,7 +3622,6 @@ console.log(JSON.stringify(out));
         # ruling is proven on must be created — E♭maj7 still collides there
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 5, nearFret: 5 } }))""")
-        page.wait_for_timeout(200)
         bars1 = sound_sight_pass("old 5-8 window grip + ref (the refusal corpus)")
         # THE REFUSED BAR IS SILENT (Daniel's ruling, 260904): the reference
         # is "the reference tone on the bottom end for all of the harmony
@@ -3760,7 +3658,6 @@ console.log(JSON.stringify(out));
         # back to the boot window for config 2
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
           { detail: { startDeg: 4, nearFret: 3 } }))""")
-        page.wait_for_timeout(200)
         # config 2 — the window STEPPED (the announce every mover must make)
         # and the arpeggio take: the class the hypothesis feared, exercised
         page.focus("#fieldSvg"); page.press("#fieldSvg", "ArrowRight"); page.wait_for_timeout(200)
@@ -3770,7 +3667,7 @@ console.log(JSON.stringify(out));
               f"{tag} the sound≡sight corpus floor: {compared[0]} complete bars compared (want ≥ 14)")
         # restore
         page.uncheck("#fdAllTones"); page.select_option("#fdBass2", "none")
-        page.press("#fieldSvg", "ArrowLeft"); page.wait_for_timeout(150)
+        page.press("#fieldSvg", "ArrowLeft")
         page.fill("#bpmRange", "72"); page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(100)
         # back to the boot state
@@ -3780,10 +3677,9 @@ console.log(JSON.stringify(out));
         # block seats the cycle early) — clear it without a visibility wait
         page.evaluate("""() => { const c = document.querySelector('#pgCustom');
           c.value = ''; c.dispatchEvent(new Event('input', { bubbles: true })); }""")
-        page.click('#pgSrcSeg button[data-src=\"cycle\"]'); page.wait_for_timeout(150)
+        page.click('#pgSrcSeg button[data-src=\"cycle\"]')
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
-        page.wait_for_timeout(150)
 
         # ---- THE SEATING CHECK, EXTENDED TO PARTS (the parts primitive):
         # WHICH PART sits in WHICH SEAT — last night's lesson one level down.
@@ -3813,11 +3709,11 @@ console.log(JSON.stringify(out));
         # one surface, two seats: a save from the row-1 pad files into the
         # foot's list — the state is one, wherever the parts sit
         page.fill("#journalIn", "the split is placement, not identity")
-        page.click("#saveEntry"); page.wait_for_timeout(120)
+        page.click("#saveEntry")
         check(page.eval_on_selector_all("#boards .hist", "e => e.length") == 1
               and page.input_value("#journalIn") == "",
               f"{tag} a save from the pad did not file into the foot's log — two seats, one surface broke")
-        page.click(".hist .acts button.danger"); page.wait_for_timeout(80)
+        page.click(".hist .acts button.danger")
 
         # ---- THE RENDERED DIFF (the surface item, 2026-08-29): "identical is
         # asserted, not judged". v0.9 is opened beside the door and the layout
@@ -3841,7 +3737,6 @@ console.log(JSON.stringify(out));
         # (cmp-checked at the move); the vault file remains the working home.
         proto.goto((REPO / "hub/tests/oracles/multetudes-v0.9.html").as_uri())
         proto.wait_for_selector(".wrap", state="attached")
-        proto.wait_for_timeout(200)
 
         def row_ratios(pg, sel):
             """the widths of a row's children, as fractions of their sum"""
@@ -3953,10 +3848,10 @@ console.log(JSON.stringify(out));
         page.wait_for_timeout(120)
         # the neck rail collapses and returns — exercised, so its state
         # rules are matched in a DOM that really entered them
-        page.click("#fdRailBtn"); page.wait_for_timeout(60)
+        page.click("#fdRailBtn")
         check(page.eval_on_selector_all(".fd-rail.fd-shut", "e => e.length") == 1,
               f"{tag} the rail toggle did not collapse the rail")
-        page.click("#fdRailBtn"); page.wait_for_timeout(60)
+        page.click("#fdRailBtn")
         proto.close()
 
     # ---------------- exercise the door -------------------------------------
@@ -4013,7 +3908,6 @@ console.log(JSON.stringify(out));
 
         # the meter is one state too, and the split list follows it
         page.select_option("#meterSel2", "3")
-        page.wait_for_timeout(80)
         check(page.input_value("#meterSel") == "3",
               f"{tag} the metronome's meter did not follow the transport's")
         splits3 = page.eval_on_selector_all("#splitSel option", "e => e.map(x => x.textContent)")
@@ -4030,7 +3924,6 @@ console.log(JSON.stringify(out));
         }""")
         tl_before = tl_index()
         page.click("#playBtn")
-        page.wait_for_timeout(150)
         check(page.inner_text("#playBtn") == "Pause", f"{tag} the transport did not arm")
         check(page.inner_text("#metroBtn") == "Stop",
               f"{tag} pressing Play did not start the grid — the transport asked for a clock it did not get")
@@ -4047,7 +3940,6 @@ console.log(JSON.stringify(out));
 
         # pausing stops the walk but leaves the position where it was
         page.click("#playBtn")
-        page.wait_for_timeout(60)
         check(page.inner_text("#playBtn") == "Play", f"{tag} the transport did not pause")
         parked = tl_index()
         page.wait_for_timeout(600)
@@ -4069,7 +3961,6 @@ console.log(JSON.stringify(out));
         # off the downbeat; the join must still land on the next bar line.
         BAR = 2
         page.select_option("#splitSel", "0")                 # one chord per whole bar
-        page.wait_for_timeout(60)
         arm_recorder = """() => {
           if (window.__lvh) document.removeEventListener('atetudes:step', window.__lvh);
           window.__lv = [];
@@ -4137,7 +4028,7 @@ console.log(JSON.stringify(out));
         # symptoms 1-3 against the pre-metroOwner build (eecea4b), the chord-1
         # sound against v0.1.1 (40d4e00), then green here.
         if page.inner_text("#playBtn") == "Pause":
-            page.click("#playBtn"); page.wait_for_timeout(120)
+            page.click("#playBtn")
         if page.inner_text("#metroBtn") == "Stop":            # a COLD, stopped clock
             page.click("#metroBtn"); page.wait_for_timeout(120)
         check(page.inner_text("#metroBtn") == "Start", f"{tag} could not reach a cold clock for the metroOwner pins")
@@ -4218,7 +4109,7 @@ console.log(JSON.stringify(out));
         page.wait_for_timeout(900)
         check(page.evaluate("() => window.__src.length") == t1,
               f"{tag} sound continued after the metronome's own Stop — stopAll must silence everything")
-        page.uncheck("#countChk"); page.wait_for_timeout(40)
+        page.uncheck("#countChk")
         page.click("#metroBtn"); page.wait_for_timeout(120)    # clock running again for the blocks below
 
         # ---- ONE MUTE ICON PER SLIDER (260820.3): the metronome's Vol slider.
@@ -4244,7 +4135,7 @@ console.log(JSON.stringify(out));
         check(clicks_in(1300) >= 1, f"{tag} the click did not resume after unmuting from the checkbox")
         # RULE 1, the one most likely to be missed: drag the Vol slider to zero
         # BY HAND and the icon shows muted — level 0 is muted however it got there
-        page.fill("#clickVolR", "0"); page.dispatch_event("#clickVolR", "input"); page.wait_for_timeout(200)
+        page.fill("#clickVolR", "0"); page.dispatch_event("#clickVolR", "input")
         check(page.get_attribute("#clickMute", "aria-pressed") == "true",
               f"{tag} Vol dragged to zero by hand but the icon does not show muted — the icon is a VIEW of the level")
         check(clicks_in(1300) == 0, f"{tag} Vol at zero but the click still sounds")
@@ -4381,7 +4272,6 @@ console.log(JSON.stringify(out));
         # study's auto-crop, as a camera over the same drawing)
         full_vb = page.get_attribute("#fretSvg", "viewBox")
         page.click("#winSeg button[data-win=\"follow\"]")
-        page.wait_for_timeout(80)
         follow_vb = page.get_attribute("#fretSvg", "viewBox")
         check(follow_vb != full_vb and float(follow_vb.split()[2]) < 1160,
               f"{tag} Follow did not crop the window: {full_vb!r} -> {follow_vb!r}")
@@ -4389,7 +4279,6 @@ console.log(JSON.stringify(out));
               f"{tag} Follow moved the dots — the crop must be a camera over the same drawing")
         # Box: the zone draws, and it is CONFIG — announced, adopted, and it moves the pass
         page.click("#winSeg button[data-win=\"box\"]")
-        page.wait_for_timeout(80)
         # ONE rectangle (ratified 2026-08-21) — the window; the inner strip is
         # retracted, so exactly one, not "at least two"
         check(page.eval_on_selector_all(".fs-zone", "e => e.length") == 1,
@@ -4401,9 +4290,7 @@ console.log(JSON.stringify(out));
         # sits at its bottom-tone anchor whatever the zone (root-position Cmaj7
         # drop-2 has one home) — the zone moves the pass from step 1 onward.
         page.click("#placeSeg button[data-v=\"grip\"]")
-        page.wait_for_timeout(120)
         page.click("#tlBars >> button >> nth=2")
-        page.wait_for_timeout(120)
         before = frets_now()
         hint0 = page.inner_text("#fsBoxHint")
         page.focus("#fretSvg")
@@ -4411,7 +4298,6 @@ console.log(JSON.stringify(out));
             page.keyboard.press("ArrowRight")
         page.wait_for_timeout(200)
         page.click("#tlBars >> button >> nth=2")   # the pass rebuilt to step 0; look at step 2 again
-        page.wait_for_timeout(120)
         after = frets_now()
         hint1 = page.inner_text("#fsBoxHint")
         check(hint0 != hint1 and "zone" in hint1.lower(),
@@ -4439,7 +4325,6 @@ console.log(JSON.stringify(out));
         # multetudes door's extra board pushed the grip past 900px and exposed
         # it (260827). Scroll first, then measure — for every raw-mouse drag.
         grip.scroll_into_view_if_needed()
-        page.wait_for_timeout(60)
         gb = grip.bounding_box()
         svg_w = page.query_selector("#fretSvg").bounding_box()["width"]
         fret_px = svg_w * 71 / 1160
@@ -4447,7 +4332,6 @@ console.log(JSON.stringify(out));
         gx, gy = gb["x"] + gb["width"] / 2, gb["y"] + gb["height"] / 2
         page.mouse.move(gx, gy); page.mouse.down()
         page.mouse.move(gx - 2 * fret_px, gy, steps=6); page.mouse.up()
-        page.wait_for_timeout(250)
         hint_post = page.inner_text("#fsBoxHint")
         check(hint_post != hint_pre and "zone" in hint_post.lower(),
               f"{tag} dragging the corner grip did not move the left edge: {hint_pre!r} -> {hint_post!r}")
@@ -4464,11 +4348,10 @@ console.log(JSON.stringify(out));
         check(r0 is not None, f"{tag} no window rectangle drawn in Box mode")
         grip2 = page.query_selector("#fretSvg .fs-grip-hit")
         grip2.scroll_into_view_if_needed()        # same clamping hazard as above
-        page.wait_for_timeout(60)
         gb2 = grip2.bounding_box()
         page.mouse.move(gb2["x"] + gb2["width"] / 2, gb2["y"] + gb2["height"] / 2); page.mouse.down()
         page.mouse.move(gb2["x"] + gb2["width"] / 2 - 3 * fret_px, gb2["y"] + gb2["height"] / 2, steps=6)
-        page.mouse.up(); page.wait_for_timeout(250)
+        page.mouse.up()
         r1 = rect_of()
         check(r1 is not None and r1["x"] != r0["x"],
               f"{tag} the drag did not move the window ({r0} -> {r1})")
@@ -4510,7 +4393,7 @@ console.log(JSON.stringify(out));
         reached_n = 2   # stretches are unmarked by design; allow a few
         anchor_frets = []
         for i in range(8):
-            page.click(f"#tlBars >> button >> nth={i}"); page.wait_for_timeout(120)
+            page.click(f"#tlBars >> button >> nth={i}")
             f = page.evaluate("""() => {
               const SY0 = 34, SGAP = 34, FX0 = 46, FW = 71;
               const yT = SY0 + 5 * SGAP;                       // string 6, the anchor string
@@ -4530,13 +4413,13 @@ console.log(JSON.stringify(out));
               f"({anchor_frets} vs {zfrets}) — bound-by-default is not binding")
         # the legacy escape still works and is a real change: unbinding re-derives
         dots_bound = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.style.transform)")
-        page.uncheck("#bindChk"); page.wait_for_timeout(250)
+        page.uncheck("#bindChk")
         dots_free = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.style.transform)")
         check(dots_bound != dots_free or True,   # some configs coincide (measured 49%) — alive is the bar here
               "")
         check(page.eval_on_selector_all(".fs-zone", "e => e.length") == 1,
               f"{tag} unbinding broke the window rectangle")
-        page.check("#bindChk"); page.wait_for_timeout(250)
+        page.check("#bindChk")
 
     if "arpIn" in r["controlsPresent"]:
         # ---- 260911 item 3: THE BOARD CARRIES THE ENGINE'S REFUSAL ----
@@ -4553,7 +4436,6 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => { [...document.querySelectorAll('#figAddrSeg button')]
           .find(b => b.dataset.mm === 'tones').click(); }""")
         page.fill("#arpIn", "(-1,+2)R"); page.dispatch_event("#arpIn", "input")
-        page.wait_for_timeout(150)
         page.evaluate("""() => { [...document.querySelectorAll('#playbackSeg button')]
           .find(b => b.dataset.pb === 'arpeggiated').click(); }""")
         page.wait_for_timeout(350)
@@ -4567,7 +4449,7 @@ console.log(JSON.stringify(out));
         # read from the score's approach head. (score-board's retired copy did this with
         # its own `|| key === "F"`.)
         key_was = page.eval_on_selector("#keySel", "e => e.value")
-        page.select_option("#keySel", "F"); page.wait_for_timeout(200)
+        page.select_option("#keySel", "F")
         page.fill("#arpIn", "(-1)3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(300)
         sc_heads = page.evaluate("""() => [...document.querySelectorAll('#score [data-scapproach]')]
           .map(e => [e.dataset.scname, e.dataset.scapproach])""")
@@ -4585,20 +4467,18 @@ console.log(JSON.stringify(out));
         # ---- 260924 (night 31 item 1, RULE C) in this door: C harmonic minor's chromatic approaches
         # under (-1)3 spell D♭ G♭ E B♭ — flats and naturals, never C♯ F♯ A♯ (the C harm row is
         # C Db D Eb E F Gb G Ab A Bb B)
-        page.select_option("#keySel", "C"); page.select_option("#scaleSel", "harm"); page.wait_for_timeout(200)
+        page.select_option("#keySel", "C"); page.select_option("#scaleSel", "harm")
         page.fill("#arpIn", "(-1)3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(300)
         ch_sc = page.evaluate("""() => [...document.querySelectorAll('#score [data-scapproach="chromatic"]')].map(e => e.dataset.scname)""")
         check(ch_sc and set(ch_sc) <= {"Db", "Gb", "E", "Bb"} and "Db" in ch_sc,
               f"{tag} 1 (260924): C harmonic minor's chromatics on the score spell D♭ G♭ E B♭ under rule C: {ch_sc}")
-        page.select_option("#scaleSel", "major"); page.select_option("#keySel", key_was); page.wait_for_timeout(200)
+        page.select_option("#scaleSel", "major"); page.select_option("#keySel", key_was)
         # restore exactly what this block moved: figure, address, playback
         page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input")
-        page.wait_for_timeout(100)
         page.evaluate("""() => { [...document.querySelectorAll('#figAddrSeg button')]
           .find(b => b.dataset.mm === 'pattern').click(); }""")
         page.evaluate("""() => { [...document.querySelectorAll('#playbackSeg button')]
           .find(b => b.dataset.pb === 'strum').click(); }""")
-        page.wait_for_timeout(200)
 
     if "arpIn" in r["controlsPresent"]:
         # ---- THE FIGURE CHAIN (extensions §1, audit A3/B4). Every stage is a
@@ -4612,7 +4492,7 @@ console.log(JSON.stringify(out));
         # so they are DISABLED until one parses and enable the moment it does.
         # Exercise BOTH states — a disabled control the gate never enables is the
         # silently-skipping class. Playback stays three real buttons.
-        page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input")
         gated = sorted(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.map(x => x.dataset.pb)"))
         check(gated == ["arpeggiated", "both"],
               f"{tag} with no figure, Arpeggiated and Both must be disabled (got {gated})")
@@ -4630,37 +4510,37 @@ console.log(JSON.stringify(out));
         # PIN REWRITTEN 261002 (night 38, ONE ADDRESS FAMILY): the alphabet is real string numbers — the
         # boot set is strings 6-5-4-3, so "1" carries nothing there, and "9" is not a string at all.
         page.click("#figAddrSeg button[data-mm=\"pattern\"]")
-        page.fill("#arpIn", "6-5-1"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        page.fill("#arpIn", "6-5-1"); page.dispatch_event("#arpIn", "input")
         err = page.inner_text("#arpErr")
         check("string 1 carries nothing in this set (strings 6-5-4-3)" in err, f"{tag} a string the set lacks did not refuse in the house words: {err!r}")
         # "9" is a tones extension, so it draws the cross-alphabet notice (as orderBy's does); "8" is in neither alphabet
-        page.fill("#arpIn", "6-5-9"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        page.fill("#arpIn", "6-5-9"); page.dispatch_event("#arpIn", "input")
         check("reads as a TONES figure" in page.inner_text("#arpErr") and "switch it to tones" in page.inner_text("#arpErr"),
               f"{tag} a tones token under pattern must draw the cross-alphabet notice: {page.inner_text('#arpErr')!r}")
-        page.fill("#arpIn", "6-5-8"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        page.fill("#arpIn", "6-5-8"); page.dispatch_event("#arpIn", "input")
         check('"8" is not a string — strings are 1–6' in page.inner_text("#arpErr"), f"{tag} a non-string did not fail loudly by name: {page.inner_text('#arpErr')!r}")
         # THE SET CHANGE (261002): a pattern figure names absolute strings; on the middle set it is
         # refused BY NAME and the shift is OFFERED, not applied — the field keeps the user's text
-        page.fill("#arpIn", "6-5-4-3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
-        page.click("#setSeg button[data-v=\"1\"]"); page.wait_for_timeout(120)
+        page.fill("#arpIn", "6-5-4-3"); page.dispatch_event("#arpIn", "input")
+        page.click("#setSeg button[data-v=\"1\"]")
         err = page.inner_text("#arpErr"); shift_vis = page.is_visible("#figShift")
         check(page.input_value("#arpIn") == "6-5-4-3" and "string 6 carries nothing in this set (strings 5-4-3-2)" in err and shift_vis
               and page.inner_text("#figShift") == "shift the figure to 5-4-3-2",
               f"{tag} the set change must keep the figure, refuse it by name and OFFER the shift: field {page.input_value('#arpIn')!r} err {err!r} shift {shift_vis}")
-        page.click("#figShift"); page.wait_for_timeout(80)
+        page.click("#figShift")
         check(page.input_value("#arpIn") == "5-4-3-2" and page.inner_text("#arpErr") == "" and not page.is_visible("#figShift"),
               f"{tag} taking the offer writes the shifted figure and clears the refusal: {page.input_value('#arpIn')!r} {page.inner_text('#arpErr')!r}")
-        page.click("#setSeg button[data-v=\"0\"]"); page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
-        page.fill("#arpIn", "(-1,+2)3"); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
+        page.click("#setSeg button[data-v=\"0\"]"); page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input")
+        page.fill("#arpIn", "(-1,+2)3"); page.dispatch_event("#arpIn", "input")
         check("tone" in page.inner_text("#arpErr").lower(),
               f"{tag} parens in slot mode must be refused by name (drill would silently read 1-2-3): {page.inner_text('#arpErr')!r}")
         # 3. a good slot figure clears the error; the picker writes into the field
-        page.select_option("#figSel", "6-5-4-3"); page.wait_for_timeout(60)
+        page.select_option("#figSel", "6-5-4-3")
         check(page.input_value("#arpIn") == "6-5-4-3", f"{tag} the picker did not write into the field")
         check(page.inner_text("#arpErr") == "", f"{tag} a good figure left an error standing")
         # 4. TONES: switching address re-lists the picker in tone letters and
         #    the guide-tone preset exists — the pedagogy in one control
-        page.click("#figAddrSeg button[data-mm=\"tones\"]"); page.wait_for_timeout(60)
+        page.click("#figAddrSeg button[data-mm=\"tones\"]")
         opts = page.eval_on_selector_all("#figSel option", "e => e.map(x => x.value)")
         check("3-7-3-7" in opts and any(o.startswith("(") for o in opts),
               f"{tag} the tone picker lacks the guide-tone / enclosure presets: {opts}")
@@ -4669,7 +4549,7 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => { window.__st = 0;
           for (const P of [window.OscillatorNode, window.AudioBufferSourceNode]) {
             const s0 = P.prototype.start; P.prototype.start = function (...a) { window.__st++; return s0.apply(this, a); }; } }""")
-        page.click("#nextBtn"); page.wait_for_timeout(150)          # a gesture; audio arms
+        page.click("#nextBtn")          # a gesture; audio arms
         # STOP THE CLOCK FIRST. A manual step sounds on its own (the stage
         # re-announces the canonical STEP_CHANGED, the audio card sounds it), but
         # a RUNNING metronome adds a click source every beat and can auto-advance
@@ -4684,7 +4564,7 @@ console.log(JSON.stringify(out));
         # 4-voice strum; both is the 4 strummed + 4 line. Pedal rides all three.
         page.select_option("#figSel", "3-7-3-7")
         def sources_for(mode):
-            page.click(f"#playbackSeg button[data-pb='{mode.lower()}']"); page.wait_for_timeout(60)
+            page.click(f"#playbackSeg button[data-pb='{mode.lower()}']")
             # step away and let ALL prior sources finish (a 2-beat step at 120bpm
             # rings ~1s; wait past it) so the counter starts from silence
             page.click("#tlBars >> button >> nth=4"); page.wait_for_timeout(1400)
@@ -4715,7 +4595,7 @@ console.log(JSON.stringify(out));
         stems_arp = page.eval_on_selector_all("#score line[stroke-width='1.1']", "e => e.length")
         check(stems_arp > stems_block, f"{tag} the score does not draw the figure as a line (block stems {stems_block}, line stems {stems_arp})")
         # 8. GUIDE TONES: dim R and 5, leave 3 and 7 full — a view, not a mode
-        page.check("#guideChk"); page.wait_for_timeout(120)
+        page.check("#guideChk")
         ops = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.style.opacity)")
         check(ops.count("0.28") == 2 and sum(1 for o in ops if o in ("", "1")) == 2,
               f"{tag} guide-tone view must dim exactly two of four voices (R and 5): {ops}")
@@ -4723,7 +4603,7 @@ console.log(JSON.stringify(out));
         # 9. FOLLOW-THE-LINE: in Follow, with a line playing, the window's viewBox
         #    x moves as the sounding note moves (a camera move over the same drawing)
         page.click("#winSeg button[data-win=\"follow\"]"); page.click("#figAddrSeg button[data-mm=\"pattern\"]")
-        page.select_option("#figSel", "6-5-4-3"); page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(120)
+        page.select_option("#figSel", "6-5-4-3"); page.click("#placeSeg button[data-v=\"free\"]")
         page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.wait_for_timeout(80)
         vbs = [page.get_attribute("#fretSvg", "viewBox")]
         page.click("#nextBtn")
@@ -4736,7 +4616,7 @@ console.log(JSON.stringify(out));
         check(all(float(v.split()[2]) < 1160 for v in vbs),
               f"{tag} follow-the-line widened to the whole neck — it must stay a crop while tracking")
         page.click("#winSeg button[data-win=\"full\"]"); page.click("#placeSeg button[data-v=\"grip\"]")
-        page.select_option("#figSel", ""); page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(80)
+        page.select_option("#figSel", ""); page.click("#playbackSeg button[data-pb=\"strum\"]")
 
         # 10. THE PANEL NARRATES ITS OWN RULES (this item: state the rules in the
         #     hints). The figure sounds ONLY when Playback != Block AND a figure
@@ -4767,47 +4647,47 @@ console.log(JSON.stringify(out));
         check(page.is_checked("#bindChk"), f"{tag} the narration block expects the shipped default: bound")
         check("same grip" in hint() and "won't pull" not in hint(),
               f"{tag} bound Grip does not say Grip and Free reach the same grip: {page.inner_text('#smHint')!r}")
-        page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(80)
+        page.click("#placeSeg button[data-v=\"free\"]")
         check("same grip" in hint() and "won't pull" not in hint() and "releas" in hint() and "neck" in hint(),
               f"{tag} bound Free still claims a release, or fails to say what makes them differ: {page.inner_text('#smHint')!r}")
         check("bind" not in hint(), f"{tag} rule 14: the narration quotes the bind control's caption: {page.inner_text('#smHint')!r}")
         check(free_title() and (free_title() in page.inner_text("#smHint")),
               f"{tag} bound: the Free button's title is not the narration's Free words: {free_title()!r} vs {page.inner_text('#smHint')!r}")
-        page.uncheck("#bindChk"); page.wait_for_timeout(200)
+        page.uncheck("#bindChk")
         check("box" in hint() and "pull" in hint() and "same grip" not in hint(),
               f"{tag} unbound Free does not warn that the Box won't pull: {page.inner_text('#smHint')!r}")
         check("anchor released" in free_title() and free_title() in page.inner_text("#smHint"),
               f"{tag} unbound: the Free button's title is not the narration's Free words: {free_title()!r}")
-        page.click("#placeSeg button[data-v=\"grip\"]"); page.wait_for_timeout(80)
+        page.click("#placeSeg button[data-v=\"grip\"]")
         check("won't pull" not in hint() and "same grip" not in hint(),
               f"{tag} unbound Grip states a dependency that is not its own: {page.inner_text('#smHint')!r}")
-        page.check("#bindChk"); page.wait_for_timeout(200)
-        page.click("#placeSeg button[data-v=\"free\"]"); page.wait_for_timeout(80)
+        page.check("#bindChk")
+        page.click("#placeSeg button[data-v=\"free\"]")
         # (c2) THE FAMILY SAYS WHAT IT COSTS (night 42, item 1 — ruling 260907 §4). Close and
         #      drop-3 cannot fit a hand position; drop-2 can and says nothing. The clause is a
         #      fact about the FAMILY: byte-identical on the artifact across a set change, a
         #      zone move and a bind toggle — it reads no voicing (the 08-21 retraction stands:
         #      #fsBoxHint is not read here and never says "reached").
         fam_clause = lambda: [p for p in page.inner_text("#smHint").split(" · ") if "hand position" in p]
-        page.click("#famSeg button[data-v=\"drop2\"]"); page.wait_for_timeout(80)
+        page.click("#famSeg button[data-v=\"drop2\"]")
         check(fam_clause() == [], f"{tag} drop-2 fits a position yet the panel states a cost: {fam_clause()}")
         seen = {}
         for fam in ("close", "drop3"):
-            page.click(f"#famSeg button[data-v=\"{fam}\"]"); page.wait_for_timeout(80)
+            page.click(f"#famSeg button[data-v=\"{fam}\"]")
             c0 = fam_clause()
             check(len(c0) == 1 and fam.replace("drop3", "drop-3") in c0[0] and "fit to find" in c0[0],
                   f"{tag} {fam} does not say what it costs: {page.inner_text('#smHint')!r}")
             check(not re.search(r"\d", c0[0].replace("drop-3", "")), f"{tag} the family clause carries a number — a fret or a span smuggled in: {c0}")
             variants = {tuple(c0)}
             for si in ("1", "2", "0"):
-                page.click(f"#setSeg button[data-v=\"{si}\"]"); page.wait_for_timeout(80); variants.add(tuple(fam_clause()))
+                page.click(f"#setSeg button[data-v=\"{si}\"]"); variants.add(tuple(fam_clause()))
             if "winSeg" in r["controlsPresent"]:
-                page.click("#winSeg button[data-win=\"box\"]"); page.wait_for_timeout(60); page.focus("#fretSvg")
+                page.click("#winSeg button[data-win=\"box\"]"); page.focus("#fretSvg")
                 for _ in range(3):
                     page.keyboard.press("ArrowRight")
                 page.wait_for_timeout(150); variants.add(tuple(fam_clause()))
                 page.uncheck("#bindChk"); page.wait_for_timeout(150); variants.add(tuple(fam_clause()))
-                page.check("#bindChk"); page.wait_for_timeout(150)
+                page.check("#bindChk")
                 for _ in range(3):
                     page.keyboard.press("ArrowLeft")
                 page.wait_for_timeout(150)
@@ -4815,7 +4695,7 @@ console.log(JSON.stringify(out));
             check(len(variants) == 1, f"{tag} {fam}'s clause VARIED with the set, the zone or the bind — it read something that is not the family: {variants}")
             seen[fam] = c0[0]
         check(seen["close"] != seen["drop3"], f"{tag} close and drop-3 share one sentence — the family is not named")
-        page.click("#famSeg button[data-v=\"drop2\"]"); page.wait_for_timeout(80)
+        page.click("#famSeg button[data-v=\"drop2\"]")
         check("reached" not in page.inner_text("#fsBoxHint") if page.query_selector("#fsBoxHint") else True,
               f"{tag} the box hint reports — 08-21 stands, this night does not touch it")
         # (d) every disabled control states WHY in the panel, not only in a tooltip
@@ -4823,14 +4703,13 @@ console.log(JSON.stringify(out));
               f"{tag} the disabled Line placement has no stated reason in the panel")
         # reset to a clean default for the blocks below
         page.click("#placeSeg button[data-v=\"grip\"]"); page.select_option("#figSel", "")
-        page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(80)
+        page.click("#playbackSeg button[data-pb=\"strum\"]")
 
     if "keySel" in r["controlsPresent"]:
         # ---- the Harmony panel, in the reference's form: labelled selects,
         # no popups — the overlap defect left with the idiom that caused it ----
         before = page.inner_text("#tlBars")
         page.select_option("#keySel", "Eb")
-        page.wait_for_timeout(120)
         check(page.input_value("#keySel") == "Eb", f"{tag} the key did not change")
         check(page.inner_text("#tlBars") != before,
               f"{tag} the pass did not rebuild when the key changed")
@@ -4842,11 +4721,9 @@ console.log(JSON.stringify(out));
         # starting the pass elsewhere really reorders it
         first = page.inner_text("#tlBars button >> nth=0")
         page.select_option("#startSel", "3")
-        page.wait_for_timeout(120)
         check(page.inner_text("#tlBars button >> nth=0") != first,
               f"{tag} Start on did not move the pass's first chord")
         page.select_option("#startSel", "0")
-        page.wait_for_timeout(80)
         # Break down is the reference's form, honestly disabled until typed
         # changes land — a control that pretends would be the v0.6.8 defect
         check(page.eval_on_selector_all("#modeSeg button[disabled]", "e => e.length") == 1,
@@ -4877,7 +4754,6 @@ console.log(JSON.stringify(out));
         check(overlaps == [], f"{tag} Harmony panel elements overlap: {overlaps[:4]}")
         # the timeline is navigation: clicking a chord moves the stage
         page.click("#tlBars >> button >> nth=2")
-        page.wait_for_timeout(120)
         check(page.eval_on_selector_all("#tlBars button.tl-cur", "e => e.length") == 1,
               f"{tag} the timeline lost its current-chord mark")
         # and the dots are the SAME NODES after a step — that is what glides
@@ -4885,7 +4761,6 @@ console.log(JSON.stringify(out));
         check(ids == ["v0", "v1", "v2", "v3"],
               f"{tag} the stage is not keyed by the stable voice key: {ids}")
         page.click("#nextBtn")
-        page.wait_for_timeout(120)
         ids2 = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
         check(ids2 == ids, f"{tag} the dots were rebuilt on a step — nothing would glide")
     if "chordVolR" in r["controlsPresent"]:
@@ -4922,7 +4797,6 @@ console.log(JSON.stringify(out));
         check(page.evaluate("() => window.__ac === undefined || window.__ac === null"),
               f"{tag} an AudioContext existed before any gesture")
         page.click("#nextBtn")                    # THE GESTURE
-        page.wait_for_timeout(150)
         check(page.evaluate("() => !!window.__ac"), f"{tag} a gesture did not create an AudioContext")
         check(page.evaluate("() => window.__ac.state") == "running",
               f"{tag} the context is not running after a gesture: {page.evaluate('() => window.__ac && window.__ac.state')}")
@@ -4941,38 +4815,38 @@ console.log(JSON.stringify(out));
         # GONE. Muting a voice stops its SOURCES (the realiser skips a voice at
         # level zero), asserted by counting — the item's gate.
         # chord: mute -> a step sounds only the bass
-        page.click("#chordMute"); page.wait_for_timeout(120)
+        page.click("#chordMute")
         check(page.input_value("#chordVolR") == "0", f"{tag} the chord mute icon did not pull the slider to zero")
         b_ch = page.evaluate("() => window.__starts")
         page.click("#nextBtn"); page.wait_for_timeout(400)
         n_ch = page.evaluate("() => window.__starts") - b_ch
         check(1 <= n_ch <= 2,
               f"{tag} chord muted but a step started {n_ch} sources — the chord voice must STOP (bass alone is 1-2)")
-        page.click("#chordMute"); page.wait_for_timeout(120)   # unmute: stash was 100
+        page.click("#chordMute")   # unmute: stash was 100
         check(page.input_value("#chordVolR") == "100", f"{tag} chord unmute did not restore the stashed level")
         b_ch = page.evaluate("() => window.__starts")
         page.click("#nextBtn"); page.wait_for_timeout(400)
         check(page.evaluate("() => window.__starts") - b_ch >= 4,
               f"{tag} the chord voice did not come back after unmute")
         # bass: mute -> a step sounds only the chord (4 voices, no bass)
-        page.click("#bassMute"); page.wait_for_timeout(120)
+        page.click("#bassMute")
         b_b = page.evaluate("() => window.__starts")
         page.click("#nextBtn"); page.wait_for_timeout(400)
         n_b = page.evaluate("() => window.__starts") - b_b
         check(4 <= n_b <= 5 and page.input_value("#bassVolR") == "0",
               f"{tag} bass muted but a step started {n_b} sources / slider {page.input_value('#bassVolR')!r}")
-        page.click("#bassMute"); page.wait_for_timeout(120)
+        page.click("#bassMute")
         # RULE 1: drag the chord slider to zero BY HAND -> its icon shows muted
-        page.fill("#chordVolR", "0"); page.dispatch_event("#chordVolR", "input"); page.wait_for_timeout(100)
+        page.fill("#chordVolR", "0"); page.dispatch_event("#chordVolR", "input")
         check(page.get_attribute("#chordMute", "aria-pressed") == "true",
               f"{tag} chord slider dragged to zero but the icon does not show muted — the icon is a VIEW of the level")
         # unmute with NO stash (dragged to zero) -> the chord default, 100
-        page.click("#chordMute"); page.wait_for_timeout(100)
+        page.click("#chordMute")
         check(page.input_value("#chordVolR") == "100",
               f"{tag} chord unmute with no stash must restore the default 100: {page.input_value('#chordVolR')!r}")
         # the stash path: 60 -> mute -> unmute -> 60
         page.fill("#chordVolR", "60"); page.dispatch_event("#chordVolR", "input")
-        page.click("#chordMute"); page.click("#chordMute"); page.wait_for_timeout(100)
+        page.click("#chordMute"); page.click("#chordMute")
         check(page.input_value("#chordVolR") == "60",
               f"{tag} chord unmute did not restore the stashed 60: {page.input_value('#chordVolR')!r}")
         page.fill("#chordVolR", "100"); page.dispatch_event("#chordVolR", "input")
@@ -4997,7 +4871,7 @@ console.log(JSON.stringify(out));
             P.prototype.start = function (...a) { window.__starts++; return s.apply(this, a); }; }
           document.addEventListener('atetudes:step', e => { const x = e.detail;
             if (x && x.request === true && x.lead !== undefined) window.__att.push(x.index); }); }""")
-        page.uncheck("#clickChk2"); page.wait_for_timeout(60)   # click silent: every source below is a CHORD
+        page.uncheck("#clickChk2")   # click silent: every source below is a CHORD
         base = page.evaluate("() => window.__starts")
         page.click("#playBtn")                                   # Play IS the first sounding gesture
         page.wait_for_function("() => window.__att.length >= 1", timeout=15000)
@@ -5051,11 +4925,11 @@ console.log(JSON.stringify(out));
             AudioBufferSourceNode.prototype.start = function (...a) { window.__bufst++; return s.apply(this, a); }; } }""")
         press_key = lambda: (page.eval_on_selector("#kbd rect",
             "e => e.dispatchEvent(new MouseEvent('click', {bubbles:true}))"), page.wait_for_timeout(300))
-        page.select_option("#noteVoiceSel", "pluck"); page.wait_for_timeout(80)
+        page.select_option("#noteVoiceSel", "pluck")
         vb0 = page.evaluate("() => window.__bufst"); press_key()
         check(page.evaluate("() => window.__bufst") - vb0 >= 1,
               f"{tag} voice=pluck but a key press started no buffer source — the moved voice select is dead")
-        page.select_option("#noteVoiceSel", "tone"); page.wait_for_timeout(80)
+        page.select_option("#noteVoiceSel", "tone")
         vb1 = page.evaluate("() => window.__bufst"); vs1 = page.evaluate("() => window.__starts"); press_key()
         check(page.evaluate("() => window.__bufst") == vb1,
               f"{tag} voice=tone but a key press started a buffer source — the select did not switch the path back")
@@ -5089,7 +4963,6 @@ console.log(JSON.stringify(out));
         page.fill("#journalIn", "fresh-page entry — nothing touched\n\nwith `inline code` and a fence:\n\n```\nCmaj7\n```\n")
         page.dispatch_event("#journalIn", "input")
         page.click("#saveEntry")
-        page.wait_for_timeout(120)
         fresh = [x for x in page.eval_on_selector_all(".hist", "e => e.map(x => x.innerText)")
                  if "nothing touched" in x]
         for word in ("C major", "Cycling 4ths", "bottom R", "set G–D–A–E", "drop-2", "bpm"):
@@ -5103,12 +4976,10 @@ console.log(JSON.stringify(out));
         page.click("#setSeg button[data-v=\"1\"]")           # the middle set (index 1), labelled high → low
         page.click("#famSeg button[data-v=\"drop3\"]")
         page.click("#figAddrSeg button[data-mm=\"tones\"]")          # P3: the address is CONFIG; its value must
-        page.wait_for_timeout(150)                       # round-trip though the control was renamed
         if "winSeg" in r["controlsPresent"]:
             # the zone is CONFIG: set it here, on this fresh page, so it is part
             # of the configuration this entry snapshots and must round-trip
             page.click("#winSeg button[data-win=\"box\"]")
-            page.wait_for_timeout(60)
             page.focus("#fretSvg")
             for _ in range(4):
                 page.keyboard.press("ArrowRight")
@@ -5117,12 +4988,10 @@ console.log(JSON.stringify(out));
             # so the EXCEPTION is what must round-trip: save UNBOUND, restore
             # unbound. Only the exception is stored.
             page.uncheck("#bindChk")
-            page.wait_for_timeout(150)
         first_before = page.inner_text("#tlBars button >> nth=0")
         page.fill("#journalIn", "the persistence round-trip entry")
         page.dispatch_event("#journalIn", "input")
         page.click("#saveEntry")
-        page.wait_for_timeout(120)
         stored = page.evaluate(f"() => localStorage.getItem({own_key!r})")
         check(stored is not None and "persistence round-trip" in stored,
               f"{tag} saving did not write under the door's own key {own_key!r}")
@@ -5170,7 +5039,6 @@ console.log(JSON.stringify(out));
         # RESTORE. The pass, family, set and bottom must all return.
         # RE-AIMED BY ROLE 260916 (rule 12): was `>> text=Restore étude`
         page.click(".hist .acts button[data-cap='apply']")
-        page.wait_for_timeout(200)
         check(page.input_value("#keySel") == "Ab", f"{tag} restore did not bring the key back")
         check(page.input_value("#scaleSel") == "harm", f"{tag} restore did not bring the scale back")
         check(page.input_value("#progSel") == "sixths", f"{tag} restore did not bring the cycle back")
@@ -5190,7 +5058,6 @@ console.log(JSON.stringify(out));
             # the zone came back too: Shape & Motion adopted it, and the stage's
             # hint (Box mode) names the restored frets
             page.click("#winSeg button[data-win=\"box\"]")
-            page.wait_for_timeout(80)
             restored_hint = page.inner_text("#fsBoxHint")
             check(zone_saved and f"frets {min(zone_saved['frets'])}–{max(zone_saved['frets'])}" in restored_hint,
                   f"{tag} restore did not bring the zone back: {restored_hint!r} vs {zone_saved!r}")
@@ -5199,7 +5066,7 @@ console.log(JSON.stringify(out));
             # later blocks run under the default
             check(not page.is_checked("#bindChk"),
                   f"{tag} the saved bind:false exception did not restore — the flag is UI state, not config")
-            page.check("#bindChk"); page.wait_for_timeout(150)
+            page.check("#bindChk")
 
         # THE SHARED SCHEMA IS A FACT: one Triadetudes v1 log imports through the
         # engine's own fromTriadetudesV1 and renders as a foreign-app entry
@@ -5232,7 +5099,6 @@ console.log(JSON.stringify(out));
         # no popups — the overlap defect left with the idiom that caused it ----
         before = page.inner_text("#tlBars")
         page.select_option("#keySel", "Eb")
-        page.wait_for_timeout(120)
         check(page.input_value("#keySel") == "Eb", f"{tag} the key did not change")
         check(page.inner_text("#tlBars") != before,
               f"{tag} the pass did not rebuild when the key changed")
@@ -5244,11 +5110,9 @@ console.log(JSON.stringify(out));
         # starting the pass elsewhere really reorders it
         first = page.inner_text("#tlBars button >> nth=0")
         page.select_option("#startSel", "3")
-        page.wait_for_timeout(120)
         check(page.inner_text("#tlBars button >> nth=0") != first,
               f"{tag} Start on did not move the pass's first chord")
         page.select_option("#startSel", "0")
-        page.wait_for_timeout(80)
         # Break down is the reference's form, honestly disabled until typed
         # changes land — a control that pretends would be the v0.6.8 defect
         check(page.eval_on_selector_all("#modeSeg button[disabled]", "e => e.length") == 1,
@@ -5279,7 +5143,6 @@ console.log(JSON.stringify(out));
         check(overlaps == [], f"{tag} Harmony panel elements overlap: {overlaps[:4]}")
         # the timeline is navigation: clicking a chord moves the stage
         page.click("#tlBars >> button >> nth=2")
-        page.wait_for_timeout(120)
         check(page.eval_on_selector_all("#tlBars button.tl-cur", "e => e.length") == 1,
               f"{tag} the timeline lost its current-chord mark")
         # and the dots are the SAME NODES after a step — that is what glides
@@ -5287,7 +5150,6 @@ console.log(JSON.stringify(out));
         check(ids == ["v0", "v1", "v2", "v3"],
               f"{tag} the stage is not keyed by the stable voice key: {ids}")
         page.click("#nextBtn")
-        page.wait_for_timeout(120)
         ids2 = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.dataset.voice)")
         check(ids2 == ids, f"{tag} the dots were rebuilt on a step — nothing would glide")
     # ---------------- expand/collapse on every panel (Shell 4) --------------
@@ -5304,7 +5166,6 @@ console.log(JSON.stringify(out));
     check(body is not None and body.is_visible(), f"{tag} the panel body is not visible before collapse")
     before_h = panel.bounding_box()["height"]
     panel.query_selector(".clpsBtn").click()
-    page.wait_for_timeout(80)
     check("clpsd" in (panel.get_attribute("class") or ""), f"{tag} the chevron did not collapse the panel")
     check(not body.is_visible(), f"{tag} the body is still visible after collapse — the collapse did nothing")
     check(panel.query_selector(".clpsSum").is_visible(), f"{tag} no summary line shows when collapsed")
@@ -5337,14 +5198,11 @@ console.log(JSON.stringify(out));
     for p2 in rowmates:
         if "clpsd" not in (p2.get_attribute("class") or ""):
             p2.query_selector(".clpsBtn").click(); toggled.append(p2)
-    page.wait_for_timeout(80)
     check(panel.bounding_box()["height"] < before_h,
           f"{tag} collapsing every card in the row did not shrink it")
     for p2 in toggled:                                    # expand exactly those again
         p2.query_selector(".clpsBtn").click()
-    page.wait_for_timeout(40)
     panel.query_selector(".clpsBtn").click()             # a real toggle: expand again
-    page.wait_for_timeout(80)
     check("clpsd" not in (panel.get_attribute("class") or ""), f"{tag} the chevron did not expand the panel")
     check(body.is_visible(), f"{tag} the body did not come back on expand")
 
@@ -5365,12 +5223,12 @@ console.log(JSON.stringify(out));
     # to break in silence, because the .hint that used to feed it just moved away
     for p in page.query_selector_all(".card, .board"):
         btn = p.query_selector(".clpsBtn")
-        btn.click(); page.wait_for_timeout(25)
+        btn.click()
         summ = page.evaluate("(el) => el.querySelector('.clpsSum').textContent.trim()", p)
         t = p.query_selector("h2, .bh span")
         check(summ != "",
               f"{tag} panel {(t.inner_text() if t else '?')!r} collapses to an EMPTY summary — the moved prose broke the coupling")
-        btn.click(); page.wait_for_timeout(15)              # expand again
+        btn.click()              # expand again
     # each popout carries the prose it replaced, verbatim (read the moved .info,
     # text_content so a hidden popout still reports its text)
     allinfo = " ".join(e.text_content() for e in page.query_selector_all(".infoPop .info") if e.text_content())
@@ -5395,14 +5253,14 @@ console.log(JSON.stringify(out));
               f"{tag} the privacy guarantee is not visible on the notepad face")
     # OPEN a popout, and prove it dismisses without a modal — Escape and click-out
     ib = page.query_selector(".infoBtn")
-    ib.click(); page.wait_for_timeout(60)
+    ib.click()
     check(page.query_selector(".infoPop:not([hidden])") is not None,
           f"{tag} the info button did not open its popout")
-    page.keyboard.press("Escape"); page.wait_for_timeout(40)
+    page.keyboard.press("Escape")
     check(page.query_selector(".infoPop:not([hidden])") is None, f"{tag} Escape did not dismiss the popout")
-    ib.click(); page.wait_for_timeout(40)
+    ib.click()
     check(page.query_selector(".infoPop:not([hidden])") is not None, f"{tag} the popout did not reopen")
-    page.mouse.click(3, 3); page.wait_for_timeout(40)       # click far outside the popout
+    page.mouse.click(3, 3)       # click far outside the popout
     check(page.query_selector(".infoPop:not([hidden])") is None, f"{tag} click-outside did not dismiss the popout")
     # the popout must not have pushed layout: the panel it belongs to keeps its
     # place (absolute positioning), so no console error and the page still loads
@@ -5425,7 +5283,6 @@ console.log(JSON.stringify(out));
         # ⏭ on a strip steps the ONE pass (the mini owns no timer, it asks the bus)
         was = tl_at()
         page.click("#tlMini button[data-role=next]")
-        page.wait_for_timeout(120)
         check(tl_at() != was, f"{tag} the strip ⏭ did not step the pass: parked at {was}")
         # ▶ on the KEYBOARD strip summons the transport AND the clock
         page.click("#kbMini button[data-role=play]")
@@ -5443,7 +5300,6 @@ console.log(JSON.stringify(out));
         check(tl_at() != 0, f"{tag} could not move off bar 0 to test the score jump")
         page.eval_on_selector("#score .sc-hit",
                               "e => e.dispatchEvent(new MouseEvent('click', {bubbles:true}))")
-        page.wait_for_timeout(140)
         check(tl_at() == 0, f"{tag} clicking the first score bar did not jump the pass to it")
         # RESTORE the live states the orphan check needs present: a strip ▶
         # re-arms the transport (.trLit) and restarts the clock (the lamp's
@@ -5463,14 +5319,13 @@ console.log(JSON.stringify(out));
     # (every door carries the metronome). Restored below.
     muted_for_check = page.query_selector("#bassMute") or page.query_selector("#clickMute")
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") != "true":
-        muted_for_check.click(); page.wait_for_timeout(60)
+        muted_for_check.click()
     collapsed_for_check = []
     for sel in (".card", ".board"):
         p = page.query_selector(sel)
         if p and "clpsd" not in (p.get_attribute("class") or ""):
             p.query_selector(".clpsBtn").click()
             collapsed_for_check.append(p)
-    page.wait_for_timeout(60)
     check(page.query_selector(".clpsd") is not None,
           f"{tag} no panel is collapsed going into the orphan check — .clpsd rules would orphan")
     # multetudes: the neck rail SHUT going into the orphan check, so its state
@@ -5478,21 +5333,21 @@ console.log(JSON.stringify(out));
     # shots with the collapsed panels (the same lesson as .clpsd and the mute)
     rail_shut_for_check = False
     if door_id == "multetudes" and page.query_selector(".fd-rail.fd-shut") is None:
-        page.click("#fdRailBtn"); page.wait_for_timeout(60)
+        page.click("#fdRailBtn")
         rail_shut_for_check = True
     # multetudes: the REFUSAL state and the COMPOSITE chip going into the
     # check — #pgNote.pg-err and .tl-us are STATE rules, and a check against
     # a door that never refused would call them orphans (the .clpsd lesson)
     err_state_for_check = False
     if door_id == "multetudes":
-        page.click('#pgSrcSeg button[data-src=\"custom\"]'); page.wait_for_timeout(80)
+        page.click('#pgSrcSeg button[data-src=\"custom\"]')
         page.fill("#pgCustom", "Qx7"); page.dispatch_event("#pgCustom", "input")
-        page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
+        page.select_option("#fdBass2", "third")
         # the centre-source seg builds its buttons on the scale-mode paint;
         # item 5's reload boots the door in chord mode, so enter the state
         # once (the .clpsd lesson, third instance) — the buttons persist
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(150)
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.select_option("#hcObj", "scale")
+        page.select_option("#hcObj", "tetrad")
         # the tuning editor's three STATE rules (night 47): a moved string, an inert
         # stepper and a shown refusal exist only after an attempt — string 5 up five
         # leaves all three (C♯, the fifth step refused at string 4's D); standard
@@ -5505,7 +5360,7 @@ console.log(JSON.stringify(out));
               f"{tag} the tuning editor did not enter its state for the orphan check (moved / inert / refusal)")
         # …and the injection's states (261009): a SHIFTED named tuning (drop D, one global step down —
         # the name field's data-shift and the name button's data-shifted) — then a refused global step
-        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(60)
+        page.click('#fdTuneNames button[data-tuning="drop D"]')
         for _ in range(5):
             page.click('#fdTuneAll button[data-step="down"]', force=True); page.wait_for_timeout(60)
         check(page.query_selector('#fdTuneNames button[data-shifted="true"]') is not None
@@ -5524,13 +5379,13 @@ console.log(JSON.stringify(out));
     readhead_shut_for_check = False
     if door_id == "multetudes" and page.query_selector("#stMode") is not None:
         page.evaluate("() => document.getElementById('stMode').closest('.board').querySelector('.clpsBtn').click()")
-        page.wait_for_timeout(80); readhead_shut_for_check = True
+        readhead_shut_for_check = True
     # night 62: the mixer strip's header carries a mini with its own collapse rule (`.clpsd>.bh #mxMini`) — the same
     # species of state rule; the mixer is collapsed for the check and re-opened after, as the staff board is
     mixer_shut_for_check = False
     if door_id == "multetudes" and page.query_selector("#mxMini") is not None:
         page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()")
-        page.wait_for_timeout(80); mixer_shut_for_check = True
+        mixer_shut_for_check = True
 
     # ---------------- 4. no orphan selector ---------------------------------
     selectors = page.evaluate(SELECTOR_JS)
@@ -5550,10 +5405,8 @@ console.log(JSON.stringify(out));
           f"       a rule that survives its markup is the trace §4.2.1 forbids")
     if readhead_shut_for_check:
         page.evaluate("() => document.getElementById('stMode').closest('.board').querySelector('.clpsBtn').click()")
-        page.wait_for_timeout(80)
     if mixer_shut_for_check:
         page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()")
-        page.wait_for_timeout(80)
 
     check(not errors and not [c for c in console if c[0] in ("error", "warning")],
           f"{tag} console dirtied by interaction: {console} page errors: {errors[:3]}")   # 261011: the page errors printed too — a thrown guard used to leave this line reading "[]"
@@ -5572,11 +5425,10 @@ console.log(JSON.stringify(out));
         page.select_option("#fdBass2", "none")
         page.fill("#pgCustom", ""); page.dispatch_event("#pgCustom", "input")
         page.click('#pgSrcSeg button[data-src=\"cycle\"]')
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(60)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
         check(page.query_selector('.fd-tune .fd-open[data-moved="true"]') is None, f"{tag} the tuning did not return to standard after the orphan check")
-    page.wait_for_timeout(40)
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") == "true":
-        muted_for_check.click(); page.wait_for_timeout(40)
+        muted_for_check.click()
 
     if SHOTS:
         # open the LARGEST popout for the shots — the item wants the popout open
@@ -5589,7 +5441,6 @@ console.log(JSON.stringify(out));
             best = max(info_btns, key=lambda b: len(
                 b.evaluate("el => (el.parentElement.querySelector('.infoPop') || {}).textContent || ''")))
             best.click()
-            page.wait_for_timeout(80)
         page.screenshot(path=str(BUILD / f"{door_id}-1280.png"), full_page=True)
         page.set_viewport_size({"width": 390, "height": 844})
         page.wait_for_timeout(80)
@@ -5670,8 +5521,8 @@ console.log(JSON.stringify(out));
         twins = page.evaluate("() => document.querySelectorAll('.tlbar, .tlrn, .curbar, button.cur, .tlscroll, .tl-scroll').length")
         check(twins == 0, f"{tag} a near-miss twin class survives in the DOM ({twins} node(s)) — one set of names")
         if door_id == "multetudes":
-            page.click('#pgSrcSeg button[data-src="custom"]'); page.wait_for_timeout(80)
-            page.fill("#pgCustom", "Bbmaj7 Db7 Cm7 F7"); page.dispatch_event("#pgCustom", "input"); page.wait_for_timeout(250)
+            page.click('#pgSrcSeg button[data-src="custom"]')
+            page.fill("#pgCustom", "Bbmaj7 Db7 Cm7 F7"); page.dispatch_event("#pgCustom", "input")
             cs = chips()
             check([c["sym"] for c in cs] == ["Bbmaj7", "Db7", "Cm7", "F7"], f"{tag} the custom chart did not land on the strip: {cs}")
             db7 = cs[1]
@@ -5681,19 +5532,19 @@ console.log(JSON.stringify(out));
                 check(c["dot"] is not None and c["dot"]["bg"] == hex2rgb(pal[c["dot"]["deg"]]),
                       f"{tag} {c['sym']}'s dot is not the palette's {c['dot'] and c['dot']['deg']} colour: {c['dot']}")
             check([c["dot"]["deg"] for c in (cs[0], cs[2], cs[3])] == ["R", "2", "5"], f"{tag} the dots' families: {[c['dot'] for c in cs]}")
-            page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(200)
+            page.click('#pgSrcSeg button[data-src="cycle"]')
             cs = chips()
             check(all(c["dot"] is not None for c in cs) and len(cs) >= 8, f"{tag} every cycle chip is on-key and wears a dot: {cs}")
             # item 3: a root reference under its own chord adds nothing — the sub-line never repeats the symbol
-            page.select_option("#fdBass2", "root"); page.wait_for_timeout(200)
+            page.select_option("#fdBass2", "root")
             cs = chips()
             check(all(c["us"] is None and c["slash"] is None for c in cs),
                   f"{tag} with the root reference the sub-line must be EMPTY (the composite IS the chord): {[(c['sym'], c['us'], c['slash']) for c in cs]}")
-            page.select_option("#fdBass2", "third"); page.wait_for_timeout(250)
+            page.select_option("#fdBass2", "third")
             cs = chips()
             check(any(c["us"] or c["slash"] for c in cs), f"{tag} with the third as reference the sub-line appears: {cs}")
             check(all(c["us"] != c["sym"] for c in cs), f"{tag} a sub-line name repeats its chip's symbol: {[(c['sym'], c['us']) for c in cs]}")
-            page.select_option("#fdBass2", "root"); page.wait_for_timeout(150)
+            page.select_option("#fdBass2", "root")
         else:
             cs = chips()
             check(len(cs) == 8 and all(c["dot"] is not None for c in cs), f"{tag} eight diatonic chips, eight dots: {cs}")
@@ -5738,7 +5589,7 @@ console.log(JSON.stringify(out));
         ed = lambda: page.evaluate("""() => ({ letters: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent), name: document.getElementById('fdTuneName').textContent,
           lit: [...document.querySelectorAll('#fdTuneNames button.on')].map(b => b.textContent), why: [...document.querySelectorAll('[data-role="refusal"]')].map(e => e.textContent) })""")
         sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => { const d = g.querySelector('[data-str]'); return g.dataset.selmidi + '@' + (d ? d.dataset.str + ':' + d.dataset.fret : ''); }).sort()")
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
         e0 = ed()
         check(e0["letters"] == ["E", "A", "D", "G", "B", "E"] and e0["name"] == "standard" and e0["lit"] == ["standard"],
               f"{tag} the editor does not read standard at boot: {e0}")
@@ -5747,8 +5598,8 @@ console.log(JSON.stringify(out));
         # PRIME the listener: setTuning() at standard, asked for standard, announces nothing
         # (field-board.mjs — an unchanged tuning does not push), so the baseline must come from
         # a real push. One legal step and its undo announce the full config twice, tuning null again.
-        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="up"]'); page.wait_for_timeout(100)
-        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="down"]'); page.wait_for_timeout(100)
+        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="up"]')
+        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="down"]')
         check(page.evaluate("() => window.__cfg.tuning === null && 'startDeg' in window.__cfg && 'strings' in window.__cfg"),
               f"{tag} the config listener holds no baseline — the retune pin would compare against nothing")
         # DADGAD in six semitone clicks; the row names itself
@@ -5768,15 +5619,15 @@ console.log(JSON.stringify(out));
         check(page.query_selector(".toast, [data-role='toast'], .fd-translated") is None and "translated" not in page.inner_text("#fdHint").lower(),
               f"{tag} the retune was announced — nothing went wrong, nothing should say so")
         # …and ceases to name itself the moment one string moves
-        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="up"]'); page.wait_for_timeout(120)
+        page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="up"]')
         check(ed()["name"] == "" and ed()["lit"] == [], f"{tag} the row still names a tuning it no longer spells: {ed()}")
         # one click of a name, from standard; standard from anywhere
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
         check(ed()["letters"] == ["E", "A", "D", "G", "B", "E"], f"{tag} standard is not one click away: {ed()}")
-        page.click('#fdTuneNames button[data-tuning="DADGAD"]'); page.wait_for_timeout(120)
+        page.click('#fdTuneNames button[data-tuning="DADGAD"]')
         check(ed()["letters"] == ["D", "A", "D", "G", "A", "D"] and ed()["name"] == "DADGAD", f"{tag} one click of its name did not retune: {ed()}")
         # THE CROSSING REFUSAL: string 5 up four is legal (C♯); the fifth step would sound string 4's D — inert, and said there
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
         for _ in range(5):   # force: an aria-disabled button is inert by its own handler, which is the claim under test
             page.click('#fdTuning .fd-tune[data-string="5"] button[data-step="up"]', force=True); page.wait_for_timeout(100)
         e5 = ed()
@@ -5791,9 +5642,9 @@ console.log(JSON.stringify(out));
         # listener), so the sounded midis come from the WALK's field. A probe that clicked a
         # field dot heard field-board announce that dot's own drawn midi back — the neck against
         # itself, true by construction — and never bit when the walk's field lost the tuning.
-        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(120)
+        page.click('#fdTuneNames button[data-tuning="drop D"]')
         if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") != "true":
-            page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(250)
+            page.click('#fieldSvg [data-fdstr="6"]')
         page.evaluate("() => { window.__n = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass') window.__n.push(e.detail.midi); }); }")
         drawn_sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret }))")
         ear = []
@@ -5811,10 +5662,10 @@ console.log(JSON.stringify(out));
         for x in six:
             check(any(x["midi"] in e["sounded"] for e in ear if x in e["drawn"]),
                   f"{tag} THE EAR: string 6 fret {x['fret']} in drop D is drawn as {x['midi']} and never sounded — the neck and the ear disagree")
-        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(150)
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))")
+        page.click('#fdTuneNames button[data-tuning="standard"]')
         if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") == "true":
-            page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(200)
+            page.click('#fieldSvg [data-fdstr="6"]')
 
     # ---------------- THE TUNING STRIP INJECTION (261009): a global stepper, the row's contents, the reading ----------
     # Item 1 a global pair after the name moves all six from where they are, refused WHOLE at the
@@ -5823,7 +5674,7 @@ console.log(JSON.stringify(out));
     # read as cells (spacing, measured); item 6 open D spells its F♯ at its own name only.
     if door_id == "multetudes":
         check("fdTuneAll" in r["controlsPresent"], f"{tag} the global stepper is not in the partition")
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
         rd = lambda: page.evaluate("""() => ({ letters: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent), offsets: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => +e.dataset.offset),
           name: document.getElementById('fdTuneName').textContent, shift: document.getElementById('fdTuneName').dataset.shift,
           lit: [...document.querySelectorAll('#fdTuneNames button.on')].map(b => b.textContent), shifted: [...document.querySelectorAll('#fdTuneNames button[data-shifted="true"]')].map(b => [b.textContent, b.title]),
@@ -5841,38 +5692,38 @@ console.log(JSON.stringify(out));
         r1 = rd()
         check(r1["offsets"] == [-6, -2, -2, -2, -2, -2] and r1["letters"] == ["B♭", "G", "C", "F", "A", "D"], f"{tag} two global steps did not transpose the partial tuning as a unit: {r1}")
         check(r1["inert"][0] == "true" and r1["inert"][1] == "false", f"{tag} the third global step down is not inert (or up is): {r1['inert']}")
-        page.click('#fdTuneAll button[data-step="down"]', force=True); page.wait_for_timeout(100)
+        page.click('#fdTuneAll button[data-step="down"]', force=True)
         r2 = rd()
         check(r2["offsets"] == r1["offsets"], f"{tag} a refused global step moved something — a clamp: {r2['offsets']}")
         check(len(r2["why"]) == 1 and r2["why"][0][0] == "all" and "string 6" in r2["why"][0][1] and "bind" not in r2["why"][0][1].lower(), f"{tag} the global refusal does not name the string that ran out, where the move was attempted: {r2['why']}")
         # item 4: drop D two global steps down names itself — item 2 lost nothing
-        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(100)
+        page.click('#fdTuneNames button[data-tuning="drop D"]')
         for _ in range(2): page.click('#fdTuneAll button[data-step="down"]'); page.wait_for_timeout(100)
         r3 = rd()
         check(r3["name"] == "drop D, a whole step down" and r3["shift"] == "-2" and r3["lit"] == [] and r3["shifted"] and r3["shifted"][0][0] == "drop D" and "drop D, a whole step down" in r3["shifted"][0][1],
               f"{tag} drop D shifted down a whole step does not say so at the name and the name's button: {r3}")
         check(r3["letters"] == ["C", "G", "C", "F", "A", "D"] and r3["offsets"] == [-4, -2, -2, -2, -2, -2], f"{tag} old drop C's letters/offsets — C G C F A D: {r3}")
-        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(100)
+        page.click('#fdTuneNames button[data-tuning="drop D"]')
         check(rd()["name"] == "drop D" and rd()["shift"] == "0", f"{tag} the shifted name's button did not bring the tuning back to its name")
         # a uniform −1 from standard reads standard, a half step down (the retired half-step-down button, as a reading)
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(100)
-        page.click('#fdTuneAll button[data-step="down"]'); page.wait_for_timeout(100)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
+        page.click('#fdTuneAll button[data-step="down"]')
         r4 = rd()
         check(r4["name"] == "standard, a half step down" and r4["letters"] == ["E♭", "A♭", "D♭", "G♭", "B♭", "E♭"] and r4["lit"] == [] and r4["shifted"] == [["standard", r4["shifted"][0][1] if r4["shifted"] else ""]] , f"{tag} a uniform −1 does not read as standard shifted: {r4}")
         # item 6 + the collision: open D reads F♯ at its name; one step up it reads by direction (G) and names itself shifted; two up IS open E, exact
-        page.click('#fdTuneNames button[data-tuning="open D"]'); page.wait_for_timeout(100)
+        page.click('#fdTuneNames button[data-tuning="open D"]')
         r5 = rd(); check(r5["letters"] == ["D", "A", "D", "F♯", "A", "D"] and r5["name"] == "open D" and r5["lit"] == ["open D"], f"{tag} open D at its own name: {r5}")
-        page.click('#fdTuneAll button[data-step="up"]'); page.wait_for_timeout(100)
+        page.click('#fdTuneAll button[data-step="up"]')
         r6 = rd(); check(r6["letters"][3] == "G" and r6["name"] == "open D, a half step up", f"{tag} one global step from open D, string 3 must return to the direction rule and the name must say the shift: {r6}")
-        page.click('#fdTuneAll button[data-step="up"]'); page.wait_for_timeout(100)
+        page.click('#fdTuneAll button[data-step="up"]')
         r7 = rd(); check(r7["name"] == "open E" and r7["lit"] == ["open E"] and r7["shifted"] == [] and r7["letters"] == ["E", "B", "E", "G♯", "B", "E"], f"{tag} open D up a whole step IS open E, exact: {r7}")
-        page.click('#fdTuneNames button[data-tuning="open E"]'); page.wait_for_timeout(100)
+        page.click('#fdTuneNames button[data-tuning="open E"]')
         for _ in range(2): page.click('#fdTuneAll button[data-step="down"]'); page.wait_for_timeout(100)
         r8 = rd(); check(r8["name"] == "open D" and r8["letters"][3] == "F♯", f"{tag} open E down a whole step is open D, exact, spelling its F♯: {r8}")
         # item 3: all fourths, one click — E A D G C F
         page.click('#fdTuneNames button[data-tuning="all fourths"]'); page.wait_for_timeout(100)
         r9 = rd(); check(r9["letters"] == ["E", "A", "D", "G", "C", "F"] and r9["offsets"] == [0, 0, 0, 0, 1, 1] and r9["name"] == "all fourths", f"{tag} all fourths: {r9}")
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(120)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
 
     # ---------------- ALTERNATE TUNINGS, ITEM 3 (night 49, 261010): a saved étude carries its tuning ----------
     # Daniel's field report replayed: all fourths built, the étude SAVED and EXPORTED ALONE, the
@@ -5894,9 +5745,9 @@ console.log(JSON.stringify(out));
     if door_id == "multetudes":
         letters = lambda pg: pg.evaluate("() => [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent)")
         name_of = lambda pg: pg.evaluate("() => document.getElementById('fdTuneName').textContent")
-        page.click('#fdTuneNames button[data-tuning="all fourths"]'); page.wait_for_timeout(150)
+        page.click('#fdTuneNames button[data-tuning="all fourths"]')
         check(letters(page) == ["E", "A", "D", "G", "C", "F"], f"{tag} all fourths did not build on the face: {letters(page)}")
-        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.click('[data-cap="save"]')
         check("all fourths" in newest_row(page).inner_text(), f"{tag} the saved entry's own summary must name the tuning it restores: {newest_row(page).inner_text()[:160]!r}")
         fourths_file = export_newest(page)
         check(_re.search(r"^tuning: \{2: 1, 1: 1\}$", fourths_file, _re.M) is not None,
@@ -5904,8 +5755,8 @@ console.log(JSON.stringify(out));
         check(fourths_file.count("\ntuning:") == 1, f"{tag} the file states the tuning once, at the top level")
         check('"tuning":{"1":1,"2":1}' in fourths_file and '"shared":{' in fourths_file, f"{tag} the entry's payload and shared form must both carry the tuning")
         # a standard étude's file carries NO tuning line — absent means standard; its payload says standard explicitly
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
-        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
+        page.click('[data-cap="save"]')
         std_file = export_newest(page)
         check(_re.search(r"^tuning:", std_file, _re.M) is None and '"tuning":null' in std_file,
               f"{tag} a standard étude's export must carry no tuning key (and say standard in its payload): {std_file[:300]}")
@@ -5935,14 +5786,14 @@ console.log(JSON.stringify(out));
         for e in ear:
             check(sorted(x["midi"] for x in e["drawn"]) == sorted(e["sounded"]), f"{tag} THE EAR on the restored étude: drew {sorted(x['midi'] for x in e['drawn'])}, sounded {sorted(e['sounded'])} — the neck and the ear disagree")
         # the offer path alone: the file's tuning applied by ITS click
-        page2.click('#fdTuneNames button[data-tuning="standard"]'); page2.wait_for_timeout(150)
+        page2.click('#fdTuneNames button[data-tuning="standard"]')
         import_text(page2, fourths_file, "all-fourths-again.atchart.md")
         ob = page2.query_selector('[data-cap="apply-file-tuning"]')
         check(ob is not None, f"{tag} a second import of a file with a tuning raised no offer")
         ob.click(); page2.wait_for_timeout(300)
         check(letters(page2) == ["E", "A", "D", "G", "C", "F"], f"{tag} the file-tuning offer's click did not retune: {letters(page2)}")
         # TUNING-BLIND: a file from before tonight (no key, no payload tuning) restores WITHOUT touching the live tuning
-        page2.click('#fdTuneNames button[data-tuning="drop D"]'); page2.wait_for_timeout(150)
+        page2.click('#fdTuneNames button[data-tuning="drop D"]')
         old_file = std_file.replace(',"tuning":null', "").replace('"tuning":null,', "")
         check('"tuning"' not in old_file, f"{tag} the synthesized pre-v1.2 file still names a tuning")
         old_file = old_file.replace('"id":"', '"id":"old-', 1)
@@ -5953,14 +5804,14 @@ console.log(JSON.stringify(out));
         check(not errs2, f"{tag} the cold page raised errors: {errs2[:2]}")
         ctx2.close()
         # DADGAD saved, the page left and reopened (the stored notepad), the entry restored — in DADGAD
-        page.click('#fdTuneNames button[data-tuning="DADGAD"]'); page.wait_for_timeout(150)
-        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+        page.click('#fdTuneNames button[data-tuning="DADGAD"]')
+        page.click('[data-cap="save"]')
+        page.click('#fdTuneNames button[data-tuning="standard"]')
         page.goto(html_path.as_uri()); page.wait_for_selector("#cards", state="attached"); page.wait_for_timeout(300)
         check(letters(page) == ["E", "A", "D", "G", "B", "E"], f"{tag} the reopened page does not boot in standard")
         page.click('#histList .hist [data-cap="apply"]'); page.wait_for_timeout(400)
         check(letters(page) == ["D", "A", "D", "G", "A", "D"] and name_of(page) == "DADGAD", f"{tag} DADGAD saved and reopened did not render in DADGAD: {letters(page)} {name_of(page)!r}")
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(150)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
     if door_id in ("tetradetudes", "scribe"):
         # a note written in multetudes in DADGAD arrives here: the tuning is WITHHELD BY NAME — a door that keeps standard says so, a door without strings says so
         dadgad_note = ("---\natchart: 1\ntitle: \"from multetudes\"\ntuning: {6: -2, 2: -2, 1: -2}\n---\n\n```chart\n| D |\n```\n\n## Notes\n\n### DADGAD étude\n\n```json\n"
@@ -5997,7 +5848,7 @@ console.log(JSON.stringify(out));
         pick = lambda values: page.select_option("#hcGamut", values)
         fdsel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi).sort((a, b) => a - b)")
         fddots = lambda: page.evaluate("() => document.querySelectorAll('#fieldSvg [data-midi]').length")
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "scale")
         check("hcGamut" in r["controlsPresent"] and page.inner_text("#hcGamutLab").strip() == "Gamut", f"{tag} the Gamut control is not mounted beside Object with the lexicon's caption")
         g0 = opts(); groups = {g["label"]: g["items"] for g in g0}
         check([g["label"] for g in g0] == ["pentatonics", "triad pairs", "triads", "tetrads", "degrees"], f"{tag} the gamut's groups: {[g['label'] for g in g0]}")
@@ -6039,9 +5890,9 @@ console.log(JSON.stringify(out));
         chosen_h = page.evaluate("() => [...document.querySelectorAll('#hcGamut option')].filter(o => o.selected).map(o => ({ t: o.textContent, role: o.dataset.role }))")
         check(len(chosen_h) == 1 and chosen_h[0]["role"] == "chosen" and "1 2 3 5 6 of C" in chosen_h[0]["t"] and [b for b in page.evaluate("() => [...document.querySelectorAll('#hcChips .hc-chip')].filter(b => b.dataset.lit === 'true').map(b => b.dataset.deg)")] == ["1", "2", "3", "5", "6"],
               f"{tag} the degrees still in force under harmonic minor: shown by their own letters in the dropdown and lit on the chips: {chosen_h}")
-        page.select_option("#hcScale", "major"); page.wait_for_timeout(200)
+        page.select_option("#hcScale", "major")
         # a pre-tonight étude restores to the WHOLE FIELD with no key present
-        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.click('[data-cap="save"]')
         with page.expect_download() as dl:
             page.query_selector('#histList .hist [data-cap="entry-export"]').click()
         txt = Path(dl.value.path()).read_text()
@@ -6060,23 +5911,23 @@ console.log(JSON.stringify(out));
         # holds no D), then the strings are restored
         for s_ in (4, 3, 2):
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true":
-                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]')
         # UPDATED night 60 (rule 7): under a scale the window spans the octave on every string (measured: one string,
         # any single degree, exactly one note drawn — frets 3..13), so no gamut EMPTIES it; under a chord no gamut
         # exists. The emptied-window sentence is unreachable now (night 61's to retire by name, with field-board's
         # other dead gamut sentence). What IS reachable, and is the gamut's whole effect on the neck: the selection
         # is the gamut's notes and nothing else — one degree draws that degree alone, one string or four.
-        pick(["2"]); page.wait_for_timeout(250)
+        pick(["2"])
         one = fdsel(); hint = page.inner_text("#fdHint")
         check(gamut_of() == "2" and len(one) >= 1 and all(m % 12 == 2 for m in one), f"{tag} a gamut of one degree draws that degree alone on the string — the gamut narrows the offer: {one} {hint!r}")
         for s_ in (4, 3, 2):
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true":
-                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]')
         # back to the whole field; key change survival by degree
-        pick(["1,2,3,4,5,6,7"]); page.wait_for_timeout(200); check(gamut_of() == "", f"{tag} the whole-field option is the whole field")
+        pick(["1,2,3,4,5,6,7"]); check(gamut_of() == "", f"{tag} the whole-field option is the whole field")
         pick(["2,3,5,6,7"]); page.select_option("#hcKey", "G"); page.wait_for_timeout(300)
         check(gamut_of() == "2,3,5,6,7" and "D major pentatonic — 2 3 5 6 7 of G" in page.inner_text("#hcNote"), f"{tag} a gamut must survive a key change BY DEGREE: {gamut_of()!r} {page.inner_text('#hcNote')!r}")
-        pick(["1,2,3,4,5,6,7"]); page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        pick(["1,2,3,4,5,6,7"]); page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad")
 
     # ---------------- INJECTION 261011c: a dropped role is not "not there"; the Gamut's way back ----------
     # Daniel's state: Bb Ionian, ONE string, arpeggiate, tones R,3,7,5, figure R-3-7-5 — a role the placement
@@ -6092,13 +5943,13 @@ console.log(JSON.stringify(out));
     if door_id == "multetudes":
         fig_note = lambda: page.inner_text("#fdFigNote")
         readout = lambda: page.inner_text("#roLine")
-        page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad")
         page.click('#fdNSeg button[data-nps="1"]'); page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(120)
         page.fill("#hcTones", "R,3,7,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
         page.fill("#fdFigIn", "R-3-7-5"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(150)
         for s_ in (4, 3, 2):
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true":
-                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]')
         drawn = lambda: sorted(page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi)"))
         roles = lambda: sorted(page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => (g.querySelector('text') || {}).textContent)"))
         check(roles() == ["R"], f"{tag} under GRIP the one string carries the R alone — the 5 dropped by the grip rule, the 7 and the 3 by the partial: {roles()}")
@@ -6118,33 +5969,33 @@ console.log(JSON.stringify(out));
         sounded = sorted(set(page.evaluate("() => window.__n.slice()")))
         check(sounded == drawn(), f"{tag} the walk must sound exactly what the neck draws under the refusal: drawn {drawn()}, sounded {sounded}")
         # three tones under LINE: no drop, no refusal — the cap was the trigger, and a line has none (night 56)
-        page.click('#fdNSeg button[data-nps="3"]'); page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.fill("#fdFigIn", "R-3-7"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
+        page.click('#fdNSeg button[data-nps="3"]'); page.fill("#hcTones", "R,3,7"); page.dispatch_event("#hcTones", "input"); page.fill("#fdFigIn", "R-3-7"); page.dispatch_event("#fdFigIn", "input")
         check("could not be placed" not in fig_note() and "carries no" not in fig_note(), f"{tag} with three tones on the one string under a line nothing is refused: {fig_note()!r}")
         # restore the boot state of this block's controls
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.fill("#hcTones", "R,3,5,7"); page.dispatch_event("#hcTones", "input")
-        page.click('#fdAddrSeg button[data-addr="pattern"]'); page.click('#fdMoveSeg button[data-move="strum"]'); page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(120)
+        page.click('#fdAddrSeg button[data-addr="pattern"]'); page.click('#fdMoveSeg button[data-move="strum"]'); page.click('#fdNSeg button[data-nps="1"]')
         for s_ in (4, 3, 2):
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true":
-                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]')
         # ITEM 3 — the way back: the first option IS the whole field. UPDATED night 60 (rule 7): the stopgap (a way
         # back inside a multi-select — a plain click and a modifier-click) is GONE; the dropdown's own first option
         # does its job, chosen as any option is, and the chip row's seventh chip is the other way back.
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)   # the Gamut lives under a scale (night 60)
+        page.select_option("#hcObj", "scale")   # the Gamut lives under a scale (night 60)
         gamut_of = lambda: page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
         first = page.evaluate("() => { const o = document.querySelector('#hcGamut option'); return { role: o.dataset.role, value: o.value, text: o.textContent, selected: o.selected, first: o === document.getElementById('hcGamut').options[0], multiple: document.getElementById('hcGamut').multiple }; }")
         check(first["role"] == "whole-field" and first["first"] and first["value"] == "1,2,3,4,5,6,7" and not first["multiple"], f"{tag} the first option must be the whole field, by role, in a single select: {first}")
         check(first["selected"] and gamut_of() == "", f"{tag} with no gamut set the whole-field option must be LIT: {first} {gamut_of()!r}")
         check("Gamut" not in first["text"] and "whole field" in first["text"], f"{tag} rule 14 / the app's own phrasing: {first['text']!r}")
-        page.select_option("#hcGamut", ["2,3,5,6,7"]); page.wait_for_timeout(250)
+        page.select_option("#hcGamut", ["2,3,5,6,7"])
         check(gamut_of() == "2,3,5,6,7" and not page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} with a pentatonic set the whole-field option must NOT be lit: {gamut_of()!r}")
         # choosing the first option, as any option is chosen → all seven → the whole field
         page.select_option("#hcGamut", "1,2,3,4,5,6,7"); page.wait_for_timeout(300)
         check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} choosing the first option must land on the whole field and light it: {gamut_of()!r}")
         # the other way back: the pair set plus its omitted degree, on the chips → all seven → the whole field
-        page.select_option("#hcGamut", ["1,2,4,5,6,7"]); page.wait_for_timeout(250); check(gamut_of() == "1,2,4,5,6,7", f"{tag} the pair set: {gamut_of()!r}")
+        page.select_option("#hcGamut", ["1,2,4,5,6,7"]); check(gamut_of() == "1,2,4,5,6,7", f"{tag} the pair set: {gamut_of()!r}")
         page.click('#hcChips .hc-chip[data-deg="3"]'); page.wait_for_timeout(300)
         check(gamut_of() == "" and page.evaluate("() => document.querySelector('#hcGamut option').selected"), f"{tag} the seventh chip completes the field and lights the whole-field option: {gamut_of()!r}")
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        page.select_option("#hcObj", "tetrad")
 
     # ---------------- THE NECK AT 390 (night 51, 261011): fewer frets, full size ----------
     # Measured before the change: a 332 px wrap, the rail's 170 px beside the neck, the SVG 150 px
@@ -6174,7 +6025,7 @@ console.log(JSON.stringify(out));
         n3 = neck(); lo3, hi3 = [int(x) for x in n3["window"].split("-")]
         drawn = page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selfret)")
         check(min(drawn) >= lo3 and max(drawn) <= hi3 and n3["scale"] >= 0.55 and n3["hit"][0] >= 22, f"{tag} the window must hold every drawn fret under Line at a usable size: window {n3['window']} drawn {drawn} scale {n3['scale']:.2f} hit {n3['hit']}")
-        page.click('#fdNSeg button[data-nps="1"]'); page.wait_for_timeout(200)
+        page.click('#fdNSeg button[data-nps="1"]')
         # a finger's click on a square at 390 toggles the string — the control is a control there now
         page.click('#fieldSvg [data-fdstr="4"]'); page.wait_for_timeout(300)
         check(page.get_attribute('#fieldSvg [data-fdstr="4"]', "aria-pressed") == "false", f"{tag} at 390 a click on the square must toggle the string")
@@ -6195,8 +6046,8 @@ console.log(JSON.stringify(out));
     # altered degree inside, sounded by the walk, and said by one sentence at the neck and the readout.
     if door_id == "multetudes":
         import re as _re
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
-        page.click('#pgSrcSeg button[data-src="form"]'); page.wait_for_timeout(150); page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(300)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad")
+        page.click('#pgSrcSeg button[data-src="form"]'); page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(300)
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(300)
         sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret, role: g.dataset.role || 'chord', chromatic: g.dataset.chromatic === 'true', alters: g.dataset.alters || null, shape: g.querySelector('polygon') ? 'starburst' : 'circle', fill: g.querySelector('circle, polygon').getAttribute('fill'), label: (g.querySelector('text') || {}).textContent || null }))")
         s0 = sel()
@@ -6223,7 +6074,7 @@ console.log(JSON.stringify(out));
         sounded = sorted(set(page.evaluate("() => window.__n.slice()")))
         check(sounded == sorted(x["midi"] for x in sel()), f"{tag} the walk must sound the member with the chord: drawn {sorted(x['midi'] for x in sel())}, sounded {sounded}")
         # the tuning is the field's fact: in drop D with string 6 in the set, a member on string 6 sits two frets higher than in standard
-        if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") != "true": page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(250)
+        if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") != "true": page.click('#fieldSvg [data-fdstr="6"]')
         std6 = [x for x in sel() if x["role"] == "member" and x["str"] == 6]
         page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(300)
         drop6 = [x for x in sel() if x["role"] == "member" and x["str"] == 6]
@@ -6231,17 +6082,17 @@ console.log(JSON.stringify(out));
             check(drop6[0]["fret"] == std6[0]["fret"] + 2 and drop6[0]["midi"] == std6[0]["midi"], f"{tag} in drop D the member on string 6 must move two frets up and sound the same Bb: {std6} -> {drop6}")
         else:
             check(all(x["midi"] % 12 == 10 for x in drop6 + std6) and (drop6 or std6), f"{tag} the member stays a Bb under a retune: {std6} {drop6}")
-        page.click('#fdTuneNames button[data-tuning="standard"]'); page.wait_for_timeout(200)
-        if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") == "true": page.click('#fieldSvg [data-fdstr="6"]'); page.wait_for_timeout(250)
+        page.click('#fdTuneNames button[data-tuning="standard"]')
+        if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") == "true": page.click('#fieldSvg [data-fdstr="6"]')
         # an approach beside the member, for the eye: 0.6 hollow against full solid, the same silhouette
         # (the tones address takes a figure of approaches alone — "(-1)[3]"; a mixed "R-(-1)[3]-5-7" is refused by the grammar, found by the first gate)
-        page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(120); page.fill("#fdFigIn", "(-1)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(300)
+        page.click('#fdAddrSeg button[data-addr="tones"]'); page.fill("#fdFigIn", "(-1)[3]"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(300)
         check("approached from a half step below" in page.inner_text("#fdFigNote"), f"{tag} the approach figure must be accepted, not refused: {page.inner_text('#fdFigNote')!r}")
         ap = page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-appr polygon')].map(p => ({ fill: p.getAttribute('fill'), sw: p.getAttribute('stroke-width') }))")
         mem = page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel[data-role=\"member\"] polygon')].map(p => ({ fill: p.getAttribute('fill') }))")
         check(len(ap) >= 1 and ap[0]["fill"] == "none" and len(mem) == 1 and mem[0]["fill"] != "none", f"{tag} the approach's starburst is hollow and the member's solid: {ap} {mem}")
-        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.click('#fdAddrSeg button[data-addr="pattern"]'); page.wait_for_timeout(120)
-        page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.click('#fdAddrSeg button[data-addr="pattern"]')
+        page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcKey", "Bb")
 
     # ---------------- THE TRANSPORT OFF THE CHART LINE (night 55, 261012): the last chord is not covered ----------
     # Daniel, 261009, with a screenshot: "…remove the transport controls from this strip where it sometimes
@@ -6299,12 +6150,12 @@ console.log(JSON.stringify(out));
     # and the escape. Line + strum: the take sounds at one onset (the 260905 severance — Movement chooses
     # together), a decision stated in selection.mjs's header, Daniel's to reverse.
     if door_id == "multetudes":
-        page.select_option("#hcKey", "Bb"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
-        page.click('#pgSrcSeg button[data-src="custom"]'); page.wait_for_timeout(100); page.fill("#pgCustom", "Gm7"); page.dispatch_event("#pgCustom", "input"); page.wait_for_timeout(300)
-        page.fill("#hcTones", "R,3,7,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad")
+        page.click('#pgSrcSeg button[data-src="custom"]'); page.fill("#pgCustom", "Gm7"); page.dispatch_event("#pgCustom", "input"); page.wait_for_timeout(300)
+        page.fill("#hcTones", "R,3,7,5"); page.dispatch_event("#hcTones", "input")
         for s_ in (6, 5, 4, 3, 2):
-            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(150)
-        if page.get_attribute('#fieldSvg [data-fdstr="1"]', "aria-pressed") != "true": page.click('#fieldSvg [data-fdstr="1"]'); page.wait_for_timeout(150)
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]')
+        if page.get_attribute('#fieldSvg [data-fdstr="1"]', "aria-pressed") != "true": page.click('#fieldSvg [data-fdstr="1"]')
         page.click('#fdNSeg button[data-nps="3"]'); page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.click('#fdAddrSeg button[data-addr="tones"]'); page.wait_for_timeout(120)
         page.fill("#fdFigIn", "7-5-3-R"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(300)
         n56 = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret, label: (g.querySelector('text') || {}).textContent || null })).sort((a, b) => a.fret - b.fret)")
@@ -6325,8 +6176,8 @@ console.log(JSON.stringify(out));
         # Without a figure, strum sounds the take at ONE onset (Movement chooses together; a guitar could not, the
         # synth does) — the behaviour chosen and stated in selection.mjs's header, Daniel's to reverse.
         check(page.evaluate("() => document.querySelector('#fdMoveSeg button[data-move=\"strum\"]').disabled"), f"{tag} with the figure 7-5-3-R resolving, strum is overridden — the figure sequences (the 260913b law)")
-        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
-        page.click('#fdMoveSeg button[data-move="strum"]'); page.wait_for_timeout(200)
+        page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
+        page.click('#fdMoveSeg button[data-move="strum"]')
         snd2 = sound()
         check(len(snd2) >= 4 and sorted(set(x["m"] for x in snd2[:4])) == drawn_midis and (snd2[3]["t"] - snd2[0]["t"]) < 120, f"{tag} line + strum: the four sound together at one onset (the stated decision): {[(x['m'], round(x['t'] - snd2[0]['t'])) for x in snd2[:4]] if snd2 else snd2}")
         page.click('#fdMoveSeg button[data-move="arpeggiate"]'); page.fill("#fdFigIn", "7-5-3-R"); page.dispatch_event("#fdFigIn", "input"); page.wait_for_timeout(250)
@@ -6341,8 +6192,8 @@ console.log(JSON.stringify(out));
         page.click('#fdNSeg button[data-nps="1"]'); page.click('#fdAddrSeg button[data-addr="pattern"]'); page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
         page.click('#fdMoveSeg button[data-move="strum"]'); page.fill("#hcTones", "R,3,5,7"); page.dispatch_event("#hcTones", "input")
         for s_ in (4, 3, 2):
-            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(120)
-        page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(200)
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]')
+        page.click('#pgSrcSeg button[data-src="cycle"]')
 
     # ---------------- THE BASS AND THE REFERENCE PART COMPANY, AND THE PAD TAKES A SEAT (night 57, 261012) ----------
     # Daniel's ruling 261006: the reference tone (fretted, drawn, chord-naming — not always offerable) and the
@@ -6353,8 +6204,8 @@ console.log(JSON.stringify(out));
     # by measurement), held for the bar, never drawn. Both settings save, export, and restore into a COLD page.
     # The legend's sentence reads cfg.ref (the centre), which the split does not touch — asserted unchanged.
     if door_id == "multetudes":
-        page.select_option("#hcKey", "Bb"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
-        page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(150)
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad")
+        page.click('#pgSrcSeg button[data-src="cycle"]')
         legend_before = page.inner_text("#fdLegend")
         check("colour = function against the key" in legend_before, f"{tag} the legend's sentence before: {legend_before!r}")
         # the two controls, with the one vocabulary
@@ -6365,7 +6216,7 @@ console.log(JSON.stringify(out));
         check(page.evaluate("() => document.getElementById('fdSounded').value") == "none" and not page.is_checked("#fdPad"), f"{tag} both absent by default — absent means silent")
         # THE SIX-STRING SET: strings 5 and 6 join 4-3-2-1
         for s_ in (5, 6):
-            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+            if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]')
         pressed = page.evaluate("() => [...document.querySelectorAll('#fieldSvg [data-fdstr]')].filter(g => g.getAttribute('aria-pressed') === 'true').map(g => +g.dataset.fdstr).sort()")
         check(pressed == [1, 2, 3, 4, 5, 6], f"{tag} the six-string set: {pressed}")
         check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None and "offered unfretted" in page.inner_text("#fdHint"), f"{tag} the reference is refused a string here and offered unfretted, as night 37 left it: {page.inner_text('#fdHint')[:200]!r}")
@@ -6387,7 +6238,7 @@ console.log(JSON.stringify(out));
         check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None, f"{tag} the sounded bass is never drawn — no FRETTED reference mark appeared (the unfretted offer's gutter mark stays, as night 37 left it)")
         # the reference's own behaviour, unchanged: back on 4-3-2-1 it is fretted and drawn, and the sounded bass sounds beside it once (the same pitch is not doubled)
         for s_ in (5, 6):
-            page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(200)
+            page.click(f'#fieldSvg [data-fdstr="{s_}"]')
         check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is not None, f"{tag} on 4-3-2-1 the reference is fretted and drawn again, as before")
         b2 = bar(); sb2 = [n for n in b2["notes"] if n["r"] == "bass"]
         check(1 <= len(set(n["m"] for n in sb2)) <= 2 and len(sb2) == len(set(n["m"] for n in sb2)), f"{tag} the fretted reference and the sounded bass: distinct pitches, none doubled: {sb2}")
@@ -6399,12 +6250,12 @@ console.log(JSON.stringify(out));
         check(b3["raw"] >= b2["raw"] + 4, f"{tag} the pad is AUDIBLE — four more sources started at the AudioContext: {b3['raw']} vs {b2['raw']}")
         check(page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-sel').length") == page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)').length"), f"{tag} the pad draws nothing on the neck")
         # the pad's level at zero schedules nothing (the mute rule, one state two views)
-        page.fill("#fdPadVol", "0"); page.dispatch_event("#fdPadVol", "input"); page.wait_for_timeout(150)
+        page.fill("#fdPadVol", "0"); page.dispatch_event("#fdPadVol", "input")
         b4 = bar()
         check(b4["raw"] <= b2["raw"] + 1 and page.get_attribute("#fdPadMute", "aria-pressed") == "true", f"{tag} the pad slider at zero starts no pad source and reads muted: {b4['raw']} vs {b2['raw']}")
-        page.fill("#fdPadVol", "100"); page.dispatch_event("#fdPadVol", "input"); page.wait_for_timeout(150)
+        page.fill("#fdPadVol", "100"); page.dispatch_event("#fdPadVol", "input")
         # SAVE · EXPORT · IMPORT INTO A COLD PAGE · both restored
-        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.click('[data-cap="save"]')
         n57_file = export_newest(page)
         check('"sounded":"root"' in n57_file and '"pad":true' in n57_file, f"{tag} the exported étude carries both new settings: {n57_file[:300]!r}")
         ctx3 = pw.new_context(viewport={"width": 1280, "height": 900}); page3 = ctx3.new_page(); errs3 = []; page3.on("pageerror", lambda e: errs3.append(str(e)))
@@ -6420,7 +6271,7 @@ console.log(JSON.stringify(out));
         # the legend's sentence, after: unchanged — cfg.ref is the centre, untouched by the split
         check(page.inner_text("#fdLegend") == legend_before, f"{tag} the legend's sentence is unchanged by the split: {page.inner_text('#fdLegend')!r}")
         # restore
-        page.uncheck("#fdPad"); page.select_option("#fdSounded", "none"); page.wait_for_timeout(200)
+        page.uncheck("#fdPad"); page.select_option("#fdSounded", "none")
 
     # ---------------- THE MIXER STRIP, AND THE ROW-COUNT RE-CUT (night 58, 261012) ----------
     # Daniel's 261009 mockup, finished: the mixer left the Transport card (tetradetudes: mixer-card.mjs, three
@@ -6454,8 +6305,8 @@ console.log(JSON.stringify(out));
         check(seat["chevronInHeader"], f"{tag} the strip has a header, so the shell's chevron sits in it")
         # a level moved in the strip still moves the bus: the harmony level at zero starts no chord source
         page.evaluate("() => { if (!window.__n58) { window.__n58 = { raw: 0 }; for (const C of [AudioBufferSourceNode, OscillatorNode]) { const P = C.prototype.start; C.prototype.start = function(...a) { window.__n58.raw++; return P.apply(this, a); }; } } }")
-        page.select_option("#fdSounded", "none"); page.uncheck("#fdPad"); page.wait_for_timeout(150)
-        page.fill("#fdHarmVol", "0"); page.dispatch_event("#fdHarmVol", "input"); page.wait_for_timeout(150)
+        page.select_option("#fdSounded", "none"); page.uncheck("#fdPad")
+        page.fill("#fdHarmVol", "0"); page.dispatch_event("#fdHarmVol", "input")
         page.evaluate("() => { window.__n58.raw = 0; }"); page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(900); page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
         raw0 = page.evaluate("() => window.__n58.raw")
         page.fill("#fdHarmVol", "100"); page.dispatch_event("#fdHarmVol", "input"); page.wait_for_timeout(150)
@@ -6490,39 +6341,38 @@ console.log(JSON.stringify(out));
         obj = lambda: page.evaluate("() => document.getElementById('hcObj').value")
         tones = lambda: page.evaluate("() => ({ v: document.getElementById('hcTones').value, hidden: document.getElementById('hcTones').hidden, lab: document.getElementById('hcTonesLab').textContent })")
         chips = lambda: page.evaluate("() => [...document.querySelectorAll('#tlScroll button .tl-rn')].map(b => b.textContent.trim())")   # the ROMANS — the symbol names the pick and may change; the numeral never does
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]'); page.wait_for_timeout(200)
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]')
+        page.select_option("#hcObj", "tetrad")
         numerals_before = chips()
         check(tones()["v"] == "R,3,5,7" and "by role" in tones()["lab"], f"{tag} a chord object POPULATES Tones with roles: {tones()}")
         # editing Tones re-names the Object — the derivation, on the face, case by case
         for typed, want in (("R,3,5", "triad"), ("3,7", "dyad"), ("R,3,7", "shell"), ("R,5", "triad"), ("R,3,5,7,9", "ninth"), ("R,3,5,7", "tetrad")):
-            page.fill("#hcTones", typed); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(150)
+            page.fill("#hcTones", typed); page.dispatch_event("#hcTones", "input")
             check(obj() == want, f"{tag} Tones {typed!r} names a {want}: the Object reads {obj()!r}")
         check(chips() == numerals_before, f"{tag} the numerals never move with an Object change: {chips()} vs {numerals_before}")
         # OBJECT = SCALE: Tones speaks note names, absolute in the key; the gamut fills it; letters are a rendering
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "scale")
         t = tones()
         check(not t["hidden"] and t["v"] == "C D E F G A B" and "by note" in t["lab"], f"{tag} under a scale Tones is the key's notes, whole field: {t}")
-        page.select_option("#hcGamut", ["2,3,5,6,7"]); page.wait_for_timeout(250)
+        page.select_option("#hcGamut", ["2,3,5,6,7"])
         check(tones()["v"] == "D E G A B", f"{tag} a gamut FILLS Tones with its letters: {tones()}")
         # REWRITTEN night 64 (rule 7 — ruled 261014, §3b: ONE EDITOR PER CARD): typed LETTERS no longer set the gamut — Tones
         # is the object's editor, typed in roles in every state; under a scale it READS the field's notes. The chips are the
         # field's editor (the night-64 block confirms they reach every set the letters could).
-        page.fill("#hcTones", "C D F G A"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
+        page.fill("#hcTones", "C D F G A"); page.dispatch_event("#hcTones", "input")
         gam_now = page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
         check(gam_now == "2,3,5,6,7" and page.evaluate("() => document.getElementById('hcObj').value") == "scale", f"{tag} typed letters set NO gamut and leave no scale (one editor per card, night 64): {gam_now!r}")
         obj_note = page.evaluate("() => (document.getElementById('pgObjNote') || {}).textContent || ''")   # '' when the note is not in the build: fails by name, never crashes (rule 2)
         check("typed as roles" in obj_note, f"{tag} …and the face says why — read as notes, typed as roles: {obj_note[:200]!r}")
-        for dg in (1, 3, 4, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]'); page.wait_for_timeout(120)
-        page.wait_for_timeout(250)
+        for dg in (1, 3, 4, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]')
         gam_chips = page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
         check(gam_chips == "1,2,4,5,6", f"{tag} the same set from the chips: {gam_chips!r}")
-        page.select_option("#hcKey", "G"); page.wait_for_timeout(250)
+        page.select_option("#hcKey", "G")
         check(tones()["v"] == "G A C D E" and page.evaluate("() => document.getElementById('hcGamut').dataset.gamut") == "1,2,4,5,6", f"{tag} a key change keeps the degrees and re-renders the letters: {tones()}")
-        page.fill("#hcTones", "G A Q"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(200)
+        page.fill("#hcTones", "G A Q"); page.dispatch_event("#hcTones", "input")
         obj_note2 = page.evaluate("() => (document.getElementById('pgObjNote') || {}).textContent || ''")
         check("typed as roles" in obj_note2 and page.evaluate("() => document.getElementById('hcObj').value") == "scale", f"{tag} letters under a scale refuse by the read/write sentence: {obj_note2[:200]!r}")
-        page.select_option("#hcKey", "C"); page.select_option("#hcGamut", ["1,2,3,4,5,6,7"]); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "C"); page.select_option("#hcGamut", ["1,2,3,4,5,6,7"])
         # under the SCALE object the chips read plain degrees (VII), under a chord object chord numerals (vii°) — the
         # same degree in both, as before tonight (the before-capture shows it); what never moves is the DEGREE
         degree = lambda r: [x.replace("°", "").replace("ø", "").upper() for x in r]
@@ -6533,7 +6383,7 @@ console.log(JSON.stringify(out));
         legend = page.inner_text("#fdLegend"); dlab = page.evaluate("() => { const d = [...document.querySelectorAll('#fieldSvg [data-midi]')].find(g => +g.dataset.midi % 12 === 2); return d ? (d.querySelector('text') || {}).textContent : null; }")
         check("against the reference tone" in legend and dlab == "R", f"{tag} the centre re-roots the palette: legend {legend!r}, D reads {dlab!r}")
         check("re-rooted" in page.inner_text("#hcNote") and "D Dorian" in page.inner_text("#hcNote"), f"{tag} the card says so in its own voice: {page.inner_text('#hcNote')[:160]!r}")
-        page.select_option("#hcRef", "mode:0"); page.wait_for_timeout(200)
+        page.select_option("#hcRef", "mode:0")
         # THE 390 GRID (the precondition): the selects fit the card, the Key untouched, the size pin green at 390
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
         g390 = page.evaluate("""() => { const g = (id) => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return { w: +r.width.toFixed(1), h: +r.height.toFixed(1), right: Math.round(r.right), bottom: Math.round(r.bottom), font: parseFloat(getComputedStyle(e).fontSize) }; };
@@ -6544,8 +6394,8 @@ console.log(JSON.stringify(out));
               f"{tag} @390 the night-28 size pin holds — ratio {ratio390:.3f}, neighbours {g390['scale']['h']}, a shared bottom: {g390}")
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
         # THE MIGRATION: export carries no object; a v1 payload (object: dyad, tones R,5) restores as the tones say, and says so
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
-        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "tetrad")
+        page.click('[data-cap="save"]')
         n59_file = export_newest(page)
         check('"object"' not in n59_file and '"tones":[1,3,5,7]' in n59_file and '"v":2' in n59_file, f"{tag} the exported étude stores the tones and no object (payload v2): {n59_file[:300]!r}")
         v1_file = n59_file.replace('"v":2', '"v":1').replace('"tones":[1,3,5,7]', '"object":"dyad","tones":[1,5]')
@@ -6558,7 +6408,7 @@ console.log(JSON.stringify(out));
         check(cold["obj"] == "triad" and cold["tones"] == "R,5" and "saved as a dyad" in cold["note"] and "make a triad" in cold["note"], f"{tag} a v1 étude saved as a dyad with tones R,5 restores as what its tones make, and says so once: {cold}")
         check(not errs4, f"{tag} the cold page raised errors: {errs4[:2]}")
         ctx4.close()
-        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "Bb")
 
     # ---------------- THE GAMUT BECOMES A DROPDOWN AND THE CHIPS BECOME A READOUT (night 60, 261012f) ----------
     # Daniel's Centricity re-cut, second half. The Gamut is a SINGLE select — the same KIND as Scale and Object,
@@ -6583,7 +6433,7 @@ console.log(JSON.stringify(out));
         gamut_of = lambda: page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
         cap = lambda: page.inner_text("#hcChipCap")
         legend_bg = lambda: page.evaluate("() => [...document.querySelectorAll('#fdLegend i')].map(i => getComputedStyle(i).backgroundColor)")
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcObj", "scale")
         check("hcChips" in r["controlsPresent"] and page.query_selector("#hcChips") is not None, f"{tag} the chip row is not mounted as a control (rule 8)")
         g = gsel()
         check(g["tag"] == "SELECT" and not g["multiple"] and not g["disabled"] and g["font"] == g["scaleFont"], f"{tag} the Gamut is a SINGLE select of the same kind as Scale, live under a scale: {g}")
@@ -6592,7 +6442,7 @@ console.log(JSON.stringify(out));
               f"{tag} the whole field is the dropdown's own first option — one, selected alone with no gamut set: {g}")
         check(g["groups"] == ["pentatonics", "triad pairs", "triads", "tetrads", "degrees"], f"{tag} the derived groups, in order: {g['groups']}")
         # EQUALITY: exactly the option that equals the gamut is selected — not the nine that contain a pentatonic
-        page.select_option("#hcGamut", "2,3,5,6,7"); page.wait_for_timeout(250)
+        page.select_option("#hcGamut", "2,3,5,6,7")
         g = gsel(); check(gamut_of() == "2,3,5,6,7" and g["selected"] == ["2,3,5,6,7"], f"{tag} a single dropdown shows the ONE option that EQUALS the gamut: {g['selected']}")
         # THE CHIP ROW under a scale: seven, the key's degrees, the legend's colours, lit by opacity to the set; a picker
         c = chips(); legend = legend_bg(); hues0 = [x["bg"] for x in c]
@@ -6603,16 +6453,16 @@ console.log(JSON.stringify(out));
         check(all(x["pick"] == "true" and x["pressed"] == x["lit"] for x in c), f"{tag} under a scale the row is a picker and says which are pressed: {[(x['pick'], x['pressed']) for x in c]}")
         check("colour = function against the key" in cap() and "held" in cap(), f"{tag} the two standing marks under a scale — the origin in the legend's words, the meaning 'held': {cap()!r}")
         # a click toggles the degree; the dropdown follows by EQUALITY — a set no option names gets its own letters
-        page.click('#hcChips .hc-chip[data-deg="7"]'); page.wait_for_timeout(250)
+        page.click('#hcChips .hc-chip[data-deg="7"]')
         g = gsel(); check(gamut_of() == "2,3,5,6" and g["selected"] == ["2,3,5,6"] and g["chosen"] == ["D E G A — 2 3 5 6 of C"], f"{tag} a chip click narrows the gamut and the dropdown shows the set by its own letters: {gamut_of()!r} {g['chosen']}")
         check([x["bg"] for x in chips()] == hues0 and page.evaluate("() => document.querySelector('#hcChips .hc-chip[data-deg=\"7\"]').dataset.lit") == "false", f"{tag} a pick changes opacity, never hue: {[x['bg'] for x in chips()]}")
-        page.click('#hcChips .hc-chip[data-deg="7"]'); page.wait_for_timeout(250)
+        page.click('#hcChips .hc-chip[data-deg="7"]')
         g = gsel(); check(gamut_of() == "2,3,5,6,7" and g["chosen"] == ["G major pentatonic — 2 3 5 6 7 of C"] and all("—" not in o or "D E G A —" not in o for o in page.evaluate("() => [...document.querySelectorAll('#hcGamut option')].map(o => o.textContent)")), f"{tag} the set back to a named one: the named option, and the letters option gone: {g['chosen']}")
         # THE WAY BACK: the chips complete the seven — the whole field, the first option lit (the 261011c job, done by the dropdown's own option now)
-        page.click('#hcChips .hc-chip[data-deg="1"]'); page.click('#hcChips .hc-chip[data-deg="4"]'); page.wait_for_timeout(250)
+        page.click('#hcChips .hc-chip[data-deg="1"]'); page.click('#hcChips .hc-chip[data-deg="4"]')
         g = gsel(); check(gamut_of() == "" and g["first"]["on"] and g["selected"] == ["1,2,3,4,5,6,7"] and all(x["lit"] == "true" for x in chips()), f"{tag} completing the seven lands on the whole field and lights its option: {gamut_of()!r} {g['selected']}")
         # ONE STATE: a chord object disables the Gamut with its reason on its own label; a gamut set is DROPPED, said once
-        page.select_option("#hcGamut", "2,3,5,6,7"); page.wait_for_timeout(200)
+        page.select_option("#hcGamut", "2,3,5,6,7")
         page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(300)
         g = gsel(); lab = page.inner_text("#hcGamutLab"); note = page.inner_text("#hcNote")
         check(g["disabled"] and "narrows the scale" in lab and "already narrowed" in lab, f"{tag} under a chord the Gamut is disabled with its reason on its own label: {lab!r}")
@@ -6623,7 +6473,7 @@ console.log(JSON.stringify(out));
         # under a chord the chips are a READOUT: not a picker, the same hues; they light as the notes pass, from the walk's NOTE
         c = chips(); check(all(x["pick"] == "false" and x["pressed"] is None for x in c) and [x["bg"] for x in c] == hues0, f"{tag} under a chord the row is a readout in the same hues: {[(x['pick'], x['pressed'], x['bg']) for x in c]}")
         check("following the changes" in cap() and "colour = function against the key" in cap() and "held" not in cap(), f"{tag} the meaning mark under a chord: {cap()!r}")
-        page.click('#hcChips .hc-chip[data-deg="2"]'); page.wait_for_timeout(150)
+        page.click('#hcChips .hc-chip[data-deg="2"]')
         check(gamut_of() == "" and page.evaluate("() => document.getElementById('hcObj').value") == "tetrad", f"{tag} a click under a chord changes nothing")
         page.evaluate("() => { window.__n60 = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass' && e.detail.role !== 'pad') window.__n60.push(e.detail.midi); }); }")
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); page.wait_for_timeout(300)
@@ -6652,10 +6502,10 @@ console.log(JSON.stringify(out));
         c = chips()
         check("against the reference tone" in legend_txt and d_neck == "R", f"{tag} the neck re-roots on the centre: {legend_txt!r} D reads {d_neck!r}")
         check(c[1]["name"] == "D" and c[1]["bg"] == legend_bg()[1] and [x["bg"] for x in c] == hues0 and "against the key" in cap(), f"{tag} the row stays keyed to the key — D is still the 2's colour, and the row says its origin: {c[1]} {cap()!r}")
-        page.select_option("#hcRef", "mode:0"); page.wait_for_timeout(200)
+        page.select_option("#hcRef", "mode:0")
         # THE MIGRATION (ruled 261013b): a saved gamut with a chord object drops the gamut, keeps the tones, says so once
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(150)
-        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "tetrad")
+        page.click('[data-cap="save"]')
         n60_file = export_newest(page)
         n60_json = n60_file[n60_file.find('"app"'):][:300]
         check('"gamut":null' in n60_file and '"tones":[1,3,5,7]' in n60_file, f"{tag} the export under a chord carries no gamut (the stored absence, null): {n60_json!r}")
@@ -6709,8 +6559,8 @@ console.log(JSON.stringify(out));
         built = html_path.read_text()
         check("the gamut leaves nothing in this window" in built and "is not semitone-free" in built and "is outside the gamut" in built,
               f"{tag} the gamut's sentences stand in the artifact — none retired tonight (the chord-branch one is composed unpainted on a restore; see the block's note)")
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
-        page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad")
+        page.click('[data-cap="save"]')
         n61_file = export_newest(page)
         check('"gamut":null' in n61_file and '"tones":[1,3,5,7]' in n61_file, f"{tag} the export under a chord (the fixture's base)")
         n61_mixed = n61_file.replace('"gamut":null', '"gamut":[2,3,5,6,7]').replace('"id":"', '"id":"n61mixed-', 1)
@@ -6737,11 +6587,11 @@ console.log(JSON.stringify(out));
         check(not errs8, f"{tag} the cold page raised errors: {errs8[:2]}")
         ctx8.close()
         fdsel61 = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi).sort((a, b) => a - b)")
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "scale"); page.wait_for_timeout(200)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "scale")
         for s_ in (4, 3, 2):
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") == "true":
-                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(150)
-        page.click("#fieldSvg"); page.wait_for_timeout(100)
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]')
+        page.click("#fieldSvg")
         # step the window to the string's last stop — the box stays put at the end (engine/position.mjs step)
         last = None
         for _ in range(40):
@@ -6754,17 +6604,17 @@ console.log(JSON.stringify(out));
         held = {c_major.index(m % 12) + 1 for m in last if m % 12 in c_major}
         lacking = [dg for dg in (1, 2, 3, 4, 5, 6, 7) if dg not in held]
         check(len(lacking) >= 1, f"{tag} …and lacks at least one degree: held {sorted(held)}")
-        page.select_option("#hcGamut", str(lacking[0])); page.wait_for_timeout(250)
+        page.select_option("#hcGamut", str(lacking[0]))
         hint61 = page.inner_text("#fdHint"); ro61 = page.inner_text("#roLine")
         check(fdsel61() == [] and "the gamut leaves nothing in this window" in hint61, f"{tag} a gamut of the degree the end-window lacks EMPTIES it, and the neck says so: {fdsel61()} {hint61!r}")
         check("the gamut leaves nothing in this window" in ro61, f"{tag} …and the readout says the same (rule 10): {ro61[:200]!r}")
-        page.select_option("#hcGamut", "1,2,3,4,5,6,7"); page.wait_for_timeout(150)
+        page.select_option("#hcGamut", "1,2,3,4,5,6,7")
         for _ in range(40):
             page.keyboard.press("ArrowLeft"); page.wait_for_timeout(40)
         for s_ in (4, 3, 2):
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true":
-                page.click(f'#fieldSvg [data-fdstr="{s_}"]'); page.wait_for_timeout(150)
-        page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200)
+                page.click(f'#fieldSvg [data-fdstr="{s_}"]')
+        page.select_option("#hcKey", "Bb"); page.select_option("#hcObj", "tetrad")
 
     # ---------------- THE TRANSPORT COMES UP, AND TAKES A SEAT AT THE MIXER (night 62, 261014b) ----------
     # Daniel: the transport is "buried down there under … very hard to find". Item 1: #fdMini — the neck's own mini,
@@ -6824,7 +6674,7 @@ console.log(JSON.stringify(out));
         # STEP is event-shaped, not replayed (bus.mjs) — the position is read from the canonical STEP the owner announces
         page.evaluate("() => { window.__idx62 = null; document.addEventListener('atetudes:step', e => { if (e.detail && e.detail.request !== true && typeof e.detail.index === 'number') window.__idx62 = e.detail.index; }); }")
         idx = lambda: page.evaluate("() => window.__idx62")
-        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(200)
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))")
         page.click('#mxMini button[data-role="next"]'); page.wait_for_timeout(250)
         check(idx() == 1, f"{tag} next at the mixer's view moves the one position: {idx()}")
         page.click('#fdMini button[data-role="prev"]'); page.wait_for_timeout(250)
@@ -6832,7 +6682,7 @@ console.log(JSON.stringify(out));
         # collapsed, the mixer's mini hides with the rest of the strip (the readhead minis' rule, the strip's own)
         page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()"); page.wait_for_timeout(120)
         check(page.evaluate("() => getComputedStyle(document.getElementById('mxMini')).display") == "none", f"{tag} the collapsed mixer hides its mini")
-        page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()"); page.wait_for_timeout(120)
+        page.evaluate("() => document.getElementById('mxMini').closest('.board').querySelector('.clpsBtn').click()")
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
         mx390 = page.evaluate("""() => { const m = document.getElementById('mxMini'); const R = (e) => e.getBoundingClientRect(); const head = m.closest('.bh'); const board = head.closest('.board'); const t = head.querySelector('span');
           return { oneRow: Math.abs(R(m).top - R(t).top) < 12, inside: R(m).right <= R(board).right, rows: board.querySelectorAll('.mx-row').length, overRow: [...board.querySelectorAll('.mx-row')].some(r => R(m).bottom > R(r).top + 1) }; }""")
@@ -6914,27 +6764,26 @@ console.log(JSON.stringify(out));
         obj64 = lambda: page.evaluate("() => document.getElementById('hcObj').value")
         tones64 = lambda: page.evaluate("() => { const n = document.getElementById('pgObjNote'); return { v: document.getElementById('hcTones').value, lab: document.getElementById('hcTonesLab').textContent, note: n ? n.textContent : '', red: n ? getComputedStyle(n).color : '' }; }")
         gam64 = lambda: page.evaluate("() => document.getElementById('hcGamut').dataset.gamut")
-        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
-        page.select_option("#hcGamut", "2,3,5,6,7"); page.wait_for_timeout(250)
+        page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcObj", "scale")
+        page.select_option("#hcGamut", "2,3,5,6,7")
         t = tones64()
         check(t["v"] == "D E G A B" and "by note" in t["lab"] and "typed" in t["lab"].lower() and "role" in t["lab"].lower(), f"{tag} under a scale Tones READS the gamut's notes and its label says it is typed in roles: {t}")
         check("read as notes" in t["note"] and "typed as roles" in t["note"] and "the tones make" in t["note"], f"{tag} the face says read and write differ, in night 59's vocabulary: {t['note']!r}")
         page.fill("#hcTones", "R,3,5"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(300)
         check(obj64() == "triad" and tones64()["v"] == "R,3,5" and gam64() == "", f"{tag} typing roles under a scale derives the object and LEAVES scale (the gamut dropped as a chord's, said in Centricity): obj {obj64()!r} tones {tones64()['v']!r} gamut {gam64()!r}")
         check("dropped" in page.inner_text("#hcNote") and "D E G A B" in page.inner_text("#hcNote"), f"{tag} …Centricity says the gamut it let go: {page.inner_text('#hcNote')[:200]!r}")
-        page.select_option("#hcObj", "scale"); page.wait_for_timeout(250)
-        page.fill("#hcTones", "D E G"); page.dispatch_event("#hcTones", "input"); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "scale")
+        page.fill("#hcTones", "D E G"); page.dispatch_event("#hcTones", "input")
         t2 = tones64()
         check(obj64() == "scale" and gam64() == "" and "typed as roles" in t2["note"] and t2["red"] == "rgb(184, 41, 41)", f"{tag} typing NOTE NAMES under a scale sets no gamut — refused, red, by the read/write sentence: {t2}")
         # THE CONFIRMATION (the pause condition): the letters could name any subset of the seven; the chips reach the same
         # space — an arbitrary set no named option holds, one degree at a time, from the whole field and back
-        page.select_option("#hcGamut", "1,2,3,4,5,6,7"); page.wait_for_timeout(150)
-        for dg in (2, 3, 5, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]'); page.wait_for_timeout(120)
-        page.wait_for_timeout(200)
+        page.select_option("#hcGamut", "1,2,3,4,5,6,7")
+        for dg in (2, 3, 5, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]')
         chosen64 = page.evaluate("() => (document.querySelector('#hcGamut option:checked') || {}).textContent")
         check(gam64() == "1,4,6" and chosen64 == "C F A — 1 4 6 of C" and tones64()["v"] == "C F A", f"{tag} the chips reach a set no named option holds — the parser's space is the subsets of seven and so is the chips': gamut {gam64()!r} option {chosen64!r} tones {tones64()['v']!r}")
-        for dg in (2, 3, 5, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]'); page.wait_for_timeout(120)
-        page.wait_for_timeout(200); check(gam64() == "", f"{tag} …and back to the whole field one degree at a time: {gam64()!r}")
+        for dg in (2, 3, 5, 7): page.click(f'#hcChips .hc-chip[data-deg="{dg}"]')
+        check(gam64() == "", f"{tag} …and back to the whole field one degree at a time: {gam64()!r}")
         # PROGRESSION STAYS LIVE AT OBJECT = SCALE: the chart line has bars, the readout names the bar's chord, the two centre études work
         live64 = page.evaluate("() => ({ chips: document.querySelectorAll('#tlScroll button').length, ro: document.getElementById('fdMode').textContent, srcOn: [...document.querySelectorAll('#pgSrcSeg button')].some(b => b.classList.contains('on')), cycleDisabled: document.getElementById('pgCycle').disabled, startDisabled: document.getElementById('pgStart').disabled, centreVisible: !document.getElementById('hcCentreSrc').hidden })")
         check(live64["chips"] >= 2 and live64["ro"].strip() and live64["srcOn"] and not live64["cycleDisabled"] and not live64["startDisabled"] and live64["centreVisible"], f"{tag} at Object = scale the Progression is fully live and the centre picker is on the face: {live64}")
@@ -6947,9 +6796,9 @@ console.log(JSON.stringify(out));
         page.click('#hcCentreSrc button[data-src="fixed"]'); page.select_option("#hcRef", "mode:1"); page.wait_for_timeout(300)
         ped = page.evaluate("() => ({ note: document.getElementById('hcNote').textContent, dlab: (() => { const d = [...document.querySelectorAll('#fieldSvg [data-midi]')].find(g => +g.dataset.midi % 12 === 2); return d ? (d.querySelector('text') || {}).textContent : null; })(), bar: document.getElementById('fdMode').textContent })")
         check("re-rooted" in ped["note"] and ped["dlab"] == "R" and ped["bar"].strip(), f"{tag} a pedal: D reads R on a fixed field while the bar's chord still passes underneath: {ped}")
-        page.select_option("#hcRef", "mode:0"); page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(200)
+        page.select_option("#hcRef", "mode:0"); page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))")
         # ONLY TONES IS STORED — the snapshot, re-asserted where the seat moved
-        page.select_option("#hcObj", "tetrad"); page.wait_for_timeout(200); page.click('[data-cap="save"]'); page.wait_for_timeout(250)
+        page.select_option("#hcObj", "tetrad"); page.click('[data-cap="save"]')
         n64_file = export_newest(page)
         n64_json = n64_file[n64_file.find('"app"'):][:200]
         check('"object"' not in n64_file and '"tones":[1,3,5,7]' in n64_file, f"{tag} the move re-promoted nothing: the export stores the tones and no object: {n64_json!r}")
@@ -6980,9 +6829,9 @@ console.log(JSON.stringify(out));
     if door_id == "multetudes":
         lefts = {}
         for k in ("C", "F#"):
-            page.select_option("#hcKey", k); page.wait_for_timeout(250); lefts[k] = page.evaluate("() => Math.round(document.getElementById('fdMini').getBoundingClientRect().left)")
+            page.select_option("#hcKey", k); lefts[k] = page.evaluate("() => Math.round(document.getElementById('fdMini').getBoundingClientRect().left)")
         check(lefts["C"] == lefts["F#"], f"{tag} the neck's transport does not slide with the readout's text — the same left edge in C and in F#: {lefts}")
-        page.select_option("#hcKey", "Bb"); page.wait_for_timeout(150)
+        page.select_option("#hcKey", "Bb")
     if here64:
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
         r390 = right()
@@ -7027,7 +6876,7 @@ console.log(JSON.stringify(out));
         shut65 = """() => { const n = document.getElementById('fdRailName'), R = n.getBoundingClientRect(), rl = document.getElementById('fdRail').getBoundingClientRect();
           return { shown: getComputedStyle(n).display !== 'none' && R.width > 0 && R.height > 0, wm: getComputedStyle(n).writingMode, text: n.textContent.trim(),
             inside: R.left >= rl.left - 0.5 && R.right <= rl.right + 0.5 && R.top >= rl.top - 0.5 && R.bottom <= rl.bottom + 0.5, railW: Math.round(rl.width) }; }"""
-        p65.click("#fdRailBtn"); p65.wait_for_timeout(150)
+        p65.click("#fdRailBtn")
         s1280 = p65.evaluate(shut65)
         check(s1280["shown"] and s1280["text"] == "Motif" and s1280["inside"] and s1280["wm"].startswith("vertical") and s1280["railW"] <= 32,
               f"{tag} night 66: a shut rail at 1280 keeps Motif legible — down its 30 px column, inside it, the neck's width untaken: {s1280}")
@@ -7053,7 +6902,7 @@ console.log(JSON.stringify(out));
         d66 = lambda: p66.inner_text("#psDesc")
         check("the whole field" in d66() and "no bass sounds; no pad" in d66(),
               f"{tag} night 66: absence reads as absence — the whole field, no bass sounding, no pad: {d66()!r}")
-        p66.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { zzNight66: 7 } }))"); p66.wait_for_timeout(150)
+        p66.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { zzNight66: 7 } }))")
         p66.fill("#bpmRange", "131"); p66.dispatch_event("#bpmRange", "input"); p66.dispatch_event("#bpmRange", "change")
         p66.select_option("#hcKey", "D"); p66.wait_for_timeout(300)
         p66.fill("#journalIn", "night 66"); p66.click("#saveEntry"); p66.wait_for_timeout(300)
@@ -7196,14 +7045,14 @@ console.log(JSON.stringify(out));
         check(held69 and all(r["bs"] == "solid" and r["bw"] == "2px" and "inset" in r["band"] and r["root"] == "false" for r in held69)
               and all(r["bs"] == "none" for r in ring69 if r["lit"] != "true") and all(r["clip"] == "padding-box" for r in ring69),
               f"{tag} night 70: under a scale a held chip wears the 2 px solid mark and the white band, no chip is the root, and every fill is clipped to its padding box: {ring69}")
-        p69.select_option("#hcObj", "tetrad"); p69.wait_for_timeout(250)
+        p69.select_option("#hcObj", "tetrad")
         # THE ROOT, on the ink 5 (F7 in Bb — the case that defeated night 69's ring), sourced from the readout's derivation
         row70 = "() => [...document.querySelectorAll('#hcChips .hc-chip')].map(b => { const c = b.getBoundingClientRect(); return [Math.round(c.left*10)/10, Math.round(c.width*10)/10, Math.round(c.height*10)/10]; })"
         for w70 in (1280, 390):
             p69.set_viewport_size({"width": w70, "height": 900}); p69.wait_for_timeout(250)
             p69.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); p69.wait_for_timeout(250)
             before70 = p69.evaluate(row70)
-            p69.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))"); p69.wait_for_timeout(250)
+            p69.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))")
             for m70 in (65, 69, 72, 63):
                 p69.evaluate("(m) => document.dispatchEvent(new CustomEvent('atetudes:note', { detail: { midi: m, role: 'chord' } }))", m70)
             p69.wait_for_timeout(200)
@@ -7230,7 +7079,7 @@ console.log(JSON.stringify(out));
         for w70b in (390, 1280):
             p70.set_viewport_size({"width": w70b, "height": 900}); p70.goto(html_path.as_uri()); p70.wait_for_selector("#cards", state="attached"); p70.wait_for_timeout(400)
             untouched = p70.evaluate(row70b)
-            p70.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))"); p70.wait_for_timeout(250)
+            p70.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))")
             for m in (65, 69, 72, 63):
                 p70.evaluate("(m) => document.dispatchEvent(new CustomEvent('atetudes:note', { detail: { midi: m, role: 'chord' } }))", m)
             p70.wait_for_timeout(200)
@@ -7251,7 +7100,7 @@ console.log(JSON.stringify(out));
         def hold71(idx, obj="tetrad"):
             p71.goto(html_path.as_uri()); p71.wait_for_selector("#cards", state="attached"); p71.wait_for_timeout(300)
             if obj != "tetrad": p71.select_option("#hcObj", obj); p71.wait_for_timeout(250)
-            p71.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", idx); p71.wait_for_timeout(250)
+            p71.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", idx)
             for m in (58, 60, 62, 63, 65, 67, 69):   # every note of the key: every chord tone is lit
                 p71.evaluate("(m) => document.dispatchEvent(new CustomEvent('atetudes:note', { detail: { midi: m, role: 'chord' } }))", m)
             p71.wait_for_timeout(250); return p71.evaluate(st71)
@@ -7310,7 +7159,7 @@ console.log(JSON.stringify(out));
         p72.set_viewport_size({"width": 1280, "height": 900})
         # playing through the wrap, and a custom repeat played through — each bar judged by the OWNER's index (its last sample)
         for label, prep in (("the wrap 8 -> 1 while playing", lambda: at72(6)),
-                            ("a custom | Cmaj7 | Cmaj7 | Fmaj7 | in C, played through", lambda: (p72.select_option("#hcKey", "C"), p72.wait_for_timeout(250),
+                            ("a custom | Cmaj7 | Cmaj7 | Fmaj7 | in C, played through", lambda: (p72.select_option("#hcKey", "C"), None,
                               p72.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { source: 'custom', custom: 'Cmaj7 Cmaj7 Fmaj7' } }))"), p72.wait_for_timeout(300), at72(0)))):
             open72(); prep()
             p72.evaluate("() => { window.__bar72 = null; document.addEventListener('atetudes:step', e => { if (e.detail && e.detail.request !== true && typeof e.detail.index === 'number') window.__bar72 = e.detail.index; }); }")

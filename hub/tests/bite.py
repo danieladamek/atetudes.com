@@ -110,6 +110,37 @@ def build():
     return r
 
 
+
+# ---------------- THE CHAIN RECORD (night 75) ----------------
+# When the last FULL chain ran, on which commit, and its verdict per mutation — written by every full run, read by --new
+# and by tools/chain_due.py. Tracked in git, so the schedule is a fact of the repository, not of anyone's memory.
+CHAIN_RECORD = REPO / "hub" / "tests" / "chain-record.json"
+
+
+def load_chain_record():
+    try:
+        return json.loads(CHAIN_RECORD.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def write_chain_record(verdicts, green):
+    head = sh("git", "rev-parse", "HEAD").stdout.strip()
+    dirty = bool(sh("git", "status", "--porcelain").stdout.strip())
+    CHAIN_RECORD.write_text(json.dumps({
+        "ran_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "commit": head, "tree_dirty_at_run": dirty, "suite_green_after": green,
+        "total": len(verdicts), "bites": sum(v == "BITES" for v in verdicts.values()),
+        "verdicts": dict(sorted(verdicts.items())),
+        "trigger_hashes": _chain_due().snapshot(),
+    }, indent=1, ensure_ascii=False) + "\n")
+
+
+def _chain_due():
+    sys.path.insert(0, str(REPO / "tools"))
+    import chain_due
+    return chain_due
+
 class BuildBroken(Exception):
     """a broken build, carrying its WHOLE error output as .full (night 71, ruling 261029b). The message stays one line
     for the log; a mutation that must read WHY the build broke reads .full. Until night 71 the harness kept only the
@@ -788,7 +819,7 @@ def m24_the_boot_refuses_its_second_bar():
         p.write_text(mutated)
         build()
         r = suite()
-        hit = "must place its grip whole" in r.stdout   # night 72: the refusal case now runs under an explicit Grip
+        hit = "must place its " in r.stdout and "grip whole" in r.stdout   # night 72: the refusal case runs under an explicit Grip; both words literal in the gate
         record("the boot refuses its second bar",
                r.returncode != 0 and hit,
                "suite exit %d; the boot-placement pin bit: %s" % (r.returncode, hit))
@@ -2865,6 +2896,27 @@ def m138_the_tempo_paint_is_removed():
         p.write_text(original)
 
 
+def m139_the_schedule_forgets_the_interval():
+    # night 75: the scheduler stops counting the record's age — a stale full chain would never be owed again. Its own
+    # selftest (a record older than the interval → DUE) must bite. The gate here is the scheduler's, not the door gate.
+    p, original, mutated = patch("tools/chain_due.py",
+        "    if age > datetime.timedelta(days=INTERVAL_DAYS):",
+        "    if False and age > datetime.timedelta(days=INTERVAL_DAYS):   # (the interval forgotten)")
+    try:
+        p.write_text(mutated)
+        r = sh("python3", "tools/chain_due.py", "selftest")
+        # the target lives in the SCHEDULER's own selftest (tools/chain_due.py), not in the door gate — so it is read from
+        # the scheduler's output, and its presence in the scheduler's source is asserted here instead of by the preflight
+        sched_out = r.stdout
+        target = "a record older than the interval"
+        assert target in (REPO / "tools" / "chain_due.py").read_text(), "m139's target rotted in tools/chain_due.py"
+        hit = r.returncode != 0 and ("FAIL  " + target) in sched_out
+        record("the schedule forgets the interval — a stale full chain is never owed",
+               hit, "the scheduler's selftest exit %d; the interval pin bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
     p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
@@ -2964,6 +3016,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--log", default=None,
         help="line-buffered log path (default hub/tests/out/bite-<stamp>.log)")
+    ap.add_argument("--new", action="store_true",
+        help="run ONLY the mutations the last full chain's record has never seen (the night's new ones); the full chain is "
+             "weekly and before any night tools/chain_due.py says is in scope (night 75, PO rulings 261033/261034)")
     args = ap.parse_args()
     stamp = datetime.datetime.now().strftime("%m%d-%H%M")
     logp = open_log(args.log or (HUB / "tests" / "out" / f"bite-{stamp}.log"))
@@ -3042,7 +3097,17 @@ def main():
                m131_the_row_speaks_under_a_scale, m132_spellrole_loses_the_degree,
                m133_the_numeral_does_not_parse, m134_the_row_clears_again_at_the_wrap,
                m135_the_neck_opens_on_grip_again, m136_the_neck_opens_strummed_again,
-               m137_the_tempo_constant_moves, m138_the_tempo_paint_is_removed)
+               m137_the_tempo_constant_moves, m138_the_tempo_paint_is_removed,
+               m139_the_schedule_forgets_the_interval)
+    # THE SCHEDULE (night 75): a full chain runs every mutation and writes the record; --new runs only the mutations the
+    # record has never seen. Nothing is excluded on a claim about what it depends on (ruling 261033 §2) — every mutation
+    # still runs, the only question is WHEN; tools/chain_due.py says when a full chain is owed.
+    record_before = load_chain_record()
+    if args.new:
+        seen = set((record_before or {}).get("verdicts", {}))
+        fns = tuple(f for f in fns if f.__name__ not in seen)
+        log_line(f"--new: {len(fns)} mutation(s) the last full chain never ran: {[f.__name__ for f in fns]}"
+                 + ("" if record_before else " (NO RECORD — every mutation is new)"))
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors
@@ -3052,8 +3117,10 @@ def main():
     reach_census()
     build()   # the chain starts from a build of THIS tree, whatever a killed step left in hub/build (night 50)
     log_line(f"reach census: {len(REACH['doors'])} doors, {len(REACH['of'])} reached files\n")
+    verdicts = {}
     for fn in fns:
         LIVE["mutation"] = fn.__name__; LIVE["touched"] = set()
+        n_before = len(results)
         try:
             fn()
         except BuildBroken as e:
@@ -3062,6 +3129,7 @@ def main():
         except AssertionError as e:
             record(fn.__name__, False, "the mutation anchor rotted — the harness "
                    "must be updated with the code it mutates: " + str(e))
+        verdicts[fn.__name__] = "BITES" if all(ok for ok, _, _ in results[n_before:]) and len(results) > n_before else "NO BITE"
     LIVE["mutation"] = None; LIVE["touched"] = set()
     build()
     r = suite(every=True)
@@ -3072,6 +3140,9 @@ def main():
     log_line(f"log: {LOG['path']}")
     for n in bad:
         print("  DID NOT BITE: " + n)
+    if not args.new:
+        write_chain_record(verdicts, green)
+        log_line(f"chain record written: {CHAIN_RECORD.relative_to(REPO)} — {len(verdicts)} verdicts, the full chain's clock restarts")
     return 0 if green and not bad else 1
 
 

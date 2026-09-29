@@ -1,3 +1,19 @@
+## 2026-09-29 — Night 75: the full chain becomes a schedule, not a nightly cost; the gate's dead waits deleted (harness only — no study moved)
+
+- **Why (Daniel, 261032; PO rulings 261033, 261034):** a one-line change cost a 9–13 h chain. The full chain now runs
+  weekly and before any night that touches a trigger path; a normal night runs every gate in full plus its own NEW
+  mutations (`bite.py --new`). No mutation is excluded — only its timing changes.
+- **Self-enforcing:** `hub/tests/chain-record.json` (written by every full chain) · `tools/chain_due.py` (DUE or NOT DUE,
+  loud, by content) · `tools/preflight.py close` refuses a close while a full chain is due · m139 pins the scheduler.
+  The interval (7 days) and the trigger list are PROPOSED for Daniel's ruling.
+- **The dead waits:** 518 reaction sleeps that waited for nothing deleted; 402 kept (time waits, delayed renders, and
+  the 32 after a resize or navigation — found when deleting one broke tetradetudes' header pin at 390). Multetudes' gate
+  434 → 290 s; every door's assertion count identical.
+- **Proof:** full chain 140/140, suite green (`hub/tests/out/bite-0928-1724.log`); against night 72's log 136 identical,
+  m14/m24 NO BITE → BITES (re-aimed after night 72), m138/m139 new. Engine 707/707 · hub 14/14.
+- **Not deployed:** committed to `multetudes/night-75` only; no study's bytes changed.
+- Report: `notes/working/Multetudes build run 261034 — night 75, the schedule, not the speed.md`.
+
 ## 2026-09-28 — DEPLOYED: night 72 live — the chip row across the wrap; Line + arpeggiate; tempo 120; Multetudes v0.6.24, Tetradetudes v0.6.11; two studies moved; written from the run
 
 - record: run 36444275699 · success · commit 268594a · fetched 2026-09-28T15:44Z · 6/6 studies byte-identical · digest 41966062f8dc
