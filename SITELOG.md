@@ -1,3 +1,14 @@
+## 2026-09-30 — DEPLOYED: night 77 live — the tempo is typeable in every seat; Multetudes v0.6.25, Tetradetudes v0.6.12; five studies moved, tetrad-voice-leading unchanged (frozen); written from the run
+
+- record: run 36656704162 · success · commit 98f9b91 · fetched 2026-09-30T01:55Z · 6/6 studies byte-identical · digest 8542c8b83a43
+- Actions run 36656704162 green on `98f9b91` — https://github.com/danieladamek/atetudes.com/actions/runs/36656704162 (created 2026-09-30T01:46:21Z, finished 2026-09-30T01:55:38Z).
+- metronome: repo 1a53fca4355b · live 1a53fca4355b — matches.
+- modes-from-pentatonic-boxes: repo 61f762da9d8d · live 61f762da9d8d — matches.
+- multetudes: repo f92d7955273a · live f92d7955273a — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 738b2a097804 · live 738b2a097804 — matches.
+- triadetudes: repo 67043cba6363 · live 67043cba6363 — matches.
+
 ## 2026-09-29 — Night 77: the tempo is typeable in every seat; the drift pins let the frozen study go; Multetudes v0.6.25, Tetradetudes v0.6.12; five studies moved
 
 - **Why (Daniel, 261035; PO rulings 261036, 261037):** "I'd like the tempo field in the metronome to be editable not just
