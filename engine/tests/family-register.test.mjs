@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { FAMILY, appsOf, SURFACE_NAMES, KINDS, FLOOR_SCOPE } from "./_family.mjs";
+import { FAMILY, appsOf, SURFACE_NAMES, KINDS, FLOOR_SCOPE, isMaintained } from "./_family.mjs";
 import { CENSUS } from "./_carriers.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -92,4 +92,21 @@ test("§4.3 family: every registered id handle exists in the published bytes", (
           `the register is wrong or the control was renamed without updating it`);
       }
   }
+});
+
+test("§4.4 family: a frozen study's cost is RECORDED in the register, in words (ruling 261036 §6)", () => {
+  // Daniel, 2026-09-29, option (a): the freeze's visible consequences are accepted AND recorded — an exemption from
+  // the family's look that lives nowhere in words is §4.4's silent divergence. Every frozen entry names what it
+  // stopped receiving, and says the other two options stay open.
+  let frozen = 0;
+  for (const [slug, entry] of FAMILY) {
+    assert.equal(isMaintained(slug), entry.kind !== "frozen", `[${slug}] isMaintained must answer from the register's kind`);
+    if (entry.kind !== "frozen") continue;
+    frozen++;
+    assert.ok(Array.isArray(entry.diverges) && entry.diverges.length > 0,
+      `[${slug}] is frozen but records no divergence — what the freeze costs must be said in words`);
+    for (const d of entry.diverges)
+      assert.match(d, /^\d{6}: .*\(b\).*\(c\)/s, `[${slug}] a divergence names its ruling and the two options still open`);
+  }
+  assert.ok(frozen >= 1, "not vacuous: the register has a frozen study");
 });

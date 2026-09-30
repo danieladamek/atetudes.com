@@ -27,17 +27,17 @@
  */
 import { CONFIG_CHANGED, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "./bus.mjs";
 import { SPLITS } from "../engine/drill.mjs";
+import { bpmField } from "./bpm-field.mjs";
 
 const TITLE = {
   split: "the bar split — a bar's chords take these slots in order",
-  bpm: "the tempo — one state, two views; the Metronome card owns the clock",
   click: "the click — one state, two views; the Metronome card's Sound is the other",
 };
 
 export function clockMarkup({ ids = null, rows = 1 } = {}) {
   const ctl = (k) => (ids && ids[k] ? ` id="${ids[k]}" data-control="${ids[k]}"` : "");
   const split = `<span class="clk-lab">bar split</span><select data-role="split"${ctl("split")}  title="${TITLE.split}"></select>`;
-  const bpm = `<span class="clk-lab">bpm</span><input type="number" class="clk-bpm" data-role="bpm"${ctl("bpm")} min="15" max="300" step="1"  title="${TITLE.bpm}">`;
+  const bpm = `<span class="clk-lab">bpm</span>${bpmField({ id: ids && ids.bpm ? ids.bpm : null })}`;
   const click = `<label class="chk" title="${TITLE.click}"><input type="checkbox" data-role="click"${ctl("click")}> metronome</label>`;
   const pulse = `<span class="clk-pulse" data-role="pulse"${ids && ids.pulse ? ` id="${ids.pulse}"` : ""}></span>`;
   return rows === 2

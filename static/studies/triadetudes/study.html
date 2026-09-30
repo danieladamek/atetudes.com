@@ -278,6 +278,9 @@
 #beatLamp span{width:9px;height:9px;border-radius:50%;background:#44444C;display:block}
 #beatLamp span.on{background:#ECECEE}
 #beatLamp span.acc{background:var(--red)}
+  /* ===== hub/bpm-field.mjs · the one bpm field's look, VERBATIM (night 77) ===== */
+.clk-bpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -299,8 +302,8 @@
   </div>
   <div class="bpmrow">
     <span class="metrolabel">BPM</span>
-    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
-    <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="120">
+    <input type="number" class="clk-bpm" data-role="bpm" id="bpmVal" data-control="bpmVal" min="15" max="300" step="1" value="120"  title="the tempo — one state, every view; the Metronome card owns the clock">
   </div>
   <div class="row2">
     <div><label>Time</label>
@@ -341,7 +344,7 @@
     <div class="bpmrow">
       <span style="font-size:12px;color:var(--gray)">BPM</span>
       <input type="range" id="bpmRange2">
-      <span id="bpmVal2" style="font-size:13px;width:30px;text-align:right">72</span>
+      <input type="number" class="clk-bpm" data-role="bpm" id="bpmVal2" data-control="bpmVal2" min="15" max="300" step="1" value="120"  title="the tempo — one state, every view; the Metronome card owns the clock">
     </div>
     <div class="row2 alignEnd">
       <div><label>Time sig</label>
@@ -6390,12 +6393,12 @@ function syncMeterUI(){
   const a=document.getElementById("meterSel"); if(a)a.value=String(st.meter);
   const b=document.getElementById("meterSel2"); if(b)b.value=String(st.meter);
 }
-/* st.bpm: one state, two sliders (Metronome card + Transport mirror) */
+/* st.bpm: one state, four faces — two sliders and two fields (Metronome card + Transport mirror) */
 function changeBpm(b){ st.bpm=b; METRO.setBpm(b); syncBpmUI(); renderCfg(); }
 function syncBpmUI(){
   for(const [r,v] of [["bpmRange","bpmVal"],["bpmRange2","bpmVal2"]]){
     const R=document.getElementById(r); if(R)R.value=st.bpm;
-    const V=document.getElementById(v); if(V)V.textContent=st.bpm;
+    const V=document.getElementById(v); if(V)V.value=st.bpm;   // the one bpm field (night 77) paints the tempo
   }
 }
 function playing(){return etude.on;}
@@ -8012,6 +8015,12 @@ function initControls(){
   bpmR2.min=bpmR.min; bpmR2.max=bpmR.max; bpmR2.value=bpmR.value;
   bpmR.addEventListener("input",()=>changeBpm(+bpmR.value));
   bpmR2.addEventListener("input",()=>changeBpm(+bpmR2.value));
+  /* THE TEMPO IS TYPEABLE (night 77, ruling 261036 §5): #bpmVal and #bpmVal2 are hub/bpm-field.mjs's one bpm field, two
+     seats. Each asks; st.bpm is the owner and clamps to the slider's own bounds; syncBpmUI paints all four faces from
+     it, so no two can disagree. An emptied box asks nothing and gets the tempo painted back. */
+  for(const id of ["bpmVal","bpmVal2"]) document.getElementById(id).addEventListener("change",e=>{
+    const v=e.target.value===""?NaN:+e.target.value;
+    if(Number.isFinite(v)) changeBpm(Math.max(+bpmR.min,Math.min(+bpmR.max,v))); else syncBpmUI();});
   syncBpmUI();
   // the Transport's Time sig is a MIRROR of the Metronome card's — its options
   // are cloned from the shared block so one list can never drift from the other

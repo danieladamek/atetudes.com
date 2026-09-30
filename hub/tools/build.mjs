@@ -16,6 +16,7 @@ import { join, relative, dirname, resolve as resolvePath } from "node:path";
 import { pathToFileURL } from "node:url";
 import { resolveDoor, listDoors, HUB, REPO, importStatementsOf, withoutImports } from "./resolve.mjs";
 import { partsOf, markupWithout } from "./parts.mjs";
+import { BPM_FIELD_STYLES } from "../bpm-field.mjs";
 
 /* the import statement is read by resolve.mjs's ONE parser (260921): what
  * binds and what blanks come from the same match, and any other spelling is
@@ -118,14 +119,13 @@ const READOUT_GRAMMAR = {
 };
 
 /* THE CLOCK GRAMMAR (261026, night 69): the clock view's own look, stated ONCE — shipped to any door that reaches
- * hub/clock.mjs, as the readout's grammar is. The bpm box and the pulse's dot were the neck's (#fdBpm, .fd-pulse),
- * byte for byte; the caption's look is the neck's .fd-lab2. A host seats the view; it never restyles it. */
+ * hub/clock.mjs, as the readout's grammar is. The pulse's dot was the neck's (.fd-pulse), byte for byte; the caption's
+ * look is the neck's .fd-lab2. A host seats the view; it never restyles it. The bpm box's look (the neck's #fdBpm) moved
+ * with the field to hub/bpm-field.mjs on night 77 — three seats, two of them outside any clock view. */
 const CLOCK_GRAMMAR = {
   reaches: "hub/clock.mjs",
   styles: `
 .clk-lab{font-size:12px;color:var(--gray)}
-.clk-bpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
-  border-radius:6px;color:var(--ink)}
 .clk-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 `,
 };
@@ -306,6 +306,7 @@ async function build(id) {
     + (rows.length ? ROW_WRAPPER.styles : "")
     + (r.filesIn.includes(READOUT_GRAMMAR.reaches) ? READOUT_GRAMMAR.styles : "")
     + (r.filesIn.includes(CLOCK_GRAMMAR.reaches) ? CLOCK_GRAMMAR.styles : "")
+    + (r.filesIn.includes("hub/bpm-field.mjs") ? BPM_FIELD_STYLES : "")   // the one bpm field's look (night 77), stated in that file
     + mods.map((m) => m.styles ?? "").join("\n");
   /* a rows-only door still carries a .cards element (hidden, empty) so the
    * shell's always-shipped .cards rule has something to match — the orphan

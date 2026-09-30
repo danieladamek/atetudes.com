@@ -2879,18 +2879,21 @@ def m137_the_tempo_constant_moves():
         p.write_text(original)
 
 
-def m138_the_tempo_paint_is_removed():
-    # night 72 (approval 261031b): the card's boot paint from the constant is removed — the face falls back to the markup's
-    # pinned 72 while the clock runs at 120. The boot-tempo pin must catch it.
+def m138_the_card_types_its_own_tempo_again():
+    # RE-AIMED night 77 (rule 7 — updated, not deleted): night 72's subject was the mount's paint from the constant over a
+    # pinned 72; night 77 retired that stopgap and the markup takes the constant itself. The same failure, re-aimed at
+    # what replaced it: the card's markup types its own 72 again, on the slider and the field. The boot-tempo pin must bite.
     p, original, mutated = patch("hub/modules/metronome-card.mjs",
-        '    byId("bpmRange").value = core.bpm; byId("bpmVal").textContent = core.bpm;\n',
-        '    // (the boot paint removed — the face shows the pinned 72)\n')
+        '    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="${DEFAULT_BPM}">\n'
+        '    ${bpmField({ id: "bpmVal", value: DEFAULT_BPM })}\n',
+        '    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">\n'
+        '    ${bpmField({ id: "bpmVal", value: 72 })}\n')
     try:
         p.write_text(mutated)
         build()
         g = suite()
         hit = "the boot tempo is 120" in g.stdout
-        record("the tempo paint is removed — the face falls back to the pinned 72",
+        record("the card types its own tempo again — the face shows a typed 72 while the clock runs at 120",
                g.returncode != 0 and hit, "suite exit %d; the tempo pin bit: %s" % (g.returncode, hit))
     finally:
         p.write_text(original)
@@ -2916,6 +2919,236 @@ def m139_the_schedule_forgets_the_interval():
     finally:
         p.write_text(original)
 
+
+
+def register_lists():
+    """the register's own answer (rule 6): the pre-hub carriers of the cards, split maintained / frozen"""
+    r = sh("node", "--input-type=module", "-e",
+           'import { preHubCarriersOf, maintainedCarriersOf } from "./engine/tests/_carriers.mjs";'
+           'console.log(JSON.stringify({ all: preHubCarriersOf("notepad-surface"), kept: maintainedCarriersOf("notepad-surface") }))')
+    j = json.loads(r.stdout.strip().splitlines()[-1])
+    return j["kept"], [s for s in j["all"] if s not in j["kept"]]
+
+
+def m140_the_card_rows_drift():
+    # night 77 (ruling 261036 §4) — THE TWO-SIDED RED. The metronome card's pinned rows change by one byte. The pin must
+    # BITE on every MAINTAINED carrier, each named, and must NOT bite on the frozen one — which must print EXMT with R3's
+    # reason instead. A mutation that proved only the first half would prove nothing about the scope that moved.
+    p, original, mutated = patch("hub/modules/metronome-card.mjs",
+        '    <span class="metrolabel">BPM</span>\n', '    <span class="metrolabel">BPM </span>\n')
+    if PREFLIGHT["on"]:
+        return
+    try:
+        p.write_text(mutated)
+        r = conformance()
+        conf_out = r.stdout + r.stderr
+        kept, frozen = register_lists()
+        assert "exempt, not passing: " in (REPO / "engine/tests/host-conformance.test.mjs").read_text(), "m140's EXMT target rotted"
+        bit = {s: f"[{s}] carries hub/modules/metronome-card.mjs" in conf_out for s in kept}
+        spared = {s: f"[{s}] carries hub/modules/metronome-card.mjs" not in conf_out and f"EXMT  {s} · §4.3 card carriers" in conf_out
+                  for s in frozen}
+        ok = r.returncode != 0 and len(kept) >= 3 and all(bit.values()) and len(frozen) >= 1 and all(spared.values())
+        record("the card's pinned rows drift — bites on every maintained carrier, spares the frozen one out loud",
+               ok, "conformance exit %d; bit on %s; frozen spared with EXMT %s" % (r.returncode, bit, spared))
+    finally:
+        p.write_text(original)
+
+
+def m141_the_freeze_goes_unrecorded():
+    # night 77 (ruling 261036 §6): the register stops recording what the freeze costs — the exemption would live on with
+    # no words for what it withholds. The register's divergence pin must bite.
+    p, original, mutated = patch("engine/tests/_family.mjs", "    diverges: [\n", "    _diverges_dropped: [\n")
+    if PREFLIGHT["on"]:
+        return
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/family-register.test.mjs")
+        reg_out = r.stdout + r.stderr
+        target = "is frozen but records no divergence"
+        assert target in (REPO / "engine/tests/family-register.test.mjs").read_text(), "m141's target rotted"
+        hit = r.returncode != 0 and target in reg_out
+        record("the freeze goes unrecorded — the register's divergence pin", hit, "register exit %d; bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m142_the_field_does_not_write_the_clock():
+    # night 77 (ruling 261036 §5): the Metronome card's field stops asking — a typed tempo never reaches the clock. The field-writes-the-clock pin must bite.
+    p, original, mutated = patch('hub/modules/metronome-card.mjs',
+        '      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });\n',
+        '      if (false && Number.isFinite(v)) announce(d, CLOCK, { bpm: v });   // (the field no longer asks)\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "sets the clock, and every face shows the clock's 144" in g.stdout
+        record('the field does not write the clock', g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m143_a_typed_tempo_is_not_clamped():
+    # night 77 (ruling 261036 §5): the owner stops clamping — a typed 999 runs the clock at 999. The typed-clamp pin must bite.
+    p, original, mutated = patch('hub/modules/metronome-card.mjs',
+        '      Math.max(+byId("bpmRange").min, Math.min(+byId("bpmRange").max, v));\n',
+        '      v;   // (the clamp removed)\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "comes back as the owner's clamp, 300, on every face" in g.stdout
+        record('a typed out-of-range tempo is not clamped', g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m144_the_slider_and_the_field_disagree():
+    # night 77 (ruling 261036 §5): the owner's paint forgets the field — the slider moves and the field keeps its old number. The slider-and-field pin must bite.
+    p, original, mutated = patch('hub/modules/metronome-card.mjs',
+        '    const paintBpm = (v) => { byId("bpmRange").value = v; byId("bpmVal").value = v; };\n',
+        '    const paintBpm = (v) => { byId("bpmRange").value = v; };   // (the field left out)\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = 'the slider at 88 — the field, the clock and every other face agree' in g.stdout
+        record('the slider and the field disagree', g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m145_the_two_cards_fields_disagree():
+    # night 77 (ruling 261036 §5): the Transport card's field stops painting the owner's echo — two tempo boxes on one page show two numbers. The two-fields pin must bite.
+    p, original, mutated = patch('hub/modules/transport-card.mjs',
+        '      if (typeof m.bpm === "number") { bpm = m.bpm; byId("bpmRange2").value = bpm; byId("bpmVal2").value = bpm; }\n',
+        '      if (typeof m.bpm === "number") { bpm = m.bpm; byId("bpmRange2").value = bpm; }   // (the field left out)\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "typed in the Metronome card's field — the Transport card's field agrees" in g.stdout
+        record("the two cards' fields disagree", g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m146_the_transport_paints_only_on_a_change():
+    # night 77 (ruling 261036 §5): the Transport card paints the echo only when the tempo changed — a second 999 at the ceiling stays 999 in its box. The ceiling pin must bite.
+    p, original, mutated = patch('hub/modules/transport-card.mjs',
+        '      if (typeof m.bpm === "number") { bpm = m.bpm;',
+        '      if (typeof m.bpm === "number" && m.bpm !== bpm) { bpm = m.bpm;')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "at the ceiling still shows the owner's 300, not the 999" in g.stdout
+        record('the transport paints the echo only on a change', g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m147_a_seat_forks_the_field():
+    # night 77 (ruling 261036 §5): the Transport card types its own tempo box instead of seating the one field — a second definition. The one-definition pin must bite.
+    p, original, mutated = patch('hub/modules/transport-card.mjs',
+        '    ${bpmField({ id: "bpmVal2", value: DEFAULT_BPM })}\n',
+        '    <input type="number" id="bpmVal2" data-control="bpmVal2" min="15" max="300" value="${DEFAULT_BPM}">\n')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "every tempo seat is hub/bpm-field.mjs's one bpm field" in g.stdout
+        record('a seat forks the field', g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m148_an_emptied_box_asks_for_zero():
+    # night 77 (ruling 261036 §5): an emptied field is read as 0 — clearing the box sets the clock to the floor. The emptied-box pin must bite.
+    p, original, mutated = patch('hub/modules/metronome-card.mjs',
+        '      const v = e.target.value === "" ? NaN : +e.target.value;\n      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });\n      else paintBpm(core.bpm);',
+        '      const v = +e.target.value;   // (an empty box read as 0)\n      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });\n      else paintBpm(core.bpm);')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = 'an emptied field asks nothing — the clock keeps 100' in g.stdout
+        record('an emptied box asks for zero', g.returncode != 0 and hit, "suite exit %d; the pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m149_a_maintained_page_loses_the_field_look():
+    # night 77: a maintained hand carrier loses the one bpm field's look — its box would ship unstyled. host-conformance's
+    # carriage pin for hub/bpm-field.mjs's rule must bite, naming the page.
+    p, original, mutated = patch("static/studies/triadetudes/study.html",
+        ".clk-bpm{font:inherit;font-size:12.5px;width:58px;",
+        ".clk-bpm{font:inherit;font-size:12px;width:58px;")
+    if PREFLIGHT["on"]:
+        return
+    try:
+        p.write_text(mutated)
+        r = conformance()
+        out = r.stdout + r.stderr
+        target = "seats the one bpm field but does not carry hub/bpm-field.mjs's .clk-bpm rule verbatim"
+        assert target in (REPO / "engine/tests/host-conformance.test.mjs").read_text(), "m149's target rotted"
+        hit = r.returncode != 0 and ("[triadetudes] " + target) in out
+        record("a maintained page loses the field's look — the carriage pin", hit, "conformance exit %d; bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m150_a_maintained_generator_drifts():
+    # night 77 (rule 16's sweep): generator identity now exempts the frozen study by the register. The other half must
+    # still hold — a MAINTAINED generator that stops reproducing its published page is named, and the frozen one is
+    # still printed EXMT, never a pass. Both halves, or no bite.
+    p, original, mutated = patch("generators/modes_pent_interactive.py",
+        "  state.bpm = +this.value; METRO.setBpm(state.bpm); syncMetro(); });\n",
+        "  state.bpm = +this.value; METRO.setBpm(state.bpm); syncMetro();  });\n")
+    if PREFLIGHT["on"]:
+        return
+    try:
+        p.write_text(mutated)
+        r = sh("python3", "tools/generator_identity.py")
+        gen_out = r.stdout + r.stderr
+        kept, frozen = register_lists()
+        named = "modes-from-pentatonic-boxes/study.html is NOT what modes_pent_interactive.py emits" in gen_out
+        spared = all(f"EXMT  {s} · generator identity — exempt, not passing: R3:" in gen_out for s in frozen) and len(frozen) >= 1
+        record("a maintained generator drifts — named, while the frozen one is still printed exempt",
+               r.returncode != 0 and named and spared, "identity exit %d; modes named: %s; frozen EXMT: %s" % (r.returncode, named, spared))
+    finally:
+        p.write_text(original)
+
+
+def m151_the_drift_scope_binds_the_frozen_page():
+    # night 77b (ruling 261037 §2): driftScope — the ONE place every drift pin is scoped — stops exempting the frozen study.
+    # Its own self-test must bite (the drift pins alone would stay green: the frozen page has not moved).
+    p, original, mutated = patch("engine/tests/_carriers.mjs",
+        "  const bound = carriers.filter(isMaintained), exempt = carriers.filter((s) => !isMaintained(s));",
+        "  const bound = carriers, exempt = [];   // (the freeze forgotten)")
+    if PREFLIGHT["on"]:
+        return
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/carrier-census.test.mjs")
+        cen_out = r.stdout + r.stderr
+        target = "driftScope exempts exactly the register's frozen studies"
+        assert target in (REPO / "engine/tests/carrier-census.test.mjs").read_text(), "m151's target rotted"
+        hit = r.returncode != 0 and target in cen_out
+        record("the drift scope binds the frozen page — driftScope's self-test", hit, "census exit %d; bit: %s" % (r.returncode, hit))
+    finally:
+        p.write_text(original)
+
+
+def m152_a_drift_pin_bypasses_the_scope():
+    # night 77b: the census pin iterates its raw carrier list instead of driftScope's — and a maintained page drifts.
+    # The pin must still name the maintained page (the subject narrowed; the assertion did not).
+    p, original, mutated = patch("engine/metronome.mjs", "2:[0.5],", "2:[0.50],")
+    if PREFLIGHT["on"]:
+        return
+    try:
+        p.write_text(mutated)
+        r = sh("node", "--test", "engine/tests/carrier-census.test.mjs", "engine/tests/metronome.test.mjs")
+        out = r.stdout + r.stderr
+        kept, frozen = register_lists()
+        named = all(f"{s}/study.html" in out for s in ("metronome", "triadetudes"))
+        spared = all(f"{s}/study.html has DRIFTED" not in out and f"{s}/study.html is missing" not in out for s in frozen)
+        record("a maintained page drifts from engine/metronome.mjs — named, while the frozen one is spared",
+               r.returncode != 0 and named and spared, "exit %d; maintained named: %s; frozen spared: %s" % (r.returncode, named, spared))
+    finally:
+        p.write_text(original)
 
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
@@ -3097,8 +3330,14 @@ def main():
                m131_the_row_speaks_under_a_scale, m132_spellrole_loses_the_degree,
                m133_the_numeral_does_not_parse, m134_the_row_clears_again_at_the_wrap,
                m135_the_neck_opens_on_grip_again, m136_the_neck_opens_strummed_again,
-               m137_the_tempo_constant_moves, m138_the_tempo_paint_is_removed,
-               m139_the_schedule_forgets_the_interval)
+               m137_the_tempo_constant_moves, m138_the_card_types_its_own_tempo_again,
+               m139_the_schedule_forgets_the_interval,
+               m140_the_card_rows_drift, m141_the_freeze_goes_unrecorded,
+               m142_the_field_does_not_write_the_clock, m143_a_typed_tempo_is_not_clamped,
+               m144_the_slider_and_the_field_disagree, m145_the_two_cards_fields_disagree,
+               m146_the_transport_paints_only_on_a_change, m147_a_seat_forks_the_field, m148_an_emptied_box_asks_for_zero,
+               m149_a_maintained_page_loses_the_field_look, m150_a_maintained_generator_drifts,
+               m151_the_drift_scope_binds_the_frozen_page, m152_a_drift_pin_bypasses_the_scope)
     # THE SCHEDULE (night 75): a full chain runs every mutation and writes the record; --new runs only the mutations the
     # record has never seen. Nothing is excluded on a claim about what it depends on (ruling 261033 §2) — every mutation
     # still runs, the only question is WHEN; tools/chain_due.py says when a full chain is owed.

@@ -28,6 +28,7 @@
 import { createTransportCore, patternOf, SPLITS } from "../../engine/transport.mjs";
 import { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } from "../bus.mjs";
 import { DEFAULT_BPM } from "../tempo.mjs";
+import { bpmField } from "../bpm-field.mjs";
 
 const METERS = Object.keys(SPLITS).map(Number).sort((a, b) => a - b);
 
@@ -37,7 +38,7 @@ export const transportCard = {
   requires: { transport: true },
   mount_point: "cards",
   order: 1,
-  controls: ["prevBtn", "playBtn", "nextBtn", "bpmRange2", "meterSel2", "splitSel",
+  controls: ["prevBtn", "playBtn", "nextBtn", "bpmRange2", "bpmVal2", "meterSel2", "splitSel",
     "clickChk2", "countChk"],
 
   markup: `
@@ -56,7 +57,7 @@ export const transportCard = {
   <div class="bpmrow">
     <span class="trLab">BPM</span>
     <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="${DEFAULT_BPM}">
-    <span class="trVal" id="bpmVal2">${DEFAULT_BPM}</span>
+    ${bpmField({ id: "bpmVal2", value: DEFAULT_BPM })}
   </div>
   <div class="row2 alignEnd trSig">
     <div><label>Time sig</label>
@@ -82,7 +83,6 @@ export const transportCard = {
 .trPlay{font-weight:bold}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
-.trVal{font-size:13px;width:30px;text-align:right}
 .trSig select{width:auto;padding:3px 6px;margin-left:4px}
 /* only this module puts a row-end group inside a .transport row (the Play
  * row's metronome + count-in), so the anchor is its own: the .row2>.rowEnd
@@ -174,9 +174,13 @@ export const transportCard = {
     byId("playBtn").addEventListener("click", () => setPlaying(!armed));
     byId("prevBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position - 1, request: true }));
     byId("nextBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position + 1, request: true }));
-    byId("bpmRange2").addEventListener("input", (e) => {
-      byId("bpmVal2").textContent = e.target.value;
-      announce(d, CLOCK, { bpm: Number(e.target.value) });
+    /* THE TEMPO IS THE CLOCK'S (night 77, rule 10): the slider and the field (#bpmVal2, hub/bpm-field.mjs's one bpm field)
+     * ask; neither paints itself — both are painted from the owner's echo below, so they cannot disagree. */
+    byId("bpmRange2").addEventListener("input", (e) => announce(d, CLOCK, { bpm: Number(e.target.value) }));
+    byId("bpmVal2").addEventListener("change", (e) => {
+      const v = e.target.value === "" ? NaN : +e.target.value;
+      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+      else byId("bpmVal2").value = bpm;   // an emptied box asks nothing; the clock's tempo is painted back
     });
     byId("meterSel2").addEventListener("change", (e) => announce(d, CLOCK, { meter: Number(e.target.value) }));
     byId("splitSel").addEventListener("change", (e) => {
@@ -196,9 +200,9 @@ export const transportCard = {
     listen(d, CLOCK_STATE, (m) => {
       if (!m) return;
       running = !!m.running;
-      if (typeof m.bpm === "number" && m.bpm !== bpm) {
-        bpm = m.bpm; byId("bpmRange2").value = bpm; byId("bpmVal2").textContent = bpm;
-      }
+      /* painted on EVERY echo, not only on a change: a typed 999 while the clock already runs at 300 must come back
+       * as the owner's 300, and a change-only paint would leave the 999 in the box */
+      if (typeof m.bpm === "number") { bpm = m.bpm; byId("bpmRange2").value = bpm; byId("bpmVal2").value = bpm; }
       if (typeof m.meter === "number" && m.meter !== meter) {
         core.setMeter(m.meter); meter = m.meter; splitIdx = core.splitIdx; fillMeters(); fillSplits();
       }

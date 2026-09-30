@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tetradetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "tetradetudes", lock {"material":"tetrad","notepad":true,"audio":true,"transport":true}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, engine/tunings.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/bpm-field.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, engine/tunings.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs tetradetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -126,6 +126,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 /* the collapse header-variant for a board (.bh, not h2) rides with the boards
  * wrapper — it ships only when a door has boards, so it can never orphan */
 .clpsd>.bh{display:flex!important;margin-bottom:2px}
+
+.clk-bpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
 
 
 .tl-strip{padding:8px 12px}
@@ -291,7 +294,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .trPlay{font-weight:bold}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
-.trVal{font-size:13px;width:30px;text-align:right}
 .trSig select{width:auto;padding:3px 6px;margin-left:4px}
 /* only this module puts a row-end group inside a .transport row (the Play
  * row's metronome + count-in), so the anchor is its own: the .row2>.rowEnd
@@ -315,8 +317,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   </div>
   <div class="bpmrow">
     <span class="metrolabel">BPM</span>
-    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
-    <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="120">
+    <input type="number" class="clk-bpm" data-role="bpm" id="bpmVal" data-control="bpmVal" min="15" max="300" step="1" value="120"  title="the tempo — one state, every view; the Metronome card owns the clock">
   </div>
   <div class="row2">
     <div><label>Time</label>
@@ -356,7 +358,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div class="bpmrow">
     <span class="trLab">BPM</span>
     <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="120">
-    <span class="trVal" id="bpmVal2">120</span>
+    <input type="number" class="clk-bpm" data-role="bpm" id="bpmVal2" data-control="bpmVal2" min="15" max="300" step="1" value="120"  title="the tempo — one state, every view; the Metronome card owns the clock">
   </div>
   <div class="row2 alignEnd trSig">
     <div><label>Time sig</label>
@@ -6011,11 +6013,51 @@ const SUB_OFFSETS={1:[],2:[0.5],3:[1/3,2/3],4:[0.25,0.5,0.75]};
 return { createMetroCore, createTapTempo, SUB_OFFSETS };
 })();
 
+/* ===== hub/bpm-field.mjs ===== */
+const __m_hub_bpm_field_mjs = (() => {
+/* bpm-field.mjs — THE FAMILY'S ONE TYPEABLE TEMPO: its markup and its look, stated once (night 77, ruling 261036 §5).
+ *
+ * Daniel, 261035: "I'd like the tempo field in the metronome to be editable not just controlled by the slider ... like
+ * it is everywhere else." Until tonight the family had ONE typeable bpm — the clock view's, seated on the neck — and two
+ * read-only readouts, the Metronome card's and the Transport card's. Now all three seats are THIS field: the clock view
+ * seats it, the Metronome card seats it (the card that owns the clock), and the Transport card seats it.
+ *
+ * WHY ITS OWN FILE AND NOT AN EXPORT OF THE CLOCK VIEW (the dispatch's wording; measured tonight, rule 4): a module that
+ * imports the clock view REACHES it, and a door that reaches the clock view ships all of it — its code and its grammar.
+ * The two cards are in every door; the clock view is in two. The door gate's pruning grep refused the plain and scribe
+ * doors for exactly that. The field alone is what the cards need, so the field alone is what they reach. (This header
+ * ships in every door, so it names no other module's path or addresses — the same grep reads it.)
+ *
+ * A VIEW, NOT AN OWNER: a seat announces a CLOCK request on `change`, the Metronome card clamps (15–300, from its
+ * slider's own bounds), and every seat paints only what the owner echoes (rule 10 — a control's state has three sites).
+ * Its look ships with the build to any door that reaches this file, and to a page without a build through the
+ * generator bridge — the bytes below, never retyped.
+ */
+
+const TITLE = "the tempo — one state, every view; the Metronome card owns the clock";
+
+/** the field's markup. `id` keeps a seat's address (rule 12); `value` is the seat's boot face — the card seats pass
+ * hub/tempo.mjs's constant, the clock view passes none. */
+function bpmField({ id = null, value = null } = {}) {
+  const ctl = id ? ` id="${id}" data-control="${id}"` : "";
+  const val = value === null ? "" : ` value="${value}"`;
+  return `<input type="number" class="clk-bpm" data-role="bpm"${ctl} min="15" max="300" step="1"${val}  title="${TITLE}">`;
+}
+
+/** the field's look — the neck's bpm box, byte for byte since night 69 */
+const BPM_FIELD_STYLES = `
+.clk-bpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
+`;
+return { bpmField, BPM_FIELD_STYLES };
+})();
+
 /* ===== hub/modules/metronome-card.mjs ===== */
 const __m_hub_modules_metronome_card_mjs = (() => {
 const { createMetroCore, createTapTempo } = __m_engine_metronome_mjs;
 const { BEAT, CLOCK, CLOCK_STATE, announce, listen } = __m_hub_bus_mjs;
 const { DEFAULT_BPM } = __m_hub_tempo_mjs;
+const { bpmField } = __m_hub_bpm_field_mjs;
 /* metronome-card.mjs — the family constant as a door contribution.
  *
  * The metronome is the one card every At-Etudes app carries, first block, this
@@ -6037,6 +6079,7 @@ const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 
 
 
+
 const metronomeCard = {
   id: "metronome-card",
   layer: "surface",
@@ -6055,8 +6098,8 @@ const metronomeCard = {
   </div>
   <div class="bpmrow">
     <span class="metrolabel">BPM</span>
-    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
-    <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="${DEFAULT_BPM}">
+    ${bpmField({ id: "bpmVal", value: DEFAULT_BPM })}
   </div>
   <div class="row2">
     <div><label>Time</label>
@@ -6120,12 +6163,13 @@ const metronomeCard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     const core = createMetroCore({ bpm: DEFAULT_BPM, meter: 4 });
-    /* THE BOOT TEMPO IS PAINTED FROM THE CONSTANT (night 72, PO ruling on item C, option a): the markup above keeps its
-     * value="72" and its readout "72" because those bytes are PINNED into the hand-authored published metronome study
-     * (host-conformance: a hand page carrying this card carries its markup verbatim), and that study does not move until
-     * it becomes a door. So the card paints the face from hub/tempo.mjs here, at mount, before anything reads it: the 72
-     * in the markup is a pinned artefact, never shown once the script runs. */
-    byId("bpmRange").value = core.bpm; byId("bpmVal").textContent = core.bpm;
+    /* THE BOOT TEMPO IS THE MARKUP'S (night 77): night 72's stopgap — a pinned value="72" painted over from the constant
+     * at mount — is retired. It was never a boot-tempo problem: it was the card-carriers pin reaching the frozen study
+     * (ruling 261036 §2), which froze these bytes. With the pin scoped to maintained carriers, the markup takes
+     * hub/tempo.mjs's constant itself, and there is nothing to paint over. */
+    /* THE TEMPO HAS TWO FACES HERE, ONE STATE (rule 10): the slider and the field (#bpmVal, hub/bpm-field.mjs's one
+     * bpm field) are both painted from the clock, by this — never from each other. */
+    const paintBpm = (v) => { byId("bpmRange").value = v; byId("bpmVal").value = v; };
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
     /* THE CLICK'S ON/OFF — the clock owner's state, riding CLOCK_STATE.click
@@ -6248,7 +6292,7 @@ const metronomeCard = {
       if (typeof m.bpm === "number") {
         const v = clampBpm(m.bpm);
         core.setBpm(v);
-        byId("bpmRange").value = v; byId("bpmVal").textContent = v;
+        paintBpm(v);
       }
       if (typeof m.meter === "number") {
         core.setMeter(m.meter);
@@ -6278,10 +6322,18 @@ const metronomeCard = {
     byId("tapBtn").addEventListener("click", () => {
       const bpm = tap(now());
       if (bpm) { const v = clampBpm(bpm); core.setBpm(v);
-        byId("bpmRange").value = v; byId("bpmVal").textContent = v; publish(); }
+        paintBpm(v); publish(); }
     });
     byId("bpmRange").addEventListener("input", (e) => {
-      core.setBpm(+e.target.value); byId("bpmVal").textContent = e.target.value; publish();
+      core.setBpm(+e.target.value); paintBpm(core.bpm); publish();
+    });
+    /* THE FIELD ASKS, THE OWNER ANSWERS (night 77): a typed tempo goes the way every other view's does — a CLOCK
+     * request, clamped by the listener above, which paints both faces and publishes. A value that is not a number
+     * (an emptied box) asks nothing and gets the clock's tempo painted back. */
+    byId("bpmVal").addEventListener("change", (e) => {
+      const v = e.target.value === "" ? NaN : +e.target.value;
+      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+      else paintBpm(core.bpm);
     });
     byId("meterSel").addEventListener("change", (e) => {
       core.setMeter(+e.target.value); if (!core.running) lamps(); publish();
@@ -10368,6 +10420,7 @@ const __m_hub_modules_transport_card_mjs = (() => {
 const { createTransportCore, patternOf, SPLITS } = __m_engine_transport_mjs;
 const { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } = __m_hub_bus_mjs;
 const { DEFAULT_BPM } = __m_hub_tempo_mjs;
+const { bpmField } = __m_hub_bpm_field_mjs;
 /* transport-card.mjs — the reference page's Transport card, ported.
  *
  * `static/studies/triadetudes/study.html` is the layout specification, and this
@@ -10398,6 +10451,7 @@ const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 
 
 
+
 const METERS = Object.keys(SPLITS).map(Number).sort((a, b) => a - b);
 
 const transportCard = {
@@ -10406,7 +10460,7 @@ const transportCard = {
   requires: { transport: true },
   mount_point: "cards",
   order: 1,
-  controls: ["prevBtn", "playBtn", "nextBtn", "bpmRange2", "meterSel2", "splitSel",
+  controls: ["prevBtn", "playBtn", "nextBtn", "bpmRange2", "bpmVal2", "meterSel2", "splitSel",
     "clickChk2", "countChk"],
 
   markup: `
@@ -10425,7 +10479,7 @@ const transportCard = {
   <div class="bpmrow">
     <span class="trLab">BPM</span>
     <input type="range" id="bpmRange2" data-control="bpmRange2" min="15" max="300" value="${DEFAULT_BPM}">
-    <span class="trVal" id="bpmVal2">${DEFAULT_BPM}</span>
+    ${bpmField({ id: "bpmVal2", value: DEFAULT_BPM })}
   </div>
   <div class="row2 alignEnd trSig">
     <div><label>Time sig</label>
@@ -10451,7 +10505,6 @@ const transportCard = {
 .trPlay{font-weight:bold}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
-.trVal{font-size:13px;width:30px;text-align:right}
 .trSig select{width:auto;padding:3px 6px;margin-left:4px}
 /* only this module puts a row-end group inside a .transport row (the Play
  * row's metronome + count-in), so the anchor is its own: the .row2>.rowEnd
@@ -10543,9 +10596,13 @@ const transportCard = {
     byId("playBtn").addEventListener("click", () => setPlaying(!armed));
     byId("prevBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position - 1, request: true }));
     byId("nextBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position + 1, request: true }));
-    byId("bpmRange2").addEventListener("input", (e) => {
-      byId("bpmVal2").textContent = e.target.value;
-      announce(d, CLOCK, { bpm: Number(e.target.value) });
+    /* THE TEMPO IS THE CLOCK'S (night 77, rule 10): the slider and the field (#bpmVal2, hub/bpm-field.mjs's one bpm field)
+     * ask; neither paints itself — both are painted from the owner's echo below, so they cannot disagree. */
+    byId("bpmRange2").addEventListener("input", (e) => announce(d, CLOCK, { bpm: Number(e.target.value) }));
+    byId("bpmVal2").addEventListener("change", (e) => {
+      const v = e.target.value === "" ? NaN : +e.target.value;
+      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+      else byId("bpmVal2").value = bpm;   // an emptied box asks nothing; the clock's tempo is painted back
     });
     byId("meterSel2").addEventListener("change", (e) => announce(d, CLOCK, { meter: Number(e.target.value) }));
     byId("splitSel").addEventListener("change", (e) => {
@@ -10565,9 +10622,9 @@ const transportCard = {
     listen(d, CLOCK_STATE, (m) => {
       if (!m) return;
       running = !!m.running;
-      if (typeof m.bpm === "number" && m.bpm !== bpm) {
-        bpm = m.bpm; byId("bpmRange2").value = bpm; byId("bpmVal2").textContent = bpm;
-      }
+      /* painted on EVERY echo, not only on a change: a typed 999 while the clock already runs at 300 must come back
+       * as the owner's 300, and a change-only paint would leave the 999 in the box */
+      if (typeof m.bpm === "number") { bpm = m.bpm; byId("bpmRange2").value = bpm; byId("bpmVal2").value = bpm; }
       if (typeof m.meter === "number" && m.meter !== meter) {
         core.setMeter(m.meter); meter = m.meter; splitIdx = core.splitIdx; fillMeters(); fillSplits();
       }
@@ -10968,7 +11025,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.11","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.12","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

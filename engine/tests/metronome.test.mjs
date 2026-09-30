@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createMetroCore, createTapTempo, SUB_OFFSETS } from "../metronome.mjs";
-import { preHubCarriersOf } from "./_carriers.mjs";
+import { preHubCarriersOf, driftScope } from "./_carriers.mjs";
 
 const close = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
 
@@ -193,18 +193,19 @@ test("every app carrying the metronome matches the module verbatim (no drift)", 
   // ALL apps that inline the component — DERIVED from the carrier census
   // (engine/tests/_carriers.mjs), never listed by hand: the hand list missed
   // the fifth study the day it shipped (260819.5)
-  const CARRIERS = preHubCarriersOf("metronome");
+  // THE SUBJECT IS DRIFT (night 77, ruling 261037 §2): the frozen study is exempt, printed — driftScope, the one place
+  const { bound: CARRIERS } = driftScope(preHubCarriersOf("metronome"), "metronome.mjs verbatim");
   assert.ok(CARRIERS.length >= 2, "the census lost the metronome's pre-hub carriers");
+  const drifted = [];
   for (const slug of CARRIERS) {
     const src = readFileSync(
       join(here, "..", "..", "static", "studies", slug, "study.html"), "utf8");
     for (const def of defs) {
-      assert.ok(
-        src.includes(def),
-        `${slug}/study.html is missing or has drifted from:\n${def.slice(0, 60)}…`
-      );
+      if (!src.includes(def))
+        drifted.push(`${slug}/study.html is missing or has drifted from:\n${def.slice(0, 60)}…`);
     }
   }
+  assert.equal(drifted.length, 0, drifted.join("\n"));
 });
 
 // ---- 260929 (night 35b): SUBDIVISION LIVES IN THE CORE ----

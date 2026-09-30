@@ -1,3 +1,36 @@
+## 2026-09-29 — Night 77: the tempo is typeable in every seat; the drift pins let the frozen study go; Multetudes v0.6.25, Tetradetudes v0.6.12; five studies moved
+
+- **Why (Daniel, 261035; PO rulings 261036, 261037):** "I'd like the tempo field in the metronome to be editable not just
+  controlled by the slider … like it is everywhere else." The family had one typeable bpm (the clock view's) and two
+  read-only readouts (the Metronome card's `#bpmVal`, the Transport card's `#bpmVal2`). All three seats are now ONE field,
+  `hub/bpm-field.mjs` (its markup and its look, stated once); each asks the clock, the Metronome card owns and clamps it
+  (15–300), every face paints the owner's echo. Ids kept. Its tooltip now says "one state, every view".
+- **The drift pins scoped to what they are about (261036 §4, 261037 §2):** a frozen study is never edited and cannot
+  drift. ONE function, `driftScope` (engine/tests/_carriers.mjs, reading the register's `isMaintained`), scopes all six
+  drift checks — the card carriers, the census, the metronome and note-events verbatim pins, the chart line's styles, and
+  `tools/generator_identity.py` — each printing `EXMT` with R3's own words, never a pass. They bind every maintained page
+  exactly as before. The census alone had frozen 16 engine modules through `tetrad-voice-leading`.
+- **PUBLISHED STUDIES THAT MOVED, AND WHY:**
+  - `metronome` (hand-authored) — **a published hand-authored study moved:** its BPM is now typeable; the card's tempo
+    row re-copied from the module (the pin requires it), its own script paints and reads the field.
+  - `triadetudes` (hand-authored) — the same, plus its Transport's tempo box; both fields paint one `st.bpm`.
+  - `modes-from-pentatonic-boxes` (**generator-built**, `generators/modes_pent_interactive.py`) — fixed UPSTREAM and
+    re-ingested byte-identical. The generator bridge now reads a card as the module EVALUATES it (it read raw source text,
+    so a `${…}` would have shipped unfilled — the root of night 72's pinned 72). One page-local `border-box` line keeps the
+    field 58 px there.
+  - `multetudes` v0.6.25, `tetradetudes` v0.6.12 (doors) — rebuilt and ingested.
+- **Did NOT move: `tetrad-voice-leading`** (frozen, §5.2.1/R3). Its tempo stays read-only; the divergence is recorded in
+  the register beside R3 (261036 §6 option (a)); (b) supersede at a new URL is back on the table for Daniel (261037 §2).
+- **Night 72's stopgap retired:** the card's pinned `value="72"`/`72` and the mount's paint over it are gone; the markup
+  takes `hub/tempo.mjs`'s constant.
+- **Proof:** engine 710/710 · hub 14/14 · every door gate green (plain 9 s/9,384 · scribe 12 s/6,764 · tetradetudes
+  87 s/4,298 · multetudes 292 s/2,572) · `bite.py --new` 12/12 BITES (`hub/tests/out/n77-new.log`) plus m151/m152 BITES ·
+  `check_site` green · before/after renders at 1280 and 390 of every moved page, and of the frozen one (unchanged).
+- **Full chain OWED:** stopped by PO amendment 261037b after 2 h 10 m (m1–m29 all BITES, `hub/tests/out/n77-chain.log`);
+  no record written. It does not run until m95 is fixed (261037 §5): the anchor preflight's run of m95 copies the current
+  build over published tetradetudes — found tonight, restored to its committed bytes before tonight's deliberate ingest.
+- Report: `notes/working/Multetudes build run 261037 — night 77, one bpm field three seats.md`.
+
 ## 2026-09-29 — DEPLOYED: night 75 live — harness only; no study moved (every hash equals night 72's); written from the run
 
 - record: run 36561981137 · success · commit 147e4ba · fetched 2026-09-29T11:38Z · 6/6 studies byte-identical · digest 03b31e47f73c

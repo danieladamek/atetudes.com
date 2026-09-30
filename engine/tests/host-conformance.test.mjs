@@ -21,7 +21,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createNotepadSurface, CAPABILITIES } from "../notepad-surface.mjs";
 import { makeDoc, memStorage, capsOf } from "./_dom-stub.mjs";
-import { carriersOf, preHubCarriersOf, CENSUS, STUDY_SLUGS } from "./_carriers.mjs";
+import { carriersOf, preHubCarriersOf, maintainedCarriersOf, driftScope, CENSUS, STUDY_SLUGS } from "./_carriers.mjs";
+import { isMaintained } from "./_family.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const studyOf = (slug) =>
@@ -308,6 +309,7 @@ test("rule 14: no error string in engine/ or hub/modules/ quotes a caption the l
 // resolver's and the build's business, not this pin's.
 import { notepadCard } from "../../hub/modules/notepad-card.mjs";
 import { metronomeCard } from "../../hub/modules/metronome-card.mjs";
+import { BPM_FIELD_STYLES } from "../../hub/bpm-field.mjs";
 import { partsOf, markupWithout } from "../../hub/tools/parts.mjs";
 
 /* metronome-card's pinned region is its FOUR ROW GROUPS — the grammar the
@@ -332,25 +334,35 @@ const assembliesOf = (markup) => {
 const carriesCard = (page, c) =>
   page.includes(c.file) || c.markup.split("\n").some((l) => l.trim().length >= 60 && page.includes(l));
 
-test("§4.3 card carriers: a hand-authored page that carries a hub card carries its bytes VERBATIM, in one of the build's own assemblies", () => {
+test("§4.3 card carriers: a MAINTAINED hand-authored page that carries a hub card carries its bytes VERBATIM, in one of the build's own assemblies (a frozen one is EXEMPT, R3)", () => {
   let pinned = 0;
-  for (const slug of STUDY_SLUGS) {
-    if (CENSUS.get(slug).source !== "detected") continue;   // door-built: the build's proof
+  /* EVERY DRIFTED CARRIER IS NAMED (night 77): the pin collects its failures and asserts once, so a drift reports
+   * every page it reaches — the proof of WHICH pages a check binds is the list of pages it names, not the first. */
+  const drifted = [];
+  /* THE SUBJECT IS DRIFT, SO THE SCOPE IS THE MAINTAINED PAGES (ruling 261036 §4, rule 16): a frozen study is never
+   * edited and cannot drift. It is EXEMPT — printed with R3's own words from the register, never a pass, never
+   * silence (§4.4) — and the exemption is counted, so the skip proves it ran. */
+  const detected = STUDY_SLUGS.filter((slug) => CENSUS.get(slug).source === "detected");   // door-built: the build's proof
+  const { bound, exempt: exempted } = driftScope(detected, "§4.3 card carriers");
+  for (const slug of bound) {
     const page = studyOf(slug);
     for (const c of CARDS) {
       if (!carriesCard(page, c)) continue;
-      assert.ok(page.includes(c.styles),
-        `[${slug}] carries ${c.file} but its styles have drifted from the module's — re-copy the styles block verbatim`);
+      if (!page.includes(c.styles))
+        drifted.push(`[${slug}] carries ${c.file} but its styles have drifted from the module's — re-copy the styles block verbatim`);
       const ok = assembliesOf(c.markup).find((a) => a.pieces.every((piece) => page.includes(piece)));
-      assert.ok(ok, `[${slug}] carries ${c.file} but its markup matches none of the build's assemblies ` +
+      if (!ok) drifted.push(`[${slug}] carries ${c.file} but its markup matches none of the build's assemblies ` +
         `(seats tried: ${assembliesOf(c.markup).map((a) => "{" + a.seated.join(",") + "}").join(" ")}) — ` +
         "re-copy the markup verbatim from the module; the host's own pieces are seated at init, never typed into the card");
       pinned++;
     }
   }
+  assert.equal(drifted.length, 0, `card carriers drifted:\n${drifted.join("\n")}`);
   // the count is the census's: every detected carrier of notepad-surface carries both cards (261003: three pages, six pins)
-  const expected = preHubCarriersOf("notepad-surface").length * CARDS.length;
-  assert.ok(expected >= 4 && pinned === expected, `the pin must actually have run ${expected} times (detected carriers × cards), ran ${pinned}`);
+  const expected = maintainedCarriersOf("notepad-surface").length * CARDS.length;
+  assert.ok(expected >= 4 && pinned === expected, `the pin must actually have run ${expected} times (maintained carriers × cards), ran ${pinned}`);
+  const frozen = preHubCarriersOf("notepad-surface").filter((s) => !isMaintained(s));
+  assert.deepEqual(exempted.sort(), frozen, "every frozen carrier is reported EXEMPT by name, and nothing else is");
 });
 
 // ================= the tokens a carried style refers to must RESOLVE on the carrier (261005) =================
@@ -360,6 +372,24 @@ test("§4.3 card carriers: a hand-authored page that carries a hub card carries 
 // tokens is COMPUTED from the styles each page carries (rule 6), never maintained by hand.
 // The same for the shell's `.hint` rule: the card's import message is class "hint", which the
 // shell sizes at 11.5px and the bridge pages left at the body's 16px.
+// ================= the one bpm field's LOOK rides with it (night 77, ruling 261036 §5) =================
+// The card's tempo is hub/bpm-field.mjs's field (class clk-bpm); a door gets its look from the build (shipped to any
+// door reaching that file). A maintained hand page has no build, so it must carry that rule itself — the module's own
+// bytes, imported here, never retyped. Subject: does the page still match the source
+// (drift) — so the scope is the maintained carriers, the frozen one exempt as in the pin above.
+test("§4.3 card carriers: a maintained carrier seating the one bpm field carries hub/bpm-field.mjs's look verbatim", () => {
+  const rule = BPM_FIELD_STYLES.trim();
+  assert.ok(rule.startsWith(".clk-bpm{"), "hub/bpm-field.mjs states no .clk-bpm rule — re-site this pin");
+  let checked = 0;
+  for (const slug of maintainedCarriersOf("notepad-surface")) {
+    const page = studyOf(slug);
+    if (!page.includes('class="clk-bpm"')) continue;
+    assert.ok(page.includes(rule), `[${slug}] seats the one bpm field but does not carry hub/bpm-field.mjs's .clk-bpm rule verbatim — its box is unstyled`);
+    checked++;
+  }
+  assert.equal(checked, maintainedCarriersOf("notepad-surface").length, `every maintained carrier seats the field since night 77 — checked ${checked}`);
+});
+
 test("§4.3 card carriers: every var(--token) the carried card styles reference is defined on the page, and the shell's .hint rule is carried", () => {
   const shell = readFileSync(join(here, "..", "..", "hub", "shell.mjs"), "utf8");
   const hintRule = shell.match(/^\.hint\{[^}]*\}$/m)[0];
@@ -458,11 +488,16 @@ test("§4.3 hosts: the chart-line host list IS the census's carrier list for cha
 });
 
 test("§4.3 chart line: every host mounts its strip, carries the scoped styles verbatim, and keeps its own position grammar", () => {
+  /* THE STYLES-VERBATIM HALF IS A DRIFT CHECK (night 77, ruling 261037 §2): scoped by driftScope — a frozen host is
+   * exempt from it, printed. Every other assertion here is "is it there" and still binds every host. */
+  const { bound: clBound } = driftScope(CHART_LINE_HOSTS.map((h) => h.name), "§4.3 chart line styles verbatim");
+  const clDrifted = [];
   for (const host of CHART_LINE_HOSTS) {
     const page = studyOf(host.name);
     assert.ok(page.includes(`id="${host.strip}"`), `[${host.name}] the strip #${host.strip} is in the page`);
     const css = chartLineStyles("#" + host.strip, { subline: host.subline });
-    assert.ok(page.includes(css), `[${host.name}] carries chartLineStyles("#${host.strip}", { subline: ${host.subline} }) verbatim — the one set of names, scoped under its own strip`);
+    if (clBound.includes(host.name) && !page.includes(css))
+      clDrifted.push(`[${host.name}] carries chartLineStyles("#${host.strip}", { subline: ${host.subline} }) verbatim — the one set of names, scoped under its own strip`);
     if (!host.subline) assert.ok(!page.includes(`#${host.strip} .tl-us`), `[${host.name}] has no bass reference and gets no sub-line rules`);
     for (const twin of [".tlbar", ".tlrn", ".curbar", ".tlscroll", ".tl-scroll", "#" + host.strip + " button.cur"])
       assert.ok(!page.includes(twin + "{") && !page.includes(twin + " ") && !page.includes(twin + "."), `[${host.name}] the near-miss twin "${twin}" survives in the page`);
@@ -478,6 +513,7 @@ test("§4.3 chart line: every host mounts its strip, carries the scoped styles v
              assert.ok(/announce\(d, STEP_CHANGED, \{ index: i, request: true \}\)/.test(src), `[${host.name}] the chip click is a request to the owner`); }
     }
   }
+  assert.equal(clDrifted.length, 0, `chart line styles drifted:\n${clDrifted.join("\n")}`);
 });
 
 // ================= metronome.mjs: widened to the same shape =================

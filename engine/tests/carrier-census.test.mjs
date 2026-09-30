@@ -28,7 +28,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { CENSUS, STUDY_SLUGS, ENGINE_MODULES, carriersOf, defSegmentsOf, studyPath,
+import { isMaintained } from "./_family.mjs";
+import { CENSUS, STUDY_SLUGS, ENGINE_MODULES, carriersOf, driftScope, defSegmentsOf, studyPath,
   OWED_DRIFT } from "./_carriers.mjs";
 
 test("the census is COMPLETE: every directory under static/studies/ is in it, with a real study file", () => {
@@ -81,7 +82,9 @@ for (const mod of ENGINE_MODULES) {
      * publish is one command, so its drift is never owed, always red. */
     const owed = OWED_DRIFT.get(mod);
     let missing = 0;
-    for (const slug of carriers) {
+    // THE SUBJECT IS DRIFT (night 77, ruling 261037 §2): the frozen study is exempt, printed — driftScope, the one place
+    const drifted = [];
+    for (const slug of driftScope(carriers, `engine/${mod}.mjs verbatim (census)`).bound) {
       const html = readFileSync(studyPath(slug), "utf8");
       const derived = CENSUS.get(slug).source === "derived";
       for (const def of segs)
@@ -89,7 +92,7 @@ for (const mod of ENGINE_MODULES) {
           if (html.includes(seg)) continue;
           missing++;
           if (!owed || derived)
-            assert.fail(
+            drifted.push(
               `${slug}/study.html has DRIFTED from engine/${mod}.mjs — ` +
               (derived
                 ? "rebuild the door and re-publish. "
@@ -98,9 +101,18 @@ for (const mod of ENGINE_MODULES) {
               `Missing:\n${seg.slice(0, 90)}…`);
         }
     }
+    assert.equal(drifted.length, 0, [...new Set(drifted.map((d) => d.split(" has DRIFTED")[0]))].join(", ") + "\n" + drifted.slice(0, 3).join("\n"));
     if (owed)
       assert.ok(missing > 0,
         `engine/${mod}.mjs is carried verbatim again — the owed drift is ` +
         `reconciled; REMOVE its OWED_DRIFT entry (${owed})`);
   });
 }
+
+test("driftScope — the one drift scope (night 77, ruling 261037 §2): it binds every maintained study and exempts exactly the frozen ones, by the register", () => {
+  const { bound, exempt } = driftScope(STUDY_SLUGS, "driftScope self-test");
+  const frozen = STUDY_SLUGS.filter((s) => !isMaintained(s));
+  assert.ok(frozen.length >= 1, "not vacuous: the register has a frozen study");
+  assert.deepEqual(exempt, frozen, "driftScope exempts exactly the register's frozen studies");
+  assert.deepEqual([...bound, ...exempt].sort(), [...STUDY_SLUGS].sort(), "driftScope loses no study and invents none");
+});

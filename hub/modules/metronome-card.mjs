@@ -19,6 +19,7 @@
 import { createMetroCore, createTapTempo } from "../../engine/metronome.mjs";
 import { BEAT, CLOCK, CLOCK_STATE, announce, listen } from "../bus.mjs";
 import { DEFAULT_BPM } from "../tempo.mjs";
+import { bpmField } from "../bpm-field.mjs";
 
 export const metronomeCard = {
   id: "metronome-card",
@@ -38,8 +39,8 @@ export const metronomeCard = {
   </div>
   <div class="bpmrow">
     <span class="metrolabel">BPM</span>
-    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
-    <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="${DEFAULT_BPM}">
+    ${bpmField({ id: "bpmVal", value: DEFAULT_BPM })}
   </div>
   <div class="row2">
     <div><label>Time</label>
@@ -103,12 +104,13 @@ export const metronomeCard = {
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
     const core = createMetroCore({ bpm: DEFAULT_BPM, meter: 4 });
-    /* THE BOOT TEMPO IS PAINTED FROM THE CONSTANT (night 72, PO ruling on item C, option a): the markup above keeps its
-     * value="72" and its readout "72" because those bytes are PINNED into the hand-authored published metronome study
-     * (host-conformance: a hand page carrying this card carries its markup verbatim), and that study does not move until
-     * it becomes a door. So the card paints the face from hub/tempo.mjs here, at mount, before anything reads it: the 72
-     * in the markup is a pinned artefact, never shown once the script runs. */
-    byId("bpmRange").value = core.bpm; byId("bpmVal").textContent = core.bpm;
+    /* THE BOOT TEMPO IS THE MARKUP'S (night 77): night 72's stopgap — a pinned value="72" painted over from the constant
+     * at mount — is retired. It was never a boot-tempo problem: it was the card-carriers pin reaching the frozen study
+     * (ruling 261036 §2), which froze these bytes. With the pin scoped to maintained carriers, the markup takes
+     * hub/tempo.mjs's constant itself, and there is nothing to paint over. */
+    /* THE TEMPO HAS TWO FACES HERE, ONE STATE (rule 10): the slider and the field (#bpmVal, hub/bpm-field.mjs's one
+     * bpm field) are both painted from the clock, by this — never from each other. */
+    const paintBpm = (v) => { byId("bpmRange").value = v; byId("bpmVal").value = v; };
     const tap = createTapTempo();
     const now = () => (d.defaultView ? d.defaultView.performance.now() : 0) / 1000;
     /* THE CLICK'S ON/OFF — the clock owner's state, riding CLOCK_STATE.click
@@ -231,7 +233,7 @@ export const metronomeCard = {
       if (typeof m.bpm === "number") {
         const v = clampBpm(m.bpm);
         core.setBpm(v);
-        byId("bpmRange").value = v; byId("bpmVal").textContent = v;
+        paintBpm(v);
       }
       if (typeof m.meter === "number") {
         core.setMeter(m.meter);
@@ -261,10 +263,18 @@ export const metronomeCard = {
     byId("tapBtn").addEventListener("click", () => {
       const bpm = tap(now());
       if (bpm) { const v = clampBpm(bpm); core.setBpm(v);
-        byId("bpmRange").value = v; byId("bpmVal").textContent = v; publish(); }
+        paintBpm(v); publish(); }
     });
     byId("bpmRange").addEventListener("input", (e) => {
-      core.setBpm(+e.target.value); byId("bpmVal").textContent = e.target.value; publish();
+      core.setBpm(+e.target.value); paintBpm(core.bpm); publish();
+    });
+    /* THE FIELD ASKS, THE OWNER ANSWERS (night 77): a typed tempo goes the way every other view's does — a CLOCK
+     * request, clamped by the listener above, which paints both faces and publishes. A value that is not a number
+     * (an emptied box) asks nothing and gets the clock's tempo painted back. */
+    byId("bpmVal").addEventListener("change", (e) => {
+      const v = e.target.value === "" ? NaN : +e.target.value;
+      if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+      else paintBpm(core.bpm);
     });
     byId("meterSel").addEventListener("change", (e) => {
       core.setMeter(+e.target.value); if (!core.running) lamps(); publish();

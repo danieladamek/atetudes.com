@@ -19,7 +19,9 @@ reformats, minifies or re-indents: the 40+ character segments survive verbatim b
 Nothing here is a list of what a page carries: `engine_inline(names)` walks the modules'
 own imports for the order, and the census DETECTS the result by scanning the page.
 """
+import json
 import re
+import subprocess
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -109,12 +111,18 @@ PART_REGION = re.compile(r"<!--part:([\w-]+)-->([\s\S]*?)<!--/part:\1-->")
 
 
 def _card_literal(card, key):
-    """the card module's `key: \\`…\\`` template literal, verbatim"""
-    src = (HUB / "modules" / f"{card}.mjs").read_text()
-    m = re.search(rf"^  {key}: `([\s\S]*?)`,?\n", src, re.M)
-    if not m:
-        raise ValueError(f"{card}.mjs has no `{key}` literal")
-    return m.group(1)
+    """the card module's `key` string AS THE MODULE EVALUATES IT — the bytes the door build ships and host-conformance
+    compares (`metronomeCard.markup`). Night 77: this read the template's SOURCE text until then, so a `${…}` in a card
+    (hub/tempo.mjs's constant, hub/bpm-field.mjs's one bpm field) would have been emitted raw into a generated page — the
+    reason night 72 had to pin a typed 72 in the card. Evaluated, a card with no interpolation gives the same bytes."""
+    export = card.split("-")[0] + "".join(w.title() for w in card.split("-")[1:])   # metronome-card → metronomeCard
+    r = subprocess.run(["node", "--input-type=module", "-e",
+                        f'import {{ {export} }} from "./hub/modules/{card}.mjs"; '
+                        f'const v = {export}[{json.dumps(key)}]; if (typeof v !== "string") process.exit(3); process.stdout.write(v);'],
+                       cwd=REPO, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise ValueError(f"{card}.mjs has no string `{key}` (node exit {r.returncode}): {r.stderr.strip()[:200]}")
+    return r.stdout
 
 
 def card_markup(card, seated=()):
@@ -143,6 +151,18 @@ def metronome_rows():
     markup = _card_literal("metronome-card", "markup")
     a, b = markup.index('  <div class="transport">'), markup.index('  <div class="clpsum"')
     return markup[a:b]
+
+
+def clock_field_css():
+    """the one bpm field's look — hub/bpm-field.mjs's BPM_FIELD_STYLES, VERBATIM (night 77). A door gets it from the
+    build (any door reaching that file); a page without the build takes the same bytes from here, stated once, read
+    from the module as it evaluates — never retyped. host-conformance pins it on every maintained carrier."""
+    r = subprocess.run(["node", "--input-type=module", "-e",
+                        'import { BPM_FIELD_STYLES } from "./hub/bpm-field.mjs"; process.stdout.write(BPM_FIELD_STYLES);'],
+                       cwd=REPO, capture_output=True, text=True)
+    if r.returncode != 0 or ".clk-bpm{" not in r.stdout:
+        raise ValueError(f"hub/bpm-field.mjs states no .clk-bpm rule ({r.stderr.strip()[:200]})")
+    return r.stdout.strip("\n")
 
 
 def metronome_guarantee():

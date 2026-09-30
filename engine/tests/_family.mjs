@@ -102,6 +102,14 @@ export const FAMILY = new Map([
   }],
   ["tetrad-voice-leading", {
     kind: "frozen",      // R3, ratified 2026-08-20 — §5.2.1's oracle; the floor skips it, named
+    /* WHAT THE FREEZE COSTS, RECORDED (ruling 261036 §6, Daniel 2026-09-29, option (a)) — named, never silent (§4.4) */
+    diverges: [
+      "261036: the metronome card here keeps a read-only tempo readout while the other five studies type into theirs — " +
+      "a frozen study is a preserved 2026 artifact and stops receiving the family's improvements; \"operated on never\" " +
+      "already meant this, and this is the first time it is visible. Still open, and nothing built for 261036 is thrown " +
+      "away if either is taken: (b) supersede it with a door-built successor at a new URL, the old bytes frozen in git; " +
+      "(c) reverse §5.2.1 and edit the oracle.",
+    ],
     surfaces: {
       /* no metronome card — the study predates the shared component */
       /* no arm handle: #soundBtn defaults ON — the suite's first run
@@ -126,6 +134,16 @@ export const FAMILY = new Map([
  * why this list exists. Frozen studies are not: frozen means not edited. */
 export const appsOf = () =>
   [...FAMILY].filter(([, v]) => v.kind === "app" || v.kind === "appliance").map(([k]) => k);
+
+/** Is this study MAINTAINED — edited as the family moves? Every kind is, except "frozen" (R3: frozen means not
+ * edited). The question a check must ask when its subject is "does the page still match the source" (drift): a
+ * page that is never edited cannot drift, so such a check does not bind it — and must say so, with R3's words
+ * (ruling 261036 §4, rule 16). A check whose subject is "is it there" still counts a frozen page. */
+export const isMaintained = (slug) => {
+  const e = FAMILY.get(slug);
+  if (!e) throw new Error(`isMaintained: "${slug}" is not in the family register`);
+  return e.kind !== "frozen";
+};
 
 export const KINDS = ["app", "appliance", "frozen", "chart"];
 export const SURFACE_NAMES = ["metronome", "transport", "neck", "staff"];

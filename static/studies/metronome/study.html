@@ -168,6 +168,9 @@
 #beatLamp span{width:9px;height:9px;border-radius:50%;background:#44444C;display:block}
 #beatLamp span.on{background:#ECECEE}
 #beatLamp span.acc{background:var(--red)}
+  /* ===== hub/bpm-field.mjs · the one bpm field's look, VERBATIM (night 77) ===== */
+.clk-bpm{font:inherit;font-size:12.5px;width:58px;padding:3px 5px;border:1px solid var(--line);
+  border-radius:6px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -189,8 +192,8 @@
   </div>
   <div class="bpmrow">
     <span class="metrolabel">BPM</span>
-    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="72">
-    <span id="bpmVal" data-control="bpmVal" class="metroval">72</span>
+    <input type="range" id="bpmRange" data-control="bpmRange" min="15" max="300" value="120">
+    <input type="number" class="clk-bpm" data-role="bpm" id="bpmVal" data-control="bpmVal" min="15" max="300" step="1" value="120"  title="the tempo — one state, every view; the Metronome card owns the clock">
   </div>
   <div class="row2">
     <div><label>Time</label>
@@ -4279,7 +4282,7 @@ function importText(t){ const n=NOTE.importText(t); NOTE.renderRows(); return n;
 /* ============ UI wiring ============ */
 function syncUI(){
   document.getElementById("bpmRange").value=st.bpm;
-  document.getElementById("bpmVal").textContent=st.bpm;
+  document.getElementById("bpmVal").value=st.bpm;
   document.getElementById("meterSel").value=String(st.meter);
   document.getElementById("subSel").value=String(st.clickSub);
   document.getElementById("voiceSel").value=st.clickVoice;
@@ -4298,9 +4301,15 @@ function initControls(){
     if(b){st.bpm=b;METRO.setBpm(b);syncUI();saveCfg();}
   });
   const bpmR=document.getElementById("bpmRange");
-  bpmR.addEventListener("input",()=>{st.bpm=+bpmR.value;METRO.setBpm(st.bpm);
-    document.getElementById("bpmVal").textContent=st.bpm;});
+  bpmR.addEventListener("input",()=>{st.bpm=+bpmR.value;METRO.setBpm(st.bpm);syncUI();});
   bpmR.addEventListener("change",saveCfg);
+  /* THE TEMPO IS TYPEABLE (night 77, ruling 261036 §5): #bpmVal is hub/bpm-field.mjs's one bpm field. It asks; st.bpm is
+     the owner and clamps to the slider's own bounds; syncUI paints the slider and the field from it, so they cannot
+     disagree. An emptied box asks nothing and gets the tempo painted back. */
+  document.getElementById("bpmVal").addEventListener("change",e=>{
+    const v=e.target.value===""?NaN:+e.target.value;
+    if(Number.isFinite(v)){st.bpm=Math.max(+bpmR.min,Math.min(+bpmR.max,v));METRO.setBpm(st.bpm);saveCfg();}
+    syncUI();});
   document.getElementById("meterSel").addEventListener("change",e=>{
     st.meter=+e.target.value;METRO.setMeter(st.meter);renderLamp();saveCfg();});
   document.getElementById("subSel").addEventListener("change",e=>{st.clickSub=+e.target.value;METRO.setSub(st.clickSub);saveCfg();});

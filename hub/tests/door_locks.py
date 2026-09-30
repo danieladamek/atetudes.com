@@ -1594,7 +1594,7 @@ def run_door(pw, door_id):
         # can hold a value the owner does not.
         u3 = ("() => ({ bpm: (document.getElementById('fdBpm') || {}).value,"
               " bpmCard: (document.getElementById('bpmRange') || {}).value,"
-              " bpmVal: (document.getElementById('bpmVal') || {}).textContent,"
+              " bpmVal: (document.getElementById('bpmVal') || {}).value,"   # night 77: the readout is the one bpm field
               " bass2: (document.getElementById('fdBass2') || {}).value,"
               " refDots: document.querySelectorAll('#fieldSvg .fd-ref').length,"
               " ro: (document.getElementById('roLine') || {}).textContent || '' })")
@@ -3864,7 +3864,7 @@ console.log(JSON.stringify(out));
           f"{tag} the beat lamp never lit — the clock is not running")
     page.fill("#bpmRange", "120")
     page.dispatch_event("#bpmRange", "input")
-    check(page.inner_text("#bpmVal") == "120", f"{tag} the BPM readout did not follow")
+    check(page.input_value("#bpmVal") == "120", f"{tag} the BPM readout did not follow")   # night 77: a field, read by value
 
     if "journalIn" in r["controlsPresent"]:
         page.fill("#journalIn", "a note from the door lock suite\n\nwith `inline code` and a fence:\n\n```\nCmaj7\n```\n")
@@ -3896,14 +3896,14 @@ console.log(JSON.stringify(out));
         page.fill("#bpmRange2", "150")
         page.dispatch_event("#bpmRange2", "input")
         page.wait_for_timeout(80)
-        check(page.inner_text("#bpmVal") == "150",
+        check(page.input_value("#bpmVal") == "150",
               f"{tag} the metronome's BPM did not follow the transport's — two clocks, not one")
-        check(page.inner_text("#bpmVal2") == "150", f"{tag} the transport's own readout did not follow")
+        check(page.input_value("#bpmVal2") == "150", f"{tag} the transport's own readout did not follow")
         # and back the other way
         page.fill("#bpmRange", "120")
         page.dispatch_event("#bpmRange", "input")
         page.wait_for_timeout(80)
-        check(page.inner_text("#bpmVal2") == "120",
+        check(page.input_value("#bpmVal2") == "120",
               f"{tag} the transport did not follow the metronome — the mirror is one-way")
 
         # the meter is one state too, and the split list follows it
@@ -7014,7 +7014,7 @@ console.log(JSON.stringify(out));
         p69.select_option(pg69("split"), "2+2"); p69.wait_for_timeout(200)
         check(p69.evaluate("() => document.getElementById('fdSplit').value") == "2+2", f"{tag} night 69: a split set at Progression's clock is the neck's split too")
         p69.fill(pg69("bpm"), "131"); p69.dispatch_event(pg69("bpm"), "change"); p69.wait_for_timeout(250)
-        check(p69.evaluate("() => document.getElementById('fdBpm').value") == "131" and p69.evaluate("() => document.getElementById('bpmVal').textContent.trim()") == "131",
+        check(p69.evaluate("() => document.getElementById('fdBpm').value") == "131" and p69.evaluate("() => document.getElementById('bpmVal').value") == "131",
               f"{tag} night 69: bpm typed at Progression's clock reaches the clock and every view paints it (the neck, the Metronome card)")
         p69.click("#fdMetChk"); p69.wait_for_timeout(200)
         check(p69.evaluate("() => document.querySelector('#pgClock [data-role=\"click\"]').checked") == p69.evaluate("() => document.getElementById('fdMetChk').checked"),
@@ -7179,7 +7179,7 @@ console.log(JSON.stringify(out));
         ctx72c = pw.new_context(viewport={"width": 1280, "height": 900}); p72c = ctx72c.new_page()
         p72c.goto(html_path.as_uri()); p72c.wait_for_selector("#cards", state="attached"); p72c.wait_for_timeout(500)
         faces72 = p72c.evaluate("""() => { const v = (sel, prop) => { const e = document.querySelector(sel); return e ? (prop === 'text' ? e.textContent.trim() : e.value) : null; };
-          return { bpmRange: v('#bpmRange'), bpmVal: v('#bpmVal', 'text'), bpmRange2: v('#bpmRange2'), bpmVal2: v('#bpmVal2', 'text'), fdBpm: v('#fdBpm'),
+          return { bpmRange: v('#bpmRange'), bpmVal: v('#bpmVal'), bpmRange2: v('#bpmRange2'), bpmVal2: v('#bpmVal2'), fdBpm: v('#fdBpm'),
             pgClock: v('#pgClock [data-role="bpm"]'), settings: document.getElementById('psDesc') ? document.getElementById('psDesc').innerText.split('\\n')[0] : null }; }""")
         present72 = {k: x for k, x in faces72.items() if x is not None}
         check(present72 and all((x == "120" if k != "settings" else x.startswith("120 bpm")) for k, x in present72.items()),
@@ -7190,6 +7190,59 @@ console.log(JSON.stringify(out));
         med72 = sorted(iv72)[len(iv72) // 2] if iv72 else 0
         check(len(iv72) >= 3 and 480 <= med72 <= 520, f"{tag} night 72: the heard beat is 500 ms at the boot tempo (median {med72:.0f} ms of {[round(x) for x in iv72]})")
         ctx72c.close()
+
+    # ---------------- NIGHT 77 (ruling 261036 §5): THE TEMPO IS TYPEABLE — one field, every seat, one state ----------
+    # Daniel, 261035: "I'd like the tempo field in the metronome to be editable ... like it is everywhere else." The
+    # Metronome card's #bpmVal and the Transport card's #bpmVal2 are hub/clock.mjs's ONE bpm field. Each asks; the
+    # Metronome card owns the clock and clamps; every face paints the owner's echo (rule 10). Read at the FACES and at
+    # the owner's own last CLOCK_STATE — never at the request.
+    if 'id="bpmVal"' in html_path.read_text():
+        ctx77 = pw.new_context(viewport={"width": 1280, "height": 900}); p77 = ctx77.new_page()
+        errs77 = []; p77.on("pageerror", lambda e: errs77.append(str(e)))
+        p77.goto(html_path.as_uri()); p77.wait_for_selector("#cards", state="attached"); p77.wait_for_timeout(300)
+        seats77 = [i for i in ("bpmVal", "bpmVal2", "fdBpm") if p77.query_selector("#" + i)]
+        # ONE DEFINITION: every seat is the same field — the clock view's attributes, byte for byte, bar the address
+        defn77 = p77.evaluate("""(ids) => ids.map(i => { const e = document.getElementById(i);
+          return [e.tagName, e.type, e.className, e.dataset.role, e.min, e.max, e.step, e.title].join('|'); })""", seats77)
+        check(len(defn77) >= 1 and len(set(defn77)) == 1 and defn77[0].startswith("INPUT|number|clk-bpm|bpm|15|300|1|"),
+              f"{tag} night 77: every tempo seat is hub/bpm-field.mjs's one bpm field, typeable 15–300 — {dict(zip(seats77, defn77))}")
+        faces77 = """() => { const v = i => { const e = document.getElementById(i); return e ? e.value : null; };
+          const st = (document.__atetudesLast && document.__atetudesLast.get('atetudes:clock-state')) || {};
+          return { clock: String(st.bpm), bpmRange: v('bpmRange'), bpmVal: v('bpmVal'), bpmRange2: v('bpmRange2'), bpmVal2: v('bpmVal2'), fdBpm: v('fdBpm') }; }"""
+        def agree77(want):
+            f = p77.evaluate(faces77)
+            return all(x == want for x in f.values() if x is not None), f
+        def type77(sel, val):
+            p77.fill(sel, val); p77.dispatch_event(sel, "change")
+        # the field WRITES THE CLOCK — the owner's echo carries it, and every face paints it
+        type77("#bpmVal", "144"); ok, f = agree77("144")
+        check(ok, f"{tag} night 77: 144 typed in the Metronome card's field sets the clock, and every face shows the clock's 144: {f}")
+        # the OWNER CLAMPS a typed value — both ends, and a second 999 at the ceiling (a change-only paint keeps the 999)
+        for seat in [x for x in ("bpmVal", "bpmVal2") if x in seats77]:
+            type77("#" + seat, "999"); ok, f = agree77("300")
+            check(ok, f"{tag} night 77: 999 typed in #{seat} comes back as the owner's clamp, 300, on every face: {f}")
+            type77("#" + seat, "999"); ok, f = agree77("300")
+            check(ok, f"{tag} night 77: 999 typed AGAIN in #{seat} at the ceiling still shows the owner's 300, not the 999: {f}")
+            type77("#" + seat, "3"); ok, f = agree77("15")
+            check(ok, f"{tag} night 77: 3 typed in #{seat} comes back as the owner's floor, 15, on every face: {f}")
+        # an emptied box asks nothing — the clock keeps its tempo and the box shows it again
+        type77("#bpmVal", "100"); type77("#bpmVal", ""); ok, f = agree77("100")
+        check(ok, f"{tag} night 77: an emptied field asks nothing — the clock keeps 100 and the box shows it again: {f}")
+        # the SLIDER AND THE FIELD are two views of one value — both directions
+        p77.fill("#bpmRange", "88"); p77.dispatch_event("#bpmRange", "input"); ok, f = agree77("88")
+        check(ok, f"{tag} night 77: the slider at 88 — the field, the clock and every other face agree: {f}")
+        type77("#bpmVal", "133"); ok, f = agree77("133")
+        check(ok, f"{tag} night 77: the field at 133 — the slider, the clock and every other face agree: {f}")
+        if "bpmVal2" in seats77:
+            # the TWO CARDS' FIELDS are two views of one value — both directions, and the transport's slider
+            type77("#bpmVal2", "166"); ok, f = agree77("166")
+            check(ok, f"{tag} night 77: 166 typed in the Transport card's field — the Metronome card's field, the clock and every face agree: {f}")
+            type77("#bpmVal", "77"); ok, f = agree77("77")
+            check(ok, f"{tag} night 77: 77 typed in the Metronome card's field — the Transport card's field agrees: {f}")
+            p77.fill("#bpmRange2", "111"); p77.dispatch_event("#bpmRange2", "input"); ok, f = agree77("111")
+            check(ok, f"{tag} night 77: the Transport's slider at 111 — both fields and the clock agree: {f}")
+        check(not errs77, f"{tag} night 77: no page errors: {errs77[:3]}")
+        ctx77.close()
 
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
@@ -7237,7 +7290,7 @@ console.log(JSON.stringify(out));
         offer_btn.click(); page.wait_for_timeout(500)
         key_after = page.input_value(key_sel)
         check(key_after == "Eb", f"{tag} the click did not bring the note's key: {key_before} -> {key_after}")
-        check(page.inner_text("#bpmVal").strip() == "84", f"{tag} the click did not bring the note's bpm: {page.inner_text('#bpmVal')!r}")
+        check(page.input_value("#bpmVal") == "84", f"{tag} the click did not bring the note's bpm: {page.input_value('#bpmVal')!r}")
         check(not errors, f"{tag} the offer raised page errors: {errors[:2]}")
         page.set_viewport_size({"width": 1280, "height": 900})
 

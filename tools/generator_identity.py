@@ -38,13 +38,41 @@ def declared():
     return out
 
 
+def register():
+    """the family register's kinds and R3's reason, read from engine/tests/_family.mjs — never retyped here"""
+    r = subprocess.run(["node", "--input-type=module", "-e",
+                        'import { FAMILY, FLOOR_SCOPE, isMaintained } from "./engine/tests/_family.mjs";'
+                        'console.log(JSON.stringify({ kinds: Object.fromEntries([...FAMILY].map(([k, v]) => [k, v.kind])),'
+                        ' maintained: [...FAMILY.keys()].filter(isMaintained),'
+                        ' reason: Object.fromEntries([...FAMILY].map(([k, v]) => [k, (FLOOR_SCOPE[v.kind].exempt || {}).metronome || null])) }))'],
+                       cwd=REPO, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit(f"generator identity: cannot read the family register ({r.stderr.strip()[-200:]})")
+    return __import__("json").loads(r.stdout)
+
+
 def check():
-    """→ [problem strings]; empty when every generator reproduces its published page"""
+    """→ [problem strings]; empty when every MAINTAINED generator reproduces its published page.
+
+    THE SUBJECT IS DRIFT, SO THE SCOPE IS THE MAINTAINED PAGES (night 77, ruling 261036 §4, rule 16). A frozen study is
+    never edited: its generator reads the LIVE hub cards through the bridge, so once a shared card moves it no longer
+    reproduces the preserved page — and must not be made to. It is EXEMPT, printed with R3's words from the register,
+    never a pass and never silence, and the exemption is counted."""
     problems = []
     gens = declared()
     if not gens:
         return ["generator identity: no generator declares PUBLISHED — the pin has nothing to check (it must never pass vacuously)"]
+    reg = register()
+    checked = 0
     for py, emitted, published in gens:
+        slug = published.parent.name
+        if slug not in reg["kinds"]:
+            problems.append(f"generator identity: {published.relative_to(REPO)} is not in the family register")
+            continue
+        if slug not in reg["maintained"]:   # the register's isMaintained — the one predicate every drift check asks
+            print(f"  EXMT  {slug} · generator identity — exempt, not passing: {reg['reason'][slug]}")
+            continue
+        checked += 1
         with tempfile.TemporaryDirectory() as tmp:
             r = subprocess.run([sys.executable, str(py)], cwd=tmp, capture_output=True, text=True,
                                env={**__import__("os").environ, "PYTHONPATH": str(GENERATORS)})
@@ -70,6 +98,8 @@ def check():
                     f"and re-ingest (run the generator, copy {emitted} to {published.relative_to(REPO)}, cmp).")
             else:
                 print(f"generator identity: {published.relative_to(REPO)} is byte-identical to what {py.name} emits ({len(a)} bytes)")
+    if checked == 0:
+        problems.append("generator identity: every declared generator was exempt — the pin checked nothing (it must never pass vacuously)")
     return problems
 
 

@@ -38,6 +38,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveDoor, listDoors } from "../../hub/tools/resolve.mjs";
+import { isMaintained, FAMILY, FLOOR_SCOPE } from "./_family.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ENGINE = join(here, "..");
@@ -114,3 +115,22 @@ export const carriersOf = (mod) =>
  * breaks contiguity there; the per-export census pin covers doors instead) */
 export const preHubCarriersOf = (mod) =>
   carriersOf(mod).filter((s) => CENSUS.get(s).source === "detected");
+
+/** the MAINTAINED pre-hub carriers — hand-authored AND edited as the family moves (ruling 261036 §4). WHY BOTH
+ * EXIST: preHubCarriersOf answers a question of SHAPE (hand-inlined, so a contiguous-bytes pin fits it) and still
+ * counts a frozen study, which does carry those bytes; this one answers a question of SUBJECT — a drift pin binds
+ * only a page someone edits. The predicate is the register's (_family.mjs isMaintained), never a list here. */
+export const maintainedCarriersOf = (mod) => preHubCarriersOf(mod).filter(isMaintained);
+
+/** THE DRIFT SCOPE — computed ONCE, used by every check whose subject is drift (ruling 261037 §2, rule 6, rule 16).
+ * A drift pin asks "does this page still match the source"; a frozen study is never edited and cannot drift, so it is
+ * not bound — and it is never silent: each exempt page is PRINTED with its kind's ratified reason from FLOOR_SCOPE
+ * (R3's own words), never as a pass (§4.4). Returns { bound, exempt }; a pin iterates `bound` and may count `exempt`.
+ * Night 77 found five such pins reaching the frozen study (the card carriers, the census, the metronome, note-events,
+ * the chart line's styles); they all route through here, so a sixth is one call, not a sixth rule. */
+export function driftScope(carriers, check) {
+  const bound = carriers.filter(isMaintained), exempt = carriers.filter((s) => !isMaintained(s));
+  for (const s of exempt)
+    console.log(`  EXMT  ${s} · ${check} — exempt, not passing: ${FLOOR_SCOPE[FAMILY.get(s).kind].exempt.metronome}`);
+  return { bound, exempt };
+}

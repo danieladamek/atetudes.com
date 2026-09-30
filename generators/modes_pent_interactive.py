@@ -257,6 +257,9 @@ __GRAMMAR_CSS__
 __NOTEPAD_CSS__
   /* ===== hub/modules/metronome-card.mjs · styles, VERBATIM (the bridge) ===== */
 __METRONOME_CSS__
+  /* ===== hub/bpm-field.mjs · the one bpm field's look, VERBATIM (the bridge, night 77) ===== */
+__CLOCK_FIELD_CSS__
+  .clk-bpm{box-sizing:border-box}   /* this page has no border-box grammar: without it the field's 58px grows to 70 (night 77) */
   #notepadCard #noteCol{padding-left:0}
   /* this page's name is long: the card's 215px title field clips it (a field that clips the value it
      holds does not visibly hold it — 260916); wider here, and in flow under the heading on a phone */
@@ -797,7 +800,7 @@ function metroToggle() {
 }
 function syncMetro() {
   document.getElementById("bpmRange").value = state.bpm;
-  document.getElementById("bpmVal").textContent = state.bpm;
+  document.getElementById("bpmVal").value = state.bpm;   // the field paints the page's tempo (night 77)
   const b = document.getElementById("clickMute"), on = met.vol > 0;
   b.textContent = on ? "🔊" : "🔇"; b.setAttribute("aria-pressed", String(!on));
   b.title = on ? "mute the click — the slider to zero" : "unmute — restore the click level";
@@ -810,8 +813,14 @@ document.getElementById("tapBtn").addEventListener("click", () => {
   if (b) { state.bpm = b; METRO.setBpm(b); syncMetro(); }
 });
 document.getElementById("bpmRange").addEventListener("input", function () {
-  state.bpm = +this.value; METRO.setBpm(state.bpm);
-  document.getElementById("bpmVal").textContent = this.value; });
+  state.bpm = +this.value; METRO.setBpm(state.bpm); syncMetro(); });
+/* THE TEMPO IS TYPEABLE (night 77, ruling 261036 §5): #bpmVal is hub/bpm-field.mjs's one bpm field. It asks; this page's
+   tempo (state.bpm) is the owner and clamps to the slider's own bounds; syncMetro paints the slider and the field from
+   it — they cannot disagree. An emptied box asks nothing and gets the tempo painted back. */
+document.getElementById("bpmVal").addEventListener("change", function () {
+  const r = document.getElementById("bpmRange"), v = this.value === "" ? NaN : +this.value;
+  if (Number.isFinite(v)) { state.bpm = Math.max(+r.min, Math.min(+r.max, v)); METRO.setBpm(state.bpm); }
+  syncMetro(); });
 document.getElementById("meterSel").addEventListener("change", e => { METRO.setMeter(+e.target.value); if (!METRO.running) renderLamp(); });
 document.getElementById("subSel").addEventListener("change", e => METRO.setSub(+e.target.value));
 document.getElementById("voiceSel").addEventListener("change", e => { met.voice = e.target.value; click(); });
@@ -907,6 +916,7 @@ html = (TEMPLATE
         .replace("__SHELL_CSS__", bridge.shell_css())
         .replace("__NOTEPAD_CSS__", bridge.card_styles("notepad-card").strip("\n"))
         .replace("__METRONOME_CSS__", bridge.card_styles("metronome-card").strip("\n"))
+        .replace("__CLOCK_FIELD_CSS__", bridge.clock_field_css())
         .replace("__METRONOME_ROWS__", bridge.metronome_rows())
         .replace("__METRONOME_GUARANTEE__", bridge.metronome_guarantee())
         .replace("__NOTEPAD_PAD__", bridge.card_part("notepad-card", "pad"))
