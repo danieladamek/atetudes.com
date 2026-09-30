@@ -2167,11 +2167,15 @@ def m95_a_mixer_row_returns_to_the_transport_card():
     p, original, mutated = patch("hub/modules/transport-card.mjs",
         '  <div class="clpsum">The étude\'s walk — Play joins the grid at the next bar.</div>',
         '  <div class="bpmrow"><span class="trLab">a level that came back</span><input type="range" min="0" max="100" value="100"></div>\n  <div class="clpsum">The étude\'s walk — Play joins the grid at the next bar.</div>')
+    # night 77 (ruling 261037 §1): the published page is RESTORED TO ITS OWN BYTES afterwards — it was restored by copying
+    # a rebuild over it, which equals the page only when the tree equals what was published
+    published = REPO / "static/studies/tetradetudes/study.html"
+    published_bytes = published.read_bytes()
     try:
         p.write_text(mutated)
         build()
         import shutil
-        shutil.copyfile(str(REPO / "hub/build/tetradetudes.html"), str(REPO / "static/studies/tetradetudes/study.html"))   # the static pin reads the published page
+        shutil.copyfile(str(REPO / "hub/build/tetradetudes.html"), str(published))   # the static pin reads the published page
         r = sh("node", "--test", "engine/tests/host-conformance.test.mjs")
         stat = r.returncode != 0 and "row groups" in (r.stdout + r.stderr)
         g = suite()
@@ -2181,7 +2185,7 @@ def m95_a_mixer_row_returns_to_the_transport_card():
     finally:
         p.write_text(original)
         build()
-        shutil.copyfile(str(REPO / "hub/build/tetradetudes.html"), str(REPO / "static/studies/tetradetudes/study.html"))
+        published.write_bytes(published_bytes)
 
 def m96_the_derivation_forgets_the_presets():
     # night 59: objectOf forgets that a preset's own default names it — R,3,7 comes back as a tetrad narrowed to three,
@@ -3197,6 +3201,21 @@ def preflight(fns):
     except OSError as e:
         log_line(f"  ENVIRONMENT  cannot delete leftover tuner-card.mjs ({e}) — "
                  "m6 may misreport until it is removed by hand")
+    # THE PREFLIGHT WRITES NOTHING PUBLISHED (night 77, PO ruling 261037 §1): it runs every mutation's body, and m95's
+    # body copied hub/build over the published tetradetudes page — unstubbed, so every full chain's START overwrote a
+    # permanent URL's bytes with whatever was built, indistinguishable afterwards from a deliberate ingest. Invisible for
+    # seven weeks because build and page are normally equal. The guard does not trust the stubs to be complete: every
+    # published page is hashed before and after, and a changed one is RESTORED and refuses the run by name.
+    import hashlib
+    STATIC = REPO / "static"
+    def _pub():
+        return {f: f.read_bytes() for f in sorted(STATIC.rglob("*")) if f.is_file()}
+    pub_before = _pub()
+    # the stub itself: file copies are writes like build() is — m95's copyfile was the one left live
+    import shutil as _sh
+    real_copies = {k: getattr(_sh, k) for k in ("copyfile", "copy", "copy2", "copytree")}
+    for k in real_copies:
+        setattr(_sh, k, lambda *a, **kw: None)
     PREFLIGHT["on"] = True
     try:
         for fn in fns:
@@ -3208,6 +3227,18 @@ def preflight(fns):
         PREFLIGHT["on"] = False
         for k, v in real.items():
             g[k] = v
+        for k, v in real_copies.items():
+            setattr(_sh, k, v)
+        pub_after = _pub()
+        for f in sorted(set(pub_before) | set(pub_after)):
+            if pub_before.get(f) != pub_after.get(f):
+                if f in pub_before:
+                    f.write_bytes(pub_before[f])
+                else:
+                    f.unlink()
+                PREFLIGHT["rotted"].append(f"THE PREFLIGHT WROTE A PUBLISHED FILE: {f.relative_to(REPO)} "
+                                           f"(restored to its bytes before the preflight) — stub whatever wrote it")
+        log_line(f"published-file guard: {len(pub_before)} file(s) under static/ hashed before and after the preflight")
     # THE GREP-TARGET PREFLIGHT (260905, the carried item): m23's expected
     # message rotted when a pin was renamed, and the anchor pass cannot see
     # it. Cheap version, no suite run: every `"…" in r.stdout` literal in
