@@ -2947,7 +2947,8 @@ def m140_the_card_rows_drift():
         r = conformance()
         conf_out = r.stdout + r.stderr
         kept, frozen = register_lists()
-        assert "exempt, not passing: " in (REPO / "engine/tests/host-conformance.test.mjs").read_text(), "m140's EXMT target rotted"
+        # re-sited night 77b: the EXMT line moved with the drift scope into engine/tests/_carriers.mjs (driftScope)
+        assert "exempt, not passing: " in (REPO / "engine/tests/_carriers.mjs").read_text(), "m140's EXMT target rotted"
         bit = {s: f"[{s}] carries hub/modules/metronome-card.mjs" in conf_out for s in kept}
         spared = {s: f"[{s}] carries hub/modules/metronome-card.mjs" not in conf_out and f"EXMT  {s} · §4.3 card carriers" in conf_out
                   for s in frozen}
