@@ -1,3 +1,14 @@
+## 2026-10-01 — DEPLOYED: the m140 re-site live — harness only; no study moved; written from the run
+
+- record: run 36802480191 · success · commit fd5b0e5 · fetched 2026-10-01T01:53Z · 6/6 studies byte-identical · digest 42028b2fae03
+- Actions run 36802480191 green on `fd5b0e5` — https://github.com/danieladamek/atetudes.com/actions/runs/36802480191 (created 2026-10-01T01:43:52Z, finished 2026-10-01T01:53:06Z).
+- metronome: repo 1a53fca4355b · live 1a53fca4355b — matches.
+- modes-from-pentatonic-boxes: repo 61f762da9d8d · live 61f762da9d8d — matches.
+- multetudes: repo f92d7955273a · live f92d7955273a — matches.
+- tetrad-voice-leading: repo 879365e1ff6a · live 879365e1ff6a — matches.
+- tetradetudes: repo 738b2a097804 · live 738b2a097804 — matches.
+- triadetudes: repo 67043cba6363 · live 67043cba6363 — matches.
+
 ## 2026-09-30 — DEPLOYED: the m95 fix live — harness only; no study moved (every hash equals night 77's); written from the run
 
 - record: run 36657484582 · success · commit 0299000 · fetched 2026-09-30T02:14Z · 6/6 studies byte-identical · digest 5cb784eca45f
