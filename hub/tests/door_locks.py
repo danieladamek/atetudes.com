@@ -4724,15 +4724,19 @@ console.log(JSON.stringify(out));
         check(page.inner_text("#tlBars button >> nth=0") != first,
               f"{tag} Start on did not move the pass's first chord")
         page.select_option("#startSel", "0")
-        # Break down is the reference's form, honestly disabled until typed
-        # changes land — a control that pretends would be the v0.6.8 defect
-        check(page.eval_on_selector_all("#modeSeg button[disabled]", "e => e.length") == 1,
-              f"{tag} the Break down button is not disabled (or vanished)")
-        # and it STATES WHY in the panel, not only in a tooltip (Shape & Motion
-        # item: no control silently disabled)
-        hpnote = page.query_selector(".hpNote")
-        check(hpnote is not None and "break down" in hpnote.inner_text().lower(),
-              f"{tag} the disabled Break-down button states no reason in the panel")
+        # RE-AIMED 2026-10-01 (night 80, Daniel removed modeSeg; rule 7): the panel
+        # carried a Build up / Break down segment whose Break down was "greyed until
+        # typed chord entry ships in a later shell child" — a promise six weeks old.
+        # The control is gone and no promise of an unshipped mode may remain: no mode
+        # segment, and no "Break down" anywhere in the panel (typed charts are their
+        # own post-1.0 item, "tetradetudes takes typed charts").
+        check(page.query_selector("#modeSeg") is None and page.query_selector('[data-control="modeSeg"]') is None,
+              f"{tag} the removed Harmony-mode segment is back in the page")
+        # the panel BY ROLE (rule 12): the card holding its own #keySel — never a class
+        # name (".hp-strip", which the panel stopped carrying 2026-08-17, matched nothing)
+        hp_text = page.evaluate("() => { const k = document.getElementById('keySel'); const c = k && k.closest('.card'); return c ? c.innerText : null; }")
+        check(hp_text is not None and "break down" not in hp_text.lower(),
+              f"{tag} the harmony panel still promises a Break-down mode it does not have (or the panel was not found): {str(hp_text)[:80]!r}")
         # NO OVERLAP anywhere in the panel: the defect this panel removed must
         # not reappear — every pair of visible controls must be disjoint
         overlaps = page.evaluate("""() => {
@@ -5113,15 +5117,19 @@ console.log(JSON.stringify(out));
         check(page.inner_text("#tlBars button >> nth=0") != first,
               f"{tag} Start on did not move the pass's first chord")
         page.select_option("#startSel", "0")
-        # Break down is the reference's form, honestly disabled until typed
-        # changes land — a control that pretends would be the v0.6.8 defect
-        check(page.eval_on_selector_all("#modeSeg button[disabled]", "e => e.length") == 1,
-              f"{tag} the Break down button is not disabled (or vanished)")
-        # and it STATES WHY in the panel, not only in a tooltip (Shape & Motion
-        # item: no control silently disabled)
-        hpnote = page.query_selector(".hpNote")
-        check(hpnote is not None and "break down" in hpnote.inner_text().lower(),
-              f"{tag} the disabled Break-down button states no reason in the panel")
+        # RE-AIMED 2026-10-01 (night 80, Daniel removed modeSeg; rule 7): the panel
+        # carried a Build up / Break down segment whose Break down was "greyed until
+        # typed chord entry ships in a later shell child" — a promise six weeks old.
+        # The control is gone and no promise of an unshipped mode may remain: no mode
+        # segment, and no "Break down" anywhere in the panel (typed charts are their
+        # own post-1.0 item, "tetradetudes takes typed charts").
+        check(page.query_selector("#modeSeg") is None and page.query_selector('[data-control="modeSeg"]') is None,
+              f"{tag} the removed Harmony-mode segment is back in the page")
+        # the panel BY ROLE (rule 12): the card holding its own #keySel — never a class
+        # name (".hp-strip", which the panel stopped carrying 2026-08-17, matched nothing)
+        hp_text = page.evaluate("() => { const k = document.getElementById('keySel'); const c = k && k.closest('.card'); return c ? c.innerText : null; }")
+        check(hp_text is not None and "break down" not in hp_text.lower(),
+              f"{tag} the harmony panel still promises a Break-down mode it does not have (or the panel was not found): {str(hp_text)[:80]!r}")
         # NO OVERLAP anywhere in the panel: the defect this panel removed must
         # not reappear — every pair of visible controls must be disjoint
         overlaps = page.evaluate("""() => {

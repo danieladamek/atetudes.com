@@ -21,9 +21,10 @@
  *   - Progression lists the door's five derived cycles, not the study's seven;
  *   - the bass select offers none/root — the pedal, not triad extensions;
  *   - "Start bottom on" (R/3/5/7, the inversion seed) has no reference twin;
- * *   - Break down is rendered DISABLED: the reference's mode segment is part of
- *     the panel's form, but typed changes are a later shell child, and a
- *     control that pretends is worse than one that says "not yet".
+ * *   - (until 2026-10-01) Break down was rendered DISABLED: the reference's mode
+ *     segment was part of the panel's form, typed changes "a later shell child".
+ *     None came to this panel in six weeks; Daniel removed the segment
+ *     (2026-10-01) and the promise became its own item.
  *
  * THIS MODULE OWNS THE CONFIGURATION (§4.2.3), as its predecessor did:
  * private state, announced as a plain value on the bus. Prune it and the
@@ -57,7 +58,10 @@ export const harmonyPanel = {
   requires: { material: "tetrad" },
   mount_point: "strips",
   order: 10,
-  controls: ["keySel", "scaleSel", "modeSeg", "progSel", "startSel", "bottomSel", "extSel"],
+  /* modeSeg (Build up / Break down) REMOVED 2026-10-01 (Daniel): it promised typed chord entry "in a later shell child"
+   * for six weeks and none came here; typed charts live in multetudes. The promise is kept visible as its own item —
+   * "tetradetudes takes typed charts" (post-1.0). */
+  controls: ["keySel", "scaleSel", "progSel", "startSel", "bottomSel", "extSel"],
 
   markup: `
   <h2>Centricity</h2>   <!-- was Harmony — ruled 260923: "Centricity for sure across all" (night 34) -->
@@ -72,15 +76,6 @@ export const harmonyPanel = {
             <option value="mel">Melodic minor</option>
           </select></div>
       </div>
-    </div>
-    <div class="grp">
-      <label>Harmony mode</label>
-      <div class="seg" id="modeSeg" data-control="modeSeg">
-        <button data-mode="build" class="on">Build up</button>
-        <button data-mode="break" disabled
-          title="typed changes arrive with a later shell child">Break down</button>
-      </div>
-      <div class="hpNote">“Break down” is greyed until typed chord entry ships in a later shell child.</div>
     </div>
     <div class="grp hpWide">
       <div class="row2 alignEnd">
@@ -108,7 +103,7 @@ export const harmonyPanel = {
 .striprow .grp.hpWide{flex:1 1 420px;max-width:none}
 .striprow .hpTight{flex:0 1 auto}
 #hpRule{margin-top:8px}
-.hpNote{font-size:11px;color:var(--gray);font-style:italic;margin-top:4px;max-width:220px}`,
+`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;

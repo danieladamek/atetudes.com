@@ -34,73 +34,86 @@ import { CENSUS, STUDY_SLUGS, driftScope } from "./_carriers.mjs";
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const RED = /var\(--red\)|#B82929/i;
 
-/* THE GRANTS — decisions Daniel MADE. They await nothing and NEVER expire. A grant pins how many sites it covers, so an
- * entry citing it can be neither removed nor added without changing the grant itself — that is, without a new ruling. */
+/* THE GRANTS — decisions Daniel MADE, each one a numbered BORROWING in the Spec's closed list (v1.5, §7 rule 8: "The
+ * Root's red is deliberately borrowed in three places, and only these three … A fourth borrowing is a Spec amendment,
+ * not a judgement"). The list is READ FROM THE SPEC (specBorrowings, below): a grant citing a borrowing the Spec does
+ * not list is malformed, and so is a listed borrowing no grant covers. A grant never expires, and pins its site count —
+ * an entry is removed or added only by a new ruling. */
 export const GRANTS = {
-  "shell-parity-N2": { sites: 5, granted: "Daniel, 2026-08-19 (shell parity N2): Play is the shell's red .primary — " +
-    "\"more obvious that it is a play button.\" Granted after golden rule 8 (2026-08-09)." },
-  "shell-parity-N3": { sites: 5, granted: "Daniel, 2026-08-19 (shell parity N3): \"a red first beat of a measure on the " +
-    "beat indicator next to the tap button.\" Granted after golden rule 8." },
+  "rule8-borrowing-1": { borrowing: 1, sites: 2, granted: "Spec v1.5 §7 rule 8, borrowing 1 — the transport's Play " +
+    "(Daniel, 2026-08-19, shell parity N2: \"more obvious that it is a play button\"). NARROWED to Play by role, " +
+    "2026-10-01 (Daniel: \"nobody decided Save should be red — a selector did\")." },
+  "rule8-borrowing-2": { borrowing: 2, sites: 5, granted: "Spec v1.5 §7 rule 8, borrowing 2 — the metronome's first beat " +
+    "of a measure (Daniel, 2026-08-19, shell parity N3)." },
+  "rule8-borrowing-3": { borrowing: 3, sites: 26, granted: "Spec v1.5 §7 rule 8, borrowing 3 — refusal and alarm text " +
+    "(Daniel, 2026-10-01: \"context removes any confusion about the meaning of red\"; draft 261046 ratified the 26 " +
+    "sites as they stand — 6 of them are danger buttons and an errored chip's border, not text: a wording gap, reported)." },
 };
 
 /* THE OPEN QUESTIONS — decisions still to be made. Closing one (open: false) turns every entry AWAITING it red until its
- * sites are fixed and the entries removed. */
+ * sites are fixed. None is open since Spec v1.5; the alarm question is kept, answered, as the record of how it closed. */
 export const RULINGS = {
-  "261041b-alarm": { open: true, question: "How an alarm or status looks (night 78, part B): the Spec's answer — a hue " +
-    "that is not in the palette, its VALUE Daniel's — or no colour at all (weight, a mark, the word)." },
+  "261041b-alarm": { open: false, question: "How an alarm or status looks (night 78, part B).",
+    answered: "Spec v1.5 §7 rule 8, borrowing 3 (Daniel, 2026-10-01) — the 26 sites keep the Root's red." },
 };
+
+/** the Spec's closed list of borrowings, read from rule 8's own text — { number → title } */
+export function specBorrowings(specText) {
+  const a = specText.indexOf("deliberately borrowed"), b = specText.indexOf("closed list", a);
+  if (a < 0 || b < 0) throw new Error("the Spec's rule 8 states no closed list of borrowings — re-site specBorrowings");
+  const out = new Map();
+  for (const m of specText.slice(a, b).matchAll(/^>\s+(\d+)\.\s+\*\*(.+?)\*\*/gm)) out.set(Number(m[1]), m[2]);
+  return out;
+}
 
 const P = (slug) => `static/studies/${slug}/study.html`;
 /* THE LEDGER — every use of the red outside the key, the token and the palette. Each entry is EITHER `granted` (cites a
  * GRANT, never expires) OR `awaiting` (cites an OPEN question, expires when it closes) — never both, never neither.
  * `match` identifies the line; `n` is how many lines. */
 export const LEDGER = [
-  // Play — shell parity N2
-  { where: "hub/shell.mjs", match: ".transport button.primary{", granted: "shell-parity-N2" },
-  { where: "generators/atetudes_bridge.py", match: ".transport button.primary{background:#B82929", granted: "shell-parity-N2" },
-  { where: P("metronome"), match: ".transport button.primary{", granted: "shell-parity-N2" },
-  { where: P("triadetudes"), match: ".transport button.primary{", granted: "shell-parity-N2" },
-  { where: P("modes-from-pentatonic-boxes"), match: ".transport button.primary{", granted: "shell-parity-N2" },
-  // the first-beat lamp — shell parity N3
-  { where: "hub/modules/metronome-card.mjs", match: "#beatLamp span.acc{", granted: "shell-parity-N3" },
-  { where: P("metronome"), match: "#beatLamp span.acc{", granted: "shell-parity-N3" },
-  { where: P("triadetudes"), match: "#beatLamp span.acc{", granted: "shell-parity-N3" },
-  { where: P("triadetudes"), match: "const LAMP={idle:", granted: "shell-parity-N3" },
-  { where: P("modes-from-pentatonic-boxes"), match: "#beatLamp span.acc{", granted: "shell-parity-N3" },
-  // alarm and status — part B
-  { where: "hub/modules/notepad-card.mjs", match: ".hist .acts button.danger{", awaiting: "261041b-alarm" },
-  { where: "hub/modules/shape-motion.mjs", match: ".smErr{", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "the centre cannot follow", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "figure: ${fg.err}", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "reference refused: the reference is relative", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "reference refused: ${rp.reason}", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "sounded bass silent: ${sb.reason}", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "${a}</span>", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "${msg}</span>", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "String(e && e.message || e)", awaiting: "261041b-alarm" },
-  { where: "hub/modules/neck-readout.mjs", match: "a.style.fontWeight = \"bold\"", awaiting: "261041b-alarm" },
-  { where: "hub/modules/field-board.mjs", match: "fill: \"#B82929\" }, svg);", awaiting: "261041b-alarm" },   // the field's refusal
-  { where: "hub/modules/field-board.mjs", match: "noteEl.style.color = \"#B82929\"", awaiting: "261041b-alarm" },   // the figure's error
-  { where: "hub/modules/progression-card.mjs", match: "#pgNote.pg-err{", awaiting: "261041b-alarm" },
-  { where: "hub/modules/progression-card.mjs", match: "if (tonesErr) { note.style.color", awaiting: "261041b-alarm" },
-  { where: "hub/modules/score-board.mjs", match: "const fe = el(\"text\"", awaiting: "261041b-alarm" },   // the figure refused
-  { where: "hub/modules/staff-board.mjs", match: "\"data-strefuse\": ci", awaiting: "261041b-alarm" },
-  { where: P("metronome"), match: ".hist .acts button.danger{", awaiting: "261041b-alarm" },
-  { where: P("modes-from-pentatonic-boxes"), match: ".hist .acts button.danger{", awaiting: "261041b-alarm" },
-  { where: P("triadetudes"), match: ".hist .acts button.danger{", awaiting: "261041b-alarm" },
-  { where: P("triadetudes"), match: ".chips button.bd.err{", awaiting: "261041b-alarm" },
-  { where: P("triadetudes"), match: ".chips button.bd.err .eq{", awaiting: "261041b-alarm" },
-  { where: P("triadetudes"), match: ".chipEd .acts button.danger{", awaiting: "261041b-alarm" },
-  { where: P("triadetudes"), match: ".chipEd .err{", awaiting: "261041b-alarm" },
-  { where: P("triadetudes"), match: "<span id=\"arpErr\"", awaiting: "261041b-alarm" },
-  { where: P("triadetudes"), match: "const r=el(\"text\",{x:x+3,y:28,", awaiting: "261041b-alarm" },   // typed symbol ≠ the reading
+  // borrowing 1 — Play, BY ROLE (narrowed 2026-10-01)
+  { where: "hub/modules/transport-card.mjs", match: "#playBtn{background:var(--red)", granted: "rule8-borrowing-1" },
+  { where: P("triadetudes"), match: "#playBtn{background:var(--red)", granted: "rule8-borrowing-1" },
+  // borrowing 2 — the first beat of a measure
+  { where: "hub/modules/metronome-card.mjs", match: "#beatLamp span.acc{", granted: "rule8-borrowing-2" },
+  { where: P("metronome"), match: "#beatLamp span.acc{", granted: "rule8-borrowing-2" },
+  { where: P("triadetudes"), match: "#beatLamp span.acc{", granted: "rule8-borrowing-2" },
+  { where: P("triadetudes"), match: "const LAMP={idle:", granted: "rule8-borrowing-2" },
+  { where: P("modes-from-pentatonic-boxes"), match: "#beatLamp span.acc{", granted: "rule8-borrowing-2" },
+  // borrowing 3 — refusal and alarm (26 sites, ratified as they stand)
+  { where: "hub/modules/notepad-card.mjs", match: ".hist .acts button.danger{", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/shape-motion.mjs", match: ".smErr{", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "the centre cannot follow", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "figure: ${fg.err}", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "reference refused: the reference is relative", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "reference refused: ${rp.reason}", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "sounded bass silent: ${sb.reason}", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "${a}</span>", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "${msg}</span>", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "String(e && e.message || e)", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/neck-readout.mjs", match: "a.style.fontWeight = \"bold\"", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/field-board.mjs", match: "fill: \"#B82929\" }, svg);", granted: "rule8-borrowing-3" },   // the field's refusal
+  { where: "hub/modules/field-board.mjs", match: "noteEl.style.color = \"#B82929\"", granted: "rule8-borrowing-3" },   // the figure's error
+  { where: "hub/modules/progression-card.mjs", match: "#pgNote.pg-err{", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/progression-card.mjs", match: "if (tonesErr) { note.style.color", granted: "rule8-borrowing-3" },
+  { where: "hub/modules/score-board.mjs", match: "const fe = el(\"text\"", granted: "rule8-borrowing-3" },   // the figure refused
+  { where: "hub/modules/staff-board.mjs", match: "\"data-strefuse\": ci", granted: "rule8-borrowing-3" },
+  { where: P("metronome"), match: ".hist .acts button.danger{", granted: "rule8-borrowing-3" },
+  { where: P("modes-from-pentatonic-boxes"), match: ".hist .acts button.danger{", granted: "rule8-borrowing-3" },
+  { where: P("triadetudes"), match: ".hist .acts button.danger{", granted: "rule8-borrowing-3" },
+  { where: P("triadetudes"), match: ".chips button.bd.err{", granted: "rule8-borrowing-3" },
+  { where: P("triadetudes"), match: ".chips button.bd.err .eq{", granted: "rule8-borrowing-3" },
+  { where: P("triadetudes"), match: ".chipEd .acts button.danger{", granted: "rule8-borrowing-3" },
+  { where: P("triadetudes"), match: ".chipEd .err{", granted: "rule8-borrowing-3" },
+  { where: P("triadetudes"), match: "<span id=\"arpErr\"", granted: "rule8-borrowing-3" },
+  { where: P("triadetudes"), match: "const r=el(\"text\",{x:x+3,y:28,", granted: "rule8-borrowing-3" },   // typed symbol ≠ the reading
 ];
 
 /** THE LEDGER'S JUDGEMENT, pure (night 79, PO ruling 261042 §2). stale: an entry's site count moved. expired: an
  * AWAITING entry whose question is no longer open. malformed: anything that would let a grant pass as a question or a
  * question as a grant — both keys or neither, a granted entry citing a question, an awaiting entry citing a grant, a grant
  * carrying an `open` flag, a key in both registries, or a grant whose entries no longer number its `sites`. */
-export function judgeLedger({ ledger, hits, grants = {}, rulings = {} }) {
+export function judgeLedger({ ledger, hits, grants = {}, rulings = {}, borrowings = null }) {
   const stale = ledger.filter((e) => (hits.get(e) ?? 0) !== (e.n ?? 1))
     .map((e) => `${e.where} "${e.match}" — matched ${hits.get(e) ?? 0} line(s), the entry says ${e.n ?? 1}`);
   const malformed = [];
@@ -111,11 +124,15 @@ export function judgeLedger({ ledger, hits, grants = {}, rulings = {} }) {
     else if ("awaiting" in e && !rulings[e.awaiting]) malformed.push(`${id} awaits "${e.awaiting}", which is not a question${grants[e.awaiting] ? " (it is a grant — a grant awaits nothing)" : ""}`);
   }
   for (const [k, gr] of Object.entries(grants)) {
+    if (borrowings && !borrowings.has(gr.borrowing))
+      malformed.push(`grant "${k}" cites borrowing ${gr.borrowing}, which the Spec's closed list does not hold (it lists ${[...borrowings.keys()].join(", ")}) — a fourth borrowing is a Spec amendment, not a judgement`);
     if ("open" in gr) malformed.push(`grant "${k}" carries an open flag — a grant is a decision made, it cannot be closed`);
     if (rulings[k]) malformed.push(`"${k}" is both a grant and an open question`);
     const n = ledger.filter((e) => e.granted === k).length;
     if (n !== gr.sites) malformed.push(`grant "${k}" covers ${gr.sites} site(s) but ${n} entr${n === 1 ? "y cites" : "ies cite"} it — a granted entry is removed or added only by a new ruling`);
   }
+  if (borrowings) for (const [n, title] of borrowings)
+    if (!Object.values(grants).some((g) => g.borrowing === n)) malformed.push(`the Spec lists borrowing ${n} (${title}) but no grant covers it`);
   const expired = ledger.filter((e) => "awaiting" in e && rulings[e.awaiting] && !rulings[e.awaiting].open)
     .map((e) => `${e.where} "${e.match}" awaits "${e.awaiting}", which is ANSWERED`);
   return { stale, expired, malformed };
@@ -163,7 +180,9 @@ test("golden rule 8: the degree red appears only as the key, the token and the p
   assert.equal(unclaimed.length, 0, "the Root's red is used outside the key, the token and the palette — golden rule 8: " +
     "emphasis and selection are weight and neutral ink; a MUSICAL use imports FAM_COLOR; anything waiting on Daniel is a " +
     "LEDGER entry naming its ruling:\n" + unclaimed.join("\n"));
-  const j = judgeLedger({ ledger: LEDGER, hits, grants: GRANTS, rulings: RULINGS });
+  const borrowings = specBorrowings(readFileSync(join(REPO, "docs", "design-language-and-engine-spec.md"), "utf8"));
+  assert.ok(borrowings.size >= 1, "not vacuous: the Spec's closed list was read");
+  const j = judgeLedger({ ledger: LEDGER, hits, grants: GRANTS, rulings: RULINGS, borrowings });
   assert.equal(j.malformed.length, 0, "the ledger is malformed — a grant and a question are different things:\n" + j.malformed.join("\n"));
   assert.equal(j.stale.length, 0, "a ledger entry no longer matches its site — fixed sites leave the ledger:\n" + j.stale.join("\n"));
   assert.equal(j.expired.length, 0, "a ledger entry outlived its question — fix the site, then remove the entry:\n" + j.expired.join("\n"));
@@ -202,4 +221,18 @@ test("the ledger split: a GRANTED entry survives its ruling being closed; an AWA
   // a granted entry may not be removed without a new ruling: the grant pins its site count
   const m3 = judgeLedger({ ledger: [], hits: new Map(), grants: { N2: { granted: "D", sites: 1 } }, rulings: {} });
   assert.ok(m3.malformed.some((x) => x.includes("N2")), `removing a granted entry without changing its grant fails: ${m3.malformed}`);
+});
+
+/* ---- THE CLOSED LIST BITES ON A FOURTH (night 80, Spec v1.5 §7 rule 8) ----
+ * "A fourth borrowing is a Spec amendment, not a judgement": a grant citing a borrowing the Spec does not list is
+ * malformed, and so is a listed borrowing that no grant covers. Pinned on the real Spec's list and on synthetic ones. */
+test("the closed list: the Spec's borrowings are read from the Spec, and a fourth borrowing in code fails until the Spec lists it", () => {
+  const listed = specBorrowings(readFileSync(join(REPO, "docs", "design-language-and-engine-spec.md"), "utf8"));
+  assert.deepEqual([...listed.keys()], [1, 2, 3], `the Spec's rule 8 lists borrowings 1–3: ${[...listed]}`);
+  const e4 = { where: "x", match: "save", granted: "b4" };
+  const grants = { b1: { borrowing: 1, sites: 0 }, b2: { borrowing: 2, sites: 0 }, b3: { borrowing: 3, sites: 0 }, b4: { borrowing: 4, sites: 1 } };
+  const j = judgeLedger({ ledger: [e4], hits: new Map([[e4, 1]]), grants, rulings: {}, borrowings: listed });
+  assert.ok(j.malformed.some((m) => m.includes("borrowing 4") && m.includes("Spec amendment")), `a fourth borrowing is refused: ${j.malformed}`);
+  const missing = judgeLedger({ ledger: [], hits: new Map(), grants: { b1: { borrowing: 1, sites: 0 } }, rulings: {}, borrowings: listed });
+  assert.ok(missing.malformed.some((m) => m.includes("lists borrowing 2")), `a listed borrowing with no grant is named: ${missing.malformed}`);
 });

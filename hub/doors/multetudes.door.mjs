@@ -173,6 +173,9 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.27 (261047, night 80): Save is no longer the Root's red — the shell's .transport button.primary had painted it
+     * red under Play's grant; Daniel narrowed the grant to Play by role ("nobody decided Save should be red — a selector
+     * did"), and every other .primary is weight and neutral ink (Spec v1.5 §7 rule 8). */
     /* v0.6.26 (261041, night 78): the Root's red leaves the furniture where the Spec already rules it (golden rule 8:
      * "emphasis is weight and neutral ink") — the timeline's current bar, the clock's pulse and the staff's current-chord
      * band are neutral ink; the stage's root ring reads the palette. Play, the first-beat lamp and the alarms wait on Daniel. */
@@ -251,7 +254,7 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.26",
+    blurb: "one tool that holds many études · v0.6.27",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

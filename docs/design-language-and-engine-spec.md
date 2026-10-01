@@ -7,7 +7,7 @@ date: 2026-08-05
 type: spec
 status: active
 reviewed: true
-doc_version: v1.4
+doc_version: v1.5
 tags: [Etudes, knowledge-base, specification, design-language, canonical]
 ---
 
@@ -347,8 +347,24 @@ clipping, off-page elements) don't throw assertions.
 > 8. **The degree palette is reserved.** The §2.1 colors encode function and nothing else —
 >    never status, selection, error, or emphasis. §2.3 already states the special case
 >    ("never a colored ring, which would collide with the degree palette"); this is the
->    general form. In interactive studies, emphasis is **weight and neutral ink**, and alarm
->    states use a hue that is not in the palette.
+>    general form. In interactive studies, emphasis is **weight and neutral ink**.
+>
+>    **The Root's red is deliberately borrowed in three places, and only these three:**
+>
+>    1. **the transport's Play** — Daniel, 2026-08-19 (shell parity N2): *"more obvious that it
+>       is a play button"*;
+>    2. **the metronome's first beat of a measure** — Daniel, 2026-08-19 (shell parity N3);
+>    3. **refusal and alarm text** — Daniel, 2026-10-01: *"context removes any confusion about
+>       the meaning of red."*
+>
+>    **This is a closed list. A fourth borrowing is a Spec amendment, not a judgement.**
+>    `engine/tests/degree-red.test.mjs` enforces it: a new red site fails the check, and every
+>    borrowed site is a `granted` ledger entry citing the ruling that granted it.
+
+*(**Amended v1.5, 2026-10-01** — the clause "alarm states use a hue that is not in the
+palette" is replaced by the closed list above. 26 live sites had contradicted it since
+adoption; Daniel ruled that context disambiguates and that the Spec should describe the
+family as it is. No code moved. Draft 261046.)*
 
 *(Rule 8 adopted with v1.2, 2026-08-09, as a forward-looking rule. Material predating the
 amendment may not conform; known non-conformances are tracked as backlog items rather than

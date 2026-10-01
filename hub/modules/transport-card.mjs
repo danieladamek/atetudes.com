@@ -72,7 +72,7 @@ export const transportCard = {
   Sound starts on your first click. What sounds — the voice and each bus's level — lives in the Mixer
   card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
-  /* Play IS the shell's red `.primary`, as the reference's is — Daniel reversed
+  /* Play is red, as the reference's is (until 2026-10-01 through the shell's `.primary`; now by its own rule below) — Daniel reversed
    * the earlier retire-the-red call in the 2026-08-19 side-by-side ("more
    * obvious that it is a play button", shell parity N2). The playing state
    * reads from the button text (Play/Pause), the triad app's own idiom; the
@@ -81,6 +81,11 @@ export const transportCard = {
   styles: `
 .trSig{align-items:flex-end}
 .trPlay{font-weight:bold}
+/* PLAY KEEPS THE ROOT'S RED, BY ROLE (Spec v1.5 §7 rule 8, borrowing 1 — Daniel, 2026-08-19, N2: "more obvious that
+ * it is a play button"). Until 2026-10-01 the red rode the shell's .transport button.primary, an APPEARANCE selector that
+ * also painted the notepad's Save red on five pages — "nobody decided Save should be red; a selector did" (Daniel,
+ * 2026-10-01, narrowing it). The grant now reaches Play by its address and nothing else; .primary is ink. */
+#playBtn{background:var(--red);border-color:var(--red)}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
 .trSig select{width:auto;padding:3px 6px;margin-left:4px}

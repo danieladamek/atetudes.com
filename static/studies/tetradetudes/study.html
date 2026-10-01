@@ -43,7 +43,7 @@ select,input[type=text]{
 .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
-.transport button.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:bold}
+.transport button.primary{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:bold}
 /* ONE MUTE ICON PER SLIDER (260820.3, Daniel's design) — page grammar because
  * two cards render it (the transport's chord and bass rows, the metronome's
  * Vol). The icon is a VIEW of its slider's level: level 0 renders muted however
@@ -177,7 +177,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .striprow .grp.hpWide{flex:1 1 420px;max-width:none}
 .striprow .hpTight{flex:0 1 auto}
 #hpRule{margin-top:8px}
-.hpNote{font-size:11px;color:var(--gray);font-style:italic;margin-top:4px;max-width:220px}
+
 #kbd rect{cursor:pointer}
 #kbMini{position:absolute;top:7px;right:44px;display:flex;gap:4px;z-index:6}
 #kbMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
@@ -292,6 +292,11 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
 .trSig{align-items:flex-end}
 .trPlay{font-weight:bold}
+/* PLAY KEEPS THE ROOT'S RED, BY ROLE (Spec v1.5 §7 rule 8, borrowing 1 — Daniel, 2026-08-19, N2: "more obvious that
+ * it is a play button"). Until 2026-10-01 the red rode the shell's .transport button.primary, an APPEARANCE selector that
+ * also painted the notepad's Save red on five pages — "nobody decided Save should be red; a selector did" (Daniel,
+ * 2026-10-01, narrowing it). The grant now reaches Play by its address and nothing else; .primary is ink. */
+#playBtn{background:var(--red);border-color:var(--red)}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
 .trSig select{width:auto;padding:3px 6px;margin-left:4px}
@@ -408,15 +413,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
             <option value="mel">Melodic minor</option>
           </select></div>
       </div>
-    </div>
-    <div class="grp">
-      <label>Harmony mode</label>
-      <div class="seg" id="modeSeg" data-control="modeSeg">
-        <button data-mode="build" class="on">Build up</button>
-        <button data-mode="break" disabled
-          title="typed changes arrive with a later shell child">Break down</button>
-      </div>
-      <div class="hpNote">“Break down” is greyed until typed chord entry ships in a later shell child.</div>
     </div>
     <div class="grp hpWide">
       <div class="row2 alignEnd">
@@ -5635,9 +5631,10 @@ const { CONFIG_CHANGED, announce, listen } = __m_hub_bus_mjs;
  *   - Progression lists the door's five derived cycles, not the study's seven;
  *   - the bass select offers none/root — the pedal, not triad extensions;
  *   - "Start bottom on" (R/3/5/7, the inversion seed) has no reference twin;
- * *   - Break down is rendered DISABLED: the reference's mode segment is part of
- *     the panel's form, but typed changes are a later shell child, and a
- *     control that pretends is worse than one that says "not yet".
+ * *   - (until 2026-10-01) Break down was rendered DISABLED: the reference's mode
+ *     segment was part of the panel's form, typed changes "a later shell child".
+ *     None came to this panel in six weeks; Daniel removed the segment
+ *     (2026-10-01) and the promise became its own item.
  *
  * THIS MODULE OWNS THE CONFIGURATION (§4.2.3), as its predecessor did:
  * private state, announced as a plain value on the bus. Prune it and the
@@ -5670,7 +5667,10 @@ const harmonyPanel = {
   requires: { material: "tetrad" },
   mount_point: "strips",
   order: 10,
-  controls: ["keySel", "scaleSel", "modeSeg", "progSel", "startSel", "bottomSel", "extSel"],
+  /* modeSeg (Build up / Break down) REMOVED 2026-10-01 (Daniel): it promised typed chord entry "in a later shell child"
+   * for six weeks and none came here; typed charts live in multetudes. The promise is kept visible as its own item —
+   * "tetradetudes takes typed charts" (post-1.0). */
+  controls: ["keySel", "scaleSel", "progSel", "startSel", "bottomSel", "extSel"],
 
   markup: `
   <h2>Centricity</h2>   <!-- was Harmony — ruled 260923: "Centricity for sure across all" (night 34) -->
@@ -5685,15 +5685,6 @@ const harmonyPanel = {
             <option value="mel">Melodic minor</option>
           </select></div>
       </div>
-    </div>
-    <div class="grp">
-      <label>Harmony mode</label>
-      <div class="seg" id="modeSeg" data-control="modeSeg">
-        <button data-mode="build" class="on">Build up</button>
-        <button data-mode="break" disabled
-          title="typed changes arrive with a later shell child">Break down</button>
-      </div>
-      <div class="hpNote">“Break down” is greyed until typed chord entry ships in a later shell child.</div>
     </div>
     <div class="grp hpWide">
       <div class="row2 alignEnd">
@@ -5721,7 +5712,7 @@ const harmonyPanel = {
 .striprow .grp.hpWide{flex:1 1 420px;max-width:none}
 .striprow .hpTight{flex:0 1 auto}
 #hpRule{margin-top:8px}
-.hpNote{font-size:11px;color:var(--gray);font-style:italic;margin-top:4px;max-width:220px}`,
+`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -10494,7 +10485,7 @@ const transportCard = {
   Sound starts on your first click. What sounds — the voice and each bus's level — lives in the Mixer
   card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
-  /* Play IS the shell's red `.primary`, as the reference's is — Daniel reversed
+  /* Play is red, as the reference's is (until 2026-10-01 through the shell's `.primary`; now by its own rule below) — Daniel reversed
    * the earlier retire-the-red call in the 2026-08-19 side-by-side ("more
    * obvious that it is a play button", shell parity N2). The playing state
    * reads from the button text (Play/Pause), the triad app's own idiom; the
@@ -10503,6 +10494,11 @@ const transportCard = {
   styles: `
 .trSig{align-items:flex-end}
 .trPlay{font-weight:bold}
+/* PLAY KEEPS THE ROOT'S RED, BY ROLE (Spec v1.5 §7 rule 8, borrowing 1 — Daniel, 2026-08-19, N2: "more obvious that
+ * it is a play button"). Until 2026-10-01 the red rode the shell's .transport button.primary, an APPEARANCE selector that
+ * also painted the notepad's Save red on five pages — "nobody decided Save should be red; a selector did" (Daniel,
+ * 2026-10-01, narrowing it). The grant now reaches Play by its address and nothing else; .primary is ink. */
+#playBtn{background:var(--red);border-color:var(--red)}
 .trLoop{font-size:12px;color:var(--gray);margin-left:4px}
 .trLab{font-size:12px;color:var(--gray)}
 .trSig select{width:auto;padding:3px 6px;margin-left:4px}
@@ -10726,7 +10722,7 @@ select,input[type=text]{
 .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
-.transport button.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:bold}
+.transport button.primary{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:bold}
 /* ONE MUTE ICON PER SLIDER (260820.3, Daniel's design) — page grammar because
  * two cards render it (the transport's chord and bass rows, the metronome's
  * Vol). The icon is a VIEW of its slider's level: level 0 renders muted however
@@ -11025,7 +11021,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.13","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.14","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

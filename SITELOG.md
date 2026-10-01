@@ -1,3 +1,44 @@
+## 2026-10-01 — Night 80: Spec v1.5 — the Root's red borrowed in three places only; Play narrowed to Play (Save is ink); the ledger cites the Spec's closed list; modeSeg removed; Multetudes v0.6.27, Tetradetudes v0.6.14, triadetudes v0.9.5; five studies moved
+
+- **Spec v1.5 committed** (`docs/design-language-and-engine-spec.md`; Daniel approved 2026-10-01). Rule 8's
+  "alarm states use a hue that is not in the palette" is replaced by a CLOSED LIST: the Root's red is borrowed for (1)
+  the transport's Play, (2) the metronome's first beat, and (3) refusal and alarm text. *"A fourth borrowing is a Spec
+  amendment, not a judgement."* The Update Log entry is in the vault (`notes/` is not tracked).
+- **Last night's check caught it the next day.** The PO's version bump turned `spec-version.test.mjs` red, because
+  triadetudes' footer still said v1.4. That's the exact species the check was built for, one day later, triggered by the
+  PO. The footer now says v1.5, read from the Spec; triadetudes is v0.9.5.
+- **A fourth red the Spec did not list: Save.** A rendered scan of all five maintained pages found the notepad's
+  `#saveEntry` painted the Root's red on every one. The shell's `.transport button.primary`, the rule granted as "Play",
+  reached every primary button in a transport row. Daniel: *"nobody decided Save should be red — a selector did."*
+  **Narrowed:** Play keeps its red BY ROLE (`#playBtn`, owned by transport-card; triadetudes' own Play likewise). Every
+  other `.primary` is weight and neutral ink (shell, generator bridge, metronome and triadetudes pages). **Studies
+  moved:** metronome, triadetudes, modes-from-pentatonic-boxes (generator), multetudes v0.6.27, tetradetudes v0.6.14.
+  Re-scan after the narrowing: exactly three categories (Play ×2, first beat ×3, refusal/alarm ×6), everything else
+  musical.
+- **The ledger flips to the Spec's closed list.** Grants now cite borrowings 1–3, which the check reads from rule 8's own
+  text: Play 2 sites, first beat 5, refusal/alarm 26. The alarm question is answered and closed. A grant citing a borrowing
+  the Spec doesn't list is malformed, and so is a listed borrowing with no grant. **Proven to bite on a fourth:** Save's
+  red returning unclaimed fails, and granting it as "borrowing 4" fails with "a fourth borrowing is a Spec amendment, not
+  a judgement". No colour moved except Save.
+- **STATED PLAINLY — A GAP:** the closed list is enforced by a LINE-KEYED check plus a ONE-OFF HAND SCAN, not yet by
+  effect. A check keyed on source lines cannot see what a rule paints; that's how Save hid under Play's line. The
+  effect-scan (every element painted the Root's red traces to a granted entry, in the door gate's browser) is the next
+  night's work. Until it lands, the Spec's "the check enforces it" is true of lines, not of pixels.
+- **A wording gap, reported:** borrowing 3 says "refusal and alarm *text*". Draft 261046 ratified the 26 sites as they
+  stand, and 6 of them are danger buttons (Delete) and an errored chip's border, not text. That's for Daniel to word or
+  leave.
+- **Field-board, rendered (a report, not a veto):** a real refusal ("missing 7th — both R and 7 on string 3 — Line takes
+  both") with nine root-red marks on the same neck. It reads as a message, but it is drawn ON the neck over the lower
+  strings' dots, including a faded root. At 390 it's crowded: the text's own "R" lands beside a pale-red R dot. Shipped as
+  ruled. Renders: `notes/working/attachments/261047 field-board refusal beside root dots {1280,390}.png`.
+- **`modeSeg` removed** (Daniel, 2026-10-01) from the Centricity panel (`harmony-panel.mjs`). Its six-week promise of
+  typed charts is now the post-1.0 item *"tetradetudes takes typed charts"*. The gate's two checks are re-aimed (no mode
+  segment, no "Break down" promise; the panel addressed by role through `#keySel`) and proven red. **Found:** the panel's
+  "no overlap" check has queried `.hp-strip`, which matched nothing since 2026-08-17. Filed, not fixed.
+- **Proof:** `tools/check.py` ALL GREEN, 441 s (engine 714/714 · hub 14/14 · doors · check_site). Every moved page
+  rendered before/after at 1280 and 390: Save went from the Root's red to ink on all five, and Play stays red on both of
+  its pages. No new console errors (triadetudes' existing "three popouts … got 4" unchanged).
+
 ## 2026-10-01 — Night 79: triadetudes names the Spec it follows (v1.4, read from the Spec); a check that no page claims a Spec version the Spec does not; the red ledger tells a grant from a question; triadetudes v0.9.4
 
 - **Triadetudes' footer said "Colors per At-Etudes Design Spec v1.1".** The Spec's own frontmatter says `doc_version: v1.4`,

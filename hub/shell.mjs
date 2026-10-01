@@ -53,7 +53,7 @@ select,input[type=text]{
 .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
-.transport button.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:bold}
+.transport button.primary{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:bold}
 /* ONE MUTE ICON PER SLIDER (260820.3, Daniel's design) — page grammar because
  * two cards render it (the transport's chord and bass rows, the metronome's
  * Vol). The icon is a VIEW of its slider's level: level 0 renders muted however
