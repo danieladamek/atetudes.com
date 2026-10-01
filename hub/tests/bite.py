@@ -111,9 +111,12 @@ def build():
 
 
 
-# ---------------- THE CHAIN RECORD (night 75) ----------------
-# When the last FULL chain ran, on which commit, and its verdict per mutation — written by every full run, read by --new
-# and by tools/chain_due.py. Tracked in git, so the schedule is a fact of the repository, not of anyone's memory.
+# ---------------- THE MUTATION RECORD (night 75; simplified 2026-09-30, Daniel's ruling) ----------------
+# Each mutation's last verdict, tracked in git. `--new` reads it to choose what to run: every mutation absent from it or
+# whose last verdict is not BITES. A full run (optional — an audit nobody is required to run) rewrites it whole; a green
+# `--new` run MERGES the verdicts that bit, so the record keeps up without full runs. The overnight chain, its schedule
+# (the scheduler) and its trigger hashes were retired by the same ruling: a 9.5-hour audit was blocking every
+# small change; the gates plus each change's own mutations are the proof that matters.
 CHAIN_RECORD = REPO / "hub" / "tests" / "chain-record.json"
 
 
@@ -124,22 +127,24 @@ def load_chain_record():
         return None
 
 
-def write_chain_record(verdicts, green):
+def write_chain_record(verdicts, green, kind, existing_names):
+    """kind "full": the record is these verdicts. kind "new": these verdicts are merged over the record's — only those
+    that BITE (a NO BITE stays unrecorded, so the next --new retries it). Either way, verdicts of mutations that no
+    longer exist in the harness are dropped (computed from the harness, never by hand)."""
     head = sh("git", "rev-parse", "HEAD").stdout.strip()
     dirty = bool(sh("git", "status", "--porcelain").stdout.strip())
+    if kind == "full":
+        merged = dict(verdicts)
+    else:
+        merged = dict((load_chain_record() or {}).get("verdicts", {}))
+        merged.update({k: v for k, v in verdicts.items() if v == "BITES"})
+    merged = {k: v for k, v in merged.items() if k in existing_names}
     CHAIN_RECORD.write_text(json.dumps({
-        "ran_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
-        "commit": head, "tree_dirty_at_run": dirty, "suite_green_after": green,
-        "total": len(verdicts), "bites": sum(v == "BITES" for v in verdicts.values()),
-        "verdicts": dict(sorted(verdicts.items())),
-        "trigger_hashes": _chain_due().snapshot(),
+        "updated_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "last_run": kind, "commit": head, "tree_dirty_at_run": dirty, "suite_green_after": green,
+        "total": len(merged), "bites": sum(v == "BITES" for v in merged.values()),
+        "verdicts": dict(sorted(merged.items())),
     }, indent=1, ensure_ascii=False) + "\n")
-
-
-def _chain_due():
-    sys.path.insert(0, str(REPO / "tools"))
-    import chain_due
-    return chain_due
 
 class BuildBroken(Exception):
     """a broken build, carrying its WHOLE error output as .full (night 71, ruling 261029b). The message stays one line
@@ -2903,28 +2908,6 @@ def m138_the_card_types_its_own_tempo_again():
         p.write_text(original)
 
 
-def m139_the_schedule_forgets_the_interval():
-    # night 75: the scheduler stops counting the record's age — a stale full chain would never be owed again. Its own
-    # selftest (a record older than the interval → DUE) must bite. The gate here is the scheduler's, not the door gate.
-    p, original, mutated = patch("tools/chain_due.py",
-        "    if age > datetime.timedelta(days=INTERVAL_DAYS):",
-        "    if False and age > datetime.timedelta(days=INTERVAL_DAYS):   # (the interval forgotten)")
-    try:
-        p.write_text(mutated)
-        r = sh("python3", "tools/chain_due.py", "selftest")
-        # the target lives in the SCHEDULER's own selftest (tools/chain_due.py), not in the door gate — so it is read from
-        # the scheduler's output, and its presence in the scheduler's source is asserted here instead of by the preflight
-        sched_out = r.stdout
-        target = "a record older than the interval"
-        assert target in (REPO / "tools" / "chain_due.py").read_text(), "m139's target rotted in tools/chain_due.py"
-        hit = r.returncode != 0 and ("FAIL  " + target) in sched_out
-        record("the schedule forgets the interval — a stale full chain is never owed",
-               hit, "the scheduler's selftest exit %d; the interval pin bit: %s" % (r.returncode, hit))
-    finally:
-        p.write_text(original)
-
-
-
 def register_lists():
     """the register's own answer (rule 6): the pre-hub carriers of the cards, split maintained / frozen"""
     r = sh("node", "--input-type=module", "-e",
@@ -3282,8 +3265,8 @@ def main():
     ap.add_argument("--log", default=None,
         help="line-buffered log path (default hub/tests/out/bite-<stamp>.log)")
     ap.add_argument("--new", action="store_true",
-        help="run ONLY the mutations the last full chain's record has never seen (the night's new ones); the full chain is "
-             "weekly and before any night tools/chain_due.py says is in scope (night 75, PO rulings 261033/261034)")
+        help="run ONLY the mutations hub/tests/chain-record.json has not recorded as biting (a change's own new ones); a "
+             "green run merges what bit into the record. Without --new every mutation runs — an optional audit (~9.5 h).")
     args = ap.parse_args()
     stamp = datetime.datetime.now().strftime("%m%d-%H%M")
     logp = open_log(args.log or (HUB / "tests" / "out" / f"bite-{stamp}.log"))
@@ -3363,22 +3346,22 @@ def main():
                m133_the_numeral_does_not_parse, m134_the_row_clears_again_at_the_wrap,
                m135_the_neck_opens_on_grip_again, m136_the_neck_opens_strummed_again,
                m137_the_tempo_constant_moves, m138_the_card_types_its_own_tempo_again,
-               m139_the_schedule_forgets_the_interval,
                m140_the_card_rows_drift, m141_the_freeze_goes_unrecorded,
                m142_the_field_does_not_write_the_clock, m143_a_typed_tempo_is_not_clamped,
                m144_the_slider_and_the_field_disagree, m145_the_two_cards_fields_disagree,
                m146_the_transport_paints_only_on_a_change, m147_a_seat_forks_the_field, m148_an_emptied_box_asks_for_zero,
                m149_a_maintained_page_loses_the_field_look, m150_a_maintained_generator_drifts,
                m151_the_drift_scope_binds_the_frozen_page, m152_a_drift_pin_bypasses_the_scope)
-    # THE SCHEDULE (night 75): a full chain runs every mutation and writes the record; --new runs only the mutations the
-    # record has never seen. Nothing is excluded on a claim about what it depends on (ruling 261033 §2) — every mutation
-    # still runs, the only question is WHEN; tools/chain_due.py says when a full chain is owed.
-    record_before = load_chain_record()
+    # WHAT RUNS: everything, or with --new only what the record has not seen bite. Nothing is excluded on a claim about
+    # what it depends on — the record is the only input.
+    existing = {f.__name__ for f in fns}
     if args.new:
-        seen = set((record_before or {}).get("verdicts", {}))
-        fns = tuple(f for f in fns if f.__name__ not in seen)
-        log_line(f"--new: {len(fns)} mutation(s) the last full chain never ran: {[f.__name__ for f in fns]}"
-                 + ("" if record_before else " (NO RECORD — every mutation is new)"))
+        rec = (load_chain_record() or {}).get("verdicts", {})
+        fns = tuple(f for f in fns if rec.get(f.__name__) != "BITES")
+        log_line(f"--new: {len(fns)} mutation(s) not yet recorded as biting: {[f.__name__ for f in fns]}")
+        if not fns:
+            log_line("nothing to run — no build, no gate (run the gates themselves with tools/check.py)")
+            return 0
     preflight(fns)
     # THE TREE MUST BE CLEAN OF STRAYS (night 50): a module in hub/modules/ that git does not track
     # is a scratch file some killed step left behind (the 261010 tuner-card leak — three built doors
@@ -3411,9 +3394,11 @@ def main():
     log_line(f"log: {LOG['path']}")
     for n in bad:
         print("  DID NOT BITE: " + n)
-    if not args.new:
-        write_chain_record(verdicts, green)
-        log_line(f"chain record written: {CHAIN_RECORD.relative_to(REPO)} — {len(verdicts)} verdicts, the full chain's clock restarts")
+    if green:
+        write_chain_record(verdicts, green, "new" if args.new else "full", existing)
+        log_line(f"record written: {CHAIN_RECORD.relative_to(REPO)} — {'merged the verdicts that bit' if args.new else 'rewritten whole'}")
+    else:
+        log_line("record NOT written — the suite was not green after the run")
     return 0 if green and not bad else 1
 
 

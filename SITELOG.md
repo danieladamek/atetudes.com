@@ -1,3 +1,25 @@
+## 2026-09-30 — Daniel's ruling: the overnight full mutation chain is no longer part of the process (tools/harness only — no study moved)
+
+- **Why:** a 9.5-hour audit was blocking every small change — a one-line refinement cost a night. The gates plus each
+  change's own mutations are the proof that matters. A change now closes on: every gate in full (`python3 tools/check.py`,
+  ~7–8 min), the change's own new mutations when it adds any, and a look at 1280 and 390 for any page that moved.
+- **Retired, named here so nothing goes silently:** `tools/chain_due.py` (the scheduler — its 7-day interval, its trigger
+  list, its selftest); mutation **m139** (it only pinned the scheduler); `tools/preflight.py close` (it only ever ran the
+  scheduler — it now prints that it is retired and exits 0); the record's `trigger_hashes` block.
+- **Kept:** `hub/tests/bite.py` and every other mutation. The full chain stays runnable by hand (`python3 hub/tests/bite.py`)
+  as an optional audit nobody is required to run.
+- **`--new` fixed:** it runs every mutation the record does not hold as BITES, and a green run MERGES the verdicts that bit
+  (computed — never a hand-typed list). Mutations that no longer exist are dropped from the record by code. With nothing to
+  run it says so and exits at once — no build, no gate. Without this, every `--new` would have re-run every mutation added
+  since the last full chain, forever.
+- **New:** `tools/check.py` — every existing gate in one command (engine · hub · build · the door gate in every door · hugo ·
+  check_site), each with its seconds and log path.
+- **Proof:** `tools/check.py` ALL GREEN, 437 s (engine 710/710 · hub 14/14 · doors 23,015/0 · check_site green);
+  `bite.py --new` ran m140 once (last night's harness-rot NO BITE) → BITES, merged — record 151/151; a second `--new` ran
+  nothing and exited in 0 s; `git grep chain_due` finds nothing outside `notes/` and this log.
+- **Deploy records:** from now on optional — `tools/deploy_record.py emit <sha>` still spot-checks live against the repo;
+  committing its output is no longer required (it cost a second commit and a second deploy per change).
+
 ## 2026-10-01 — DEPLOYED: the m140 re-site live — harness only; no study moved; written from the run
 
 - record: run 36802480191 · success · commit fd5b0e5 · fetched 2026-10-01T01:53Z · 6/6 studies byte-identical · digest 42028b2fae03

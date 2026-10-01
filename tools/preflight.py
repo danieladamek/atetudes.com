@@ -14,7 +14,6 @@ night only discovers when it needs it. This tool takes them first.
                                         (exit 2) while a git process or a young lock
                                         holds it; a stale one is NAMED, never removed
   python3 tools/preflight.py            both, in that order
-  python3 tools/preflight.py close      refuses a close while tools/chain_due.py says a full chain is due
   python3 tools/preflight.py selftest   the pin: a mismatched handle refuses, a
                                         matched one passes, both URL forms parse —
                                         no network, no gh
@@ -159,12 +158,11 @@ def main(argv):
     if cmd == "lock": return lock()
     if cmd == "selftest": return selftest()
     if cmd == "close":
-        # a night may not report itself closed while a full mutation chain is owed (night 75): the schedule's verdict
-        r = subprocess.run([sys.executable, str(REPO / "tools" / "chain_due.py")], capture_output=True, text=True)
-        print(r.stdout.strip())
-        if r.returncode:
-            print("REFUSED — close: a full chain is due; run `caffeinate -i python3 -u hub/tests/bite.py` first")
-        return r.returncode
+        # RETIRED 2026-09-30 (Daniel's ruling): `close` only ever asked the retired scheduler whether a full mutation chain
+        # was owed; the chain is no longer a requirement and the scheduler is gone. Said out loud, never a silent pass.
+        print("`preflight.py close` is retired (2026-09-30): the full chain is optional; nothing refuses a close. "
+              "Close on the gates — python3 tools/check.py")
+        return 0
     if cmd == "all":
         a = account()
         return a if a else lock()
