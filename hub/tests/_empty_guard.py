@@ -181,6 +181,8 @@ def report(out_path):
         k = (h["site"], h["kind"], h["sel"])
         by.setdefault(k, set()).add(h["door"])
     rows = sorted(by.items(), key=lambda kv: int(kv[0][0].split(":")[1]) if kv[0][0][-1].isdigit() else 0)
+    from pathlib import Path   # night 81: hub/tests/out is gitignored — on a fresh checkout (CI) it does not exist
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w") as f:
         json.dump([{"site": s, "kind": k, "sel": sel, "doors": sorted(d)} for (s, k, sel), d in rows], f, indent=1)
     return rows

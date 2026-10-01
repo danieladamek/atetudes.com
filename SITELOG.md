@@ -1,3 +1,11 @@
+## 2026-10-01 — Night 81, fix: the empty-lookup guard's report creates its own directory (CI's first run of it failed)
+
+- Actions run 36917970203 FAILED on `87ec9bf`: the door gate passed every check, then crashed writing its census report to
+  `hub/tests/out/`, which is gitignored and so absent on a fresh checkout. Nothing deployed; the live site kept night 80's
+  bytes (4/6 matched, the two night-81 pages not yet live). The report now creates its directory. Red first: the write
+  failed into a missing directory exactly as on the runner; with the fix, the gate run with no `out/` at all completes
+  (plain: 9,471 assertions, 0 failed).
+
 ## 2026-10-01 — Night 81: the gate sees what it guards — a lookup that finds nothing is an error; the Root's red is checked on the pixels; Spec v1.6; Tetradetudes v0.6.15, triadetudes v0.9.6
 
 - **Spec v1.6 committed** (Daniel approved the wording 2026-10-01). Borrowing 3 is now "refusal, error and destructive
