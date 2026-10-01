@@ -31,6 +31,9 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _empty_guard as EMPTY   # night 81: a lookup that finds nothing is an error, not a pass
+from _empty_guard import absent_ok
 
 HUB = Path(__file__).resolve().parent.parent
 REPO = HUB.parent
@@ -228,8 +231,9 @@ def run_door(pw, door_id):
           f"       unclaimed (rendered by nothing the lock reaches): "
           f"{sorted(set(rendered) - set(r['controlsPresent']))}")
     for cid in r["controlsAbsent"]:
-        check(page.query_selector(f"#{cid}") is None,
-              f"{tag} LOCKED control #{cid} is in the page — the lock is not holding")
+        with absent_ok("a LOCKED control must not render — its absence is the lock holding"):
+            check(page.query_selector(f"#{cid}") is None,
+                  f"{tag} LOCKED control #{cid} is in the page — the lock is not holding")
 
     # ---------------- MULTETUDES: the field (child 0) ------------------------
     # Keyed on the DOOR, not on a control id — a gate block keyed to a control
@@ -426,7 +430,7 @@ def run_door(pw, door_id):
                   f"three consecutive scale notes span 4 or 5 frets, always")
             strs = page.evaluate("""() =>
               [...document.querySelectorAll('#fieldSvg [data-fdstr]')]
-                .filter(g => g.querySelector('rect[fill="#212126"]'))
+                .filter(g => __may(() => g.querySelector('rect[fill="#212126"]'), 'unselected strings carry no ink set-marker rect; the filter keeps the strings that do'))
                 .map(g => +g.dataset.fdstr)""")
             pcs_at = lambda h: page.evaluate("""([ss, lo, h]) => {
               const got = new Set();
@@ -549,8 +553,9 @@ def run_door(pw, door_id):
         check(entry_before == entry_after,
               f"{tag} restore rewrote the saved entry — no dual-write, no reinterpretation")
         page.click(".hist .acts button.danger")
-        check(page.eval_on_selector_all(".hist", "e => e.length") == 0,
-              f"{tag} the exercise entry was not deleted — later notepad gates would miscount")
+        with absent_ok("the deleted exercise entry must leave no .hist row — absence is the assertion"):
+            check(page.eval_on_selector_all(".hist", "e => e.length") == 0,
+                  f"{tag} the exercise entry was not deleted — later notepad gates would miscount")
 
         # the recipes below were derived for C major — set it explicitly and
         # return to the boot state at the end
@@ -758,7 +763,7 @@ def run_door(pw, door_id):
             window.__pulseLog.push(row);
             setTimeout(() => {
               const svg = document.getElementById('fieldSvg');
-              const dot = svg && svg.querySelector(`.fd-sel[data-selmidi="${m.midi}"] circle`);
+              const dot = svg && __may(() => svg.querySelector(`.fd-sel[data-selmidi="${m.midi}"] circle`), 'bass/pre-rebuild notes have no selection dot; rang stays false so a melodic miss fails 791');
               if (!dot) return;
               row.rang = [...svg.querySelectorAll('.fd-pulse')].some((rg) =>
                 rg.getAttribute('cx') === dot.getAttribute('cx')
@@ -1165,7 +1170,7 @@ def run_door(pw, door_id):
         np_t = page.evaluate("""() => { const t = document.getElementById('npTitle');
           if (!t) return { there: false };
           const p = t.closest('.card, .board');
-          const h = p && (p.querySelector('h2') || p.querySelector('.bh'));
+          const h = p && (__may(() => p.querySelector('h2'), 'the notepad host is a .board whose header is .bh; h2 is the .card alternative') || p.querySelector('.bh'));
           const tb = t.getBoundingClientRect(), hb = h.getBoundingClientRect();
           const chev = p.querySelector('.clpsBtn').getBoundingClientRect();
           return { there: true, slot: t.parentElement === p && t.style.position === 'absolute',
@@ -1327,7 +1332,8 @@ def run_door(pw, door_id):
               f"{tag} 1: the row is worded for restoring: {cf['labels']}")
         # answer 1 — keep writing: nothing moves
         page.click(".hist [data-cap='confirm-cancel']")
-        a1 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+        with absent_ok("keep writing must dismiss the in-row restore confirm — absence asserted at 1336"):
+            a1 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           shown: !!document.querySelector('.hist [data-cap="restore-confirm"]'),
           n: JSON.parse(localStorage.getItem('multetudes.v1.log')).entries.length })""")
         check(a1["pad"] == "unsaved words that must survive" and not a1["shown"] and a1["n"] == n_before,
@@ -1363,7 +1369,8 @@ def run_door(pw, door_id):
         # 6c: a just-restored note is not unsaved work — restoring ANOTHER
         # entry over it asks nothing (register 30; this changed shipped behaviour)
         page.click(".hist .acts button[data-cap='apply'] >> nth=2")   # the default-named entry
-        a4 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+        with absent_ok("restoring over a clean restored note asks nothing — no restore-confirm, asserted at 1372"):
+            a4 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           title: document.getElementById('npTitle').value,
           shown: !!document.querySelector('.hist [data-cap="restore-confirm"]') })""")
         check(a4["pad"] == "untouched-field export" and not a4["shown"],
@@ -1392,7 +1399,8 @@ def run_door(pw, door_id):
               f"{tag} 6c: Clear over a clean restored note clears without asking: {a6}")
         # the common case keeps no ceremony: an empty pad restores at once
         page.click(".hist .acts button[data-cap='apply'] >> nth=1")
-        a7 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
+        with absent_ok("an empty pad restores at once — no restore-confirm, asserted at 1400"):
+            a7 = page.evaluate("""() => ({ pad: document.getElementById('journalIn').value,
           shown: !!document.querySelector('.hist [data-cap="restore-confirm"]') })""")
         check(a7["pad"] != "" and not a7["shown"],
               f"{tag} 1: an empty pad restores at once, no ceremony: {a7}")
@@ -1427,7 +1435,7 @@ def run_door(pw, door_id):
               window.__fdRing.push(row);
               setTimeout(() => {
                 const svg = document.getElementById('fieldSvg');
-                const dot = svg && svg.querySelector('.fd-sel[data-selmidi="' + m.midi + '"] circle');
+                const dot = svg && __may(() => svg.querySelector('.fd-sel[data-selmidi="' + m.midi + '"] circle'), 'field-board listener: a non-bass note with no drawn dot leaves drawn false and fails 1445');
                 if (!dot) return;
                 row.drawn = true;
                 row.rang = [...svg.querySelectorAll('.fd-pulse')].some((rg) =>
@@ -1482,7 +1490,7 @@ def run_door(pw, door_id):
         # spelling: a root reference under its own chord adds nothing.
         chip_read = ("() => [...document.querySelectorAll('#tlScroll button')].slice(0, 8)"
                      ".map(b => ({ rn: (b.querySelector('.tl-rn') || {}).textContent || null,"
-                     " slash: (b.querySelector('.tl-slash') || {}).textContent || null,"
+                     " slash: (__may(() => b.querySelector('.tl-slash'), 'no reference, or a root reference, adds no slash — None asserted at 1492 and 1503') || {}).textContent || null,"
                      " sym: b.getAttribute('data-tlchip') }))")
         page.select_option("#fdBass2", "none")
         chips0 = page.evaluate(chip_read)
@@ -1596,7 +1604,7 @@ def run_door(pw, door_id):
               " bpmCard: (document.getElementById('bpmRange') || {}).value,"
               " bpmVal: (document.getElementById('bpmVal') || {}).value,"   # night 77: the readout is the one bpm field
               " bass2: (document.getElementById('fdBass2') || {}).value,"
-              " refDots: document.querySelectorAll('#fieldSvg .fd-ref').length,"
+              " refDots: __may(() => document.querySelectorAll('#fieldSvg .fd-ref'), 'bass none draws no reference dot; the count is compared (==1 at 1635, ==0 at 1643)').length,"
               " ro: (document.getElementById('roLine') || {}).textContent || '' })")
         # crash-proof (the m28 lesson): a build without the view yields a
         # NAMED failure, never a 30s fill timeout that masks later pins
@@ -1740,21 +1748,21 @@ def run_door(pw, door_id):
               if (typeof m.midi !== 'number') return;
               const svg0 = document.getElementById('kySvg');
               const row = { midi: m.midi, t: Math.round(performance.now()),
-                preDot: !!(svg0 && (svg0.querySelector('circle[data-kysel="' + m.midi + '"]')
-                  || svg0.querySelector('circle[data-kyref="' + m.midi + '"]'))),
-                preRings: svg0 ? svg0.querySelectorAll('.ky-pulse').length : -1,
+                preDot: !!(svg0 && __may(() => (svg0.querySelector('circle[data-kysel="' + m.midi + '"]')
+                  || svg0.querySelector('circle[data-kyref="' + m.midi + '"]')), 'kysel||kyref alternation; preDot probes before the rebuild — drawn/rang asserted at 1772/1775')),
+                preRings: svg0 ? __may(() => svg0.querySelectorAll('.ky-pulse'), 'no ring at note arrival is legit (preRings); rang over no rings is false and fails 1775').length : -1,
                 renders0: window.__kyRenders || 0,
                 drawn: false, rang: false, nrings: -1, renders1: -1 };
               window.__kyLog.push(row);
               setTimeout(() => {
                 const svg = document.getElementById('kySvg');
-                const dot = svg && (svg.querySelector('circle[data-kysel="' + m.midi + '"]')
-                  || svg.querySelector('circle[data-kyref="' + m.midi + '"]'));
-                row.nrings = svg ? svg.querySelectorAll('.ky-pulse').length : -1;
+                const dot = svg && __may(() => (svg.querySelector('circle[data-kysel="' + m.midi + '"]')
+                  || svg.querySelector('circle[data-kyref="' + m.midi + '"]')), 'kysel||kyref alternation; preDot probes before the rebuild — drawn/rang asserted at 1772/1775');
+                row.nrings = svg ? __may(() => svg.querySelectorAll('.ky-pulse'), 'no ring at note arrival is legit (preRings); rang over no rings is false and fails 1775').length : -1;
                 row.renders1 = window.__kyRenders || 0;
                 if (!dot) return;
                 row.drawn = true;
-                row.rang = [...svg.querySelectorAll('.ky-pulse')].some((rg) =>
+                row.rang = [...__may(() => svg.querySelectorAll('.ky-pulse'), 'no ring at note arrival is legit (preRings); rang over no rings is false and fails 1775')].some((rg) =>
                   rg.getAttribute('cx') === dot.getAttribute('cx')
                   && rg.getAttribute('cy') === dot.getAttribute('cy'));
               }, 120);
@@ -1868,7 +1876,7 @@ console.log(JSON.stringify(out));
           const btns = [...row.children].filter(c => c.tagName === 'BUTTON');
           return { ids: btns.map(b => b.id),
                    labels: btns.map(b => b.textContent.trim()),
-                   msgInRow: !!row.querySelector('#saveMsg'),
+                   msgInRow: !!__may(() => row.querySelector('#saveMsg'), '#saveMsg must sit OUT of the button row — its absence there is asserted at 1885'),
                    wraps: (() => { const ys = btns.map(b => b.getBoundingClientRect().top);
                      return Math.max(...ys) - Math.min(...ys) > 4; })() }; }""")
         check(np_row is not None and np_row["ids"] ==
@@ -2026,7 +2034,8 @@ console.log(JSON.stringify(out));
                                     "notesPer": 1, "source": "cycle", "custom": "", **st_cfg })
             page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
               { detail: { index: 0, request: true } }))""")
-            got = page.evaluate(st_read)
+            with absent_ok("staff counts vs schedule-derived values; 0 stems/beams/tuplets is the strum/arp expectation"):
+                got = page.evaluate(st_read)
             exp = st_exp[st_name]
             # REWRITTEN 260911 (item 5): every bar wears the figure now, so
             # the figured case carries the schedule's events on ALL EIGHT
@@ -2144,14 +2153,15 @@ console.log(JSON.stringify(out));
                     n_bars = int(page.get_attribute("#tlScroll", "data-tlbars") or "8")
                     for mx_bar in range(min(n_bars, 8)):
                         page.click(f'#tlScroll button >> nth={mx_bar}')
-                        st = page.evaluate("""(bar) => {
+                        with absent_ok("matrix cell: dots OR a named refusal, heads OR an in-bar refusal - one side is empty by design"):
+                            st = page.evaluate("""(bar) => {
                           const sel = document.querySelectorAll('#fieldSvg .fd-sel').length;
                           const ref = document.querySelector('#fieldSvg .fd-refusal');
                           const stv = document.getElementById('stSvg');
                           return { sel, refusal: ref ? ref.textContent : null,
                             stHeads: stv ? stv.querySelectorAll('ellipse[data-stmidi][data-stbar="' + bar + '"]').length : -1,
                             stRefuse: stv ? stv.querySelectorAll('[data-strefuse="' + bar + '"]').length : -1 }; }""",
-                          str(mx_bar))
+                              str(mx_bar))
                         mx_cells[0] += 1
                         ok = st["sel"] > 0 or (st["refusal"] and len(st["refusal"]) > 10)
                         # 260911 item 5: the STAFF holds the same doctrine —
@@ -2268,7 +2278,8 @@ console.log(JSON.stringify(out));
             page.click(f'#tlScroll button >> nth={mx_bar}')
             n_dr = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
             placed_bars.append(n_dr > 0); drawn_counts.append(n_dr)
-            partial_bars.append(n_dr > 0 and page.query_selector("#fieldSvg .fd-refusal") is not None)
+            with absent_ok("a COMPLETE bar has no refusal; the leg requires both complete and partial bars (:2303)"):
+                partial_bars.append(n_dr > 0 and page.query_selector("#fieldSvg .fd-refusal") is not None)
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.evaluate("""() => {
@@ -2573,7 +2584,7 @@ console.log(JSON.stringify(out));
             const ys = c.tagName === 'polygon' ? c.getAttribute('points').split(' ').map(p => +p.split(',')[1]) : null;
             return { chrom: g.dataset.chromatic, deg: g.dataset.deg, alters: g.dataset.alters, shape: c.tagName,
             r: ys ? (Math.max(...ys) - Math.min(...ys)) / 2 : +c.getAttribute('r'), stroke: c.getAttribute('stroke'),
-            fill: c.getAttribute('fill'), text: !!g.querySelector('text'), hostR: +host.getAttribute('r') }; });
+            fill: c.getAttribute('fill'), text: !!__may(() => g.querySelector('text'), '§2.6: an approach mark carries no interval label — its absence is the assertion'), hostR: +host.getAttribute('r') }; });
           const slurs = [...svg.querySelectorAll('.fd-slur')];
           const firstDot = kids.indexOf(svg.querySelector('.fd-sel'));
           return { aps, slurs: slurs.map(sl => ({ under: kids.indexOf(sl) < firstDot, stroke: sl.getAttribute('stroke'), w: sl.getAttribute('stroke-width') })),
@@ -2830,7 +2841,7 @@ console.log(JSON.stringify(out));
         # board's mini and before the shell's ⓘ, on all three boards, at 390.
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(250)
         clear = page.evaluate("""(ids) => ids.map(id => { const box = document.getElementById(id); const bd = box.closest('.board'); const r = (e) => e.getBoundingClientRect();
-          const mini = bd.querySelector('.bh .mini'); const info = bd.querySelector('.infoBtn') || bd.querySelector('.clpsBtn');
+          const mini = bd.querySelector('.bh .mini'); const info = __may(() => bd.querySelector('.infoBtn'), 'keys board has no .info prose so no ⓘ (shell initInfo); the chevron is the obstacle') || bd.querySelector('.clpsBtn');
           const ch = box.querySelector('.readchord'); const title = bd.querySelector('.bh span'); const t = box.querySelector('.readtext');
           return { id, w: Math.round(r(box).width), clearsMini: !mini || r(box).right <= r(mini).left || r(box).bottom <= r(mini).top + 1, clearsBtn: r(box).right <= r(info).left, oneLine: r(box).height < 40,   /* night 62: the neck's mini stacks BELOW the box at phone width — clear means no overlap, right or below */
             /* night 63 (rule 7, doctrine rule 3): the span's rect fits while the ellipsis has eaten the chord's tail ("Bbm…") — whole means the
@@ -2863,7 +2874,7 @@ console.log(JSON.stringify(out));
         # MOVED night 67 (261024b — Daniel, 261023): the row joined the transport in the neck's header (#fdClock, left of
         # the mini); the claim stands — the same three, in that order, one row, no repeat and no mini inside it.
         clock = page.evaluate("""() => ['fdSplit','fdBpm','fdMetChk'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().left))""")
-        row_first = page.evaluate("() => { const r = document.getElementById('fdSplit').closest('.fd-headclock'); return { repeat: !!(r.querySelector('#fdRepeat') || r.querySelector('button[data-role=\"repeat\"]')), mini: !!r.querySelector('.mini'), sameRow: r === document.getElementById('fdMetChk').closest('.fd-headclock') }; }")
+        row_first = page.evaluate("() => { const r = document.getElementById('fdSplit').closest('.fd-headclock'); return { repeat: !!__may(() => r.querySelector('#fdRepeat') || r.querySelector('button[data-role=\"repeat\"]'), 'the clock row must hold no repeat and no mini (261015) — their absence is the assertion'), mini: !!__may(() => r.querySelector('.mini'), 'the clock row must hold no repeat and no mini (261015) — their absence is the assertion'), sameRow: r === document.getElementById('fdMetChk').closest('.fd-headclock') }; }")
         check(all(clock[i] >= clock[i - 1] for i in range(1, 3)) and row_first["sameRow"] and not row_first["repeat"] and not row_first["mini"],
               f"{tag} 2 (260919, re-cut 261014b and 261015): the clock row runs bar split · bpm · metronome in one row — repeat and the transport both live in the header mini: {clock} {row_first}")
         # THE TRUNCATION ORDER (item 1): at phone width a long name ellipsises the MODE; the chord survives whole.
@@ -2936,8 +2947,9 @@ console.log(JSON.stringify(out));
         rr = page.inner_text("#fdFigNote")
         # PIN REWRITTEN 261001 (rule 3/7): the root sits at fret 6 in a 3–7 window — NOT at the edge; the old
         # pin asserted the unconditional clause Daniel reported. The numbers carry the meaning.
-        check("beyond the hand" in rr and "is at fret 6 (frets 3–7)" in rr and "window's edge" not in rr and "the reach is 2" in rr and page.query_selector("#fieldSvg [data-role='approach']") is None,
-              f"{tag} 2 (260924): the reach REFUSES by name on the face — the target, the distance, the hand: {rr!r}")
+        with absent_ok("the reach refuses (+9)[R] beyond the hand: no approach mark may be drawn"):
+            check("beyond the hand" in rr and "is at fret 6 (frets 3–7)" in rr and "window's edge" not in rr and "the reach is 2" in rr and page.query_selector("#fieldSvg [data-role='approach']") is None,
+                  f"{tag} 2 (260924): the reach REFUSES by name on the face — the target, the distance, the hand: {rr!r}")
         page.select_option("#hcScale", "major"); page.select_option("#hcKey", "Bb")
         page.fill("#fdFigIn", ""); page.dispatch_event("#fdFigIn", "input")
         page.click('#fdAddrSeg button[data-addr="pattern"]')
@@ -2946,7 +2958,7 @@ console.log(JSON.stringify(out));
         # strings 4–1, anchor 4, startDegree 1, frets 0–3: R and 7 both live only on string 2.
         CASE = "() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'C', scale: 'major', object: 'tetrad', source: 'custom', custom: 'Cmaj7', strings: [4, 3, 2, 1], startDeg: 1, nearFret: 0, take: %s, notesPer: %d } }))"
         READ = """() => ({ sel: [...document.querySelectorAll('#fieldSvg .fd-sel')].map(g => g.querySelector('text').textContent + '@s' + g.dataset.selstr + 'f' + g.dataset.selfret).join(' '),
-          overlay: (document.querySelector('#fieldSvg .fd-refusal') || {}).textContent || '', staff: document.querySelectorAll('#stSvg [data-stmidi][data-stbar="0"]').length })"""
+          overlay: (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a scene with nothing refused draws no refusal overlay; refused scenes assert its text') || {}).textContent || '', staff: document.querySelectorAll('#stSvg [data-stmidi][data-stbar="0"]').length })"""
         page.evaluate(CASE % ("'all'", 1)); page.wait_for_timeout(300); cs = page.evaluate(READ)
         check(cs["sel"] == "3@s4f2 R@s2f1 5@s1f3" and cs["staff"] == 3,
               f"{tag} 1 (260923): all-tones under Grip on the capped case draws R 3 5 once each — the doubled 5 is gone, string 3 SILENT, the staff agrees: {cs}")
@@ -3075,9 +3087,10 @@ console.log(JSON.stringify(out));
         check(ref_el() is not None and ref_el()["s"] == "6" and ref_el()["f"] == "6",
               f"{tag} item 3: the root in the bass is B♭ on string 6, fret 6, drawn: {ref_el()}")
         page.select_option("#fdBass2", "none")
-        check(ref_el() is None
-              and page.eval_on_selector_all("#stSvg [data-strefmidi]", "e => e.length") == 0,
-              f"{tag} 'none' clears the reference from the neck and the bass clef")
+        with absent_ok("bass 'none' clears the reference: no .fd-ref on the neck, no [data-strefmidi] on the staff"):
+            check(ref_el() is None
+                  and page.eval_on_selector_all("#stSvg [data-strefmidi]", "e => e.length") == 0,
+                  f"{tag} 'none' clears the reference from the neck and the bass clef")
         # a chord TONE in the bass: the 3rd of B♭ (D) — placed, and the composite named
         page.select_option("#fdBass2", "tone:3")
         rr3 = ref_el()
@@ -3139,7 +3152,7 @@ console.log(JSON.stringify(out));
           return { name: g.dataset.refname, keyDeg: g.dataset.refkeydeg, cx: +c.getAttribute('cx'), cy: +c.getAttribute('cy'), r: +c.getAttribute('r'),
             dash: c.getAttribute('stroke-dasharray'), sw: c.getAttribute('stroke-width'), fill: c.getAttribute('fill'), stroke: c.getAttribute('stroke'),
             belowRow6: +c.getAttribute('cy') - +c.getAttribute('r') - row6, leftOfNut: nutX - (+c.getAttribute('cx') + +c.getAttribute('r')), lab,
-            fretted: !!document.querySelector('#fieldSvg .fd-ref[data-refstr]') }; }""")
+            fretted: !!__may(() => document.querySelector('#fieldSvg .fd-ref[data-refstr]'), 'a full set offers the reference unfretted: no fretted .fd-ref[data-refstr] may exist') }; }""")
         check(unf is not None and not unf["fretted"] and unf["name"] == "Bb" and unf["r"] == 12 and unf["dash"] == "3 2.5" and unf["sw"] == "2.4"
               and unf["fill"] == "none" and unf["stroke"] == "#B82929" and "unfretted" in unf["lab"] and unf["belowRow6"] >= 8 and unf["leftOfNut"] >= 8
               and "Reference offered unfretted: strings 5 and 6 are both in the set" in page.inner_text("#fdHint"),
@@ -3352,8 +3365,9 @@ console.log(JSON.stringify(out));
               f"{tag} a BLOCK's four notes must pulse AT their drawn dots as they sound: "
               f"rings {pulse['rings']}, midis {pulse['dotAt']}, heard {heard}")
         page.wait_for_timeout(500)
-        check(page.eval_on_selector_all("#fieldSvg .fd-pulse", "e => e.length") == 0,
-              f"{tag} the pulse must fade — a ring that stays is a marker, not a pulse")
+        with absent_ok("the pulse must fade: zero rings is the assertion; :3353 proved 4 rings with the same selector"):
+            check(page.eval_on_selector_all("#fieldSvg .fd-pulse", "e => e.length") == 0,
+                  f"{tag} the pulse must fade — a ring that stays is a marker, not a pulse")
         page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(200)
         # and in ARPEGGIO movement the rings arrive one at a time
         page.click('#fdMoveSeg button[data-move=\"arpeggiate\"]')
@@ -3401,7 +3415,7 @@ console.log(JSON.stringify(out));
             page.click(f'#tlScroll button >> nth={aud_bar}'); page.wait_for_timeout(350)
             aud_states.append(page.evaluate("""() => ({
               drawn: document.querySelectorAll('#fieldSvg .fd-sel').length,
-              refused: !!document.querySelector('#fieldSvg .fd-refusal'),
+              refused: !!__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3424 demands both refused and placed bars in the walk'),
               nt: window.__nt.length, raw: window.__raw.length })"""))
         for aud_bar, st in enumerate(aud_states):
             if st["refused"] and st["drawn"] == 0:
@@ -3578,8 +3592,8 @@ console.log(JSON.stringify(out));
             requestAnimationFrame(() => {
               const drawn = [...document.querySelectorAll('#fieldSvg .fd-sel')]
                 .map(g => +g.dataset.selmidi);
-              const rf = document.querySelector('#fieldSvg .fd-ref');
-              window.__cf.bars.push({ i, t, drawn, refused: !!document.querySelector('#fieldSvg .fd-refusal'),
+              const rf = __may(() => document.querySelector('#fieldSvg .fd-ref'), 'listener probes of live field/keys state; absence is a legal state, asserted in their own pins');
+              window.__cf.bars.push({ i, t, drawn, refused: !!__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3642 demands the corpus hold a refusing bar'),
                 ref: rf ? +rf.dataset.refmidi : null }); }); }); }""")
         page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
@@ -3589,8 +3603,8 @@ console.log(JSON.stringify(out));
             page.evaluate("""() => {
               const drawn = [...document.querySelectorAll('#fieldSvg .fd-sel')]
                 .map(g => +g.dataset.selmidi);
-              const rf = document.querySelector('#fieldSvg .fd-ref');
-              window.__cf.bars = [{ i: -1, t: performance.now(), drawn, refused: !!document.querySelector('#fieldSvg .fd-refusal'),
+              const rf = __may(() => document.querySelector('#fieldSvg .fd-ref'), 'listener probes of live field/keys state; absence is a legal state, asserted in their own pins');
+              window.__cf.bars = [{ i: -1, t: performance.now(), drawn, refused: !!__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3642 demands the corpus hold a refusing bar'),
                 ref: rf ? +rf.dataset.refmidi : null }];
               window.__cf.notes = []; }""")
             page.click('#fdMini button[data-role="play"]')
@@ -3690,19 +3704,20 @@ console.log(JSON.stringify(out));
           const cell = [...document.querySelectorAll('#cards .cardrow')][0].children[1];
           const bh = cell.querySelector('.bh span');
           return { pad: !!cell.querySelector('#journalIn'),
-                   log: !!cell.querySelector('#histList'),
+                   log: !!__may(() => cell.querySelector('#histList'), "the parts split: row 1's cell holds the pad and must NOT hold the log (#histList)"),
                    hdr: bh ? bh.textContent.trim() : null }; }""")
         check(pad_cell["pad"] and not pad_cell["log"] and pad_cell["hdr"] == "Notepad",
               f"{tag} row 1's cell must hold the pad alone under v0.9's 'Notepad' header: {pad_cell}")
         log_seat = page.evaluate("""() => {
           const boards = [...document.querySelectorAll('#boards > .board')];
-          const li = boards.findIndex(b => b.querySelector('#histList'));
-          const ki = boards.findIndex(b => b.querySelector('#kySvg'));
+          const li = boards.findIndex(b => __may(() => b.querySelector('#histList'), 'findIndex over boards misses by design; the log board must not hold the pad (#journalIn)'));
+          const ki = boards.findIndex(b => __may(() => b.querySelector('#kySvg'), 'findIndex over boards misses by design; the log board must not hold the pad (#journalIn)'));
           const lb = boards[li];
           return { li, ki, last: li === boards.length - 1,
                    hdr: lb ? !!lb.querySelector('.bh') : false,
-                   pad: lb ? !!lb.querySelector('#journalIn') : null }; }""")
-        check(log_seat["li"] >= 0 and log_seat["last"] and log_seat["li"] > log_seat["ki"],
+                   pad: lb ? !!__may(() => lb.querySelector('#journalIn'), 'findIndex over boards misses by design; the log board must not hold the pad (#journalIn)') : null }; }""")
+        # night 81: `li > ki` held with ki = -1 — a missing keys board made "after the keys" vacuous; it must be found
+        check(log_seat["li"] >= 0 and log_seat["ki"] >= 0 and log_seat["last"] and log_seat["li"] > log_seat["ki"],
               f"{tag} the log part is not seated at the page foot after the keys: {log_seat}")
         check(log_seat["hdr"] and not log_seat["pad"],
               f"{tag} the log board must carry its own header and no pad: {log_seat}")
@@ -3781,7 +3796,7 @@ console.log(JSON.stringify(out));
             [...row.children].map(cell => {
               for (const [id, name] of [["metroBtn","metronome"],["journalIn","journal"],
                 ["hcKey","harmony"],["pgCycle","progression"],["psSel","presets"]])
-                if (cell.querySelector('#' + id)) return name;
+                if (__may(() => cell.querySelector('#' + id), 'identity search: each cell holds one of five controls, so the other four ids miss by design')) return name;
               return "?"; }))""")
         check(seating == [["metronome", "journal"], ["harmony", "progression", "presets"]],
               f"{tag} the rows seat the wrong cards: {seating} — v0.9 seats "
@@ -3821,7 +3836,7 @@ console.log(JSON.stringify(out));
         pal_proto = proto.evaluate("""() => { const out = {};
           for (const t of [...document.querySelectorAll('#neck g text')]) {
             const lab = t.textContent.trim();
-            const c = t.parentElement.querySelector('circle');
+            const c = __may(() => t.parentElement.querySelector('circle'), 'filter: oracle neck text without a dot is skipped; 7 sampled degrees are asserted');
             if (c && /^(R|[2-7])$/.test(lab) && !(lab in out)) out[lab] = c.getAttribute('fill');
           } return out; }""")
         pal_door = page.evaluate("""() => { const out = {};
@@ -3948,8 +3963,9 @@ console.log(JSON.stringify(out));
         # THE PLAYHEAD IS GONE FROM THE ARTIFACT (Shell 4). Not "the control was
         # dropped from the config" — the div itself must not be in the rendered
         # DOM, the redundant fourth indicator removed at the source.
-        check(page.eval_on_selector_all(".trPlayhead, #trHead, .trPip", "e => e.length") == 0,
-              f"{tag} the transport playhead strip is still in the DOM — Shell 4 cut it")
+        with absent_ok("Shell 4 cut the transport playhead strip; it must stay out of the DOM"):
+            check(page.eval_on_selector_all(".trPlayhead, #trHead, .trPip", "e => e.length") == 0,
+                  f"{tag} the transport playhead strip is still in the DOM — Shell 4 cut it")
 
         # PLAY JOINS AT THE NEXT BAR, not the arming beat — the beat-2 defect.
         # The clock is running and the transport idle (paused above). One chord
@@ -4158,7 +4174,7 @@ console.log(JSON.stringify(out));
           const out = [];
           for (const card of document.querySelectorAll('.card')) {
             const h2 = card.querySelector('h2');
-            for (const row of card.querySelectorAll('.transport,.row2,.bpmrow')) {
+            for (const row of __may(() => card.querySelectorAll('.transport,.row2,.bpmrow'), 'not every card has row groups; metronome/transport/mixer row counts are asserted exactly')) {
               const ctl = [...row.querySelectorAll('button,select,input,textarea')]
                 .filter(e => getComputedStyle(e).display !== 'none');
               out.push({ card: h2 ? h2.textContent.trim() : '?',
@@ -4187,8 +4203,9 @@ console.log(JSON.stringify(out));
         check(page.eval_on_selector_all("#beatLamp span.acc", "e => e.length") == 1,
               f"{tag} accents on but no downbeat dot wears .acc")
         page.uncheck("#accChk"); page.wait_for_timeout(80)
-        check(page.eval_on_selector_all("#beatLamp span.acc", "e => e.length") == 0,
-              f"{tag} accents UNCHECKED in its new row but the downbeat dot still wears .acc — the moved control is dead")
+        with absent_ok("accents unchecked: no beat dot may wear .acc (bracketed by == 1 at 4190 and 4196)"):
+            check(page.eval_on_selector_all("#beatLamp span.acc", "e => e.length") == 0,
+                  f"{tag} accents UNCHECKED in its new row but the downbeat dot still wears .acc — the moved control is dead")
         page.check("#accChk"); page.wait_for_timeout(80)
         check(page.eval_on_selector_all("#beatLamp span.acc", "e => e.length") == 1,
               f"{tag} re-checking accents did not restore the downbeat's .acc")
@@ -4370,8 +4387,9 @@ console.log(JSON.stringify(out));
                   f"{tag} the rectangle is not the window: drawn {r1} vs zone {fLo}-{fHi}")
         # the retracted reporters are GONE — nothing marks, tints or confesses
         for sel in (".fs-overhang", ".fs-zone-on", ".fs-anchor"):
-            check(page.eval_on_selector_all(sel, "e => e.length") == 0,
-                  f"{tag} retracted element {sel} is still drawn — the ruling deletes it")
+            with absent_ok("the retracted window reporters (overhang/zone-on/anchor) are deleted by ruling; must stay gone"):
+                check(page.eval_on_selector_all(sel, "e => e.length") == 0,
+                      f"{tag} retracted element {sel} is still drawn — the ruling deletes it")
         check("reached" not in page.inner_text("#fsBoxHint") and "Bound" not in page.inner_text("#fsBoxHint"),
               f"{tag} the hint still reports — the window never explains itself")
         for _ in range(5):
@@ -4439,7 +4457,8 @@ console.log(JSON.stringify(out));
         page.evaluate("""() => { [...document.querySelectorAll('#playbackSeg button')]
           .find(b => b.dataset.pb === 'arpeggiated').click(); }""")
         page.wait_for_timeout(350)
-        sc_errs = page.evaluate("""() => [...document.querySelectorAll('[data-scfigerr]')]
+        with absent_ok("a playable figure draws no engine refusal; m35 in bite.py proves the pin bites"):
+            sc_errs = page.evaluate("""() => [...document.querySelectorAll('[data-scfigerr]')]
           .map(e => [...e.querySelectorAll('tspan')].map(t => t.textContent).join(' '))""")
         check(sc_errs == [],
               f"{tag} a figure the engine can sound draws NO refusal — but when the "
@@ -4485,8 +4504,9 @@ console.log(JSON.stringify(out));
         # tested engine seam; the gate proves the WIRING end to end in the page.
         # 1. the figure chain is live (not the old all-disabled placeholder): the
         #    address toggle, field and picker are enabled, and Block always is.
-        check(page.eval_on_selector_all("#figAddrSeg button[disabled]", "e => e.length") == 0,
-              f"{tag} Figure addresses is still disabled")
+        with absent_ok("the figure chain is live: no address button may be disabled"):
+            check(page.eval_on_selector_all("#figAddrSeg button[disabled]", "e => e.length") == 0,
+                  f"{tag} Figure addresses is still disabled")
         check(page.is_enabled("#arpIn") and page.is_enabled("#figSel"), f"{tag} the figure field/picker are disabled")
         # P1 (cheap): Arpeggiated and Both have nothing to sound without a figure,
         # so they are DISABLED until one parses and enable the moment it does.
@@ -4496,13 +4516,15 @@ console.log(JSON.stringify(out));
         gated = sorted(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.map(x => x.dataset.pb)"))
         check(gated == ["arpeggiated", "both"],
               f"{tag} with no figure, Arpeggiated and Both must be disabled (got {gated})")
-        check(page.eval_on_selector_all("#playbackSeg button[data-pb=strum]:disabled", "e => e.length") == 0,
-              f"{tag} Block must stay enabled — it is the only thing that sounds without a figure")
+        with absent_ok("Strum (Block) sounds without a figure, so it must never be disabled"):
+            check(page.eval_on_selector_all("#playbackSeg button[data-pb=strum]:disabled", "e => e.length") == 0,
+                  f"{tag} Block must stay enabled — it is the only thing that sounds without a figure")
         check("figure" in page.inner_text("#smWhy").lower(),
               f"{tag} the panel does not state why Arpeggiated/Both are disabled")
         page.select_option("#figSel", "6-5-4-3"); page.wait_for_timeout(60)
-        check(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.length") == 0,
-              f"{tag} a valid figure did not enable Arpeggiated and Both (the enable is not live)")
+        with absent_ok("a parsed figure enables Arpeggiated and Both; bracketed by == 2 checks at 4500/4510"):
+            check(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.length") == 0,
+                  f"{tag} a valid figure did not enable Arpeggiated and Both (the enable is not live)")
         page.fill("#arpIn", ""); page.dispatch_event("#arpIn", "input"); page.wait_for_timeout(60)
         check(page.eval_on_selector_all("#playbackSeg button:disabled", "e => e.length") == 2,
               f"{tag} clearing the figure did not re-disable Arpeggiated/Both — the gate is not live")
@@ -4585,15 +4607,18 @@ console.log(JSON.stringify(out));
         seen = 0
         for _ in range(8):
             page.wait_for_timeout(120)
-            seen = max(seen, page.eval_on_selector_all("#fretSvg circle[stroke='#212126'][r='19']", "e => e.length"))
+            with absent_ok("polling transient pulse rings; an empty sample is fine, seen >= 1 is asserted at 4592"):
+                seen = max(seen, page.eval_on_selector_all("#fretSvg circle[stroke='#212126'][r='19']", "e => e.length"))
         check(seen >= 1, f"{tag} the sounding-note pulse never rang for the figure")
         # 7. the score draws the figure at its onsets: an arpeggiated 4-note line
         #    over a 4-beat bar writes quarters — four heads per bar, not one stack
         page.click("#playbackSeg button[data-pb=\"strum\"]"); page.wait_for_timeout(120)
-        stems_block = page.eval_on_selector_all("#score line[stroke-width='1.2']", "e => e.length")
+        # night 81: block bars are whole notes (no 1.2 stem, so stems_block was always 0) and the 1.1 count includes the
+        # barlines — `stems_arp > stems_block` held on barlines alone. Count 1.1 in BOTH modes so the barlines cancel.
+        stems_block = page.eval_on_selector_all("#score line[stroke-width='1.1']", "e => e.length")
         page.click("#playbackSeg button[data-pb=\"arpeggiated\"]"); page.wait_for_timeout(120)
         stems_arp = page.eval_on_selector_all("#score line[stroke-width='1.1']", "e => e.length")
-        check(stems_arp > stems_block, f"{tag} the score does not draw the figure as a line (block stems {stems_block}, line stems {stems_arp})")
+        check(stems_arp - stems_block >= 4, f"{tag} the score does not draw the figure as a line (block stems {stems_block}, line stems {stems_arp})")
         # 8. GUIDE TONES: dim R and 5, leave 3 and 7 full — a view, not a mode
         page.check("#guideChk")
         ops = page.eval_on_selector_all("#fretSvg .fs-dot", "e => e.map(x => x.style.opacity)")
@@ -4730,8 +4755,9 @@ console.log(JSON.stringify(out));
         # The control is gone and no promise of an unshipped mode may remain: no mode
         # segment, and no "Break down" anywhere in the panel (typed charts are their
         # own post-1.0 item, "tetradetudes takes typed charts").
-        check(page.query_selector("#modeSeg") is None and page.query_selector('[data-control="modeSeg"]') is None,
-              f"{tag} the removed Harmony-mode segment is back in the page")
+        with absent_ok("modeSeg (Build up / Break down) was removed 2026-10-01; it must stay gone"):
+            check(page.query_selector("#modeSeg") is None and page.query_selector('[data-control="modeSeg"]') is None,
+                  f"{tag} the removed Harmony-mode segment is back in the page")
         # the panel BY ROLE (rule 12): the card holding its own #keySel — never a class
         # name (".hp-strip", which the panel stopped carrying 2026-08-17, matched nothing)
         hp_text = page.evaluate("() => { const k = document.getElementById('keySel'); const c = k && k.closest('.card'); return c ? c.innerText : null; }")
@@ -4739,10 +4765,14 @@ console.log(JSON.stringify(out));
               f"{tag} the harmony panel still promises a Break-down mode it does not have (or the panel was not found): {str(hp_text)[:80]!r}")
         # NO OVERLAP anywhere in the panel: the defect this panel removed must
         # not reappear — every pair of visible controls must be disjoint
-        overlaps = page.evaluate("""() => {
-          const els = [...document.querySelectorAll(
-            '.hp-strip select, .hp-strip button, .hp-strip label')]
-            .map(e => ({ t: e.tagName + ':' + (e.id || e.textContent.slice(0, 12)),
+        # FIXED night 81: this queried '.hp-strip', a class the panel stopped carrying on 2026-08-17 (Shell 3, c52b786),
+        # so it compared NO pairs and passed for six weeks. The panel BY ROLE (rule 12) — the card holding its own
+        # #keySel — and the check proves it compared something before an empty "no overlaps" may count.
+        ov = page.evaluate("""() => {
+          const k = document.getElementById('keySel'), card = k && k.closest('.card');
+          if (!card) return { n: 0, bad: ['the panel (the card holding #keySel) was not found'] };
+          const els = [...card.querySelectorAll('select, button, label')]
+            .map(e => ({ t: e.tagName + ':' + (e.id || e.textContent.trim().slice(0, 12)),
                          r: e.getBoundingClientRect() }))
             .filter(x => x.r.width > 0 && x.r.height > 0);
           const bad = [];
@@ -4753,9 +4783,10 @@ console.log(JSON.stringify(out));
               const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
               if (x > 2 && y > 2) bad.push(els[i].t + " ~ " + els[j].t);
             }
-          return bad;
+          return { n: els.length, bad };
         }""")
-        check(overlaps == [], f"{tag} Harmony panel elements overlap: {overlaps[:4]}")
+        check(ov["n"] >= 6 and ov["bad"] == [],
+              f"{tag} Centricity panel: {ov['n']} controls compared (>= 6 required — a check over nothing proves nothing); overlaps: {ov['bad'][:4]}")
         # the timeline is navigation: clicking a chord moves the stage
         page.click("#tlBars >> button >> nth=2")
         check(page.eval_on_selector_all("#tlBars button.tl-cur", "e => e.length") == 1,
@@ -4776,8 +4807,9 @@ console.log(JSON.stringify(out));
         # a fact with no variation, so the word is markup, not configuration.
         labels = page.eval_on_selector_all(".mxMixLab", "e => e.map(x => x.textContent.trim())")
         check(labels == ["chord", "bass"], f"{tag} the mixer rows are not chord/bass: {labels}")
-        check(page.query_selector("#auOn") is None and page.query_selector(".auHead") is None,
-              f"{tag} a separate Sound card still renders — the mixer must live in Transport")
+        with absent_ok("the separate Sound card (#auOn/.auHead) is retired; the mixer card replaced it"):
+            check(page.query_selector("#auOn") is None and page.query_selector(".auHead") is None,
+                  f"{tag} a separate Sound card still renders — the mixer must live in Transport")
 
         # AUTOPLAY DISCIPLINE. The realiser arms on the FIRST gesture, and this
         # door has already been clicked above (Play, the popups) — so the
@@ -4855,8 +4887,9 @@ console.log(JSON.stringify(out));
               f"{tag} chord unmute did not restore the stashed 60: {page.input_value('#chordVolR')!r}")
         page.fill("#chordVolR", "100"); page.dispatch_event("#chordVolR", "input")
         # metroChk is GONE from the artifact — the checkbox this icon replaced
-        check(page.eval_on_selector_all("#metroChk", "e => e.length") == 0,
-              f"{tag} the 'mute chords' checkbox still renders — the icon replaced it")
+        with absent_ok("the 'mute chords' checkbox (#metroChk) was replaced by the mute icon; it must stay gone"):
+            check(page.eval_on_selector_all("#metroChk", "e => e.length") == 0,
+                  f"{tag} the 'mute chords' checkbox still renders — the icon replaced it")
         page.fill("#bassVolR", "50")
         page.dispatch_event("#bassVolR", "input")
 
@@ -5123,8 +5156,9 @@ console.log(JSON.stringify(out));
         # The control is gone and no promise of an unshipped mode may remain: no mode
         # segment, and no "Break down" anywhere in the panel (typed charts are their
         # own post-1.0 item, "tetradetudes takes typed charts").
-        check(page.query_selector("#modeSeg") is None and page.query_selector('[data-control="modeSeg"]') is None,
-              f"{tag} the removed Harmony-mode segment is back in the page")
+        with absent_ok("modeSeg was removed night 80 (typed charts post-1.0); it must stay gone from the page"):
+            check(page.query_selector("#modeSeg") is None and page.query_selector('[data-control="modeSeg"]') is None,
+                  f"{tag} the removed Harmony-mode segment is back in the page")
         # the panel BY ROLE (rule 12): the card holding its own #keySel — never a class
         # name (".hp-strip", which the panel stopped carrying 2026-08-17, matched nothing)
         hp_text = page.evaluate("() => { const k = document.getElementById('keySel'); const c = k && k.closest('.card'); return c ? c.innerText : null; }")
@@ -5132,10 +5166,14 @@ console.log(JSON.stringify(out));
               f"{tag} the harmony panel still promises a Break-down mode it does not have (or the panel was not found): {str(hp_text)[:80]!r}")
         # NO OVERLAP anywhere in the panel: the defect this panel removed must
         # not reappear — every pair of visible controls must be disjoint
-        overlaps = page.evaluate("""() => {
-          const els = [...document.querySelectorAll(
-            '.hp-strip select, .hp-strip button, .hp-strip label')]
-            .map(e => ({ t: e.tagName + ':' + (e.id || e.textContent.slice(0, 12)),
+        # FIXED night 81: this queried '.hp-strip', a class the panel stopped carrying on 2026-08-17 (Shell 3, c52b786),
+        # so it compared NO pairs and passed for six weeks. The panel BY ROLE (rule 12) — the card holding its own
+        # #keySel — and the check proves it compared something before an empty "no overlaps" may count.
+        ov = page.evaluate("""() => {
+          const k = document.getElementById('keySel'), card = k && k.closest('.card');
+          if (!card) return { n: 0, bad: ['the panel (the card holding #keySel) was not found'] };
+          const els = [...card.querySelectorAll('select, button, label')]
+            .map(e => ({ t: e.tagName + ':' + (e.id || e.textContent.trim().slice(0, 12)),
                          r: e.getBoundingClientRect() }))
             .filter(x => x.r.width > 0 && x.r.height > 0);
           const bad = [];
@@ -5146,9 +5184,10 @@ console.log(JSON.stringify(out));
               const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
               if (x > 2 && y > 2) bad.push(els[i].t + " ~ " + els[j].t);
             }
-          return bad;
+          return { n: els.length, bad };
         }""")
-        check(overlaps == [], f"{tag} Harmony panel elements overlap: {overlaps[:4]}")
+        check(ov["n"] >= 6 and ov["bad"] == [],
+              f"{tag} Centricity panel: {ov['n']} controls compared (>= 6 required — a check over nothing proves nothing); overlaps: {ov['bad'][:4]}")
         # the timeline is navigation: clicking a chord moves the stage
         page.click("#tlBars >> button >> nth=2")
         check(page.eval_on_selector_all("#tlBars button.tl-cur", "e => e.length") == 1,
@@ -5220,9 +5259,11 @@ console.log(JSON.stringify(out));
     # exercised HERE, before the orphan check, so its selectors are not orphans
     # (the .clpsd lesson from Shell 4).
     for p in page.query_selector_all(".card, .board"):
-        has_prose = p.query_selector(".info") is not None   # moved into the popout, still a descendant
-        has_btn = p.query_selector(".infoBtn") is not None
-        title = p.query_selector("h2, .bh span")
+        with absent_ok("a panel without prose has no .info; equality with .infoBtn is checked, and L5255 pins .info exists"):
+            has_prose = p.query_selector(".info") is not None   # moved into the popout, still a descendant
+            has_btn = p.query_selector(".infoBtn") is not None
+        with absent_ok("headless boards (chart line, readout) carry no h2/.bh title; the name only labels the message"):
+            title = p.query_selector("h2, .bh span")
         name = title.inner_text() if title else "?"
         check(has_prose == has_btn,
               f"{tag} panel {name!r}: info button ({has_btn}) and static prose ({has_prose}) disagree — "
@@ -5233,7 +5274,8 @@ console.log(JSON.stringify(out));
         btn = p.query_selector(".clpsBtn")
         btn.click()
         summ = page.evaluate("(el) => el.querySelector('.clpsSum').textContent.trim()", p)
-        t = p.query_selector("h2, .bh span")
+        with absent_ok("headless boards carry no h2/.bh title; the name only labels the message"):
+            t = p.query_selector("h2, .bh span")
         check(summ != "",
               f"{tag} panel {(t.inner_text() if t else '?')!r} collapses to an EMPTY summary — the moved prose broke the coupling")
         btn.click()              # expand again
@@ -5265,17 +5307,21 @@ console.log(JSON.stringify(out));
     check(page.query_selector(".infoPop:not([hidden])") is not None,
           f"{tag} the info button did not open its popout")
     page.keyboard.press("Escape")
-    check(page.query_selector(".infoPop:not([hidden])") is None, f"{tag} Escape did not dismiss the popout")
+    with absent_ok("after Escape no popout may be open; L5278 proved the same selector matched before"):
+        check(page.query_selector(".infoPop:not([hidden])") is None, f"{tag} Escape did not dismiss the popout")
     ib.click()
     check(page.query_selector(".infoPop:not([hidden])") is not None, f"{tag} the popout did not reopen")
     page.mouse.click(3, 3)       # click far outside the popout
-    check(page.query_selector(".infoPop:not([hidden])") is None, f"{tag} click-outside did not dismiss the popout")
+    with absent_ok("after a click outside no popout may be open; L5283 proved the selector matched first"):
+        check(page.query_selector(".infoPop:not([hidden])") is None, f"{tag} click-outside did not dismiss the popout")
     # the popout must not have pushed layout: the panel it belongs to keeps its
     # place (absolute positioning), so no console error and the page still loads
     # — asserted by the zero-error check below and the orphan sweep.
 
     # ---------------- strip mini-transports + click-a-bar (Shell 4) ---------
-    if page.query_selector("#tlMini"):
+    # night 81: keyed on the DOOR, not a DOM probe — keyed on #tlMini, a tetradetudes that lost it skipped in silence
+    if door_id == "tetradetudes":
+        check("tlMini" in r["controlsPresent"], f"{tag} tetradetudes lost its strip minis")
         tl_at = lambda: page.evaluate("""() => {
           const bs = [...document.querySelectorAll('#tlBars button')];
           return bs.findIndex(b => b.classList.contains('tl-cur')); }""")
@@ -5325,12 +5371,15 @@ console.log(JSON.stringify(out));
     # element to match (the same lesson as .clpsd). Any mute icon this door
     # renders will do — the bass where a transport exists, else the click
     # (every door carries the metronome). Restored below.
-    muted_for_check = page.query_selector("#bassMute") or page.query_selector("#clickMute")
+    with absent_ok("only a transport door has #bassMute; the click mute stands in and the orphan sweep still bites"):
+        muted_for_check = page.query_selector("#bassMute")
+    muted_for_check = muted_for_check or page.query_selector("#clickMute")
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") != "true":
         muted_for_check.click()
     collapsed_for_check = []
     for sel in (".card", ".board"):
-        p = page.query_selector(sel)
+        with absent_ok("plain has no boards; a door with boards still orphans .clpsd>.bh in the sweep if not collapsed"):
+            p = page.query_selector(sel)
         if p and "clpsd" not in (p.get_attribute("class") or ""):
             p.query_selector(".clpsBtn").click()
             collapsed_for_check.append(p)
@@ -5340,7 +5389,9 @@ console.log(JSON.stringify(out));
     # rules match a DOM that really entered the state; re-expanded after the
     # shots with the collapsed panels (the same lesson as .clpsd and the mute)
     rail_shut_for_check = False
-    if door_id == "multetudes" and page.query_selector(".fd-rail.fd-shut") is None:
+    with absent_ok("reads whether the rail is already shut; open is the normal state, and the sweep catches no-shut"):
+        rail_open_for_check = door_id == "multetudes" and page.query_selector(".fd-rail.fd-shut") is None
+    if rail_open_for_check:
         page.click("#fdRailBtn")
         rail_shut_for_check = True
     # multetudes: the REFUSAL state and the COMPOSITE chip going into the
@@ -5434,7 +5485,8 @@ console.log(JSON.stringify(out));
         page.fill("#pgCustom", ""); page.dispatch_event("#pgCustom", "input")
         page.click('#pgSrcSeg button[data-src=\"cycle\"]')
         page.click('#fdTuneNames button[data-tuning="standard"]')
-        check(page.query_selector('.fd-tune .fd-open[data-moved="true"]') is None, f"{tag} the tuning did not return to standard after the orphan check")
+        with absent_ok("back at standard no string is moved; the same selector was asserted present at L5378/5390"):
+            check(page.query_selector('.fd-tune .fd-open[data-moved="true"]') is None, f"{tag} the tuning did not return to standard after the orphan check")
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") == "true":
         muted_for_check.click()
 
@@ -5490,7 +5542,8 @@ console.log(JSON.stringify(out));
         page.set_viewport_size({"width": aw, "height": 900}); page.wait_for_timeout(150)
         if not page.evaluate("() => !!window.axe"):
             page.add_script_tag(path=str(AXE_JS))
-        res = page.evaluate("""(tags) => axe.run(document, { runOnly: { type: 'tag', values: tags } })
+        with absent_ok("axe-core's own rule probes (label[for], a[href]); vendored library lookups, not the gate's"):
+            res = page.evaluate("""(tags) => axe.run(document, { runOnly: { type: 'tag', values: tags } })
           .then(r => ({ passes: r.passes.length, violations: r.violations.map(v => ({ id: v.id, impact: v.impact, targets: v.nodes.map(n => n.target.join(' ')) })) }))""", AXE_FLOOR)
         failed, exempt_hits, seen = [], 0, {}
         for v in res["violations"]:
@@ -5522,11 +5575,12 @@ console.log(JSON.stringify(out));
         check(len(pal) == 7, f"{tag} could not read the seven palette hexes off engine/degree-palette.mjs: {pal}")
         chips = lambda: page.evaluate("""(sel) => [...document.querySelectorAll(sel + ' .tl-bar button')].map(b => ({
           sym: b.getAttribute('data-tlchip'), rn: (b.querySelector('.tl-rn') || {}).textContent || null,
-          dot: (b.querySelector('[data-role="degree-dot"]') || null) && { deg: b.querySelector('[data-role="degree-dot"]').getAttribute('data-deg'),
+          dot: (__may(() => b.querySelector('[data-role="degree-dot"]'), "a chip's dot/sub-line may be absent by rule (off-key, root ref); presence and absence both asserted") || null) && { deg: b.querySelector('[data-role="degree-dot"]').getAttribute('data-deg'),
             bg: getComputedStyle(b.querySelector('[data-role="degree-dot"]')).backgroundColor },
-          us: (b.querySelector('.tl-us') || {}).textContent || null, slash: (b.querySelector('.tl-slash') || {}).textContent || null }))""", strip)
+          us: (__may(() => b.querySelector('.tl-us'), "a chip's dot/sub-line may be absent by rule (off-key, root ref); presence and absence both asserted") || {}).textContent || null, slash: (__may(() => b.querySelector('.tl-slash'), "a chip's dot/sub-line may be absent by rule (off-key, root ref); presence and absence both asserted") || {}).textContent || null }))""", strip)
         hex2rgb = lambda h: f"rgb({int(h[1:3], 16)}, {int(h[3:5], 16)}, {int(h[5:7], 16)})"
-        twins = page.evaluate("() => document.querySelectorAll('.tlbar, .tlrn, .curbar, button.cur, .tlscroll, .tl-scroll').length")
+        with absent_ok("near-miss twin class names must not exist anywhere in the DOM — one set of names"):
+            twins = page.evaluate("() => document.querySelectorAll('.tlbar, .tlrn, .curbar, button.cur, .tlscroll, .tl-scroll').length")
         check(twins == 0, f"{tag} a near-miss twin class survives in the DOM ({twins} node(s)) — one set of names")
         if door_id == "multetudes":
             page.click('#pgSrcSeg button[data-src="custom"]')
@@ -5565,7 +5619,8 @@ console.log(JSON.stringify(out));
             for c in cs:
                 check(c["dot"]["bg"] == hex2rgb(pal[c["dot"]["deg"]]), f"{tag} {c['sym']}'s dot is not the palette's colour: {c['dot']}")
             check(all(c["us"] is None and c["slash"] is None for c in cs), f"{tag} tetradetudes has no bass reference — no sub-line, not an empty one: {cs}")
-            check(page.evaluate("() => document.querySelectorAll('#tlBars .tl-us, #tlBars .tl-slash').length") == 0, f"{tag} no sub-line element at all")
+            with absent_ok("tetradetudes has no bass reference — no sub-line element may exist at all"):
+                check(page.evaluate("() => document.querySelectorAll('#tlBars .tl-us, #tlBars .tl-slash').length") == 0, f"{tag} no sub-line element at all")
             # ONE ROMAN SPELLING (ruled 261006, built 261008): the chip pairs the roman with its symbol,
             # so the roman names function only — no seventh tag on any chip; the Start-on selector
             # shows the roman ALONE and keeps its tags. Night 43's KEEP pin stood here until the ruling reached it.
@@ -5595,8 +5650,10 @@ console.log(JSON.stringify(out));
         check("fdTuning" in r["controlsPresent"] and "fdTuneNames" in r["controlsPresent"], f"{tag} the tuning editor is not in the partition")
         page.evaluate("() => { window.__cfg = {}; document.addEventListener('atetudes:config', e => Object.assign(window.__cfg, e.detail)); }")
         ed = lambda: page.evaluate("""() => ({ letters: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent), name: document.getElementById('fdTuneName').textContent,
-          lit: [...document.querySelectorAll('#fdTuneNames button.on')].map(b => b.textContent), why: [...document.querySelectorAll('[data-role="refusal"]')].map(e => e.textContent) })""")
-        sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => { const d = g.querySelector('[data-str]'); return g.dataset.selmidi + '@' + (d ? d.dataset.str + ':' + d.dataset.fret : ''); }).sort()")
+          lit: [...__may(() => document.querySelectorAll('#fdTuneNames button.on'), 'no tuning name lit off a named tuning, no refusal until a crossing; both are compared exactly')].map(b => b.textContent), why: [...__may(() => document.querySelectorAll('[data-role="refusal"]'), 'no tuning name lit off a named tuning, no refusal until a crossing; both are compared exactly')].map(e => e.textContent) })""")
+        # night 81: the fret was read from a [data-str] child no .fd-sel group has — every entry was 'midi@', so the retune
+        # pin compared midis only; the group carries its own string and fret (data-selstr/data-selfret, as drawn_sel reads)
+        sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => { return g.dataset.selmidi + '@' + g.dataset.selstr + ':' + g.dataset.selfret; }).sort()")
         page.click('#fdTuneNames button[data-tuning="standard"]')
         e0 = ed()
         check(e0["letters"] == ["E", "A", "D", "G", "B", "E"] and e0["name"] == "standard" and e0["lit"] == ["standard"],
@@ -5624,8 +5681,9 @@ console.log(JSON.stringify(out));
         moved = sorted(k for k in set(a) | set(b2) if _json.dumps(a.get(k), sort_keys=True) != _json.dumps(b2.get(k), sort_keys=True))
         check(moved == ["tuning"], f"{tag} a retune moved config beyond the tuning — slots and degrees must not move: {moved}")
         check(sel() != sel_before and len(sel()) > 0, f"{tag} a retune left the drawn frets where they were: {sel_before[:3]} vs {sel()[:3]}")
-        check(page.query_selector(".toast, [data-role='toast'], .fd-translated") is None and "translated" not in page.inner_text("#fdHint").lower(),
-              f"{tag} the retune was announced — nothing went wrong, nothing should say so")
+        with absent_ok("a retune is not an event — no toast or translation marker may appear"):
+            check(page.query_selector(".toast, [data-role='toast'], .fd-translated") is None and "translated" not in page.inner_text("#fdHint").lower(),
+                  f"{tag} the retune was announced — nothing went wrong, nothing should say so")
         # …and ceases to name itself the moment one string moves
         page.click('#fdTuning .fd-tune[data-string="3"] button[data-step="up"]')
         check(ed()["name"] == "" and ed()["lit"] == [], f"{tag} the row still names a tuning it no longer spells: {ed()}")
@@ -5685,8 +5743,8 @@ console.log(JSON.stringify(out));
         page.click('#fdTuneNames button[data-tuning="standard"]')
         rd = lambda: page.evaluate("""() => ({ letters: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent), offsets: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => +e.dataset.offset),
           name: document.getElementById('fdTuneName').textContent, shift: document.getElementById('fdTuneName').dataset.shift,
-          lit: [...document.querySelectorAll('#fdTuneNames button.on')].map(b => b.textContent), shifted: [...document.querySelectorAll('#fdTuneNames button[data-shifted="true"]')].map(b => [b.textContent, b.title]),
-          why: [...document.querySelectorAll('[data-role="refusal"]')].map(e => [e.dataset.string, e.textContent]), row: [...document.querySelectorAll('#fdTuneNames button')].map(b => b.textContent),
+          lit: [...__may(() => document.querySelectorAll('#fdTuneNames button.on'), 'strip state: nothing lit, nothing shifted, no refusal yet are real states, checked exactly')].map(b => b.textContent), shifted: [...__may(() => document.querySelectorAll('#fdTuneNames button[data-shifted="true"]'), 'strip state: nothing lit, nothing shifted, no refusal yet are real states, checked exactly')].map(b => [b.textContent, b.title]),
+          why: [...__may(() => document.querySelectorAll('[data-role="refusal"]'), 'strip state: nothing lit, nothing shifted, no refusal yet are real states, checked exactly')].map(e => [e.dataset.string, e.textContent]), row: [...document.querySelectorAll('#fdTuneNames button')].map(b => b.textContent),
           inert: [...document.querySelectorAll('#fdTuneAll button')].map(b => b.getAttribute('aria-disabled')) })""")
         r0 = rd()
         check(r0["row"] == ["standard", "drop D", "DADGAD", "open G", "open D", "open E", "all fourths"], f"{tag} the named row's contents are not the seven ruled: {r0['row']}")
@@ -5806,7 +5864,8 @@ console.log(JSON.stringify(out));
         check('"tuning"' not in old_file, f"{tag} the synthesized pre-v1.2 file still names a tuning")
         old_file = old_file.replace('"id":"', '"id":"old-', 1)
         import_text(page2, old_file, "old.atchart.md")
-        check(page2.query_selector('[data-cap="apply-file-tuning"]') is None, f"{tag} a tuning-blind file must not offer a tuning")
+        with absent_ok("a tuning-blind file must raise no tuning offer — the offer's absence is the claim"):
+            check(page2.query_selector('[data-cap="apply-file-tuning"]') is None, f"{tag} a tuning-blind file must not offer a tuning")
         page2.click('#histList .hist [data-cap="apply"]'); page2.wait_for_timeout(400)
         check(letters(page2) == ["D", "A", "D", "G", "B", "E"], f"{tag} restoring a tuning-blind étude moved the tuning — nothing may retro-interpret it: {letters(page2)}")
         check(not errs2, f"{tag} the cold page raised errors: {errs2[:2]}")
@@ -5877,7 +5936,8 @@ console.log(JSON.stringify(out));
         on = [o for g in opts() for o in g["items"] if o["on"]]
         check(any(o["v"] == "2,3,5,6,7" for o in on), f"{tag} the chosen pentatonic is not lit: {[o['t'] for o in on]}")
         check("Gamut: G major pentatonic — 2 3 5 6 7 of C — C, F stay on the neck at field opacity." in page.inner_text("#hcNote"), f"{tag} the hint does not say what is lit: {page.inner_text('#hcNote')!r}")
-        ro = page.inner_text("#neckReadout") if page.query_selector("#neckReadout") else page.evaluate("() => document.querySelector('[data-control=\"nrText\"], .nr-text, #nrText')?.innerText || document.body.innerText")
+        with absent_ok("legacy readout ids; the page-text fallback still fails if the readout loses its gamut sentence"):
+            ro = page.inner_text("#neckReadout") if page.query_selector("#neckReadout") else page.evaluate("() => document.querySelector('[data-control=\"nrText\"], .nr-text, #nrText')?.innerText || document.body.innerText")
         check("gamut: G major pentatonic — 2 3 5 6 7 of C" in ro, f"{tag} the readout's sentence does not carry the gamut")
         # the gamut's effect where it is (rule 3): under a scale the neck's selection is the gamut's notes — C and F (pcs 0, 5) never drawn as selected
         check(len(fdsel()) > 0 and all(m % 12 in (2, 4, 7, 9, 11) for m in fdsel()) and len(fdsel()) < len(sel_whole), f"{tag} the selection under a scale must be the pentatonic's notes and fewer than the whole field's: {fdsel()} vs {sel_whole}")
@@ -6012,11 +6072,11 @@ console.log(JSON.stringify(out));
     # the selection reaches, never fewer than five — with the squares' column at the window's edge.
     # At 1280 nothing changes: the viewBox is the full neck and the SVG is the same markup.
     if door_id == "multetudes":
+        # night 81: the dead `pos` field is gone — .fd-box/[data-flo] exist in no module and no check ever read it
         neck = lambda: page.evaluate("""() => { const svg = document.getElementById('fieldSvg'); const b = svg.getBoundingClientRect(); const vb = svg.viewBox.baseVal;
           const hit = document.querySelector('#fieldSvg [data-fdstr="4"] .fd-hit').getBoundingClientRect(); const sq = document.querySelector('#fieldSvg [data-fdstr="4"] .fd-sq').getBoundingClientRect();
           const inside = [...document.querySelectorAll('#fieldSvg [data-fdstr] .fd-hit')].every(r => { const q = r.getBoundingClientRect(); return q.left >= b.left - 0.5 && q.right <= b.right + 0.5; });
-          return { w: b.width, scale: b.width / vb.width, vbx: vb.x, vbw: vb.width, window: svg.dataset.window || null, hit: [hit.width, hit.height], sq: [sq.width, sq.height], inside, dir: getComputedStyle(document.querySelector('.fd-wrap')).flexDirection,
-            pos: [+document.querySelector('#fieldSvg .fd-box, #fieldSvg [data-flo]')?.dataset?.flo || null] }; }""")
+          return { w: b.width, scale: b.width / vb.width, vbx: vb.x, vbw: vb.width, window: svg.dataset.window || null, hit: [hit.width, hit.height], sq: [sq.width, sq.height], inside, dir: getComputedStyle(document.querySelector('.fd-wrap')).flexDirection }; }""")
         n1 = neck()
         check(n1["vbx"] == 0 and n1["vbw"] == 1280 and n1["window"] is None and n1["dir"] == "row", f"{tag} at 1280 the neck must be the whole neck, unchanged: {n1}")
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(400)
@@ -6057,7 +6117,7 @@ console.log(JSON.stringify(out));
         page.select_option("#hcKey", "C"); page.select_option("#hcScale", "major"); page.select_option("#hcObj", "tetrad")
         page.click('#pgSrcSeg button[data-src="form"]'); page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(300)
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 0, request: true } }))"); page.wait_for_timeout(300)
-        sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret, role: g.dataset.role || 'chord', chromatic: g.dataset.chromatic === 'true', alters: g.dataset.alters || null, shape: g.querySelector('polygon') ? 'starburst' : 'circle', fill: g.querySelector('circle, polygon').getAttribute('fill'), label: (g.querySelector('text') || {}).textContent || null }))")
+        sel = lambda: page.evaluate("() => [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => ({ midi: +g.dataset.selmidi, str: +g.dataset.selstr, fret: +g.dataset.selfret, role: g.dataset.role || 'chord', chromatic: g.dataset.chromatic === 'true', alters: g.dataset.alters || null, shape: __may(() => g.querySelector('polygon'), 'a chord tone draws a circle; only a chord-supplied member is a starburst') ? 'starburst' : 'circle', fill: g.querySelector('circle, polygon').getAttribute('fill'), label: (g.querySelector('text') || {}).textContent || null }))")
         s0 = sel()
         # rule 3 — the guards' names are asserted WHERE the effect is: a role-A board that throws says so here, by name
         # (the suite's "console dirtied" check at the end prints the console, not the page errors — a guard's message
@@ -6112,7 +6172,8 @@ console.log(JSON.stringify(out));
     # the scroller is a scroller. Asserted where the effect is — at the last chip's own centre, both widths.
     if door_id == "multetudes":
         page.select_option("#hcKey", "C"); page.click('#pgSrcSeg button[data-src="form"]'); page.wait_for_timeout(120); page.select_option("#pgForm", "blues-12"); page.wait_for_timeout(300)
-        check(page.query_selector("#tlStripMini") is None, f"{tag} the chart line carries no mini of its own — the transport is the neck's (#fdMini), one copy")
+        with absent_ok("the chart line's own mini was deleted (night 55) — it must stay gone"):
+            check(page.query_selector("#tlStripMini") is None, f"{tag} the chart line carries no mini of its own — the transport is the neck's (#fdMini), one copy")
         check(page.query_selector('#fdMini button[data-role="play"]') is not None and page.query_selector('#fdMini button[data-role="stop"]') is not None, f"{tag} the neck's own cluster is the transport the strip used to duplicate — ⏮ ▶ ⏹ ⏭ under the neck")
         strip_read = lambda: page.evaluate("""() => { const sc = document.getElementById('tlScroll'); sc.scrollLeft = sc.scrollWidth;
           const chips = [...sc.querySelectorAll('button')]; const last = chips[chips.length - 1];
@@ -6227,7 +6288,8 @@ console.log(JSON.stringify(out));
             if page.get_attribute(f'#fieldSvg [data-fdstr="{s_}"]', "aria-pressed") != "true": page.click(f'#fieldSvg [data-fdstr="{s_}"]')
         pressed = page.evaluate("() => [...document.querySelectorAll('#fieldSvg [data-fdstr]')].filter(g => g.getAttribute('aria-pressed') === 'true').map(g => +g.dataset.fdstr).sort()")
         check(pressed == [1, 2, 3, 4, 5, 6], f"{tag} the six-string set: {pressed}")
-        check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None and "offered unfretted" in page.inner_text("#fdHint"), f"{tag} the reference is refused a string here and offered unfretted, as night 37 left it: {page.inner_text('#fdHint')[:200]!r}")
+        with absent_ok("six strings: the reference has no string — no fretted reference mark may be drawn"):
+            check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None and "offered unfretted" in page.inner_text("#fdHint"), f"{tag} the reference is refused a string here and offered unfretted, as night 37 left it: {page.inner_text('#fdHint')[:200]!r}")
         hook = "() => { if (!window.__n57) { window.__n57 = { notes: [], raw: 0 }; document.addEventListener('atetudes:note', e => window.__n57.notes.push({ m: e.detail.midi, r: e.detail.role || 'chord', u: !!e.detail.unfretted, d: e.detail.dur || null })); for (const C of [AudioBufferSourceNode, OscillatorNode]) { const P = C.prototype.start; C.prototype.start = function(...a) { window.__n57.raw++; return P.apply(this, a); }; } } window.__n57.notes = []; window.__n57.raw = 0; }"
         def bar():
             page.evaluate(hook)
@@ -6243,7 +6305,8 @@ console.log(JSON.stringify(out));
         hint = page.inner_text("#fdHint"); ro = page.inner_text("#roLine")
         check("A sounded bass on Bb" in hint and "no string" in hint, f"{tag} the neck says the sounded bass by name and that it has no string: {hint!r}")
         check("sounded bass Bb" in ro and "no string" in ro, f"{tag} the readout says it too (rule 10): {ro[-260:]!r}")
-        check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None, f"{tag} the sounded bass is never drawn — no FRETTED reference mark appeared (the unfretted offer's gutter mark stays, as night 37 left it)")
+        with absent_ok("the sounded bass is never drawn — no fretted reference mark on the six-string set"):
+            check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None, f"{tag} the sounded bass is never drawn — no FRETTED reference mark appeared (the unfretted offer's gutter mark stays, as night 37 left it)")
         # the reference's own behaviour, unchanged: back on 4-3-2-1 it is fretted and drawn, and the sounded bass sounds beside it once (the same pitch is not doubled)
         for s_ in (5, 6):
             page.click(f'#fieldSvg [data-fdstr="{s_}"]')
@@ -6290,10 +6353,10 @@ console.log(JSON.stringify(out));
     if door_id == "multetudes":
         seat = page.evaluate("""() => {
           const boards = [...document.querySelectorAll('.board')];
-          const mixer = boards.find(b => (b.querySelector('.bh span') || {}).textContent === 'Mixer');
-          const neck = boards.find(b => b.querySelector('#fieldSvg'));
+          const mixer = boards.find(b => (__may(() => b.querySelector('.bh span'), 'a find over every board: boards that are not the one sought answer nothing') || {}).textContent === 'Mixer');
+          const neck = boards.find(b => __may(() => b.querySelector('#fieldSvg'), 'a find over every board: boards that are not the one sought answer nothing'));
           const ids = ['fdVoice','fdHarmVol','fdHarmMute','fdBass2','fdSounded','fdBassVol','fdBassMute','fdPad','fdPadVol','fdPadMute'];
-          const inMixer = ids.filter(i => mixer && mixer.querySelector('#' + i)), inNeck = ids.filter(i => neck && neck.querySelector('#' + i));
+          const inMixer = ids.filter(i => mixer && mixer.querySelector('#' + i)), inNeck = ids.filter(i => neck && __may(() => neck.querySelector('#' + i), 'the ten mixer controls left the neck (night 58), none may be found in it'));
           const clock = ['fdMini','fdSplit','fdBpm','fdMetChk'].filter(i => neck && neck.querySelector('#' + i));   // night 64: the clock-row repeat went (ruling 261015)
           const rows = mixer ? mixer.querySelectorAll('.mx-row').length : 0;
           /* the CLAIM (re-stated 261013 after CI): the strip has a header, so the chevron sits in the header BAND and over
@@ -6305,7 +6368,7 @@ console.log(JSON.stringify(out));
             const overRow = [...mixer.querySelectorAll('.mx-row')].some(r => { const rr = r.getBoundingClientRect(); return cr.bottom > rr.top + 1 && cr.top < rr.bottom - 1 && cr.right > rr.left && cr.left < rr.right; });
             return cr.top >= hr.top - 4 && cr.top < hr.bottom && !overRow; })() : false;
           const order = boards.indexOf(mixer) - boards.indexOf(neck);
-          return { mixer: !!mixer, inMixer, inNeck, clock, rows, chevronInHeader, order, pairrows: neck ? neck.querySelectorAll('.fd-pairrow').length : -1 }; }""")
+          return { mixer: !!mixer, inMixer, inNeck, clock, rows, chevronInHeader, order, pairrows: neck ? __may(() => neck.querySelectorAll('.fd-pairrow'), 'the neck mixer row retired (night 58), no .fd-pairrow may remain').length : -1 }; }""")
         check(seat["mixer"] and seat["rows"] == 3, f"{tag} the Mixer board exists below the neck with three rows: {seat}")
         check(len(seat["inMixer"]) == 10 and not seat["inNeck"], f"{tag} the ten mixer controls live in the Mixer board and none in the neck: {seat}")
         check(len(seat["clock"]) == 4 and seat["pairrows"] == 0, f"{tag} the neck keeps its clock row (the 260919 ruling; four members since the clock-row repeat went, ruling 261015) and no mixer row: {seat}")
@@ -6323,8 +6386,8 @@ console.log(JSON.stringify(out));
         check(raw1 >= 3 and raw0 <= raw1 - 3, f"{tag} the harmony level in the strip still drives the chord bus (sources at zero: {raw0}, at unity: {raw1})")
         # 390: stack, do not shrink — each level slider keeps a usable width and the board is the page's width
         page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(300)
-        narrow = page.evaluate("""() => { const boards = [...document.querySelectorAll('.board')]; const mixer = boards.find(b => (b.querySelector('.bh span') || {}).textContent === 'Mixer');
-          const neck = boards.find(b => b.querySelector('#fieldSvg')); const w = (e) => Math.round(e.getBoundingClientRect().width);
+        narrow = page.evaluate("""() => { const boards = [...document.querySelectorAll('.board')]; const mixer = boards.find(b => (__may(() => b.querySelector('.bh span'), 'a find over every board: boards that are not the one sought answer nothing') || {}).textContent === 'Mixer');
+          const neck = boards.find(b => __may(() => b.querySelector('#fieldSvg'), 'a find over every board: boards that are not the one sought answer nothing')); const w = (e) => Math.round(e.getBoundingClientRect().width);
           return { board: w(mixer), neck: w(neck), sliders: ['fdHarmVol','fdBassVol','fdPadVol'].map(i => w(document.getElementById(i))),
             rows: [...mixer.querySelectorAll('.mx-row')].map(r => Math.round(r.getBoundingClientRect().height)) }; }""")
         check(narrow["board"] == narrow["neck"] and all(s_ >= 150 for s_ in narrow["sliders"]), f"{tag} @390 the strip takes the neck's width and every level slider keeps ≥ 150 px: {narrow}")
@@ -6332,7 +6395,7 @@ console.log(JSON.stringify(out));
     if door_id == "tetradetudes":
         tcard = page.evaluate("""() => { const cards = [...document.querySelectorAll('.card')]; const byT = (t) => cards.find(c => (c.querySelector('h2') || {}).textContent.trim() === t);
           const tr = byT('Transport'), mx = byT('Mixer');
-          return { mixer: !!mx, voiceInMixer: !!(mx && mx.querySelector('#noteVoiceSel')), voiceInTransport: !!(tr && tr.querySelector('#noteVoiceSel')),
+          return { mixer: !!mx, voiceInMixer: !!(mx && mx.querySelector('#noteVoiceSel')), voiceInTransport: !!(tr && __may(() => tr.querySelector('#noteVoiceSel'), 'the voice left the Transport card for the Mixer (night 58)')),
             slidersInMixer: ['chordVolR','bassVolR','chordMute','bassMute'].filter(i => mx && mx.querySelector('#' + i)).length,
             trRows: tr ? tr.querySelectorAll('.transport,.row2,.bpmrow').length : -1, mxRows: mx ? mx.querySelectorAll('.transport,.row2,.bpmrow').length : -1 }; }""")
         check(tcard["mixer"] and tcard["voiceInMixer"] and not tcard["voiceInTransport"] and tcard["slidersInMixer"] == 4, f"{tag} the Mixer card holds the voice and both levels; the Transport card holds neither: {tcard}")
@@ -6614,7 +6677,8 @@ console.log(JSON.stringify(out));
         check(len(lacking) >= 1, f"{tag} …and lacks at least one degree: held {sorted(held)}")
         page.select_option("#hcGamut", str(lacking[0]))
         hint61 = page.inner_text("#fdHint"); ro61 = page.inner_text("#roLine")
-        check(fdsel61() == [] and "the gamut leaves nothing in this window" in hint61, f"{tag} a gamut of the degree the end-window lacks EMPTIES it, and the neck says so: {fdsel61()} {hint61!r}")
+        with absent_ok("a gamut of the degree the end-window lacks empties it — nothing drawn IS the claim"):
+            check(fdsel61() == [] and "the gamut leaves nothing in this window" in hint61, f"{tag} a gamut of the degree the end-window lacks EMPTIES it, and the neck says so: {fdsel61()} {hint61!r}")
         check("the gamut leaves nothing in this window" in ro61, f"{tag} …and the readout says the same (rule 10): {ro61[:200]!r}")
         page.select_option("#hcGamut", "1,2,3,4,5,6,7")
         for _ in range(40):
@@ -6655,7 +6719,7 @@ console.log(JSON.stringify(out));
         # and the clock-row copy was a duplicate of the header mini's. The neck holds exactly ONE repeat — the mini's, by role,
         # a glyph with a NAME among glyphs; #fdRepeat is gone.
         rp = page.evaluate("""() => { const neck = document.getElementById('fieldSvg').closest('.board'); const reps = [...neck.querySelectorAll('button[data-role="repeat"]')];
-          return { fdRepeat: !!document.getElementById('fdRepeat'), count: reps.length, inMini: reps.length === 1 && reps[0].closest('#fdMini') !== null, name: reps[0] ? reps[0].getAttribute('aria-label') : null, pressed: reps[0] ? reps[0].getAttribute('aria-pressed') : null }; }""")
+          return { fdRepeat: !!__may(() => document.getElementById('fdRepeat'), '#fdRepeat retired by ruling 261015: one repeat per surface, the mini one'), count: reps.length, inMini: reps.length === 1 && reps[0].closest('#fdMini') !== null, name: reps[0] ? reps[0].getAttribute('aria-label') : null, pressed: reps[0] ? reps[0].getAttribute('aria-pressed') : null }; }""")
         check(not rp["fdRepeat"] and rp["count"] == 1 and rp["inMini"] and rp["name"] and "repeat" in rp["name"] and rp["pressed"] in ("true", "false"), f"{tag} the neck holds one repeat — the header mini's, named, with its state (ruling 261015): {rp}")
         # ITEM 2 — the seventh view, in the mixer's header
         mx = page.evaluate("""() => { const m = document.getElementById('mxMini'); if (!m) return null; const R = (e) => { const r = e.getBoundingClientRect(); return { l: Math.round(r.left), t: Math.round(r.top), r: Math.round(r.right), b: Math.round(r.bottom) }; };
@@ -6667,8 +6731,10 @@ console.log(JSON.stringify(out));
         # five missed the staff board's #stMini, found by this very pin — with the mixer's the door carries seven)
         import re as _re62
         hosts62 = sorted(set(h for p in (REPO / "hub" / "modules").glob("*.mjs") for h in _re62.findall(r'mountMini\(ctx, byId\("(\w+)"\)\)', p.read_text())))
-        live62 = page.evaluate("(ids) => ids.map(id => { const e = document.getElementById(id); return [id, e ? [...e.querySelectorAll('button')].map(b => b.dataset.role).join(' ') : null]; })", hosts62)
-        here62 = [(h, v) for h, v in live62 if f'id="{h}"' in html_path.read_text()]   # the hosts THIS door carries (the chart line's, the keyboard's and the score's are other doors')
+        # night 81: the door's facts filter BEFORE the lookup — the family's other hosts were looked up here and missed
+        ids62 = [h for h in hosts62 if f'id="{h}"' in html_path.read_text()]   # the hosts THIS door carries (the chart line's, the keyboard's and the score's are other doors')
+        live62 = page.evaluate("(ids) => ids.map(id => { const e = document.getElementById(id); return [id, e ? [...e.querySelectorAll('button')].map(b => b.dataset.role).join(' ') : null]; })", ids62)
+        here62 = live62
         check(len(hosts62) >= 7 and "mxMini" in hosts62 and "fdMini" in hosts62 and len(here62) >= 4 and all(v.startswith("prev play stop next") for _, v in here62),
               f"{tag} every mounted mini this door carries is live with the reference's four buttons first — one clock, {len(hosts62)} views in the family, {len(here62)} in this door: {live62}")
         # THE AGREEMENT: play at the mixer's view — both read playing (the one sign the mini reads back: Play greyed); stop at the neck's — both read stopped
@@ -6829,7 +6895,7 @@ console.log(JSON.stringify(out));
     here64 = [h for h in hosts64 if f'id="{h}"' in html_path.read_text()]
     if not here64:
         print(f"  {tag} carries no transport view — the injection's seat pins do not apply here")
-    right = lambda: page.evaluate("""(ids) => ids.map(id => { const m = document.getElementById(id); const R = (e) => e.getBoundingClientRect(); const board = m.closest('.board') || m.closest('.card') || m.parentElement; const info = board.querySelector('.infoBtn') || board.querySelector('.clpsBtn');
+    right = lambda: page.evaluate("""(ids) => ids.map(id => { const m = document.getElementById(id); const R = (e) => e.getBoundingClientRect(); const board = m.closest('.board') || m.closest('.card') || m.parentElement; const info = __may(() => board.querySelector('.infoBtn'), 'only panels with .info prose carry an infoBtn; the chevron is the edge then') || board.querySelector('.clpsBtn');
       const edge = info && Math.abs(R(info).top - R(m).top) < 20 ? R(info).left : R(board).right - 12; return { id, gapRight: Math.round(edge - R(m).right), l: Math.round(R(m).left) }; })""", here64)
     r1280 = right() if here64 else []
     if here64:
@@ -6936,18 +7002,20 @@ console.log(JSON.stringify(out));
     # "Practice log — 0 saved" in scribe and the published tetradetudes, 59 px of "Notepad" in the published multetudes.
     # The seat is measured now (hub/shell.mjs). Pinned in EVERY door that carries a slot, both widths: the header's words
     # and the slot never overlap in one band, and the slot stays inside its panel. The next door inherits the pin.
-    if 'data-header-slot' in html_path.read_text():
+    # night 81: keyed on the door's FACT (the notepad's title is the one element carrying the slot), not on the attribute
+    # name every door's inlined shell contains — a notepad door that lost its slot printed "does not apply" and passed
+    if 'id="npTitle"' in html_path.read_text():
         ctx67 = pw.new_context(viewport={"width": 1280, "height": 900}); p67 = ctx67.new_page()
         p67.goto(html_path.as_uri()); p67.wait_for_selector("#cards", state="attached"); p67.wait_for_timeout(300)
         slot67 = """() => [...document.querySelectorAll('[data-header-slot]')].filter(s => s.getClientRects().length).map(s => {
-          const p = s.closest('.card, .board'), h = p.querySelector('h2') || p.querySelector('.bh'), rr = document.createRange(); rr.selectNodeContents(h);
+          const p = s.closest('.card, .board'), h = __may(() => p.querySelector('h2'), 'the slot panel is a card (h2) or a board (.bh); the other answers nothing') || p.querySelector('.bh'), rr = document.createRange(); rr.selectNodeContents(h);
           const a = rr.getBoundingClientRect(), b = s.getBoundingClientRect(), c = p.getBoundingClientRect();
           const cover = a.bottom > b.top && a.top < b.bottom && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0;
           return { id: s.id, cover, inside: b.left >= c.left - 0.5 && b.right <= c.right + 0.5, words: h.textContent.replace(/\s+/g, ' ').trim().slice(0, 30) }; })"""
         # guarded on the RENDERED page: the shell's own inlined source names the attribute in every door (plain renders no slot)
         n67 = p67.evaluate("() => document.querySelectorAll('[data-header-slot]').length")
-        if not n67: print(f"  {tag} renders no header slot — the night-67 slot pin does not apply here")
-        for w67 in ((1280, 390) if n67 else ()):
+        check(n67 >= 1, f"{tag} night 67: the notepad's header slot is not rendered")
+        for w67 in (1280, 390):
             p67.set_viewport_size({"width": w67, "height": 900}); p67.wait_for_timeout(250)
             got67 = p67.evaluate(slot67)
             check(got67 and all(not g["cover"] and g["inside"] for g in got67),
@@ -7005,7 +7073,7 @@ console.log(JSON.stringify(out));
         p69.goto(html_path.as_uri()); p69.wait_for_selector("#cards", state="attached"); p69.wait_for_timeout(400)
         pg69 = lambda role: f"#pgClock [data-role=\"{role}\"]"
         # a LATE view paints the current state on subscribe: its inputs start empty in the markup, so a value here is the replay's
-        boot69 = p69.evaluate("() => { const q = r => document.querySelector('#pgClock [data-role=\"' + r + '\"]'); return { bpm: q('bpm').value, neck: document.getElementById('fdBpm').value, click: q('click').checked, neckClick: document.getElementById('fdMetChk').checked, splits: q('split').options.length, ids: [...document.querySelectorAll('#pgClock [id]')].map(e => e.id) }; }")
+        boot69 = p69.evaluate("() => { const q = r => document.querySelector('#pgClock [data-role=\"' + r + '\"]'); return { bpm: q('bpm').value, neck: document.getElementById('fdBpm').value, click: q('click').checked, neckClick: document.getElementById('fdMetChk').checked, splits: q('split').options.length, ids: __may(() => [...document.querySelectorAll('#pgClock [id]')], 'the second clock view carries no ids, addressed by data-role only (night 69)').map(e => e.id) }; }")
         check(boot69["bpm"] != "" and boot69["bpm"] == boot69["neck"] and boot69["click"] == boot69["neckClick"] and boot69["splits"] > 1,
               f"{tag} night 69: a clock view mounted with nothing touched paints the clock's current state (the bus replays it): {boot69}")
         check(boot69["ids"] == [], f"{tag} night 69: the second clock view carries no ids — addressed by data-role only: {boot69['ids']}")
@@ -7080,7 +7148,8 @@ console.log(JSON.stringify(out));
     # from the page, never a typed list), and compares an untouched row with the same row holding a chord.
     ctx70 = pw.new_context(viewport={"width": 1280, "height": 900}); p70 = ctx70.new_page()
     p70.goto(html_path.as_uri()); p70.wait_for_selector("#cards", state="attached"); p70.wait_for_timeout(300)
-    if not p70.evaluate("() => document.querySelectorAll('.hc-chip').length"):
+    # night 81: keyed on the door's FACT (#hcChips), not the rendered count — a chip-row door that rendered no chips skipped
+    if 'id="hcChips"' not in html_path.read_text():
         print(f"  {tag} renders no chip row — the night-70 row pin does not apply here")
     else:
         row70b = "() => [...document.querySelectorAll('.hc-chip')].map(b => { const c = b.getBoundingClientRect(); return [Math.round(c.left*100)/100, Math.round(c.width*100)/100, Math.round(c.height*100)/100]; })"
@@ -7186,7 +7255,8 @@ console.log(JSON.stringify(out));
     if 'id="bpmRange"' in html_path.read_text():
         ctx72c = pw.new_context(viewport={"width": 1280, "height": 900}); p72c = ctx72c.new_page()
         p72c.goto(html_path.as_uri()); p72c.wait_for_selector("#cards", state="attached"); p72c.wait_for_timeout(500)
-        faces72 = p72c.evaluate("""() => { const v = (sel, prop) => { const e = document.querySelector(sel); return e ? (prop === 'text' ? e.textContent.trim() : e.value) : null; };
+        with absent_ok("WRONG-DOOR, LEFT: faces read on every door; a lost carried tempo face or #psDesc goes unasserted"):
+            faces72 = p72c.evaluate("""() => { const v = (sel, prop) => { const e = document.querySelector(sel); return e ? (prop === 'text' ? e.textContent.trim() : e.value) : null; };
           return { bpmRange: v('#bpmRange'), bpmVal: v('#bpmVal'), bpmRange2: v('#bpmRange2'), bpmVal2: v('#bpmVal2'), fdBpm: v('#fdBpm'),
             pgClock: v('#pgClock [data-role="bpm"]'), settings: document.getElementById('psDesc') ? document.getElementById('psDesc').innerText.split('\\n')[0] : null }; }""")
         present72 = {k: x for k, x in faces72.items() if x is not None}
@@ -7208,7 +7278,8 @@ console.log(JSON.stringify(out));
         ctx77 = pw.new_context(viewport={"width": 1280, "height": 900}); p77 = ctx77.new_page()
         errs77 = []; p77.on("pageerror", lambda e: errs77.append(str(e)))
         p77.goto(html_path.as_uri()); p77.wait_for_selector("#cards", state="attached"); p77.wait_for_timeout(300)
-        seats77 = [i for i in ("bpmVal", "bpmVal2", "fdBpm") if p77.query_selector("#" + i)]
+        # night 81: the seats are the door's FACT, read before the lookup — a carried seat that failed to render dropped out
+        seats77 = [i for i in ("bpmVal", "bpmVal2", "fdBpm") if f'id="{i}"' in html_path.read_text()]
         # ONE DEFINITION: every seat is the same field — the clock view's attributes, byte for byte, bar the address
         defn77 = p77.evaluate("""(ids) => ids.map(i => { const e = document.getElementById(i);
           return [e.tagName, e.type, e.className, e.dataset.role, e.min, e.max, e.step, e.title].join('|'); })""", seats77)
@@ -7218,7 +7289,8 @@ console.log(JSON.stringify(out));
           const st = (document.__atetudesLast && document.__atetudesLast.get('atetudes:clock-state')) || {};
           return { clock: String(st.bpm), bpmRange: v('bpmRange'), bpmVal: v('bpmVal'), bpmRange2: v('bpmRange2'), bpmVal2: v('bpmVal2'), fdBpm: v('fdBpm') }; }"""
         def agree77(want):
-            f = p77.evaluate(faces77)
+            with absent_ok("WRONG-DOOR, LEFT: faces read family-wide; a carried tempo face that died drops out unasserted"):
+                f = p77.evaluate(faces77)
             return all(x == want for x in f.values() if x is not None), f
         def type77(sel, val):
             p77.fill(sel, val); p77.dispatch_event(sel, "change")
@@ -7280,7 +7352,8 @@ console.log(JSON.stringify(out));
         offer_text = offer_btn.inner_text() if offer_btn else ""
         check(offer_text.startswith("apply the ") and "from this note" in offer_text and "key" in offer_text,
               f"{tag} the offer does not name what it takes: {offer_text!r}")
-        withheld = page.query_selector('#histList .hist [data-cap="withheld"]')
+        with absent_ok("multetudes takes every concept — nothing may be withheld"):
+            withheld = page.query_selector('#histList .hist [data-cap="withheld"]')
         withheld_text = withheld.inner_text() if withheld is not None else None   # (an f-string evaluates eagerly — the gate's own first run crashed here on None)
         if door_id == "tetradetudes":
             # a 3-string set offered to a 4-string door: the PARTIAL is named, with the reason
@@ -7340,10 +7413,13 @@ def main():
         doors = [d for d in doors if d in want]
         print(f"targeted: --doors {','.join(doors)}")
     print(f"hub door lock suite — {len(doors)} door(s): {', '.join(doors)}")
+    EMPTY.install(check)
+    print(f"empty-lookup guard: {EMPTY.MODE} (night 81)")
     with sync_playwright() as p:
         browser = p.chromium.launch()
         try:
             for d in doors:
+                EMPTY.STATE["door"] = d
                 try:
                     run_door(browser, d)
                 except Exception as e:  # noqa: BLE001
@@ -7355,8 +7431,20 @@ def main():
                     loc = next((ln.strip() for ln in str(e).splitlines() if "waiting for" in ln or "locator(" in ln), "")
                     check(False, f"[{d}] the suite could not finish this door{where}: "
                                  f"{type(e).__name__}: {str(e).splitlines()[0]}" + (f" — {loc}" if loc else ""))
+            # GOLDEN RULE 8 ON THE PIXELS (night 81): every element painted the Root's red traces to the palette, the key
+            # or a granted ledger line — and a granted rule paints only its borrowing's role. Doors and maintained pages.
+            import _red_effects
+            EMPTY.STATE["door"] = "red effect-scan"
+            print("golden rule 8 — the red effect-scan (night 81):")
+            _red_effects.effect_scan(browser, check, BUILD)
         finally:
             browser.close()
+    rows = EMPTY.report(str(HUB / "tests" / "out" / "empty-census.json"))
+    print(f"empty-lookup guard: {EMPTY.STATE['watched']} python lookups watched · {len(rows)} distinct site(s) found nothing"
+          f" · {EMPTY.STATE['declared']} declared-absence block(s) entered · mode {EMPTY.MODE}")
+    if EMPTY.MODE == "census":
+        for (site, kind, sel), ds in rows:
+            print(f"  EMPTY  {site}  {kind}({sel[:90]!r})  doors: {','.join(sorted(ds))}")
     print(f"\n{checks} assertions, {len(failures)} failed")
     for f in failures:
         print("FAIL " + f)

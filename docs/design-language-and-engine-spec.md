@@ -7,7 +7,7 @@ date: 2026-08-05
 type: spec
 status: active
 reviewed: true
-doc_version: v1.5
+doc_version: v1.6
 tags: [Etudes, knowledge-base, specification, design-language, canonical]
 ---
 
@@ -354,8 +354,13 @@ clipping, off-page elements) don't throw assertions.
 >    1. **the transport's Play** — Daniel, 2026-08-19 (shell parity N2): *"more obvious that it
 >       is a play button"*;
 >    2. **the metronome's first beat of a measure** — Daniel, 2026-08-19 (shell parity N3);
->    3. **refusal and alarm text** — Daniel, 2026-10-01: *"context removes any confusion about
->       the meaning of red."*
+>    3. **refusal, error and destructive actions** — the places the app says no, and the controls
+>       that discard — Daniel, 2026-10-01: *"context removes any confusion about the meaning of
+>       red."* (**Widened v1.6, 2026-10-01**: ratified as "refusal and alarm *text*", which covered
+>       20 of its 26 sites — four notepad Delete buttons, the chip-editor's Delete and an errored
+>       chip's border are not text. The set Daniel ratified is unchanged; only the words were short.
+>       Destructiveness is a property of the ACTION, not a status, so this does not collide with the
+>       first sentence.)
 >
 >    **This is a closed list. A fourth borrowing is a Spec amendment, not a judgement.**
 >    `engine/tests/degree-red.test.mjs` enforces it: a new red site fails the check, and every

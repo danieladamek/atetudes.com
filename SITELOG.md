@@ -1,3 +1,49 @@
+## 2026-10-01 — Night 81: the gate sees what it guards — a lookup that finds nothing is an error; the Root's red is checked on the pixels; Spec v1.6; Tetradetudes v0.6.15, triadetudes v0.9.6
+
+- **Spec v1.6 committed** (Daniel approved the wording 2026-10-01). Borrowing 3 is now "refusal, error and destructive
+  actions — the places the app says no, and the controls that discard"; the 26 sites are unchanged. **`spec-version.test.mjs`
+  caught the PO's bump AGAIN, the second time in two days:** triadetudes' footer said v1.5. It now says v1.6, read from
+  the Spec; triadetudes is v0.9.6. **And the ledger had resolved borrowings by NUMBER ALONE:** `degree-red.test.mjs` stayed
+  green through v1.6's rewording. Grants now carry the Spec's wording and must match rule 8's text. Red first: the
+  v1.5-worded grant failed against v1.6; it was re-read and re-granted under the new words.
+- **The Root's red, checked on the pixels** (`hub/tests/_red_effects.py`, run by the door gate). Each page is loaded from a
+  copy in which every lawful source of the red (the palette's Root, the key, and each granted ledger line) is re-tinted
+  with its own sentinel. A painted element still exactly #B82929 is a leak. A granted rule painting outside its
+  borrowing's role is a spill. It covers the four doors and the three maintained pages, hidden elements, three states
+  (open, a note saved, the metronome running), every paint property in any alpha, and ::before/::after. **Red first, three
+  ways:** Save's red restored ungranted → 30 leak failures; granted as Play (night 79's state) → 30 spill failures; and a
+  spill **the line check passes** — `.transport button.primary,` prefixed onto Play's own granted line on triadetudes. The
+  line check stayed green and the effect-scan went red, naming the line. That is the Save miss, caught.
+- **STATED PLAINLY — what it still cannot see** (in the file): furniture that READS the palette (painted "musical", it
+  passes); borrowing 3's role is by name; refusal states the scan does not drive. 24 of 33 granted lines were never seen
+  painting in the scanned states, and they are named every run with counts, never silent. The Spec's "the check enforces
+  it" is now true of the pixels in the states the scan enters, not of every state.
+- **A fifth red, found by the scan's design review:** the score's current-chord highlight was the Root's red at 6% alpha
+  (an rgba form). It was live at rest on tetradetudes and triadetudes, and invisible to a check that only knew the hex. Both
+  checks now know every form. It is now neutral ink (Spec §7 rule 8, as night 78 did for the staff band). **Studies moved:**
+  tetradetudes v0.6.15 and triadetudes; the red root noteheads are unchanged.
+- **A lookup that finds nothing is an error** (`hub/tests/_empty_guard.py`, strict in the door gate). It watches every
+  empty `querySelector`/`querySelectorAll`/`getElementById` the gate makes, on both the Python and the JS side, unless
+  absence is DECLARED where it is the point (`absent_ok` / `__may`). Never a central list. **Red first on the real
+  instance:** `.hp-strip`, as it stood, fails strict. **Turned on, it found 215 call sites.** 54 asserted absence, 139 were
+  state probes, 8 were third-party or crash-proof; all are declared at their site with a reason. **6 were VACUOUS** —
+  `.hp-strip` ×2 (fixed: the panel is found by role, and the check now compares 13 controls, 78 pairs), plus four more,
+  all fixed:
+  - a notepad-placement check that passed with the keys missing;
+  - "the score draws the figure as a line", which passed on barlines alone;
+  - a retune check that never read a fret;
+  - a measured field never asserted.
+
+  **8 were WRONG-DOOR** (a check skipped silently when a carried feature vanished): 5 fixed by keying on the door's own
+  facts, and 3 LEFT, declared at their site as "WRONG-DOOR, LEFT", in the tempo-face checks. Full list in the run note.
+- **Found, not fixed:** the metronome STUDY's first beat is white, not red. Its `LAMP.bar` is `#FFFFFF` and its granted
+  `#beatLamp span.acc` rule paints nothing, so N3's red first beat is on the doors and triadetudes but not the appliance.
+  Filed.
+- **Proof:** `tools/check.py` — doors GREEN in strict mode (23,076 assertions, 0 failed; guard: 1,401 lookups, 0
+  undeclared; effect-scan: 20 page-states, 328 paints read, 0 leaks, 0 spills) · hub 14/14 · check_site green · engine
+  714/714 after rewording a version comment that quoted the red in prose (the line check, rightly, does not strip
+  comments). Both moved pages rendered before/after at 1280 and 390, with no new console errors.
+
 ## 2026-10-01 — Night 80: Spec v1.5 — the Root's red borrowed in three places only; Play narrowed to Play (Save is ink); the ledger cites the Spec's closed list; modeSeg removed; Multetudes v0.6.27, Tetradetudes v0.6.14, triadetudes v0.9.5; five studies moved
 
 - **Spec v1.5 committed** (`docs/design-language-and-engine-spec.md`; Daniel approved 2026-10-01). Rule 8's

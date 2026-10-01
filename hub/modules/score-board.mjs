@@ -82,7 +82,7 @@ export const scoreBoard = {
       const yOf = (name, oct) => yF5 + (stepOf("F", 5) - stepOf(name, oct)) * HS;
       const yA3 = yOf("A", 3), yBot = yA3 + 8 * HS;
       const X0 = 104, X1 = 1146;
-      hi = el("rect", { x: 0, y: yF5 - 26, width: 0, height: yBot - yF5 + 40, rx: 8, fill: "rgba(184,41,41,0.06)" }, svg);
+      hi = el("rect", { x: 0, y: yF5 - 26, width: 0, height: yBot - yF5 + 40, rx: 8, fill: "rgba(33,33,38,0.06)" }, svg);   // the current chord: neutral ink, never the Root's red — Spec §7 rule 8 (found night 81: the red at 6% alpha, invisible to a hex-only check)
       for (let i = 0; i < 5; i++) {
         el("line", { x1: 34, y1: yF5 + i * 2 * HS, x2: X1, y2: yF5 + i * 2 * HS, stroke: "#B9B9BF", "stroke-width": 1 }, svg);
         el("line", { x1: 34, y1: yA3 + i * 2 * HS, x2: X1, y2: yA3 + i * 2 * HS, stroke: "#B9B9BF", "stroke-width": 1 }, svg);
