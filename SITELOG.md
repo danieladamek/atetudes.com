@@ -1,3 +1,21 @@
+## 2026-10-01 — Night 79: triadetudes names the Spec it follows (v1.4, read from the Spec); a check that no page claims a Spec version the Spec does not; the red ledger tells a grant from a question; triadetudes v0.9.4
+
+- **Triadetudes' footer said "Colors per At-Etudes Design Spec v1.1".** The Spec's own frontmatter says `doc_version: v1.4`,
+  and the footer now says v1.4, read from there. The page's other "v1.4" mentions are code comments that cite where a
+  clause came from, and they stay. Version bumped to v0.9.4 (tag line and footer). No other study moved.
+- **New check, `engine/tests/spec-version.test.mjs`:** a page's VISIBLE text may name only the Spec version the Spec
+  claims. It covers every maintained study and the site's content/ and layouts/. Not covered, named in the file:
+  scripts, styles and comments (provenance citations), runtime-written text, the frozen study, and generator comments.
+  Red first: it failed on the v1.1 footer, then went green.
+- **The red ledger split (PO ruling 261042 §2):** Play (N2) and the first-beat lamp (N3) are now GRANTED entries. They cite
+  Daniel's 2026-08-19 decisions, never expire, and a grant pins its site count, so they can't be removed without a new
+  ruling. The 26 alarm sites stay AWAITING the open question and expire when it closes. A pure `judgeLedger` is pinned on
+  synthetic ledgers: closing a question expires its awaiting entries and never a granted one, and no entry can pass for
+  the other kind. Red first: the old model expired a granted entry. On the real ledger, closing the alarm question
+  expires exactly its 26 and none of the 10 granted.
+- **Proof:** `tools/check.py` ALL GREEN, 435 s (engine 713/713 · hub 14/14 · doors green · check_site). Triadetudes rendered
+  before/after at 1280 and 390, with no new console errors (its existing "three popouts … got 4" is unchanged).
+
 ## 2026-10-01 — Night 78: the Root's red leaves the interface furniture where the Spec already rules it; golden rule 8 becomes a check; Multetudes v0.6.26, Tetradetudes v0.6.13; four studies moved
 
 - **The authority is the Spec, §7 golden rule 8:** *"In interactive studies, emphasis is weight and neutral ink, and alarm
