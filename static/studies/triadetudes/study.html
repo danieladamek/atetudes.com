@@ -70,7 +70,7 @@
 /* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own remedy): the
  * current chip keeps its outline and fill; its text is ink. The red text it wore said
  * "root" about chords that were not one. --red means the key, nowhere else. */
-#tlBars .tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
+#tlBars .tl-bar button.tl-cur{border-color:var(--ink);font-weight:bold;background:#fff}
 /* the chord's ROOT DEGREE dot — the legend's mark, the one palette, painted per chip */
 #tlBars .tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
 #tlBars .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
@@ -127,7 +127,7 @@
   #chipsDock .chips{margin:10px 0 2px}
   .chips button{font:inherit;font-size:12.5px;padding:4px 10px;border:1.4px solid var(--line);
     border-radius:14px;background:#fff;cursor:pointer;color:var(--ink)}
-  .chips button.cur{border-color:var(--red);color:var(--red);font-weight:bold}
+  .chips button.cur{border-color:var(--ink);color:var(--ink);font-weight:bold}
   /* break-down chips: big triad identity over small source-symbol identity */
   .chips button.bd{display:inline-flex;flex-direction:column;align-items:center;
     line-height:1.15;padding:3px 11px;min-width:44px}
@@ -155,9 +155,9 @@
   .chipEd .usList button{display:block;width:100%;text-align:left;font:inherit;font-size:12.5px;
     padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;
     cursor:pointer;margin-bottom:4px}
-  .chipEd .usList button.on{border-color:var(--red);color:var(--red);font-weight:bold}
+  .chipEd .usList button.on{border-color:var(--ink);color:var(--ink);font-weight:bold}
   .chipEd .usList .deg{color:var(--gray);font-size:11px}
-  .chipEd .usList button.on .deg{color:var(--red)}
+  .chipEd .usList button.on .deg{color:var(--ink)}
   .chipEd .acts{display:flex;gap:6px;margin-top:10px}
   .chipEd .acts button{font:inherit;font-size:12px;padding:4px 10px;border:1px solid var(--line);
     border-radius:6px;background:#fff;cursor:pointer}
@@ -3922,7 +3922,7 @@ SCOPE .tl-bar button:hover{border-color:var(--line);background:#fff}
 /* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own remedy): the
  * current chip keeps its outline and fill; its text is ink. The red text it wore said
  * "root" about chords that were not one. --red means the key, nowhere else. */
-SCOPE .tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
+SCOPE .tl-bar button.tl-cur{border-color:var(--ink);font-weight:bold;background:#fff}
 /* the chord's ROOT DEGREE dot — the legend's mark, the one palette, painted per chip */
 SCOPE .tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
 SCOPE .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
@@ -6855,7 +6855,7 @@ function renderScore(){
     const bassPc=bassPcFor(ch);
     const relabel=bassPc!==null&&bassPc!==ch.rootPc;
     const lb=el("text",{x:x+3,y:16,"font-size":"12.5","font-weight":"bold",
-      fill:ch.srcSymbol?"#212126":relabel?"#B82929":"#212126"},svg);
+      fill:"#212126"},svg);   // night 78: a relabelled name is no longer the Root's red — the name itself says it (golden rule 8)
     lb.textContent=ch.srcSymbol?ch.srcSymbol:relabel?tetradName(bassPc,ch):ch.label;
     if(ch.srcSymbol){
       if(ch.srcSymbol!==ch.label){
@@ -7044,7 +7044,7 @@ function renderActive(){
     for(let s2=maxStr+1;s2<=6;s2++){
       for(let f=0;f<=NFRETS;f++){
         if((OPEN[s2]+f)%12===ref){
-          el("circle",{cx:fx(f),cy:fy(s2),r:11,fill:"none",stroke:"#B82929",
+          el("circle",{cx:fx(f),cy:fy(s2),r:11,fill:"none",stroke:FAM_COLOR.R,
             "stroke-width":2.6},ctxL);
         }
       }

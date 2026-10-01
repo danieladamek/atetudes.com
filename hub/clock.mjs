@@ -83,7 +83,7 @@ export function mountClock(ctx, host) {
   let pulseT = null;
   listen(d, BEAT, (ev) => {
     if (ev && ev.sub) return;   // the pulse is the beat's, not the subdivision's (260929)
-    pulse.style.background = "#B82929";
+    pulse.style.background = "var(--ink)";   // emphasis is weight and neutral ink (Spec §7 golden rule 8) — the Root's red is not a pulse
     if (pulseT) view.clearTimeout(pulseT);
     pulseT = view.setTimeout(() => { pulse.style.background = ""; }, 70);
   });

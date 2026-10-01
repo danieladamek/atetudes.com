@@ -1,3 +1,29 @@
+## 2026-10-01 — Night 78: the Root's red leaves the interface furniture where the Spec already rules it; golden rule 8 becomes a check; Multetudes v0.6.26, Tetradetudes v0.6.13; four studies moved
+
+- **The authority is the Spec, §7 golden rule 8:** *"In interactive studies, emphasis is weight and neutral ink, and alarm
+  states use a hue that is not in the palette."* `#B82929` is the Root; `--red` is that red, and register 35 gives it to
+  the key alone.
+- **Moved to neutral ink (selection and emphasis):** the timeline's current bar (`engine/chart-line.mjs`), the clock
+  view's beat pulse, and the staff's current-chord band. Plus modes-from-pentatonic-boxes' toured box title (fixed in its
+  generator) and, on triadetudes, its chip and chip-editor selection and a relabelled chord name. The stage's root ring
+  is MUSICAL, so it now reads the palette (`FAM_COLOR.R`) instead of typing the hex; same pixels.
+- **Studies moved:** multetudes v0.6.26 and tetradetudes v0.6.13 (rebuilt, ingested), triadetudes (hand, re-copied from
+  the modules), and modes-from-pentatonic-boxes (generator, re-ingested byte-identical). metronome did NOT move (its only
+  sites are held). tetrad-voice-leading keeps all its red (frozen, R3), printed EXMT by the check.
+- **Held for Daniel — named in the ledger, not changed:**
+  - Play (shell parity N2: Daniel chose red on 2026-08-19, after rule 8).
+  - The first-beat lamp (shell parity N3: Daniel asked for "a red first beat of a measure" the same day).
+  - Every alarm and status use (26 sites — part B: the Spec grants a non-palette alarm hue; its value, or no colour at
+    all, is his).
+- **New check, `engine/tests/degree-red.test.mjs`:** both forms (`var(--red)` and `#B82929`) across hub, engine, the
+  generator bridge and every maintained page. Allowed: the token, the key and the palette's definition. Every other use
+  is a ledger entry naming the open ruling it waits on. It fails on a new site, on a stale entry, and on an entry whose
+  ruling is answered — each proven red first. Its uncovered scope is named in the file.
+- **Proof:** `tools/check.py` ALL GREEN, 440 s (engine 711/711 · hub 14/14 · doors 23,015/0 · check_site). Before/after
+  renders at 1280 and 390 of every changed element. Every one computes to ink (rgb 33,33,38) where it was the Root's
+  rgb 184,41,41. No new console errors (triadetudes' existing "three popouts … got 4" unchanged). The chip row's `.cur`
+  red was already overridden on screen before tonight, so that edit is source-only.
+
 ## 2026-09-30 — Daniel's ruling: the overnight full mutation chain is no longer part of the process (tools/harness only — no study moved)
 
 - **Why:** a 9.5-hour audit was blocking every small change — a one-line refinement cost a night. The gates plus each

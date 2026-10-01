@@ -371,7 +371,7 @@ export const fretboardStage = {
         for (let s2 = maxStr + 1; s2 <= 6; s2++)
           for (let f = 0; f <= NFRETS; f++)
             if ((pass.opens[s2] + f) % 12 === cur.chord.root.pc)
-              el("circle", { cx: fx(f), cy: fy(s2), r: 11, fill: "none", stroke: "#B82929", "stroke-width": 2.6 }, ctxLayer);
+              el("circle", { cx: fx(f), cy: fy(s2), r: 11, fill: "none", stroke: FAM_COLOR.R, "stroke-width": 2.6 }, ctxLayer);   // a MUSICAL use (the root's positions): it reads the palette
       }
 
       /* the readout: the reference's line — chord, roman · family/inversion ·

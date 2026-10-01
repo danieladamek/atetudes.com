@@ -179,7 +179,7 @@ def metronome_guarantee():
 # from the appliance page (static/studies/metronome/study.html), the family's own metronome look
 def shell_css():
     """the door SHELL's tokens and the one shell rule the carried cards rely on — sliced from
-    hub/shell.mjs, never restated. 261005: the cards' styles say var(--line), var(--red),
+    hub/shell.mjs, never restated. 261005: the cards' styles say var(--line), the --red token,
     var(--card), var(--edge) and size their messages through the shell's `.hint`; a page that
     carries the cards without these renders borderless buttons, a black Delete and a 16px
     import message (seen in the night-41 renders). host-conformance computes the token list

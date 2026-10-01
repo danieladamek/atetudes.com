@@ -146,7 +146,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 /* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own remedy): the
  * current chip keeps its outline and fill; its text is ink. The red text it wore said
  * "root" about chords that were not one. --red means the key, nowhere else. */
-#tlBars .tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
+#tlBars .tl-bar button.tl-cur{border-color:var(--ink);font-weight:bold;background:#fff}
 /* the chord's ROOT DEGREE dot — the legend's mark, the one palette, painted per chip */
 #tlBars .tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
 #tlBars .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
@@ -4810,7 +4810,7 @@ SCOPE .tl-bar button:hover{border-color:var(--line);background:#fff}
 /* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own remedy): the
  * current chip keeps its outline and fill; its text is ink. The red text it wore said
  * "root" about chords that were not one. --red means the key, nowhere else. */
-SCOPE .tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
+SCOPE .tl-bar button.tl-cur{border-color:var(--ink);font-weight:bold;background:#fff}
 /* the chord's ROOT DEGREE dot — the legend's mark, the one palette, painted per chip */
 SCOPE .tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
 SCOPE .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}
@@ -5492,7 +5492,7 @@ const fretboardStage = {
         for (let s2 = maxStr + 1; s2 <= 6; s2++)
           for (let f = 0; f <= NFRETS; f++)
             if ((pass.opens[s2] + f) % 12 === cur.chord.root.pc)
-              el("circle", { cx: fx(f), cy: fy(s2), r: 11, fill: "none", stroke: "#B82929", "stroke-width": 2.6 }, ctxLayer);
+              el("circle", { cx: fx(f), cy: fy(s2), r: 11, fill: "none", stroke: FAM_COLOR.R, "stroke-width": 2.6 }, ctxLayer);   // a MUSICAL use (the root's positions): it reads the palette
       }
 
       /* the readout: the reference's line — chord, roman · family/inversion ·
@@ -11025,7 +11025,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.12","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.13","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

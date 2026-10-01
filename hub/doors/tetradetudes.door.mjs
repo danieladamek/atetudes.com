@@ -102,6 +102,8 @@ export default {
     /* v0.6.0 (261002, night 38): ONE ADDRESS FAMILY — the figure's pattern address is
      * real string numbers (multetudes' own), slots retired to a saved-étude alias; a set
      * change refuses a stale figure by name and OFFERS the shift. Multetudes unmoved. */
+    /* v0.6.13 (261041, night 78): the Root's red leaves the furniture where the Spec already rules it (golden rule 8) —
+     * the timeline's current bar is neutral ink; the stage's root ring reads the palette. */
     /* v0.6.12 (261037, night 77): the tempo is typeable in the Metronome card and the Transport card — both readouts
      * are the family's one bpm field (hub/bpm-field.mjs), both painted from the one clock. */
     /* v0.6.11 (261031, night 72): the tempo opens at 120 — the hub's one default (hub/tempo.mjs, Daniel 2026-09-27),
@@ -132,7 +134,7 @@ export default {
      * Settings card also reads — the saved entry is byte-for-byte the same shape; nothing on this face moved. */
     /* v0.6.7 (261014e, night 64): the bus gained announceAfter and the readout grammar right-justifies a mini's own
      * row — shared files; nothing on this door's face moves. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.12",
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.13",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

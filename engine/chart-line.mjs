@@ -56,7 +56,7 @@ SCOPE .tl-bar button:hover{border-color:var(--line);background:#fff}
 /* SELECTION IS WEIGHT AND NEUTRAL INK (260918, item 2 — golden rule 8's own remedy): the
  * current chip keeps its outline and fill; its text is ink. The red text it wore said
  * "root" about chords that were not one. --red means the key, nowhere else. */
-SCOPE .tl-bar button.tl-cur{border-color:var(--red);font-weight:bold;background:#fff}
+SCOPE .tl-bar button.tl-cur{border-color:var(--ink);font-weight:bold;background:#fff}
 /* the chord's ROOT DEGREE dot — the legend's mark, the one palette, painted per chip */
 SCOPE .tl-bar button .tl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-bottom:1px}
 SCOPE .tl-bar button .tl-rn{font-size:9px;font-weight:normal;color:var(--gray);font-style:italic}

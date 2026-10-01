@@ -210,7 +210,7 @@ export const staffBoard = {
         if (ci) el("line", { x1: x0, y1: BY, x2: x0, y2: BY + GAP * 8, stroke: "#D8D8DC", "stroke-width": 1 }, svg);
         if (ci === index)
           el("rect", { x: x0, y: labY - 14, width: BW, height: (BY + GAP * 8) - (labY - 14),
-            fill: "#B82929", opacity: 0.055, "data-stcur": ci }, svg);
+            fill: "#212126", opacity: 0.055, "data-stcur": ci }, svg);   // the current chord: neutral ink, never the Root's red (golden rule 8)
         const lab = el("text", { x: x0 + 7, y: labY, "font-size": "12.5", "font-weight": "bold",
           fill: "#212126", class: "st-sym" }, svg);
         lab.textContent = c.symbol;

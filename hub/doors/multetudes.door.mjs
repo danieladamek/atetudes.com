@@ -173,6 +173,9 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.26 (261041, night 78): the Root's red leaves the furniture where the Spec already rules it (golden rule 8:
+     * "emphasis is weight and neutral ink") — the timeline's current bar, the clock's pulse and the staff's current-chord
+     * band are neutral ink; the stage's root ring reads the palette. Play, the first-beat lamp and the alarms wait on Daniel. */
     /* v0.6.25 (261037, night 77): the tempo is typeable in the Metronome card — its readout is the family's one bpm
      * field (hub/bpm-field.mjs), the neck's box already was; the card owns the clock and clamps (15–300). */
     /* v0.6.24 (261031, night 72): the chip row stays lit across the wrap (it keyed to a request's unwrapped index); the
@@ -248,7 +251,7 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.25",
+    blurb: "one tool that holds many études · v0.6.26",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
