@@ -1,3 +1,31 @@
+## 2026-10-01 — Night 82: the site build and the app gates separate; the deploy does not (CI and tools only — no study moved)
+
+- **Why (Daniel, 2026-10-01; ruling 261045):** "I want to separate the site build from the apps build." **Measured first**
+  (median of the last six runs): a push cost **554 s**, and **488 s of it was the browser door gate**. Installing Go and
+  Hugo plus the build was 3 s. So a site-only push (a blog post) paid ~8 min for a gate it cannot affect.
+- **Now:** `tools/paths.py` is the ONE partition: every tracked path in exactly one set (app · site · all · meta), and a
+  path in no set is an ERROR. CI runs `classify`, then an `app-gate` (the browser gate and generator identity) only when an
+  app or all path changed, then `publish` on every run: engine and hub suites, Hugo build, the studies check, the site
+  check. Publish proceeds only if the app gate succeeded, or classify proved none was owed. `trap-a` asserts that on every
+  run's own results. **Proved on a real runner** (branch `ci-proof/night-82`, never deployed):
+  - an app change ran the gate;
+  - a site-only change skipped it and published in **105 s**;
+  - a path in no set failed loudly;
+  - the gate forged to skip while owed blocked the publish and turned the run red;
+  - the final tree ran green.
+- **`check_site.py` split by subject:** the site (links, CNAME, `.nojekyll`, deploy records) and `tools/check_studies.py`,
+  the **permanent-URL guard**: every study present in the built site and byte-identical. It runs on EVERY publish,
+  because it protects the studies from the site, so it is never gated on an app change. Generator identity moved to the
+  app gate.
+- **THE DEPLOY DOES NOT SEPARATE.** One Pages site takes one artifact, so a broken site build still blocks every deploy,
+  studies included. Splitting the gates BOUNDS the studies' exposure to a site failure — a bad site build fails before it
+  can publish, and no build that alters a study can pass — it does not ELIMINATE it. Every way out changes URLs, and
+  published URLs are permanent. **Not solved; bounded.**
+- **Drafted, not ratified:** web contract §9.5 — "a study is a self-contained file … the site may never modify it, and
+  may never be required for it to work" — in its ratification item. Daniel ratifies §9.
+- **Proof:** `tools/check.py` ALL GREEN, 477 s (engine · hub · doors strict · check_site · check_studies 6/6 · generator
+  identity · paths 236/236). Report: `notes/working/Multetudes build run 261049 — night 82, the gates separate, the deploy does not.md`.
+
 ## 2026-10-01 — Night 81, fix: the empty-lookup guard's report creates its own directory (CI's first run of it failed)
 
 - Actions run 36917970203 FAILED on `87ec9bf`: the door gate passed every check, then crashed writing its census report to

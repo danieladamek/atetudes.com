@@ -1,11 +1,31 @@
-# Build the Hugo/Hextra site and deploy to GitHub Pages.
-# Adapted from Hextra's recommended workflow.
+# Gate the apps, build the site, deploy to GitHub Pages.
+#
+# NIGHT 82 (Daniel 2026-10-01, ruling 261045: "separate the site build from the apps build").
+# THE BUILDS AND THE GATES SEPARATE; THE DEPLOY DOES NOT — one Pages site takes one artifact (public/, with the
+# studies inside it), so every deploy still builds the whole site. What separates is which GATE a change owes:
+#
+#   classify   tools/paths.py — the ONE partition of the repository (app · site · all · meta); a changed path in no
+#              set FAILS here, loudly, and nothing downstream runs.
+#   app-gate   the expensive gate (the browser door gate with the red effect-scan, ~8 min; the generator identity) —
+#              only when an app (or all) path changed, or on a release / manual run.
+#   publish    EVERY run: the engine and hub suites (some read site content), the Hugo build, the studies check (the
+#              permanent-URL guard — it protects the studies FROM the site, so it is never gated on an app change), the
+#              site check. It runs only if the app gate SUCCEEDED, or was skipped BECAUSE classify proved no app path
+#              changed. A skipped gate is never read as a passed gate.
+#   trap-a     EVERY run: asserts that invariant on the run's own job results, so it is proved continuously, not once.
+#   deploy     main only, after a successful publish.
+#
+# Every downstream condition is written out with always(): GitHub's default skip propagation is exactly the trap.
+# `ci-proof/**` branches run everything but the upload and the deploy — the place a workflow change is proved on a
+# real runner before it reaches main (a runner is not this machine: night 81's gitignored directory).
 
 name: Deploy Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, "ci-proof/**"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -14,7 +34,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 defaults:
@@ -22,7 +42,47 @@ defaults:
     shell: bash
 
 jobs:
-  build:
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.c.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify the change (tools/paths.py — one partition, every path in exactly one set)
+        id: c
+        run: python3 tools/paths.py classify "${{ github.event_name }}" "${{ github.event.before }}" "${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+  app-gate:
+    needs: classify
+    if: needs.classify.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        # a runner-managed Python, so `pip install` below is not fighting ubuntu's externally-managed interpreter
+        with:
+          python-version: "3.12"
+      - name: Door lock suite (browser) — with the empty-lookup guard and the red effect-scan (night 81)
+        # family spec §4.2.2's AUTHORITATIVE half. Playwright is a CI devDependency, approved by Daniel 2026-08-16,
+        # pinned to the version the gate was developed against; it ships in nothing.
+        run: |
+          pip install playwright==1.55.0 reportlab   # reportlab: tools/generator_identity.py runs the generators (261004)
+          playwright install --with-deps chromium
+          node hub/tools/build.mjs
+          python3 hub/tests/door_locks.py
+      - name: Generator identity (every generated study is what its generator emits — moved out of check_site, night 82)
+        run: python3 tools/generator_identity.py
+
+  publish:
+    needs: [classify, app-gate]
+    if: >-
+      always() && needs.classify.result == 'success' &&
+      (needs.app-gate.result == 'success' ||
+       (needs.app-gate.result == 'skipped' && needs.classify.outputs.app == 'false'))
     runs-on: ubuntu-latest
     env:
       HUGO_VERSION: "0.164.0"
@@ -31,36 +91,13 @@ jobs:
         with:
           fetch-depth: 0
       - name: Engine tests
-        # node:test, zero dependencies — includes the characterization suite that
-        # pins the shipped Triadetudes engine. A red test blocks deploy.
+        # node:test, zero dependencies — every run: the spec-version and red line checks read site content too
         run: node --test engine/tests/*.test.mjs
-      - name: Door build gate
-        # family spec §4.2.2: the style-ownership rule, the static-derivation
-        # bans, and the artifact greps — the half of the door gate that needs no
-        # browser and no dependencies.
+      - name: Hub tests (the door build gate's static half)
         run: node --test hub/tests/*.test.mjs
       - uses: actions/setup-python@v5
-        # a runner-managed Python, so `pip install` below is not fighting
-        # ubuntu's externally-managed system interpreter. check_site.py is
-        # stdlib-only and does not care which of the two it gets.
         with:
           python-version: "3.12"
-      - name: Door lock suite (browser)
-        # family spec §4.2.2's AUTHORITATIVE half, local-only for two sessions
-        # and now guarding the branch that deploys: the rendered control
-        # partition (§4.2.1's equality over the control universe), the
-        # orphan-selector check, and file:// with the network aborted.
-        #
-        # Playwright is a CI devDependency, approved by Daniel 2026-08-16. It is
-        # a build-time tool and ships in nothing, so charter §5's single-file
-        # offline promise is untouched. Pinned to the version the gate was
-        # developed against, so a browser bump is a deliberate act with a log
-        # entry rather than a silent change in what "green" means.
-        run: |
-          pip install playwright==1.55.0 reportlab   # reportlab: tools/generator_identity.py runs the generators (261004)
-          playwright install --with-deps chromium
-          node hub/tools/build.mjs
-          python3 hub/tests/door_locks.py
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
@@ -70,23 +107,48 @@ jobs:
             https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb
           sudo dpkg -i ${{ runner.temp }}/hugo.deb
       - uses: actions/configure-pages@v5
+        if: github.ref == 'refs/heads/main'
         id: pages
-      - name: Build
+      - name: Build the site
         run: hugo --gc --minify
-      - name: Check site integrity
+      - name: Studies check — the permanent-URL guard (every study present and byte-identical in the built site)
+        run: python3 tools/check_studies.py
+      - name: Site check — links, CNAME, .nojekyll, the deploy records
         env:
           GH_TOKEN: ${{ github.token }}   # tools/deploy_record.py verify re-fetches every recorded run (260921)
         run: python3 tools/check_site.py
       - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
         with:
           path: ./public
 
+  trap-a:
+    # THE INVARIANT, asserted on this run's own results: when an app path changed (or every gate was owed), a successful
+    # publish implies a successful app gate. It cannot be argued away by reading the yaml; it is checked every run.
+    needs: [classify, app-gate, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: A skipped gate is never a passed gate
+        run: |
+          echo "classify=${{ needs.classify.result }} app-owed=${{ needs.classify.outputs.app }} app-gate=${{ needs.app-gate.result }} publish=${{ needs.publish.result }}"
+          if [ "${{ needs.classify.outputs.app }}" != "false" ] && [ "${{ needs.app-gate.result }}" != "success" ]; then
+            # whatever the publish did: an owed gate that did not succeed must turn the RUN red — a run that is green
+            # while nothing was gated or published is a skipped job read as a passed one, one level up
+            echo "TRAP A: this change owed the app gate and it did not succeed (${{ needs.app-gate.result }}) — publish: ${{ needs.publish.result }}" >&2; exit 1
+          fi
+          if [ "${{ needs.classify.result }}" != "success" ] && [ "${{ needs.publish.result }}" = "success" ]; then
+            echo "TRAP B: the publish succeeded although the change could not be classified" >&2; exit 1
+          fi
+          echo "deploy reachable: $([ "${{ needs.publish.result }}" = success ] && echo yes || echo no)"
+
   deploy:
+    needs: [publish, trap-a]
+    if: always() && needs.publish.result == 'success' && needs.trap-a.result == 'success' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

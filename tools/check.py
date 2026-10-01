@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """check.py — EVERY GATE, ONE COMMAND (2026-09-30, Daniel's ruling: a change closes on the gates).
 
-  python3 tools/check.py            engine · hub · the door gate in every door · hugo · check_site   (~7–8 min)
+  python3 tools/check.py            engine · hub · the door gate in every door · hugo · check_site · check_studies ·
+                                    generator identity · the CI path partition   (~7–8 min)
   python3 tools/check.py --doors plain,scribe
                                     the same, with the door gate limited to the named doors
 
@@ -33,7 +34,10 @@ def main():
         ("build", ["node", "hub/tools/build.mjs"]),
         ("doors", door_cmd),
         ("hugo", ["hugo", "--quiet"]),
-        ("check_site", ["python3", "tools/check_site.py"]),
+        ("check_site", ["python3", "tools/check_site.py"]),          # the site: links, CNAME, .nojekyll, deploy records
+        ("check_studies", ["python3", "tools/check_studies.py"]),    # the permanent-URL guard (night 82)
+        ("generators", ["python3", "tools/generator_identity.py"]),  # moved out of check_site (night 82): the app's subject
+        ("paths", ["python3", "tools/paths.py", "check"]),           # every tracked path in exactly one CI set (night 82)
     ]
     results = []
     for name, cmd in gates:

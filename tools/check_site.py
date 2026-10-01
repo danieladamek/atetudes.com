@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static integrity checks for atetudes.com (Site Charter, Verification #4).
+"""Static integrity checks for atetudes.com (Site Charter, Verification #4) — THE SITE half (night 82).
 
 Walks every .html file in the BUILT site (public/ — run `hugo` first),
 parses it, and verifies that every internal link and asset reference
@@ -90,11 +90,9 @@ def main():
     print(v.stdout.strip())
     if v.returncode != 0:
         problems.append("deploy records: " + (v.stderr.strip() or v.stdout.strip() or "verify failed")[:300])
-    # THE GENERATOR PIN (261004, night 40): every generated study is byte-identical to what its
-    # generator emits — the check that would have caught aac92a0 (a generated page edited by hand)
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import generator_identity
-    problems += generator_identity.check()
+    # (night 82, split by SUBJECT — rule 16) the generator pin moved to the APP gate, where its subject lives:
+    # `python3 tools/generator_identity.py` (it runs the generators). The studies' presence and byte-identity in the
+    # built site is tools/check_studies.py, which runs on every publish. This file is the SITE: links and plumbing.
     if problems:
         for p in problems:
             print(f"PROBLEM: {p}")
