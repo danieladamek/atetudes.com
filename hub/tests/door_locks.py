@@ -2115,9 +2115,9 @@ console.log(JSON.stringify(out));
         # goes ON THE WINDOW as well as in the hint (ruling 260922b/1)
         check("missing 7th" in hint_cb and "both R and 7 on string" in hint_cb and "Line takes both" in hint_cb,
               f"{tag} the capped loss must be NAMED with its escape: {hint_cb!r}")
-        cb_over = page.evaluate("() => (document.querySelector('#fieldSvg .fd-refusal') || {}).textContent || ''")
+        cb_over = page.evaluate("() => ((document.getElementById('fdRefusal') || {}).textContent || (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'the absence is drawn inside the window only when nothing was placed (260908); the refusal over placed notes is the line under the neck (night 85)') || {}).textContent || '')")
         check("missing 7th" in cb_over and "Line takes both" in cb_over,
-              f"{tag} 1 (260923): the capped loss is LOUD on the window, not only in the hint: {cb_over!r}")
+              f"{tag} 1 (260923; seated under the neck night 85): the capped loss is LOUD on the neck, not only in the hint: {cb_over!r}")
         check("the 7 is in the box" in page.inner_text("#roLine"),
               f"{tag} the readout names the capped loss too: {page.inner_text('#roLine')!r}")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:config',
@@ -2156,9 +2156,9 @@ console.log(JSON.stringify(out));
                         with absent_ok("matrix cell: dots OR a named refusal, heads OR an in-bar refusal - one side is empty by design"):
                             st = page.evaluate("""(bar) => {
                           const sel = document.querySelectorAll('#fieldSvg .fd-sel').length;
-                          const ref = document.querySelector('#fieldSvg .fd-refusal');
+                          const refusalText = ((document.getElementById('fdRefusal') || {}).textContent || (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'the absence is drawn inside the window only when nothing was placed (260908); the refusal over placed notes is the line under the neck (night 85)') || {}).textContent || '');
                           const stv = document.getElementById('stSvg');
-                          return { sel, refusal: ref ? ref.textContent : null,
+                          return { sel, refusal: refusalText || null,
                             stHeads: stv ? stv.querySelectorAll('ellipse[data-stmidi][data-stbar="' + bar + '"]').length : -1,
                             stRefuse: stv ? stv.querySelectorAll('[data-strefuse="' + bar + '"]').length : -1 }; }""",
                               str(mx_bar))
@@ -2279,7 +2279,7 @@ console.log(JSON.stringify(out));
             n_dr = page.eval_on_selector_all("#fieldSvg .fd-sel", "e => e.length")
             placed_bars.append(n_dr > 0); drawn_counts.append(n_dr)
             with absent_ok("a COMPLETE bar has no refusal; the leg requires both complete and partial bars (:2303)"):
-                partial_bars.append(n_dr > 0 and page.query_selector("#fieldSvg .fd-refusal") is not None)
+                partial_bars.append(n_dr > 0 and bool(page.evaluate("() => ((document.getElementById('fdRefusal') || {}).textContent || (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'the absence is drawn inside the window only when nothing was placed (260908); the refusal over placed notes is the line under the neck (night 85)') || {}).textContent || '')")))
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
         page.evaluate("""() => {
@@ -2958,22 +2958,35 @@ console.log(JSON.stringify(out));
         # strings 4–1, anchor 4, startDegree 1, frets 0–3: R and 7 both live only on string 2.
         CASE = "() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { key: 'C', scale: 'major', object: 'tetrad', source: 'custom', custom: 'Cmaj7', strings: [4, 3, 2, 1], startDeg: 1, nearFret: 0, take: %s, notesPer: %d } }))"
         READ = """() => ({ sel: [...document.querySelectorAll('#fieldSvg .fd-sel')].map(g => g.querySelector('text').textContent + '@s' + g.dataset.selstr + 'f' + g.dataset.selfret).join(' '),
-          overlay: (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a scene with nothing refused draws no refusal overlay; refused scenes assert its text') || {}).textContent || '', staff: document.querySelectorAll('#stSvg [data-stmidi][data-stbar="0"]').length })"""
+          overlay: ((document.getElementById('fdRefusal') || {}).textContent || (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'the absence is drawn inside the window only when nothing was placed (260908); the refusal over placed notes is the line under the neck (night 85)') || {}).textContent || ''), staff: document.querySelectorAll('#stSvg [data-stmidi][data-stbar="0"]').length })"""
         page.evaluate(CASE % ("'all'", 1)); page.wait_for_timeout(300); cs = page.evaluate(READ)
         check(cs["sel"] == "3@s4f2 R@s2f1 5@s1f3" and cs["staff"] == 3,
               f"{tag} 1 (260923): all-tones under Grip on the capped case draws R 3 5 once each — the doubled 5 is gone, string 3 SILENT, the staff agrees: {cs}")
         check(cs["overlay"].replace("— ", "— ").startswith("missing 7th") and "both R and 7 on string 2" in cs["overlay"] and "Line takes both" in cs["overlay"],
               f"{tag} 1 (260923): the capped loss is LOUD on the window in Daniel's words, the escape derived: {cs['overlay']!r}")
-        # the message's SEAT: clear of the drawn notes and inside the neck, at the nut and at the far right
-        GEO = """() => { const svg = document.getElementById('fieldSvg'); const t = svg.querySelector('.fd-refusal'); if (!t) return null; const tb = t.getBBox(); const vb = svg.viewBox.baseVal;
-          const dots = [...svg.querySelectorAll('.fd-sel circle')].map(c => ({ x: +c.getAttribute('cx'), y: +c.getAttribute('cy'), r: +c.getAttribute('r') }));
-          return { seat: t.dataset.seat, inside: tb.x >= 0 && tb.x + tb.width <= vb.width && tb.y >= 0 && tb.y + tb.height <= vb.height,
-            overlaps: dots.filter(d => d.x + d.r > tb.x && d.x - d.r < tb.x + tb.width && d.y + d.r > tb.y && d.y - d.r < tb.y + tb.height).length }; }"""
+        # the message's SEAT (night 85 — Daniel, 2026-10-02: "Under the neck for sure", amending 260922b's "above the view",
+        # whose two in-SVG seats both crossed marks): with notes drawn, the refusal is the ONE line under the neck — below
+        # the neck's SVG, inside the board, meeting no mark of the neck — and nothing is said inside the SVG. Every mark
+        # is measured (circles, text, rects), not only the selection's circles: the old GEO counted .fd-sel alone and
+        # passed on a seat that crossed field dots and both window handles.
+        GEO = """() => { const svg = document.getElementById('fieldSvg'), line = document.getElementById('fdRefusal');
+          if (!line.textContent) return null;
+          const lr = line.getBoundingClientRect(), sr = svg.getBoundingClientRect(), br = svg.closest('.board').getBoundingClientRect();
+          const marks = [...svg.querySelectorAll('circle, text, rect, ellipse')].map(e => e.getBoundingClientRect()).filter(b => b.width && b.height);
+          const inSvg = __may(() => svg.querySelector('.fd-refusal'), 'with notes drawn nothing is said inside the neck — the absence-in-the-window is the nothing-placed case only');
+          return { seat: 'under', below: lr.top >= sr.bottom - 0.5, inside: lr.left >= br.left - 0.5 && lr.right <= br.right + 0.5,
+            overlaps: marks.filter(b => b.right > lr.left && b.left < lr.right && b.bottom > lr.top && b.top < lr.bottom).length,
+            inSvg: !!inSvg, colour: getComputedStyle(line).color, weight: getComputedStyle(line).fontWeight, size: getComputedStyle(line).fontSize }; }"""
         g0 = page.evaluate(GEO)
-        check(g0 and g0["inside"] and g0["overlaps"] == 0 and g0["seat"] in ("above", "below"),
-              f"{tag} 1 (260923): with notes drawn the message sits clear of them and inside the neck, even at the nut: {g0}")
+        check(g0 and g0["below"] and g0["inside"] and g0["overlaps"] == 0 and not g0["inSvg"]
+              and g0["colour"] == "rgb(184, 41, 41)" and g0["weight"] in ("700", "bold") and g0["size"] == "12.5px",
+              f"{tag} night 85: with notes drawn the refusal is ONE line UNDER the neck — below it, inside the board, meeting no mark, nothing said inside the SVG, the family's red bold at 12.5px: {g0}")
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { nearFret: 12 } }))"); page.wait_for_timeout(300); g1 = page.evaluate(GEO)
-        check(g1 and g1["inside"] and g1["overlaps"] == 0, f"{tag} 1 (260923): …and at the far right of the neck: {g1}")
+        check(g1 and g1["below"] and g1["inside"] and g1["overlaps"] == 0 and not g1["inSvg"], f"{tag} night 85: …and with the window at the far right of the neck: {g1}")
+        vp85 = page.viewport_size
+        page.set_viewport_size({"width": 390, "height": vp85["height"]}); page.wait_for_timeout(300); g2 = page.evaluate(GEO)
+        check(g2 and g2["below"] and g2["inside"] and g2["overlaps"] == 0 and not g2["inSvg"], f"{tag} night 85: …and at 390, where the R in the sentence once sat beside an R dot: {g2}")
+        page.set_viewport_size(vp85); page.wait_for_timeout(200)
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { nearFret: 0 } }))")
         page.evaluate(CASE % ("'one'", 1)); page.wait_for_timeout(300); c1 = page.evaluate(READ)
         check(c1["sel"] == "5@s3f0 R@s2f1 3@s1f0" and c1["staff"] == 3 and "no placement fits" in c1["overlay"] and "occur only on string 2" in c1["overlay"] and "Line takes both" in c1["overlay"],
@@ -3415,7 +3428,7 @@ console.log(JSON.stringify(out));
             page.click(f'#tlScroll button >> nth={aud_bar}'); page.wait_for_timeout(350)
             aud_states.append(page.evaluate("""() => ({
               drawn: document.querySelectorAll('#fieldSvg .fd-sel').length,
-              refused: !!__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3424 demands both refused and placed bars in the walk'),
+              refused: !!((document.getElementById('fdRefusal') || {}).textContent || (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3424 demands both refused and placed bars in the walk') || {}).textContent || ''),
               nt: window.__nt.length, raw: window.__raw.length })"""))
         for aud_bar, st in enumerate(aud_states):
             if st["refused"] and st["drawn"] == 0:
@@ -3593,7 +3606,7 @@ console.log(JSON.stringify(out));
               const drawn = [...document.querySelectorAll('#fieldSvg .fd-sel')]
                 .map(g => +g.dataset.selmidi);
               const rf = __may(() => document.querySelector('#fieldSvg .fd-ref'), 'listener probes of live field/keys state; absence is a legal state, asserted in their own pins');
-              window.__cf.bars.push({ i, t, drawn, refused: !!__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3642 demands the corpus hold a refusing bar'),
+              window.__cf.bars.push({ i, t, drawn, refused: !!((document.getElementById('fdRefusal') || {}).textContent || (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3642 demands the corpus hold a refusing bar') || {}).textContent || ''),
                 ref: rf ? +rf.dataset.refmidi : null }); }); }); }""")
         page.select_option("#fdBass2", "third"); page.wait_for_timeout(200)
         page.fill("#bpmRange", "240"); page.dispatch_event("#bpmRange", "input")
@@ -3604,7 +3617,7 @@ console.log(JSON.stringify(out));
               const drawn = [...document.querySelectorAll('#fieldSvg .fd-sel')]
                 .map(g => +g.dataset.selmidi);
               const rf = __may(() => document.querySelector('#fieldSvg .fd-ref'), 'listener probes of live field/keys state; absence is a legal state, asserted in their own pins');
-              window.__cf.bars = [{ i: -1, t: performance.now(), drawn, refused: !!__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3642 demands the corpus hold a refusing bar'),
+              window.__cf.bars = [{ i: -1, t: performance.now(), drawn, refused: !!((document.getElementById('fdRefusal') || {}).textContent || (__may(() => document.querySelector('#fieldSvg .fd-refusal'), 'a placed bar has no refusal overlay; :3642 demands the corpus hold a refusing bar') || {}).textContent || ''),
                 ref: rf ? +rf.dataset.refmidi : null }];
               window.__cf.notes = []; }""")
             page.click('#fdMini button[data-role="play"]')
@@ -4679,9 +4692,11 @@ console.log(JSON.stringify(out));
         check(free_title() and (free_title() in page.inner_text("#smHint")),
               f"{tag} bound: the Free button's title is not the narration's Free words: {free_title()!r} vs {page.inner_text('#smHint')!r}")
         page.uncheck("#bindChk")
-        check("box" in hint() and "pull" in hint() and "same grip" not in hint(),
-              f"{tag} unbound Free does not warn that the Box won't pull: {page.inner_text('#smHint')!r}")
-        check("anchor released" in free_title() and free_title() in page.inner_text("#smHint"),
+        # REWRITTEN night 85 (4A, rule 3): unbound, the Box still pulls the OPENING grip — the old pin demanded the
+        # sentence that said it would not
+        check("box" in hint() and "pulls only the opening grip" in hint() and "same grip" not in hint() and "won't pull" not in hint(),
+              f"{tag} unbound Free says the Box pulls only the opening grip: {page.inner_text('#smHint')!r}")
+        check("pulls the first chord" in free_title() and free_title() in page.inner_text("#smHint"),
               f"{tag} unbound: the Free button's title is not the narration's Free words: {free_title()!r}")
         page.click("#placeSeg button[data-v=\"grip\"]")
         check("won't pull" not in hint() and "same grip" not in hint(),
@@ -6182,7 +6197,7 @@ console.log(JSON.stringify(out));
           const inter = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
           const sb = R(sc), cb = R(last);
           /* everything positioned absolutely in this board that reaches INTO the scroller's box — the shell's
-           * own collapse button (▾, top right of every board) is the one floater a header-less board keeps;
+           * own collapse button (▾) sat here while the board had no header — night 85 seats it in the header band;
            * anything else is a floater the strip put there */
           const board = sc.closest('.board') || sc.parentElement;
           const floaters = [...board.querySelectorAll('*')].filter(x => getComputedStyle(x).position === 'absolute' && x.getBoundingClientRect().width > 0)
@@ -6201,12 +6216,13 @@ console.log(JSON.stringify(out));
             page.set_viewport_size({"width": vw, "height": 900}); page.wait_for_timeout(300)
             sr = strip_read()   # NOT `r` — that name is the resolver's record, read by every block after this one
             strangers = [f for f in sr["floaters"] if f["id"] != "clpsBtn"]
-            check(sr["n"] == 12 and not strangers, f"{tag} @{vw}: nothing the strip put there floats over the scroller (the shell's ▾ is the one floater a header-less board keeps): {sr['floaters']}")
+            check(sr["n"] == 12 and not strangers, f"{tag} @{vw}: nothing the strip put there floats over the scroller: {sr['floaters']}")
             check(not sr["miss"] and sr["fullyIn"], f"{tag} @{vw}: the last chord ({sr['text']}) is fully visible — its symbol and roman land on the chip at every probe, inside the scroller: missed {sr['miss']}, chip {sr['chip']}, scroller {sr['scroller']}")
             check(sr["pr"] == "0px", f"{tag} @{vw}: the scroller reserves nothing at its end: padding-right {sr['pr']}")
-            # the shell's ▾ over the chip's top-right CORNER — the shell's, not the strip's; pinned so growth is caught
+            # RE-AIMED night 85 (rule 7): the ▾ touched the last chip's corner (≤ 120 px², measured 94 on 261012) because this
+            # board had no header; the shell rule seats it in the board's header band now, so it reaches the scroller NOT AT ALL
             shell = [f for f in sr["floaters"] if f["id"] == "clpsBtn"]
-            check(all(f["overChip"] <= 120 for f in shell), f"{tag} @{vw}: the shell's collapse button may touch only the last chip's corner (≤ 120 px², measured 94 on 261012): {shell}")
+            check(not shell, f"{tag} @{vw}: night 85: the shell's collapse button sits in the chart line's header band and reaches no part of the scroller (it touched the last chip before): {shell}")
         page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(300)
         page.click('#pgSrcSeg button[data-src="cycle"]'); page.select_option("#hcKey", "Bb"); page.wait_for_timeout(200)
 
@@ -7204,6 +7220,82 @@ console.log(JSON.stringify(out));
         check(not errs71, f"{tag} night 71: no page errors: {errs71[:3]}")
         ctx71.close()
 
+    # ---------------- NIGHT 85 (item 5 — PO ruling 261053 §2, a SHELL rule): THE CHEVRON'S ONLY SEAT IS THE HEADER BAND ----------
+    # Every panel declares a header (a card's h2, a board's .bh), and the shell's collapse chevron sits inside that band —
+    # on every panel of every door, at 1280 and 390. Two boards had none (the chart line, the readout), and the chevron
+    # sat on their content: over the chord's name at 390. A header-less panel cannot exist silently — the shell also
+    # names one on the console — and this holds the effect: no panel without a header, no chevron outside its band.
+    ctx85c = pw.new_context(viewport={"width": 1280, "height": 900}); p85c = ctx85c.new_page(); errs85c = []
+    p85c.on("console", lambda m: errs85c.append(m.text) if m.type == "error" and "[shell]" in m.text else None)
+    p85c.goto(html_path.as_uri()); p85c.wait_for_selector("#cards", state="attached"); p85c.wait_for_timeout(350)
+    for w85 in (1280, 390):
+        p85c.set_viewport_size({"width": w85, "height": 900}); p85c.wait_for_timeout(250)
+        panels85 = p85c.evaluate("""() => [...document.querySelectorAll('.card, .board')].filter(p => p.getClientRects().length).map(p => {
+          const h = __may(() => p.querySelector('h2') || p.querySelector('.bh'), 'a card heads with h2, a board with .bh — one of the two is absent by design; a panel with NEITHER fails below');
+          const b = __may(() => p.querySelector(':scope > .clpsBtn'), 'a panel without its chevron fails below, by name');
+          const hr = h && h.getBoundingClientRect(), br = b && b.getBoundingClientRect();
+          return { panel: p.id || (h ? h.textContent.trim().slice(0, 24) : p.className.slice(0, 30)), header: !!h, chevron: !!b,
+            inBand: !!(hr && br && br.top < hr.bottom && br.bottom > hr.top) }; })""")
+        check(len(panels85) >= 1, f"{tag} night 85: at {w85} the door shows panels to hold the rule on (not nothing): {len(panels85)}")
+        bad85 = [x for x in panels85 if not (x["header"] and x["chevron"] and x["inBand"])]
+        check(not bad85, f"{tag} night 85: at {w85} every panel has a header band and its chevron sits IN it — none over the panel's content: {bad85}")
+    check(not errs85c, f"{tag} night 85: the shell names no header-less panel: {errs85c[:2]}")
+    ctx85c.close()
+
+    # ---------------- NIGHT 85 (items 2, 7, 8): WHAT A FACE SAYS IS TRUE OF WHAT IT DRAWS ----------
+    # Item 2 (PO ruling 261053 §2, C): under "follows" each diagram face's legend names the centre it re-reads against —
+    # the neck's said "against the key" there, FALSE on a live page. Item 7 (C): the readout states why a narrow set's
+    # window is wide or what it lacks; the neck's hint teaches the way out. Item 8 place 2 (Daniel, 2026-10-02, 2A): the
+    # readout names the bar whose anchor left the zone — bars 4 and 6 of Bb harmonic minor, Scaler, close — and no other.
+    src85 = html_path.read_text()
+    if 'id="fdLegend"' in src85 and 'id="hcCentreSrc"' in src85:
+        ctx85t = pw.new_context(viewport={"width": 1280, "height": 900}); t85 = ctx85t.new_page(); errs85t = []; t85.on("pageerror", lambda e: errs85t.append(str(e)))
+        t85.goto(html_path.as_uri()); t85.wait_for_selector("#cards", state="attached"); t85.wait_for_timeout(350)
+        legs85 = lambda: {k: t85.inner_text(f"#{k}") for k in ("fdLegend", "kyLegend", "stLegend") if f'id="{k}"' in src85}
+        boot85 = legs85()
+        check(len(boot85) == 3 and all(v.endswith("colour = function against the key") for v in boot85.values()),
+              f"{tag} night 85: at boot every face's legend reads against the key: {boot85}")
+        t85.select_option("#hcObj", "scale"); t85.click('#hcCentreSrc button:nth-of-type(2)'); t85.wait_for_timeout(200)
+        t85.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 1, request: true } }))"); t85.wait_for_timeout(300)
+        fol85 = legs85(); box85 = t85.inner_text("#fdMode")
+        root85 = box85.split(" ")[0]
+        check(all("against the centre" in v and "following the changes" in v for v in fol85.values())
+              and f"against the centre, {root85}" in fol85["fdLegend"] and f"against the centre, {root85}" in fol85["kyLegend"]
+              and "faint field" in fol85["fdLegend"] and "bass clef" in fol85["stLegend"],
+              f"{tag} night 85: under follows (bar 2, box {box85!r}) each face names the centre it re-reads against, and the marks that stay in key space: {fol85}")
+        # item 7 — set 6, seated on the root at fret 6: the window reaches the neck's end without A
+        t85.goto(html_path.as_uri()); t85.wait_for_selector("#cards", state="attached"); t85.wait_for_timeout(350)
+        t85.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [6], startDeg: 0, nearFret: 6 } }))"); t85.wait_for_timeout(300)
+        ro85, hint85 = t85.inner_text("#roLine"), t85.inner_text("#fdHint")
+        check("frets 6–15, short of A" in ro85 and "the neck ends" in ro85, f"{tag} night 85: the readout states what the window lacks: {ro85[:240]!r}")
+        check("The neck ends at fret 15 — step ← toward the nut to reach A" in hint85, f"{tag} night 85: the neck's hint teaches the way out: {hint85!r}")
+        t85.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [6], startDeg: 4, nearFret: 3 } }))"); t85.wait_for_timeout(300)
+        ro85b, hint85b = t85.inner_text("#roLine"), t85.inner_text("#fdHint")
+        check("widened so one string holds the whole scale" in ro85b and "Fewer strings widen the window" in hint85b,
+              f"{tag} night 85: a widened window says why, and the hint names the control: {ro85b[:240]!r} / {hint85b!r}")
+        t85.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [4, 3, 2, 1], startDeg: 4, nearFret: 3 } }))"); t85.wait_for_timeout(300)
+        check("widened" not in t85.inner_text("#roLine") and "short of" not in t85.inner_text("#roLine") and "Fewer strings" not in t85.inner_text("#fdHint"),
+              f"{tag} night 85: the boot window (four strings, not widened) says neither: {t85.inner_text('#roLine')[:200]!r}")
+        check(not errs85t, f"{tag} night 85: no page errors: {errs85t[:3]}")
+        ctx85t.close()
+    if 'id="bindChk"' in src85 and 'id="readout"' in src85:
+        ctx85z = pw.new_context(viewport={"width": 1280, "height": 900}); z85 = ctx85z.new_page(); errs85z = []; z85.on("pageerror", lambda e: errs85z.append(str(e)))
+        z85.goto(html_path.as_uri()); z85.wait_for_selector("#cards", state="attached"); z85.wait_for_timeout(350)
+        z85.select_option("#keySel", "Bb"); z85.select_option("#scaleSel", "harm"); z85.select_option("#progSel", "scale")
+        z85.click('#famSeg button:has-text("Close")'); z85.wait_for_timeout(250)
+        named85 = []
+        for i in range(8):
+            z85.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", i); z85.wait_for_timeout(150)
+            ro = z85.inner_text("#readout")
+            if "the anchor leaves the zone" in ro: named85.append((i + 1, ro.split(" · the anchor leaves the zone: ")[1]))
+        check([b for b, _ in named85] == [4, 6] and named85[0][1] == "no close grip of Ebm7 reaches it" and named85[1][1] == "no close grip of Gbmaj7 reaches it",
+              f"{tag} night 85: the readout names the bars whose anchor left the zone — 4 and 6, and no other (bar 1's seed fallback, ruled, stays unmarked): {named85}")
+        title85 = z85.get_attribute("label.fsBind", "title") or ""
+        check("the readout says so" in title85 and "nothing reports" not in title85 and "nearest" not in title85,
+              f"{tag} night 85: the bind's tooltip says what happens — no longer 'the nearest grip … nothing reports it': {title85!r}")
+        check(not errs85z, f"{tag} night 85: no page errors: {errs85z[:3]}")
+        ctx85z.close()
+
     # ---------------- NIGHT 84 (item 6): A CUSTOM CHART AND A FORM SHOW THE ROLES A CYCLE SHOWS ----------
     # The chip row labels a chip by its tone's key degree, and a form's or a custom chart's chords carried none, so the
     # roles row went blank on every chart that was not a cycle (night 72's sighting; night 79 measured forms too). The
@@ -7496,6 +7588,9 @@ def main():
     print(f"hub door lock suite — {len(doors)} door(s): {', '.join(doors)}")
     EMPTY.install(check)
     print(f"empty-lookup guard: {EMPTY.MODE} (night 81)")
+    # A VISITOR NEVER SEES A SELF-CHECK FAIL (night 85): every page the gate opens watches the readout's self-check line
+    import _selfcheck_guard as SELFCHECK
+    SELFCHECK.install(lambda: EMPTY.STATE["door"])
     with sync_playwright() as p:
         browser = p.chromium.launch()
         try:
@@ -7527,6 +7622,9 @@ def main():
             _red_effects.effect_scan(browser, check, BUILD)
         finally:
             browser.close()
+    renders = SELFCHECK.verdict(check)
+    if "multetudes" in doors:
+        check(renders > 0, "the self-check guard saw no readout render on a run that drove multetudes — it would pass on nothing")
     rows = EMPTY.report(str(HUB / "tests" / "out" / "empty-census.json"))
     print(f"empty-lookup guard: {EMPTY.STATE['watched']} python lookups watched · {len(rows)} distinct site(s) found nothing"
           f" · {EMPTY.STATE['declared']} declared-absence block(s) entered · mode {EMPTY.MODE}")

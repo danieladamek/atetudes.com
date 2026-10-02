@@ -198,9 +198,12 @@ export function tetradPass({
    * frets (or an open string — positionless); the other voices reach as the
    * chord requires. Never the whole box: whole-box binding is structurally
    * impossible for close and drop3 (measured, 260820). A bar with NO anchored
-   * candidate takes the full pool — a stretch, not an error, so nothing is
-   * counted and nothing throws. The seed outranks the bind: bar 1 keeps the
-   * requested bottom. `zone.bind === false` is the legacy unbound path,
+   * candidate takes the full pool — never an error, nothing throws. AMENDED
+   * 2026-10-02 (Daniel, narrowing his own 2026-08-21 ruling): such a bar is no
+   * longer SILENT — its step says `offZone`, derived below from the voicing,
+   * and the readout names the bar; the BOX still never stretches and never
+   * reports. The seed outranks the bind: bar 1 keeps the requested bottom, and
+   * its fallback stays unmarked (ruled). `zone.bind === false` is the legacy unbound path,
    * byte-for-byte the pre-ruling optimizer — what pre-ruling saved études
    * restore through, and what the oracle comparisons pin. */
   const bind = !(zone && zone.bind === false);
@@ -221,7 +224,8 @@ export function tetradPass({
   /* THE BOX IS THE WINDOW (ratified 2026-08-21): the span of the zone's three
    * anchor-string scale notes by the strings of the set — a SETTING, derived
    * from the zone and NEVER from the voicings. It is rigid: it never
-   * stretches, never reports, never explains itself. Notes outside it are
+   * stretches, never reports, never explains itself — still true after
+   * 2026-10-02; what reports is the STEP (offZone) and the readout, not the box. Notes outside it are
    * stretches, left alone — that is the teaching. (The voicing scan, the
    * soft wall, brokeLeft and the reach counter shipped 2026-08-20 are
    * retracted by the ruling and deleted with it.) */
@@ -237,6 +241,10 @@ export function tetradPass({
     rule: CYCLES[cycle].rule,
     steps: chords.map((c, i) => ({
       ...c, voicing: voicings[i], keys: keysOf(voicings[i]),
+      /* THE BAR WHOSE ANCHOR LEFT THE ZONE (night 85 — Daniel, 2026-10-02): with the bind on, a bar after the first whose
+       * anchor voice is off the zone's frets (and not an open string) can only have come from the full pool — no grip
+       * of that chord reached the zone. Derived from the voicing, never stored. Bar 1's seed fallback is ruled: unmarked. */
+      ...(bind && i > 0 && voicings[i].notes[zi].fret !== 0 && !zoneFrets.includes(voicings[i].notes[zi].fret) ? { offZone: true } : {}),
       /** each voice's degree label against ITS OWN chord — the frozen study's
        * "held notes recolor as their function changes", derived per step */
       labels: voicings[i].notes.map((n) => degreeLabel(c.chord, n.midi)),

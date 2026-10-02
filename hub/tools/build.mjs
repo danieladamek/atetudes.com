@@ -84,6 +84,19 @@ const ROW_WRAPPER = {
  * five-button mini ate the chord; night 62 had stacked the neck's alone). Collapsed, the mini hides with the rest
  * of the board (the !important outranks a module's own #id rule, as the shell's
  * collapse rules do); the readout stays. */
+/* THE LEGEND GRAMMAR (night 85, item 2 C): the colour legend — the palette's swatches and "colour = function against …"
+ * — rendered by three faces (the neck, the keys, the staff) through hub/legend.mjs, so by the resolver's own rule it is
+ * page grammar, stated once, shipped where a door reaches the helper (the readout's precedent, below). The rules are
+ * the neck's own since 260905, moved unchanged. */
+const LEGEND_GRAMMAR = {
+  reaches: "hub/legend.mjs",
+  styles: `
+.legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;margin-right:3px}
+.legend span{display:inline-block;margin-right:11px}
+.legend .legend-words{margin-left:8px}`,
+};
+
 const READOUT_GRAMMAR = {
   reaches: "hub/readout.mjs",
   styles: `
@@ -305,6 +318,7 @@ async function build(id) {
         .map((k) => shell.WRAPPERS[k].styles).join("\n")
     + (rows.length ? ROW_WRAPPER.styles : "")
     + (r.filesIn.includes(READOUT_GRAMMAR.reaches) ? READOUT_GRAMMAR.styles : "")
+    + (r.filesIn.includes(LEGEND_GRAMMAR.reaches) ? LEGEND_GRAMMAR.styles : "")
     + (r.filesIn.includes(CLOCK_GRAMMAR.reaches) ? CLOCK_GRAMMAR.styles : "")
     + (r.filesIn.includes("hub/bpm-field.mjs") ? BPM_FIELD_STYLES : "")   // the one bpm field's look (night 77), stated in that file
     + mods.map((m) => m.styles ?? "").join("\n");

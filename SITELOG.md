@@ -1,3 +1,42 @@
+## 2026-10-02 — Night 85: the last of the listed defects — Multetudes v0.6.30, Tetradetudes v0.6.18
+
+- **"assertion failed" on a published page: the cause was the assertion's SUBJECT.** Since night 46 (2026-09-12) a
+  chord's own off-key tone has been material by design. The readout's self-check still demanded "a field note", so
+  every blues and every minor ii–V–i told visitors "assertion failed". Measured over the readout's own derivation, it
+  failed 30,264 of 100,224 bars; every failure was the chord's own tone, none a fault.
+  - The check now states today's law. It is proven still able to fail on real violations, and swept across every bar
+    the readout can derive.
+  - A visitor who meets a real failure now reads what is wrong and what to do. The check's name goes to the console.
+  - **A guard watches every page the door gate opens:** a failing self-check in any driven state fails the gate, with
+    the state named.
+  - **Its first run found a second, real fault:** under a scale, with both reference strings in the set, the readout
+    threw, the night-18 `.map`-on-null returned through a later branch. The offer is now named plainly.
+- **Under "follows", the neck's legend was FALSE.** It said "colour = function against the key" while the selection
+  was re-read against the bar's centre. Fixed, and the neck, the keys and the staff now each carry one legend line
+  naming the centre they speak from (PO ruling 261053, item 2 option C). The footer gains its third clause.
+- **The neck's refusal is one line UNDER the neck** (Daniel, 2026-10-02: "Under the neck for sure"). **This amends his
+  260922b ruling "a red message above the view"**, because both of that night's in-SVG seats crossed marks. Same words,
+  #B82929 bold, 12.5 px, borrowing 3. The absence drawn in the window when nothing is placed (260908) is untouched.
+- **The chevron's only seat is a header band (a shell rule).** The chart line and the readout gain headers, THE CHART
+  LINE and THE READOUT, their own collapse summaries. The shell names a header-less panel, and the gate holds every
+  chevron in its band on every door at both widths.
+- **The window says why it is wide, or what it lacks:** "widened so one string holds the whole scale" / "short of A
+  (the neck ends …)". The neck's hint teaches the way out (item 7, C).
+- **Tetradetudes' readout names the bar whose anchor left the zone** (Daniel, 2026-10-02, 2A). **This amends his
+  2026-08-21 ruling narrowly: the box still never stretches and never reports; the readout names the bar.**
+  - Free's sentence is now true whether bound or not ("the zone still pulls the first chord toward it", 4A).
+  - The bind tooltip says what happens.
+  - The tests that pinned the old silence and the false sentence were rewritten first and seen red.
+- **Proposed, not built:** at 390 the readout's clause makes it grow from 4 lines to 8. Its own line under the readout
+  row is rendered as the alternative (run note 261056).
+- **Proof:**
+  - `tools/check.py` ALL GREEN, 541 s (doors 23,627 assertions, 0 failed; the self-check guard saw 83 renders, none
+    failing).
+  - Three existing mutations re-anchored to the rewritten pins and re-proved (m31, m66, m67); the record is 155/155.
+  - Looked at, 1280 and 390, before and after, zero console errors.
+
+  Run note: `notes/working/Multetudes build run 261056 — night 85, the last of the defects.md`.
+
 ## 2026-10-02 — Night 84: 1.0's defects triaged; five ship, five are proposed — Multetudes v0.6.29, Tetradetudes v0.6.17
 
 - **Why (dispatch 261055):** all of 1.0 at once — eight defects and one ruling. Measured, then triaged into SHIP (the

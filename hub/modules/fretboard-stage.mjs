@@ -68,7 +68,7 @@ export const fretboardStage = {
       <button data-win="follow" title="the frozen study's auto-cropping window — the neck framed to the pass">Follow</button>
       <button data-win="box" title="the isolation zone as a movable box the optimizer honours (Grip placement)">Box</button>
     </div>
-    <label class="chk fsBind" title="hold the anchor voice to one of the three zone notes; a bar with no such candidate takes the nearest grip it can, and nothing reports it. Released, the zone is a pull under Grip and no pull at all under Free, which chooses by voice-leading alone.">
+    <label class="chk fsBind" title="hold the anchor voice to one of the three zone notes; a bar with no such grip leaves the zone — the readout says so. Released, the zone pulls every bar under Grip and only the first chord under Free, which chooses the rest by voice-leading alone.">
       <input type="checkbox" id="bindChk" data-control="bindChk"> bind</label>
   </div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
@@ -378,9 +378,14 @@ export const fretboardStage = {
        * n of N · key scale — every prefix true */
       const invName = ["root pos.", "1st inv.", "2nd inv.", "3rd inv."][cur.voicing.bass] || "";
       const fam = pass.families && pass.families[0] ? pass.families[0] : "drop2";
+      /* THE READOUT NAMES THE BAR (night 85 — Daniel, 2026-10-02, amending his 2026-08-21 "the box … never stretches,
+       * never reports" NARROWLY: the box still never stretches and never reports; the readout names the bar). A bar
+       * whose anchor left the zone because no grip of its chord reaches it (the engine's offZone) says so here, in the
+       * readout's own grey — not a refusal, not red. Bar 1's seed fallback is ruled, and stays unmarked. */
+      const leaves = cur.offZone ? ` · the anchor leaves the zone: no ${cur.voicing.family || fam} grip of ${cur.symbol} reaches it` : "";
       byId("readout").innerHTML =
         `<b>${cur.symbol}</b> <span class="rosub">${cur.roman} · ${fam} · ${invName} · ` +
-        `${step + 1} of ${n} · ${cfg.key} ${({ major: "major", harm: "harmonic minor", mel: "melodic minor" })[cfg.scale]}</span>`;
+        `${step + 1} of ${n} · ${cfg.key} ${({ major: "major", harm: "harmonic minor", mel: "melodic minor" })[cfg.scale]}${leaves}</span>`;
 
       /* the echo: the canonical position fact every board follows. When the
        * show was attack-borne the echo says so, and the audio card skips it —

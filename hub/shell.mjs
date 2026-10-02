@@ -214,6 +214,12 @@ function initCollapse(doc) {
   const panels = [];
   for (const p of doc.querySelectorAll(".card, .board")) {
     const header = p.querySelector("h2") || p.querySelector(".bh");
+    /* THE CHEVRON'S ONLY SEAT IS THE HEADER BAND (night 85 — PO ruling 261053 §2, a SHELL rule): every panel declares a
+     * header (a card's h2, a board's .bh). A panel without one put the chevron over its own content (the chart line's
+     * chips; the readout's chord name at 390). It cannot exist silently: the shell names it where every gate looks, and
+     * the door gate holds every chevron inside its header band on every door, at 1280 and 390. */
+    if (!header && doc.defaultView && doc.defaultView.console)
+      doc.defaultView.console.error(`[shell] a panel with no header band (a card's h2, a board's .bh): ${p.id || p.className} — the collapse chevron has no seat`);
     const sum = doc.createElement("div");
     sum.className = "clpsSum";
     if (header) header.after(sum); else p.prepend(sum);

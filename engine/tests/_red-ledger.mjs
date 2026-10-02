@@ -75,7 +75,7 @@ export const LEDGER = [
   { where: "hub/modules/neck-readout.mjs", match: "${msg}</span>", granted: "rule8-borrowing-3" },
   { where: "hub/modules/neck-readout.mjs", match: "String(e && e.message || e)", granted: "rule8-borrowing-3" },
   { where: "hub/modules/neck-readout.mjs", match: "a.style.fontWeight = \"bold\"", granted: "rule8-borrowing-3" },
-  { where: "hub/modules/field-board.mjs", match: "fill: \"#B82929\" }, svg);", granted: "rule8-borrowing-3" },   // the field's refusal
+  { where: "hub/modules/field-board.mjs", match: "const REFUSAL_RED = \"#B82929\";", granted: "rule8-borrowing-3" },   // the field's refusal — ONE site since night 85: the absence in the window and the refusal under the neck (Daniel, 2026-10-02) both paint from it
   { where: "hub/modules/field-board.mjs", match: "noteEl.style.color = \"#B82929\"", granted: "rule8-borrowing-3" },   // the figure's error
   { where: "hub/modules/progression-card.mjs", match: "#pgNote.pg-err{", granted: "rule8-borrowing-3" },
   { where: "hub/modules/progression-card.mjs", match: "if (tonesErr) { note.style.color", granted: "rule8-borrowing-3" },

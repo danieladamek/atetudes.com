@@ -101,19 +101,19 @@ export const PLACE_LABEL = { grip: "Grip", line: "Line", free: "Free" };
  * 32 drop-3 cases put Free on an open anchor (close 0, drop-2 1). The sentence names
  * the tie, and shape-motion-words.test.mjs asserts that whatever it excepts has
  * instances in the corpus. Unbound (the legacy path, `bind: false`, pinned byte-for-byte by the oracle
- * comparisons) Free really does release the pull. The panel used to state the
- * unbound sentence in both states — false whenever bound. Words, not behaviour: Free
+ * comparisons) Free drops the per-bar pivot pull, but the first chord's seed pull stays (isolation.mjs, Daniel
+ * 2026-08-10) — the old comment said "Free really does release the pull", and night 79 measured it false: unbound,
+ * the zone moves bar 1 in 420 of 6,480 configurations (115 bound). NIGHT 85 (PO ruling 261053 §2, 4A): ONE Free
+ * sentence, true bound or not, and the dependency sentences say what pulls and when. Words, not behaviour: Free
  * is NOT coupled to bind, which would change what a saved étude restores to. */
 export const placementWords = (placement, bound) => ({
   grip: "one note per string, anchored to the zone",
-  free: bound
-    ? "the grip chosen by smoothest voice-leading — the anchor voice is still held to the zone, so there is no pull left to release"
-    : "the grip chosen by smoothest voice-leading, anchor released",
+  free: "the grip chosen by smoothest voice-leading — the zone still pulls the first chord toward it",   // 4A: true bound or not
   line: "free placement along the set — needs the line voicer, not wired yet",
 })[placement];
 export const placementDependency = (bound) => bound
-  ? `the anchor voice is held to the zone, so ${PLACE_LABEL.grip} and ${PLACE_LABEL.free} reach the same grip — they part only where their two tie rules pick different anchored candidates, mostly drop-3 and mostly ${PLACE_LABEL.free} reaching an open position — releasing the anchor on the neck is what makes them differ`
-  : "Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it";
+  ? `the anchor voice is held to the zone on every bar a grip reaches it (bar 1 keeps its bass first), so ${PLACE_LABEL.grip} and ${PLACE_LABEL.free} mostly reach the same grip — they part where their two tie rules pick different anchored candidates, mostly in drop-3, and on a bar no grip anchors, where only ${PLACE_LABEL.grip} still pulls toward the zone — releasing the anchor on the neck is what makes them differ`
+  : `after the first chord ${PLACE_LABEL.free} ignores the zone: the Box on the neck pulls only the opening grip, and voice-leading carries the rest — choose ${PLACE_LABEL.grip} to practise inside it`;
 
 /* THE PANEL'S NARRATION, AS A PURE FUNCTION OF ITS CONFIG (night 42) — every clause is
  * stated only when it is true (the rule at render's comment), and the whole sentence
@@ -233,7 +233,7 @@ export const shapeMotion = {
     // it is the default whenever the door allows it
     const cfg = { setIndex: 0, families: [allowed.includes("drop2") ? "drop2" : allowed[0]],
       /* GRIP, as the reference defaults (`placement:"grip"`). The door had said
-       * "free" — under which isolation.mjs releases the anchor (pivotW: 0), so
+       * "free" — under which isolation.mjs drops the pivot pull (pivotW: 0; the seed anchor stays), so
        * the box shipped by the zone item was decorative on first run. Third
        * instance of the same pattern: where the reference has an answer, take
        * it. The ENGINE's own argument default stays "free" — that is a library

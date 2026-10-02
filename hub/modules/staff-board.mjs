@@ -31,6 +31,7 @@ import { writtenValue } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 import { mountReadout } from "../readout.mjs";
+import { legendHTML } from "../legend.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
@@ -55,7 +56,8 @@ export const staffBoard = {
   <div class="hint info">Treble carries the material, written an octave above where it sounds —
   the 8 under the clef. The bass clef carries the reference tone, at sounding pitch, when one is
   chosen; the full progression of bars arrives with child 7. Until then the étude holds one bar.</div>
-  <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>`,
+  <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>
+  <div class="legend" id="stLegend"></div>`,
 
   styles: `
 #stSvg{width:100%;height:auto;display:block}
@@ -107,6 +109,9 @@ export const staffBoard = {
       if (index >= prog.chords.length) index = 0;
       const N = prog.chords.length;
       const scaleSel = cfg.object === "scale" ? scaleTake(pool).notes : null;
+      /* THE LEGEND (night 85, item 2 C): the staff shows many bars, each re-centred on its own chord under "follows" */
+      byId("stLegend").innerHTML = legendHTML({ follows: cfg.object === "scale" && cfg.centreSrc === "follows", perBar: true,
+        keepsKey: "the readout's dot and the bass clef", ref: !!cfg.ref });
       /* the whole result rides (260911, item 5): a refused bar's collide and
        * its derived escape are the engine's own fields, and the staff prints
        * them IN THE BAR — the playthrough matrix's doctrine ("places or

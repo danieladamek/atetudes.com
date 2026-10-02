@@ -27,6 +27,19 @@ import { alteredDegree } from "../../engine/chord.mjs";
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
 
+/** THE PLACEMENT LAW the readout re-checks before drawing (night 85): every selected note sits in the frame, and is a
+ * field note — or, since night 46 (role A, 7fc4e4a), one of the CHORD'S OWN off-key tones, placed from the chord's
+ * supply (engine/selection.mjs chordSupply: member, chromatic, inside the frame). Returns the notes that break it; an
+ * empty list is lawful. The v0.9 check (2026-08-28) demanded a field note and nothing else, and night 46 changed the law
+ * without the check — so from 2026-09-12 every bar whose chord holds a tone the key lacks (a blues, a minor ii–V–i)
+ * showed the visitor "assertion failed": 30,264 of 100,224 bars measured, every one the chord's own tone, none a fault. */
+export function unlawfulNotes(sel, fld, pos, cur) {
+  const pc = (m) => ((m % 12) + 12) % 12;
+  const own = new Set(((cur && cur.tones) || []).filter((t) => t.offKey).map((t) => pc(t.pc)));
+  return (sel || []).filter((x) => !(x.fret >= pos.fLo && x.fret <= pos.fHi
+    && (fld.degOf(x.midi) >= 0 || (x.member === true && x.chromatic === true && own.has(pc(x.midi))))));
+}
+
 export const neckReadout = {
   id: "neck-readout",
   layer: "surface",
@@ -35,7 +48,10 @@ export const neckReadout = {
   order: 19,
   controls: ["roLine", "roAssert"],
 
+  /* THE HEADER BAND (night 85 — the shell rule: every panel has a header, the chevron's only seat; this board had none,
+   * and the chevron sat on its first line — over the chord's name at 390). Its own collapse summary, shown. */
   markup: `
+  <div class="bh"><span>The readout</span></div>
   <span class="clpsum">the readout</span>
   <div class="ro-line" id="roLine" data-control="roLine"></div>
   <div class="ro-assert" id="roAssert" data-control="roAssert"></div>`,
@@ -145,8 +161,8 @@ export const neckReadout = {
           const cap = cfg.object === "scale" ? 3 : capOf(cfg.notesPer);
           return Object.values(per).every((c) => c <= cap);
         });
-        check("every selected note is a real field note in the frame", () =>
-          sel.every((x) => fld.degOf(x.midi) >= 0 && x.fret >= pos.fLo && x.fret <= pos.fHi));
+        check("every selected note sits in the frame — a field note, or the chord's own tone", () =>
+          unlawfulNotes(sel, fld, pos, cfg.object === "scale" ? null : cur).length === 0);
         check("the étude is at least one bar", () => true);
 
         /* THE FIELD'S OWN COUNT (260919, item 3 — moved from the hint, which
@@ -189,8 +205,18 @@ export const neckReadout = {
             : oneOfEach(bc.tones, pool, { n: capOf(cfg.notesPer), centre: pos.centre });
           if (br.notes) placeK++;
         }
+        /* WHY THE WINDOW IS THIS WIDE (night 85, item 7 C — PO ruling 261053 §2): the engine widens a narrow set's
+         * window until the set holds every pitch class of the field (position.mjs, 2026-09-07), and stops at the neck's
+         * end naming what is still missing — and the readout said neither, so it held a silent value. It states the
+         * fact here; the neck's hint teaches the control and the way out (it is where the control is: this line sits
+         * 556 px below the neck at 1280, ~1100 at 390). Ink, never red: a window is drawn, not refused. */
+        const SETN = ["", "one string holds", "two strings hold", "three strings hold", "four strings hold", "five strings hold", "six strings hold"];
+        const nameOfPc = (pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name;
+        const short = pos.covered ? "" : pos.uncovered.map((pc) => `<b>${nameOfPc(pc)}</b>`).join(" and ");
+        const why = !pos.covered ? "the neck ends · " : pos.fHi > pos.frets[2] ? `widened so ${SETN[run.strings.length] || "the set holds"} the whole scale · ` : "";
         bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`
-          + ` <span class="ro-dim">(${pool.length} notes · ${placeK}/${prog.chords.length} bars place)</span>`);
+          + (short ? `, short of ${short}` : "")
+          + ` <span class="ro-dim">(${why}${pool.length} notes · ${placeK}/${prog.chords.length} bars place)</span>`);
         const ss = [...run.strings].sort((a, b) => b - a).map(String).join("–");
         /* THE TAKE WORD (260919, item 3 — moved from the hint; the readout said
          * grip/line but never one-of-each/every-occurrence, the cap's meaning) */
@@ -251,6 +277,12 @@ export const neckReadout = {
             bits.push(`over <b>${comp.bassName}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
               + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : "")
               + (comp.name ? `: the stack is <b>${comp.name}</b>` : ' <span class="ro-dim">(an unnamed stack — no honest symbol reads back)</span>'));
+          } else if (rp.offer && cfg.object === "scale") {
+            /* night 85 — FOUND BY THE SELF-CHECK GUARD in a state the gate drives (C major, scale, strings 6 5 4 3 1 2):
+             * the offered-unfretted branch (261001) read the stack back from cur.tones, which a scale does not have — the
+             * night-18 .map-on-null, returned through a later branch, shown to a visitor as "assertion failed — Cannot
+             * read properties of null". A scale has no stack: the offer is named plainly, as the fretted note is above. */
+            bits.push(`the bass under the centre: <b>${rp.offer.name}</b> — <span class="ro-dim">unfretted: strings 5 and 6 are in the set; drawn below the strings, sounding nothing</span>`);
           } else if (rp.offer) {
             /* 261001: offered unfretted — named, the stack read back over its degree, and
              * honest about sound: nothing sits under the strings, so nothing sounds */
@@ -274,16 +306,23 @@ export const neckReadout = {
         for (const a of absences) bits.push(`<span style="color:#B82929">${a}</span>`);
         if (msg) bits.push(`<span style="color:#B82929">${msg}</span>`);
       } catch (e) {
-        fails.push(String(e && e.message || e));
+        /* a THROW is a failing self-check too; for us, its first frames ride with it to the console (night 85) */
+        fails.push(String(e && e.message || e) + (e && e.stack ? " @ " + String(e.stack).split("\n").slice(1, 3).map((l) => l.trim()).join(" < ") : ""));
         bits = [`<span style="color:#B82929">${String(e && e.message || e)}</span>`];
       }
       byId("roLine").innerHTML = bits.join(" · ");
       const a = byId("roAssert");
+      /* A SELF-CHECK IS FOR US; A VISITOR NEEDS WHAT IS WRONG AND WHAT TO DO (night 85 — the two are not one string).
+       * The check's own name and reason go where we look — the console (which every door gate reads) and a data
+       * attribute — never onto the page. The visitor is told the drawing may be wrong and how to step away from it. */
       if (fails.length) {
         a.style.color = "#B82929"; a.style.fontWeight = "bold";
-        a.textContent = "assertion failed — " + fails.join(" ; ");
+        a.textContent = "Something on this bar did not add up, so the neck may be drawn wrong here — step to another bar, or choose other strings.";
+        a.dataset.selfcheck = fails.join(" ; ");
+        if (d.defaultView && d.defaultView.console) d.defaultView.console.error("[readout self-check] " + fails.join(" ; "));
       } else {
         a.style.color = ""; a.style.fontWeight = "";
+        delete a.dataset.selfcheck;
         a.textContent = `${asserts.length} assertions passed before drawing.`;
       }
     };

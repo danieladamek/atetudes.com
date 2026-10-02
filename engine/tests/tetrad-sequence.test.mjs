@@ -338,19 +338,21 @@ test("THE WIRING: moving the zone changes the chosen voicings — the zone the c
       assert.deepEqual(new Set(s.voicing.notes.map((n) => pc(n.midi))), new Set(s.chord.pcs.map(pc)));
 });
 
-test("FINDING, pinned: under FREE the zone does not move the pass — anchor released is the rule", () => {
-  // this is isolation.mjs's shipped definition of Free (pivotW: 0), extracted
-  // verbatim and pinned by its own suite; not something to "fix" here. It is
-  // pinned so the day Free changes, this says so — and so the door's UI can
-  // state it truthfully rather than offer a box that appears broken.
-  // REWRITTEN 2026-08-21: the pivotW:0 fact belongs to the UNBOUND path, so
-  // it is pinned there (bind:false); the bound default DOES follow the zone —
-  // that is binding working, asserted alongside so the pair states the law.
-  const base = { key: "C", scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, placement: "free" };
-  const frets = (p) => JSON.stringify(p.steps.map((s) => s.voicing.notes.map((n) => n.fret)));
-  assert.equal(frets(tetradPass({ ...base, zone: { frets: [1, 2, 3], bind: false } })),
-               frets(tetradPass({ ...base, zone: { frets: [10, 11, 12], bind: false } })),
-    "unbound Free now follows the zone — isolation.mjs's Free changed; revisit the door's Box mode prose");
+/* RETITLED night 85 (rule 3 — the title stated a false law: unbound Free's zone DOES move bar 1, measured 420 of 6,480
+ * configurations night 79). The seed anchor's pull stays when Free drops the pivot (isolation.mjs, Daniel 2026-08-10);
+ * the true law: unbound, the zone reaches the pass ONLY through bar 1 — where bar 1 is the same, the whole pass is. */
+test("FINDING, pinned: under unbound FREE the zone pulls only the first chord — where bar 1 agrees, the whole pass agrees", () => {
+  const base = { scale: "major", cycle: "fourths", bottom: 0, setIndex: 0, placement: "free" };
+  const frets = (p) => p.steps.map((s) => s.voicing.notes.map((n) => n.fret).join("."));
+  let firstMoved = 0, compared = 0;
+  for (const key of ["C", "Eb", "Gb", "A", "Bb", "E"]) for (const setIndex of [0, 1, 2]) for (const [lo, hi] of [[[1, 2, 3], [10, 11, 12]], [[3, 5, 7], [8, 10, 12]]]) {
+    const a = frets(tetradPass({ ...base, key, setIndex, zone: { frets: lo, bind: false } }));
+    const b = frets(tetradPass({ ...base, key, setIndex, zone: { frets: hi, bind: false } }));
+    compared++;
+    if (a[0] !== b[0]) { firstMoved++; continue; }
+    assert.deepEqual(a, b, `${key} set ${setIndex}: bar 1 agrees, so the whole unbound-Free pass must — the zone reaches nothing past bar 1`);
+  }
+  assert.ok(firstMoved > 0, `the zone still pulls the first chord under unbound Free (the seed anchor stays): ${firstMoved} of ${compared}`);
   assert.notEqual(frets(tetradPass({ ...base, zone: { frets: [1, 3, 5] } })),
                   frets(tetradPass({ ...base, zone: { frets: [8, 10, 12] } })),
     "BOUND Free ignored the zone — binding must constrain the anchor voice under every placement");
@@ -414,25 +416,30 @@ test("bound: the anchor voice lands ON a zone note (or an open string) except wh
   }
 });
 
-test("bound NEVER throws: a bar with no anchored candidate stretches — voiced, unmarked", () => {
-  // hunt a (config, triple) where some chord has zero anchor-bound candidates —
-  // the measurements put these at ~12% of pairs, so a short scan finds one; the
-  // precondition (a real stretch of the anchor voice) is asserted so the test
-  // cannot rot into vacuity. Nothing counts it: a stretch is not an error.
-  let found = null;
-  outer: for (const key of ["G", "Db", "B", "Gb"]) for (const fLo of [1, 2, 3, 4]) {
+/* REWRITTEN night 85 (rule 3 — this test pinned the silence: "voiced, unmarked"). Daniel, 2026-10-02, amending his own
+ * 2026-08-21 ruling NARROWLY: the BOX still never stretches and never reports — the READOUT names the bar. So the step
+ * says which bar's anchor left the zone (`offZone`, derived from the voicing, never stored); bar 1's seed fallback stays
+ * unmarked (ruled: the seed outranks the bind). Still never a throw. */
+test("bound NEVER throws: a bar with no anchored candidate stretches — voiced, and MARKED offZone (bar 1's seed excepted)", () => {
+  // hunt a (config, triple) where a chord AFTER bar 1 has zero anchor-bound candidates — the precondition is asserted
+  // so the test cannot rot into vacuity
+  let found = null, zone = null;
+  outer: for (const key of ["G", "Db", "B", "Gb", "Bb"]) for (const scale of ["harm", "major"]) for (const fLo of [1, 2, 3, 4]) {
     const frets = [fLo, fLo + 2, fLo + 3];
-    const probe = tetradPass({ key, scale: "harm", cycle: "sixths", bottom: 0, setIndex: 1,
-      placement: "grip", zone: { frets } });
+    const probe = tetradPass({ key, scale, cycle: "sixths", bottom: 0, setIndex: 1, placement: "grip", zone: { frets } });
     const zi = probe.set.strings.indexOf(probe.zone.string);
-    const off = probe.steps.filter((st) => {
-      const pf = st.voicing.notes[zi].fret;
-      return pf !== 0 && !frets.includes(pf);
-    }).length;
-    if (off > 0) { found = probe; break outer; }
+    if (probe.steps.some((st, i) => i > 0 && st.voicing.notes[zi].fret !== 0 && !frets.includes(st.voicing.notes[zi].fret))) { found = probe; zone = frets; break outer; }
   }
-  assert.ok(found, "precondition: no stretching configuration found in the scan — re-derive from the measurements");
-  for (const st of found.steps) assert.ok(st.voicing, "a stretching bar is still VOICED — the throw must never fire");
+  assert.ok(found, "precondition: no configuration with a later bar off the zone found in the scan — re-derive from the measurements");
+  const zi = found.set.strings.indexOf(found.zone.string);
+  found.steps.forEach((st, i) => {
+    assert.ok(st.voicing, "a stretching bar is still VOICED — the throw must never fire");
+    const off = st.voicing.notes[zi].fret !== 0 && !zone.includes(st.voicing.notes[zi].fret);
+    assert.equal(st.offZone === true, i > 0 && off, `bar ${i + 1}: offZone says the anchor left the zone exactly when it did (bar 1's seed fallback excepted)`);
+  });
+  // unbound, nothing is a bind to leave
+  const free = tetradPass({ key: found.key, scale: found.scale, cycle: "sixths", bottom: 0, setIndex: 1, placement: "grip", zone: { frets: zone, bind: false } });
+  assert.ok(free.steps.every((st) => !st.offZone), "an unbound pass marks nothing — there is no bind to leave");
 });
 
 test("bound respects the seed: bar 1 keeps the requested bottom, stretching if it must", () => {

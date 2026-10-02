@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -150,6 +150,10 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 }
 .clpsd>.bh.readhead .mini{display:none!important}
 
+.legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;margin-right:3px}
+.legend span{display:inline-block;margin-right:11px}
+.legend .legend-words{margin-left:8px}
 .clk-lab{font-size:12px;color:var(--gray)}
 .clk-pulse{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line)}
 
@@ -160,6 +164,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
 #fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
 .fd-wrap{display:flex;gap:12px;align-items:flex-start}
+.fd-neckcol{flex:1 1 auto;min-width:0;width:100%}
+.fd-refusal{font-size:12.5px;font-weight:bold;line-height:1.4;margin:6px 2px 0}
+.fd-refusal:empty{display:none}
 .fd-rail{flex:0 0 170px}
 /* THE NECK AT 390 (night 51, 261011 — measured: in a 332 px wrap the rail's 170 px left the SVG
  * 150 px wide, scale 0.117, a 4.7 px hit target). Under 600 px the rail stacks beneath the neck so
@@ -250,10 +257,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * The mixer-column basis (380px, margin-left:auto) is gone with the seat. */
 /* the readout's seat and box are the SHELL's grammar since 260920 (night 26 item 3):
  * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
-.fd-legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
-.fd-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;
-  margin-right:3px}
-.fd-legend span{display:inline-block;margin-right:11px}
+/* the legend's rules moved to the build's LEGEND_GRAMMAR (night 85): three faces render it through hub/legend.mjs */
 #fdHint{margin:8px 2px 0}
 /* the seg's visual grammar, scoped to this module's own markup (260905):
  * the shell defines these rules in its STRIPS chrome block, which this
@@ -728,6 +732,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div id="strips">
 </div>
   <div id="boards"><div class="board">
+  <div class="bh"><span>The chart line</span></div>
   <span class="clpsum">the chart line</span>
   <div id="tlScroll" data-control="tlScroll"></div></div>
 <div class="board">
@@ -771,8 +776,14 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
              one idea again (night 58's constant: a Transport card IS the clock). Same controls, same ids, same
              messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock"><span class="clk-lab">bar split</span><select data-role="split" id="fdSplit" data-control="fdSplit"  title="the bar split — a bar's chords take these slots in order"></select><span class="clk-lab">bpm</span><input type="number" class="clk-bpm" data-role="bpm" id="fdBpm" data-control="fdBpm" min="15" max="300" step="1"  title="the tempo — one state, every view; the Metronome card owns the clock"><label class="chk" title="the click — one state, two views; the Metronome card's Sound is the other"><input type="checkbox" data-role="click" id="fdMetChk" data-control="fdMetChk"> metronome</label><span class="clk-pulse" data-role="pulse" id="fdPulse"></span></span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
+    <div class="fd-neckcol">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
+    <!-- THE REFUSAL, UNDER THE NECK (night 85 — Daniel, 2026-10-02: "Under the neck for sure."). It amends his 260922b
+         "a red message above the view": measured, both of that night's seats crossed marks — "below" three dots and the
+         bottom handle, "above" two dots and the top handle. One line, the same words, beside nothing it describes. -->
+    <div class="fd-refusal" id="fdRefusal"></div>
+    </div>
     <div class="fd-rail" id="fdRail">
       <!-- THE RAIL IS NAMED FOR WHAT IT IS (261023, night 65 — motif approved by Daniel 261022, recorded by PO
            ruling 261023): it holds the motif's parts — placement, the take, movement, the figure. The name is
@@ -870,7 +881,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
   <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.</div>
   <div class="hint" id="fdHint"></div>
-  <div class="fd-legend" id="fdLegend"></div></div>
+  <div class="legend" id="fdLegend"></div></div>
 <div class="board">
   <!-- A SEVENTH VIEW OF THE TRANSPORT (night 62, 261014b — Daniel, ruled: "a second view is what I intended";
        "the user can start and stop wherever they are"): hub/mini.mjs's cluster mounted in this board's header,
@@ -921,6 +932,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     </div>
   </div></div>
 <div class="board">
+  <div class="bh"><span>The readout</span></div>
   <span class="clpsum">the readout</span>
   <div class="ro-line" id="roLine" data-control="roLine"></div>
   <div class="ro-assert" id="roAssert" data-control="roAssert"></div></div>
@@ -930,11 +942,13 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div class="hint info">Treble carries the material, written an octave above where it sounds —
   the 8 under the clef. The bass clef carries the reference tone, at sounding pitch, when one is
   chosen; the full progression of bars arrives with child 7. Until then the étude holds one bar.</div>
-  <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg></div>
+  <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>
+  <div class="legend" id="stLegend"></div></div>
 <div class="board">
   <div class="bh readhead"><span>On the keys</span><div class="readbox" id="kyMode" data-control="kyMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="kyMini" data-control="kyMini"></span></div>
-  <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg></div>
+  <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>
+  <div class="legend" id="kyLegend"></div></div>
 <div class="board">
   <div class="bh"><span>Practice log — <span id="histCount" data-control="histCount">0</span> saved</span>
     <span id="storeNote" data-control="storeNote" class="storenote"></span></div>
@@ -2216,9 +2230,10 @@ function makeZone({ string, frets }) {
  * than as branches scattered through the optimizer.
  *
  *   GRIP  one note per string, anchored to the pivots — the isolation thesis
- *   FREE  the grip chosen by smoothest voice-leading, anchor released; the
+ *   FREE  the grip chosen by smoothest voice-leading, the pivot released; the
  *         étude begins in the zone and is then SEEN to leave it, so the seed
- *         anchor stays and only the pivot term drops (Daniel, 2026-08-10)
+ *         anchor stays and only the pivot term drops (Daniel, 2026-08-10) —
+ *         "anchor released" said here until night 85, and was never the rule
  *   LINE  placed freely along the set by the §6.1.2 rule
  *
  * Tie rules are NAMED because they are the pinned behaviour of every shipped
@@ -3117,9 +3132,12 @@ function tetradPass({
    * frets (or an open string — positionless); the other voices reach as the
    * chord requires. Never the whole box: whole-box binding is structurally
    * impossible for close and drop3 (measured, 260820). A bar with NO anchored
-   * candidate takes the full pool — a stretch, not an error, so nothing is
-   * counted and nothing throws. The seed outranks the bind: bar 1 keeps the
-   * requested bottom. `zone.bind === false` is the legacy unbound path,
+   * candidate takes the full pool — never an error, nothing throws. AMENDED
+   * 2026-10-02 (Daniel, narrowing his own 2026-08-21 ruling): such a bar is no
+   * longer SILENT — its step says `offZone`, derived below from the voicing,
+   * and the readout names the bar; the BOX still never stretches and never
+   * reports. The seed outranks the bind: bar 1 keeps the requested bottom, and
+   * its fallback stays unmarked (ruled). `zone.bind === false` is the legacy unbound path,
    * byte-for-byte the pre-ruling optimizer — what pre-ruling saved études
    * restore through, and what the oracle comparisons pin. */
   const bind = !(zone && zone.bind === false);
@@ -3140,7 +3158,8 @@ function tetradPass({
   /* THE BOX IS THE WINDOW (ratified 2026-08-21): the span of the zone's three
    * anchor-string scale notes by the strings of the set — a SETTING, derived
    * from the zone and NEVER from the voicings. It is rigid: it never
-   * stretches, never reports, never explains itself. Notes outside it are
+   * stretches, never reports, never explains itself — still true after
+   * 2026-10-02; what reports is the STEP (offZone) and the readout, not the box. Notes outside it are
    * stretches, left alone — that is the teaching. (The voicing scan, the
    * soft wall, brokeLeft and the reach counter shipped 2026-08-20 are
    * retracted by the ruling and deleted with it.) */
@@ -3156,6 +3175,10 @@ function tetradPass({
     rule: CYCLES[cycle].rule,
     steps: chords.map((c, i) => ({
       ...c, voicing: voicings[i], keys: keysOf(voicings[i]),
+      /* THE BAR WHOSE ANCHOR LEFT THE ZONE (night 85 — Daniel, 2026-10-02): with the bind on, a bar after the first whose
+       * anchor voice is off the zone's frets (and not an open string) can only have come from the full pool — no grip
+       * of that chord reached the zone. Derived from the voicing, never stored. Bar 1's seed fallback is ruled: unmarked. */
+      ...(bind && i > 0 && voicings[i].notes[zi].fret !== 0 && !zoneFrets.includes(voicings[i].notes[zi].fret) ? { offZone: true } : {}),
       /** each voice's degree label against ITS OWN chord — the frozen study's
        * "held notes recolor as their function changes", derived per step */
       labels: voicings[i].notes.map((n) => degreeLabel(c.chord, n.midi)),
@@ -8802,6 +8825,39 @@ const ANNOTATION_GRAY = "#73737A";
 return { FAM, FAM_COLOR, FAM_TEXT, ANNOTATION_GRAY };
 })();
 
+/* ===== hub/legend.mjs ===== */
+const __m_hub_legend_mjs = (() => {
+const { FAM, FAM_COLOR } = __m_hub_palette_mjs;
+/* legend.mjs — THE COLOUR LEGEND, one line per diagram face (night 85 — PO ruling 261053 §2, item 2 option C; inside
+ * Daniel's 260918 ruling "a sentence on each face saying which centre it speaks from, not a behaviour change").
+ *
+ * The neck carried the family's legend alone — the palette's swatches and "colour = function against the key" — and
+ * under "follows" (Object = scale, each bar re-centred on its own chord) that sentence was FALSE: the bold selection is
+ * re-read against the bar's centre while the faint field and the bass stay in key space. The keys and the staff
+ * re-read the same way and said nothing at all. Three faces now render one line, in the grammar the legend always used
+ * and night 60's chip caption adopted ("colour = function against …"), naming each mark's centre where a face mixes
+ * them. Three renderers make it page grammar (rule 6, as .readbox became): the words live here, once; the styles in
+ * the build's LEGEND_GRAMMAR, shipped only where a door reaches this file.
+ */
+
+/** the swatches and the sentence, as markup for a `.legend` element.
+ *   follows     the face re-reads against the bar's centre now (Object = scale, centre following, a centre to follow)
+ *   centreName  that centre's name, for a face showing one bar (the staff shows several, each its own: null)
+ *   perBar      the staff's clause — each bar re-centres on its own chord
+ *   keepsKey    the marks on this face that stay in KEY space under follows, named by role
+ *   ref         a fixed centre re-rooted off the key: the reference tone, as the neck has always said */
+function legendHTML({ follows = false, centreName = null, perBar = false, keepsKey = "", ref = false } = {}) {
+  const swatches = FAM.map((f) => `<span><i style="background:${FAM_COLOR[f]}"></i>${f}</span>`).join("");
+  const words = follows
+    ? `colour = function against the centre${centreName ? `, ${centreName}` : ""} — following the changes`
+      + (perBar ? ", each bar re-centres on its own chord" : "")
+      + (keepsKey ? `; ${keepsKey}: against the key` : "")
+    : `colour = function against ${ref ? "the reference tone" : "the key"}`;
+  return swatches + `<span class="legend-words">${words}</span>`;
+}
+return { legendHTML };
+})();
+
 /* ===== hub/readout.mjs ===== */
 const __m_hub_readout_mjs = (() => {
 const { field, MODES } = __m_engine_field_mjs;
@@ -8963,6 +9019,7 @@ const { SPLITS } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 const { clockMarkup, mountClock } = __m_hub_clock_mjs;
+const { legendHTML } = __m_hub_legend_mjs;
 const { mountReadout } = __m_hub_readout_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { FAM_COLOR, FAM_TEXT, FAM, ANNOTATION_GRAY } = __m_hub_palette_mjs;
@@ -9025,6 +9082,7 @@ const { starburst } = __m_hub_marks_mjs;
 
 
 
+
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
@@ -9044,6 +9102,9 @@ const fy = (str) => SY0 + (str - 1) * SGAP;
 
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
+/* THE REFUSAL'S RED — ONE SITE, two renderings (night 85): the absence drawn inside the window (260908) and the refusal
+ * said under the neck (Daniel, 2026-10-02). Spec v1.6 §7 rule 8, borrowing 3 — the places the app says no. */
+const REFUSAL_RED = "#B82929";
 
 /** the field's dots, derived then asserted — never drawn before both. The
  * walk is engine/field.mjs's notesOn; the assertion is a CLOSED FORM computed
@@ -9124,8 +9185,14 @@ const fieldBoard = {
              one idea again (night 58's constant: a Transport card IS the clock). Same controls, same ids, same
              messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock">${clockMarkup({ ids: { split: "fdSplit", bpm: "fdBpm", click: "fdMetChk", pulse: "fdPulse" } })}</span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
+    <div class="fd-neckcol">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
+    <!-- THE REFUSAL, UNDER THE NECK (night 85 — Daniel, 2026-10-02: "Under the neck for sure."). It amends his 260922b
+         "a red message above the view": measured, both of that night's seats crossed marks — "below" three dots and the
+         bottom handle, "above" two dots and the top handle. One line, the same words, beside nothing it describes. -->
+    <div class="fd-refusal" id="fdRefusal"></div>
+    </div>
     <div class="fd-rail" id="fdRail">
       <!-- THE RAIL IS NAMED FOR WHAT IT IS (261023, night 65 — motif approved by Daniel 261022, recorded by PO
            ruling 261023): it holds the motif's parts — placement, the take, movement, the figure. The name is
@@ -9223,11 +9290,14 @@ const fieldBoard = {
   names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
   <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.</div>
   <div class="hint" id="fdHint"></div>
-  <div class="fd-legend" id="fdLegend"></div>`,
+  <div class="legend" id="fdLegend"></div>`,
 
   styles: `
 #fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
 .fd-wrap{display:flex;gap:12px;align-items:flex-start}
+.fd-neckcol{flex:1 1 auto;min-width:0;width:100%}
+.fd-refusal{font-size:12.5px;font-weight:bold;line-height:1.4;margin:6px 2px 0}
+.fd-refusal:empty{display:none}
 .fd-rail{flex:0 0 170px}
 /* THE NECK AT 390 (night 51, 261011 — measured: in a 332 px wrap the rail's 170 px left the SVG
  * 150 px wide, scale 0.117, a 4.7 px hit target). Under 600 px the rail stacks beneath the neck so
@@ -9318,10 +9388,7 @@ const fieldBoard = {
  * The mixer-column basis (380px, margin-left:auto) is gone with the seat. */
 /* the readout's seat and box are the SHELL's grammar since 260920 (night 26 item 3):
  * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
-.fd-legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
-.fd-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;
-  margin-right:3px}
-.fd-legend span{display:inline-block;margin-right:11px}
+/* the legend's rules moved to the build's LEGEND_GRAMMAR (night 85): three faces render it through hub/legend.mjs */
 #fdHint{margin:8px 2px 0}
 /* the seg's visual grammar, scoped to this module's own markup (260905):
  * the shell defines these rules in its STRIPS chrome block, which this
@@ -9651,24 +9718,26 @@ const fieldBoard = {
        * LOSS's own sentence; the hint beneath keeps everything. Status, in the one
        * existing treatment — never a second one, never a degree colour. */
       const wrong = !sel.length || !!lossMsg;
-      if (cfg.object !== "scale" && selMsg && wrong) {
-        const linesTxt = (sel.length && lossMsg ? lossMsg : selMsg).split(" — ");
-        /* WHERE THE MESSAGE SITS (260923): inside the window's own box when nothing was
-         * placed (as since 260908); when notes ARE drawn the message must not sit on
-         * them — Daniel: "a red message above the view" — so it goes just above the
-         * window, or below it when the window touches the top string. Either way its
-         * x is clamped so the longest line stays inside the neck (a window at the nut
-         * ran the text off the left edge). Width estimated at 0.58em per character. */
+      const refusalLine = byId("fdRefusal");
+      refusalLine.textContent = "";
+      if (cfg.object !== "scale" && selMsg && wrong && sel.length) {
+        /* WHERE THE REFUSAL SITS (night 85 — Daniel, 2026-10-02, amending 260922b): notes ARE drawn, so the message
+         * must not sit on them, and neither in-SVG seat managed that (both crossed marks). One HTML line directly under
+         * the neck: the LOSS's own sentence, the words unchanged, the family's bold at 12.5 px. */
+        refusalLine.textContent = lossMsg || selMsg;
+        refusalLine.style.color = REFUSAL_RED;
+      } else if (cfg.object !== "scale" && selMsg && wrong) {
+        /* NOTHING PLACED (260908 — untouched by night 85, which moves the refusal, not the absence): "an absence about
+         * the neck belongs on the neck, where the dots would have been" — drawn inside the window's own box, split at
+         * the em-dash so the collide and the escape read as two lines; x clamped so the longest line stays on the neck. */
+        const linesTxt = selMsg.split(" — ");
         const half = Math.max(...linesTxt.map((l) => l.length + 2)) * 12.5 * 0.29 + 6;
         const rx = Math.min(Math.max((fx(pos.fLo) + fx(pos.fHi)) / 2, half), 1280 - half);
         const sTop = Math.min(...run.strings), sBot = Math.max(...run.strings);
-        let ry;
-        if (!sel.length) ry = (fy(sTop) + fy(sBot)) / 2 - (linesTxt.length - 1) * 8;
-        else if (fy(sTop) - 16 - (linesTxt.length - 1) * 16 > 12) ry = fy(sTop) - 18 - (linesTxt.length - 1) * 16;
-        else ry = fy(sBot) + 30;
-        const rt = el("text", { class: "fd-refusal", x: rx, y: ry, "data-seat": !sel.length ? "in" : (ry < fy(sTop) ? "above" : "below"),
+        const ry = (fy(sTop) + fy(sBot)) / 2 - (linesTxt.length - 1) * 8;
+        const rt = el("text", { class: "fd-refusal", x: rx, y: ry, "data-seat": "in",
           "text-anchor": "middle", "font-size": "12.5", "font-weight": "bold",
-          fill: "#B82929" }, svg);
+          fill: REFUSAL_RED }, svg);
         linesTxt.forEach((ln, li) => {
           const ts = el("tspan", { x: rx, dy: li === 0 ? 0 : 16 }, rt);
           ts.textContent = li === 0 ? ln : "— " + ln;
@@ -10061,10 +10130,19 @@ const fieldBoard = {
           : refP.offer ? `Reference offered unfretted: ${refP.reason} — drawn below the strings, sounding nothing. `
           : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +
         soundedMsg + padMsg +
+        /* THE WINDOW'S WIDTH, TAUGHT WHERE THE CONTROL IS (night 85, item 7 C): a narrow set widens the window until it
+         * holds the whole scale — and where the neck ends first, the way to what is missing is a step toward the nut */
+        (!pos.covered
+          ? `The neck ends at fret ${pos.fHi} — step ← toward the nut to reach ${pos.uncovered.map((pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name).join(" and ")}. `
+          : pos.fHi > pos.frets[2] ? "Fewer strings widen the window until the set holds the whole scale; more strings narrow it. " : "") +
         "Click the numbers to choose strings; ← → step the window.";
-      byId("fdLegend").innerHTML = FAM.map((f2) =>
-        `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
-        + `<span style="margin-left:8px">colour = function against ${cfg.ref ? "the reference tone" : "the key"}</span>`;
+      /* THE LEGEND SAYS WHICH CENTRE (night 85, item 2 C — PO ruling 261053 §2): under "follows" this line said
+       * "against the key" while the bold selection was re-read against the bar's centre — FALSE on the live page. It
+       * now names the centre the selection speaks from, and the marks that stay in key space. */
+      byId("fdLegend").innerHTML = legendHTML({
+        follows: cfg.object === "scale" && cfg.centreSrc === "follows" && fdRefDeg != null,
+        centreName: fdRefDeg != null ? fld.notes[fdRefDeg].name : null,
+        keepsKey: "the readout's dot, the faint field and the bass", ref: !!cfg.ref });
       /* every living pulse re-rings on the fresh dots, for what is left
        * of its 320ms — survivors of the wipe and first-notes alike */
       const now = d.defaultView.performance.now();
@@ -11028,6 +11106,7 @@ const { placeReference, centreDegreeOf, centreMaterialRef, reRead } = __m_engine
 const { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 const { mountReadout } = __m_hub_readout_mjs;
+const { legendHTML } = __m_hub_legend_mjs;
 const { FAM, FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 /* keys-board.mjs — v0.9's ON THE KEYS for Multetudes (surface, 2026-08-29).
@@ -11045,6 +11124,7 @@ const { tonePick, pickOf } = __m_engine_selection_mjs;
  * reconciliation is decided. The geometry is v0.9's (C2–C6 across the
  * board's width).
  */
+
 
 
 
@@ -11075,7 +11155,8 @@ const keysBoard = {
   markup: `
   <div class="bh readhead"><span>On the keys</span><div class="readbox" id="kyMode" data-control="kyMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="kyMini" data-control="kyMini"></span></div>
-  <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>`,
+  <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>
+  <div class="legend" id="kyLegend"></div>`,
 
   styles: `
 #kySvg{width:100%;height:auto;display:block}
@@ -11155,6 +11236,10 @@ const keysBoard = {
       const kyRefDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
         : cur.degree;
+      /* THE LEGEND (night 85, item 2 C): this face re-reads under "follows" and said nothing about it */
+      byId("kyLegend").innerHTML = legendHTML({
+        follows: cfg.object === "scale" && cfg.centreSrc === "follows" && kyRefDeg != null,
+        centreName: kyRefDeg != null ? fld.notes[kyRefDeg].name : null, keepsKey: "the readout's dot", ref: !!cfg.ref });
       if (cfg.object === "scale") {
         sel = scaleTake(pool).notes;
         if (cfg.centreSrc === "follows" && kyRefDeg != null) sel = reRead(sel, kyRefDeg);
@@ -11948,6 +12033,19 @@ const { alteredDegree } = __m_engine_chord_mjs;
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
 
+/** THE PLACEMENT LAW the readout re-checks before drawing (night 85): every selected note sits in the frame, and is a
+ * field note — or, since night 46 (role A, 7fc4e4a), one of the CHORD'S OWN off-key tones, placed from the chord's
+ * supply (engine/selection.mjs chordSupply: member, chromatic, inside the frame). Returns the notes that break it; an
+ * empty list is lawful. The v0.9 check (2026-08-28) demanded a field note and nothing else, and night 46 changed the law
+ * without the check — so from 2026-09-12 every bar whose chord holds a tone the key lacks (a blues, a minor ii–V–i)
+ * showed the visitor "assertion failed": 30,264 of 100,224 bars measured, every one the chord's own tone, none a fault. */
+function unlawfulNotes(sel, fld, pos, cur) {
+  const pc = (m) => ((m % 12) + 12) % 12;
+  const own = new Set(((cur && cur.tones) || []).filter((t) => t.offKey).map((t) => pc(t.pc)));
+  return (sel || []).filter((x) => !(x.fret >= pos.fLo && x.fret <= pos.fHi
+    && (fld.degOf(x.midi) >= 0 || (x.member === true && x.chromatic === true && own.has(pc(x.midi))))));
+}
+
 const neckReadout = {
   id: "neck-readout",
   layer: "surface",
@@ -11956,7 +12054,10 @@ const neckReadout = {
   order: 19,
   controls: ["roLine", "roAssert"],
 
+  /* THE HEADER BAND (night 85 — the shell rule: every panel has a header, the chevron's only seat; this board had none,
+   * and the chevron sat on its first line — over the chord's name at 390). Its own collapse summary, shown. */
   markup: `
+  <div class="bh"><span>The readout</span></div>
   <span class="clpsum">the readout</span>
   <div class="ro-line" id="roLine" data-control="roLine"></div>
   <div class="ro-assert" id="roAssert" data-control="roAssert"></div>`,
@@ -12066,8 +12167,8 @@ const neckReadout = {
           const cap = cfg.object === "scale" ? 3 : capOf(cfg.notesPer);
           return Object.values(per).every((c) => c <= cap);
         });
-        check("every selected note is a real field note in the frame", () =>
-          sel.every((x) => fld.degOf(x.midi) >= 0 && x.fret >= pos.fLo && x.fret <= pos.fHi));
+        check("every selected note sits in the frame — a field note, or the chord's own tone", () =>
+          unlawfulNotes(sel, fld, pos, cfg.object === "scale" ? null : cur).length === 0);
         check("the étude is at least one bar", () => true);
 
         /* THE FIELD'S OWN COUNT (260919, item 3 — moved from the hint, which
@@ -12110,8 +12211,18 @@ const neckReadout = {
             : oneOfEach(bc.tones, pool, { n: capOf(cfg.notesPer), centre: pos.centre });
           if (br.notes) placeK++;
         }
+        /* WHY THE WINDOW IS THIS WIDE (night 85, item 7 C — PO ruling 261053 §2): the engine widens a narrow set's
+         * window until the set holds every pitch class of the field (position.mjs, 2026-09-07), and stops at the neck's
+         * end naming what is still missing — and the readout said neither, so it held a silent value. It states the
+         * fact here; the neck's hint teaches the control and the way out (it is where the control is: this line sits
+         * 556 px below the neck at 1280, ~1100 at 390). Ink, never red: a window is drawn, not refused. */
+        const SETN = ["", "one string holds", "two strings hold", "three strings hold", "four strings hold", "five strings hold", "six strings hold"];
+        const nameOfPc = (pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name;
+        const short = pos.covered ? "" : pos.uncovered.map((pc) => `<b>${nameOfPc(pc)}</b>`).join(" and ");
+        const why = !pos.covered ? "the neck ends · " : pos.fHi > pos.frets[2] ? `widened so ${SETN[run.strings.length] || "the set holds"} the whole scale · ` : "";
         bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`
-          + ` <span class="ro-dim">(${pool.length} notes · ${placeK}/${prog.chords.length} bars place)</span>`);
+          + (short ? `, short of ${short}` : "")
+          + ` <span class="ro-dim">(${why}${pool.length} notes · ${placeK}/${prog.chords.length} bars place)</span>`);
         const ss = [...run.strings].sort((a, b) => b - a).map(String).join("–");
         /* THE TAKE WORD (260919, item 3 — moved from the hint; the readout said
          * grip/line but never one-of-each/every-occurrence, the cap's meaning) */
@@ -12172,6 +12283,12 @@ const neckReadout = {
             bits.push(`over <b>${comp.bassName}</b> — string ${rp.note.string}, fret ${rp.note.fret}`
               + (rp.stretch ? ' <span class="ro-dim">(a stretch past the box)</span>' : "")
               + (comp.name ? `: the stack is <b>${comp.name}</b>` : ' <span class="ro-dim">(an unnamed stack — no honest symbol reads back)</span>'));
+          } else if (rp.offer && cfg.object === "scale") {
+            /* night 85 — FOUND BY THE SELF-CHECK GUARD in a state the gate drives (C major, scale, strings 6 5 4 3 1 2):
+             * the offered-unfretted branch (261001) read the stack back from cur.tones, which a scale does not have — the
+             * night-18 .map-on-null, returned through a later branch, shown to a visitor as "assertion failed — Cannot
+             * read properties of null". A scale has no stack: the offer is named plainly, as the fretted note is above. */
+            bits.push(`the bass under the centre: <b>${rp.offer.name}</b> — <span class="ro-dim">unfretted: strings 5 and 6 are in the set; drawn below the strings, sounding nothing</span>`);
           } else if (rp.offer) {
             /* 261001: offered unfretted — named, the stack read back over its degree, and
              * honest about sound: nothing sits under the strings, so nothing sounds */
@@ -12195,16 +12312,23 @@ const neckReadout = {
         for (const a of absences) bits.push(`<span style="color:#B82929">${a}</span>`);
         if (msg) bits.push(`<span style="color:#B82929">${msg}</span>`);
       } catch (e) {
-        fails.push(String(e && e.message || e));
+        /* a THROW is a failing self-check too; for us, its first frames ride with it to the console (night 85) */
+        fails.push(String(e && e.message || e) + (e && e.stack ? " @ " + String(e.stack).split("\n").slice(1, 3).map((l) => l.trim()).join(" < ") : ""));
         bits = [`<span style="color:#B82929">${String(e && e.message || e)}</span>`];
       }
       byId("roLine").innerHTML = bits.join(" · ");
       const a = byId("roAssert");
+      /* A SELF-CHECK IS FOR US; A VISITOR NEEDS WHAT IS WRONG AND WHAT TO DO (night 85 — the two are not one string).
+       * The check's own name and reason go where we look — the console (which every door gate reads) and a data
+       * attribute — never onto the page. The visitor is told the drawing may be wrong and how to step away from it. */
       if (fails.length) {
         a.style.color = "#B82929"; a.style.fontWeight = "bold";
-        a.textContent = "assertion failed — " + fails.join(" ; ");
+        a.textContent = "Something on this bar did not add up, so the neck may be drawn wrong here — step to another bar, or choose other strings.";
+        a.dataset.selfcheck = fails.join(" ; ");
+        if (d.defaultView && d.defaultView.console) d.defaultView.console.error("[readout self-check] " + fails.join(" ; "));
       } else {
         a.style.color = ""; a.style.fontWeight = "";
+        delete a.dataset.selfcheck;
         a.textContent = `${asserts.length} assertions passed before drawing.`;
       }
     };
@@ -12222,7 +12346,7 @@ const neckReadout = {
     render();
   },
 };
-return { neckReadout };
+return { unlawfulNotes, neckReadout };
 })();
 
 /* ===== engine/notepad.mjs ===== */
@@ -15093,6 +15217,7 @@ const { writtenValue } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, CLOCK_STATE, STEP_CHANGED, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 const { mountReadout } = __m_hub_readout_mjs;
+const { legendHTML } = __m_hub_legend_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { FAM_COLOR, FAM_TEXT, FAM } = __m_hub_palette_mjs;
 /* staff-board.mjs — v0.9's ÉTUDE STAFF for Multetudes (surface, 2026-08-29).
@@ -15128,6 +15253,7 @@ const { FAM_COLOR, FAM_TEXT, FAM } = __m_hub_palette_mjs;
 
 
 
+
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
@@ -15151,7 +15277,8 @@ const staffBoard = {
   <div class="hint info">Treble carries the material, written an octave above where it sounds —
   the 8 under the clef. The bass clef carries the reference tone, at sounding pitch, when one is
   chosen; the full progression of bars arrives with child 7. Until then the étude holds one bar.</div>
-  <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>`,
+  <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>
+  <div class="legend" id="stLegend"></div>`,
 
   styles: `
 #stSvg{width:100%;height:auto;display:block}
@@ -15203,6 +15330,9 @@ const staffBoard = {
       if (index >= prog.chords.length) index = 0;
       const N = prog.chords.length;
       const scaleSel = cfg.object === "scale" ? scaleTake(pool).notes : null;
+      /* THE LEGEND (night 85, item 2 C): the staff shows many bars, each re-centred on its own chord under "follows" */
+      byId("stLegend").innerHTML = legendHTML({ follows: cfg.object === "scale" && cfg.centreSrc === "follows", perBar: true,
+        keepsKey: "the readout's dot and the bass clef", ref: !!cfg.ref });
       /* the whole result rides (260911, item 5): a refused bar's collide and
        * its derived escape are the engine's own fields, and the staff prints
        * them IN THE BAR — the playthrough matrix's doctrine ("places or
@@ -15735,7 +15865,10 @@ const timelineStrip = {
   order: 16,
   controls: ["tlScroll"],
 
+  /* THE HEADER BAND (night 85 — the shell rule: the chevron's only seat is a panel's header, so every panel has one).
+   * The words are the board's own collapse summary, shown — not new copy (PO ruling 261053 §8). */
   markup: `
+  <div class="bh"><span>The chart line</span></div>
   <span class="clpsum">the chart line</span>
   <div id="tlScroll" data-control="tlScroll"></div>`,
 
@@ -16073,6 +16206,12 @@ function initCollapse(doc) {
   const panels = [];
   for (const p of doc.querySelectorAll(".card, .board")) {
     const header = p.querySelector("h2") || p.querySelector(".bh");
+    /* THE CHEVRON'S ONLY SEAT IS THE HEADER BAND (night 85 — PO ruling 261053 §2, a SHELL rule): every panel declares a
+     * header (a card's h2, a board's .bh). A panel without one put the chevron over its own content (the chart line's
+     * chips; the readout's chord name at 390). It cannot exist silently: the shell names it where every gate looks, and
+     * the door gate holds every chevron inside its header band on every door, at 1280 and 390. */
+    if (!header && doc.defaultView && doc.defaultView.console)
+      doc.defaultView.console.error(`[shell] a panel with no header band (a card's h2, a board's .bh): ${p.id || p.className} — the collapse chevron has no seat`);
     const sum = doc.createElement("div");
     sum.className = "clpsSum";
     if (header) header.after(sum); else p.prepend(sum);
@@ -16211,7 +16350,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.29","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v0.6.30","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

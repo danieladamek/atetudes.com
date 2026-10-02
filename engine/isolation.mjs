@@ -64,9 +64,10 @@ export function makeZone({ string, frets }) {
  * than as branches scattered through the optimizer.
  *
  *   GRIP  one note per string, anchored to the pivots — the isolation thesis
- *   FREE  the grip chosen by smoothest voice-leading, anchor released; the
+ *   FREE  the grip chosen by smoothest voice-leading, the pivot released; the
  *         étude begins in the zone and is then SEEN to leave it, so the seed
- *         anchor stays and only the pivot term drops (Daniel, 2026-08-10)
+ *         anchor stays and only the pivot term drops (Daniel, 2026-08-10) —
+ *         "anchor released" said here until night 85, and was never the rule
  *   LINE  placed freely along the set by the §6.1.2 rule
  *
  * Tie rules are NAMED because they are the pinned behaviour of every shipped

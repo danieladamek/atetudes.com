@@ -979,8 +979,10 @@ def m31_a_bar_dies_without_a_reason():
     # name the dead bars.
     p, original, mutated = patch("hub/modules/field-board.mjs",
         # ANCHOR RE-SITED 260923 (night 30, rule 7): the gate reads "something is wrong with what was placed"
-        '      if (cfg.object !== "scale" && selMsg && wrong) {',
-        '      if (false) {')
+        # RE-SITED night 85: the refusal over PLACED notes moved under the neck; a DEAD bar is the nothing-placed case,
+        # whose absence is still drawn in the window (260908) — removing it is what kills a bar's reason
+        '      } else if (cfg.object !== "scale" && selMsg && wrong) {',
+        '      } else if (false) {')
     try:
         p.write_text(mutated)
         build()
@@ -1687,8 +1689,9 @@ def m65_the_spelling_changes_and_the_dots_do_not():
 # the retracted reporter must not return to the bind control's title.
 def m66_the_fallback_clause_returns():
     p, original, mutated = patch("hub/modules/shape-motion.mjs",
-        "reach the same grip — they part only where their two tie rules pick different anchored candidates, mostly drop-3 and mostly ${PLACE_LABEL.free} reaching an open position — releasing",
-        "reach the same grip (a bar with no candidate on the zone excepted) — releasing")
+        # RE-ANCHORED night 85 (4A's bound sentence — it names the ties AND the bar no grip anchors)
+        "mostly reach the same grip — they part where their two tie rules pick different anchored candidates, mostly in drop-3, and on a bar no grip anchors, where only ${PLACE_LABEL.grip} still pulls toward the zone — releasing",
+        "mostly reach the same grip (a bar with no candidate on the zone excepted) — releasing")
     try:
         p.write_text(mutated)
         r = words()
@@ -1702,8 +1705,8 @@ def m66_the_fallback_clause_returns():
 
 def m67_the_box_says_so_again():
     p, original, mutated = patch("hub/modules/fretboard-stage.mjs",
-        "takes the nearest grip it can, and nothing reports it. Released,",
-        "reaches outside and the box says so. Released,")
+        "leaves the zone — the readout says so. Released,",   # re-anchored night 85: the READOUT names the bar; the box never reports
+        "leaves the zone and the box says so. Released,")
     try:
         p.write_text(mutated)
         build()

@@ -183,6 +183,13 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.30 (261056, night 85): the readout's self-check states today's law — a chord's own off-key tone is lawful
+     * (night 46), so "assertion failed" no longer showed on every blues and minor ii–V–i; a visitor who meets a real
+     * failure reads what is wrong and what to do, and the check's name goes to the console. The refusal over placed
+     * notes is one line UNDER the neck (Daniel, 2026-10-02, amending 260922b). The chart line and the readout have
+     * header rows — the shell's chevron sits only in a header now. Each diagram face's legend names its centre under
+     * "follows" (the neck's said "the key", false). The readout says why a narrow set's window is wide, or what it
+     * lacks; the hint teaches the way out. */
     /* v0.6.29 (261055, night 84 — 1.0's defects): a FORM or CUSTOM chart's chips wear their roles, as a cycle's do (the
      * chord tones carry their key degree at the source, engine/progression.mjs); a HAND-TYPED CHART OPENS ON THE PINNED
      * VALUES (opensAs above — Daniel, 2026-10-02), never on the page's live state; the engine refuses, by name, the two
@@ -274,9 +281,9 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.29",
+    blurb: "one tool that holds many études · v0.6.30",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
-      "Colour is function against the key — or the reference, when one re-roots the field. " +
+      "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
   },
 };

@@ -48,7 +48,10 @@ export const timelineStrip = {
   order: 16,
   controls: ["tlScroll"],
 
+  /* THE HEADER BAND (night 85 — the shell rule: the chevron's only seat is a panel's header, so every panel has one).
+   * The words are the board's own collapse summary, shown — not new copy (PO ruling 261053 §8). */
   markup: `
+  <div class="bh"><span>The chart line</span></div>
   <span class="clpsum">the chart line</span>
   <div id="tlScroll" data-control="tlScroll"></div>`,
 

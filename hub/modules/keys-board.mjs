@@ -23,6 +23,7 @@ import { placeReference, centreDegreeOf, centreMaterialRef, reRead } from "../..
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 import { mountReadout } from "../readout.mjs";
+import { legendHTML } from "../legend.mjs";
 import { FAM, FAM_COLOR, FAM_TEXT } from "../palette.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
@@ -44,7 +45,8 @@ export const keysBoard = {
   markup: `
   <div class="bh readhead"><span>On the keys</span><div class="readbox" id="kyMode" data-control="kyMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="kyMini" data-control="kyMini"></span></div>
-  <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>`,
+  <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>
+  <div class="legend" id="kyLegend"></div>`,
 
   styles: `
 #kySvg{width:100%;height:auto;display:block}
@@ -124,6 +126,10 @@ export const keysBoard = {
       const kyRefDeg = cfg.object === "scale"
         ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
         : cur.degree;
+      /* THE LEGEND (night 85, item 2 C): this face re-reads under "follows" and said nothing about it */
+      byId("kyLegend").innerHTML = legendHTML({
+        follows: cfg.object === "scale" && cfg.centreSrc === "follows" && kyRefDeg != null,
+        centreName: kyRefDeg != null ? fld.notes[kyRefDeg].name : null, keepsKey: "the readout's dot", ref: !!cfg.ref });
       if (cfg.object === "scale") {
         sel = scaleTake(pool).notes;
         if (cfg.centreSrc === "follows" && kyRefDeg != null) sel = reRead(sel, kyRefDeg);

@@ -102,6 +102,10 @@ export default {
     /* v0.6.0 (261002, night 38): ONE ADDRESS FAMILY — the figure's pattern address is
      * real string numbers (multetudes' own), slots retired to a saved-étude alias; a set
      * change refuses a stale figure by name and OFFERS the shift. Multetudes unmoved. */
+    /* v0.6.18 (261056, night 85): the readout names the bar whose anchor left the zone because no grip of its chord
+     * reaches it (Daniel, 2026-10-02, amending 2026-08-21 narrowly: the box still never stretches and never reports);
+     * Free says the zone still pulls the first chord (one sentence, true bound or not), and the bind's tooltip says
+     * what happens. The shell's chevron sits only in a header. */
     /* v0.6.17 (261055, night 84): nothing on this face moves — the engine it carries refuses, by name, two narrowings it
      * used to make in silence (the silent-failure audit, places 1 and 3: a figure slot two notes share; a chord with
      * more than four tones). No shipped path reaches either; the bytes re-inline. */
@@ -147,7 +151,7 @@ export default {
      * Settings card also reads — the saved entry is byte-for-byte the same shape; nothing on this face moved. */
     /* v0.6.7 (261014e, night 64): the bus gained announceAfter and the readout grammar right-justifies a mini's own
      * row — shared files; nothing on this door's face moves. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.17",
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.18",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

@@ -55,6 +55,7 @@ import { SPLITS } from "../../engine/drill.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 import { clockMarkup, mountClock } from "../clock.mjs";
+import { legendHTML } from "../legend.mjs";
 import { mountReadout } from "../readout.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
@@ -76,6 +77,9 @@ const fy = (str) => SY0 + (str - 1) * SGAP;
 
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
+/* THE REFUSAL'S RED — ONE SITE, two renderings (night 85): the absence drawn inside the window (260908) and the refusal
+ * said under the neck (Daniel, 2026-10-02). Spec v1.6 §7 rule 8, borrowing 3 — the places the app says no. */
+const REFUSAL_RED = "#B82929";
 
 /** the field's dots, derived then asserted — never drawn before both. The
  * walk is engine/field.mjs's notesOn; the assertion is a CLOSED FORM computed
@@ -156,8 +160,14 @@ export const fieldBoard = {
              one idea again (night 58's constant: a Transport card IS the clock). Same controls, same ids, same
              messages; only the seat moved. The under-neck band now opens with the tuning rows. --><span class="fd-headclock" id="fdClock">${clockMarkup({ ids: { split: "fdSplit", bpm: "fdBpm", click: "fdMetChk", pulse: "fdPulse" } })}</span><span class="mini fd-headmini" id="fdMini" data-control="fdMini"></span></div>
   <div class="fd-wrap">
+    <div class="fd-neckcol">
     <svg id="fieldSvg" data-control="fieldSvg" viewBox="0 0 1280 260" tabindex="0"
       aria-label="the neck — the field, the window, the string set, and the selection"></svg>
+    <!-- THE REFUSAL, UNDER THE NECK (night 85 — Daniel, 2026-10-02: "Under the neck for sure."). It amends his 260922b
+         "a red message above the view": measured, both of that night's seats crossed marks — "below" three dots and the
+         bottom handle, "above" two dots and the top handle. One line, the same words, beside nothing it describes. -->
+    <div class="fd-refusal" id="fdRefusal"></div>
+    </div>
     <div class="fd-rail" id="fdRail">
       <!-- THE RAIL IS NAMED FOR WHAT IT IS (261023, night 65 — motif approved by Daniel 261022, recorded by PO
            ruling 261023): it holds the motif's parts — placement, the take, movement, the figure. The name is
@@ -255,11 +265,14 @@ export const fieldBoard = {
   names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
   <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.</div>
   <div class="hint" id="fdHint"></div>
-  <div class="fd-legend" id="fdLegend"></div>`,
+  <div class="legend" id="fdLegend"></div>`,
 
   styles: `
 #fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
 .fd-wrap{display:flex;gap:12px;align-items:flex-start}
+.fd-neckcol{flex:1 1 auto;min-width:0;width:100%}
+.fd-refusal{font-size:12.5px;font-weight:bold;line-height:1.4;margin:6px 2px 0}
+.fd-refusal:empty{display:none}
 .fd-rail{flex:0 0 170px}
 /* THE NECK AT 390 (night 51, 261011 — measured: in a 332 px wrap the rail's 170 px left the SVG
  * 150 px wide, scale 0.117, a 4.7 px hit target). Under 600 px the rail stacks beneath the neck so
@@ -350,10 +363,7 @@ export const fieldBoard = {
  * The mixer-column basis (380px, margin-left:auto) is gone with the seat. */
 /* the readout's seat and box are the SHELL's grammar since 260920 (night 26 item 3):
  * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
-.fd-legend{margin-top:7px;font-size:11.5px;color:var(--gray)}
-.fd-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;
-  margin-right:3px}
-.fd-legend span{display:inline-block;margin-right:11px}
+/* the legend's rules moved to the build's LEGEND_GRAMMAR (night 85): three faces render it through hub/legend.mjs */
 #fdHint{margin:8px 2px 0}
 /* the seg's visual grammar, scoped to this module's own markup (260905):
  * the shell defines these rules in its STRIPS chrome block, which this
@@ -683,24 +693,26 @@ export const fieldBoard = {
        * LOSS's own sentence; the hint beneath keeps everything. Status, in the one
        * existing treatment — never a second one, never a degree colour. */
       const wrong = !sel.length || !!lossMsg;
-      if (cfg.object !== "scale" && selMsg && wrong) {
-        const linesTxt = (sel.length && lossMsg ? lossMsg : selMsg).split(" — ");
-        /* WHERE THE MESSAGE SITS (260923): inside the window's own box when nothing was
-         * placed (as since 260908); when notes ARE drawn the message must not sit on
-         * them — Daniel: "a red message above the view" — so it goes just above the
-         * window, or below it when the window touches the top string. Either way its
-         * x is clamped so the longest line stays inside the neck (a window at the nut
-         * ran the text off the left edge). Width estimated at 0.58em per character. */
+      const refusalLine = byId("fdRefusal");
+      refusalLine.textContent = "";
+      if (cfg.object !== "scale" && selMsg && wrong && sel.length) {
+        /* WHERE THE REFUSAL SITS (night 85 — Daniel, 2026-10-02, amending 260922b): notes ARE drawn, so the message
+         * must not sit on them, and neither in-SVG seat managed that (both crossed marks). One HTML line directly under
+         * the neck: the LOSS's own sentence, the words unchanged, the family's bold at 12.5 px. */
+        refusalLine.textContent = lossMsg || selMsg;
+        refusalLine.style.color = REFUSAL_RED;
+      } else if (cfg.object !== "scale" && selMsg && wrong) {
+        /* NOTHING PLACED (260908 — untouched by night 85, which moves the refusal, not the absence): "an absence about
+         * the neck belongs on the neck, where the dots would have been" — drawn inside the window's own box, split at
+         * the em-dash so the collide and the escape read as two lines; x clamped so the longest line stays on the neck. */
+        const linesTxt = selMsg.split(" — ");
         const half = Math.max(...linesTxt.map((l) => l.length + 2)) * 12.5 * 0.29 + 6;
         const rx = Math.min(Math.max((fx(pos.fLo) + fx(pos.fHi)) / 2, half), 1280 - half);
         const sTop = Math.min(...run.strings), sBot = Math.max(...run.strings);
-        let ry;
-        if (!sel.length) ry = (fy(sTop) + fy(sBot)) / 2 - (linesTxt.length - 1) * 8;
-        else if (fy(sTop) - 16 - (linesTxt.length - 1) * 16 > 12) ry = fy(sTop) - 18 - (linesTxt.length - 1) * 16;
-        else ry = fy(sBot) + 30;
-        const rt = el("text", { class: "fd-refusal", x: rx, y: ry, "data-seat": !sel.length ? "in" : (ry < fy(sTop) ? "above" : "below"),
+        const ry = (fy(sTop) + fy(sBot)) / 2 - (linesTxt.length - 1) * 8;
+        const rt = el("text", { class: "fd-refusal", x: rx, y: ry, "data-seat": "in",
           "text-anchor": "middle", "font-size": "12.5", "font-weight": "bold",
-          fill: "#B82929" }, svg);
+          fill: REFUSAL_RED }, svg);
         linesTxt.forEach((ln, li) => {
           const ts = el("tspan", { x: rx, dy: li === 0 ? 0 : 16 }, rt);
           ts.textContent = li === 0 ? ln : "— " + ln;
@@ -1093,10 +1105,19 @@ export const fieldBoard = {
           : refP.offer ? `Reference offered unfretted: ${refP.reason} — drawn below the strings, sounding nothing. `
           : (refP.reason ? `Reference refused: ${refP.reason}. ` : "")) +
         soundedMsg + padMsg +
+        /* THE WINDOW'S WIDTH, TAUGHT WHERE THE CONTROL IS (night 85, item 7 C): a narrow set widens the window until it
+         * holds the whole scale — and where the neck ends first, the way to what is missing is a step toward the nut */
+        (!pos.covered
+          ? `The neck ends at fret ${pos.fHi} — step ← toward the nut to reach ${pos.uncovered.map((pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name).join(" and ")}. `
+          : pos.fHi > pos.frets[2] ? "Fewer strings widen the window until the set holds the whole scale; more strings narrow it. " : "") +
         "Click the numbers to choose strings; ← → step the window.";
-      byId("fdLegend").innerHTML = FAM.map((f2) =>
-        `<span><i style="background:${FAM_COLOR[f2]}"></i>${f2}</span>`).join("")
-        + `<span style="margin-left:8px">colour = function against ${cfg.ref ? "the reference tone" : "the key"}</span>`;
+      /* THE LEGEND SAYS WHICH CENTRE (night 85, item 2 C — PO ruling 261053 §2): under "follows" this line said
+       * "against the key" while the bold selection was re-read against the bar's centre — FALSE on the live page. It
+       * now names the centre the selection speaks from, and the marks that stay in key space. */
+      byId("fdLegend").innerHTML = legendHTML({
+        follows: cfg.object === "scale" && cfg.centreSrc === "follows" && fdRefDeg != null,
+        centreName: fdRefDeg != null ? fld.notes[fdRefDeg].name : null,
+        keepsKey: "the readout's dot, the faint field and the bass", ref: !!cfg.ref });
       /* every living pulse re-rings on the fresh dots, for what is left
        * of its 320ms — survivors of the wipe and first-notes alike */
       const now = d.defaultView.performance.now();

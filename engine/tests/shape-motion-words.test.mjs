@@ -106,8 +106,10 @@ test("item 2: bound (the default, zone null) says Grip and Free reach the same g
     }
   }
   const unboundFree = narrate({ ...base, placement: "free", zone: { string: 4, frets: [6, 8, 9], bind: false } });
-  assert.ok(unboundFree.includes("Free releases the zone, so the Box on the neck won't pull — choose Grip to practise inside it"),
-    "unbound Free keeps the existing sentence verbatim (rule 7): " + JSON.stringify(unboundFree));
+  // REWRITTEN night 85 (rule 3 — this pinned a FALSE sentence: unbound, the zone still pulls the first chord; measured
+  // 420 of 6,480 configurations, night 79). PO ruling 261053 §2, 4A: the sentence that is true.
+  assert.ok(unboundFree.includes(placementDependency(false)) && /first/.test(placementDependency(false)) && !/won't pull/.test(placementDependency(false)),
+    "unbound Free says the Box pulls only the opening grip — never that it won't pull: " + JSON.stringify(unboundFree));
   assert.ok(!unboundFree.some((p) => /same grip/.test(p)), "unbound: the bound sentence is not stated");
   const unboundGrip = narrate({ ...base, placement: "grip", zone: { string: 4, frets: [6, 8, 9], bind: false } });
   assert.ok(!unboundGrip.some((p) => /same grip|won't pull/.test(p)), "unbound Grip: neither dependency sentence — nothing is true to say");
@@ -123,11 +125,13 @@ test("item 2, rule 10 / rule 6: the placement's three sites are ONE source", () 
       zone: bound ? null : { string: 6, frets: [5, 7, 8], bind: false } });
     assert.ok(parts.includes(`${PLACE_LABEL.free}: ${placementWords("free", bound)}`), `the narration's placement words are placementWords(): ${JSON.stringify(parts)}`);
   }
-  assert.notEqual(placementWords("free", true), placementWords("free", false), "Free's words differ by bind — bound, the release has nothing left to release");
+  // REWRITTEN night 85 (4A): ONE Free sentence, true whether the zone is bound or not — the old pair differed, and both overstated
+  assert.equal(placementWords("free", true), placementWords("free", false), "4A: Free's words are one sentence, true bound or not");
+  assert.match(placementWords("free", false), /pulls the first chord/, "…and it says the zone still pulls the first chord");
   assert.equal(placementWords("grip", true), placementWords("grip", false));
   // the segment button's title is built from the same function — no second literal anywhere in the module
   assert.ok(/title: placementWords\(p, bound\)/.test(SRC), "#placeSeg's button title reads placementWords(p, bound)");
-  for (const lit of ["anchor released", "one note per string, anchored to the zone", "needs the line voicer, not wired yet"])
+  for (const lit of ["the zone still pulls the first chord toward it", "one note per string, anchored to the zone", "needs the line voicer, not wired yet"])
     assert.equal((SRC.match(new RegExp(lit.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1,
       `"${lit}" is written ONCE in shape-motion.mjs — the single source`);
   assert.ok(/const PLACE_LABEL = [\s\S]{0,3000}placementWords = /.test(SRC), "placementWords sits by PLACE_LABEL");
@@ -157,14 +161,47 @@ function boundCorpus() {
   return { bars, same, differing: bars - same, offZone, onZone, freeOpen, byFam };
 }
 
+/* WIDENED night 85 (4A — the bound sentence now names TWO mechanisms, the tie rules and "a bar no grip anchors"): on the
+ * default zone the bind always finds an anchored grip, so the narrow corpus held no fallback parting at all; a dragged
+ * zone does. Majors and harmonic minor, fourths and sixths, three dragged zones — every mechanism the sentence names
+ * must have instances here, judged on its own. */
+function draggedCorpus() {
+  let diff = 0, tie = 0, tieD3 = 0, fall = 0;
+  for (const key of ["C", "Eb", "Gb", "A"]) for (const scale of ["major", "harm"]) for (const cycle of ["fourths", "sixths"])
+    for (let setIndex = 0; setIndex < 3; setIndex++) for (const family of ["close", "drop2", "drop3"]) for (const fLo of [2, 5, 8]) {
+      const args = { key, scale, cycle, bottom: 0, setIndex, families: [family], zone: { frets: [fLo, fLo + 2, fLo + 3] } };
+      const g = tetradPass({ ...args, placement: "grip" }), f = tetradPass({ ...args, placement: "free" });
+      const zi = g.set.strings.indexOf(g.zone.string), zf = g.zone.frets, on = (fr) => fr === 0 || zf.includes(fr);
+      g.steps.forEach((st, i) => {
+        const a = st.voicing.notes.map((x) => x.fret), b = f.steps[i].voicing.notes.map((x) => x.fret);
+        if (a.join() === b.join()) return;
+        diff++; if (on(a[zi]) && on(b[zi])) { tie++; if (family === "drop3") tieD3++; } else fall++;
+      });
+    }
+  return { diff, tie, tieD3, fall };
+}
+
+test("night 85 (4A): every mechanism the bound sentence names has instances — the ties (mostly drop-3) and the bar no grip anchors", () => {
+  const sentence = placementDependency(true), c = draggedCorpus();
+  assert.ok(/tie/i.test(sentence) && /no grip anchors/.test(sentence), `the sentence names both mechanisms: ${sentence}`);
+  assert.ok(c.tie > 0 && c.tieD3 > c.tie / 2, `ties part Grip and Free, mostly in drop-3: ${c.tieD3} of ${c.tie}`);
+  assert.ok(c.fall > 0, `a bar no grip anchors parts them too: ${c.fall} of ${c.diff} differing bars`);
+  assert.ok(/mostly reach the same grip/.test(sentence), "…and on the default zone they mostly reach the same grip (below)");
+  const narrow = boundCorpus();
+  assert.ok(narrow.same / narrow.bars > 0.9, `"mostly the same grip": ${narrow.same} of ${narrow.bars} on the default zone`);
+});
+
 test("item 2's exception names a mechanism that MEASURES: whatever the bound sentence excepts must have instances in the corpus", () => {
   const c = boundCorpus();
+  // night 85: the sentence now ALSO names the fallback, which the default-zone corpus cannot hold (above, judged on the
+  // dragged corpus); here only the tie half is judged on its own corpus
+  const tieOnly = !/no grip anchors/.test(placementDependency(true));
   assert.equal(c.bars, 864); assert.ok(c.same >= 800, `bound Grip == Free in ${c.same} of ${c.bars}`);
   const sentence = placementDependency(true);
   const namesFallback = /no candidate on the zone|empty pool|fallback/i.test(sentence);
   const namesTie = /tie/i.test(sentence);
   assert.ok(namesFallback || namesTie || !/\(|except/i.test(sentence), "the sentence either names its mechanism or excepts nothing");
-  if (namesFallback) assert.ok(c.offZone > 0, `the sentence names the empty-pool fallback, but in ${c.differing} differing bars the anchor is off the zone in ${c.offZone} — a cause with zero instances`);
+  if (namesFallback && tieOnly) assert.ok(c.offZone > 0, `the sentence names the empty-pool fallback, but in ${c.differing} differing bars the anchor is off the zone in ${c.offZone} — a cause with zero instances`);
   if (namesTie) {
     assert.equal(c.offZone, 0, "the sentence names the tie rules: every differing bar must be tie-resolved (both anchors on the zone)");
     assert.ok(c.onZone === c.differing && c.differing > 0, `tie-resolved: ${c.onZone} of ${c.differing}`);
