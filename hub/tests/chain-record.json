@@ -1,11 +1,11 @@
 {
- "updated_at": "2026-10-01T20:52:38-05:00",
+ "updated_at": "2026-10-01T22:38:53-05:00",
  "last_run": "new",
- "commit": "4534c708bc0ae1fa07c338ea6f1ec71aade2a12b",
+ "commit": "2dddbd6360abe740acb9290dc734e466bc027348",
  "tree_dirty_at_run": true,
  "suite_green_after": true,
- "total": 154,
- "bites": 154,
+ "total": 155,
+ "bites": 155,
  "verdicts": {
   "m100_the_derivation_skips_a_null_pick": "BITES",
   "m101_the_emptied_window_goes_unsaid": "BITES",
@@ -67,6 +67,7 @@
   "m153_the_record_keeps_a_list_again": "BITES",
   "m154_a_restored_etude_starts_playing": "BITES",
   "m155_silence_restores_the_default": "BITES",
+  "m156_a_silent_chart_opens_on_the_live_state": "BITES",
   "m15_scale_material_silently_halved": "BITES",
   "m16_card_moved_between_rows": "BITES",
   "m17_part_moved_between_seats": "BITES",

@@ -42,6 +42,15 @@ This is a STOPGAP with a stated death date: when `Site shell - live chart
 miniatures` lands, these PNGs and this script are deleted in the same
 commit. Do not grow features here.
 
+A third rule, night 84 (item: The re-cut frames slice their own dots), ASSERTED where the other two are:
+
+  NO EDGE CUTS A MARK. The 16:10 stopping point is arithmetic, so an edge landed wherever the ratio fell — through a
+  dot, on a neck (3 of the 8 designer-card edges: tetradetudes' right and top, triadetudes' bottom). After the cover is
+  computed, every drawn mark (an SVG circle, ellipse or text, or a line of the page's text) that STRADDLES the clip
+  pushes that edge OUTWARD past
+  it, and the ratio is re-satisfied by growing the other side; repeat until nothing straddles. Outward only — cropping
+  inward to find a gap is the arithmetic that caused it. A frame that cannot clear its marks is refused, by name.
+
 usage: python3 tools/capture_cards.py [slug ...]   (no slugs = every card)
 """
 import io
@@ -90,13 +99,81 @@ def cover_16x10(page, x0, y0, x1, y1, pad=PAD, name="?"):
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     x, y = cx - w / 2, cy - h / 2
     pw_, ph_ = page.evaluate("() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight]")
-    x = max(0, min(x, pw_ - w))
-    y = max(0, min(y, ph_ - h))
-    if w > pw_ or h > ph_:
-        sys.exit(f"CAPTURE REFUSED: a {w:.0f}x{h:.0f} clip cannot fit the {pw_}x{ph_} page")
+
+    def inside(x, y, w, h):
+        if w > pw_ or h > ph_:
+            sys.exit(f"CAPTURE REFUSED [{name}]: a {w:.0f}x{h:.0f} clip cannot fit the {pw_}x{ph_} page")
+        return max(0, min(x, pw_ - w)), max(0, min(y, ph_ - h))
+
+    x, y = inside(x, y, w, h)
+    # NO EDGE CUTS A MARK (night 84): push each straddled edge outward past the mark, re-satisfy 16:10 by growing the
+    # other dimension about its centre, keep it on the page, and look again
+    for rnd in range(12):
+        cut = straddlers(page, x, y, w, h)
+        if not cut:
+            break
+        l, t, r, b = x, y, x + w, y + h
+        for m in cut:
+            if m[0] < l < m[2]: l = m[0] - EDGE_GAP
+            if m[0] < r < m[2]: r = m[2] + EDGE_GAP
+            if m[1] < t < m[3]: t = m[1] - EDGE_GAP
+            if m[1] < b < m[3]: b = m[3] + EDGE_GAP
+        nw, nh = r - l, b - t
+        if nw / nh < RATIO:
+            grow = nh * RATIO - nw; l, nw = l - grow / 2, nh * RATIO
+        else:
+            grow = nw / RATIO - nh; t, nh = t - grow / 2, nw / RATIO
+        x, y = inside(l, t, nw, nh)
+        w, h = nw, nh
+        print(f"  [{name}] round {rnd + 1}: {len(cut)} mark(s) straddled an edge — pushed out to {w:.0f}x{h:.0f}")
+    cut = straddlers(page, x, y, w, h)
+    if cut:
+        sys.exit(f"CAPTURE REFUSED [{name}]: {len(cut)} drawn mark(s) still straddle the frame's edge after pushing "
+                 f"outward — the frame would slice its own dots: {[m[4] for m in cut][:6]}")
     clip = {"x": x, "y": y, "width": w, "height": h}
     assert abs(clip["width"] / clip["height"] - RATIO) < 1e-6
     return clip
+
+
+EDGE_GAP = 2            # CSS px between a pushed edge and the mark it clears
+MARKS_JS = """() => { const out = [];
+  for (const e of document.querySelectorAll('svg circle, svg ellipse, svg text')) {
+    const b = e.getBoundingClientRect(), cs = getComputedStyle(e);
+    if (!b.width || !b.height || cs.display === 'none' || cs.visibility === 'hidden') continue;
+    out.push([b.x, b.y, b.right, b.bottom, (e.tagName + ' ' + (e.textContent || '').trim()).slice(0, 24)]);
+  }
+  /* and every LINE of the page's own text — an edge through a heading is the same slice (night 84: taking the readout
+   * in pushed the tetrad frame's top through "ON THE NECK"); read from the text's line boxes, never its container's */
+  const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; (n = tw.nextNode());) {
+    const el = n.parentElement;
+    if (!n.textContent.trim() || !el || el.closest('svg')) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+    const r = document.createRange(); r.selectNodeContents(n);
+    for (const b of r.getClientRects())
+      if (b.width && b.height) out.push([b.x, b.y, b.right, b.bottom, ('line ' + n.textContent.trim()).slice(0, 24)]);
+  }
+  return out; }"""
+
+
+def straddlers(page, x, y, w, h):
+    """every drawn mark (an SVG circle, ellipse or text) and every line of text the clip's boundary passes THROUGH — a
+    mark wholly inside or wholly outside is not cut; one larger than half the frame is not a mark"""
+    l, t, r, b = x, y, x + w, y + h
+    out = []
+    # every rect here, like every subject rect in this file, is read in VIEWPORT px and the clip is in DOCUMENT px:
+    # they are one frame only while the page sits unscrolled — said, not assumed
+    if page.evaluate("() => [scrollX, scrollY]") != [0, 0]:
+        sys.exit("CAPTURE REFUSED: the page has scrolled — viewport rects no longer equal document px")
+    for m in page.evaluate(MARKS_JS):
+        if m[2] - m[0] > w / 2 or m[3] - m[1] > h / 2:
+            continue
+        overlaps = m[0] < r and m[2] > l and m[1] < b and m[3] > t
+        contained = m[0] >= l and m[2] <= r and m[1] >= t and m[3] <= b
+        if overlaps and not contained:
+            out.append(m)
+    return out
 
 
 def bbox(page, sel):
@@ -124,7 +201,7 @@ def shoot(page, clip, name):
         sys.exit(f"CAPTURE REFUSED [{name}]: {img.size[0]}x{img.size[1]} is under the "
                  f"{MIN_LONG_EDGE} px long-edge floor — it would be upscaled soft in the index's slot")
     kb = path.stat().st_size / 1024
-    print(f"  {path.relative_to(REPO)}  {img.size[0]}x{img.size[1]}  {kb:.0f} kB")
+    print(f"  {path.relative_to(REPO) if path.is_relative_to(REPO) else path}  {img.size[0]}x{img.size[1]}  {kb:.0f} kB")
     return kb
 
 
@@ -248,9 +325,16 @@ def cap_tetradetudes(browser, dsf):
                    Math.max(...bs.map(b => b.x + b.width)), Math.max(...bs.map(b => b.y + b.height))],
                neckTop: f.y + 14, neckBot: f.y + f.height - 30 }; }""")
     x0, _, x1, _ = dots["d"]
+    # THE READOUT IS IN THE FRAME (night 84, the item's §2): the script asserts this string and the frame used to crop
+    # it out, so the tetrad card was a bare grid beside a triad card that names its chord. Its TEXT extent joins the
+    # subject from above, as triadetudes' does; the neck below it, widened along the neck to 16:10 as before.
+    rt = page.evaluate("""() => { const r = document.createRange();
+      r.selectNodeContents(document.getElementById('readout'));
+      const b = r.getBoundingClientRect();
+      return [b.x, b.y, b.right, b.bottom]; }""")
     # the sounding dots span a near-square patch of neck; the frame widens ALONG THE NECK, centred
     # on them, until it is 16:10 — more frets either side, never page margin above and below
-    y0, y1 = dots["neckTop"], dots["neckBot"]
+    y0, y1 = rt[1], dots["neckBot"]
     sx0, _, sx1, _ = bbox(page, "#fretSvg")
     need_w = (y1 - y0 + 2 * PAD) * RATIO - 2 * PAD
     cx = (x0 + x1) / 2
@@ -259,6 +343,7 @@ def cap_tetradetudes(browser, dsf):
         x0, x1 = sx0, min(sx1, sx0 + need_w)
     elif x1 > sx1:
         x0, x1 = max(sx0, sx1 - need_w), sx1
+    x0, x1 = min(x0, rt[0]), max(x1, rt[2])   # and never cut the readout's words
     return page, cover_16x10(page, x0, y0, x1, y1, name="tetradetudes"), "tetradetudes"
 
 

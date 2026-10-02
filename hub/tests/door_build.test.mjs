@@ -122,7 +122,10 @@ test("hub: a door's shared-config declaration reaches the artifact — the notep
     assert.ok(m, `[${d}] the built file carries the DOOR literal`);
     const lit = JSON.parse(m[1]);
     assert.deepEqual(lit.shared, door.shared || null, `[${d}] DOOR.shared in the artifact is the door's declaration`);
-    assert.deepEqual(Object.keys(lit).sort(), ["id", "lock", "present", "shared"]);
+    // night 84: what a hand-typed chart opens as travels the same seam — a declaration the artifact dropped would open
+    // every silent chart on the page's live state, which the card cannot tell from "no pins declared"
+    assert.deepEqual(lit.opensAs, door.opensAs || null, `[${d}] DOOR.opensAs in the artifact is the door's declaration`);
+    assert.deepEqual(Object.keys(lit).sort(), ["id", "lock", "opensAs", "present", "shared"]);
   }
 });
 

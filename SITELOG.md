@@ -1,3 +1,47 @@
+## 2026-10-02 — Night 84: 1.0's defects triaged; five ship, five are proposed — Multetudes v0.6.29, Tetradetudes v0.6.17
+
+- **Why (dispatch 261055):** all of 1.0 at once — eight defects and one ruling. Measured, then triaged into SHIP (the
+  fix is obvious once measured) and PROPOSE (a design decision: what a page says, where text goes). Proposals were not
+  settled to close the list.
+- **Shipped:**
+  - **The `/studies/` tab says "At-Etudes" once.** `layouts/_partials/head.html` is a project copy of Hextra v0.12.3's
+    head partial, differing by one line. `tools/check_site.py` asserts the rule on every built page, red first on that
+    one page.
+  - **The two designer cards no longer slice their dots.** `tools/capture_cards.py`: no frame edge may cut a drawn mark
+    or a line of text; it is pushed outward and the 16:10 ratio is restored, or the capture is refused by name. Red
+    first on both cards. The tetradetudes card now carries its readout line, as triadetudes' does. Both were recaptured
+    and looked at full size. Three of eight edges had been cut, not every edge as the item said; the item is corrected.
+  - **A custom chart and a form show chord roles.** Their chord tones carry the key degree at the source
+    (`engine/progression.mjs`). The door gate compares them with the cycle chord by chord: 35 of 41 checks were red on
+    the published page.
+  - **Two silent narrowings are refused by name:** a duplicate figure slot (`drill.orderFor`) and a chord with more than
+    four tones (`coreTetrad`). Each assertion was seen failing first. The class is noted in `engine/README.md`. No shipped
+    path reaches either.
+  - **A hand-typed chart opens on pinned values** (Daniel, 2026-10-02): Line, arpeggiated, 120. They are declared as
+    literals by the door, never the live defaults. A stated `tempo:` or an `apps.multetudes` block wins. The gate moves
+    the live state off the pins before opening, and m156 (the pins not applied) bites. **The format wording is
+    drafted for Daniel's approval; `docs/` is not edited.**
+- **Proposed, rendered at 1280 and 390, NOT built:**
+  - which centre each face speaks from;
+  - where the neck's refusal text goes;
+  - the collapse chevron on a header-less board;
+  - what the widening window says;
+  - the audit's places 2 and 4.
+
+  See `notes/working/AtEtudes proposals 261055`.
+- **Found, filed:**
+  - The metronome card's capture refuses: its frame drifted to v1.5.1. Its PNG is unchanged.
+  - In blues-12 in C the readout shows a failing assertion on the face.
+- **Proof:** `tools/check.py` ALL GREEN, 526 s (doors 23,400 assertions, 0 failed · check_studies 6/6 · titles 20 read
+  once). m156 BITES; the record is 155/155. Looked at, 1280 and 390, on the published files and the built site:
+  - the chip row's roles before and after;
+  - a hand-typed chart opening over a moved state;
+  - the tab titles;
+  - both cards on the landing page;
+  - zero console errors.
+
+  Run note: `notes/working/Multetudes build run 261055 — night 84, all of 1.0, triaged.md`.
+
 ## 2026-10-01 — Night 83: a saved étude comes back as the whole bench — Multetudes v0.6.28, Tetradetudes v0.6.16
 
 - **Why (Daniel, 2026-10-01; ruling 261050 §5):** a saved étude comes back as the whole bench. The practice log kept the

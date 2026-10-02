@@ -22,11 +22,30 @@ class LinkCollector(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.links = []
+        self.title, self._in_title = None, False
 
     def handle_starttag(self, tag, attrs):
+        if tag == "title" and self.title is None:
+            self._in_title, self.title = True, ""
         for name, value in attrs:
             if name in ("href", "src") and value:
                 self.links.append(value)
+
+    def handle_endtag(self, tag):
+        if tag == "title":
+            self._in_title = False
+
+    def handle_data(self, data):
+        if self._in_title:
+            self.title += data
+
+
+def site_title():
+    """the site's own title, read from hugo.yaml — never restated here"""
+    for line in (ROOT.parent / "hugo.yaml").read_text().splitlines():
+        if line.startswith("title:"):
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
+    raise SystemExit("hugo.yaml states no title")
 
 
 def site_pages():
@@ -65,7 +84,7 @@ def main():
     if cname.exists() and cname.read_text().strip() != "atetudes.com":
         problems.append("CNAME does not read 'atetudes.com'")
 
-    pages = 0
+    pages, site, titled = 0, site_title(), 0
     for path, rel in site_pages():
         pages += 1
         parser = LinkCollector()
@@ -78,8 +97,16 @@ def main():
             target = resolve(link, path.parent)
             if target is not None and not target.exists():
                 problems.append(f"{rel}: broken internal link -> {link}")
+        # THE TAB SAYS THE SITE'S NAME ONCE (night 84, item 1): Hextra composes "<page> – <site>", so a page whose OWN
+        # title is the site's ("At-Etudes", the section index since b236e6c) read "At-Etudes – At-Etudes". A title that
+        # merely contains the name ("Welcome to At-Etudes – At-Etudes") is a title, not the defect.
+        if parser.title is not None:
+            titled += 1
+            parts = [x.strip() for x in parser.title.split(" – ")]
+            if len(parts) >= 2 and parts[0] == site:
+                problems.append(f"{rel}: the tab names the site twice — <title>{parser.title.strip()}</title>")
 
-    print(f"checked {pages} page(s)")
+    print(f"checked {pages} page(s); {titled} <title>(s) read against the site's own title {site!r}")
     # THE DEPLOY RECORDS ARE VERIFIED AGAINST GITHUB (260921, night 27 item 3): every
     # SITELOG deploy record above the mechanism marker must carry the `record:` line
     # tools/deploy_record.py wrote from the fetched run, and its run id, conclusion

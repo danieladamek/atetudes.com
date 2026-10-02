@@ -336,6 +336,16 @@ surfaces) is asserted at the artifact level by `tools/family_floor.py`.
 
 ## Rules
 
+- **A plausible value produced quietly is this codebase's recurring defect** (the silent-failure audit, child 9 →
+  night 84). It has had several shapes:
+  - a map that keeps the LAST of two entries sharing a key (`drill.orderFor`, before night 84);
+  - a slice that narrows input it cannot hold (`coreTetrad`, before night 84);
+  - a fallback that drops a constraint and marks nothing (`bindFilter`);
+  - a sentence saying a weight is gone while it still pulls.
+
+  A module that cannot honour its input **throws by name**, or returns the narrowing as a value the surface shows. It
+  never absorbs it. Write the assertion and see it fail first: a test that pins the silence is a suspect, not an
+  authority (verification doctrine, rule 3).
 - **No hand-placed musical data.** Interval formulas are named rules (`maj7 = R 3 5 7`),
   asserted structurally (root present, intervals ascending, pcs unique) at module load.
 - **The characterization tests are read-only.** They load the shipped

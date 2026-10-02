@@ -46,6 +46,16 @@ export default {
   /* SHARED SETTINGS (261005): what this door can take from another app's note — the card
    * derives the offer from this and the vocabulary; a set of any size 1–6 is a real set here */
   shared: { carries: ["key", "scale", "progression", "startOn", "stringSet", "tuning", "bpm", "meter"], stringSet: { min: 1 } },   // tuning joined 261010 (night 49)
+  /* WHAT A HAND-TYPED CHART OPENS AS (night 84 — Daniel, 2026-10-02): a file that carries a chart and says nothing of
+   * these opens on THESE, forever — never on the app's live defaults, which move (night 72 moved all three). His
+   * reason: a lesson IS a hand-typed chart plus prose saying what you will see, and a lesson that silently stops
+   * matching is the worst kind. The `.atchart` v1.2 tuning clause is the precedent ("tuning-blind, not
+   * tuning-standard, and nothing may retro-interpret them"). LITERALS, by rule: never DEFAULT_BPM, never the neck's
+   * boot config — the values a silent file opens on may not follow a live default (hub/tests/opens-as.test.mjs pins
+   * them; moving one is Daniel's ruling, not an edit). The format names the same values (docs/atchart-format.md —
+   * the wording drafted night 84, awaiting his approval). What the file STATES wins: its own `tempo:`, or an
+   * `apps.multetudes` block's keys. */
+  opensAs: { notesPer: 3, movement: "arpeggiate", bpm: 120 },
   lock: {
     field: true,
     notepad: true,
@@ -173,6 +183,10 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.29 (261055, night 84 — 1.0's defects): a FORM or CUSTOM chart's chips wear their roles, as a cycle's do (the
+     * chord tones carry their key degree at the source, engine/progression.mjs); a HAND-TYPED CHART OPENS ON THE PINNED
+     * VALUES (opensAs above — Daniel, 2026-10-02), never on the page's live state; the engine refuses, by name, the two
+     * narrowings it used to make in silence (a duplicate figure slot; a chord with more than four tones). */
     /* v0.6.28 (261052, night 83): A SAVED ÉTUDE COMES BACK AS THE WHOLE BENCH (Daniel, 2026-10-01, ruling 261050 §5) —
      * the practice log keeps the metronome's subdivision, accents, click voice, level and mute, and the mixer strip's
      * voice and levels; the record names what it excludes (the clock's run state and owner, the armed audio), never what
@@ -260,7 +274,7 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.28",
+    blurb: "one tool that holds many études · v0.6.29",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

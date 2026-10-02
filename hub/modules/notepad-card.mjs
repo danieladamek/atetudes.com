@@ -33,6 +33,7 @@ import { OPEN_MIDI } from "../../engine/field.mjs";
 import { setLabel } from "../../engine/open-string.mjs";
 import { describeTuning } from "../../engine/tunings.mjs";
 import { fromTriadetudesV1 } from "../../engine/notepad.mjs";
+import { parseAtchart, readApp } from "../../engine/atchart.mjs";
 import { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } from "../bus.mjs";
 import { etudeRecord } from "../etude-record.mjs";
 import { SHARED, pcOfKey } from "../../engine/shared-config.mjs";
@@ -394,6 +395,30 @@ export const notepadCard = {
       onChange: () => { ctx.changed(); announceChart(surface ? surface.getDoc().pad : ""); },
     });
     announceChart(surface.getDoc().pad);
+    /* A HAND-TYPED CHART OPENS ON THE PINNED VALUES (night 84 — Daniel, 2026-10-02). A file that carries a chart is opened
+     * on what this door DECLARES a silent file opens as (door.opensAs — literals, never the live defaults, which move),
+     * key by key: what the file STATES wins — an `apps.<door>` block's own keys, or the file's top-level `tempo:` for
+     * the tempo. Announced the way a restore is (the record routes each key to its owner). Read beside the surface's own
+     * import, from the same file: the surface merges the notes, this sets what the étude opens as. A file with no chart
+     * (an exported journal of notes) opens nothing; a door that declares nothing applies nothing. */
+    const pin = ctx.door.opensAs;
+    /* CAPTURED ON THE DOCUMENT, before the input's own listener: the surface empties the input (value = "") in the same
+     * dispatch it reads the file, so a second listener on the input itself would find no file */
+    d.addEventListener("change", async (e) => {
+      if (e.target !== byId("importFile")) return;
+      const f = e.target.files && e.target.files[0];
+      if (!pin || !f) return;
+      let at;
+      try { at = parseAtchart(await f.text()); } catch { return; }   // not a chart file: the surface says why
+      if (!at.sections.some((sec) => sec.bars.length)) return;
+      const block = readApp(at, doorId) || {};
+      const opens = {};
+      for (const k of Object.keys(pin)) opens[k] = k in block ? block[k] : pin[k];
+      if (!("bpm" in block) && typeof at.meta.tempo === "number") opens.bpm = at.meta.tempo;
+      const { config, clock } = record.parts(opens);
+      if (Object.keys(config).length) announce(d, CONFIG_CHANGED, config);
+      if (Object.keys(clock).length) announce(d, CLOCK, clock);
+    }, true);
     /* the placeholder is the fallback itself: a field the player empties
      * shows, greyed, exactly the name the export will fall back to */
     byId("npTitle").placeholder = fallback();

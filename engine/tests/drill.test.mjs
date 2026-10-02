@@ -181,3 +181,17 @@ test("AUDIT: every bar split divides its meter — the load-time invariant", () 
       assert.equal(split.reduce((a, b) => a + b, 0), Number(meter),
         `split [${split}] filed under meter ${meter} does not sum to it`);
 });
+
+/* NIGHT 84 — THE SILENT-FAILURE AUDIT, PLACE 1: orderFor indexed the voicing's notes by key and kept the LAST of two
+ * that shared one (`by[keyOf(n)] = n`), so a duplicate slot dropped a note and the figure sounded the survivor. No
+ * shipped door reaches it today (51,840 tetradPass steps measured night 79, none duplicated) — which is exactly when a
+ * silent value waits. A voicing two of whose notes answer to one key is a contradiction in the caller's data, so it
+ * throws, by name, like a slot with no note already does (a458dd6). */
+test("NIGHT 84: orderFor refuses a voicing in which two notes share one key — never keeps the last in silence", () => {
+  const v = { notes: [{ midi: 60, slot: 0 }, { midi: 64, slot: 1 }, { midi: 72, slot: 0 }] };
+  assert.throws(() => orderFor(v, [0, 1], (n) => n.slot), /two notes .* key 0/);
+  const byString = { notes: [{ midi: 60, string: 3 }, { midi: 62, string: 3 }, { midi: 67, string: 2 }] };
+  assert.throws(() => orderFor(byString, [3, 2]), /two notes .* key 3/);
+  // a voicing whose keys are distinct is ordered as ever
+  assert.deepEqual(orderFor({ notes: [{ midi: 60, slot: 0 }, { midi: 64, slot: 1 }] }, [1, 0], (n) => n.slot).map((n) => n.midi), [64, 60]);
+});

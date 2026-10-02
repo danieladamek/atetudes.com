@@ -3213,6 +3213,23 @@ def m155_silence_restores_the_default():
     finally:
         p.write_text(original)
 
+def m156_a_silent_chart_opens_on_the_live_state():
+    # night 84 (Daniel, 2026-10-02): the notepad stops applying the door's pinned values, so a hand-typed chart opens on
+    # whatever the page holds — the app reading its own live state for a file that is silent. The gate MOVES the live
+    # state off the pins before it opens the fixture, so the door gate's opens-as pin must bite.
+    p, original, mutated = patch("hub/modules/notepad-card.mjs",
+        "    const pin = ctx.door.opensAs;\n",
+        "    const pin = null;   // (a silent file takes the page's live state)\n")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "A HAND-TYPED CHART OPENS ON THE PINNED VALUES, not on the page's live state" in g.stdout
+        record("a silent chart opens on the live state — the pinned values not applied", g.returncode != 0 and hit,
+               "suite exit %d; the opens-as pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
 
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
@@ -3407,7 +3424,8 @@ def main():
                m146_the_transport_paints_only_on_a_change, m147_a_seat_forks_the_field, m148_an_emptied_box_asks_for_zero,
                m149_a_maintained_page_loses_the_field_look, m150_a_maintained_generator_drifts,
                m151_the_drift_scope_binds_the_frozen_page, m152_a_drift_pin_bypasses_the_scope,
-               m153_the_record_keeps_a_list_again, m154_a_restored_etude_starts_playing, m155_silence_restores_the_default)
+               m153_the_record_keeps_a_list_again, m154_a_restored_etude_starts_playing, m155_silence_restores_the_default,
+               m156_a_silent_chart_opens_on_the_live_state)
     # WHAT RUNS: everything, or with --new only what the record has not seen bite. Nothing is excluded on a claim about
     # what it depends on — the record is the only input.
     existing = {f.__name__ for f in fns}

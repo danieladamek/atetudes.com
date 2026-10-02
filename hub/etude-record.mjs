@@ -96,27 +96,30 @@ export function etudeRecord(doc) {
      * config bus, the clock's keys to the clock owner AS A REQUEST, the mixer on the mixer bus. A clock key is one
      * the clock has said on this page; any other top-level key rides the config bus, as every key did before tonight,
      * so a key from a later build is carried, never dropped. Only what the entry HAS is announced. */
-    restore: (data) => {
-      if (!data || typeof data !== "object") return;
+    /* WHOSE IS EACH KEY (night 84 — shared by restore and by a file that opens): the clock's (a key the clock has said
+     * on this page, less the clock's exclusions), the mix's (under `mixer`, less its exclusions), or the config's */
+    parts: (data) => {
       const clockKeys = new Set(Object.keys(heard[CLOCK_STATE]));
       const config = {}, clock = {};
-      for (const [k, v] of Object.entries(data)) {
+      for (const [k, v] of Object.entries(data || {})) {
         if (k === PLACE[MIXER]) continue;
         if (clockKeys.has(k)) clock[k] = v; else config[k] = v;
       }
+      const req = keep(CLOCK_STATE, clock);
+      const mx = data && data[PLACE[MIXER]];
+      return { config, clock: req, mixer: mx && typeof mx === "object" && !Array.isArray(mx) ? keep(MIXER, mx) : {} };
+    },
+    restore: (data) => {
+      if (!data || typeof data !== "object") return;
+      const { config, clock: req, mixer: lv } = r.parts(data);
       /* THE CONFIG PART GOES AS IT ALWAYS DID — exclusions are not stripped here: a v1 entry's `object` and `dyad`
        * are READ, as labels the owners compare (night 59: "tones win, and the face says so once"); they are only
        * never WRITTEN. THE GAMUT (night 48): absent means the WHOLE FIELD, totally — an étude saved before that night
        * carries no key and restores to today's behaviour, never acquiring one. THE ONE PLACE A RESTORE READS SILENCE
        * AS A VALUE: it was ruled for the gamut by name, and is kept as ruled — not a precedent for the bench. */
       announce(doc, CONFIG_CHANGED, { ...config, gamut: "gamut" in config ? config.gamut : null });
-      const req = keep(CLOCK_STATE, clock);
       if (Object.keys(req).length) announce(doc, CLOCK, req);
-      const mx = data[PLACE[MIXER]];
-      if (mx && typeof mx === "object" && !Array.isArray(mx)) {
-        const lv = keep(MIXER, mx);
-        if (Object.keys(lv).length) announce(doc, MIXER, lv);
-      }
+      if (Object.keys(lv).length) announce(doc, MIXER, lv);
     },
     onChange: (fn) => { subs.add(fn); return () => subs.delete(fn); },
   };

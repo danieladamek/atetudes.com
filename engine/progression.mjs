@@ -310,9 +310,14 @@ export function chordAt(prog, index, fld, object, pick) {   // pick: tonePick(cf
   /* ROLE A (night 46, §2.6's material clause): the chord's offKey tones are MEMBERS of the chord —
    * they ride in `tones` flagged offKey (the placers take them from the chord's own supply), and
    * `offKey` still lists their roles for the sentence the boards owe */
+  /* THE KEY DEGREE, AS A CYCLE'S TONES CARRY IT (night 84 — "a custom chart shows no chord roles"): an in-key tone's
+   * index in the key's scale, derived from the field the same way diatonicTones' is. Without it the chip row (which
+   * labels a chip by its tone's keyDeg) went blank on every form and custom chart. An off-key tone has no chip and
+   * carries none. */
   return { kind: c.kind, degree, rootPc, symbol: c.symbol,
     roman: romanOf(degree, c.parsed.pcs),
-    tones: [...part.inKey, ...part.offKey.map((t) => ({ ...t, offKey: true, name: spellRole(c.parsed.root.name, t.role, t.pc) }))], absent: ot.absent, offKey: part.offKey.map((t) => t.role) };
+    tones: [...part.inKey.map((t) => ({ ...t, keyDeg: fld.pcs.indexOf(mod12(t.pc)) })),
+      ...part.offKey.map((t) => ({ ...t, offKey: true, name: spellRole(c.parsed.root.name, t.role, t.pc) }))], absent: ot.absent, offKey: part.offKey.map((t) => t.role) };
 }
 
 /* ---------------- load-time structural assertions (golden rule 1) ---------------- */

@@ -398,3 +398,17 @@ test("this suite only READS the frozen study (§5.2.1)", async () => {
   assert.ok(!/writeFileSync|appendFile|createWriteStream|rmSync|unlink/.test(src),
     "the oracle loader must contain no write path at all");
 });
+
+/* NIGHT 84 — THE SILENT-FAILURE AUDIT, PLACE 3: coreTetrad took the first four intervals of ANY chord, so C13 voiced
+ * as C7 and tetradCandidates handed back five seventh-chord voicings with the 9th and 13th gone, saying nothing. The
+ * parser can spell an extension the four-voice voicer cannot hold; that is a refusal, by name — the "never silently
+ * narrowed" rule selection.mjs already keeps (the coreTetrad lesson, its own third sighting). No shipped door reaches
+ * it today (tetradPass feeds diatonic sevenths); a door that types chords will. */
+test("NIGHT 84: a chord with more than four tones is refused by the four-voice voicer — never cut to its seventh in silence", () => {
+  for (const sym of ["C13", "C9", "Cmaj9", "C7#11", "Cm11"]) {
+    const ch = parseChord(sym);
+    assert.ok(ch.intervals.length > ARITY, `${sym} parses with its extensions (${ch.intervals})`);
+    assert.throws(() => coreTetrad(ch), new RegExp(`${sym.replace(/[#]/g, "\\#")}: .*four`), `${sym} is refused by name`);
+  }
+  assert.deepEqual(coreTetrad(parseChord("Cmaj7")), [0, 4, 11, 7].sort((a, b) => a - b), "a seventh chord is its own core");
+});

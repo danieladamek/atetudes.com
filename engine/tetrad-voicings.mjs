@@ -86,7 +86,15 @@ export function coreTetrad(chord) {
     throw new Error(
       `${chord.symbol}: a tetrad voicing needs four tones, this chord has ${iv.length} ` +
       `(${iv.join(",")}) — triads belong to Triadetudes' generator`);
-  return iv.slice(0, ARITY);
+  /* NIGHT 84 (the silent-failure audit, place 3): an extended chord was cut to its first four intervals, so C13 voiced
+   * as C7 and nothing said the 9th and 13th were gone. The parser spells what the four-voice voicer cannot hold; that
+   * is a refusal, by name — never a silent narrowing (selection.mjs keeps the same rule). A caller that wants the
+   * seventh-chord core asks for that chord. */
+  if (iv.length > ARITY)
+    throw new Error(
+      `${chord.symbol}: a tetrad voicing holds four tones, this chord has ${iv.length} ` +
+      `(${iv.join(",")}) — its extensions would be dropped in silence; voice its seventh chord by name`);
+  return iv;
 }
 
 /* A stack is carried as {offset, tone} pairs — `tone` indexing the chord's own

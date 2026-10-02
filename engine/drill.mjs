@@ -182,7 +182,14 @@ export function scheduleStep({ voicing, order, bassMidi, durBeats, bpm }) {
 export function orderFor(voicing, pattern, keyOf = (n) => n.string) {
   if (!pattern) return null;
   const by = {};
-  for (const n of voicing.notes) by[keyOf(n)] = n;
+  /* NIGHT 84 (the silent-failure audit, place 1): two notes answering to ONE key kept the last and dropped the other in
+   * silence — a dot gone, the figure sounding the survivor. A contradiction in the caller's data, so it is named. */
+  for (const n of voicing.notes) {
+    const k = keyOf(n);
+    if (Object.prototype.hasOwnProperty.call(by, k))
+      throw new Error(`drill.orderFor: two notes of this voicing answer to key ${JSON.stringify(k)} (midi ${by[k].midi} and ${n.midi}) — one would be dropped in silence`);
+    by[k] = n;
+  }
   // LOUD AT SOURCE (the isolation.mjs audit lesson, §4.2.4): a pattern slot with
   // no note in this voicing is a real mismatch — the figure names a slot the
   // voicing does not hold. The pre-audit code returned it as `undefined`, a

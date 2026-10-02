@@ -7204,6 +7204,87 @@ console.log(JSON.stringify(out));
         check(not errs71, f"{tag} night 71: no page errors: {errs71[:3]}")
         ctx71.close()
 
+    # ---------------- NIGHT 84 (item 6): A CUSTOM CHART AND A FORM SHOW THE ROLES A CYCLE SHOWS ----------
+    # The chip row labels a chip by its tone's key degree, and a form's or a custom chart's chords carried none, so the
+    # roles row went blank on every chart that was not a cycle (night 72's sighting; night 79 measured forms too). The
+    # law at the effect, chord by chord: the SAME chord shows the SAME roles whichever source names it — major and
+    # harmonic minor, tetrad and triad, a typed chart of the cycle's own symbols and the ii–V–I form.
+    if 'id="hcRoles"' in html_path.read_text() and 'id="pgCustom"' in html_path.read_text():
+        ctx84 = pw.new_context(viewport={"width": 1280, "height": 900}); p84 = ctx84.new_page(); errs84 = []; p84.on("pageerror", lambda e: errs84.append(str(e)))
+        rows84 = "() => ({ roles: [...document.querySelectorAll('#hcRoles > span')].map(s => s.textContent), sym: document.getElementById('hcMode').innerText.trim().split(' ')[0] })"
+        def held84(i):
+            p84.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", i)
+            for m in range(58, 70):   # every pitch class: every chord tone of any chord is lit
+                p84.evaluate("(m) => document.dispatchEvent(new CustomEvent('atetudes:note', { detail: { midi: m, role: 'chord' } }))", m)
+            p84.wait_for_timeout(120); return p84.evaluate(rows84)
+        compared84 = 0
+        for w84, cases in ((1280, (("major", "tetrad"), ("major", "triad"), ("harm", "tetrad"))), (390, (("major", "tetrad"),))):
+            p84.set_viewport_size({"width": w84, "height": 900})
+            for scale84, obj84 in cases:
+                p84.goto(html_path.as_uri()); p84.wait_for_selector("#cards", state="attached"); p84.wait_for_timeout(300)
+                p84.select_option("#hcKey", "Bb"); p84.select_option("#hcScale", scale84)
+                if obj84 != "tetrad": p84.select_option("#hcObj", obj84)
+                p84.select_option("#pgCycle", "scale"); p84.wait_for_timeout(250)
+                cyc84 = {}
+                for i in range(7):
+                    row84 = held84(i); cyc84[row84["sym"]] = row84["roles"]
+                check(sum(1 for v in cyc84.values() if any(v)) >= 6,
+                      f"{tag} night 84: at {w84}, {scale84} {obj84} — the cycle itself shows roles (the comparison's reference): {cyc84}")
+                for src84 in ("custom", "form"):
+                    p84.click(f'#pgSrcSeg button[data-src="{src84}"]')
+                    if src84 == "custom":
+                        p84.fill("#pgCustom", " ".join(cyc84)); p84.dispatch_event("#pgCustom", "input")
+                    else:
+                        p84.select_option("#pgForm", "ii-V-I")
+                    p84.wait_for_timeout(250)
+                    for i in range(7 if src84 == "custom" else 3):
+                        row84 = held84(i)
+                        if row84["sym"] not in cyc84:
+                            continue
+                        compared84 += 1
+                        check(row84["roles"] == cyc84[row84["sym"]],
+                              f"{tag} night 84: at {w84}, {scale84} {obj84} — {row84['sym']} from the {src84} chart shows the roles the cycle shows: {row84['roles']} vs {cyc84[row84['sym']]}")
+        check(compared84 >= 25, f"{tag} night 84: the comparison ran chord by chord, not on nothing: {compared84}")
+        check(not errs84, f"{tag} night 84: no page errors: {errs84[:3]}")
+        ctx84.close()
+
+    # ---------------- NIGHT 84 (item 9 — Daniel, 2026-10-02): A HAND-TYPED CHART OPENS ON THE PINNED VALUES ----------
+    # "A lesson IS a hand-typed chart plus prose saying what you will see." A file that carries a chart and says nothing
+    # of placement, movement or tempo opens on what the door DECLARES (door.opensAs, read here from the built page's own
+    # DOOR literal — never restated), not on whatever the page holds: the gate first MOVES the live state off the pins,
+    # so a page that read its own state for a silent file would show it. What a file STATES wins, key by key (its
+    # `tempo:`, an `apps.<door>` block); a file with no chart opens nothing.
+    m84o = re.search(r'"opensAs":(\{[^}]*\})', html_path.read_text())
+    if m84o:
+        pin84 = json.loads(m84o.group(1))
+        ctx84o = pw.new_context(viewport={"width": 1280, "height": 900}); q84 = ctx84o.new_page(); errs84o = []; q84.on("pageerror", lambda e: errs84o.append(str(e)))
+        q84.goto(html_path.as_uri()); q84.wait_for_selector("#cards", state="attached"); q84.wait_for_timeout(350)
+        opened84 = lambda: q84.evaluate("""() => ({ notesPer: +document.querySelector('#fdNSeg button.on').dataset.nps,
+          movement: document.querySelector('#fdMoveSeg button.on').dataset.move, bpm: +document.getElementById('bpmVal').value })""")
+        def move84():
+            q84.click('#fdNSeg button[data-nps="1"]'); q84.click('#fdMoveSeg button[data-move="strum"]')
+            q84.fill("#bpmVal", "77"); q84.dispatch_event("#bpmVal", "change"); q84.wait_for_timeout(200)
+            return opened84()
+        def open84(name, text):
+            q84.set_input_files("#importFile", files=[{"name": name, "mimeType": "text/markdown", "buffer": text.encode()}])
+            q84.wait_for_timeout(450); return opened84()
+        chart84 = "\n```chart\n| F7 | Bb7 | F7 | F7 |\n| Bb7 | Bb7 | F7 | F7 |\n```\n"
+        moved84 = move84()
+        check(all(moved84[k] != pin84[k] for k in pin84), f"{tag} night 84: the live state is moved84 off every pin before the file opens (else the check passes on nothing): {moved84} vs {pin84}")
+        a84 = open84("a-lesson.atchart.md", "---\natchart: 1\ntitle: a lesson\nkey: F\n---\n\nPlay the changes; the neck shows the line.\n" + chart84)
+        check(a84 == pin84, f"{tag} night 84: A HAND-TYPED CHART OPENS ON THE PINNED VALUES, not on the page's live state — opened {a84}, the door pins {pin84} (Daniel, 2026-10-02)")
+        move84()
+        b84 = open84("tempo.atchart.md", "---\natchart: 1\ntitle: at ninety\ntempo: 90\n---\n" + chart84)
+        check(b84 == {**pin84, "bpm": 90}, f"{tag} night 84: a chart that STATES its tempo opens at it; the silent keys on the pins: {b84}")
+        move84()
+        c84 = open84("block.atchart.md", "---\natchart: 1.1\ntitle: its own\napps:\n  multetudes: {v: 1, notesPer: 1, movement: strum, bpm: 100}\n---\n" + chart84)
+        check(c84 == {"notesPer": 1, "movement": "strum", "bpm": 100}, f"{tag} night 84: a chart with an apps.multetudes block opens on what the block says: {c84}")
+        moved84 = move84()
+        d84 = open84("notes.atchart.md", "---\natchart: 1\ntitle: just notes\n---\n\nNo chart in this one.\n")
+        check(d84 == moved84, f"{tag} night 84: a file with no chart opens nothing — the page keeps its state: {d84} vs {moved84}")
+        check(not errs84o, f"{tag} night 84: no page errors: {errs84o[:3]}")
+        ctx84o.close()
+
     # ---------------- NIGHT 72 (261031) ITEM A: THE CHIP ROW STAYS LIT ACROSS THE WRAP ----------
     # Daniel: "when the transition is to the same chord it clears the chips." Measured (night 72's run note): the row keyed
     # its set to a STEP REQUEST's raw index — unwrapped (8 from the last bar, -1 from the first) — and the owner's echo then

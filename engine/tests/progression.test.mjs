@@ -214,3 +214,30 @@ test("NIGHT 57 — walkSchedule: the sounded bass is a bass-role event flagged u
   const none = walkSchedule(sel, null, 4, 120, {});
   assert.equal(none.events.filter((e) => e.role === "bass").length, 0, "absent means silent");
 });
+
+/* NIGHT 84 (item 6 — "a custom chart shows no chord roles"): a form's and a custom chart's chords are kind "abs", and
+ * chordAt's abs branch built their tones from objectTones/fieldPartition, which carry no key degree — so the chip row
+ * (harmony-card's roleAt, which labels a chip by its tone's keyDeg) went blank on every chart that was not a cycle. The
+ * law, asserted chord by chord: the SAME chord carries the SAME key degrees whichever source names it, in-key tones
+ * only (an off-key tone has no chip, and so no keyDeg). Major, harmonic minor, tetrad and triad. */
+test("NIGHT 84: a chord from a form or a custom chart carries the key degrees the same chord carries from a cycle", () => {
+  let compared = 0;
+  for (const scale of ["major", "harm"]) for (const object of ["tetrad", "triad"]) {
+    const fld = field({ key: "Bb", scale });
+    const cyc = progressionOf({ source: "cycle", cycle: "scale", start: 0 }, "Bb", scale);
+    const bySym = new Map();
+    cyc.chords.forEach((_, i) => { const c = chordAt(cyc, i, fld, object, null); bySym.set(c.symbol, c); });
+    const typed = [...bySym.keys()].filter((s) => { try { return parseChord(s) && true; } catch { return false; } });
+    for (const src of [{ source: "custom", custom: typed.join(" ") }, { source: "form", form: "ii-V-I" }]) {
+      const p = progressionOf(src, "Bb", scale);
+      p.chords.forEach((_, i) => {
+        const c = chordAt(p, i, fld, object, null), d = bySym.get(c.symbol);
+        if (!d) return;
+        const deg = (x) => x.tones.filter((t) => !t.offKey).map((t) => [t.pc, t.keyDeg]).sort((a, b) => a[0] - b[0]);
+        assert.deepEqual(deg(c), deg(d), `${scale} ${object}, ${src.source}: ${c.symbol} carries the cycle's key degrees`);
+        compared++;
+      });
+    }
+  }
+  assert.ok(compared >= 20, `the comparison ran on real chords, not on nothing: ${compared}`);
+});

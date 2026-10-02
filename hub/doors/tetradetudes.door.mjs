@@ -102,6 +102,9 @@ export default {
     /* v0.6.0 (261002, night 38): ONE ADDRESS FAMILY — the figure's pattern address is
      * real string numbers (multetudes' own), slots retired to a saved-étude alias; a set
      * change refuses a stale figure by name and OFFERS the shift. Multetudes unmoved. */
+    /* v0.6.17 (261055, night 84): nothing on this face moves — the engine it carries refuses, by name, two narrowings it
+     * used to make in silence (the silent-failure audit, places 1 and 3: a figure slot two notes share; a chord with
+     * more than four tones). No shipped path reaches either; the bytes re-inline. */
     /* v0.6.16 (261052, night 83): A SAVED ÉTUDE COMES BACK AS THE WHOLE BENCH (Daniel, 2026-10-01, ruling 261050 §5) —
      * the practice log keeps the metronome's subdivision, accents, click voice, level and mute, the Mixer card's voice
      * and levels, and the Transport card's bar split and count-in (orphans too: the split rode only the step request, the
@@ -144,7 +147,7 @@ export default {
      * Settings card also reads — the saved entry is byte-for-byte the same shape; nothing on this face moved. */
     /* v0.6.7 (261014e, night 64): the bus gained announceAfter and the readout grammar right-justifies a mini's own
      * row — shared files; nothing on this door's face moves. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.16",
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.17",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

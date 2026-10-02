@@ -1543,7 +1543,15 @@ function coreTetrad(chord) {
     throw new Error(
       `${chord.symbol}: a tetrad voicing needs four tones, this chord has ${iv.length} ` +
       `(${iv.join(",")}) — triads belong to Triadetudes' generator`);
-  return iv.slice(0, ARITY);
+  /* NIGHT 84 (the silent-failure audit, place 3): an extended chord was cut to its first four intervals, so C13 voiced
+   * as C7 and nothing said the 9th and 13th were gone. The parser spells what the four-voice voicer cannot hold; that
+   * is a refusal, by name — never a silent narrowing (selection.mjs keeps the same rule). A caller that wants the
+   * seventh-chord core asks for that chord. */
+  if (iv.length > ARITY)
+    throw new Error(
+      `${chord.symbol}: a tetrad voicing holds four tones, this chord has ${iv.length} ` +
+      `(${iv.join(",")}) — its extensions would be dropped in silence; voice its seventh chord by name`);
+  return iv;
 }
 
 /* A stack is carried as {offset, tone} pairs — `tone` indexing the chord's own
@@ -2988,7 +2996,14 @@ function scheduleStep({ voicing, order, bassMidi, durBeats, bpm }) {
 function orderFor(voicing, pattern, keyOf = (n) => n.string) {
   if (!pattern) return null;
   const by = {};
-  for (const n of voicing.notes) by[keyOf(n)] = n;
+  /* NIGHT 84 (the silent-failure audit, place 1): two notes answering to ONE key kept the last and dropped the other in
+   * silence — a dot gone, the figure sounding the survivor. A contradiction in the caller's data, so it is named. */
+  for (const n of voicing.notes) {
+    const k = keyOf(n);
+    if (Object.prototype.hasOwnProperty.call(by, k))
+      throw new Error(`drill.orderFor: two notes of this voicing answer to key ${JSON.stringify(k)} (midi ${by[k].midi} and ${n.midi}) — one would be dropped in silence`);
+    by[k] = n;
+  }
   // LOUD AT SOURCE (the isolation.mjs audit lesson, §4.2.4): a pattern slot with
   // no note in this voicing is a real mismatch — the figure names a slot the
   // voicing does not hold. The pre-audit code returned it as `undefined`, a
@@ -9311,27 +9326,30 @@ function etudeRecord(doc) {
      * config bus, the clock's keys to the clock owner AS A REQUEST, the mixer on the mixer bus. A clock key is one
      * the clock has said on this page; any other top-level key rides the config bus, as every key did before tonight,
      * so a key from a later build is carried, never dropped. Only what the entry HAS is announced. */
-    restore: (data) => {
-      if (!data || typeof data !== "object") return;
+    /* WHOSE IS EACH KEY (night 84 — shared by restore and by a file that opens): the clock's (a key the clock has said
+     * on this page, less the clock's exclusions), the mix's (under `mixer`, less its exclusions), or the config's */
+    parts: (data) => {
       const clockKeys = new Set(Object.keys(heard[CLOCK_STATE]));
       const config = {}, clock = {};
-      for (const [k, v] of Object.entries(data)) {
+      for (const [k, v] of Object.entries(data || {})) {
         if (k === PLACE[MIXER]) continue;
         if (clockKeys.has(k)) clock[k] = v; else config[k] = v;
       }
+      const req = keep(CLOCK_STATE, clock);
+      const mx = data && data[PLACE[MIXER]];
+      return { config, clock: req, mixer: mx && typeof mx === "object" && !Array.isArray(mx) ? keep(MIXER, mx) : {} };
+    },
+    restore: (data) => {
+      if (!data || typeof data !== "object") return;
+      const { config, clock: req, mixer: lv } = r.parts(data);
       /* THE CONFIG PART GOES AS IT ALWAYS DID — exclusions are not stripped here: a v1 entry's `object` and `dyad`
        * are READ, as labels the owners compare (night 59: "tones win, and the face says so once"); they are only
        * never WRITTEN. THE GAMUT (night 48): absent means the WHOLE FIELD, totally — an étude saved before that night
        * carries no key and restores to today's behaviour, never acquiring one. THE ONE PLACE A RESTORE READS SILENCE
        * AS A VALUE: it was ruled for the gamut by name, and is kept as ruled — not a precedent for the bench. */
       announce(doc, CONFIG_CHANGED, { ...config, gamut: "gamut" in config ? config.gamut : null });
-      const req = keep(CLOCK_STATE, clock);
       if (Object.keys(req).length) announce(doc, CLOCK, req);
-      const mx = data[PLACE[MIXER]];
-      if (mx && typeof mx === "object" && !Array.isArray(mx)) {
-        const lv = keep(MIXER, mx);
-        if (Object.keys(lv).length) announce(doc, MIXER, lv);
-      }
+      if (Object.keys(lv).length) announce(doc, MIXER, lv);
     },
     onChange: (fn) => { subs.add(fn); return () => subs.delete(fn); },
   };
@@ -9348,6 +9366,7 @@ const { OPEN_MIDI } = __m_engine_field_mjs;
 const { setLabel } = __m_engine_open_string_mjs;
 const { describeTuning } = __m_engine_tunings_mjs;
 const { fromTriadetudesV1 } = __m_engine_notepad_mjs;
+const { parseAtchart, readApp } = __m_engine_atchart_mjs;
 const { CONFIG_CHANGED, CLOCK, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { etudeRecord } = __m_hub_etude_record_mjs;
 const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
@@ -9381,6 +9400,7 @@ const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
  * every card that owns a piece of it re-renders from the message (§4.2.3).
  * This card reaches into nothing.
  */
+
 
 
 
@@ -9746,6 +9766,30 @@ const notepadCard = {
       onChange: () => { ctx.changed(); announceChart(surface ? surface.getDoc().pad : ""); },
     });
     announceChart(surface.getDoc().pad);
+    /* A HAND-TYPED CHART OPENS ON THE PINNED VALUES (night 84 — Daniel, 2026-10-02). A file that carries a chart is opened
+     * on what this door DECLARES a silent file opens as (door.opensAs — literals, never the live defaults, which move),
+     * key by key: what the file STATES wins — an `apps.<door>` block's own keys, or the file's top-level `tempo:` for
+     * the tempo. Announced the way a restore is (the record routes each key to its owner). Read beside the surface's own
+     * import, from the same file: the surface merges the notes, this sets what the étude opens as. A file with no chart
+     * (an exported journal of notes) opens nothing; a door that declares nothing applies nothing. */
+    const pin = ctx.door.opensAs;
+    /* CAPTURED ON THE DOCUMENT, before the input's own listener: the surface empties the input (value = "") in the same
+     * dispatch it reads the file, so a second listener on the input itself would find no file */
+    d.addEventListener("change", async (e) => {
+      if (e.target !== byId("importFile")) return;
+      const f = e.target.files && e.target.files[0];
+      if (!pin || !f) return;
+      let at;
+      try { at = parseAtchart(await f.text()); } catch { return; }   // not a chart file: the surface says why
+      if (!at.sections.some((sec) => sec.bars.length)) return;
+      const block = readApp(at, doorId) || {};
+      const opens = {};
+      for (const k of Object.keys(pin)) opens[k] = k in block ? block[k] : pin[k];
+      if (!("bpm" in block) && typeof at.meta.tempo === "number") opens.bpm = at.meta.tempo;
+      const { config, clock } = record.parts(opens);
+      if (Object.keys(config).length) announce(d, CONFIG_CHANGED, config);
+      if (Object.keys(clock).length) announce(d, CLOCK, clock);
+    }, true);
     /* the placeholder is the fallback itself: a field the player empties
      * shows, greyed, exactly the name the export will fall back to */
     byId("npTitle").placeholder = fallback();
@@ -11168,7 +11212,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.16","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.17","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}},"opensAs":null};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>
