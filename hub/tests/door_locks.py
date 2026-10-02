@@ -7431,6 +7431,13 @@ def main():
                     loc = next((ln.strip() for ln in str(e).splitlines() if "waiting for" in ln or "locator(" in ln), "")
                     check(False, f"[{d}] the suite could not finish this door{where}: "
                                  f"{type(e).__name__}: {str(e).splitlines()[0]}" + (f" — {loc}" if loc else ""))
+            # A SAVED ÉTUDE COMES BACK AS THE WHOLE BENCH (night 83, ruling 261050 §5): every key on a recorded message
+            # saved or excluded by name; the bench round-trips, at its defaults too, and never starts playback; a real
+            # pre-tonight entry moves nothing of it. Every targeted door that keeps a practice log.
+            import _bench_record
+            EMPTY.STATE["door"] = "bench"
+            print("the whole bench (night 83):")
+            _bench_record.run(browser, check, BUILD, doors)
             # GOLDEN RULE 8 ON THE PIXELS (night 81): every element painted the Root's red traces to the palette, the key
             # or a granted ledger line — and a granted rule paints only its borrowing's role. Doors and maintained pages.
             import _red_effects

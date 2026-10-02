@@ -1,3 +1,43 @@
+## 2026-10-01 — Night 83: a saved étude comes back as the whole bench — Multetudes v0.6.28, Tetradetudes v0.6.16
+
+- **Why (Daniel, 2026-10-01; ruling 261050 §5):** a saved étude comes back as the whole bench. The practice log kept the
+  config plus `bpm` and `meter`, by two hand-written checks. Everything else on the bench was lost on save, silently.
+  Night 66's census, night 72's click and this were one bug: **the record named what it KEPT, so forgetting to include
+  was invisible.**
+- **Now `hub/etude-record.mjs` absorbs whole messages and names only what it EXCLUDES**, each with its reason at the site:
+  the clock's `running` ("loading an étude may not start playback") and `owner` (session-local), the mixer's `on` (the
+  audio a Play armed), and the derived `object`/`dyad` (night 59). Restore moved into the record, beside the snapshot it
+  inverts.
+- **Given a message for the first time:** the metronome's accents, click level (the mute is the level at zero) and click
+  voice now ride `CLOCK_STATE`. The mix is saved under its own key, `mixer`: its `bass` and `pad` mean other things on the
+  config, so a flat merge would have saved a level as the reference tone. The Mixer card and the mixer strip now listen
+  to the mix, so a restore moves their sliders, not only the sound. Tetradetudes' Transport card had two more orphans,
+  found by the gate: the **bar split** (it rode only an event) and the **count-in** (said nowhere). Both now ride the
+  config. The mixer strip says its levels, sounded bass and pad at boot. A setting said only when it moves is never
+  recorded at its default.
+- **Old entries are bench-blind** (Daniel, 2026-10-02: "leave them where they are"). An entry saved before tonight
+  restores only what it has, and the click stays muted. This follows the `.atchart` v1.2 tuning precedent. The gamut's
+  night-48 rule ("absent means the whole field") stays as ruled: it is the one place a restore reads silence as a value.
+  **Known and accepted:** loading an étude can change your volume. That is what "the whole bench" means.
+- **Checked:**
+  - **The bench gate**, `hub/tests/_bench_record.py`, runs in the door gate on every door that keeps a log:
+    - every key the real cards say is either saved or named as excluded;
+    - the computed bench (37 controls) round-trips, both when moved and at its defaults;
+    - an étude saved while playing restores without starting the clock;
+    - a REAL pre-tonight entry, captured from the previous build (`hub/tests/pre-n83-entries.json`), moves nothing of
+      the bench.
+  - **Mechanism tests** in node (`etude-record.test.mjs`).
+  - **Six mutations bite**, among them the record keeping a list again, a restored étude starting to play, and silence
+    restoring the default. Three older mutations were re-anchored and re-proved.
+  - **By hand, on the published files:** an entry saved on the pre-tonight page, restored over a moved bench, moved only
+    the tempo it carries. Tonight's entry came back whole after a reload, and again after export and import into a cold
+    page.
+- **Census, night 66's script:** before, 11 controls never reached the log; after, all 25 do.
+- **Filed, not fixed:** Multetudes' bar split is said only when it moves, and it has no owner to say it, so an étude
+  saved at one-chord-to-a-bar does not bring it back. It needs a decision; two shapes are proposed.
+- **Proof:** `tools/check.py` ALL GREEN, 493 s (doors 23,327 assertions, 0 failed · check_studies 6/6). Run note:
+  `notes/working/Multetudes build run 261054 — night 83, the record names what it leaves out.md`.
+
 ## 2026-10-01 — Night 82: the site build and the app gates separate; the deploy does not (CI and tools only — no study moved)
 
 - **Why (Daniel, 2026-10-01; ruling 261045):** "I want to separate the site build from the apps build." **Measured first**

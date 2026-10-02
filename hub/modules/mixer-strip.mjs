@@ -132,8 +132,10 @@ export const mixerStrip = {
       fillSelect(byId("fdSounded"), soundedChoicesFor(pickOf(cfg)), cfg.sounded);
       byId("fdPad").checked = !!cfg.pad;
     };
+    const heard = new Set();   // night 83: which of the mirror's keys the BUS has said (the mirror starts at defaults)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
+      for (const k of Object.keys(m)) heard.add(k);
       let changed = false;
       for (const k of ["object", "tones", "bass", "sounded", "pad"])
         if (k in m && JSON.stringify(m[k]) !== JSON.stringify(cfg[k])) { cfg = { ...cfg, [k]: Array.isArray(m[k]) ? [...m[k]] : m[k] }; changed = true; }
@@ -150,6 +152,7 @@ export const mixerStrip = {
       v.addEventListener("change", (e) => announce(d, MIXER, { voice: e.target.value }));
     }
     /* ONE MUTE ICON PER SLIDER (260820.3): the icon is the level at zero, a view, never separate state */
+    const level = {};
     for (const [slId, muteId, valId, chan] of
       [["fdHarmVol", "fdHarmMute", "fdHarmVal", "chord"], ["fdBassVol", "fdBassMute", "fdBassVal", "bass"], ["fdPadVol", "fdPadMute", "fdPadVal", "pad"]]) {
       const sl = byId(slId), mute = byId(muteId), val = byId(valId);
@@ -168,7 +171,31 @@ export const mixerStrip = {
         pushLvl();
       });
       paintLvl();
+      // what the bus says this level IS (night 83): painted, never re-announced — the stash remembers a non-zero one
+      level[chan] = { now: () => +sl.value / 100,
+        paint: (v) => { const lvl = Math.round(v * 100); if (lvl > 0) last = lvl; sl.value = lvl; paintLvl(); } };
     }
+    /* THE ROWS ARE VIEWS OF THE MIXER (night 83, rule 10): a restored étude announces MIXER, and until tonight nothing
+     * here listened — the sound would have moved and the sliders stayed. */
+    listen(d, MIXER, (m) => {
+      if (!m || typeof m !== "object") return;
+      for (const chan of Object.keys(level))
+        if (typeof m[chan] === "number" && Number.isFinite(m[chan])) level[chan].paint(Math.max(0, Math.min(1, m[chan])));
+      if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) byId("fdVoice").value = m.voice;
+    });
+    /* THE BOOT ANNOUNCE (night 83): the strip said its levels only when one MOVED, so a mix left at its defaults was
+     * never said — and what is never said cannot be recorded, so an étude saved on the default mix restored nothing
+     * over a mix moved since. The Mixer card has always said its boot state (night 58); the strip now does too. The
+     * values are the ones the audio card already assumes (tone, every bus at 1), so nothing sounds different. */
+    announce(d, MIXER, { voice: byId("fdVoice").value,
+      ...Object.fromEntries(Object.entries(level).map(([chan, l]) => [chan, l.now()])) });
     paint();
+    /* …and the two CONFIG settings only this strip moves — the sounded bass and the pad — were said only when moved, so
+     * an étude saved at their defaults restored neither (found by the bench gate's boot entry, night 83). Said here
+     * when the config has not said them: a value already on the bus (a replay) is never overwritten by a default. */
+    const unsaid = {};
+    if (!heard.has("sounded")) unsaid.sounded = cfg.sounded;
+    if (!heard.has("pad")) unsaid.pad = !!cfg.pad;
+    if (Object.keys(unsaid).length) announce(d, CONFIG_CHANGED, unsaid);
   },
 };

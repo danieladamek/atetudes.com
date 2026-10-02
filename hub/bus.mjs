@@ -45,13 +45,21 @@ export const STEP_CHANGED = "atetudes:step";
  * voice, so its on/off lives with the clock owner and every view of it
  * (the metronome's Sound button, the transport's metronome checkbox) is a view
  * of CLOCK_STATE.click: one state, two views, either can move it (260820.2).
+ * `{ sub, accents, clickVoice, clickLevel }` (night 83) ask for the rest of
+ * the bench, so a restored étude comes back whole; a value the owner does not
+ * offer asks nothing. A restore never sends `run`: loading an étude may not
+ * start playback (ruling 261050 §5).
  * (Before the owner rule, the play path was asymmetric — Play started the
  * clock, Pause never stopped it — and three symptoms followed from that one
  * defect; side-by-side triage 260819.) */
 export const CLOCK = "atetudes:clock";
 
 /** the grid owner's answer: what the clock IS now — `{ running, bpm, meter,
- * owner, click }`. `owner` is the metroOwner ("transport" | "metro" | null): ownership
+ * sub, owner, click, accents, clickLevel, clickVoice }` (the last three since
+ * night 83: the metronome card's orphans, read off its controls and said
+ * nowhere until then — the mute is clickLevel at zero, not a key of its own).
+ * The practice log keeps every key but the ones its record EXCLUDES by name
+ * (`running`, `owner`). `owner` is the metroOwner ("transport" | "metro" | null): ownership
  * is STATE, so it rides the state-shaped message and is replayed to a late
  * subscriber like the rest. Every card that shows tempo, meter or a run state
  * renders from this rather than from its own copy, so two views of one clock
@@ -68,9 +76,13 @@ export const CLOCK_STATE = "atetudes:clock-state";
  * stale request. */
 export const PLAY = "atetudes:play";
 
-/** the mixer moved: { chord?, bass?, voice?, on? } — levels 0..1, the note
- * voice by name, and whether sound is on at all. The controls live in the
- * Transport card (the reference's form); whoever realises audio listens. */
+/** the mixer moved: { chord?, bass?, pad?, voice?, on? } — levels 0..1, the
+ * note voice by name, and whether sound is on at all. The controls live in the
+ * Mixer card and the mixer strip (night 58); whoever realises audio listens,
+ * and since night 83 the controls listen too — a restored étude announces the
+ * mix it saved, and every slider is a view of it. The practice log keeps it
+ * under `mixer` (its `bass` and `pad` mean other things on the config), less
+ * `on`, which the practice log's record excludes by name. */
 export const MIXER = "atetudes:mixer";
 
 /** THE TRANSPORT'S ATTACK: sound step `index` NOW — `{ index, lead, level,

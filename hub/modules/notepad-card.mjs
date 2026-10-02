@@ -228,6 +228,9 @@ export const notepadCard = {
         parts.push(describeTuning(c.tuning) || SHARED.tuning.describe(c.tuning));
       if (Array.isArray(c.gamut) && c.gamut.length) parts.push("gamut " + c.gamut.join(" "));   // degrees, the stored identity (night 48)
       if (typeof c.bpm === "number") parts.push(c.bpm + " bpm");
+      /* the click's on/off (night 83 — the round-trip item: the reference's summary names it). Said when OFF only:
+       * an entry that silences the click is the one a player would otherwise restore and wonder at */
+      if (c.click === false) parts.push("click off");
       return parts.join(" · ") || "no configuration attached";
     };
 
@@ -275,16 +278,11 @@ export const notepadCard = {
          * it as a label to compare, never as the truth, and says so once when they disagree. */
         snapshot: () => record.snapshot(),   // hub/etude-record.mjs — the one computation (night 66)
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
-         * the message; the tempo goes to the clock owner as a request. */
-        apply: (data) => {
-          if (!data || typeof data !== "object") return;
-          const { bpm: savedBpm, ...rest } = data;
-          /* THE GAMUT (night 48): absent means the WHOLE FIELD, totally — an étude saved before
-           * tonight carries no key and restores to today's behaviour, never acquiring one */
-          announce(d, CONFIG_CHANGED, { ...rest, gamut: "gamut" in rest ? rest.gamut : null });
-          if (typeof savedBpm === "number") announce(d, CLOCK, { bpm: savedBpm });
-          if (typeof data.meter === "number") announce(d, CLOCK, { meter: data.meter });
-        },
+         * the message; the clock's part goes to the clock owner as a request.
+         * MOVED 261052 (night 83): the way home lives in the record, beside the
+         * snapshot it inverts — a saved étude comes back as the whole bench, and
+         * an entry from before tonight restores only what it has. */
+        apply: (data) => record.restore(data),
         summarize,
         /* SHARE WHAT YOU MAKE (261005, night 41): this door's map of its own state to the
          * family's shared vocabulary (engine/shared-config.mjs — the one definition), and what

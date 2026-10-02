@@ -24,7 +24,8 @@ const degreesOf = (g) => (Array.isArray(g) ? g : String(g).split(",")).map((x) =
 /** the keys this file has words for — anything else in a snapshot is said under "also", never dropped */
 export const DESCRIBED = ["bpm", "meter", "split", "key", "scale", "gamut", "ref", "centreSrc", "tones", "dyad",
   "source", "cycle", "form", "custom", "start", "chart", "strings", "startDeg", "nearFret", "notesPer", "take",
-  "movement", "address", "figure", "repeat", "bass", "sounded", "pad", "tuning"];
+  "movement", "address", "figure", "repeat", "bass", "sounded", "pad", "tuning",
+  "sub", "click", "accents", "clickLevel", "clickVoice", "mixer"];   // night 83: the bench
 
 /** [{ part, text }] — one line per part of the étude, in the order a player builds it */
 export function describe(s) {
@@ -73,6 +74,23 @@ export function describe(s) {
   say("tuning", s.tuning == null ? "standard tuning" : (describeTuning(s.tuning) || "a tuning of its own"));
   // a chart written in the pad (the notepad's ```chart block): the progression the étude runs, when one is written
   if (s.chart != null && String(s.chart).trim()) say("chart", `a chart written in the notes: ${String(s.chart).trim().split(/\s+/).length} symbols`);
+  /* THE BENCH (night 83 — a saved étude comes back as the whole bench, so the face says it), after the étude it
+   * plays under — every earlier line keeps its place. Said only when the
+   * record carries it; no second table of the controls' labels — the subdivision is a number, the voice its own
+   * name, and the mix names its channels by the mixer's own keys, so a channel added later is said with no edit. */
+  if (["sub", "click", "accents", "clickLevel", "clickVoice"].some((k) => k in s)) {
+    const level = typeof s.clickLevel === "number" ? s.clickLevel : s.click === false ? 0 : null;
+    const at = level == null ? "" : ` at ${Math.round(level * 100)}`;
+    const how = level === 0 ? "the click muted" : s.clickVoice ? `a ${s.clickVoice} click${at}` : `the click${at}`;
+    const acc = s.accents === false ? " · no accent on the one" : s.accents === true ? " · the one accented" : "";
+    const sub = Number(s.sub) > 1 ? ` · each beat in ${Number(s.sub)}` : "";
+    say("click", `${how}${acc}${sub}`);
+  }
+  if (s.mixer && typeof s.mixer === "object") {
+    const m = s.mixer, lv = (v) => (v === 0 ? "muted" : String(Math.round(v * 100)));
+    const chans = Object.keys(m).filter((k) => typeof m[k] === "number").sort().map((k) => `${k} ${lv(m[k])}`);
+    say("mix", [m.voice ? `the ${m.voice} voice` : null, ...chans].filter(Boolean).join(" · "));
+  }
   // anything the log carries that this file has no words for — SAID, never dropped
   const also = Object.keys(s).filter((k) => !DESCRIBED.includes(k)).sort();
   if (also.length) say("also", also.map((k) => `${k} ${JSON.stringify(s[k])}`).join(" · "));

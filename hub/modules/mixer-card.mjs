@@ -14,7 +14,7 @@
  * never starts anything. audio-card.mjs listens to MIXER and reaches nothing.
  */
 import { NOTE_VOICE_NAMES } from "../../engine/voices.mjs";
-import { MIXER, announce } from "../bus.mjs";
+import { MIXER, announce, listen } from "../bus.mjs";
 
 export const mixerCard = {
   id: "mixer-card",
@@ -77,10 +77,11 @@ export const mixerCard = {
         b.setAttribute("aria-pressed", String(muted));
         b.title = muted ? "unmute — restore the level" : "mute — the slider to zero";
       };
-      const apply = (v) => { set(v);
+      const paint = (v) => { set(v);
         byId(sliderId).value = String(Math.round(v * 100));
         byId(valId).textContent = String(Math.round(v * 100));
-        renderIcon(); mixer(); };
+        renderIcon(); };
+      const apply = (v) => { paint(v); mixer(); };
       byId(btnId).addEventListener("click", () => {
         if (get() > 0) { stash = get(); apply(0); }
         else apply(stash > 0 ? stash : dflt);
@@ -91,9 +92,22 @@ export const mixerCard = {
         set(v); byId(valId).textContent = e.target.value; renderIcon(); mixer();
       });
       renderIcon();
+      // what the bus says this level IS (night 83): painted, never re-announced — the stash remembers a non-zero one
+      return (v) => { if (v > 0) stash = v; paint(v); };
     };
-    wireMute("chordMute", "chordVolR", "chordVolVal", () => chordVol, (v) => { chordVol = v; }, 1);
-    wireMute("bassMute", "bassVolR", "bassVolVal", () => bassVol, (v) => { bassVol = v; }, 1);
+    const level = {
+      chord: wireMute("chordMute", "chordVolR", "chordVolVal", () => chordVol, (v) => { chordVol = v; }, 1),
+      bass: wireMute("bassMute", "bassVolR", "bassVolVal", () => bassVol, (v) => { bassVol = v; }, 1),
+    };
+    /* THE CONTROLS ARE VIEWS OF THE MIXER (night 83, rule 10): a restored étude announces MIXER, and until tonight
+     * nothing here listened — the sound would have moved and the sliders stayed. The card paints what the bus says;
+     * its own next announce then carries it, since the state it announces is the state it painted. */
+    listen(d, MIXER, (m) => {
+      if (!m || typeof m !== "object") return;
+      for (const chan of Object.keys(level))
+        if (typeof m[chan] === "number" && Number.isFinite(m[chan])) level[chan](Math.max(0, Math.min(1, m[chan])));
+      if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) vsel.value = m.voice;
+    });
     mixer();   // the boot announce: the audio card hears the levels and the voice before the first Play (moved here with the state)
   },
 };

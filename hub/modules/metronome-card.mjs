@@ -193,13 +193,19 @@ export const metronomeCard = {
       if (sum) sum.textContent = `A metronome on its own clock — ${core.running ? "running" : "stopped"} · ` +
         `${core.bpm} bpm · ${core.meter}/4 · click ${sound ? "on" : "off"}.`;
     };
-    const setClickVol = (v) => {
+    const paintClickVol = (v) => {
       byId("clickVolR").value = String(Math.round(v * 100));
       byId("clickVolVal").textContent = String(Math.round(v * 100));
-      publish();
     };
+    const setClickVol = (v) => { paintClickVol(v); publish(); };
+    /* THE FOUR ORPHANS ARE ANNOUNCED (night 83 — scoping 261052: accents, the click level, its mute and its voice were
+     * read straight off this card's controls at every beat and said NOWHERE, so nothing could record them). They ride
+     * the state-shaped message the click already rides, as THREE keys: the mute is the level at zero (260820.3), so
+     * `clickLevel` carries it and there is no fourth. The controls stay this card's own state; this is what it says. */
     const publish = () => { syncSound(); announce(d, CLOCK_STATE,
-      { running: core.running, bpm: core.bpm, meter: core.meter, sub: core.sub, owner, click: sound }); };
+      { running: core.running, bpm: core.bpm, meter: core.meter, sub: core.sub, owner, click: sound,
+        accents: byId("accChk").checked, clickLevel: clickVol(), clickVoice: byId("voiceSel").value }); };
+    const offers = (id, v) => [...byId(id).options].some((o) => o.value === String(v));
 
     const setRunning = (want, who) => {
       if (want === core.running) return;
@@ -246,6 +252,18 @@ export const metronomeCard = {
         // hand. An unnamed stop, or a start, is applied as asked.
         if (m.run === false && m.owner && owner !== m.owner) return;
         setRunning(m.run, m.owner);
+      }
+      /* THE BENCH COMES HOME (night 83): a restored étude asks for the subdivision, the accents, the click's voice
+       * and its level, as any view asks. A value this card does not offer asks nothing (the core refuses an unknown
+       * subdivision by throwing; a restore must never). The level lands BEFORE the click below, so a saved pair
+       * (click, clickLevel) cannot disagree: the level says it, and the click then already matches. */
+      if (typeof m.sub === "number" && offers("subSel", m.sub)) { core.setSub(m.sub); byId("subSel").value = String(m.sub); }
+      if (typeof m.accents === "boolean") { byId("accChk").checked = m.accents; light(-1); }
+      if (typeof m.clickVoice === "string" && offers("voiceSel", m.clickVoice)) byId("voiceSel").value = m.clickVoice;
+      if (typeof m.clickLevel === "number" && Number.isFinite(m.clickLevel)) {
+        const v = Math.max(0, Math.min(1, m.clickLevel));
+        if (v > 0) clickStash = v;
+        paintClickVol(v);
       }
       // the other view asking: the transport's metronome checkbox — mapped to
       // the ONE state, the level: off stashes and zeroes, on restores
@@ -299,7 +317,9 @@ export const metronomeCard = {
       // publish() re-derives `sound` from the level and re-renders the icon.
       publish();
     });
-    byId("accChk").addEventListener("change", () => light(-1));
+    // night 83: the accents and the click's voice are SAID when they move, as every other setting here is
+    byId("accChk").addEventListener("change", () => { light(-1); publish(); });
+    byId("voiceSel").addEventListener("change", () => publish());
     lamps(); light(-1);
     // say what the grid is at mount, so a card that mounts after this one still
     // starts from the truth rather than from its own defaults

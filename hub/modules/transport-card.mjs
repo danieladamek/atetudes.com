@@ -26,7 +26,7 @@
  * this shell's strip mini-transports provide properly.
  */
 import { createTransportCore, patternOf, SPLITS } from "../../engine/transport.mjs";
-import { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } from "../bus.mjs";
+import { CONFIG_CHANGED, CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce, announceAfter } from "../bus.mjs";
 import { DEFAULT_BPM } from "../tempo.mjs";
 import { bpmField } from "../bpm-field.mjs";
 
@@ -176,6 +176,33 @@ export const transportCard = {
 
     fillMeters(); fillSplits(); showLoop();
 
+    /* THE BAR SPLIT AND THE COUNT-IN ARE SAID (night 83 — found by the bench gate, which drives every control of the
+     * cards that speak for the bench: the scoping's census was Multetudes', and this door's two were orphans as well).
+     * The split went out only on the step request, an event a record cannot keep; the count-in went out nowhere. Both
+     * now ride the config, as Multetudes' split ({split}, clock.mjs) and the repeat ({repeat}, night 63) already do, in
+     * the same shape — so a saved étude carries them, and restore brings them home through the listener below. Said at
+     * boot too: a setting said only when it moves is never recorded at its default. */
+    const sayBar = () => announce(d, CONFIG_CHANGED,
+      { split: [...((SPLITS[meter] || [])[splitIdx] || [])], countIn: byId("countChk").checked });
+    /* the last split HEARD, applied once this meter offers it — a restore says the split before the meter (the config
+     * goes first), and a meter change resets the split; clock.mjs keeps its split the same way */
+    let wantSplit = null;
+    const applySplit = () => {
+      const i = wantSplit === null ? -1 : (SPLITS[meter] || []).findIndex((p) => p.join("+") === wantSplit);
+      if (i < 0 || i === splitIdx) return false;
+      splitIdx = i; core.setSplit(i); byId("splitSel").value = String(i);
+      // after the message that moved it has reached everyone — the chord line resets its own split on a meter change
+      announceAfter(d, STEP_CHANGED, { index: position, request: true, meter, splitIdx });
+      return true;
+    };
+    listen(d, CONFIG_CHANGED, (m) => {
+      if (!m || typeof m !== "object") return;
+      if (typeof m.countIn === "boolean" && m.countIn !== byId("countChk").checked) {
+        byId("countChk").checked = m.countIn; core.setCountIn(m.countIn);
+      }
+      if (Array.isArray(m.split)) { wantSplit = m.split.join("+"); applySplit(); }
+    });
+
     byId("playBtn").addEventListener("click", () => setPlaying(!armed));
     byId("prevBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position - 1, request: true }));
     byId("nextBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position + 1, request: true }));
@@ -192,8 +219,9 @@ export const transportCard = {
       splitIdx = Number(e.target.value); core.setSplit(splitIdx);
       // the timeline draws bars from this split — announce it as a plain value
       announce(d, STEP_CHANGED, { index: position, request: true, meter, splitIdx });
+      sayBar();   // night 83: and as the étude's setting
     });
-    byId("countChk").addEventListener("change", (e) => core.setCountIn(e.target.checked));
+    byId("countChk").addEventListener("change", (e) => { core.setCountIn(e.target.checked); sayBar(); });
     byId("clickChk2").addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
     /* a strip mini summoned Play — arm (or disarm) the walk exactly as our own
      * Play button does; setPlaying takes it from there (grid + audio) */
@@ -210,6 +238,8 @@ export const transportCard = {
       if (typeof m.bpm === "number") { bpm = m.bpm; byId("bpmRange2").value = bpm; byId("bpmVal2").value = bpm; }
       if (typeof m.meter === "number" && m.meter !== meter) {
         core.setMeter(m.meter); meter = m.meter; splitIdx = core.splitIdx; fillMeters(); fillSplits();
+        applySplit();   // night 83: the split a restore asked for, once this meter offers it
+        sayBar();       // the split the bar now has is the étude's
       }
       if (typeof m.click === "boolean") byId("clickChk2").checked = m.click;
       if (!running && armed) setPlaying(false);
@@ -247,5 +277,6 @@ export const transportCard = {
       announce(d, STEP_CHANGED, { index: w.step, request: true, attack: true, lead: ev.lead, level: w.level, meter, splitIdx, beats });
     });
     /* the boot announce of the levels and the voice is mixer-card's (night 58) */
+    sayBar();   // night 83: the split and the count-in, said at boot
   },
 };

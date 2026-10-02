@@ -1902,9 +1902,11 @@ def m78_a_second_spelling_override_creeps_in():
 
 def m79_the_snapshot_strips_the_tuning_again():
     # the field report's exact line: the export describes the étude AS IF IN STANDARD
-    p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
-        "    snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },",   # re-anchored 261013 (night 59): the line strips the derived label now
-        "    snapshot: () => { const { object: _object, dyad: _dyad, tuning: _tuning, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },")
+    # re-anchored 261052 (night 83): the record absorbs whole messages less what it EXCLUDES by name — so the tuning
+    # stripped from the snapshot is the tuning named as excluded (re-anchored 261024 and 261013 before that)
+    p, original, mutated = patch("hub/etude-record.mjs",
+        '    dyad: "derived — the object\'s legacy alias (night 59)",\n',
+        '    dyad: "derived — the object\'s legacy alias (night 59)",\n    tuning: "(the tuning stripped again)",\n')
     try:
         p.write_text(mutated)
         build()
@@ -1980,9 +1982,9 @@ def m83_the_pentatonic_rule_admits_a_semitone():
 
 def m84_a_restored_etude_acquires_a_gamut():
     # the notepad's restore no longer says "absent means the whole field": a pre-tonight étude keeps whatever gamut is live
-    p, original, mutated = patch("hub/modules/notepad-card.mjs",
-        '          announce(d, CONFIG_CHANGED, { ...rest, gamut: "gamut" in rest ? rest.gamut : null });',
-        "          announce(d, CONFIG_CHANGED, rest);")
+    p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261052 (night 83): the restore moved into the record
+        '      announce(doc, CONFIG_CHANGED, { ...config, gamut: "gamut" in config ? config.gamut : null });',
+        "      announce(doc, CONFIG_CHANGED, config);")
     try:
         p.write_text(mutated)
         build()
@@ -3140,9 +3142,10 @@ def m152_a_drift_pin_bypasses_the_scope():
 
 def m97_the_snapshot_stores_the_object_again():
     # night 59: the notepad's snapshot keeps the derived label — a saved étude stores `object` again. The export pin must bite.
-    p, original, mutated = patch("hub/etude-record.mjs",   # re-anchored 261024 (night 66): the snapshot moved to the one record
-        "    snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },",
-        "    snapshot: () => ({ ...cfg, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }),   // (the object stored again)")
+    # re-anchored 261052 (night 83): the record names what it excludes — the object stored again is its exclusion dropped
+    p, original, mutated = patch("hub/etude-record.mjs",
+        '    object: "derived — the name the tones make (selection.mjs objectOf); only the tones are stored (night 59)",\n',
+        "")
     try:
         p.write_text(mutated)
         build()
@@ -3157,6 +3160,58 @@ def m97_the_snapshot_stores_the_object_again():
 
 
 
+
+
+# ---------------- NIGHT 83 (ruling 261050 §5): A SAVED ÉTUDE COMES BACK AS THE WHOLE BENCH ----------------
+def m153_the_record_keeps_a_list_again():
+    # the record cherry-picks the clock's message again — bpm and meter, by hand, and the rest dropped in silence. The
+    # bench gate's key check must bite: a key on a recorded message is neither saved nor named as excluded.
+    p, original, mutated = patch("hub/etude-record.mjs",
+        "        if (PLACE[name] === null) Object.assign(out, kept);\n",
+        "        if (PLACE[name] === null) Object.assign(out, name === CLOCK_STATE ? { bpm: kept.bpm, meter: kept.meter } : kept);   // (a hand-kept list again)\n")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "is NEITHER saved NOR named as excluded" in g.stdout
+        record("the record keeps a hand-written list again — a key neither saved nor excluded", g.returncode != 0 and hit,
+               "suite exit %d; the key check bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m154_a_restored_etude_starts_playing():
+    # the record "completes" the round trip for the run state: `running` is saved and restored as a run request — an
+    # étude saved while playing starts playing on load, the one defect here a user would hate. The bench gate must bite.
+    p, original, mutated = patch("hub/etude-record.mjs",
+        "      const req = keep(CLOCK_STATE, clock);\n",
+        "      const req = { ...keep(CLOCK_STATE, clock), ...(typeof clock.running === 'boolean' ? { run: clock.running } : {}) };   // (the run state routed home)\n")
+    mutated = mutated.replace(
+        '    running: "transient — LOADING AN ÉTUDE MAY NOT START PLAYBACK (ruling 261050 §5)",\n', "", 1)
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "LOADING AN ÉTUDE MAY NOT START PLAYBACK — an entry saved while playing was restored" in g.stdout
+        record("a restored étude starts playing — running saved and routed home", g.returncode != 0 and hit,
+               "suite exit %d; the no-playback pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
+def m155_silence_restores_the_default():
+    # an entry from before tonight is read as "the defaults": a click it never recorded is restored ON — Daniel's ruling
+    # (2026-10-02) the other way round. The bench gate's pre-tonight entry must bite.
+    p, original, mutated = patch("hub/etude-record.mjs",
+        "      const req = keep(CLOCK_STATE, clock);\n",
+        "      const req = { click: true, ...keep(CLOCK_STATE, clock) };   // (silence read as the default)\n")
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "AN ENTRY FROM BEFORE TONIGHT RESTORES ONLY WHAT IT HAS" in g.stdout
+        record("an old entry resets the bench — silence restores the default", g.returncode != 0 and hit,
+               "suite exit %d; the bench-blind pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
 
 
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
@@ -3351,7 +3406,8 @@ def main():
                m144_the_slider_and_the_field_disagree, m145_the_two_cards_fields_disagree,
                m146_the_transport_paints_only_on_a_change, m147_a_seat_forks_the_field, m148_an_emptied_box_asks_for_zero,
                m149_a_maintained_page_loses_the_field_look, m150_a_maintained_generator_drifts,
-               m151_the_drift_scope_binds_the_frozen_page, m152_a_drift_pin_bypasses_the_scope)
+               m151_the_drift_scope_binds_the_frozen_page, m152_a_drift_pin_bypasses_the_scope,
+               m153_the_record_keeps_a_list_again, m154_a_restored_etude_starts_playing, m155_silence_restores_the_default)
     # WHAT RUNS: everything, or with --new only what the record has not seen bite. Nothing is excluded on a claim about
     # what it depends on — the record is the only input.
     existing = {f.__name__ for f in fns}

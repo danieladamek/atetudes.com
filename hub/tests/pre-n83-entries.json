@@ -1,0 +1,137 @@
+{
+ "_how": "saved by the door build at 4534c70 (before night 83) through the page's own Save note; tempo set to 96 by the Metronome card's slider, otherwise the door's boot state. Captured, never hand-typed: an entry from before the bench was recorded, so it carries no bench keys.",
+ "entries": {
+  "multetudes": {
+   "id": "muq8ehtf-yc5pq",
+   "savedAt": "2026-10-02T00:35:13.971Z",
+   "heading": "multetudes journal — 2026-10-02",
+   "text": "a pre-night-83 entry (multetudes)",
+   "payload": {
+    "app": "multetudes",
+    "v": 2,
+    "data": {
+     "strings": [
+      4,
+      3,
+      2,
+      1
+     ],
+     "startDeg": 4,
+     "nearFret": 3,
+     "notesPer": 3,
+     "address": "pattern",
+     "figure": "",
+     "movement": "arpeggiate",
+     "take": "one",
+     "repeat": false,
+     "tuning": null,
+     "key": "Bb",
+     "scale": "major",
+     "ref": 0,
+     "bass": "root",
+     "centreSrc": "fixed",
+     "gamut": null,
+     "chart": null,
+     "tones": [
+      1,
+      3,
+      5,
+      7
+     ],
+     "source": "cycle",
+     "cycle": "fourths",
+     "form": "ii-V-I",
+     "custom": "",
+     "start": 0,
+     "bpm": 96,
+     "meter": 4
+    },
+    "shared": {
+     "key": "Bb",
+     "scale": "major",
+     "progression": "fourths",
+     "startOn": 0,
+     "stringSet": [
+      4,
+      3,
+      2,
+      1
+     ],
+     "bpm": 96,
+     "meter": 4
+    }
+   }
+  },
+  "tetradetudes": {
+   "id": "muq8eiq9-0mhsu",
+   "savedAt": "2026-10-02T00:35:15.152Z",
+   "heading": "tetradetudes journal — 2026-10-02",
+   "text": "a pre-night-83 entry (tetradetudes)",
+   "payload": {
+    "app": "tetradetudes",
+    "v": 2,
+    "data": {
+     "key": "C",
+     "scale": "major",
+     "cycle": "fourths",
+     "bottom": 0,
+     "startDegree": 0,
+     "bass": "root",
+     "chart": null,
+     "setIndex": 0,
+     "families": [
+      "drop2"
+     ],
+     "placement": "grip",
+     "roots": false,
+     "address": "pattern",
+     "figure": "",
+     "playback": "strum",
+     "guide": false,
+     "zone": null,
+     "strings": [
+      6,
+      5,
+      4,
+      3
+     ],
+     "bpm": 96,
+     "meter": 4
+    },
+    "shared": {
+     "key": "C",
+     "scale": "major",
+     "progression": "fourths",
+     "startOn": 0,
+     "stringSet": [
+      6,
+      5,
+      4,
+      3
+     ],
+     "bpm": 96,
+     "meter": 4
+    }
+   }
+  },
+  "scribe": {
+   "id": "muq8ejl8-cocxs",
+   "savedAt": "2026-10-02T00:35:16.267Z",
+   "heading": "scribe journal — 2026-10-02",
+   "text": "a pre-night-83 entry (scribe)",
+   "payload": {
+    "app": "scribe",
+    "v": 2,
+    "data": {
+     "chart": null,
+     "bpm": 96,
+     "meter": 4
+    },
+    "shared": {
+     "bpm": 96,
+     "meter": 4
+    }
+   }
+  }
+ }
+}

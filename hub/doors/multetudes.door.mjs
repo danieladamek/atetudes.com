@@ -173,6 +173,12 @@ export default {
      * move; the named table (drop D · DADGAD · open G · open D · open E · half-step down ·
      * whole-step down · drop C) read both ways; back to standard in one click. The design
      * survives a retune silently: slots and degrees do not move, only the drawn frets do. */
+    /* v0.6.28 (261052, night 83): A SAVED ÉTUDE COMES BACK AS THE WHOLE BENCH (Daniel, 2026-10-01, ruling 261050 §5) —
+     * the practice log keeps the metronome's subdivision, accents, click voice, level and mute, and the mixer strip's
+     * voice and levels; the record names what it excludes (the clock's run state and owner, the armed audio), never what
+     * it keeps. The strip's sliders are views of the mix (a restore moves them), and its sounded bass and pad are said
+     * at boot. An entry saved before tonight is bench-blind: it restores only what it has — the click stays muted.
+     * The Settings card says the click and the mix. */
     /* v0.6.27 (261047, night 80): Save is no longer the Root's red — the shell's .transport button.primary had painted it
      * red under Play's grant; Daniel narrowed the grant to Play by role ("nobody decided Save should be red — a selector
      * did"), and every other .primary is weight and neutral ink (Spec v1.5 §7 rule 8). */
@@ -254,7 +260,7 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.27",
+    blurb: "one tool that holds many études · v0.6.28",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

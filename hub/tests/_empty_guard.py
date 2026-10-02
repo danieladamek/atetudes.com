@@ -25,6 +25,7 @@ import contextlib
 import json
 import os
 import traceback
+from pathlib import Path
 
 MODE = os.environ.get("EMPTY_GUARD", "strict")
 STATE = {"absent": 0, "door": None, "hits": [], "declared": 0, "watched": 0}
@@ -71,10 +72,13 @@ def absent_ok(why):
         STATE["absent"] -= 1
 
 
+GATE_FILES = ("door_locks.py", "_bench_record.py")   # the gate's own files: an empty lookup is named at its line there
+
+
 def _site():
     for fr in reversed(traceback.extract_stack()):
-        if fr.filename.endswith("door_locks.py"):
-            return f"door_locks.py:{fr.lineno}"
+        if fr.filename.endswith(GATE_FILES):
+            return f"{Path(fr.filename).name}:{fr.lineno}"
     return "?"
 
 

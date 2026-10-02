@@ -3975,13 +3975,21 @@ const STEP_CHANGED = "atetudes:step";
  * voice, so its on/off lives with the clock owner and every view of it
  * (the metronome's Sound button, the transport's metronome checkbox) is a view
  * of CLOCK_STATE.click: one state, two views, either can move it (260820.2).
+ * `{ sub, accents, clickVoice, clickLevel }` (night 83) ask for the rest of
+ * the bench, so a restored étude comes back whole; a value the owner does not
+ * offer asks nothing. A restore never sends `run`: loading an étude may not
+ * start playback (ruling 261050 §5).
  * (Before the owner rule, the play path was asymmetric — Play started the
  * clock, Pause never stopped it — and three symptoms followed from that one
  * defect; side-by-side triage 260819.) */
 const CLOCK = "atetudes:clock";
 
 /** the grid owner's answer: what the clock IS now — `{ running, bpm, meter,
- * owner, click }`. `owner` is the metroOwner ("transport" | "metro" | null): ownership
+ * sub, owner, click, accents, clickLevel, clickVoice }` (the last three since
+ * night 83: the metronome card's orphans, read off its controls and said
+ * nowhere until then — the mute is clickLevel at zero, not a key of its own).
+ * The practice log keeps every key but the ones its record EXCLUDES by name
+ * (`running`, `owner`). `owner` is the metroOwner ("transport" | "metro" | null): ownership
  * is STATE, so it rides the state-shaped message and is replayed to a late
  * subscriber like the rest. Every card that shows tempo, meter or a run state
  * renders from this rather than from its own copy, so two views of one clock
@@ -3998,9 +4006,13 @@ const CLOCK_STATE = "atetudes:clock-state";
  * stale request. */
 const PLAY = "atetudes:play";
 
-/** the mixer moved: { chord?, bass?, voice?, on? } — levels 0..1, the note
- * voice by name, and whether sound is on at all. The controls live in the
- * Transport card (the reference's form); whoever realises audio listens. */
+/** the mixer moved: { chord?, bass?, pad?, voice?, on? } — levels 0..1, the
+ * note voice by name, and whether sound is on at all. The controls live in the
+ * Mixer card and the mixer strip (night 58); whoever realises audio listens,
+ * and since night 83 the controls listen too — a restored étude announces the
+ * mix it saved, and every slider is a view of it. The practice log keeps it
+ * under `mixer` (its `bass` and `pad` mean other things on the config), less
+ * `on`, which the practice log's record excludes by name. */
 const MIXER = "atetudes:mixer";
 
 /** THE TRANSPORT'S ATTACK: sound step `index` NOW — `{ index, lead, level,
@@ -6243,13 +6255,19 @@ const metronomeCard = {
       if (sum) sum.textContent = `A metronome on its own clock — ${core.running ? "running" : "stopped"} · ` +
         `${core.bpm} bpm · ${core.meter}/4 · click ${sound ? "on" : "off"}.`;
     };
-    const setClickVol = (v) => {
+    const paintClickVol = (v) => {
       byId("clickVolR").value = String(Math.round(v * 100));
       byId("clickVolVal").textContent = String(Math.round(v * 100));
-      publish();
     };
+    const setClickVol = (v) => { paintClickVol(v); publish(); };
+    /* THE FOUR ORPHANS ARE ANNOUNCED (night 83 — scoping 261052: accents, the click level, its mute and its voice were
+     * read straight off this card's controls at every beat and said NOWHERE, so nothing could record them). They ride
+     * the state-shaped message the click already rides, as THREE keys: the mute is the level at zero (260820.3), so
+     * `clickLevel` carries it and there is no fourth. The controls stay this card's own state; this is what it says. */
     const publish = () => { syncSound(); announce(d, CLOCK_STATE,
-      { running: core.running, bpm: core.bpm, meter: core.meter, sub: core.sub, owner, click: sound }); };
+      { running: core.running, bpm: core.bpm, meter: core.meter, sub: core.sub, owner, click: sound,
+        accents: byId("accChk").checked, clickLevel: clickVol(), clickVoice: byId("voiceSel").value }); };
+    const offers = (id, v) => [...byId(id).options].some((o) => o.value === String(v));
 
     const setRunning = (want, who) => {
       if (want === core.running) return;
@@ -6296,6 +6314,18 @@ const metronomeCard = {
         // hand. An unnamed stop, or a start, is applied as asked.
         if (m.run === false && m.owner && owner !== m.owner) return;
         setRunning(m.run, m.owner);
+      }
+      /* THE BENCH COMES HOME (night 83): a restored étude asks for the subdivision, the accents, the click's voice
+       * and its level, as any view asks. A value this card does not offer asks nothing (the core refuses an unknown
+       * subdivision by throwing; a restore must never). The level lands BEFORE the click below, so a saved pair
+       * (click, clickLevel) cannot disagree: the level says it, and the click then already matches. */
+      if (typeof m.sub === "number" && offers("subSel", m.sub)) { core.setSub(m.sub); byId("subSel").value = String(m.sub); }
+      if (typeof m.accents === "boolean") { byId("accChk").checked = m.accents; light(-1); }
+      if (typeof m.clickVoice === "string" && offers("voiceSel", m.clickVoice)) byId("voiceSel").value = m.clickVoice;
+      if (typeof m.clickLevel === "number" && Number.isFinite(m.clickLevel)) {
+        const v = Math.max(0, Math.min(1, m.clickLevel));
+        if (v > 0) clickStash = v;
+        paintClickVol(v);
       }
       // the other view asking: the transport's metronome checkbox — mapped to
       // the ONE state, the level: off stashes and zeroes, on restores
@@ -6349,7 +6379,9 @@ const metronomeCard = {
       // publish() re-derives `sound` from the level and re-renders the icon.
       publish();
     });
-    byId("accChk").addEventListener("change", () => light(-1));
+    // night 83: the accents and the click's voice are SAID when they move, as every other setting here is
+    byId("accChk").addEventListener("change", () => { light(-1); publish(); });
+    byId("voiceSel").addEventListener("change", () => publish());
     lamps(); light(-1);
     // say what the grid is at mount, so a card that mounts after this one still
     // starts from the truth rather than from its own defaults
@@ -6362,7 +6394,7 @@ return { metronomeCard };
 /* ===== hub/modules/mixer-card.mjs ===== */
 const __m_hub_modules_mixer_card_mjs = (() => {
 const { NOTE_VOICE_NAMES } = __m_engine_voices_mjs;
-const { MIXER, announce } = __m_hub_bus_mjs;
+const { MIXER, announce, listen } = __m_hub_bus_mjs;
 /* mixer-card.mjs — WHAT SOUNDS: the voice, and each bus's level (night 58, 261012).
  *
  * Daniel's 261009 mockup, finished: the Transport card had carried the clock AND a mixer
@@ -6441,10 +6473,11 @@ const mixerCard = {
         b.setAttribute("aria-pressed", String(muted));
         b.title = muted ? "unmute — restore the level" : "mute — the slider to zero";
       };
-      const apply = (v) => { set(v);
+      const paint = (v) => { set(v);
         byId(sliderId).value = String(Math.round(v * 100));
         byId(valId).textContent = String(Math.round(v * 100));
-        renderIcon(); mixer(); };
+        renderIcon(); };
+      const apply = (v) => { paint(v); mixer(); };
       byId(btnId).addEventListener("click", () => {
         if (get() > 0) { stash = get(); apply(0); }
         else apply(stash > 0 ? stash : dflt);
@@ -6455,9 +6488,22 @@ const mixerCard = {
         set(v); byId(valId).textContent = e.target.value; renderIcon(); mixer();
       });
       renderIcon();
+      // what the bus says this level IS (night 83): painted, never re-announced — the stash remembers a non-zero one
+      return (v) => { if (v > 0) stash = v; paint(v); };
     };
-    wireMute("chordMute", "chordVolR", "chordVolVal", () => chordVol, (v) => { chordVol = v; }, 1);
-    wireMute("bassMute", "bassVolR", "bassVolVal", () => bassVol, (v) => { bassVol = v; }, 1);
+    const level = {
+      chord: wireMute("chordMute", "chordVolR", "chordVolVal", () => chordVol, (v) => { chordVol = v; }, 1),
+      bass: wireMute("bassMute", "bassVolR", "bassVolVal", () => bassVol, (v) => { bassVol = v; }, 1),
+    };
+    /* THE CONTROLS ARE VIEWS OF THE MIXER (night 83, rule 10): a restored étude announces MIXER, and until tonight
+     * nothing here listened — the sound would have moved and the sliders stayed. The card paints what the bus says;
+     * its own next announce then carries it, since the state it announces is the state it painted. */
+    listen(d, MIXER, (m) => {
+      if (!m || typeof m !== "object") return;
+      for (const chan of Object.keys(level))
+        if (typeof m[chan] === "number" && Number.isFinite(m[chan])) level[chan](Math.max(0, Math.min(1, m[chan])));
+      if (typeof m.voice === "string" && NOTE_VOICE_NAMES.includes(m.voice)) vsel.value = m.voice;
+    });
     mixer();   // the boot announce: the audio card hears the levels and the voice before the first Play (moved here with the state)
   },
 };
@@ -9167,7 +9213,7 @@ return { STANDARD_NAME, NAMED_TUNINGS, SPELLING_OVERRIDES, totalOffsets, nameOf,
 
 /* ===== hub/etude-record.mjs ===== */
 const __m_hub_etude_record_mjs = (() => {
-const { CONFIG_CHANGED, CLOCK_STATE, listen } = __m_hub_bus_mjs;
+const { CONFIG_CHANGED, CLOCK, CLOCK_STATE, MIXER, announce, listen } = __m_hub_bus_mjs;
 /* etude-record.mjs — WHAT THE ÉTUDE IS, computed once (night 66, 261024).
  *
  * Daniel, 261014: the Settings card is "a complete view of the étude the user has just structured", and "all of
@@ -9177,6 +9223,7 @@ const { CONFIG_CHANGED, CLOCK_STATE, listen } = __m_hub_bus_mjs;
  *   etudeRecord(doc).snapshot()   the configuration a practice-log entry saves — notepad-card's snapshot, moved
  *                                 here verbatim (the merged CONFIG_CHANGED, less the derived object and its legacy
  *                                 alias, plus the clock's bpm and meter)
+ *   etudeRecord(doc).restore(d)   the way home — the inverse of the snapshot, beside it (night 83)
  *   describe(snapshot)            that same object, in a musician's words — the Settings card's face; it lives in
  *                                 the card's own describer module so the engine modules it needs reach only the door that
  *                                 shows it (a first build here put them in every door that saves notes: scribe
@@ -9187,40 +9234,111 @@ const { CONFIG_CHANGED, CLOCK_STATE, listen } = __m_hub_bus_mjs;
  * for is still SAID (under "also"), so a setting added in a later night appears on the face the moment it reaches
  * the log, and never in one without the other.
  *
- * WHAT THE LOG DOES NOT CARRY is not listed here by hand (that would be the hand-kept list rule 6 forbids): it is
- * measured, per night, by driving every control the resolver renders and reading the saved entry
- * (notes/working/scripts/n66snap.py). Night 66's census: the metronome card's subdivision, accents, click voice,
- * click level and mute, the neck's metronome switch, and the whole mixer do not reach the log — they ride the
- * clock, the mixer, or no message at all. Whether they should is a question of who OWNS a setting: proposed to
- * the PO, not settled here.
+ * A SAVED ÉTUDE COMES BACK AS THE WHOLE BENCH (night 83 — Daniel, 2026-10-01, ruling 261050 §5; scoping 261052).
+ * Until tonight this file named what it KEPT: two hand-written `typeof` checks took `bpm` and `meter` off the clock's
+ * message and dropped the rest, and the mixer's message was never heard at all. FORGETTING TO INCLUDE IS INVISIBLE —
+ * night 66's census, night 72's click and this item are one bug, the same hand-kept list three times. So the record
+ * now ABSORBS WHOLE MESSAGES AND NAMES ONLY WHAT IT EXCLUDES (EXCLUDED, below, each with its reason at the site): a
+ * setting added to a recorded message is saved by default, and forgetting to exclude a transient shows in the saved
+ * file where anyone can see it. The door gate holds it (hub/tests/_bench_record.py): every key observed on a recorded
+ * message is either in the saved entry or named here — a key that is neither fails.
+ *
+ *   CONFIG_CHANGED  flat, as it always was (generative since night 66)
+ *   CLOCK_STATE     flat beside it — `bpm` and `meter` stay where every saved entry already has them; tonight adds
+ *                   `sub`, `click`, and the metronome card's three orphans (`accents`, `clickLevel`, `clickVoice`)
+ *   MIXER           under its own name, `mixer` — MEASURED, not chosen: two of its keys mean something else on the
+ *                   config (`bass` is the reference tone there, `pad` the pad switch), so a flat merge would save a
+ *                   level as the reference tone. A key on two flat messages fails the gate the same way.
+ *
+ * OLD ENTRIES ARE BENCH-BLIND (Daniel, 2026-10-02: "leave them where they are" — the click stays muted). An entry
+ * saved before tonight carries none of the bench, and restore announces ONLY WHAT AN ENTRY HAS: silence in a file
+ * means "not recorded", never "set it to the default". It is the `.atchart` v1.2 tuning precedent verbatim — "files
+ * written before v1.2 carry no tuning… they are tuning-blind, not tuning-standard, and nothing may retro-interpret
+ * them" (docs/atchart-format.md §2.1; ruling 261050). KNOWN AND ACCEPTED: loading an étude can change your volume —
+ * that is what "the whole bench" means, and Daniel chose it over "the music, not the bench" knowing so.
  */
+
+/** WHAT THE RECORD DOES NOT KEEP — the only list in this file, and every name carries its reason. A key on a recorded
+ * message that is not named here is saved. Restore strips the bench's (the clock's and the mixer's) too, so a file
+ * that carries one — hand-edited, or written by some other build — cannot make the page act on it. */
+const EXCLUDED = {
+  [CONFIG_CHANGED]: {
+    object: "derived — the name the tones make (selection.mjs objectOf); only the tones are stored (night 59)",
+    dyad: "derived — the object's legacy alias (night 59)",
+  },
+  [CLOCK_STATE]: {
+    running: "transient — LOADING AN ÉTUDE MAY NOT START PLAYBACK (ruling 261050 §5)",
+    owner: "session-local — who started the clock in this tab means nothing in a saved file",
+  },
+  [MIXER]: {
+    on: "transient — the audio armed by a Play gesture; loading an étude may not start playback, nor arm it",
+  },
+};
+
+/** where each recorded message's keys live in a saved entry: flat (null), or under one name */
+const PLACE = { [CONFIG_CHANGED]: null, [CLOCK_STATE]: null, [MIXER]: "mixer" };
+
+const keep = (name, m) => {
+  const out = {};
+  for (const k of Object.keys(m)) if (!(k in EXCLUDED[name])) out[k] = m[k];
+  return out;
+};
 
 const RECORDS = new WeakMap();
 
-/** the one record for this document — created on first ask, listening from then (both messages are replayed) */
+/** the one record for this document — created on first ask, listening from then (all three messages are replayed) */
 function etudeRecord(doc) {
   let r = RECORDS.get(doc);
   if (r) return r;
-  let cfg = {};
-  let bpm = null, meter = null;
+  // the last of each message, merged, exactly as the bus keeps it — whole, exclusions applied only when saved
+  const heard = { [CONFIG_CHANGED]: {}, [CLOCK_STATE]: {}, [MIXER]: {} };
   const subs = new Set();
   const changed = () => { for (const fn of subs) fn(); };
-  listen(doc, CONFIG_CHANGED, (m) => { if (m && typeof m === "object") { cfg = { ...cfg, ...m }; changed(); } });
-  listen(doc, CLOCK_STATE, (m) => {
-    if (m && typeof m.bpm === "number") bpm = m.bpm;
-    if (m && typeof m.meter === "number") meter = m.meter;
-    changed();
-  });
+  for (const name of Object.keys(heard))
+    listen(doc, name, (m) => { if (m && typeof m === "object") { heard[name] = { ...heard[name], ...m }; changed(); } });
   r = {
-    /* ONLY TONES IS STORED (night 59): the object is the name the tones make, so the snapshot drops it and the
-     * legacy `dyad` alias with it */
-    snapshot: () => { const { object: _object, dyad: _dyad, ...c } = cfg; return { ...c, ...(bpm !== null ? { bpm } : {}), ...(meter !== null ? { meter } : {}) }; },
+    snapshot: () => {
+      const out = {};
+      for (const name of Object.keys(heard)) {
+        const kept = keep(name, heard[name]);
+        if (PLACE[name] === null) Object.assign(out, kept);
+        else if (Object.keys(kept).length) out[PLACE[name]] = kept;
+      }
+      return out;
+    },
+    /* RESTORE = ANNOUNCE (moved here night 83 from notepad-card's apply, so the way home sits beside the way out —
+     * completeness is a round-trip property, not a save property). Each part goes to its owner: the config on the
+     * config bus, the clock's keys to the clock owner AS A REQUEST, the mixer on the mixer bus. A clock key is one
+     * the clock has said on this page; any other top-level key rides the config bus, as every key did before tonight,
+     * so a key from a later build is carried, never dropped. Only what the entry HAS is announced. */
+    restore: (data) => {
+      if (!data || typeof data !== "object") return;
+      const clockKeys = new Set(Object.keys(heard[CLOCK_STATE]));
+      const config = {}, clock = {};
+      for (const [k, v] of Object.entries(data)) {
+        if (k === PLACE[MIXER]) continue;
+        if (clockKeys.has(k)) clock[k] = v; else config[k] = v;
+      }
+      /* THE CONFIG PART GOES AS IT ALWAYS DID — exclusions are not stripped here: a v1 entry's `object` and `dyad`
+       * are READ, as labels the owners compare (night 59: "tones win, and the face says so once"); they are only
+       * never WRITTEN. THE GAMUT (night 48): absent means the WHOLE FIELD, totally — an étude saved before that night
+       * carries no key and restores to today's behaviour, never acquiring one. THE ONE PLACE A RESTORE READS SILENCE
+       * AS A VALUE: it was ruled for the gamut by name, and is kept as ruled — not a precedent for the bench. */
+      announce(doc, CONFIG_CHANGED, { ...config, gamut: "gamut" in config ? config.gamut : null });
+      const req = keep(CLOCK_STATE, clock);
+      if (Object.keys(req).length) announce(doc, CLOCK, req);
+      const mx = data[PLACE[MIXER]];
+      if (mx && typeof mx === "object" && !Array.isArray(mx)) {
+        const lv = keep(MIXER, mx);
+        if (Object.keys(lv).length) announce(doc, MIXER, lv);
+      }
+    },
     onChange: (fn) => { subs.add(fn); return () => subs.delete(fn); },
   };
   RECORDS.set(doc, r);
   return r;
 }
-return { etudeRecord };
+return { EXCLUDED, PLACE, etudeRecord };
 })();
 
 /* ===== hub/modules/notepad-card.mjs ===== */
@@ -9462,6 +9580,9 @@ const notepadCard = {
         parts.push(describeTuning(c.tuning) || SHARED.tuning.describe(c.tuning));
       if (Array.isArray(c.gamut) && c.gamut.length) parts.push("gamut " + c.gamut.join(" "));   // degrees, the stored identity (night 48)
       if (typeof c.bpm === "number") parts.push(c.bpm + " bpm");
+      /* the click's on/off (night 83 — the round-trip item: the reference's summary names it). Said when OFF only:
+       * an entry that silences the click is the one a player would otherwise restore and wonder at */
+      if (c.click === false) parts.push("click off");
       return parts.join(" · ") || "no configuration attached";
     };
 
@@ -9509,16 +9630,11 @@ const notepadCard = {
          * it as a label to compare, never as the truth, and says so once when they disagree. */
         snapshot: () => record.snapshot(),   // hub/etude-record.mjs — the one computation (night 66)
         /* RESTORE = ANNOUNCE. The owners of each piece of config re-render from
-         * the message; the tempo goes to the clock owner as a request. */
-        apply: (data) => {
-          if (!data || typeof data !== "object") return;
-          const { bpm: savedBpm, ...rest } = data;
-          /* THE GAMUT (night 48): absent means the WHOLE FIELD, totally — an étude saved before
-           * tonight carries no key and restores to today's behaviour, never acquiring one */
-          announce(d, CONFIG_CHANGED, { ...rest, gamut: "gamut" in rest ? rest.gamut : null });
-          if (typeof savedBpm === "number") announce(d, CLOCK, { bpm: savedBpm });
-          if (typeof data.meter === "number") announce(d, CLOCK, { meter: data.meter });
-        },
+         * the message; the clock's part goes to the clock owner as a request.
+         * MOVED 261052 (night 83): the way home lives in the record, beside the
+         * snapshot it inverts — a saved étude comes back as the whole bench, and
+         * an entry from before tonight restores only what it has. */
+        apply: (data) => record.restore(data),
         summarize,
         /* SHARE WHAT YOU MAKE (261005, night 41): this door's map of its own state to the
          * family's shared vocabulary (engine/shared-config.mjs — the one definition), and what
@@ -10409,7 +10525,7 @@ return { familyCostClause, PLACE_LABEL, placementWords, placementDependency, nar
 /* ===== hub/modules/transport-card.mjs ===== */
 const __m_hub_modules_transport_card_mjs = (() => {
 const { createTransportCore, patternOf, SPLITS } = __m_engine_transport_mjs;
-const { CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce } = __m_hub_bus_mjs;
+const { CONFIG_CHANGED, CLOCK, CLOCK_STATE, BEAT, STEP_CHANGED, MIXER, PLAY, ATTACK, listen, announce, announceAfter } = __m_hub_bus_mjs;
 const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 const { bpmField } = __m_hub_bpm_field_mjs;
 /* transport-card.mjs — the reference page's Transport card, ported.
@@ -10589,6 +10705,33 @@ const transportCard = {
 
     fillMeters(); fillSplits(); showLoop();
 
+    /* THE BAR SPLIT AND THE COUNT-IN ARE SAID (night 83 — found by the bench gate, which drives every control of the
+     * cards that speak for the bench: the scoping's census was Multetudes', and this door's two were orphans as well).
+     * The split went out only on the step request, an event a record cannot keep; the count-in went out nowhere. Both
+     * now ride the config, as Multetudes' split ({split}, clock.mjs) and the repeat ({repeat}, night 63) already do, in
+     * the same shape — so a saved étude carries them, and restore brings them home through the listener below. Said at
+     * boot too: a setting said only when it moves is never recorded at its default. */
+    const sayBar = () => announce(d, CONFIG_CHANGED,
+      { split: [...((SPLITS[meter] || [])[splitIdx] || [])], countIn: byId("countChk").checked });
+    /* the last split HEARD, applied once this meter offers it — a restore says the split before the meter (the config
+     * goes first), and a meter change resets the split; clock.mjs keeps its split the same way */
+    let wantSplit = null;
+    const applySplit = () => {
+      const i = wantSplit === null ? -1 : (SPLITS[meter] || []).findIndex((p) => p.join("+") === wantSplit);
+      if (i < 0 || i === splitIdx) return false;
+      splitIdx = i; core.setSplit(i); byId("splitSel").value = String(i);
+      // after the message that moved it has reached everyone — the chord line resets its own split on a meter change
+      announceAfter(d, STEP_CHANGED, { index: position, request: true, meter, splitIdx });
+      return true;
+    };
+    listen(d, CONFIG_CHANGED, (m) => {
+      if (!m || typeof m !== "object") return;
+      if (typeof m.countIn === "boolean" && m.countIn !== byId("countChk").checked) {
+        byId("countChk").checked = m.countIn; core.setCountIn(m.countIn);
+      }
+      if (Array.isArray(m.split)) { wantSplit = m.split.join("+"); applySplit(); }
+    });
+
     byId("playBtn").addEventListener("click", () => setPlaying(!armed));
     byId("prevBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position - 1, request: true }));
     byId("nextBtn").addEventListener("click", () => announce(d, STEP_CHANGED, { index: position + 1, request: true }));
@@ -10605,8 +10748,9 @@ const transportCard = {
       splitIdx = Number(e.target.value); core.setSplit(splitIdx);
       // the timeline draws bars from this split — announce it as a plain value
       announce(d, STEP_CHANGED, { index: position, request: true, meter, splitIdx });
+      sayBar();   // night 83: and as the étude's setting
     });
-    byId("countChk").addEventListener("change", (e) => core.setCountIn(e.target.checked));
+    byId("countChk").addEventListener("change", (e) => { core.setCountIn(e.target.checked); sayBar(); });
     byId("clickChk2").addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
     /* a strip mini summoned Play — arm (or disarm) the walk exactly as our own
      * Play button does; setPlaying takes it from there (grid + audio) */
@@ -10623,6 +10767,8 @@ const transportCard = {
       if (typeof m.bpm === "number") { bpm = m.bpm; byId("bpmRange2").value = bpm; byId("bpmVal2").value = bpm; }
       if (typeof m.meter === "number" && m.meter !== meter) {
         core.setMeter(m.meter); meter = m.meter; splitIdx = core.splitIdx; fillMeters(); fillSplits();
+        applySplit();   // night 83: the split a restore asked for, once this meter offers it
+        sayBar();       // the split the bar now has is the étude's
       }
       if (typeof m.click === "boolean") byId("clickChk2").checked = m.click;
       if (!running && armed) setPlaying(false);
@@ -10660,6 +10806,7 @@ const transportCard = {
       announce(d, STEP_CHANGED, { index: w.step, request: true, attack: true, lead: ev.lead, level: w.level, meter, splitIdx, beats });
     });
     /* the boot announce of the levels and the voice is mixer-card's (night 58) */
+    sayBar();   // night 83: the split and the count-in, said at boot
   },
 };
 return { transportCard };
@@ -11021,7 +11168,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.15","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.16","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>
