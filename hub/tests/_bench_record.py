@@ -20,6 +20,14 @@ on every door that keeps a practice log:
      muted). A REAL pre-night-83 entry (hub/tests/pre-n83-entries.json, captured from the pre-change build, never
      typed) is restored over a moved bench: the clock is asked for exactly the bench keys the entry carries, no mix is
      announced, and every bench control stays where the player left it.
+
+  4. AN ENTRY SAVED BEFORE TONIGHT'S BUILD OPENS EXACTLY AS IT DID (night 86, dispatch 261057 item 0 — the day Multetudes
+     became 1.0). A version is data, not a label, IF anything reads it; the audit found nothing does (the app version is
+     printed once, into the header; an entry carries its payload schema `v: 2` and lives at the fixed `<door>.v1.log`).
+     This holds it so: REAL entries saved by the PUBLISHED pages before the bump (hub/tests/v0630-entries.json — one at
+     boot, one off every default, captured through each page's own Save note, never typed), each restored here through
+     Restore, must reach exactly what the published page restored it to — every input control, and the config, the
+     clock's state and the mix as the bus last said them. A version jump may not become a silent reinterpretation.
 """
 import json
 import re
@@ -31,6 +39,7 @@ from _empty_guard import absent_ok
 HUB = Path(__file__).resolve().parent.parent
 REPO = HUB.parent
 FIXTURE = HUB / "tests" / "pre-n83-entries.json"
+BEFORE_1_0 = HUB / "tests" / "v0630-entries.json"   # night 86: saved by the published pages before the bump
 
 CFG, CLOCK, CLOCK_STATE, MIXER, BEAT = ("atetudes:config", "atetudes:clock", "atetudes:clock-state", "atetudes:mixer",
                                         "atetudes:beat")
@@ -108,6 +117,7 @@ def run(browser, check, build_dir, doors):
     all_ids = [i for ids in bench.values() for i in ids]
     check(len(bench) >= 2 and all_ids, f"[bench] the bench is computed from the sources, not passed on nothing: {sorted(bench)}")
     fixture = json.loads(FIXTURE.read_text())["entries"]
+    before = json.loads(BEFORE_1_0.read_text())["doors"]
     seen_excl = set()
     print(f"the bench (night 83): {len(all_ids)} control(s) of {', '.join(sorted(bench))} · "
           f"exclusions read from the record: " + ", ".join(f"{n.split(':')[1]}.{k}" for n, ks in excluded.items() for k in ks))
@@ -116,13 +126,13 @@ def run(browser, check, build_dir, doors):
         if 'id="saveEntry"' not in html.read_text():
             print(f"  [{door}] keeps no practice log — nothing to record")
             continue
-        seen_excl |= _door(browser, check, html, door, excluded, place, all_ids, fixture.get(door))
+        seen_excl |= _door(browser, check, html, door, excluded, place, all_ids, fixture.get(door), before.get(door))
     never = sorted(f"{n.split(':')[1]}.{k}" for n, ks in excluded.items() for k in ks if (n, k) not in seen_excl)
     if never:
         print(f"  exclusions no driven door said tonight (kept — a restored entry can still carry them): {', '.join(never)}")
 
 
-def _door(browser, check, html, door, excluded, place, all_ids, old_entry):
+def _door(browser, check, html, door, excluded, place, all_ids, old_entry, saved_before=None):
     tag = f"[{door} bench]"
     ctx = browser.new_context(viewport={"width": 1280, "height": 900})
     ctx.add_init_script(CAPTURE_JS)
@@ -138,9 +148,18 @@ def _door(browser, check, html, door, excluded, place, all_ids, old_entry):
     bench = lambda: page.evaluate("() => window.__bench")
     state = lambda: (bench()["last"].get(CLOCK_STATE) or {})
 
+    def stored():
+        """the log AT ITS ADDRESS — the one a visitor's earlier saves live at. A page that stores elsewhere fails here by
+        name, and the gate goes on to say what that costs (claim 4), rather than crashing on an empty read (night 86:
+        m157 moved the address and this read crashed before any pin could speak)"""
+        raw = page.evaluate(f"() => localStorage.getItem({key!r})")
+        check(raw is not None, f"{tag} THE PRACTICE LOG IS NOT AT ITS ADDRESS ({key}) after a save — every entry a "
+                               f"visitor saved there before is unreachable")
+        return json.loads(raw) if raw else {"entries": []}
+
     def save(text):
         page.fill("#journalIn", text); page.click("#saveEntry"); page.wait_for_timeout(300)
-        log = json.loads(page.evaluate(f"() => localStorage.getItem({key!r})"))
+        log = stored()
         hit = [e for e in log["entries"] if text in (e.get("text") or "")]
         check(len(hit) == 1, f"{tag} the entry {text!r} was saved once: {len(hit)}")
         return hit[0]["payload"]["data"] if hit else {}
@@ -229,7 +248,7 @@ def _door(browser, check, html, door, excluded, place, all_ids, old_entry):
         print(f"  {tag} no pre-night-83 entry was captured for this door — it postdates the bench (nothing to restore)")
     else:
         old = old_entry["payload"]["data"]
-        log = json.loads(page.evaluate(f"() => localStorage.getItem({key!r})"))
+        log = stored()
         log["entries"] = [old_entry]
         page.evaluate("([k, v]) => localStorage.setItem(k, v)", [key, json.dumps(log)])
         boot()
@@ -260,6 +279,42 @@ def _door(browser, check, html, door, excluded, place, all_ids, old_entry):
               f"{tag} the click stays muted under a pre-tonight entry (Daniel, 2026-10-02)")
         print(f"  {tag} a pre-night-83 entry restored: the clock asked for {asked} only, no mix, "
               f"{len(v_before)} bench control(s) unmoved")
+
+    # ---- 4: REAL entries saved by the published page before tonight's build open exactly as that page opened them
+    if saved_before is None:
+        print(f"  {tag} no entry saved by the published page was captured for this door (nothing to reopen)")
+    else:
+        all_in = list(saved_before["opens_as"][0]["controls"])
+        state_js = ("() => { const L = window.__bench.last; return { config: L[%r] || {}, clock: L[%r] || {}, "
+                    "mixer: L[%r] || {} }; }" % (CFG, CLOCK_STATE, MIXER))
+        for entry, was in zip(saved_before["entries"], saved_before["opens_as"]):
+            label = entry["text"][:40]
+            log = json.loads(page.evaluate(f"() => localStorage.getItem({key!r})") or '{"entries": []}')
+            log["entries"] = [entry]
+            page.evaluate("([k, v]) => localStorage.setItem(k, v)", [key, json.dumps(log)])   # the published page's address
+            boot()
+            if "at boot" in entry["text"]:   # restored over a MOVED page, as captured, so the restore is a real change
+                page.evaluate(DRIVE_JS, all_in); page.wait_for_timeout(400)
+            v_from = page.evaluate(VALUES_JS, all_in)
+            restore(label)
+            page.wait_for_timeout(300)
+            now = {"controls": page.evaluate(VALUES_JS, all_in), "bus": page.evaluate(state_js)}
+            moved_by = sum(1 for i in all_in if v_from.get(i) != now["controls"].get(i))
+            check(moved_by >= 4, f"{tag} the restore of {label!r} was a real change, not a comparison on nothing: "
+                                 f"{moved_by} control(s) moved")
+            off = {i: (was["controls"].get(i), now["controls"].get(i)) for i in all_in
+                   if was["controls"].get(i) != now["controls"].get(i)}
+            check(not off, f"{tag} AN ENTRY SAVED BEFORE TONIGHT OPENS EXACTLY AS IT DID — {label!r}: these controls "
+                           f"differ from what the published page restored (then, now): {off}")
+            for part in ("config", "clock", "mixer"):
+                a, b = was["bus"][part], now["bus"][part]
+                diff = sorted(k for k in set(a) | set(b) if json.dumps(a.get(k), sort_keys=True) != json.dumps(b.get(k), sort_keys=True))
+                check(not diff, f"{tag} AN ENTRY SAVED BEFORE TONIGHT OPENS EXACTLY AS IT DID — {label!r}: the {part} the "
+                                f"bus says differs from the published page's at {diff}: "
+                                f"{ {k: (a.get(k), b.get(k)) for k in diff[:6]} }")
+            print(f"  {tag} saved by the published page, reopened: {label!r} — {len(all_in)} control(s) and "
+                  f"{sum(len(was['bus'][p]) for p in ('config', 'clock', 'mixer'))} bus key(s) as it opened then "
+                  f"({moved_by} moved by the restore)")
     check(not errs, f"{tag} no page errors: {errs[:3]}")
     ctx.close()
     return said

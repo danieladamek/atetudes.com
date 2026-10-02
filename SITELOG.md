@@ -1,3 +1,44 @@
+## 2026-10-02 — Night 86: Multetudes is 1.0 — Multetudes v1.0.0, Tetradetudes v0.6.19
+
+- **Daniel called it: Multetudes is 1.0.** His definition, verbatim (ruling 261040; his to set, and set):
+  > *A visitor on a phone or a laptop can derive an étude, hear it, read it, save it and get it back unchanged — and
+  > nothing they can see is mislabelled, unusable or silently lost.*
+  - **What it asserts:** every defect anyone has found is fixed. **What it does not:** it is not a proof that nothing is
+    wrong. The gate drives what it drives; the last two defects (night 85) were found by instruments built that week.
+    The claim is Daniel's, made knowing the difference (ruling 261054 §5).
+  - **1.0 is Multetudes', not the family's.** The other doors keep their own numbers: Tetradetudes moves tonight to
+    v0.6.19 (its readout line below), triadetudes stays v0.9.6.
+- **A version is data, not a label — measured before the bump.** Four independent sweeps and an adversarial critic over
+  every tracked file: nothing reads the app version. It is printed once, into the door's header (`#doorTag`), and
+  nothing reads it back. A saved entry carries its payload schema `v: 2` and lives at the fixed `multetudes.v1.log`; an
+  export's `atchart:` is the file format's own. Neither derives from the app version, so the bump moved one line.
+  - **Held so:** real entries saved by the published v0.6.30 and v0.6.18 pages (`hub/tests/v0630-entries.json`,
+    captured through each page's own Save, never typed) must reopen exactly as those pages reopened them: every input
+    control, the config, the clock's state and the mix. Checked on both doors at v1.0.0.
+  - **m157** moves the practice log's address with the version (the classic "start clean at 1.0"), and every étude
+    saved before the bump is silently gone. The pin bites.
+    - Its first run was red by a crash, not by name: the bench read the log at its literal address and crashed on the
+      empty read. Those reads now fail by name.
+- **The readout speaks to the player about the music** (ruling 261054 §3). "6 assertions passed before drawing." is gone
+  from the page: a pass goes to the console with the checks' names, beside where a failure goes (night 85). The line
+  says something only when a check fails. The self-check guard now also fails on a passing line that shows text, and on
+  any readout that says "assertion".
+- **Tetradetudes' zone clause has its own line under the readout row, at every width** (ruling 261054 §3, option (b),
+  rendered night 85). Same words. At 390 the readout beside Full · Follow · Box · bind stays at four lines (it was eight).
+- **The gate's one namespace fails on a rebind** (ruling 261054 §3, dispatched). `hub/tests/_gate_namespace.py` runs
+  before any browser opens: a block that rebinds a name a later block reads, or a name a closure reads, fails by name.
+  - Red on the real case: night 84's `r`, which cost a closing run.
+  - Silent on today's gate (139 blocks).
+- **Proof:**
+  - `tools/check.py` ALL GREEN, 547 s, on the tree as committed:
+    - doors 23,693 assertions, 0 failed;
+    - the bench reopened all four captured entries;
+    - the self-check guard saw 1,427 renders, none failing.
+  - m157 bites; the record is 156/156.
+  - Looked at, 1280 and 390, before and after, zero console errors.
+
+  Run note: `notes/working/Multetudes build run 261057 — night 86, Multetudes 1.0.md`.
+
 ## 2026-10-02 — Night 85: the last of the listed defects — Multetudes v0.6.30, Tetradetudes v0.6.18
 
 - **"assertion failed" on a published page: the cause was the assertion's SUBJECT.** Since night 46 (2026-09-12) a

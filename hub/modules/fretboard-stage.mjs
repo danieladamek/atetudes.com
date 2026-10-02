@@ -71,6 +71,7 @@ export const fretboardStage = {
     <label class="chk fsBind" title="hold the anchor voice to one of the three zone notes; a bar with no such grip leaves the zone — the readout says so. Released, the zone pulls every bar under Grip and only the first chord under Free, which chooses the rest by voice-leading alone.">
       <input type="checkbox" id="bindChk" data-control="bindChk"> bind</label>
   </div>
+  <div class="fsLeaves" id="fsLeaves"></div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
   <div class="hint fsBoxHint" id="fsBoxHint" hidden></div>`,
 
@@ -89,6 +90,8 @@ export const fretboardStage = {
 .readout{font-size:14px;margin:2px 2px 10px;color:var(--ink)}
 .readout b{font-size:16px}
 .readout .rosub{color:var(--gray);font-size:12.5px}
+.fsLeaves{color:var(--gray);font-size:12.5px;margin:0 2px 10px}
+.fsLeaves:empty{display:none}
 .fs-dot{transition:transform .55s cubic-bezier(.4,0,.2,1);cursor:pointer}
 .fs-dot .fs-mk{transition:fill .55s}
 .fs-dot .fs-ring{fill:none;stroke:#212126;stroke-width:2;opacity:0;transition:opacity .2s}
@@ -381,11 +384,14 @@ export const fretboardStage = {
       /* THE READOUT NAMES THE BAR (night 85 — Daniel, 2026-10-02, amending his 2026-08-21 "the box … never stretches,
        * never reports" NARROWLY: the box still never stretches and never reports; the readout names the bar). A bar
        * whose anchor left the zone because no grip of its chord reaches it (the engine's offZone) says so here, in the
-       * readout's own grey — not a refusal, not red. Bar 1's seed fallback is ruled, and stays unmarked. */
-      const leaves = cur.offZone ? ` · the anchor leaves the zone: no ${cur.voicing.family || fam} grip of ${cur.symbol} reaches it` : "";
+       * readout's own grey — not a refusal, not red. Bar 1's seed fallback is ruled, and stays unmarked.
+       * ITS OWN LINE, UNDER THE READOUT ROW, AT EVERY WIDTH (night 86 — ruling 261054 §3, option (b)): inside the
+       * readout it doubled the narrow column beside Full · Follow · Box · bind at 390 (4 lines → 8). The same words; the
+       * place is the same at every width, so it is no width-dependent convention. 2A is unchanged. */
+      byId("fsLeaves").textContent = cur.offZone ? `the anchor leaves the zone: no ${cur.voicing.family || fam} grip of ${cur.symbol} reaches it` : "";
       byId("readout").innerHTML =
         `<b>${cur.symbol}</b> <span class="rosub">${cur.roman} · ${fam} · ${invName} · ` +
-        `${step + 1} of ${n} · ${cfg.key} ${({ major: "major", harm: "harmonic minor", mel: "melodic minor" })[cfg.scale]}${leaves}</span>`;
+        `${step + 1} of ${n} · ${cfg.key} ${({ major: "major", harm: "harmonic minor", mel: "melodic minor" })[cfg.scale]}</span>`;
 
       /* the echo: the canonical position fact every board follows. When the
        * show was attack-borne the echo says so, and the audio card skips it —

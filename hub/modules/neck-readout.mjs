@@ -3,13 +3,18 @@
  *
  * Two full-width lines between the neck and the étude, exactly where v0.9
  * puts them: the prose readout (the reading · the bar · the frame · the
- * strings · the shape · what is missing, loudly) and the assertion line —
- * "N assertions passed before drawing", which in this build is TRUE twice
- * over: this module RE-DERIVES the whole configuration from the bus through
+ * strings · the shape · what is missing, loudly) and the self-check line.
+ * This module RE-DERIVES the whole configuration from the bus through
  * the same pure engine the neck used (§4.2.3 — modules derive independently
- * from the message, never from each other), runs v0.9's own checks against
- * that derivation, and paints the count. A failing check paints RED — the
- * prototype's honesty, kept.
+ * from the message, never from each other) and runs v0.9's own checks against
+ * that derivation before drawing.
+ *
+ * THE READOUT SPEAKS TO THE PLAYER ABOUT THE MUSIC (night 86 — ruling 261054
+ * §3). v0.9 painted "N assertions passed before drawing" under every bar; a
+ * count of internal checks is not musician's language, and night 85 already
+ * sent the failure's name to the console. The pass goes there too, with the
+ * checks' names; the line is empty, and says something only when a check
+ * fails — what is wrong and what to do (night 85).
  */
 import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
@@ -60,7 +65,8 @@ export const neckReadout = {
 .ro-line{font-size:13px;line-height:1.6;color:var(--ink)}
 .ro-line b{font-weight:bold}
 .ro-line .ro-dim{color:var(--gray)}
-.ro-assert{font-size:11px;color:var(--gray);margin-top:6px}`,
+.ro-assert{font-size:11px;color:var(--gray);margin-top:6px}
+.ro-assert:empty{display:none}`,
 
   mount(ctx) {
     const d = ctx.doc, byId = ctx.byId;
@@ -321,9 +327,12 @@ export const neckReadout = {
         a.dataset.selfcheck = fails.join(" ; ");
         if (d.defaultView && d.defaultView.console) d.defaultView.console.error("[readout self-check] " + fails.join(" ; "));
       } else {
+        /* the pass is ours too (night 86): the console, beside where a failure goes, at the debug level — a line per
+         * bar while playing, so never one a visitor's console shows by default */
         a.style.color = ""; a.style.fontWeight = "";
         delete a.dataset.selfcheck;
-        a.textContent = `${asserts.length} assertions passed before drawing.`;
+        a.textContent = "";
+        if (d.defaultView && d.defaultView.console) d.defaultView.console.debug(`[readout self-check] ${asserts.length} passed before drawing: ${asserts.join(" · ")}`);
       }
     };
 

@@ -281,7 +281,13 @@ export default {
      * the top of Progression; one editor per card — Tones reads the field's notes under a scale and is typed in
      * roles, typing roles leaves scale; every mini sits right (injection 261015); the clock-row repeat, a duplicate of
      * the header mini's, is gone (ruling 261015). */
-    blurb: "one tool that holds many études · v0.6.30",
+    /* v1.0.0 (261057, night 86 — DANIEL CALLED IT): "a visitor on a phone or a laptop can derive an étude, hear it, read
+     * it, save it and get it back unchanged — and nothing they can see is mislabelled, unusable or silently lost". Every
+     * defect FOUND is fixed; the gate drives what it drives — not a claim that nothing is wrong. Measured first: nothing
+     * reads this string (it is printed into #doorTag, never read back; an entry carries its payload schema v: 2 at the
+     * fixed multetudes.v1.log), and entries saved by the published v0.6.30 reopen exactly as they did (the bench gate,
+     * hub/tests/v0630-entries.json; m157). Tonight's page moves: the readout's pass line goes to the console. */
+    blurb: "one tool that holds many études · v1.0.0",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

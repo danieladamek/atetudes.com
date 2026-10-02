@@ -151,7 +151,9 @@ export default {
      * Settings card also reads — the saved entry is byte-for-byte the same shape; nothing on this face moved. */
     /* v0.6.7 (261014e, night 64): the bus gained announceAfter and the readout grammar right-justifies a mini's own
      * row — shared files; nothing on this door's face moves. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.18",
+    /* v0.6.19 (261057, night 86): the zone clause has its own line under the readout row, at every width (ruling
+     * 261054 §3, option (b)) — the same words; at 390 the readout beside the window buttons stays at four lines. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.19",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

@@ -1,0 +1,614 @@
+{
+ "_how": "saved by the PUBLISHED pages at 8218ed5 (Multetudes v0.6.30, Tetradetudes v0.6.18 — the bytes live at atetudes.com before night 86) through each page's own Save note: one at boot, one with every select, checkbox and number on the page driven off its default by _bench_record.DRIVE_JS and the click muted. `opens_as` is what those same published pages restore each entry to — every input control and the merged config, clock state and mix on the bus — read twice, identical. Captured, never hand-typed.",
+ "doors": {
+  "multetudes": {
+   "entries": [
+    {
+     "id": "mur9r2eo-2andw",
+     "savedAt": "2026-10-02T18:00:46.320Z",
+     "heading": "multetudes journal — 2026-10-02",
+     "text": "saved at boot by the published multetudes (8218ed5)",
+     "payload": {
+      "app": "multetudes",
+      "v": 2,
+      "data": {
+       "strings": [
+        4,
+        3,
+        2,
+        1
+       ],
+       "startDeg": 4,
+       "nearFret": 3,
+       "notesPer": 3,
+       "address": "pattern",
+       "figure": "",
+       "movement": "arpeggiate",
+       "take": "one",
+       "repeat": false,
+       "tuning": null,
+       "key": "Bb",
+       "scale": "major",
+       "ref": 0,
+       "bass": "root",
+       "centreSrc": "fixed",
+       "gamut": null,
+       "sounded": "none",
+       "pad": false,
+       "chart": null,
+       "tones": [
+        1,
+        3,
+        5,
+        7
+       ],
+       "source": "cycle",
+       "cycle": "fourths",
+       "form": "ii-V-I",
+       "custom": "",
+       "start": 0,
+       "bpm": 120,
+       "meter": 4,
+       "sub": 1,
+       "click": true,
+       "accents": true,
+       "clickLevel": 0.8,
+       "clickVoice": "beep",
+       "mixer": {
+        "voice": "tone",
+        "chord": 1,
+        "bass": 1,
+        "pad": 1
+       }
+      },
+      "shared": {
+       "key": "Bb",
+       "scale": "major",
+       "progression": "fourths",
+       "startOn": 0,
+       "stringSet": [
+        4,
+        3,
+        2,
+        1
+       ],
+       "bpm": 120,
+       "meter": 4
+      }
+     }
+    },
+    {
+     "id": "mur9r383-eaiql",
+     "savedAt": "2026-10-02T18:00:47.379Z",
+     "heading": "multetudes journal — 2026-10-02",
+     "text": "saved off its defaults by the published multetudes (8218ed5)",
+     "payload": {
+      "app": "multetudes",
+      "v": 2,
+      "data": {
+       "strings": [
+        4,
+        3
+       ],
+       "startDeg": 5,
+       "nearFret": 6,
+       "notesPer": 1,
+       "address": "pattern",
+       "figure": "",
+       "movement": "arpeggiate",
+       "take": "one",
+       "repeat": false,
+       "tuning": null,
+       "key": "B",
+       "scale": "mel",
+       "ref": 0,
+       "bass": "root",
+       "centreSrc": "fixed",
+       "gamut": null,
+       "sounded": "none",
+       "pad": false,
+       "chart": null,
+       "tones": [
+        3,
+        7
+       ],
+       "source": "cycle",
+       "cycle": "sixths",
+       "form": "cycle-4ths",
+       "custom": "",
+       "start": 6,
+       "bpm": 122,
+       "meter": 7,
+       "sub": 4,
+       "click": false,
+       "accents": false,
+       "clickLevel": 0,
+       "clickVoice": "tick",
+       "mixer": {
+        "voice": "tone",
+        "chord": 1,
+        "bass": 1,
+        "pad": 1
+       }
+      },
+      "shared": {
+       "key": "B",
+       "scale": "mel",
+       "progression": "sixths",
+       "startOn": 6,
+       "stringSet": [
+        4,
+        3
+       ],
+       "bpm": 122,
+       "meter": 7
+      }
+     }
+    }
+   ],
+   "opens_as": [
+    {
+     "controls": {
+      "bpmRange": "120",
+      "bpmVal": "120",
+      "meterSel": "4",
+      "subSel": "1",
+      "voiceSel": "beep",
+      "accChk": true,
+      "clickVolR": "80",
+      "hcKey": "Bb",
+      "hcScale": "major",
+      "hcGamut": "1,2,3,4,5,6,7",
+      "hcRef": "",
+      "hcObj": "tetrad",
+      "pgCycle": "fourths",
+      "pgForm": "ii-V-I",
+      "pgStart": "0",
+      "psSel": ""
+     },
+     "bus": {
+      "config": {
+       "strings": [
+        4,
+        3,
+        2,
+        1
+       ],
+       "startDeg": 4,
+       "nearFret": 3,
+       "notesPer": 3,
+       "address": "pattern",
+       "figure": "",
+       "movement": "arpeggiate",
+       "take": "one",
+       "repeat": false,
+       "tuning": null,
+       "key": "Bb",
+       "scale": "major",
+       "ref": 0,
+       "bass": "root",
+       "centreSrc": "fixed",
+       "gamut": null,
+       "sounded": "none",
+       "pad": false,
+       "chart": null,
+       "object": "tetrad",
+       "tones": [
+        1,
+        3,
+        5,
+        7
+       ],
+       "source": "cycle",
+       "cycle": "fourths",
+       "form": "ii-V-I",
+       "custom": "",
+       "start": 0
+      },
+      "clock": {
+       "running": false,
+       "bpm": 120,
+       "meter": 4,
+       "sub": 1,
+       "owner": null,
+       "click": true,
+       "accents": true,
+       "clickLevel": 0.8,
+       "clickVoice": "beep"
+      },
+      "mixer": {
+       "voice": "tone",
+       "chord": 1,
+       "bass": 1,
+       "pad": 1
+      }
+     }
+    },
+    {
+     "controls": {
+      "bpmRange": "122",
+      "bpmVal": "122",
+      "meterSel": "7",
+      "subSel": "4",
+      "voiceSel": "tick",
+      "accChk": false,
+      "clickVolR": "0",
+      "hcKey": "B",
+      "hcScale": "mel",
+      "hcGamut": "1,2,3,4,5,6,7",
+      "hcRef": "",
+      "hcObj": "dyad",
+      "pgCycle": "sixths",
+      "pgForm": "cycle-4ths",
+      "pgStart": "6",
+      "psSel": ""
+     },
+     "bus": {
+      "config": {
+       "strings": [
+        4,
+        3
+       ],
+       "startDeg": 5,
+       "nearFret": 6,
+       "notesPer": 1,
+       "address": "pattern",
+       "figure": "",
+       "movement": "arpeggiate",
+       "take": "one",
+       "repeat": false,
+       "tuning": null,
+       "key": "B",
+       "scale": "mel",
+       "ref": 0,
+       "bass": "root",
+       "centreSrc": "fixed",
+       "gamut": null,
+       "sounded": "none",
+       "pad": false,
+       "chart": null,
+       "object": "dyad",
+       "tones": [
+        3,
+        7
+       ],
+       "source": "cycle",
+       "cycle": "sixths",
+       "form": "cycle-4ths",
+       "custom": "",
+       "start": 6
+      },
+      "clock": {
+       "running": false,
+       "bpm": 122,
+       "meter": 7,
+       "sub": 4,
+       "owner": null,
+       "click": false,
+       "accents": false,
+       "clickLevel": 0,
+       "clickVoice": "tick"
+      },
+      "mixer": {
+       "voice": "tone",
+       "chord": 1,
+       "bass": 1,
+       "pad": 1
+      }
+     }
+    }
+   ],
+   "moved": [
+    "accChk",
+    "bpmRange",
+    "bpmVal",
+    "clickVolR",
+    "hcKey",
+    "hcObj",
+    "hcScale",
+    "meterSel",
+    "pgCycle",
+    "pgForm",
+    "pgStart",
+    "subSel",
+    "voiceSel"
+   ]
+  },
+  "tetradetudes": {
+   "entries": [
+    {
+     "id": "mur9r8ox-cebqu",
+     "savedAt": "2026-10-02T18:00:54.465Z",
+     "heading": "tetradetudes journal — 2026-10-02",
+     "text": "saved at boot by the published tetradetudes (8218ed5)",
+     "payload": {
+      "app": "tetradetudes",
+      "v": 2,
+      "data": {
+       "key": "C",
+       "scale": "major",
+       "cycle": "fourths",
+       "bottom": 0,
+       "startDegree": 0,
+       "bass": "root",
+       "chart": null,
+       "setIndex": 0,
+       "families": [
+        "drop2"
+       ],
+       "placement": "grip",
+       "roots": false,
+       "address": "pattern",
+       "figure": "",
+       "playback": "strum",
+       "guide": false,
+       "zone": null,
+       "strings": [
+        6,
+        5,
+        4,
+        3
+       ],
+       "split": [
+        4
+       ],
+       "countIn": false,
+       "bpm": 120,
+       "meter": 4,
+       "sub": 1,
+       "click": true,
+       "accents": true,
+       "clickLevel": 0.8,
+       "clickVoice": "beep",
+       "mixer": {
+        "chord": 1,
+        "bass": 1,
+        "voice": "tone"
+       }
+      },
+      "shared": {
+       "key": "C",
+       "scale": "major",
+       "progression": "fourths",
+       "startOn": 0,
+       "stringSet": [
+        6,
+        5,
+        4,
+        3
+       ],
+       "bpm": 120,
+       "meter": 4
+      }
+     }
+    },
+    {
+     "id": "mur9r9c1-v6ztn",
+     "savedAt": "2026-10-02T18:00:55.297Z",
+     "heading": "tetradetudes journal — 2026-10-02",
+     "text": "saved off its defaults by the published tetradetudes (8218ed5)",
+     "payload": {
+      "app": "tetradetudes",
+      "v": 2,
+      "data": {
+       "key": "C",
+       "scale": "major",
+       "cycle": "fourths",
+       "bottom": 0,
+       "startDegree": 0,
+       "bass": "root",
+       "chart": null,
+       "setIndex": 0,
+       "families": [
+        "drop2"
+       ],
+       "placement": "grip",
+       "roots": false,
+       "address": "pattern",
+       "figure": "",
+       "playback": "strum",
+       "guide": false,
+       "zone": null,
+       "strings": [
+        6,
+        5,
+        4,
+        3
+       ],
+       "split": [
+        2,
+        4
+       ],
+       "countIn": true,
+       "bpm": 122,
+       "meter": 6,
+       "sub": 4,
+       "click": false,
+       "accents": false,
+       "clickLevel": 0,
+       "clickVoice": "tick",
+       "mixer": {
+        "chord": 0.37,
+        "bass": 0.37,
+        "voice": "sustain"
+       }
+      },
+      "shared": {
+       "key": "C",
+       "scale": "major",
+       "progression": "fourths",
+       "startOn": 0,
+       "stringSet": [
+        6,
+        5,
+        4,
+        3
+       ],
+       "bpm": 122,
+       "meter": 6
+      }
+     }
+    }
+   ],
+   "opens_as": [
+    {
+     "controls": {
+      "bpmRange": "120",
+      "bpmVal": "120",
+      "meterSel": "4",
+      "subSel": "1",
+      "voiceSel": "beep",
+      "accChk": true,
+      "clickVolR": "80",
+      "clickChk2": true,
+      "countChk": false,
+      "bpmRange2": "120",
+      "bpmVal2": "120",
+      "meterSel2": "4",
+      "splitSel": "0",
+      "noteVoiceSel": "tone",
+      "chordVolR": "100",
+      "bassVolR": "100"
+     },
+     "bus": {
+      "config": {
+       "key": "C",
+       "scale": "major",
+       "cycle": "fourths",
+       "bottom": 0,
+       "startDegree": 0,
+       "bass": "root",
+       "chart": null,
+       "setIndex": 0,
+       "families": [
+        "drop2"
+       ],
+       "placement": "grip",
+       "roots": false,
+       "address": "pattern",
+       "figure": "",
+       "playback": "strum",
+       "guide": false,
+       "zone": null,
+       "strings": [
+        6,
+        5,
+        4,
+        3
+       ],
+       "split": [
+        4
+       ],
+       "countIn": false,
+       "gamut": null
+      },
+      "clock": {
+       "running": false,
+       "bpm": 120,
+       "meter": 4,
+       "sub": 1,
+       "owner": null,
+       "click": true,
+       "accents": true,
+       "clickLevel": 0.8,
+       "clickVoice": "beep"
+      },
+      "mixer": {
+       "chord": 1,
+       "bass": 1,
+       "voice": "tone"
+      }
+     }
+    },
+    {
+     "controls": {
+      "bpmRange": "122",
+      "bpmVal": "122",
+      "meterSel": "6",
+      "subSel": "4",
+      "voiceSel": "tick",
+      "accChk": false,
+      "clickVolR": "0",
+      "clickChk2": false,
+      "countChk": true,
+      "bpmRange2": "122",
+      "bpmVal2": "122",
+      "meterSel2": "6",
+      "splitSel": "4",
+      "noteVoiceSel": "sustain",
+      "chordVolR": "37",
+      "bassVolR": "37"
+     },
+     "bus": {
+      "config": {
+       "key": "C",
+       "scale": "major",
+       "cycle": "fourths",
+       "bottom": 0,
+       "startDegree": 0,
+       "bass": "root",
+       "chart": null,
+       "setIndex": 0,
+       "families": [
+        "drop2"
+       ],
+       "placement": "grip",
+       "roots": false,
+       "address": "pattern",
+       "figure": "",
+       "playback": "strum",
+       "guide": false,
+       "zone": null,
+       "strings": [
+        6,
+        5,
+        4,
+        3
+       ],
+       "split": [
+        2,
+        4
+       ],
+       "countIn": true,
+       "gamut": null
+      },
+      "clock": {
+       "running": false,
+       "bpm": 122,
+       "meter": 6,
+       "sub": 4,
+       "owner": null,
+       "click": false,
+       "accents": false,
+       "clickLevel": 0,
+       "clickVoice": "tick"
+      },
+      "mixer": {
+       "chord": 0.37,
+       "bass": 0.37,
+       "voice": "sustain"
+      }
+     }
+    }
+   ],
+   "moved": [
+    "accChk",
+    "bassVolR",
+    "bpmRange",
+    "bpmRange2",
+    "bpmVal",
+    "bpmVal2",
+    "chordVolR",
+    "clickChk2",
+    "clickVolR",
+    "countChk",
+    "meterSel",
+    "meterSel2",
+    "noteVoiceSel",
+    "splitSel",
+    "subSel",
+    "voiceSel"
+   ]
+  }
+ }
+}

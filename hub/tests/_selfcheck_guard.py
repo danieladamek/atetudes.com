@@ -5,9 +5,13 @@ false" on every bar whose chord holds a tone the key lacks. It was seen twice an
 check looked: each block of the door gate asserted its OWN subject and walked past a red line it was not asking about.
 
 So this is a MECHANISM, not a block (the empty-lookup guard's shape): every page the door gate opens carries an observer
-on the readout's self-check line (#roAssert). Every render of it is counted, and any render whose self-check FAILED (the
-readout marks it with data-selfcheck since night 85; the old "assertion failed" wording is watched too) is reported with
-the door and the text. The gate fails on any, at the end of the run, naming each.
+on the readout (#roLine) and its self-check line (#roAssert). Every render is counted, and any render whose self-check
+FAILED (the readout marks it with data-selfcheck since night 85; the old "assertion failed" wording is watched too) is
+reported with the door and the text. The gate fails on any, at the end of the run, naming each.
+
+AND A PASS SHOWS THE VISITOR NOTHING (night 86 — ruling 261054 §3: "a count of internal checks is not musician's
+language"). The pass went to the console beside the failure; so a render whose self-check passed and whose line still
+shows text fails too, and so does any render whose readout says "assertion" at all.
 
 WHAT IT CANNOT SEE — said, not assumed: only the states some block drives. Most of key × scale × source × object × set ×
 placement is never visited by a browser; that space is covered for the readout's placement law by
@@ -25,12 +29,18 @@ INIT_JS = r"""(() => {
   document.addEventListener('atetudes:step', (e) => { if (e.detail && e.detail.request !== true && typeof e.detail.index === 'number') step = e.detail.index; });
   const stateOf = () => { const keep = ['key', 'scale', 'object', 'tones', 'source', 'cycle', 'form', 'custom', 'strings', 'startDeg', 'nearFret', 'notesPer', 'take', 'gamut', 'ref', 'centreSrc', 'bass', 'sounded', 'tuning'];
     return JSON.stringify(Object.fromEntries(keep.filter((k) => k in cfg).map((k) => [k, cfg[k]]))) + ' bar ' + (step == null ? '?' : step + 1); };
+  let line = null;
   const look = () => {
     el = el && el.isConnected ? el : (window.__may ? __may(() => document.getElementById('roAssert'), 'the self-check guard looks on every page; most have no readout yet, or none') : document.getElementById('roAssert'));
     if (!el) return;
-    const text = el.textContent || '', fail = el.dataset.selfcheck || (/assertion failed|returned false/i.test(text) ? text : '');
-    const key = text + '|' + fail;
-    if (key === last || !text) return;
+    line = line && line.isConnected ? line : document.getElementById('roLine');
+    // a RENDER is the readout's line drawn (night 86: a passing self-check line is empty, so it cannot be the count)
+    const said = (line && line.textContent) || '', text = el.textContent || '';
+    const fail = el.dataset.selfcheck || (/assertion failed|returned false/i.test(text) ? text : '')
+      || (/assertion/i.test(said + ' ' + text) ? 'the readout says "assertion" to the visitor: ' + (said + ' | ' + text).slice(0, 300) : '')
+      || (text ? 'a PASSING self-check shows the visitor a line (a count of internal checks is not musician\'s language): ' + text : '');
+    const key = said + '|' + text + '|' + fail;
+    if (key === last || !said) return;
     last = key;
     if (window.__scgSaw) window.__scgSaw(fail ? 'FAIL ' + fail + ' || state: ' + stateOf() + ' || shown: ' + text : '');
   };

@@ -7278,18 +7278,51 @@ console.log(JSON.stringify(out));
               f"{tag} night 85: the boot window (four strings, not widened) says neither: {t85.inner_text('#roLine')[:200]!r}")
         check(not errs85t, f"{tag} night 85: no page errors: {errs85t[:3]}")
         ctx85t.close()
+    # ---------------- NIGHT 86 (ruling 261054 §3): THE READOUT SPEAKS TO THE PLAYER — a pass shows nothing, said to the console ----------
+    if 'id="roAssert"' in src85:
+        pass86 = [t for (k, t) in console if k == "debug" and t.startswith("[readout self-check] ") and " passed before drawing: " in t]
+        check(pass86 and "every selected note sits in the frame" in pass86[-1],
+              f"{tag} night 86: a passing self-check goes to the console with the checks' names, beside where a failure goes: {pass86[-1:] or [k for k, _ in console][:8]}")
+        check(page.inner_text("#roAssert") == "" and not page.is_visible("#roAssert"),
+              f"{tag} night 86: a passing self-check shows the visitor nothing — no count of internal checks: {page.inner_text('#roAssert')!r}")
     if 'id="bindChk"' in src85 and 'id="readout"' in src85:
         ctx85z = pw.new_context(viewport={"width": 1280, "height": 900}); z85 = ctx85z.new_page(); errs85z = []; z85.on("pageerror", lambda e: errs85z.append(str(e)))
         z85.goto(html_path.as_uri()); z85.wait_for_selector("#cards", state="attached"); z85.wait_for_timeout(350)
         z85.select_option("#keySel", "Bb"); z85.select_option("#scaleSel", "harm"); z85.select_option("#progSel", "scale")
         z85.click('#famSeg button:has-text("Close")'); z85.wait_for_timeout(250)
-        named85 = []
+        named85, inside86, geo86 = [], [], {}
+        # night 86 (ruling 261054 §3, option (b)): THE CLAUSE HAS ITS OWN LINE UNDER THE READOUT ROW, AT EVERY WIDTH — the
+        # same words, read from that line (#fsLeaves); the readout itself never carries them; the line sits below the
+        # whole row (readout · Full Follow Box · bind), starts where the readout starts, and holds one or two lines
+        # "below the row" = below every item OF the row (their border boxes — the row's own box holds the readout's margin)
+        leaves86 = """() => { const l = document.getElementById('fsLeaves'), top = { bottom: Math.max(...[...document.querySelector('.fsTop').children].map((c) => c.getBoundingClientRect().bottom)) },
+          roEl = document.getElementById('readout'), ro = roEl.getBoundingClientRect(), b = l.getBoundingClientRect();
+          const lines = (e) => { const r = document.createRange(); r.selectNodeContents(e);   // line boxes: rects that overlap vertically are one line (a bold 16px name beside 12.5px grey)
+            let n = 0, bottom = -1e9;
+            for (const q of [...r.getClientRects()].filter((q) => q.width > 0).sort((x, y) => x.top - y.top))
+              if (q.top >= bottom - 2) { n++; bottom = q.bottom; } else bottom = Math.max(bottom, q.bottom);
+            return n; };
+          return { text: l.textContent, below: b.top >= top.bottom - 0.5, left: Math.abs(b.left - ro.left) <= 3,
+            lines: lines(l), roLines: lines(roEl), shown: getComputedStyle(l).display !== 'none' }; }"""
         for i in range(8):
             z85.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", i); z85.wait_for_timeout(150)
             ro = z85.inner_text("#readout")
-            if "the anchor leaves the zone" in ro: named85.append((i + 1, ro.split(" · the anchor leaves the zone: ")[1]))
+            if "leaves the zone" in ro: inside86.append(i + 1)
+            lv = z85.evaluate(leaves86)
+            if lv["text"]: named85.append((i + 1, lv["text"].split("the anchor leaves the zone: ")[1]))
+            elif lv["shown"]: check(False, f"{tag} night 86: an empty leaves line takes room at bar {i + 1}")
+            if i == 3: geo86[1280] = lv
+        z85.set_viewport_size({"width": 390, "height": 844}); z85.wait_for_timeout(250)
+        z85.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 3, request: true } }))"); z85.wait_for_timeout(200)
+        geo86[390] = z85.evaluate(leaves86)
+        z85.set_viewport_size({"width": 1280, "height": 900}); z85.wait_for_timeout(150)
         check([b for b, _ in named85] == [4, 6] and named85[0][1] == "no close grip of Ebm7 reaches it" and named85[1][1] == "no close grip of Gbmaj7 reaches it",
               f"{tag} night 85: the readout names the bars whose anchor left the zone — 4 and 6, and no other (bar 1's seed fallback, ruled, stays unmarked): {named85}")
+        check(not inside86, f"{tag} night 86: the clause left the readout for its own line — the readout still carries it at bars {inside86}")
+        for w86, g86 in sorted(geo86.items()):
+            check(g86["text"] and g86["below"] and g86["left"] and 1 <= g86["lines"] <= 2,
+                  f"{tag} night 86: at {w86}, bar 4's clause is its own line under the readout row, from the readout's left edge, one or two lines: {g86}")
+        check(geo86[390]["roLines"] <= 4, f"{tag} night 86: at 390 the readout beside the window buttons stays at four lines or fewer (it was eight with the clause inside): {geo86[390]}")
         title85 = z85.get_attribute("label.fsBind", "title") or ""
         check("the readout says so" in title85 and "nothing reports" not in title85 and "nearest" not in title85,
               f"{tag} night 85: the bind's tooltip says what happens — no longer 'the nearest grip … nothing reports it': {title85!r}")
@@ -7573,6 +7606,17 @@ def redrun_pin():
 def main():
     from playwright.sync_api import sync_playwright
     redrun_pin()
+    # THE GATE'S ONE NAMESPACE (night 86, ruling 261054 §3 — dispatched, not filed): run_door's blocks share one function,
+    # and a block that rebinds a name a later block reads fails HERE, by name, before any browser opens (night 84's `r`
+    # cost a nine-minute closing run). hub/tests/_gate_namespace.py; red-first in hub/tests/gate-namespace.test.mjs.
+    import _gate_namespace as NAMESPACE
+    ns_found, ns_blocks = NAMESPACE.findings(Path(__file__).read_text())
+    print(f"gate namespace (night 86): {ns_blocks} block(s) of run_door · {len(ns_found)} rebind(s) a later block reads")
+    if ns_found:
+        for f in ns_found:
+            print("FAIL " + NAMESPACE.describe(f))
+        print(f"\n0 assertions, {len(ns_found)} failed — the gate did not open a browser")
+        return 1
     doors = node("--doors")
     # THE DOOR FILTER (night 50, 261010): `--doors a,b` runs a subset — the bite harness targets
     # the doors whose reach holds the file a mutation patched (derived from the resolver's own

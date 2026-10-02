@@ -3233,6 +3233,24 @@ def m156_a_silent_chart_opens_on_the_live_state():
     finally:
         p.write_text(original)
 
+def m157_the_log_moves_with_the_version():
+    # night 86 (dispatch 261057 item 0 — the day Multetudes became 1.0): the practice log's address follows the app's
+    # version, the classic "start clean at 1.0" — and every étude a visitor saved before the bump is silently gone. The
+    # audit found nothing that reads the version today; this is the fault a version jump would bring. The bench gate's
+    # REAL entries, saved by the published page at its fixed address, must bite.
+    p, original, mutated = patch("hub/modules/notepad-card.mjs",
+        '    const KEY = doorId + ".v1.log";',
+        '    const KEY = doorId + ".v" + ((String((ctx.door.present || {}).blurb || "").match(/v(\\d+\\.\\d+\\.\\d+)/) || [])[1] || "1") + ".log";   // (the address follows the version)')
+    try:
+        p.write_text(mutated)
+        build()
+        g = suite()
+        hit = "AN ENTRY SAVED BEFORE TONIGHT OPENS EXACTLY AS IT DID" in g.stdout
+        record("the practice log moves with the app version — an étude saved before the bump is gone", g.returncode != 0 and hit,
+               "suite exit %d; the saved-before-tonight pin bit: %s" % (g.returncode, hit))
+    finally:
+        p.write_text(original)
+
 
 MUTATIONS = None      # bound in main() — the one list, preflighted then run
 
@@ -3428,7 +3446,7 @@ def main():
                m149_a_maintained_page_loses_the_field_look, m150_a_maintained_generator_drifts,
                m151_the_drift_scope_binds_the_frozen_page, m152_a_drift_pin_bypasses_the_scope,
                m153_the_record_keeps_a_list_again, m154_a_restored_etude_starts_playing, m155_silence_restores_the_default,
-               m156_a_silent_chart_opens_on_the_live_state)
+               m156_a_silent_chart_opens_on_the_live_state, m157_the_log_moves_with_the_version)
     # WHAT RUNS: everything, or with --new only what the record has not seen bite. Nothing is excluded on a claim about
     # what it depends on — the record is the only input.
     existing = {f.__name__ for f in fns}
