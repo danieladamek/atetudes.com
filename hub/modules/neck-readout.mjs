@@ -19,7 +19,7 @@
 import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
+import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, groupClause, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
 import { progressionOf, chordAt } from "../../engine/progression.mjs";
 import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef, soundedBass } from "../../engine/reference.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
@@ -246,7 +246,9 @@ export const neckReadout = {
          * that resolves sequences the notes whatever the switch says (the neck greys strum then), and a scale
          * with no figure is a run with nothing to move (the neck greys both) — said, not guessed. */
         const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent }) : null;
-        if (fgm && fgm.order && fgm.order.length)
+        if (fgm && fgm.order && fgm.order.length && fgm.steps.length === 1 && fgm.steps[0].length > 1)
+          bits.push(`<b>strummed</b> <span class="ro-dim">(together — the figure is one group)</span>`);   // 261009: <r357> is the strum, said so
+        else if (fgm && fgm.order && fgm.order.length)
           bits.push(`<b>arpeggiated</b> <span class="ro-dim">(in sequence — the figure orders it)</span>`);
         else if (cfg.object !== "scale")
           bits.push(/^arpeggi/.test(String(cfg.movement))   // a restored v0.1.0 étude says "arpeggio"
@@ -255,7 +257,7 @@ export const neckReadout = {
         if (String(cfg.figure || "").trim()) {
           const fg = fgm;   // 260923: the window, for the approach reach; 261011c: what the placement dropped
           if (fg.order && fg.order.length)
-            bits.push(`figure <b>${fg.order.length} steps</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""})</span>`);
+            bits.push(`figure <b>${fg.steps.length} step${fg.steps.length === 1 ? "" : "s"}</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""}${groupClause(fg, sel) ? " — " + groupClause(fg, sel) : ""})</span>`);   // a group is one step (261009)
           else if (fg.err) bits.push(`<span style="color:#B82929">figure: ${fg.err}</span>`);   // the refusal reaches the readout too (rule 10, 261011c)
         }
         /* THE REFERENCE, fretted and NAMED (child 5): the readout says what

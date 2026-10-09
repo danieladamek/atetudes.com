@@ -172,7 +172,7 @@ export const etudeWalk = {
        * the box has no chord to sound as one). A typed figure sequences
        * regardless, as ruled. */
       const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
-      const { events, span } = walkSchedule(sel, fig.err ? null : fig.order,
+      const { events, span } = walkSchedule(sel, fig.err ? null : fig.steps || null,   // a group is one step, its notes one onset (261009)
         chordBeats(prog), bpm, { spread, refMidi, soundedMidi });
       clearPending();
       /* THE PAD (night 57): the bar's harmony seated above the strings' register (padSeat), at the

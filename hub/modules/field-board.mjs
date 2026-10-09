@@ -857,7 +857,7 @@ export const fieldBoard = {
        * drawn as v0.9 draws it — a dashed line through the ordered notes —
        * and exposed on the artifact as data-figorder for the gate */
       if (fig.order && fig.order.length > 1)
-        el("polyline", { points: fig.order.map((n) => fx(n.fret) + "," + fy(n.string)).join(" "),
+        el("polyline", { points: fig.order.map((n) => fx(n.fret) + "," + fy(n.string)).join(" "),   // a group's notes are adjacent in the flat order (261009)
           fill: "none", stroke: "#212126", "stroke-width": 1.3,
           "stroke-dasharray": "4 3", opacity: 0.45, "pointer-events": "none" }, svg);
       /* THE SOUNDING-NOTE PULSE LAYER (260905, item 5 — the family idiom
@@ -866,8 +866,8 @@ export const fieldBoard = {
        * so arrival IS sounding time; the stage schedules its own because it
        * hears ATTACK instead. Same ring: r 19, ink, 2.4, gone in 320ms. */
       el("g", { class: "fd-pulselayer" }, svg);
-      svg.setAttribute("data-figorder",
-        fig.order ? fig.order.map((n) => n.string + "/" + n.fret).join(",") : "");
+      svg.setAttribute("data-figorder",   // a group's notes joined by "+" — one step (261009)
+        fig.steps ? fig.steps.map((st) => st.map((n) => n.string + "/" + n.fret).join("+")).join(",") : "");
 
       /* THE WINDOW — one rigid dashed rectangle, with v0.9's gesture surfaces:
        * the ■ move grip at bottom-left, and the two ● edge handles */
@@ -917,7 +917,7 @@ export const fieldBoard = {
       const capB = el("text", { x: brkX + 10, y: fy(1) - 22, "text-anchor": "middle",
         "font-size": "8.5", fill: "#B9B9BF" }, svg);
       capB.textContent = "pattern";
-      const brSteps = bracketOf(fig.order);
+      const brSteps = bracketOf(fig.steps);   // a group's notes share one step number (261009)
       const offers = offersOn(sel);
       for (let s = 1; s <= 6; s++) {
         const on = inRun.has(s);
@@ -1044,6 +1044,9 @@ export const fieldBoard = {
       if (fig.err) {
         noteEl.textContent = "figure: " + fig.err;
         noteEl.style.color = "#B82929"; noteEl.style.fontStyle = "normal";
+      } else if (fig.open) {
+        noteEl.textContent = fig.open;   // an open group is incomplete, not invalid (261009)
+        noteEl.style.color = ""; noteEl.style.fontStyle = "";
       } else {
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
         /* WHICH CENTRE THE DEGREE SPEAKS FROM (260919, item 4): motion's grammar

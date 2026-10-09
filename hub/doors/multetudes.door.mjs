@@ -287,7 +287,10 @@ export default {
      * reads this string (it is printed into #doorTag, never read back; an entry carries its payload schema v: 2 at the
      * fixed multetudes.v1.log), and entries saved by the published v0.6.30 reopen exactly as they did (the bench gate,
      * hub/tests/v0630-entries.json; m157). Tonight's page moves: the readout's pass line goes to the console. */
-    blurb: "one tool that holds many études · v1.0.0",
+    /* v1.1.0 (261009 — Daniel's ruling, motion-grammar §11): tones inside < > sound together — a group is ONE step of
+     * the subdivision, no roll, no internal order, so <r357> is the strum; both alphabets; no approaches into a group
+     * yet (refused by name). And the bracket path's errors no longer read "figure: figure —". */
+    blurb: "one tool that holds many études · v1.1.0",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

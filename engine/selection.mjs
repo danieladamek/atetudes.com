@@ -769,6 +769,14 @@ export function orderBy(address, text, notes, ctx) {
    * legal ONLY as an APPROACH — an event that exists while it points at a
    * target — and never as a member of the field (CR-1 §3: the guards get
    * stronger, not weaker; see the assertion at the end). */
+  /* THE SIMULTANEOUS GROUP (Daniel, 261009 — motion-grammar §11): tones (or strings)
+   * inside < > sound together, ONE step of the subdivision. Routed before the
+   * approach grammar so a figure mixing the two is refused by name, never half-read. */
+  if (/[<>]/.test(raw)) {
+    if (/[()\[\]]/.test(raw))
+      return { order: null, err: "an approach leads into one note, and a group sounds several at once — approaches into a group are not ruled yet; write the group's tones bare" };
+    return orderGroups(address, raw, notes, ctx);
+  }
   if (/[()\[\]]/.test(raw)) {
     if (address !== "tones")
       return { order: null, err: "approaches — (…)[…] — name TONES: the address is set to pattern; switch it to tones" };
@@ -799,12 +807,30 @@ export function orderBy(address, text, notes, ctx) {
    * ruling): R 3 5 7 9 11 13, longest first so 11 and 13 never half-read
    * as strings. 1/2/4/6/8 alone stay the pattern alphabet's and keep the
    * mode-mismatch notice. */
+  const tk = tokensOf(address, raw);
+  if (tk.err) return { order: null, err: tk.err };
+  const toks = tk.toks;
+  if (!toks.length) return { order: null, err: null };
+  const rs = resolverFor(address, notes, ctx);
+  const order = [];
+  for (const tok of toks) {
+    const hit = rs(tok);
+    if (hit.err) return { order: null, err: hit.err };
+    order.push(hit.note);
+  }
+  assertOrder(order, notes);
+  return { order, steps: order.map((n) => [n]), err: null };
+}
+
+/** the figure's TOKENS in one alphabet — every character a separator, a legal token, or
+ * refused BY NAME (the 260910 junk refusal; one parser with the selection, 260917) */
+function tokensOf(address, raw) {
   const toks = [];
   if (address === "pattern") {
     for (const ch of raw) {
       if (/[,\-\s.·]/.test(ch)) continue;
       if ("123456".includes(ch)) { toks.push(ch); continue; }
-      return { order: null, err: `"${ch}" is not a string — strings are 1–6` };
+      return { err: `"${ch}" is not a string — strings are 1–6` };
     }
   } else {
     /* ONE PARSER (260917, item 1): the tones alphabet is parseTones' — the
@@ -813,13 +839,18 @@ export function orderBy(address, text, notes, ctx) {
      * figure has another mode to switch to */
     const r = parseTones(raw);
     if (r.err)
-      return { order: null, err: r.patternDigit
+      return { err: r.patternDigit
         ? "this reads as a string PATTERN (1/2/4/6 are strings, not roles) — " +
           "the address is set to tones; switch it to pattern"
         : r.err };
     toks.push(...r.tones);
   }
-  if (!toks.length) return { order: null, err: null };
+  return { toks };
+}
+
+/** resolverFor(address, notes, ctx) → tok → { note } | { err }: one token onto the selection,
+ * the ordinal law's `used` count living in the closure (a figure shares one count, groups and all) */
+function resolverFor(address, notes, ctx) {
   /* a selection whose notes carry no ROLES is the scale box (scaleTake) —
    * tones then address DEGREES FROM THE CENTRE (deg, already re-rooted by
    * the field), and a repeat is the ordinal over that degree's occurrences
@@ -829,42 +860,115 @@ export function orderBy(address, text, notes, ctx) {
   const degOfTok = (t) => (t === "R" ? 0 : (Number(t) - 1) % 7);
   const wordOf = (t) => t === "R" ? "root"
     : t + ({ "3": "rd" }[t] || "th");
-  const order = [];
   const used = {};
-  for (const tok of toks) {
+  return (tok) => {
     if (address === "pattern") {
       const s = +tok;
       const onStr = notes.filter((n) => n.string === s).sort((a, b) => a.fret - b.fret);
       if (!onStr.length)
-        return { order: null, err: `string ${s} carries nothing in this selection` };
+        return { err: `string ${s} carries nothing in this selection` };
       const k = (used[s] || 0) % onStr.length;      // A REPEAT IS THE ORDINAL, wrapping
       used[s] = (used[s] || 0) + 1;
-      order.push(onStr[k]);
+      return { note: onStr[k] };
     } else if (degreeAddressed) {
       const d = degOfTok(tok);
       const occ = notes.filter((n) => n.deg === d).sort((a, b) => a.midi - b.midi);
       if (!occ.length)
-        return { order: null, err: `this box carries no ${wordOf(tok)} of the centre — step or widen the window` };
+        return { err: `this box carries no ${wordOf(tok)} of the centre — step or widen the window` };
       const k = (used[tok] || 0) % occ.length;      // the same ordinal law
       used[tok] = (used[tok] || 0) + 1;
-      order.push(occ[k]);
+      return { note: occ[k] };
     } else {
       if (!"R357".includes(tok) || tok.length > 1)
-        return { order: null, err: `${wordOf(tok)}s live in the SCALE box — a chord selection carries R, 3, 5, 7` };
+        return { err: `${wordOf(tok)}s live in the SCALE box — a chord selection carries R, 3, 5, 7` };
       const hit = notes.find((n) => n.role === tok);
       if (!hit) {
         /* a role the PLACEMENT dropped is not absent from the chord: the cause and the way
          * through (injection 261011c); a role the chord does not hold reads as before */
         const ab = ctx && ctx.absent;
         if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(tok))
-          return { order: null, err: droppedRoleSentence(tok === "R" ? 1 : Number(tok), ab) };
-        return { order: null, err: `this selection carries no ${wordOf(tok)}` };
+          return { err: droppedRoleSentence(tok === "R" ? 1 : Number(tok), ab) };
+        return { err: `this selection carries no ${wordOf(tok)}` };
       }
-      order.push(hit);
+      return { note: hit };
     }
+  };
+}
+
+/** orderGroups(address, raw, notes, ctx) → { order, steps, err } | { order: null, err: null, open }
+ * — a figure carrying < > (motion-grammar §11). Each ungrouped token is a step; each group is
+ * ONE step whose notes sound together, in no internal order (the schedule gives them one onset).
+ * `steps` is an array of note arrays — a step that can later carry an approach without a format
+ * change; `order` stays the flat list of every sounded note, so a reader of notes keeps working.
+ * An OPEN group at the end is incomplete, not invalid (the 260910 manners): no order, no error,
+ * and `open` says so. */
+function orderGroups(address, raw, notes, ctx) {
+  const noun = address === "pattern" ? "strings" : "tones";
+  if (address === "pattern" && /R|7|9/.test(raw))   // the mode mismatch reads first, as in the plain path
+    return { order: null, err: "this reads as a TONES figure (R, 7 and the extensions are roles, not strings) — " +
+      "the address is set to pattern; switch it to tones" };
+  const segs = [];
+  let cur = "", open = false;
+  for (const ch of raw) {
+    if (ch === "<") {
+      if (open) return { order: null, err: `a group cannot hold a group — close the first with > before opening another` };
+      segs.push({ group: false, text: cur }); cur = ""; open = true;
+    } else if (ch === ">") {
+      if (!open) return { order: null, err: `a > closes no group — open one with <` };
+      segs.push({ group: true, text: cur }); cur = ""; open = false;
+    } else cur += ch;
   }
+  segs.push({ group: open, text: cur, open });
+  const parsed = [];
+  for (const sg of segs) {
+    const tk = tokensOf(address, sg.text);
+    if (tk.err) return { order: null, err: tk.err };
+    if (sg.group && !sg.open && !tk.toks.length)
+      return { order: null, err: `an empty group sounds nothing — put the ${noun} that sound together inside < >` };
+    parsed.push({ ...sg, toks: tk.toks });
+  }
+  if (open) return { order: null, err: null, open: "the group is open — close it with > and its notes sound together" };
+  const rs = resolverFor(address, notes, ctx);
+  const steps = [];
+  for (const sg of parsed) {
+    const here = [];
+    for (const tok of sg.toks) {
+      const hit = rs(tok);
+      if (hit.err) return { order: null, err: hit.err };
+      if (sg.group && here.includes(hit.note))
+        return { order: null, err: `the group <${sg.text.trim()}> names the same note twice — a note cannot sound against itself` };
+      if (sg.group) here.push(hit.note); else steps.push([hit.note]);
+    }
+    if (sg.group) steps.push(here);
+  }
+  if (!steps.length) return { order: null, err: null };
+  const order = steps.flat();
   assertOrder(order, notes);
-  return { order, err: null };
+  for (const st of steps) if (new Set(st).size !== st.length) throw new Error("orderBy: a group holds one note twice — a note cannot sound against itself");
+  return { order, steps, err: null };
+}
+
+/** groupClause(fig, sel) → the readout's words for a figure's groups, or "" when it has none:
+ * a group equal to the whole selection is the strum, said so; otherwise how many groups sound
+ * together; and a string holding two notes of one group (Line only — Grip is one per string) is
+ * sounded, not fingered together (§11: sounded, not gripped). */
+export function groupClause(fig, sel) {
+  const groups = (fig && fig.steps || []).filter((st) => st.length > 1);
+  if (!groups.length) return "";
+  const N = ["", "one", "two", "three", "four", "five", "six", "seven"];
+  const parts = [];
+  if (fig.steps.length === 1 && groups[0].length === (sel || []).length && sel.every((x) => groups[0].includes(x)))
+    parts.push(`all ${N[groups[0].length] || groups[0].length} at once — the strum`);
+  else parts.push(groups.length === 1 ? "one group sounding together, one step" : `${N[groups.length] || groups.length} groups sounding together, each one step`);
+  const shared = new Set();
+  for (const st of groups) {
+    const per = {};
+    for (const x of st) per[x.string] = (per[x.string] || 0) + 1;
+    for (const [s, c] of Object.entries(per)) if (c > 1) shared.add(+s);
+  }
+  for (const s of [...shared].sort((a, b) => b - a))
+    parts.push(`string ${s} holds two notes of one group — sounded, not fingered together`);
+  return parts.join("; ");
 }
 
 /* THE ROLE TEST (CR-1 §3): a step is legal if it IS a note of the selection,
@@ -900,7 +1004,7 @@ function assertOrder(order, notes) {
 function orderWithApproaches(text, notes, ctx) {
   const src = text.replace(/\bR\b/gi, "1").replace(/S/g, "s");   // the figure's R is motion's 1; `s` is the scale
   const parsed = parseMotion(src, "tones");
-  if (parsed.error) return { order: null, err: "figure — " + parsed.error.message };
+  if (parsed.error) return { order: null, err: parsed.error.message };   // 261009: the page says "figure: " once
   const fld = ctx.fld;
   const degreeAddressed = notes.length > 0 && notes.every((n) => n.role == null);
   const wordOf = (d) => (d === 1 ? "root" : d + ({ 3: "rd" }[d] || "th"));
@@ -932,7 +1036,7 @@ function orderWithApproaches(text, notes, ctx) {
     for (const it of fig.approaches) {
       let midi;
       try { midi = approachMidi(it, target.midi, { scalePcs: fld.pcs, tonicPc: fld.pcs[0] }); }
-      catch (e) { return { order: null, err: "figure — " + String(e.message || e).replace(/^motion: /, "") }; }
+      catch (e) { return { order: null, err: String(e.message || e).replace(/^motion: /, "") }; }
       /* THE OCTAVE TIE (measured on the staff, 260918): an absolute-degree
        * approach takes "the octave nearest the target", and when the two
        * octaves are EQUALLY near motion's rule keeps the lower — which a
@@ -982,7 +1086,7 @@ function orderWithApproaches(text, notes, ctx) {
     if (n.chromatic !== (fld.degOf(n.midi) < 0)) throw new Error("orderBy: an approach's function disagrees with the field");
   }
   assertOrder(order, notes);
-  return { order, err: null, describe: describeMotion(parsed) };
+  return { order, steps: order.map((n) => [n]), err: null, describe: describeMotion(parsed) };
 }
 
 /** the bracket beside each string: which steps of the order land there —
@@ -991,7 +1095,7 @@ function orderWithApproaches(text, notes, ctx) {
 export function bracketOf(order) {
   const per = {};
   if (!order) return per;
-  order.forEach((n, i) => { (per[n.string] ??= []).push(i + 1); });
+  order.forEach((st, i) => { for (const n of Array.isArray(st) ? st : [st]) (per[n.string] ??= []).push(i + 1); });   // a group's notes share its step number (261009)
   return per;
 }
 

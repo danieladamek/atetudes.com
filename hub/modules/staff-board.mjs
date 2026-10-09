@@ -273,14 +273,18 @@ export const staffBoard = {
         const spread2 = cfg.object === "scale" || cfg.movement === "arpeggiate";
         let events = [];
         if (seq.length) {
-          const sched = walkSchedule(sels[ci], figHere, beats, 60, { spread: spread2 });
+          const sched = walkSchedule(sels[ci], figHere ? figs[ci].steps : null, beats, 60, { spread: spread2 });   // a group is one step (261009)
           events = sched.events;
           if (events.length !== seq.length)
             throw new Error("staff-board: the schedule and the drawn sequence disagree — the staff may only write what sounds");
         }
         const together = events.length > 0 && events.every((ev) => ev.at === 0);
+        /* the written value is the STEP's, and a group is one step (261009): count steps, not heads —
+         * the same number as the events' spacing whenever no step holds two notes */
+        const nSteps = figHere ? figs[ci].steps.length : events.length;
+        const inStep = figHere ? figs[ci].steps.flatMap((st) => st.map((_, gi) => gi)) : seq.map(() => 0);
         const dv = together ? beats
-          : events.length > 1 ? events[1].at - events[0].at : beats;
+          : nSteps > 1 ? beats / nSteps : beats;
         const dyadic = [4, 2, 1, 0.5, 0.25].includes(dv);
         const wv = dyadic ? dv : writtenValue(dv);
         const open = together ? beats >= 2 : wv >= 2;
@@ -334,7 +338,7 @@ export const staffBoard = {
           }
           if (!stacked) { xsL.push(x); ysL.push(y); }
           if (ci === index) {
-            const fr = el("text", { x, y: TY + GAP * 8 + 15 + (stacked ? k * 10 : 0),
+            const fr = el("text", { x, y: TY + GAP * 8 + 15 + (stacked ? k * 10 : inStep[k] * 10),
               "text-anchor": "middle", "font-size": "8.5", fill: "#B9B9BF" }, svg);
             fr.textContent = nt.string + "/" + nt.fret;
           }
@@ -361,7 +365,7 @@ export const staffBoard = {
               const t2 = el("text", { x: (xsL[0] + xsL[L - 1]) / 2 + 5.6, y: yBeam - 4,
                 "text-anchor": "middle", "font-size": "9", "font-style": "italic",
                 fill: "#212126", "data-sttuplet": "" }, svg);
-              t2.textContent = String(L);
+              t2.textContent = String(nSteps);
             }
           } else if (!dyadic) {
             const yB = yBeam - 1, xa = xsL[0] + 5.6, xb = xsL[L - 1] + 5.6, xm = (xa + xb) / 2;
@@ -371,7 +375,7 @@ export const staffBoard = {
               el("line", { x1: xx, y1: yB, x2: xx, y2: yB + 5, stroke: "#212126", "stroke-width": 1.1 }, svg);
             const t2 = el("text", { x: xm, y: yB + 3.4, "text-anchor": "middle", "font-size": "9.5",
               "font-style": "italic", fill: "#212126", "data-sttuplet": "" }, svg);
-            t2.textContent = String(L);
+            t2.textContent = String(nSteps);
           }
         }
 

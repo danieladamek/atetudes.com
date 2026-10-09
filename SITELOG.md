@@ -1,3 +1,19 @@
+## 2026-10-09 — Simultaneous groups `< >` in the figure — Multetudes v1.1.0
+
+- **Tones inside angle brackets sound together** (Daniel, 261009; `notes/specs/motion-grammar.md` §11). `r357<53><53>`
+  plays R, 3, 5, 7, then 5+3 together, twice. A group is **one step** of the even subdivision, so that figure is 6 steps.
+  It has no roll and no internal order (`<53>` = `<35>`), so `<r357>` is the strum: the readout says *"strummed
+  (together — the figure is one group)"* and *"all four at once — the strum"*. Works in both alphabets: `6<43>2` is a
+  double-stop by string. Under Line, two notes of one group on one string are sounded and the readout says they cannot
+  be fingered together.
+- **Refused by name:** an empty `<>`, a nested group, a stray `>`, a group naming the same note twice, and any group
+  mixed with an approach (not ruled yet). An open `<` mid-typing is incomplete, not red.
+- **Fixed: the doubled prefix.** Errors from the `[ ]`/`( )` path read `figure: figure — …`; the engine's prefix is gone.
+- Engine: `orderBy` returns `steps` (a group is a note array) beside the flat `order`; `walkSchedule` gives a group one
+  onset; the staff writes a group as stacked heads in one slot and numbers the tuplet by steps. Every figure without
+  `<` reads byte-identically (35,136 orderBy+schedule cases before/after; only the 732 doubled-prefix errors changed).
+  Tetradetudes did not move.
+
 ## 2026-10-02 — Night 86: Multetudes is 1.0 — Multetudes v1.0.0, Tetradetudes v0.6.19
 
 - **Daniel called it: Multetudes is 1.0.** His definition, verbatim (ruling 261040; his to set, and set):

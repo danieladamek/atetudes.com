@@ -204,7 +204,9 @@ export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi =
     : sel;
   const together = !(order && order.length) && !spread;
   const step = seq.length > 1 && !together ? span / seq.length : 0;
-  const events = seq.map((nt, k) => ({ midi: nt.midi, at: together ? 0 : k * step }));
+  /* a step may be a GROUP (261009, motion-grammar §11): an array of notes sounding together —
+   * one onset, one step of the subdivision, no roll */
+  const events = seq.flatMap((st, k) => (Array.isArray(st) ? st : [st]).map((nt) => ({ midi: nt.midi, at: together ? 0 : k * step })));
   /* the reference carries its ROLE (260906): it is the bass line's note, and
    * whoever realises audio may route it to the bass bus — the additive-field
    * precedent (STEP_CHANGED's attack) followed for NOTE */
@@ -218,7 +220,7 @@ export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi =
     if (e.at < 0 || e.at >= span - 1e-9)
       throw new Error("walkSchedule: a step left the chord's span — steps never spill into the next chord " +
         "(a step AT the span is the next chord's downbeat, which is spilling)");
-  const expected = seq.length + (refMidi != null ? 1 : 0) + (sounded ? 1 : 0);
+  const expected = seq.reduce((t, st) => t + (Array.isArray(st) ? st.length : 1), 0) + (refMidi != null ? 1 : 0) + (sounded ? 1 : 0);
   if (events.length !== expected)
     throw new Error("walkSchedule: an event went missing — the schedule must carry every note it was given");
   return { events, span };
