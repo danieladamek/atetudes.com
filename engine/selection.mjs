@@ -1095,7 +1095,12 @@ function orderWithApproaches(text, notes, ctx) {
 export function bracketOf(order) {
   const per = {};
   if (!order) return per;
-  order.forEach((st, i) => { for (const n of Array.isArray(st) ? st : [st]) (per[n.string] ??= []).push(i + 1); });   // a group's notes share its step number (261009)
+  /* a GROUP step is written <k> — the figure's own sign — once on each string it touches, so a string holding two
+   * notes of one group reads {1,<2>,3}, never {1,2,2,3} (Daniel, 261009) */
+  order.forEach((st, i) => {
+    if (Array.isArray(st) && st.length > 1) { for (const s of new Set(st.map((n) => n.string))) (per[s] ??= []).push(`<${i + 1}>`); }
+    else for (const n of Array.isArray(st) ? st : [st]) (per[n.string] ??= []).push(i + 1);
+  });
   return per;
 }
 

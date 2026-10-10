@@ -1,3 +1,9 @@
+## 2026-10-09 — The order bracket writes a group as `<k>` — Multetudes v1.1.1
+
+- **Daniel's choice (option c of run note 261009e):** a group's step is written `<k>`, the figure's own sign, once on each
+  string the group touches. A string holding two notes of one group reads `{1,<2>,3}`, not `{1,2,2,3}`. Figures without
+  `<` draw their brackets unchanged.
+
 ## 2026-10-09 — Simultaneous groups `< >` in the figure — Multetudes v1.1.0
 
 - **Tones inside angle brackets sound together** (Daniel, 261009; `notes/specs/motion-grammar.md` §11). `r357<53><53>`

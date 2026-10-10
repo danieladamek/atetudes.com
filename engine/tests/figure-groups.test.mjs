@@ -134,9 +134,15 @@ test("every figure without < keeps its shape: steps is the order, one note per s
     assert.deepEqual(r.steps, r.order.map((x) => [x]));
     assert.deepEqual(bracketOf(r.steps), bracketOf(r.order));
   }
-  // a group's notes share one step number in the bracket
+  // a group's step is written <k> on every string it touches (Daniel, 261009: {1,<2>,3})
   const g = orderBy("tones", "r<53>", sel, ctx);
   const br = bracketOf(g.steps);
   const s5 = g.steps[1].map((x) => x.string);
-  for (const s of s5) assert.deepEqual(br[s], [2]);
+  for (const s of s5) assert.deepEqual(br[s], ["<2>"]);
+  // two notes of one group on ONE string: the group appears once, not twice
+  const one = scene({ strings: [1], anchor: 1, startDegree: 0, nearFret: 5, n: 3 });
+  const [a, b] = one.sel.map((x) => x.role);
+  const o = orderBy("tones", `r<${a}${b}>r`, one.sel, one.ctx);
+  assert.equal(o.err, null, o.err);
+  assert.equal("{" + bracketOf(o.steps)[1].join(",") + "}", "{1,<2>,3}");
 });
