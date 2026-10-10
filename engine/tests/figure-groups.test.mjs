@@ -11,14 +11,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { field } from "../field.mjs";
 import { positionOf, materialIn } from "../position.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, groupClause } from "../selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, groupClause, gripFit } from "../selection.mjs";
 import { walkSchedule } from "../progression.mjs";
 
 function scene({ key = "Bb", strings = [4, 3, 2, 1], deg = 0, n = 1, take = "one", nearFret = 3, anchor = null, startDegree = 4 } = {}) {
   const fld = field({ key, scale: "major" });
   const pos = positionOf({ field: fld, anchorString: anchor ?? strings[0], startDegree, nearFret, strings });
   const pool = materialIn(pos, strings, fld);
-  const tones = diatonicTones(fld, deg, objectOffsets("tetrad"));
+  /* the tones fit to the slots first, as every board does (gripFit) — CORRECTED 261010: the one-string scene leaned on
+   * an uncovered window (the 7th absent from frets 6–15) to place four tones in three slots; the window now reaches
+   * down to it, and the scene must do what the app does */
+  const tones = gripFit(diatonicTones(fld, deg, objectOffsets("tetrad")), strings.length * n).tones;
   const sel = take === "scale" ? scaleTake(pool).notes
     : take === "every" ? everyOccurrence(tones, pool, { n: 3 }).notes
     : oneOfEach(tones, pool, { n, centre: pos.centre }).notes;

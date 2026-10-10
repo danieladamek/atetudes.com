@@ -17,7 +17,7 @@
  * fails — what is wrong and what to do (night 85).
  */
 import { field, notesOn } from "../../engine/field.mjs";
-import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
+import { positionOf, materialIn, regionOf, windowLo } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, groupClause, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
 import { progressionOf, chordAt, beatsOf, AS_CHARTED } from "../../engine/progression.mjs";
@@ -41,7 +41,7 @@ const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor
 export function unlawfulNotes(sel, fld, pos, cur) {
   const pc = (m) => ((m % 12) + 12) % 12;
   const own = new Set(((cur && cur.tones) || []).filter((t) => t.offKey).map((t) => pc(t.pc)));
-  return (sel || []).filter((x) => !(x.fret >= pos.fLo && x.fret <= pos.fHi
+  return (sel || []).filter((x) => !(x.fret >= windowLo(pos) && x.fret <= pos.fHi   // the drawn window, reach included (261010)
     && (fld.degOf(x.midi) >= 0 || (x.member === true && x.chromatic === true && own.has(pc(x.midi))))));
 }
 
@@ -229,8 +229,11 @@ export const neckReadout = {
         const SETN = ["", "one string holds", "two strings hold", "three strings hold", "four strings hold", "five strings hold", "six strings hold"];
         const nameOfPc = (pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name;
         const short = pos.covered ? "" : pos.uncovered.map((pc) => `<b>${nameOfPc(pc)}</b>`).join(" and ");
-        const why = !pos.covered ? "the neck ends · " : pos.fHi > pos.frets[2] ? `widened so ${SETN[run.strings.length] || "the set holds"} the whole scale · ` : "";
-        bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`
+        /* 261010: where the top ran out the window reaches DOWN — said as what it is, from the drawn edge */
+        const why = !pos.covered ? "the neck ends · "
+          : windowLo(pos) < pos.fLo ? `the neck ends at ${pos.fHi} — it reaches down to fret ${windowLo(pos)} so ${SETN[run.strings.length] || "the set holds"} the whole scale · `
+          : pos.fHi > pos.frets[2] ? `widened so ${SETN[run.strings.length] || "the set holds"} the whole scale · ` : "";
+        bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${windowLo(pos)}–${pos.fHi}</b>`
           + (short ? `, short of ${short}` : "")
           + ` <span class="ro-dim">(${why}${pool.length} notes · ${placeK}/${prog.chords.length} bars place)</span>`);
         const ss = [...run.strings].sort((a, b) => b - a).map(String).join("–");
@@ -255,7 +258,7 @@ export const neckReadout = {
          * placement and the figure and never said strum or arpeggiate). Stated as the neck resolves it: a figure
          * that resolves sequences the notes whatever the switch says (the neck greys strum then), and a scale
          * with no figure is a run with nothing to move (the neck greys both) — said, not guessed. */
-        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent }) : null;
+        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones }) : null;
         if (fgm && fgm.order && fgm.order.length && fgm.steps.length === 1 && fgm.steps[0].length > 1)
           bits.push(`<b>strummed</b> <span class="ro-dim">(together — the figure is one group)</span>`);   // 261009: <r357> is the strum, said so
         else if (fgm && fgm.order && fgm.order.length)

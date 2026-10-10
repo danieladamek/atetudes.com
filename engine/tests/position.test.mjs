@@ -191,13 +191,16 @@ test("THE OCTAVE AMENDMENT (2026-09-07): with its set, every window covers the f
   assert.ok(widened >= 10, `the corpus must contain windows the amendment actually widened (${widened})`);
 });
 
-test("the no-fit case is NAMED, never out-widened: a single string near the neck's end", () => {
+test("a single string near the neck's end: never out-widened PAST fret 15 — and, since 261010, it reaches DOWN for what is missing", () => {
+  // CORRECTED 261010 (doctrine 3): this test pinned `covered: false` here — the state Daniel ruled away ("the window
+  // reaches down when the neck runs out"). What it guarded still holds: the window never passes fret 15.
   const fld = field({ key: "C", scale: "major" });
   const pos = positionOf({ field: fld, anchorString: 3, startDegree: 2, nearFret: 12, strings: [3] });
   assert.ok(pos.fLo >= 9, `the case must sit high on the neck (fLo ${pos.fLo})`);
-  assert.equal(pos.covered, false, "the neck ends before one string can give seven classes");
-  assert.ok(pos.uncovered.length >= 1, "what is missing is named by pitch class");
   assert.equal(pos.fHi, 15, "the widening stopped at the neck's end, not past it");
+  assert.ok(pos.reachLo < pos.fLo, `the top ran out, so the window reached down (reachLo ${pos.reachLo})`);
+  assert.equal(pos.covered, true, "one string's frets reachLo..15 hold the seven classes");
+  assert.equal(pos.fLo, pos.frets[0], "the anchor's start did not move");
 });
 
 test("the boot window is untouched by the amendment — register 11 holds", () => {
@@ -205,4 +208,63 @@ test("the boot window is untouched by the amendment — register 11 holds", () =
   const withSet = positionOf({ field: fld, anchorString: 4, startDegree: 4, nearFret: 3, strings: [4, 3, 2, 1] });
   assert.deepEqual([withSet.fLo, withSet.fHi, withSet.centre], [3, 7, 5],
     "the four-string boot already covered its octave; the amendment moves nothing there");
+});
+
+/* ---------------- 261010 — the window reaches DOWN when the neck runs out (Daniel) ----------------
+ * Upward first, exactly as 2026-09-07; only when fHi reaches 15 with pitch classes still missing does the window
+ * reach DOWN, minimally, below the anchor triple. The reach is `reachLo` — `fLo` stays the anchor's start (the
+ * window's identity, read by step(), the neck's drag and every nearFret written back) — and the region, the
+ * material and the drawing read reachLo..fHi. */
+import { notesOn as notesOn261010, OPEN_MIDI as OPEN261010 } from "../field.mjs";
+import { regionOf as regionOf261010, materialIn as materialIn261010, step as step261010 } from "../position.mjs";
+
+test("261010 PINNED: B♭ major, string 2, from F (fret 6) — covered, the region reaching down to fret 4 (E♭)", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const p = positionOf({ field: fld, anchorString: 2, startDegree: 4, nearFret: 6, strings: [2] });
+  assert.deepEqual(p.frets, [6, 8, 10], "the anchor triple does not move");
+  assert.equal(p.fLo, 6, "fLo stays the anchor's start");
+  assert.equal(p.centre, 8, "the centre does not move");
+  assert.equal(p.fHi, 15);
+  assert.equal(p.reachLo, 4, "the window reaches down to E♭ at fret 4 — minimally");
+  assert.equal(p.covered, true); assert.deepEqual(p.uncovered, []);
+  assert.equal(regionOf261010(p, [2]).fLo, 4, "the region is what the neck draws and isolates");
+  assert.ok(materialIn261010(p, [2], fld).some((n) => n.fret === 4), "E♭ at fret 4 is in the material");
+});
+
+test("261010 every single-string set × every start degree × a key sample: a diatonic field is always covered (a string's 0–15 holds all twelve pitch classes — the 2026-09-07 'named' case is unreachable for seven-note fields)", () => {
+  let n = 0;
+  for (const key of ["C", "Bb", "F#", "Eb", "A"]) for (const scale of ["major", "harm", "mel"]) {
+    const fld = field({ key, scale });
+    for (let s = 1; s <= 6; s++) for (let d = 0; d < 7; d++) for (const nf of [0, 5, 10, 15]) {
+      const p = positionOf({ field: fld, anchorString: s, startDegree: d, nearFret: nf, strings: [s] });
+      assert.equal(p.covered, true, `${key} ${scale} string ${s} from degree ${d} near ${nf}: ${JSON.stringify(p)}`);
+      assert.ok(p.reachLo <= p.fLo && p.reachLo >= 0);
+      n++;
+    }
+  }
+  assert.equal(n, 5 * 3 * 6 * 7 * 4);
+});
+
+test("261010 upward first: wherever upward already covered (or no set is given), reachLo is fLo — nothing that worked moves", () => {
+  for (const key of ["C", "Bb"]) {
+    const fld = field({ key, scale: "major" });
+    for (const strings of [[4, 3, 2, 1], [3, 2, 1], [6, 5, 4]]) for (let d = 0; d < 7; d++) {
+      const p = positionOf({ field: fld, anchorString: Math.max(...strings), startDegree: d, nearFret: 5, strings });
+      if (p.fHi < 15) assert.equal(p.reachLo, p.fLo, `${key} ${strings} ${d}: covered going up — no reach down`);
+    }
+    const bare = positionOf({ field: fld, anchorString: 2, startDegree: 4, nearFret: 6 });
+    assert.equal(bare.reachLo, bare.fLo, "without a set, the anchor-triple floor stands");
+  }
+});
+
+test("261010 step() ± across a down-reached window walks and comes back", () => {
+  const fld = field({ key: "Bb", scale: "major" });
+  const p = positionOf({ field: fld, anchorString: 2, startDegree: 4, nearFret: 6, strings: [2] });
+  assert.ok(p.reachLo < p.fLo, "the probe is a down-reached window");
+  const up = step261010(p, 1, fld, [2]), back = step261010(up, -1, fld, [2]);
+  assert.notDeepEqual(up.frets, p.frets, "it walked");
+  assert.deepEqual(back.frets, p.frets, "and came back");
+  assert.deepEqual([back.fLo, back.reachLo, back.fHi], [p.fLo, p.reachLo, p.fHi]);
+  const dn = step261010(p, -1, fld, [2]), fwd = step261010(dn, 1, fld, [2]);
+  assert.deepEqual(fwd.frets, p.frets, "down and back up too");
 });

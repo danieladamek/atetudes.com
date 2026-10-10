@@ -91,7 +91,7 @@
  */
 import { parseChord } from "./chord.mjs";
 import { field } from "./field.mjs";
-import { positionOf, materialIn } from "./position.mjs";
+import { positionOf, materialIn, windowLo } from "./position.mjs";
 // 260918 (CR-1): the approach grammar and arithmetic, owned by motion.mjs — imported by their exported names (the door build blanks imports; an alias would name nothing)
 import { parseMotion, describeMotion, approachMidi, placeNear } from "./motion.mjs";
 
@@ -355,7 +355,7 @@ export function chordSupply(tones, fld, strings, pos) {
   for (const t of tones) {
     if (!t.offKey) continue;
     for (const s of strings)
-      for (let fret = pos.fLo; fret <= pos.fHi; fret++) {
+      for (let fret = windowLo(pos); fret <= pos.fHi; fret++) {   // the window as drawn, reach included (261010)
         const midi = fld.opens[s] + fret;
         if (mod12(midi) !== mod12(t.pc)) continue;
         if (fld.degOf(midi) >= 0) throw new Error("chordSupply: a chord-supplied tone must be off the field — this one is a degree of it");
@@ -758,6 +758,27 @@ export function droppedRoleSentence(role, absent) {
   return cause + (escape ? ` — ${escape}` : " — no cap or set this neck offers would carry it");
 }
 
+/** THE WINDOW'S SENTENCE (Daniel, 261010 — Cm7 said "this selection carries no 3rd" while the E♭ sat below the
+ * window): when a role the chord HOLDS has no note inside the window on these strings, the window is the cause —
+ * said with the note's name and where it sits, and the way through. Derived from the caller's chord tones
+ * (`ctx.tones`), the field's opens and the drawn window; null when the window is not the cause, or the caller handed
+ * no tones (then the old sentence stands — nothing is invented). */
+export function windowRoleSentence(tok, ctx) {
+  if (!ctx || !Array.isArray(ctx.tones) || !ctx.fld || !ctx.pos || !Array.isArray(ctx.strings)) return null;
+  const t = ctx.tones.find((x) => String(x.role) === String(tok));
+  if (!t) return null;
+  const pc = mod12(t.pc), lo = windowLo(ctx.pos), hi = ctx.pos.fHi;
+  const at = [];
+  for (const s of ctx.strings)
+    for (let f = 0; f <= 15; f++) if (mod12(ctx.fld.opens[s] + f) === pc) at.push({ s, f });
+  if (at.some(({ f }) => f >= lo && f <= hi)) return null;   // the window holds it — the cause is elsewhere
+  const name = t.name || (t.keyDeg >= 0 && ctx.fld.notes[t.keyDeg] ? ctx.fld.notes[t.keyDeg].name : null);
+  const word = tok === "R" || tok === 1 ? "root" : tok + ({ 3: "rd" }[tok] || "th");
+  const per = ctx.strings.map((s) => [s, at.filter((x) => x.s === s).map((x) => x.f)]).filter(([, fs]) => fs.length);
+  const where = per.map(([s, fs]) => `${fs.map((f) => "fret " + f).join(" and ")} on string ${s}`).join(", ");
+  return `the ${word}${name ? ` (${name})` : ""} is outside the window — it sits at ${where}; step the window or add a string`;
+}
+
 export function orderBy(address, text, notes, ctx) {
   const raw = String(text || "").toUpperCase();
   /* THE APPROACH NOTE (260918, night 24 — CR-1 ruled it, Design Spec §2.6
@@ -888,7 +909,7 @@ function resolverFor(address, notes, ctx) {
         const ab = ctx && ctx.absent;
         if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(tok))
           return { err: droppedRoleSentence(tok === "R" ? 1 : Number(tok), ab) };
-        return { err: `this selection carries no ${wordOf(tok)}` };
+        return { err: windowRoleSentence(tok, ctx) || `this selection carries no ${wordOf(tok)}` };   // 261010: the window, when it is the cause
       }
       return { note: hit };
     }
@@ -1029,7 +1050,7 @@ function orderWithApproaches(text, notes, ctx) {
         const ab = ctx && ctx.absent;
         if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(role))
           return { order: null, err: droppedRoleSentence(t.deg, ab) };
-        return { order: null, err: `this selection carries no ${wordOf(t.deg)}` };
+        return { order: null, err: windowRoleSentence(role, ctx) || `this selection carries no ${wordOf(t.deg)}` };   // 261010
       }
     }
     const shift = target.deg == null ? 0 : (((target.deg - fld.degOf(target.midi)) % 7) + 7) % 7;
@@ -1056,7 +1077,7 @@ function orderWithApproaches(text, notes, ctx) {
        * rule is never restated here. No reachable position → refuse BY NAME. */
       const gaps = ctx.fld.pcs.map((pc, i, arr) => (((arr[(i + 1) % arr.length] - pc) % 12) + 12) % 12);
       const reach = Math.max(...gaps);
-      const lo = ctx.pos.fLo - reach, hi = ctx.pos.fHi + reach;
+      const lo = windowLo(ctx.pos) - reach, hi = ctx.pos.fHi + reach;   // from the window's drawn edge, reach down included (261010)
       const dist = Math.abs(midi - target.midi);
       const octaves = [midi, ...[midi + 12, midi - 12].filter((m) => Math.abs(m - target.midi) === dist)];
       let pos = null, nearestMiss = null;
@@ -1070,7 +1091,7 @@ function orderWithApproaches(text, notes, ctx) {
         const rel = `${midi - target.midi > 0 ? "+" : ""}${midi - target.midi}`;
         return { order: null, err: nearestMiss === null
           ? `the approach ${rel} to the ${wordOf(t.deg)} has no playable position on these strings`
-          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}${target.fret === ctx.pos.fLo || target.fret === ctx.pos.fHi ? ", at the window's edge" : ""} (frets ${ctx.pos.fLo}–${ctx.pos.fHi}), and the reach is ${reach}` };   // 261001: the edge clause only AT the edge (rule 14's sibling — template text that is said whatever the fret is a caption of nothing)
+          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}${target.fret === windowLo(ctx.pos) || target.fret === ctx.pos.fHi ? ", at the window's edge" : ""} (frets ${windowLo(ctx.pos)}–${ctx.pos.fHi}), and the reach is ${reach}` };   // 261001: the edge clause only AT the edge (rule 14's sibling — template text that is said whatever the fret is a caption of nothing)
       }
       const keyDeg = fld.degOf(midi);
       const chromatic = keyDeg < 0;

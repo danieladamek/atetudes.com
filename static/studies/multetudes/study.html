@@ -4918,7 +4918,7 @@ function positionOf({ field: fld, anchorString, startDegree, nearFret = 5, strin
   if (span3(frets) !== 3 && span3(frets) !== 4)
     throw new Error(`positionOf: window ${frets.join(",")} spans ${span3(frets)} frets — ` +
       "a scale triple spans 3 or 4; adjacent frets are the flattening the ruling retired");
-  let fHi = frets[2];
+  let fHi = frets[2], reachLo = frets[0];
   let covered = true, uncovered = [];
   if (strings) {
     /* THE OCTAVE EXTENSION (2026-09-07): widen upward, minimally, until the
@@ -4926,21 +4926,27 @@ function positionOf({ field: fld, anchorString, startDegree, nearFret = 5, strin
      * table anywhere. The neck's end (fret 15, notesOn's own bound) is the
      * honest stop: what is still missing there is NAMED, never out-widened. */
     const set = [...new Set(strings)];
-    const covers = (hi) => {
+    const covers = (lo, hi) => {
       const got = new Set();
       for (const st of set)
         for (const n of notesOn(st, fld))
-          if (n.fret >= frets[0] && n.fret <= hi) got.add(((n.midi % 12) + 12) % 12);
+          if (n.fret >= lo && n.fret <= hi) got.add(((n.midi % 12) + 12) % 12);
       return got;
     };
-    let got = covers(fHi);
-    while (got.size < fld.pcs.length && fHi < 15) { fHi++; got = covers(fHi); }
+    let got = covers(reachLo, fHi);
+    while (got.size < fld.pcs.length && fHi < 15) { fHi++; got = covers(reachLo, fHi); }
+    /* THE REACH DOWN (Daniel, 261010 — string 2 from F at fret 6 held no E♭ and Cm7 lost its 3rd): only when the
+     * top has run out, the window reaches BELOW the anchor triple, minimally, until the set holds the field or
+     * fret 0 is reached. The reach is `reachLo`, never `fLo`: fLo is the anchor's start — the window's identity,
+     * which step(), the neck's drag and every nearFret written back read — and the triple, `frets` and `centre`
+     * do not move. The widened tail is reach, not centre, now in both directions. */
+    while (got.size < fld.pcs.length && reachLo > 0) { reachLo--; got = covers(reachLo, fHi); }
     covered = got.size === fld.pcs.length;
     uncovered = covered ? [] : fld.pcs.filter((pc) => !got.has(pc));
   }
   return {
     anchorString, startDeg: startDegree, frets,
-    fLo: frets[0], fHi,
+    fLo: frets[0], fHi, reachLo,
     centre: (frets[0] + frets[1] + frets[2]) / 3,
     covered, uncovered,
   };
@@ -4968,6 +4974,10 @@ function step(pos, dir, fld, strings = null) {
  * `{6,4,3,1}` is as legal as `{4,3,2,1}`; the region spans min..max of it and
  * an excluded string inside the span is the SURFACE's fact to show, not this
  * value's to hide. */
+/** the window's LOW edge as drawn and isolated: the reach down when the top ran out (261010), else the anchor's
+ * start. A position built by hand (a test's, a zone's box) has no reachLo and reads its fLo. */
+const windowLo = (pos) => (Number.isInteger(pos.reachLo) ? pos.reachLo : pos.fLo);
+
 function regionOf(pos, strings) {
   if (!Array.isArray(strings) || !strings.length)
     throw new Error("regionOf: the set is a non-empty array of strings");
@@ -4978,7 +4988,7 @@ function regionOf(pos, strings) {
   if (!set.includes(pos.anchorString))
     throw new Error(`regionOf: the anchor (string ${pos.anchorString}) is not in the set ${set.join(",")}`);
   return {
-    fLo: pos.fLo, fHi: pos.fHi,
+    fLo: windowLo(pos), fHi: pos.fHi,   // the region's low edge is the reach (261010); the anchor's start stays pos.fLo
     /* stored low pitch → high pitch (descending string numbers), the family's
      * storage order (string-sets.mjs law: 1 is the highest pitch) */
     strings: [...set].sort((a, b) => b - a),
@@ -5005,7 +5015,7 @@ function materialIn(pos, strings, fld, gamut = null) {
    * is computed). null is the whole field, today's offer exactly. It narrows what is offered; it
    * never widens what is legal: the off-field throw below is untouched (CR-1 §3). */
   for (const s of region.strings)
-    out.push(...notesOn(s, fld).filter((n) => n.fret >= pos.fLo && n.fret <= pos.fHi && inGamut(gamut, n.keyDeg)));
+    out.push(...notesOn(s, fld).filter((n) => n.fret >= region.fLo && n.fret <= region.fHi && inGamut(gamut, n.keyDeg)));
   for (const n of out)
     if (fld.degOf(n.midi) < 0)
       throw new Error("materialIn: a note outside the field leaked into the material — " +
@@ -5058,7 +5068,7 @@ function reanchor(pos, strings, fld) {
   if (m.length < 2)
     throw new Error("position: a 3-or-4-fret window on one string must offer at least two scale notes");
 }
-return { positionOf, step, regionOf, inGamut, materialIn, reanchor };
+return { positionOf, step, windowLo, regionOf, inGamut, materialIn, reanchor };
 })();
 
 /* ===== engine/string-run.mjs ===== */
@@ -5210,7 +5220,7 @@ return { makeRun, fromSetIndex, translateFigure };
 const __m_engine_selection_mjs = (() => {
 const { parseChord } = __m_engine_chord_mjs;
 const { field } = __m_engine_field_mjs;
-const { positionOf, materialIn } = __m_engine_position_mjs;
+const { positionOf, materialIn, windowLo } = __m_engine_position_mjs;
 const { parseMotion, describeMotion, approachMidi, placeNear } = __m_engine_motion_mjs;
 /* selection.mjs — THE SELECTION: what is taken from the field's pool
  * (Multetudes child 3a — Route B, ratified 2026-08-28).
@@ -5568,7 +5578,7 @@ function chordSupply(tones, fld, strings, pos) {
   for (const t of tones) {
     if (!t.offKey) continue;
     for (const s of strings)
-      for (let fret = pos.fLo; fret <= pos.fHi; fret++) {
+      for (let fret = windowLo(pos); fret <= pos.fHi; fret++) {   // the window as drawn, reach included (261010)
         const midi = fld.opens[s] + fret;
         if (mod12(midi) !== mod12(t.pc)) continue;
         if (fld.degOf(midi) >= 0) throw new Error("chordSupply: a chord-supplied tone must be off the field — this one is a degree of it");
@@ -5971,6 +5981,27 @@ function droppedRoleSentence(role, absent) {
   return cause + (escape ? ` — ${escape}` : " — no cap or set this neck offers would carry it");
 }
 
+/** THE WINDOW'S SENTENCE (Daniel, 261010 — Cm7 said "this selection carries no 3rd" while the E♭ sat below the
+ * window): when a role the chord HOLDS has no note inside the window on these strings, the window is the cause —
+ * said with the note's name and where it sits, and the way through. Derived from the caller's chord tones
+ * (`ctx.tones`), the field's opens and the drawn window; null when the window is not the cause, or the caller handed
+ * no tones (then the old sentence stands — nothing is invented). */
+function windowRoleSentence(tok, ctx) {
+  if (!ctx || !Array.isArray(ctx.tones) || !ctx.fld || !ctx.pos || !Array.isArray(ctx.strings)) return null;
+  const t = ctx.tones.find((x) => String(x.role) === String(tok));
+  if (!t) return null;
+  const pc = mod12(t.pc), lo = windowLo(ctx.pos), hi = ctx.pos.fHi;
+  const at = [];
+  for (const s of ctx.strings)
+    for (let f = 0; f <= 15; f++) if (mod12(ctx.fld.opens[s] + f) === pc) at.push({ s, f });
+  if (at.some(({ f }) => f >= lo && f <= hi)) return null;   // the window holds it — the cause is elsewhere
+  const name = t.name || (t.keyDeg >= 0 && ctx.fld.notes[t.keyDeg] ? ctx.fld.notes[t.keyDeg].name : null);
+  const word = tok === "R" || tok === 1 ? "root" : tok + ({ 3: "rd" }[tok] || "th");
+  const per = ctx.strings.map((s) => [s, at.filter((x) => x.s === s).map((x) => x.f)]).filter(([, fs]) => fs.length);
+  const where = per.map(([s, fs]) => `${fs.map((f) => "fret " + f).join(" and ")} on string ${s}`).join(", ");
+  return `the ${word}${name ? ` (${name})` : ""} is outside the window — it sits at ${where}; step the window or add a string`;
+}
+
 function orderBy(address, text, notes, ctx) {
   const raw = String(text || "").toUpperCase();
   /* THE APPROACH NOTE (260918, night 24 — CR-1 ruled it, Design Spec §2.6
@@ -6101,7 +6132,7 @@ function resolverFor(address, notes, ctx) {
         const ab = ctx && ctx.absent;
         if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(tok))
           return { err: droppedRoleSentence(tok === "R" ? 1 : Number(tok), ab) };
-        return { err: `this selection carries no ${wordOf(tok)}` };
+        return { err: windowRoleSentence(tok, ctx) || `this selection carries no ${wordOf(tok)}` };   // 261010: the window, when it is the cause
       }
       return { note: hit };
     }
@@ -6242,7 +6273,7 @@ function orderWithApproaches(text, notes, ctx) {
         const ab = ctx && ctx.absent;
         if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(role))
           return { order: null, err: droppedRoleSentence(t.deg, ab) };
-        return { order: null, err: `this selection carries no ${wordOf(t.deg)}` };
+        return { order: null, err: windowRoleSentence(role, ctx) || `this selection carries no ${wordOf(t.deg)}` };   // 261010
       }
     }
     const shift = target.deg == null ? 0 : (((target.deg - fld.degOf(target.midi)) % 7) + 7) % 7;
@@ -6269,7 +6300,7 @@ function orderWithApproaches(text, notes, ctx) {
        * rule is never restated here. No reachable position → refuse BY NAME. */
       const gaps = ctx.fld.pcs.map((pc, i, arr) => (((arr[(i + 1) % arr.length] - pc) % 12) + 12) % 12);
       const reach = Math.max(...gaps);
-      const lo = ctx.pos.fLo - reach, hi = ctx.pos.fHi + reach;
+      const lo = windowLo(ctx.pos) - reach, hi = ctx.pos.fHi + reach;   // from the window's drawn edge, reach down included (261010)
       const dist = Math.abs(midi - target.midi);
       const octaves = [midi, ...[midi + 12, midi - 12].filter((m) => Math.abs(m - target.midi) === dist)];
       let pos = null, nearestMiss = null;
@@ -6283,7 +6314,7 @@ function orderWithApproaches(text, notes, ctx) {
         const rel = `${midi - target.midi > 0 ? "+" : ""}${midi - target.midi}`;
         return { order: null, err: nearestMiss === null
           ? `the approach ${rel} to the ${wordOf(t.deg)} has no playable position on these strings`
-          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}${target.fret === ctx.pos.fLo || target.fret === ctx.pos.fHi ? ", at the window's edge" : ""} (frets ${ctx.pos.fLo}–${ctx.pos.fHi}), and the reach is ${reach}` };   // 261001: the edge clause only AT the edge (rule 14's sibling — template text that is said whatever the fret is a caption of nothing)
+          : `the approach ${rel} to the ${wordOf(t.deg)} sits ${nearestMiss} fret${nearestMiss === 1 ? "" : "s"} beyond the hand — the ${wordOf(t.deg)} is at fret ${target.fret}${target.fret === windowLo(ctx.pos) || target.fret === ctx.pos.fHi ? ", at the window's edge" : ""} (frets ${windowLo(ctx.pos)}–${ctx.pos.fHi}), and the reach is ${reach}` };   // 261001: the edge clause only AT the edge (rule 14's sibling — template text that is said whatever the fret is a caption of nothing)
       }
       const keyDeg = fld.degOf(midi);
       const chromatic = keyDeg < 0;
@@ -6383,7 +6414,7 @@ function bracketOf(order) {
   if (dy.tones.length !== 1 || dy.absent.join() !== "7")
     throw new Error("selection: a dyad's 7 on a plain triad must be ABSENT BY NAME, never silently narrowed");
 }
-return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, objectOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, UNCAPPED, capOf, gripFit, chordSupply, materialFor, chordSuppliedSentence, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, orderBy, groupClause, bracketOf };
+return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, objectOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, UNCAPPED, capOf, gripFit, chordSupply, materialFor, chordSuppliedSentence, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, windowRoleSentence, orderBy, groupClause, bracketOf };
 })();
 
 /* ===== engine/atchart.mjs ===== */
@@ -7960,7 +7991,7 @@ const etudeWalk = {
       }
       /* THE SCHEDULE: the figure's order through orderBy — the same value
        * the bracket and the polyline draw — or the take's own shape */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent, tones: cfg.object === "scale" ? null : cur.tones });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       /* 260905, the coupling severed: Take chooses the MATERIAL, the rail's
        * Movement control chooses together-or-sequence (a scale stays a run —
        * the box has no chord to sound as one). A typed figure sequences
@@ -9142,7 +9173,7 @@ const { pentatonicBreak, describeGamut } = __m_engine_gamut_mjs;
 const { inGamut } = __m_engine_position_mjs;
 const { SHARED } = __m_engine_shared_config_mjs;
 const { alteredDegree } = __m_engine_chord_mjs;
-const { positionOf, step, reanchor, regionOf, materialIn } = __m_engine_position_mjs;
+const { positionOf, step, reanchor, regionOf, materialIn, windowLo } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
 const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } = __m_engine_selection_mjs;
 const { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead, soundedBass, soundedChoicesFor } = __m_engine_reference_mjs;
@@ -9728,7 +9759,7 @@ const fieldBoard = {
         const fam = FAM[dot.deg];
         const excludedInFrame = !inRun.has(dot.string)
           && dot.string >= region.strHi && dot.string <= region.strLo
-          && dot.fret >= pos.fLo && dot.fret <= pos.fHi;
+          && dot.fret >= windowLo(pos) && dot.fret <= pos.fHi;   // the drawn window, reach included (261010)
         const g = el("g", { class: "fd-dot", opacity: excludedInFrame ? 0.1 : 0.28,
           "data-midi": dot.midi, "data-str": dot.string, "data-fret": dot.fret }, svg);
         el("circle", { cx: fx(dot.fret), cy: fy(dot.string), r: 10.5, fill: FAM_COLOR[fam] }, g);
@@ -9867,7 +9898,7 @@ const fieldBoard = {
          * the em-dash so the collide and the escape read as two lines; x clamped so the longest line stays on the neck. */
         const linesTxt = selMsg.split(" — ");
         const half = Math.max(...linesTxt.map((l) => l.length + 2)) * 12.5 * 0.29 + 6;
-        const rx = Math.min(Math.max((fx(pos.fLo) + fx(pos.fHi)) / 2, half), 1280 - half);
+        const rx = Math.min(Math.max((fx(windowLo(pos)) + fx(pos.fHi)) / 2, half), 1280 - half);
         const sTop = Math.min(...run.strings), sBot = Math.max(...run.strings);
         const ry = (fy(sTop) + fy(sBot)) / 2 - (linesTxt.length - 1) * 8;
         const rt = el("text", { class: "fd-refusal", x: rx, y: ry, "data-seat": "in",
@@ -9924,7 +9955,7 @@ const fieldBoard = {
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
        * slur is drawn UNDER the dots (the under-draw convention) */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones });   // 261010: the chord's tones, so the window can be named as a cause   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const approaches = (fig.order || []).filter((n) => n.role === "approach");
       /* §2.6 "Connection. An approach figure joins its target with a slur in
        * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */
@@ -10032,7 +10063,8 @@ const fieldBoard = {
       /* THE WINDOW — one rigid dashed rectangle, with v0.9's gesture surfaces:
        * the ■ move grip at bottom-left, and the two ● edge handles */
       const ys = [fy(region.strHi) - 17, fy(region.strLo) + 17];
-      const xLo = pos.fLo === 0 ? FX0 - 34 : FX0 + (pos.fLo - 1) * FW + FW * 0.28;
+      const wLo0 = windowLo(pos);   // the drawn edge: the reach down when the top ran out (261010); the anchor stays pos.fLo
+      const xLo = wLo0 === 0 ? FX0 - 34 : FX0 + (wLo0 - 1) * FW + FW * 0.28;
       const xHi = Math.min(FX0 + pos.fHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9);
       el("rect", { class: "fd-frame", x: xLo, y: ys[0], width: xHi - xLo,
         height: ys[1] - ys[0], rx: 12 }, svg);
@@ -10057,7 +10089,7 @@ const fieldBoard = {
        * coordinates — only the viewBox and the gutter's x move, and only under 600 px. */
       const narrow = d.defaultView.matchMedia && d.defaultView.matchMedia("(max-width: 600px)").matches;
       const drawnFrets = sel.map((n) => n.fret);
-      let wLo = Math.max(0, Math.min(pos.fLo, ...drawnFrets)), wHi = Math.min(NFRETS, Math.max(pos.fHi, ...drawnFrets));
+      let wLo = Math.max(0, Math.min(windowLo(pos), ...drawnFrets)), wHi = Math.min(NFRETS, Math.max(pos.fHi, ...drawnFrets));
       while (wHi - wLo + 1 < 5) { if (wHi < NFRETS) wHi++; else if (wLo > 0) wLo--; else break; }
       const sideX = narrow ? fx(wHi) + FW / 2 + 42 : STR_X;   // the gutter follows the window
       const brkX = sideX + (BRK_X - STR_X);
@@ -10272,6 +10304,7 @@ const fieldBoard = {
          * holds the whole scale — and where the neck ends first, the way to what is missing is a step toward the nut */
         (!pos.covered
           ? `The neck ends at fret ${pos.fHi} — step ← toward the nut to reach ${pos.uncovered.map((pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name).join(" and ")}. `
+          : windowLo(pos) < pos.fLo ? `The neck ends at fret ${pos.fHi}, so the window reaches down to fret ${windowLo(pos)} for what the set lacks above; step ← to bring it under the hand. `   // 261010
           : pos.fHi > pos.frets[2] ? "Fewer strings widen the window until the set holds the whole scale; more strings narrow it. " : "") +
         "Click the numbers to choose strings; ← → step the window.";
       /* THE LEGEND SAYS WHICH CENTRE (night 85, item 2 C — PO ruling 261053 §2): under "follows" this line said
@@ -12133,7 +12166,7 @@ return { mixerStrip };
 /* ===== hub/modules/neck-readout.mjs ===== */
 const __m_hub_modules_neck_readout_mjs = (() => {
 const { field, notesOn } = __m_engine_field_mjs;
-const { positionOf, materialIn, regionOf } = __m_engine_position_mjs;
+const { positionOf, materialIn, regionOf, windowLo } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
 const { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, groupClause, materialFor, chordSuppliedSentence, capOf } = __m_engine_selection_mjs;
 const { progressionOf, chordAt, beatsOf, AS_CHARTED } = __m_engine_progression_mjs;
@@ -12185,7 +12218,7 @@ const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor
 function unlawfulNotes(sel, fld, pos, cur) {
   const pc = (m) => ((m % 12) + 12) % 12;
   const own = new Set(((cur && cur.tones) || []).filter((t) => t.offKey).map((t) => pc(t.pc)));
-  return (sel || []).filter((x) => !(x.fret >= pos.fLo && x.fret <= pos.fHi
+  return (sel || []).filter((x) => !(x.fret >= windowLo(pos) && x.fret <= pos.fHi   // the drawn window, reach included (261010)
     && (fld.degOf(x.midi) >= 0 || (x.member === true && x.chromatic === true && own.has(pc(x.midi))))));
 }
 
@@ -12373,8 +12406,11 @@ const neckReadout = {
         const SETN = ["", "one string holds", "two strings hold", "three strings hold", "four strings hold", "five strings hold", "six strings hold"];
         const nameOfPc = (pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name;
         const short = pos.covered ? "" : pos.uncovered.map((pc) => `<b>${nameOfPc(pc)}</b>`).join(" and ");
-        const why = !pos.covered ? "the neck ends · " : pos.fHi > pos.frets[2] ? `widened so ${SETN[run.strings.length] || "the set holds"} the whole scale · ` : "";
-        bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${pos.fLo}–${pos.fHi}</b>`
+        /* 261010: where the top ran out the window reaches DOWN — said as what it is, from the drawn edge */
+        const why = !pos.covered ? "the neck ends · "
+          : windowLo(pos) < pos.fLo ? `the neck ends at ${pos.fHi} — it reaches down to fret ${windowLo(pos)} so ${SETN[run.strings.length] || "the set holds"} the whole scale · `
+          : pos.fHi > pos.frets[2] ? `widened so ${SETN[run.strings.length] || "the set holds"} the whole scale · ` : "";
+        bits.push(`frame from the <b>${ORD[pos.startDeg]}</b> on string ${anchor}, frets <b>${windowLo(pos)}–${pos.fHi}</b>`
           + (short ? `, short of ${short}` : "")
           + ` <span class="ro-dim">(${why}${pool.length} notes · ${placeK}/${prog.chords.length} bars place)</span>`);
         const ss = [...run.strings].sort((a, b) => b - a).map(String).join("–");
@@ -12399,7 +12435,7 @@ const neckReadout = {
          * placement and the figure and never said strum or arpeggiate). Stated as the neck resolves it: a figure
          * that resolves sequences the notes whatever the switch says (the neck greys strum then), and a scale
          * with no figure is a run with nothing to move (the neck greys both) — said, not guessed. */
-        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent }) : null;
+        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones }) : null;
         if (fgm && fgm.order && fgm.order.length && fgm.steps.length === 1 && fgm.steps[0].length > 1)
           bits.push(`<b>strummed</b> <span class="ro-dim">(together — the figure is one group)</span>`);   // 261009: <r357> is the strum, said so
         else if (fgm && fgm.order && fgm.order.length)
@@ -15582,7 +15618,7 @@ const staffBoard = {
        * figure resolves against EACH bar's own selection, exactly as the
        * walk will sound it when the bar arrives. A bar whose selection
        * cannot honour it prints the refusal in the bar. */
-      const figs = sels.map((sl, i) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos, absent: rs[i].absent || null }));   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+      const figs = sels.map((sl, i) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos, absent: rs[i].absent || null, tones: cfg.object === "scale" ? null : chords[i].tones }));   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
       for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role, nt.member, nt.name));
@@ -16521,7 +16557,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.2","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.3","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

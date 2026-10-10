@@ -75,7 +75,7 @@ export function positionOf({ field: fld, anchorString, startDegree, nearFret = 5
   if (span3(frets) !== 3 && span3(frets) !== 4)
     throw new Error(`positionOf: window ${frets.join(",")} spans ${span3(frets)} frets — ` +
       "a scale triple spans 3 or 4; adjacent frets are the flattening the ruling retired");
-  let fHi = frets[2];
+  let fHi = frets[2], reachLo = frets[0];
   let covered = true, uncovered = [];
   if (strings) {
     /* THE OCTAVE EXTENSION (2026-09-07): widen upward, minimally, until the
@@ -83,21 +83,27 @@ export function positionOf({ field: fld, anchorString, startDegree, nearFret = 5
      * table anywhere. The neck's end (fret 15, notesOn's own bound) is the
      * honest stop: what is still missing there is NAMED, never out-widened. */
     const set = [...new Set(strings)];
-    const covers = (hi) => {
+    const covers = (lo, hi) => {
       const got = new Set();
       for (const st of set)
         for (const n of notesOn(st, fld))
-          if (n.fret >= frets[0] && n.fret <= hi) got.add(((n.midi % 12) + 12) % 12);
+          if (n.fret >= lo && n.fret <= hi) got.add(((n.midi % 12) + 12) % 12);
       return got;
     };
-    let got = covers(fHi);
-    while (got.size < fld.pcs.length && fHi < 15) { fHi++; got = covers(fHi); }
+    let got = covers(reachLo, fHi);
+    while (got.size < fld.pcs.length && fHi < 15) { fHi++; got = covers(reachLo, fHi); }
+    /* THE REACH DOWN (Daniel, 261010 — string 2 from F at fret 6 held no E♭ and Cm7 lost its 3rd): only when the
+     * top has run out, the window reaches BELOW the anchor triple, minimally, until the set holds the field or
+     * fret 0 is reached. The reach is `reachLo`, never `fLo`: fLo is the anchor's start — the window's identity,
+     * which step(), the neck's drag and every nearFret written back read — and the triple, `frets` and `centre`
+     * do not move. The widened tail is reach, not centre, now in both directions. */
+    while (got.size < fld.pcs.length && reachLo > 0) { reachLo--; got = covers(reachLo, fHi); }
     covered = got.size === fld.pcs.length;
     uncovered = covered ? [] : fld.pcs.filter((pc) => !got.has(pc));
   }
   return {
     anchorString, startDeg: startDegree, frets,
-    fLo: frets[0], fHi,
+    fLo: frets[0], fHi, reachLo,
     centre: (frets[0] + frets[1] + frets[2]) / 3,
     covered, uncovered,
   };
@@ -125,6 +131,10 @@ export function step(pos, dir, fld, strings = null) {
  * `{6,4,3,1}` is as legal as `{4,3,2,1}`; the region spans min..max of it and
  * an excluded string inside the span is the SURFACE's fact to show, not this
  * value's to hide. */
+/** the window's LOW edge as drawn and isolated: the reach down when the top ran out (261010), else the anchor's
+ * start. A position built by hand (a test's, a zone's box) has no reachLo and reads its fLo. */
+export const windowLo = (pos) => (Number.isInteger(pos.reachLo) ? pos.reachLo : pos.fLo);
+
 export function regionOf(pos, strings) {
   if (!Array.isArray(strings) || !strings.length)
     throw new Error("regionOf: the set is a non-empty array of strings");
@@ -135,7 +145,7 @@ export function regionOf(pos, strings) {
   if (!set.includes(pos.anchorString))
     throw new Error(`regionOf: the anchor (string ${pos.anchorString}) is not in the set ${set.join(",")}`);
   return {
-    fLo: pos.fLo, fHi: pos.fHi,
+    fLo: windowLo(pos), fHi: pos.fHi,   // the region's low edge is the reach (261010); the anchor's start stays pos.fLo
     /* stored low pitch → high pitch (descending string numbers), the family's
      * storage order (string-sets.mjs law: 1 is the highest pitch) */
     strings: [...set].sort((a, b) => b - a),
@@ -162,7 +172,7 @@ export function materialIn(pos, strings, fld, gamut = null) {
    * is computed). null is the whole field, today's offer exactly. It narrows what is offered; it
    * never widens what is legal: the off-field throw below is untouched (CR-1 §3). */
   for (const s of region.strings)
-    out.push(...notesOn(s, fld).filter((n) => n.fret >= pos.fLo && n.fret <= pos.fHi && inGamut(gamut, n.keyDeg)));
+    out.push(...notesOn(s, fld).filter((n) => n.fret >= region.fLo && n.fret <= region.fHi && inGamut(gamut, n.keyDeg)));
   for (const n of out)
     if (fld.degOf(n.midi) < 0)
       throw new Error("materialIn: a note outside the field leaked into the material — " +

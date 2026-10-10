@@ -6693,9 +6693,15 @@ console.log(JSON.stringify(out));
         check(len(lacking) >= 1, f"{tag} …and lacks at least one degree: held {sorted(held)}")
         page.select_option("#hcGamut", str(lacking[0]))
         hint61 = page.inner_text("#fdHint"); ro61 = page.inner_text("#roLine")
-        with absent_ok("a gamut of the degree the end-window lacks empties it — nothing drawn IS the claim"):
-            check(fdsel61() == [] and "the gamut leaves nothing in this window" in hint61, f"{tag} a gamut of the degree the end-window lacks EMPTIES it, and the neck says so: {fdsel61()} {hint61!r}")
-        check("the gamut leaves nothing in this window" in ro61, f"{tag} …and the readout says the same (rule 10): {ro61[:200]!r}")
+        # CORRECTED 261010 (doctrine 3): night 61 pinned that a gamut of the degree the end-window lacks EMPTIES it — true
+        # only while the window stopped at fret 15 short of a pitch class. Daniel ruled 261010 that the window reaches
+        # DOWN when the neck runs out, so the end-window now holds that degree below the anchor: the gamut DRAWS it, and
+        # neither face says "leaves nothing" (that sentence is now unreachable for a seven-note field — reported, kept).
+        drawn61 = fdsel61()
+        check(len(drawn61) >= 1 and all(c_major.index(m % 12) + 1 == lacking[0] for m in drawn61),
+              f"{tag} 261010: a gamut of the degree the end-window's take lacks draws that degree — the window reached down for it: {drawn61}")
+        check("the gamut leaves nothing in this window" not in hint61 and "the gamut leaves nothing in this window" not in ro61,
+              f"{tag} 261010: …and neither the neck nor the readout says the gamut left nothing: {hint61!r} / {ro61[:200]!r}")
         page.select_option("#hcGamut", "1,2,3,4,5,6,7")
         for _ in range(40):
             page.keyboard.press("ArrowLeft"); page.wait_for_timeout(40)
@@ -7267,8 +7273,16 @@ console.log(JSON.stringify(out));
         t85.goto(html_path.as_uri()); t85.wait_for_selector("#cards", state="attached"); t85.wait_for_timeout(350)
         t85.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [6], startDeg: 0, nearFret: 6 } }))"); t85.wait_for_timeout(300)
         ro85, hint85 = t85.inner_text("#roLine"), t85.inner_text("#fdHint")
-        check("frets 6–15, short of A" in ro85 and "the neck ends" in ro85, f"{tag} night 85: the readout states what the window lacks: {ro85[:240]!r}")
-        check("The neck ends at fret 15 — step ← toward the nut to reach A" in hint85, f"{tag} night 85: the neck's hint teaches the way out: {hint85!r}")
+        # CORRECTED 261010 (doctrine 3): these two pinned the window that stopped at 15 short of A — the state Daniel
+        # ruled away. The window now reaches DOWN to A (fret 5); the readout says why it is that wide, the hint says
+        # where the reach went and the way to bring it under the hand, and nothing says "short of".
+        check("frets 5–15" in ro85 and "the neck ends at 15 — it reaches down to fret 5 so one string holds the whole scale" in ro85
+              and "short of" not in ro85, f"{tag} 261010: the readout states that the window reached down, and why: {ro85[:260]!r}")
+        check("The neck ends at fret 15, so the window reaches down to fret 5 for what the set lacks above; step ← to bring it under the hand." in hint85,
+              f"{tag} 261010: the neck's hint says where the reach went and the way out: {hint85!r}")
+        check(t85.evaluate("() => { const r = document.querySelector('#fieldSvg .fd-frame'); return r ? +r.getAttribute('x') : null; }")
+              < t85.evaluate("() => { const d = document.querySelector('#fieldSvg .fd-dot[data-str=\"6\"][data-fret=\"5\"] circle'); return d ? +d.getAttribute('cx') : 1e9; }"),
+              f"{tag} 261010: the drawn window's left edge sits left of fret 5 on string 6 — the reach is drawn, not only said")
         t85.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [6], startDeg: 4, nearFret: 3 } }))"); t85.wait_for_timeout(300)
         ro85b, hint85b = t85.inner_text("#roLine"), t85.inner_text("#fdHint")
         check("widened so one string holds the whole scale" in ro85b and "Fewer strings widen the window" in hint85b,

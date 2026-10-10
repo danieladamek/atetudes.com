@@ -42,7 +42,7 @@ import { pentatonicBreak, describeGamut } from "../../engine/gamut.mjs";
 import { inGamut } from "../../engine/position.mjs";
 import { SHARED } from "../../engine/shared-config.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
-import { positionOf, step, reanchor, regionOf, materialIn } from "../../engine/position.mjs";
+import { positionOf, step, reanchor, regionOf, materialIn, windowLo } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
 import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead, soundedBass, soundedChoicesFor } from "../../engine/reference.mjs";
@@ -568,7 +568,7 @@ export const fieldBoard = {
         const fam = FAM[dot.deg];
         const excludedInFrame = !inRun.has(dot.string)
           && dot.string >= region.strHi && dot.string <= region.strLo
-          && dot.fret >= pos.fLo && dot.fret <= pos.fHi;
+          && dot.fret >= windowLo(pos) && dot.fret <= pos.fHi;   // the drawn window, reach included (261010)
         const g = el("g", { class: "fd-dot", opacity: excludedInFrame ? 0.1 : 0.28,
           "data-midi": dot.midi, "data-str": dot.string, "data-fret": dot.fret }, svg);
         el("circle", { cx: fx(dot.fret), cy: fy(dot.string), r: 10.5, fill: FAM_COLOR[fam] }, g);
@@ -707,7 +707,7 @@ export const fieldBoard = {
          * the em-dash so the collide and the escape read as two lines; x clamped so the longest line stays on the neck. */
         const linesTxt = selMsg.split(" — ");
         const half = Math.max(...linesTxt.map((l) => l.length + 2)) * 12.5 * 0.29 + 6;
-        const rx = Math.min(Math.max((fx(pos.fLo) + fx(pos.fHi)) / 2, half), 1280 - half);
+        const rx = Math.min(Math.max((fx(windowLo(pos)) + fx(pos.fHi)) / 2, half), 1280 - half);
         const sTop = Math.min(...run.strings), sBot = Math.max(...run.strings);
         const ry = (fy(sTop) + fy(sBot)) / 2 - (linesTxt.length - 1) * 8;
         const rt = el("text", { class: "fd-refusal", x: rx, y: ry, "data-seat": "in",
@@ -764,7 +764,7 @@ export const fieldBoard = {
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
        * slur is drawn UNDER the dots (the under-draw convention) */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones });   // 261010: the chord's tones, so the window can be named as a cause   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const approaches = (fig.order || []).filter((n) => n.role === "approach");
       /* §2.6 "Connection. An approach figure joins its target with a slur in
        * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */
@@ -872,7 +872,8 @@ export const fieldBoard = {
       /* THE WINDOW — one rigid dashed rectangle, with v0.9's gesture surfaces:
        * the ■ move grip at bottom-left, and the two ● edge handles */
       const ys = [fy(region.strHi) - 17, fy(region.strLo) + 17];
-      const xLo = pos.fLo === 0 ? FX0 - 34 : FX0 + (pos.fLo - 1) * FW + FW * 0.28;
+      const wLo0 = windowLo(pos);   // the drawn edge: the reach down when the top ran out (261010); the anchor stays pos.fLo
+      const xLo = wLo0 === 0 ? FX0 - 34 : FX0 + (wLo0 - 1) * FW + FW * 0.28;
       const xHi = Math.min(FX0 + pos.fHi * FW - FW * 0.22, FX0 + NFRETS * FW + 9);
       el("rect", { class: "fd-frame", x: xLo, y: ys[0], width: xHi - xLo,
         height: ys[1] - ys[0], rx: 12 }, svg);
@@ -897,7 +898,7 @@ export const fieldBoard = {
        * coordinates — only the viewBox and the gutter's x move, and only under 600 px. */
       const narrow = d.defaultView.matchMedia && d.defaultView.matchMedia("(max-width: 600px)").matches;
       const drawnFrets = sel.map((n) => n.fret);
-      let wLo = Math.max(0, Math.min(pos.fLo, ...drawnFrets)), wHi = Math.min(NFRETS, Math.max(pos.fHi, ...drawnFrets));
+      let wLo = Math.max(0, Math.min(windowLo(pos), ...drawnFrets)), wHi = Math.min(NFRETS, Math.max(pos.fHi, ...drawnFrets));
       while (wHi - wLo + 1 < 5) { if (wHi < NFRETS) wHi++; else if (wLo > 0) wLo--; else break; }
       const sideX = narrow ? fx(wHi) + FW / 2 + 42 : STR_X;   // the gutter follows the window
       const brkX = sideX + (BRK_X - STR_X);
@@ -1112,6 +1113,7 @@ export const fieldBoard = {
          * holds the whole scale — and where the neck ends first, the way to what is missing is a step toward the nut */
         (!pos.covered
           ? `The neck ends at fret ${pos.fHi} — step ← toward the nut to reach ${pos.uncovered.map((pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name).join(" and ")}. `
+          : windowLo(pos) < pos.fLo ? `The neck ends at fret ${pos.fHi}, so the window reaches down to fret ${windowLo(pos)} for what the set lacks above; step ← to bring it under the hand. `   // 261010
           : pos.fHi > pos.frets[2] ? "Fewer strings widen the window until the set holds the whole scale; more strings narrow it. " : "") +
         "Click the numbers to choose strings; ← → step the window.";
       /* THE LEGEND SAYS WHICH CENTRE (night 85, item 2 C — PO ruling 261053 §2): under "follows" this line said

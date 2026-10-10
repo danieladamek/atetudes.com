@@ -1,3 +1,15 @@
+## 2026-10-10 — The window reaches down when the neck runs out — Multetudes v1.1.3
+
+- **Daniel, on I–vi–ii–V in B♭ with string 2 only:** Cm7 said "this selection carries no 3rd" and F7 "no 7th". The
+  window only ever widened upward and stopped at fret 15, so E♭ never got in. **Now, only when the top runs out, it
+  reaches down**, minimally (to fret 4 there). The start, the anchor and stepping are unchanged.
+- The readout says why it is that wide ("the neck ends at 15 — it reaches down to fret 4 so one string holds the whole
+  scale"), and the neck's hint says where the reach went.
+- If the window is ever the reason a role is missing, the figure says so: the note, where it sits, and the way through.
+- Every window that already covered the scale is unchanged (10,470 of 10,470). On three multi-string sets the neck's
+  drawing is byte-identical to v1.1.2. Heard in the browser: every chord of Daniel's setup sounds, under `357` and
+  `<357>`, at 1280 and 390.
+
 ## 2026-10-10 — The bar split does something now — Multetudes v1.1.2
 
 - **Daniel: "everything plays at 2+2 no matter what is set."** He was right. A bar with two chords ignored the split
