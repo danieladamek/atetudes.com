@@ -291,7 +291,10 @@ export default {
      * the subdivision, no roll, no internal order, so <r357> is the strum; both alphabets; no approaches into a group
      * yet (refused by name). And the bracket path's errors no longer read "figure: figure —". */
     /* v1.1.1 (261009, Daniel): the order bracket writes a group's step as <k>, once per string it touches — {1,<2>,3}. */
-    blurb: "one tool that holds many études · v1.1.1",
+    /* v1.1.2 (261010, Daniel): the bar split is ONE law — every chord takes the next slot, the cycle carried across
+     * bars (a two-chord bar used to play 2+2 under every split); "as charted" is the first option and the load
+     * default, said at boot by the walk (the orphan item's owner) and re-said on a meter change. */
+    blurb: "one tool that holds many études · v1.1.2",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

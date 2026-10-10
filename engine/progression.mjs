@@ -145,27 +145,31 @@ export function progressionOf(cfg, key, scale = "major") {
   }
 }
 
-/** beats per chord — the family transport's own sentence, "chords take the
- * bar's slots in order", applied whole (corrected 260902 — Daniel's finding:
- * 1+1+1+1 audibly did nothing):
- *   - a bar with as many chords as the split has slots: the slots ARE the
- *     beats;
- *   - a bar with ONE chord under a multi-slot split: the chord takes the
- *     NEXT SLOT of the split's cycle — so under 1+1+1+1 a cycle's chords
- *     change every beat, four to the metric bar, exactly as v0.9's
- *     regrouping sounds (register 14 amended: the timing follows v0.9, the
- *     bar GROUPING still follows the chart);
- *   - otherwise the meter divides evenly, remainder to the front — an
- *     integer partition, derived, summing to the meter. */
+/** beats per chord — ONE LAW (Daniel, 261010 — "everything plays at 2+2 no matter [what] is set"):
+ *   - a SPLIT (an array): every chord takes the NEXT SLOT of the split, and the cycle carries across bars.
+ *     The split sets the harmonic rhythm: under 4 a two-chord bar's chords each sound a whole bar, under
+ *     1+1+1+1 each sounds a beat. Until 261010 this held only for one-chord bars (and for a bar whose chord
+ *     count equalled the slot count); every other bar fell through to the even division, so on ii–V–I and
+ *     every turnaround the control did nothing you could hear.
+ *   - AS CHARTED ("chart", and null — a mirror that has not heard the split yet): the chart's own barring —
+ *     a bar's chords divide its meter evenly, remainder to the front; an integer partition summing to the meter.
+ * The chart's bar GROUPING stays notation either way (register 14): the boards draw the chart's bars.
+ * A pass whose slots do not end on a bar line wraps where the chords run out — never padded. */
+/** the split's stored word for the chart's own barring (261010) — meter-independent, never null, never [4] */
+export const AS_CHARTED = "chart";
 export function beatsOf(bars, meter = 4, split = null) {
   const out = [];
-  let slot = 0;                    // the split cycle, walked across one-chord bars
+  if (Array.isArray(split) && split.length) {
+    if (!split.every((b) => Number.isInteger(b) && b > 0))
+      throw new Error("progression: a split's slots must be whole beats — [" + split.join(",") + "]");
+    let slot = 0;                  // the split cycle, walked across every chord of every bar
+    for (const bar of bars) out.push(bar.map(() => split[slot++ % split.length]));
+    return out;
+  }
+  if (split != null && split !== AS_CHARTED)
+    throw new Error(`progression: the split is a slot list or "${AS_CHARTED}" — got ${JSON.stringify(split)}`);
   for (const bar of bars) {
     const n = bar.length;
-    if (split && Array.isArray(split) && split.length === n) { out.push([...split]); continue; }
-    if (split && Array.isArray(split) && split.length > 1 && n === 1) {
-      out.push([split[slot % split.length]]); slot++; continue;
-    }
     const base = Math.floor(meter / n), extra = meter - base * n;
     const beats = bar.map((_, i) => base + (i < extra ? 1 : 0));
     if (beats.reduce((a, b) => a + b, 0) !== meter)

@@ -241,3 +241,46 @@ test("NIGHT 84: a chord from a form or a custom chart carries the key degrees th
   }
   assert.ok(compared >= 20, `the comparison ran on real chords, not on nothing: ${compared}`);
 });
+
+// ---------------------------------------------------------------------------
+// 261010 — THE BAR SPLIT IGNORED TWO-CHORD BARS (Daniel: "everything plays at 2+2 no matter [what] is set").
+// Ruled: one law — every chord takes the next slot of the split, the cycle carrying across bars; "as charted"
+// (AS_CHARTED, stored "chart") is the chart's own barring: a bar's chords divide its meter evenly, remainder front.
+import { AS_CHARTED } from "../progression.mjs";
+import { SPLITS as ALL_SPLITS } from "../drill.mjs";
+
+test("261010 THE DEFECT: [Dm, G] under 1+1+1+1 sounds a beat each — [1,1], not [2,2]", () => {
+  assert.deepEqual(beatsOf([[0, 1]], 4, [1, 1, 1, 1]), [[1, 1]]);
+});
+
+test("261010 ONE LAW: every meter × every split × bars of 1, 2 and 3 chords — each chord takes the next slot, carried across bars", () => {
+  let n = 0;
+  for (const [m, list] of Object.entries(ALL_SPLITS)) for (const split of list)
+    for (const shape of [[1], [2], [3], [2, 1], [1, 2], [3, 2, 1], [2, 2, 2], [1, 3, 2]]) {
+      let c = 0; const bars = shape.map((k) => Array.from({ length: k }, () => c++));
+      const got = beatsOf(bars, +m, split).flat();
+      got.forEach((b, i) => assert.equal(b, split[i % split.length], `meter ${m}, ${split.join("+")}, shape ${shape}: chord ${i}`));
+      n++;
+    }
+  assert.ok(n >= 26 * 8, `the sweep ran (${n} cases)`);
+});
+
+test("261010 AS CHARTED is the chart's barring — a bar's chords divide its meter evenly, remainder to the front; null reads the same", () => {
+  assert.equal(AS_CHARTED, "chart");
+  for (const m of Object.keys(ALL_SPLITS).map(Number))
+    for (const k of [1, 2, 3, 4]) {
+      const bar = Array.from({ length: k }, (_, i) => i);
+      const base = Math.floor(m / k), extra = m - base * k;
+      const want = bar.map((_, i) => base + (i < extra ? 1 : 0));
+      assert.deepEqual(beatsOf([bar], m, AS_CHARTED), [want]);
+      assert.deepEqual(beatsOf([bar], m, null), [want], "a mirror that has not heard the split yet reads as charted");
+    }
+});
+
+test("261010 the 'does nothing' class: a two-chord bar under every split other than 2+2 sounds differently from 2+2", () => {
+  const twoTwo = JSON.stringify(beatsOf([[0, 1]], 4, [2, 2]));
+  for (const s of ALL_SPLITS[4]) {
+    if (s.join("+") === "2+2") continue;
+    assert.notEqual(JSON.stringify(beatsOf([[0, 1]], 4, s)), twoTwo, `${s.join("+")} must not sound 2+2`);
+  }
+});

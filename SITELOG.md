@@ -1,3 +1,18 @@
+## 2026-10-10 — The bar split does something now — Multetudes v1.1.2
+
+- **Daniel: "everything plays at 2+2 no matter what is set."** He was right. A bar with two chords ignored the split
+  entirely. Ruled the same day: **every chord takes the next slot of the split, and the cycle carries across bars.** Under
+  `4`, ii and V each sound a whole bar; under `1+1+1+1`, a beat each. The chart's bars stay notation: the timeline and
+  the staff still draw them, and the readout says where sounding and barring part ("sounds 4 beats (split 4 — the chart
+  bars it 2)").
+- **"as charted" is the bar split's first option and the load default.** It is the chart's own rhythm, stored as
+  `"chart"` in a saved étude, valid in every meter.
+- **The split has an owner** (the approved orphan item, ruled 2026-10-02). The walk says it at boot and on a meter change,
+  so a new entry always carries it. An entry saved before tonight has no split and leaves the split where it is.
+- The Settings card says the split in words. It used to print the stored value raw and claimed "one chord to a bar".
+- Heard in the browser, 20 of 20 cases at 1280 and 390. Corpus: 2,604 cases. Every as-charted and every one-chord-bar
+  chart is unchanged; the 1,945 changes are the fix. Tetradetudes did not move (its split is its own transport card's).
+
 ## 2026-10-09 — The order bracket writes a group as `<k>` — Multetudes v1.1.1
 
 - **Daniel's choice (option c of run note 261009e):** a group's step is written `<k>`, the figure's own sign, once on each

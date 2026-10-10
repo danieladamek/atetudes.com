@@ -53,15 +53,16 @@ export function mountClock(ctx, host) {
   const fillSplits = (meter) => {
     const cur = sp.value;
     sp.textContent = "";
-    for (const opt of (SPLITS[meter] || SPLITS[4] || []).map((x) => (Array.isArray(x) ? x.join("+") : String(x)))) {
-      const o = d.createElement("option"); o.value = opt; o.textContent = opt;
+    /* "as charted" FIRST (Daniel, 261010): the chart's own barring, the load default — its value is the stored word */
+    for (const opt of ["chart", ...(SPLITS[meter] || SPLITS[4] || []).map((x) => (Array.isArray(x) ? x.join("+") : String(x)))]) {
+      const o = d.createElement("option"); o.value = opt; o.textContent = opt === "chart" ? "as charted" : opt;
       sp.appendChild(o);
     }
     const want = split ?? cur;
     if ([...sp.options].some((o) => o.value === want)) sp.value = want;
   };
   fillSplits(4);
-  sp.addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { split: e.target.value.split("+").map(Number) }));
+  sp.addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { split: e.target.value === "chart" ? "chart" : e.target.value.split("+").map(Number) }));
   click.addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
   bpm.addEventListener("change", (e) => {
     const v = +e.target.value;
@@ -76,8 +77,8 @@ export function mountClock(ctx, host) {
   /* ONE STATE, EVERY VIEW (night 69): a split set at one view is painted at every other — before tonight the one
    * view announced and never painted back, which was invisible while it was the only view */
   listen(d, CONFIG_CHANGED, (m) => {
-    if (!m || !Array.isArray(m.split)) return;
-    split = m.split.join("+");
+    if (!m || !(Array.isArray(m.split) || m.split === "chart")) return;
+    split = Array.isArray(m.split) ? m.split.join("+") : m.split;
     if ([...sp.options].some((o) => o.value === split)) sp.value = split;
   });
   let pulseT = null;

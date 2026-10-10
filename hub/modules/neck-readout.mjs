@@ -20,9 +20,9 @@ import { field, notesOn } from "../../engine/field.mjs";
 import { positionOf, materialIn, regionOf } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, gripFit, orderBy, groupClause, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
-import { progressionOf, chordAt } from "../../engine/progression.mjs";
+import { progressionOf, chordAt, beatsOf, AS_CHARTED } from "../../engine/progression.mjs";
 import { placeReference, compositeOver, centreDegreeOf, centreMaterialRef, soundedBass } from "../../engine/reference.mjs";
-import { CONFIG_CHANGED, STEP_CHANGED, listen } from "../bus.mjs";
+import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen } from "../bus.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
@@ -78,8 +78,10 @@ export const neckReadout = {
       movement: "arpeggiate",   // night 72 (was strum) · 261023 (night 65): mirrored so the readout can SAY the motif's movement
       /* the figure (260919, item 3): mirrored so the readout can SAY it — the
        * one piece of state it never carried; the hint's clause moved here */
-      address: "pattern", figure: "" };
+      address: "pattern", figure: "",
+      split: null };   // 261010: mirrored so the readout can say where sounding and barring part
     let index = 0;
+    let meter = 4;     // adopted from CLOCK_STATE — the metronome owns it
 
     const render = () => {
       const asserts = [], fails = [];
@@ -183,6 +185,14 @@ export const neckReadout = {
         bits.push(`bar <b>${index + 1}</b> of ${prog.chords.length}` +
           (cfg.object === "scale" ? "" :
             ` — <b>${cur.symbol}</b> <span class="ro-dim">(${cur.roman})</span>`));
+        /* WHERE SOUNDING AND BARRING PART (Daniel, 261010): the split sets the harmonic rhythm, the chart's bars stay
+         * notation — said in a few words, only when this bar's chord sounds other than the chart bars it */
+        if (Array.isArray(cfg.split)) {
+          const flatOf = (sp) => beatsOf(prog.bars, meter, sp).flat();
+          const sounds = flatOf(cfg.split)[index], charted = flatOf(AS_CHARTED)[index];
+          if (sounds !== charted)
+            bits.push(`sounds <b>${sounds} beat${sounds === 1 ? "" : "s"}</b> <span class="ro-dim">(split ${cfg.split.join("+")} — the chart bars it ${charted})</span>`);
+        }
         const roRefDeg = cfg.object === "scale"
           ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
           : cur.degree;   // 4a + 260914: the centre, from its source
@@ -347,6 +357,9 @@ export const neckReadout = {
     listen(d, STEP_CHANGED, (m) => {
       if (!m || m.request === true || typeof m.index !== "number") return;
       if (m.index !== index) { index = m.index; render(); }
+    });
+    listen(d, CLOCK_STATE, (m) => {
+      if (m && typeof m.meter === "number" && m.meter !== meter) { meter = m.meter; render(); }
     });
     render();
   },

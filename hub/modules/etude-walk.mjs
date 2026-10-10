@@ -44,7 +44,8 @@ import { field } from "../../engine/field.mjs";
 import { positionOf, materialIn } from "../../engine/position.mjs";
 import { makeRun } from "../../engine/string-run.mjs";
 import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } from "../../engine/selection.mjs";
-import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } from "../../engine/progression.mjs";
+import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord, AS_CHARTED } from "../../engine/progression.mjs";
+import { SPLITS, splitFor } from "../../engine/drill.mjs";
 import { bassSeat, padSeat } from "../../engine/voices.mjs";
 import { placeReference, centreDegreeOf, centreMaterialRef, reRead, soundedBass } from "../../engine/reference.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
@@ -256,7 +257,19 @@ export const etudeWalk = {
     });
     listen(d, CLOCK_STATE, (m) => {
       if (!m) return;
-      if (typeof m.meter === "number") meter = m.meter;
+      if (typeof m.meter === "number" && m.meter !== meter) {
+        /* THE SPLIT'S OWNER on a meter change (261010, carrying the 261002 orphan ruling): a slot list maps
+         * through splitFor (the same shape where the new meter has it, else the whole bar); "as charted"
+         * survives every meter and is said again, so a saved étude always carries the split it played in.
+         * Announced in a microtask — never from inside another message's delivery (night 61). */
+        const old = meter;
+        meter = m.meter;
+        const s = cfg.split;
+        const next = Array.isArray(s) && SPLITS[old] && SPLITS[meter]
+          ? [...SPLITS[meter][splitFor(old, SPLITS[old].findIndex((p) => p.join("+") === s.join("+")), meter)]]
+          : AS_CHARTED;
+        queueMicrotask(() => announce(d, CONFIG_CHANGED, { split: next }));
+      } else if (typeof m.meter === "number") meter = m.meter;
       if (typeof m.bpm === "number") bpm = m.bpm;
       if (m.running === false) { armed = false; clearPending(); }
     });
@@ -269,5 +282,9 @@ export const etudeWalk = {
           cfg = { ...cfg, [k]: Array.isArray(v) ? [...v] : v };
         }
     });
+    /* THE SPLIT HAS AN OWNER (orphan item, ruled 261002; 261010): the walk says it at boot — "as charted", the
+     * load default — unless a replayed config already said one. An entry saved before tonight carries no split,
+     * and its restore leaves the split where it is (silence means "not recorded", 2026-10-02). */
+    if (cfg.split == null) announce(d, CONFIG_CHANGED, { split: AS_CHARTED });
   },
 };

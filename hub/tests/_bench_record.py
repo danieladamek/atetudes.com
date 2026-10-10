@@ -39,6 +39,11 @@ from _empty_guard import absent_ok
 HUB = Path(__file__).resolve().parent.parent
 REPO = HUB.parent
 FIXTURE = HUB / "tests" / "pre-n83-entries.json"
+# KEYS SAID SINCE THE CAPTURE: a key the published page's bus never said, which a later page says at boot. Such a key
+# cannot be "as the published page restored it" (there was nothing); what holds instead is Daniel's 2026-10-02 ruling —
+# an entry that does not carry a key leaves it where it is. So it is admitted ONLY when the restore left it exactly
+# where it stood before the restore, and only when named here with the ruling that made it said.
+SAID_SINCE = {"config": {"split": "261010 — the split's owner says it at boot (\"chart\"); an entry saved before carries none"}}
 BEFORE_1_0 = HUB / "tests" / "v0630-entries.json"   # night 86: saved by the published pages before the bump
 
 CFG, CLOCK, CLOCK_STATE, MIXER, BEAT = ("atetudes:config", "atetudes:clock", "atetudes:clock-state", "atetudes:mixer",
@@ -296,6 +301,7 @@ def _door(browser, check, html, door, excluded, place, all_ids, old_entry, saved
             if "at boot" in entry["text"]:   # restored over a MOVED page, as captured, so the restore is a real change
                 page.evaluate(DRIVE_JS, all_in); page.wait_for_timeout(400)
             v_from = page.evaluate(VALUES_JS, all_in)
+            bus_from = page.evaluate(state_js)   # what the bus said before the restore — a SAID_SINCE key must still say it
             restore(label)
             page.wait_for_timeout(300)
             now = {"controls": page.evaluate(VALUES_JS, all_in), "bus": page.evaluate(state_js)}
@@ -309,6 +315,12 @@ def _door(browser, check, html, door, excluded, place, all_ids, old_entry, saved
             for part in ("config", "clock", "mixer"):
                 a, b = was["bus"][part], now["bus"][part]
                 diff = sorted(k for k in set(a) | set(b) if json.dumps(a.get(k), sort_keys=True) != json.dumps(b.get(k), sort_keys=True))
+                for k in [k for k in diff if k not in a and k in SAID_SINCE.get(part, {})]:
+                    kept = json.dumps(b.get(k), sort_keys=True) == json.dumps(bus_from[part].get(k), sort_keys=True)
+                    check(kept, f"{tag} {label!r}: {part}.{k} was never said by the published page ({SAID_SINCE[part][k]}) — "
+                                f"the restore must leave it where it stood: before {bus_from[part].get(k)!r}, after {b.get(k)!r}")
+                    print(f"  {tag} {label!r}: {part}.{k} said since the capture, left where it stood by the restore: {b.get(k)!r}")
+                    diff.remove(k)
                 check(not diff, f"{tag} AN ENTRY SAVED BEFORE TONIGHT OPENS EXACTLY AS IT DID — {label!r}: the {part} the "
                                 f"bus says differs from the published page's at {diff}: "
                                 f"{ {k: (a.get(k), b.get(k)) for k in diff[:6]} }")

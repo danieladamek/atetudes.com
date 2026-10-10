@@ -34,7 +34,12 @@ export function describe(s) {
   // the clock
   const tempo = typeof s.bpm === "number" ? `${s.bpm} bpm` : "the clock's own tempo";
   const bar = typeof s.meter === "number" ? `, ${s.meter}/4` : "";
-  const split = s.split && s.split !== "4" ? ` — each bar split ${s.split}` : " — one chord to a bar";
+  /* the split's words (261010, the one law): a slot list sets the harmonic rhythm — each chord takes the next slot;
+   * "chart" is the chart's own barring; absent (an entry saved before 261010) is not recorded, and says so */
+  const slots = Array.isArray(s.split) ? s.split : typeof s.split === "string" && /^\d+(\+\d+)*$/.test(s.split) ? s.split.split("+").map(Number) : null;
+  const split = s.split === "chart" ? " — chords as charted"
+    : slots ? (slots.length === 1 ? ` — each chord ${slots[0]} beat${slots[0] === 1 ? "" : "s"}` : ` — each chord takes the next slot of ${slots.join("+")}`)
+    : " — the bar split not recorded";
   say("tempo", `${tempo}${bar}${split}`);
   // the field and its centre
   const field = s.gamut == null ? "the whole field" : `narrowed to degrees ${degreesOf(s.gamut).join(" ")}`;
