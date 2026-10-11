@@ -113,6 +113,8 @@ jobs:
         run: hugo --gc --minify
       - name: Studies check — the permanent-URL guard (every study present and byte-identical in the built site)
         run: python3 tools/check_studies.py
+      - name: Tools check — every pinned tool (static/tools/<slug>/) is its PIN's sha256, byte-identical in the built site, offered on /tools/
+        run: python3 tools/check_tools.py
       - name: Site check — links, CNAME, .nojekyll, the deploy records
         env:
           GH_TOKEN: ${{ github.token }}   # tools/deploy_record.py verify re-fetches every recorded run (260921)

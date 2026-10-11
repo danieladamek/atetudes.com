@@ -1,0 +1,17 @@
+{{- /*
+One tool as a card in the Hextra card family — the same classes Hextra's card partial renders, as a <div> rather than
+an <a>, because the card holds two actions: Open (the page) and Download (the same file, saved as <slug>.html). Takes
+one row of data/tools.yaml. STOPGAP with layouts/tools/list.html (see data/tools.yaml).
+*/ -}}
+{{- $href := printf "/tools/%s/" .slug | relURL -}}
+<div class="hextra-card tool-card hx:flex hx:flex-col hx:justify-start hx:overflow-hidden hx:rounded-lg hx:border hx:border-gray-200 hx:text-current hx:shadow-xs hx:shadow-gray-100">
+  <div class="hx:mt-auto">
+    <a class="hextra-card-icon hx:flex hx:font-semibold hx:items-start hx:gap-2 hx:pt-4 hx:px-4 hx:text-gray-700 hx:hover:text-gray-900 hx:no-underline" href="{{ $href }}">{{ .name }}</a>
+    <div class="hextra-card-subtitle hx:text-sm hx:font-normal hx:text-gray-500 hx:px-4 hx:mt-2">{{ .line }}</div>
+    {{- with .needs }}<div class="tool-card-needs hx:text-sm hx:px-4 hx:mt-1">{{ . }}</div>{{ end }}
+    <div class="tool-card-actions hx:px-4 hx:mt-3 hx:mb-4">
+      <a href="{{ $href }}">Open&nbsp;→</a>
+      <a href="{{ printf "/tools/%s/index.html" .slug | relURL }}" download="{{ .slug }}.html">Download</a>
+    </div>
+  </div>
+</div>

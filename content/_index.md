@@ -42,6 +42,10 @@ layout: hextra-home
 
 {{< study-section key="sol" >}}
 
+<h2 class="shelf-heading shelf-heading-plain hx:text-2xl hx:font-semibold">Tools</h2>
+
+{{< tool-cards >}}
+
 <h2 class="shelf-heading shelf-heading-plain hx:text-2xl hx:font-semibold">Blog</h2>
 
 {{< cards >}}

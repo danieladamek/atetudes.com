@@ -31,7 +31,7 @@ REPO = Path(__file__).resolve().parent.parent
 SETS = {
     "app":  ["hub/", "engine/", "generators/", "static/studies/", "docs/"],
     "site": ["content/", "layouts/", "assets/", "data/", "i18n/", "hugo.yaml", "go.mod", "go.sum",
-             "static/assets/", "static/CNAME", "static/.nojekyll", "SITELOG.md"],
+             "static/assets/", "static/tools/", "static/CNAME", "static/.nojekyll", "SITELOG.md"],
     "all":  [".github/", "tools/", ".gitignore"],
     "meta": ["CLAUDE.md"],
 }
@@ -92,6 +92,7 @@ def selftest():
     pin(sets_of("static/studies/metronome/study.html") == ["app"], "a published study is app")
     pin(sets_of("content/blog/post.md") == ["site"], "a blog post is site")
     pin(sets_of("static/assets/logo.svg") == ["site"], "a site asset is site")
+    pin(sets_of("static/tools/riffraft/index.html") == ["site"], "a pinned tool is site (its own gate: tools/check_tools.py)")
     pin(sets_of(".github/workflows/pages.yaml") == ["all"], "the pipeline is all")
     pin(sets_of("CLAUDE.md") == ["meta"], "the contract is meta")
     pin(sets_of("static/robots.txt") == [], "a new file loose in static/ is in NO set")

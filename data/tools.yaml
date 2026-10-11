@@ -1,0 +1,9 @@
+# THE /tools/ SECTION'S ONE LIST (item: RiffRaft on the site, Daniel 2026-09-23). The /tools/ page and the landing
+# page's Tools card both derive from this file, so the next tool is one row here plus its pinned copy in
+# static/tools/<slug>/ (index.html + PIN). /tools/ holds what is NOT the At-Etudes family: no Design Spec, no study
+# index entry, no study footer.
+# STOPGAP: this list and layouts/tools/list.html go when the rebuilt site shell takes the /tools/ section over.
+- slug: riffraft
+  name: RiffRaft
+  line: "Catch a riff from a MIDI controller or step it in by hand — melody, bass, drums and a pad — play it back, and save it as a plain-text file."
+  needs: "MIDI input needs Chrome, Edge or Firefox."

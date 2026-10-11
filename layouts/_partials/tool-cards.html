@@ -1,0 +1,9 @@
+{{- /*
+Every tool as a card, one per row of data/tools.yaml — rendered here once for both the landing page's Tools shelf
+(shortcode tool-cards) and the /tools/ page (layouts/tools/list.html).
+*/ -}}
+{{- $content := "" -}}
+{{- range hugo.Data.tools -}}
+  {{- $content = print $content (partial "tool-card.html" .) -}}
+{{- end -}}
+{{- partial "shortcodes/cards" (dict "cols" 2 "content" (safeHTML $content)) -}}

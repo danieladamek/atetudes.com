@@ -1,3 +1,21 @@
+## 2026-10-11 — A new section, /tools/, and RiffRaft at /tools/riffraft/
+
+- **New URLs (permanent): `atetudes.com/tools/` and `atetudes.com/tools/riffraft/`.** Daniel ruled the URL and the
+  section on 2026-09-23. `/tools/` holds things outside the At-Etudes family. They are not studies: no Design Spec, no
+  `/studies/` entry, no study footer.
+- **RiffRaft is pinned to its commit `ae10bfe`** (`obsidian-riffraft/native/assets/riffraft.html`, sha256
+  `2085c43d…a853ddf3`). `static/tools/riffraft/index.html` is a byte-identical copy, and `static/tools/riffraft/PIN` records
+  the commit and the hash. The site never edits the copy. Updating it is a deliberate re-pin: both files in one commit,
+  plus an entry here.
+- **`tools/check_tools.py`** fails CI if a copy's sha256 differs from its PIN. It also fails if the built copy differs
+  from the pinned one, or if `/tools/` doesn't offer the tool. Proved red by flipping one byte, then green again.
+  `--offline` (run by `tools/check.py`) opens the file from `file://` with the network aborted at 1280 and 390.
+- **`/tools/` is a plain list** derived from `data/tools.yaml`, with name, one line, Open and Download
+  (`download="riffraft.html"`). It's a stopgap until the rebuilt site shell takes the section over. The landing page
+  gets a Tools heading and one card in the Hextra card family, with the line "MIDI input needs Chrome, Edge or Firefox."
+- Nothing else moved: every study is byte-identical. The only other built changes are the stylesheet's fingerprint, the
+  sitemap and the search index.
+
 ## 2026-10-10 — The window reaches down when the neck runs out — Multetudes v1.1.3
 
 - **Daniel, on I–vi–ii–V in B♭ with string 2 only:** Cm7 said "this selection carries no 3rd" and F7 "no 7th". The

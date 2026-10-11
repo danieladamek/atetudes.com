@@ -1,0 +1,7 @@
+# RiffRaft, pinned (item: RiffRaft on the site — publish the web edition; Daniel 2026-09-23).
+# index.html beside this file is a BYTE-IDENTICAL copy of obsidian-riffraft/native/assets/riffraft.html at the commit
+# below. The site never edits it. Updating is a deliberate re-pin: one commit that changes both files, plus a SITELOG
+# entry. tools/check_tools.py fails CI if the copy's sha256 differs from the one recorded here.
+source native/assets/riffraft.html
+commit ae10bfe247936ecf9590a3ebe4507897980ff834
+sha256 2085c43d5c3342c58d24ce220c96b9228a1f10e7dec1bdcccbaeee55a853ddf3
