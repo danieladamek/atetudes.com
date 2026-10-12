@@ -386,8 +386,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 #dragBar{flex:0 0 8px;cursor:col-resize;border-left:2px solid var(--line);
   border-radius:2px;touch-action:none}
 #dragBar:hover{border-left-color:var(--ink)}
-.colhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
 /* 215px (260916, item 2a): wide enough to show the whole pre-populated
@@ -578,9 +576,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
            does NOT relabel entries — those keep deriving (260811.3). The
            shell seats it in the header band via data-header-slot. -->
       <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
-      <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
-        placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
+        placeholder="Type your session notes here in plain text."></textarea>
       <!-- v0.9's ratified row (260911, item 1): six buttons, one row, THAT
            order — Copy between Export and Import. The host takes the
            placement the auto-append was covering for; the message line sits
@@ -14396,6 +14393,21 @@ const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
  * one rule, in the enumeration's index order (a sliding window of four down the six strings) */
 const SET_LABELS = [0, 1, 2].map((offset) => setLabel([6, 5, 4, 3].map((n) => n - offset), OPEN_MIDI, OPEN_MIDI));
 
+/* HOW A TAKE IS SAVED, SAID ON EVERY CARD (261012b — Daniel: "add instructions/information to every card including the
+ * notepad"). Written ONCE, here, because the claim is this card's: on a door that locks the notepad out there is no log,
+ * the sentence would be false, and the module that would say it is not mounted. The shell places it in every other
+ * panel's ⓘ (ctx.aboutEveryPanel). Only what the code does: the pad lives in this tab until saved (nothing writes it as
+ * you type); a saved entry is the note plus the whole étude (hub/etude-record.mjs), in this browser's storage under the
+ * door's key; Export, Copy and Import all speak one .atchart.md. RULE 14 (ruled by Daniel, 261012b): no caption is
+ * quoted — the captions are "Save note", "Restore étude", "Export (.atchart.md)", and a sentence quoting them goes stale
+ * the day one is renamed; these name the actions. */
+const SAVED_WITH_EACH_TAKE = "Everything set here is saved with each take: saving a note in the notepad files it " +
+  "in the Practice log at the bottom of the page, where any take can be brought back or written out as a file.";
+const NOTEPAD_ABOUT = "Type here as you practise; the note stays in this tab until you save it. Saving files it, " +
+  "with every card's settings, in the Practice log at the bottom of the page, kept in this browser on this computer and " +
+  "never uploaded. From the log, any take can be brought back or downloaded. Exporting, copying and importing all use " +
+  "one plain markdown file (.atchart.md), so your notes open in any text editor and come back in the same way.";
+
 const notepadCard = {
   id: "notepad-card",
   layer: "surface",
@@ -14432,9 +14444,8 @@ const notepadCard = {
            does NOT relabel entries — those keep deriving (260811.3). The
            shell seats it in the header band via data-header-slot. -->
       <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
-      <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
-        placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
+        placeholder="Type your session notes here in plain text."></textarea>
       <!-- v0.9's ratified row (260911, item 1): six buttons, one row, THAT
            order — Copy between Export and Import. The host takes the
            placement the auto-append was covering for; the message line sits
@@ -14476,8 +14487,6 @@ const notepadCard = {
 #dragBar{flex:0 0 8px;cursor:col-resize;border-left:2px solid var(--line);
   border-radius:2px;touch-action:none}
 #dragBar:hover{border-left-color:var(--ink)}
-.colhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
 /* 215px (260916, item 2a): wide enough to show the whole pre-populated
@@ -14532,6 +14541,24 @@ const notepadCard = {
     const d = ctx.doc, byId = ctx.byId;
     const doorId = ctx.door.id;
     const KEY = doorId + ".v1.log";          // the door's OWN namespace, derived
+
+    /* THE ⓘ PROSE (261012b): the pad's and the log's own panels carry NOTEPAD_ABOUT — each column gets it, once per panel
+     * (one panel on a door that keeps them together, two where the pad is seated in a row); every OTHER panel carries
+     * SAVED_WITH_EACH_TAKE through the shell. Static prose, so it is .info: the shell moves it into the ⓘ. Written into
+     * this card's own columns only — the other panels are the shell's to touch, not this card's. */
+    {
+      const mine = [byId("noteCol"), byId("logCol")];
+      const panelOf = (col) => col.closest(".card, .board");
+      const said = new Set();
+      for (const col of mine) {
+        if (said.has(panelOf(col))) continue;
+        said.add(panelOf(col));
+        const about = d.createElement("div");
+        about.className = "hint info"; about.textContent = NOTEPAD_ABOUT;
+        col.appendChild(about);
+      }
+      ctx.aboutEveryPanel(SAVED_WITH_EACH_TAKE, { skip: (p) => mine.some((col) => p.contains(col)) });
+    }
 
     /* the last configuration heard on the bus, merged across its owners — the
      * harmony panel, Shape & Motion, and the clock's tempo. This is what an
@@ -14778,7 +14805,7 @@ const notepadCard = {
     byId("npTitle").placeholder = fallback();
   },
 };
-return { SET_LABELS, notepadCard };
+return { SET_LABELS, SAVED_WITH_EACH_TAKE, NOTEPAD_ABOUT, notepadCard };
 })();
 
 /* ===== hub/etude-describe.mjs ===== */
@@ -16586,7 +16613,7 @@ function initCollapse(doc) {
  * and by Escape — never a browser modal (the file:// gate forbids a dialog).
  * Keyboard-reachable (a real button) and labelled, since the popout is now the
  * only route to that text. A panel with no static prose gets no button. */
-function initInfo(doc) {
+function initInfo(doc, about) {
   let openBtn = null, openPop = null;
   const close = () => {
     if (openPop) { openPop.hidden = true; openBtn.setAttribute("aria-expanded", "false"); }
@@ -16595,6 +16622,9 @@ function initInfo(doc) {
   let n = 0;
   for (const p of doc.querySelectorAll(".card, .board")) {
     const prose = [...p.querySelectorAll(".info")];
+    /* PROSE A MODULE SAYS OF EVERY PANEL (261012b): appended after the panel's own, so a panel with none grows an ⓘ */
+    for (const a of about)
+      if (!a.skip(p)) { const el = doc.createElement("div"); el.className = "hint info"; el.textContent = a.text; prose.push(el); }
     if (!prose.length) continue;
     const pop = doc.createElement("div");
     pop.className = "infoPop"; pop.hidden = true; pop.id = "infoPop-" + (++n);
@@ -16622,12 +16652,17 @@ function boot(MODULES, door, doc) {
   doc.getElementById("doorTitle").textContent = door.present.title;
   doc.getElementById("doorTag").textContent = door.present.blurb;
   doc.getElementById("doorFoot").textContent = door.present.footer || "";
+  const about = [];
   const ctx = { door, doc, byId,
     /** modules report state changes here; the shell owns no readout of its
      * own, so this is a no-op seam the host page can take over */
-    changed() {} };
+    changed() {},
+    /** A SENTENCE EVERY PANEL'S ⓘ CARRIES (261012b): a module that owns a claim about the whole page states it once
+     * here; the shell appends it to each panel's static prose (skip: the module's own panels). Door-aware by
+     * construction — a door that prunes the module never hears the claim. */
+    aboutEveryPanel(text, { skip = () => false } = {}) { about.push({ text, skip }); } };
   for (const m of MODULES) m.mount(ctx);
-  initInfo(doc);
+  initInfo(doc, about);
   initCollapse(doc);
   return ctx;
 }
@@ -16636,7 +16671,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip, __m_hub_modules_tuning_strip_mjs.tuningStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.4","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.5","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

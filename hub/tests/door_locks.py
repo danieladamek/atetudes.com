@@ -5332,7 +5332,8 @@ console.log(JSON.stringify(out));
     if "journalIn" in r["controlsPresent"]:
         # THE PRIVACY GUARANTEE STAYS ON THE FACE (the P1P3 correction): it is a
         # privacy assurance, not instructional prose — prominence is part of what
-        # it does, so it is NOT in a popout, and the notepad has no info button.
+        # it does, so it is NOT in a popout. (Since 261012b the notepad HAS an ⓘ, explaining how a take is saved; the
+        # guarantee itself stays here on the face — ruled by Daniel, 261012b.)
         # PINS REWRITTEN 260915 (5d, the plain-English pass — rule 7): the
         # guarantee is identical, the words are a player's ("Your notes stay
         # on this computer — nothing is uploaded"); the old engineer's
@@ -5343,6 +5344,41 @@ console.log(JSON.stringify(out));
         face = page.query_selector("#handoffNote")
         check(face is not None and "nothing is uploaded" in face.inner_text() and face.is_visible(),
               f"{tag} the privacy guarantee is not visible on the notepad face")
+    # ---- 261012b item 2: EVERY panel says how a take is saved — where the notepad is, and nowhere where it is not ----
+    # The two sentences are read from the module's exports (rule 6), never retyped here. Door-aware: the notepad's own
+    # panels carry NOTEPAD_ABOUT, every other panel SAVED_WITH_EACH_TAKE; a door without the notepad carries neither.
+    _ab = subprocess.run(["node", "--input-type=module", "-e",
+        "const m = await import('./hub/modules/notepad-card.mjs'); console.log(JSON.stringify([m.SAVED_WITH_EACH_TAKE, m.NOTEPAD_ABOUT]))"],
+        capture_output=True, text=True, cwd=REPO)
+    saved_line, pad_about = json.loads(_ab.stdout)
+    per_panel = page.evaluate("""() => [...document.querySelectorAll('.card, .board')].map(p => ({
+        name: ((p.querySelector('h2, .bh span') || {}).textContent || '?').replace(/\\s+/g, ' ').trim().slice(0, 40),
+        btn: !!__may(() => p.querySelector(':scope > .infoBtn'), 'a panel without an ⓘ is the finding, named below'),
+        mine: [__may(() => document.getElementById('noteCol'), 'plain carries no notepad'), __may(() => document.getElementById('logCol'), 'plain carries no notepad')].some(c => c && p.contains(c)),
+        prose: [...__may(() => p.querySelectorAll('.infoPop .info'), 'a panel with no prose is the finding, named below')].map(e => e.textContent) }))""")
+    if "journalIn" in r["controlsPresent"]:
+        check(len(per_panel) >= 2 and all(x["btn"] for x in per_panel),
+              f"{tag} 261012b: every panel shows an ⓘ on a door with the notepad: {[x['name'] for x in per_panel if not x['btn']]}")
+        for x in per_panel:
+            want, other = (pad_about, saved_line) if x["mine"] else (saved_line, pad_about)
+            check(x["prose"].count(want) == 1 and other not in x["prose"],
+                  f"{tag} 261012b: panel {x['name']!r}'s ⓘ carries {'the notepad paragraph' if x['mine'] else 'the save sentence'} once, and not the other: {x['prose'][-2:]}")
+        check(sum(x["mine"] for x in per_panel) >= 1, f"{tag} 261012b: no panel holds the notepad — the paragraph's site was not found")
+        ta = page.query_selector("#journalIn")
+        check(ta.get_attribute("placeholder") == "Type your session notes here in plain text.",
+              f"{tag} 261012b: the pad's placeholder: {ta.get_attribute('placeholder')!r}")
+        with absent_ok("the column head was removed 261012b — its absence is the claim"):
+            check(page.query_selector("#noteCol .colhd") is None, f"{tag} 261012b: the 'Note — what just happened' column head is gone")
+        # the note box lines up with the log where they sit side by side (one board): its top meets the log's first row
+        side = page.evaluate("""() => { const n = document.getElementById('noteCol'), l = document.getElementById('logCol');
+          if (n.closest('.card, .board') !== l.closest('.card, .board')) return null;
+          const ta = document.getElementById('journalIn').getBoundingClientRect(), lc = l.getBoundingClientRect(), nc = n.getBoundingClientRect();
+          return { sideBySide: Math.abs(nc.top - lc.top) < 2 && nc.left > lc.left, taTop: Math.round(ta.top), colTop: Math.round(lc.top) }; }""")
+        if side is not None and side["sideBySide"]:
+            check(abs(side["taTop"] - side["colTop"]) <= 2, f"{tag} 261012b: with the head gone the note box's top meets the log column's top: {side}")
+    else:
+        check(all(saved_line not in x["prose"] and pad_about not in x["prose"] for x in per_panel),
+              f"{tag} 261012b: a door without the notepad says nothing about saving a take — the sentence would be false here")
     # OPEN a popout, and prove it dismisses without a modal — Escape and click-out
     ib = page.query_selector(".infoBtn")
     ib.click()

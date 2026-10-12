@@ -1,3 +1,18 @@
+## 2026-10-12 — Every card says how a take is saved — Multetudes v1.1.5, Tetradetudes v0.6.21, metronome v1.5.2, triadetudes v0.9.7, modes
+
+- **Every card's ⓘ** (Update Log 261012b.2, Daniel 261012), on the pages built from the hub doors with a notepad, now
+  ends: "Everything set here is saved with each take: saving a note in the notepad files it in the Practice log at the
+  bottom of the page, where any take can be brought back or written out as a file." A door without the notepad never
+  says it.
+- **The notepad's ⓘ** explains the pad (this tab until saved), the log (this browser, this computer, never uploaded),
+  bringing a take back, and the one markdown file (`.atchart.md`) that Export, Copy and Import share. The privacy line
+  stays on the notepad's face.
+- **Every study with the notepad** (Multetudes, Tetradetudes, metronome, triadetudes, modes-from-pentatonic-boxes): the
+  placeholder reads "Type your session notes here in plain text." and the "Note — what just happened" heading is gone.
+  tetrad-voice-leading is frozen and unchanged.
+- Source editions: `hub/build/{multetudes,tetradetudes}.html`; metronome and triadetudes re-carried from
+  `hub/modules/notepad-card.mjs`'s own assemblies; modes re-emitted by `generators/modes_pent_interactive.py`.
+
 ## 2026-10-12 — The tuning gets its own card, shut on load — Multetudes v1.1.4, Tetradetudes v0.6.20
 
 - **Multetudes v1.1.4** (Update Log 261012b.1, Daniel 261012): the tuning rows left the neck for a **Tuning** board

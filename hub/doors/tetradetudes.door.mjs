@@ -155,7 +155,9 @@ export default {
      * 261054 §3, option (b)) — the same words; at 390 the readout beside the window buttons stays at four lines. */
     /* v0.6.20 (261012b): carried along — the shell gained a declared start-collapsed and a shut panel's summary that
      * follows its one-liner; nothing on this door declares either, so nothing here looks or behaves differently. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.20",
+    /* v0.6.21 (261012b, Daniel): every card's ⓘ says how a take is saved; the notepad's ⓘ, its new placeholder, and no
+     * column head — the shared notepad card. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.21",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

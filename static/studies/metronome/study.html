@@ -91,8 +91,6 @@
 #dragBar{flex:0 0 8px;cursor:col-resize;border-left:2px solid var(--line);
   border-radius:2px;touch-action:none}
 #dragBar:hover{border-left-color:var(--ink)}
-.colhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
 /* 215px (260916, item 2a): wide enough to show the whole pre-populated
@@ -177,7 +175,7 @@
 <div class="wrap">
 <header>
   <h1>Metronome</h1>
-  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.5.1</div>
+  <div class="tag">the At-Etudes appliance — tap it, hear it, jot the idea · v1.5.2</div>
 </header>
 
 <div class="cards">
@@ -231,9 +229,8 @@
            does NOT relabel entries — those keep deriving (260811.3). The
            shell seats it in the header band via data-header-slot. -->
       <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
-      <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
-        placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
+        placeholder="Type your session notes here in plain text."></textarea>
       <!-- v0.9's ratified row (260911, item 1): six buttons, one row, THAT
            order — Copy between Export and Import. The host takes the
            placement the auto-append was covering for; the message line sits
@@ -286,7 +283,7 @@
   <!-- ===== /hub/modules/notepad-card.mjs ===== -->
 </div>
 
-<footer>Metronome v1.5.1 — the first At-Etudes appliance. Three synthesized click voices
+<footer>Metronome v1.5.2 — the first At-Etudes appliance. Three synthesized click voices
 (zero assets), tap tempo, accents (bar &gt; beat), subdivisions to 16ths. The notepad
 is the shared At-Etudes component, built for capture: one plain textarea (plain prose is
 valid markdown), notes carrying settings as data, one .atchart.md file any sibling app

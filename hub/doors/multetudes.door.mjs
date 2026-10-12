@@ -300,7 +300,9 @@ export default {
     /* v1.1.4 (261012b, Daniel): the tuning gets its own card under the neck, above the Mixer — shut on every load, its
      * summary naming the live tuning ("Tuning · standard" / "drop D" / "custom"), rewritten while shut; the neck's
      * standing "click the numbers…" line left the hint for the neck's ⓘ, reworded. */
-    blurb: "one tool that holds many études · v1.1.4",
+    /* v1.1.5 (261012b, Daniel): every card's ⓘ says how a take is saved; the notepad's ⓘ says what Save, the log and the
+     * .atchart.md file do; the placeholder reads "Type your session notes here in plain text."; the column head is gone. */
+    blurb: "one tool that holds many études · v1.1.5",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

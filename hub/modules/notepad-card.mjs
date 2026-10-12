@@ -42,6 +42,21 @@ import { SHARED, pcOfKey } from "../../engine/shared-config.mjs";
  * one rule, in the enumeration's index order (a sliding window of four down the six strings) */
 export const SET_LABELS = [0, 1, 2].map((offset) => setLabel([6, 5, 4, 3].map((n) => n - offset), OPEN_MIDI, OPEN_MIDI));
 
+/* HOW A TAKE IS SAVED, SAID ON EVERY CARD (261012b — Daniel: "add instructions/information to every card including the
+ * notepad"). Written ONCE, here, because the claim is this card's: on a door that locks the notepad out there is no log,
+ * the sentence would be false, and the module that would say it is not mounted. The shell places it in every other
+ * panel's ⓘ (ctx.aboutEveryPanel). Only what the code does: the pad lives in this tab until saved (nothing writes it as
+ * you type); a saved entry is the note plus the whole étude (hub/etude-record.mjs), in this browser's storage under the
+ * door's key; Export, Copy and Import all speak one .atchart.md. RULE 14 (ruled by Daniel, 261012b): no caption is
+ * quoted — the captions are "Save note", "Restore étude", "Export (.atchart.md)", and a sentence quoting them goes stale
+ * the day one is renamed; these name the actions. */
+export const SAVED_WITH_EACH_TAKE = "Everything set here is saved with each take: saving a note in the notepad files it " +
+  "in the Practice log at the bottom of the page, where any take can be brought back or written out as a file.";
+export const NOTEPAD_ABOUT = "Type here as you practise; the note stays in this tab until you save it. Saving files it, " +
+  "with every card's settings, in the Practice log at the bottom of the page, kept in this browser on this computer and " +
+  "never uploaded. From the log, any take can be brought back or downloaded. Exporting, copying and importing all use " +
+  "one plain markdown file (.atchart.md), so your notes open in any text editor and come back in the same way.";
+
 export const notepadCard = {
   id: "notepad-card",
   layer: "surface",
@@ -78,9 +93,8 @@ export const notepadCard = {
            does NOT relabel entries — those keep deriving (260811.3). The
            shell seats it in the header band via data-header-slot. -->
       <input type="text" id="npTitle" data-control="npTitle" data-header-slot>
-      <div class="colhd">Note — what just happened</div>
       <textarea id="journalIn" data-control="journalIn"
-        placeholder="The note for this take — plain prose (it's markdown underneath)."></textarea>
+        placeholder="Type your session notes here in plain text."></textarea>
       <!-- v0.9's ratified row (260911, item 1): six buttons, one row, THAT
            order — Copy between Export and Import. The host takes the
            placement the auto-append was covering for; the message line sits
@@ -122,8 +136,6 @@ export const notepadCard = {
 #dragBar{flex:0 0 8px;cursor:col-resize;border-left:2px solid var(--line);
   border-radius:2px;touch-action:none}
 #dragBar:hover{border-left-color:var(--ink)}
-.colhd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--gray);font-weight:bold;margin:0 0 8px}
 #journalIn{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:100%;resize:vertical;color:var(--ink);min-height:210px}
 #importFile{display:none}
 /* 215px (260916, item 2a): wide enough to show the whole pre-populated
@@ -178,6 +190,24 @@ export const notepadCard = {
     const d = ctx.doc, byId = ctx.byId;
     const doorId = ctx.door.id;
     const KEY = doorId + ".v1.log";          // the door's OWN namespace, derived
+
+    /* THE ⓘ PROSE (261012b): the pad's and the log's own panels carry NOTEPAD_ABOUT — each column gets it, once per panel
+     * (one panel on a door that keeps them together, two where the pad is seated in a row); every OTHER panel carries
+     * SAVED_WITH_EACH_TAKE through the shell. Static prose, so it is .info: the shell moves it into the ⓘ. Written into
+     * this card's own columns only — the other panels are the shell's to touch, not this card's. */
+    {
+      const mine = [byId("noteCol"), byId("logCol")];
+      const panelOf = (col) => col.closest(".card, .board");
+      const said = new Set();
+      for (const col of mine) {
+        if (said.has(panelOf(col))) continue;
+        said.add(panelOf(col));
+        const about = d.createElement("div");
+        about.className = "hint info"; about.textContent = NOTEPAD_ABOUT;
+        col.appendChild(about);
+      }
+      ctx.aboutEveryPanel(SAVED_WITH_EACH_TAKE, { skip: (p) => mine.some((col) => p.contains(col)) });
+    }
 
     /* the last configuration heard on the bus, merged across its owners — the
      * harmony panel, Shape & Motion, and the clock's tempo. This is what an

@@ -1435,12 +1435,12 @@ def m52_the_speller_keeps_the_letter_again():
 # ---------------------------------------------------------------- mutation 53
 # 260929 (night 35): the hand-authored studies carry notepad-card.mjs's bytes
 # VERBATIM (host-conformance's card-carrier pin, in the build's own
-# assemblies). A word drifts in the metronome study's carried column head —
+# assemblies). A word drifts in the metronome study's carried placeholder (its column head until 261012b) —
 # the drift an "edit the copy, not the module" slip would make.
 def m53_a_carried_card_drifts_in_a_hand_page():
     p, original, mutated = patch("static/studies/metronome/study.html",
-        '<div class="colhd">Note — what just happened</div>',
-        '<div class="colhd">Note — what happened</div>')
+        'placeholder="Type your session notes here in plain text."',   # repointed 261012b: the column head it patched is gone
+        'placeholder="Type your session notes here in plain prose."')
     try:
         p.write_text(mutated)
         # no build(): the mutated file is not a build input; the gate is the engine's

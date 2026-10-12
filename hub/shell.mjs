@@ -324,7 +324,7 @@ function initCollapse(doc) {
  * and by Escape — never a browser modal (the file:// gate forbids a dialog).
  * Keyboard-reachable (a real button) and labelled, since the popout is now the
  * only route to that text. A panel with no static prose gets no button. */
-function initInfo(doc) {
+function initInfo(doc, about) {
   let openBtn = null, openPop = null;
   const close = () => {
     if (openPop) { openPop.hidden = true; openBtn.setAttribute("aria-expanded", "false"); }
@@ -333,6 +333,9 @@ function initInfo(doc) {
   let n = 0;
   for (const p of doc.querySelectorAll(".card, .board")) {
     const prose = [...p.querySelectorAll(".info")];
+    /* PROSE A MODULE SAYS OF EVERY PANEL (261012b): appended after the panel's own, so a panel with none grows an ⓘ */
+    for (const a of about)
+      if (!a.skip(p)) { const el = doc.createElement("div"); el.className = "hint info"; el.textContent = a.text; prose.push(el); }
     if (!prose.length) continue;
     const pop = doc.createElement("div");
     pop.className = "infoPop"; pop.hidden = true; pop.id = "infoPop-" + (++n);
@@ -360,12 +363,17 @@ export function boot(MODULES, door, doc) {
   doc.getElementById("doorTitle").textContent = door.present.title;
   doc.getElementById("doorTag").textContent = door.present.blurb;
   doc.getElementById("doorFoot").textContent = door.present.footer || "";
+  const about = [];
   const ctx = { door, doc, byId,
     /** modules report state changes here; the shell owns no readout of its
      * own, so this is a no-op seam the host page can take over */
-    changed() {} };
+    changed() {},
+    /** A SENTENCE EVERY PANEL'S ⓘ CARRIES (261012b): a module that owns a claim about the whole page states it once
+     * here; the shell appends it to each panel's static prose (skip: the module's own panels). Door-aware by
+     * construction — a door that prunes the module never hears the claim. */
+    aboutEveryPanel(text, { skip = () => false } = {}) { about.push({ text, skip }); } };
   for (const m of MODULES) m.mount(ctx);
-  initInfo(doc);
+  initInfo(doc, about);
   initCollapse(doc);
   return ctx;
 }
