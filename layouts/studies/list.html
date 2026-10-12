@@ -1,7 +1,7 @@
 {{- /*
 /studies/ — the section index, one study at a time (item: AptÉtudes and SolÉtudes, 260929).
 Hextra's default list layout with the content replaced by two grouped runs of full-width rows:
-thumbnail on the left, title + `blurb` + Open on the right. Section membership and order come from
+thumbnail on the left, title + `blurb` + Open and Download on the right (the tool card's actions). Section membership and order come from
 each study's front matter; section names and standfirsts from data/study_sections.yaml — the same
 sources the landing page's study-section shortcode reads.
 
@@ -41,7 +41,10 @@ in the same commit that lands. The front matter it reads does not die with it.
               <div class="study-row-body">
                 <h3><a href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
                 <div class="study-row-blurb">{{ .Params.blurb | markdownify }}</div>
-                <a class="study-row-open" href="{{ .RelPermalink }}">Open&nbsp;→</a>
+                <div class="tool-card-actions">
+                  <a href="{{ .RelPermalink }}">Open&nbsp;→</a>
+                  <a href="{{ .RelPermalink }}study.html" download="{{ .File.ContentBaseName }}.html">Download</a>
+                </div>
               </div>
             </div>
           {{- end -}}

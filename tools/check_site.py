@@ -22,11 +22,15 @@ class LinkCollector(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.links = []
+        self.downloads = []  # (href, download) of every <a download>
         self.title, self._in_title = None, False
 
     def handle_starttag(self, tag, attrs):
         if tag == "title" and self.title is None:
             self._in_title, self.title = True, ""
+        if tag == "a" and any(n == "download" for n, _ in attrs):
+            d = dict(attrs)
+            self.downloads.append((d.get("href"), d.get("download")))
         for name, value in attrs:
             if name in ("href", "src") and value:
                 self.links.append(value)
@@ -71,6 +75,29 @@ def resolve(link, page_dir):
     return target
 
 
+def check_downloads():
+    """EVERY STUDY GETS A DOWNLOAD LINK (item, 261012): its study page, its landing card and its /studies/ row each link
+    to its own study.html with download="<slug>.html". The studies are COMPUTED from static/studies/ (rule 6)."""
+    problems, found = [], 0
+    slugs = sorted(f.parent.name for f in (ROOT.parent / "static" / "studies").glob("*/study.html"))
+    if not slugs:
+        return ["downloads: no study found in static/studies/ — the check would pass on nothing"], 0
+    pages = {}
+    for rel in ["index.html", "studies/index.html"] + [f"studies/{s}/index.html" for s in slugs]:
+        parser = LinkCollector()
+        if (ROOT / rel).exists():
+            parser.feed((ROOT / rel).read_text(encoding="utf-8"))
+        pages[rel] = set(parser.downloads)
+    for slug in slugs:
+        want = (f"/studies/{slug}/study.html", f"{slug}.html")
+        for rel in ("index.html", "studies/index.html", f"studies/{slug}/index.html"):
+            if want in pages[rel]:
+                found += 1
+            else:
+                problems.append(f"{rel}: no Download link for {slug} (want <a href=\"{want[0]}\" download=\"{want[1]}\">)")
+    return problems, found
+
+
 def main():
     problems = []
     if not ROOT.is_dir():
@@ -107,6 +134,9 @@ def main():
                 problems.append(f"{rel}: the tab names the site twice — <title>{parser.title.strip()}</title>")
 
     print(f"checked {pages} page(s); {titled} <title>(s) read against the site's own title {site!r}")
+    dl_problems, dl_found = check_downloads()
+    problems += dl_problems
+    print(f"downloads: {dl_found} study Download link(s) found (study page, landing card, /studies/ row per study)")
     # THE DEPLOY RECORDS ARE VERIFIED AGAINST GITHUB (260921, night 27 item 3): every
     # SITELOG deploy record above the mechanism marker must carry the `record:` line
     # tools/deploy_record.py wrote from the fetched run, and its run id, conclusion

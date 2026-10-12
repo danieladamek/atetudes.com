@@ -2,15 +2,18 @@
 Study wrapper: real Hextra chrome (navbar, search) above a full-viewport
 iframe that loads the untouched, generated study file living at
 <page URL>/study.html. The vault edition is never modified — ingest is a
-plain file copy into static/studies/<slug>/study.html.
+plain file copy into static/studies/<slug>/study.html. The bar offers that same file
+to Download, saved as <slug>.html (item: Every study gets a Download link, 261012).
 */ -}}
 {{ define "main" }}
 {{ partial "sidebar.html" (dict "context" . "disableSidebar" true "displayPlaceholder" false) }}
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 20px;background:#fff;border-bottom:1px solid #E2E2E6;">
   <span style="font-size:13.5px;color:#73737A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ .Title }}</span>
-  <a href="{{ .RelPermalink }}study.html" target="_blank" rel="noopener" style="flex-shrink:0;font-size:13.5px;color:#212126;text-decoration:underline;text-underline-offset:2px;">
-    Open standalone&nbsp;↗
-  </a>
+  <span class="study-bar-actions" style="flex-shrink:0;display:flex;align-items:baseline;gap:16px;font-size:13.5px;">
+    <span class="study-bar-note" style="color:#73737A;">One file — it keeps working offline.</span>
+    <a href="{{ .RelPermalink }}study.html" download="{{ .File.ContentBaseName }}.html" style="color:#212126;text-decoration:underline;text-underline-offset:2px;">Download</a>
+    <a href="{{ .RelPermalink }}study.html" target="_blank" rel="noopener" style="color:#212126;text-decoration:underline;text-underline-offset:2px;">Open standalone&nbsp;↗</a>
+  </span>
 </div>
 <iframe
   src="{{ .RelPermalink }}study.html"

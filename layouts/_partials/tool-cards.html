@@ -4,6 +4,14 @@ Every tool as a card, one per row of data/tools.yaml — rendered here once for 
 */ -}}
 {{- $content := "" -}}
 {{- range hugo.Data.tools -}}
-  {{- $content = print $content (partial "tool-card.html" .) -}}
+  {{- $card := dict
+        "name"  .name
+        "line"  .line
+        "needs" .needs
+        "href"  (printf "/tools/%s/" .slug | relURL)
+        "file"  (printf "/tools/%s/index.html" .slug | relURL)
+        "slug"  .slug
+      -}}
+  {{- $content = print $content (partial "tool-card.html" $card) -}}
 {{- end -}}
 {{- partial "shortcodes/cards" (dict "cols" 2 "content" (safeHTML $content)) -}}

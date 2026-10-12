@@ -19,11 +19,14 @@ menu:
     - name: "At-Etudes"
       pageRef: "/studies"
       weight: 1
+    - name: "Tools"
+      pageRef: "/tools"
+      weight: 2
     - name: "Blog"
       pageRef: "/blog"
-      weight: 2
-    - name: "Search"
       weight: 3
+    - name: "Search"
+      weight: 4
       params:
         type: "search"
 

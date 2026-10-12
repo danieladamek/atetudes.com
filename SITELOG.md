@@ -1,3 +1,21 @@
+## 2026-10-12 — Every study gets a Download link, and Tools joins the top bar
+
+- **Download, like RiffRaft's on `/tools/`** (Daniel, 261012). Every study page's bar now reads *One file — it keeps
+  working offline. · Download · Open standalone ↗* (the sentence gives way at phone width). Every landing card and every
+  `/studies/` row offers *Open →* and *Download*. Each link is `<a href="/studies/<slug>/study.html"
+  download="<slug>.html">`, slug from the study's own page, so a new study gets its links with no extra edit.
+- **One card style, not two.** The landing's study cards are now the tool card (`layouts/_partials/tool-card.html`,
+  generalised to take a thumbnail), because a card with two actions can't be one `<a>`. `/tools/`'s RiffRaft card renders
+  the same bytes as before.
+- **The top bar reads At-Etudes · Tools · Blog · Search** (`hugo.yaml` `menu.main`, `pageRef: "/tools"`), desktop and the
+  phone menu, marked current on `/tools/`.
+- **`tools/check_site.py` checks it** (so `tools/check.py` and CI): each study's page, landing card and `/studies/` row
+  must link its own `study.html` with `download="<slug>.html"`, studies computed from `static/studies/`. 18 links found;
+  removing the study page's `download` dropped it to 12 with six PROBLEMs, then restored.
+- Nothing else moved: every `study.html` and `/tools/riffraft/` is byte-identical in the built site. Each file saved from
+  every Download link (18) is byte-identical to the published one and opens from `file://` with the network off.
+  `/studies/`'s intro now says to download a study rather than "Open standalone".
+
 ## 2026-10-11 — A new section, /tools/, and RiffRaft at /tools/riffraft/
 
 - **New URLs (permanent): `atetudes.com/tools/` and `atetudes.com/tools/riffraft/`.** Daniel ruled the URL and the

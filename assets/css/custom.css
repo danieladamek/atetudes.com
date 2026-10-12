@@ -182,3 +182,12 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* ---- Every study gets a Download link (item, 261012) --------------------------------------------
+   The study bar's one sentence ("One file — it keeps working offline.") is said once, on the
+   study page; at phone width it gives way so Download and Open standalone stay on the bar. */
+@media (max-width: 640px) {
+  .study-bar-note {
+    display: none;
+  }
+}
