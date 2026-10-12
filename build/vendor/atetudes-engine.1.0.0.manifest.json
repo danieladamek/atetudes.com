@@ -1,0 +1,63 @@
+{
+  "name": "atetudes-engine",
+  "version": "1.0.0",
+  "file": "atetudes-engine.1.0.0.mjs",
+  "sha256": "0db19f36ba445ccd96eed749f88d8d7589daf73494c86c9ab60a1a10c0fe6484",
+  "sourceCommit": "b2911c97c38b788244612908133dd8cc49b1b853",
+  "sources": [
+    {
+      "path": "engine/chord.mjs",
+      "blob": "bbfecb34ea016a9c99418394f4ee1bc5e9305a8c"
+    },
+    {
+      "path": "engine/field.mjs",
+      "blob": "37372800a00c61572d669a3443852f10aa7e5b8c"
+    },
+    {
+      "path": "engine/atchart.mjs",
+      "blob": "b27d519256b4d6dff14c6924416707fcc546e540"
+    },
+    {
+      "path": "engine/structures.mjs",
+      "blob": "ea11c3ab27a491bdabb6c04e0556c6a0141f12ed"
+    },
+    {
+      "path": "engine/markdown.mjs",
+      "blob": "3bd1904297a6173c1dafa658d5602f3aef3db7ee"
+    },
+    {
+      "path": "engine/numeral.mjs",
+      "blob": "111a6c17a9d5d534a93a2a096aad726dc1e8d2d4"
+    }
+  ],
+  "api": [
+    "LETTER_PC",
+    "accOf",
+    "pcOf",
+    "parseChord",
+    "SCALE_STEPS",
+    "scaleNotes",
+    "chromaticSpeller",
+    "spellRole",
+    "alteredDegree",
+    "resolveRoman",
+    "ATCHART_VERSION",
+    "CHART_SLOT",
+    "readApp",
+    "writeApp",
+    "parseAtchart",
+    "serializeAtchart",
+    "STRUCTURES",
+    "CHORD_ROOTS",
+    "CHORD_QUALITIES",
+    "GLYPHS",
+    "resolveStructure",
+    "chartBody",
+    "chartFence",
+    "changesLine",
+    "chordSymbol",
+    "applyEdit",
+    "grammarRoman"
+  ],
+  "ruling": "261011c (option C): no palette.mjs, no motion.mjs, parseRoman not in the API"
+}

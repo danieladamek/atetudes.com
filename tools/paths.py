@@ -29,7 +29,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 
 SETS = {
-    "app":  ["hub/", "engine/", "generators/", "static/studies/", "docs/"],
+    "app":  ["hub/", "engine/", "generators/", "static/studies/", "docs/", "build/vendor/"],   # build/vendor: the engine bundle RiffRaft vendors (261011c)
     "site": ["content/", "layouts/", "assets/", "data/", "i18n/", "hugo.yaml", "go.mod", "go.sum",
              "static/assets/", "static/tools/", "static/CNAME", "static/.nojekyll", "SITELOG.md"],
     "all":  [".github/", "tools/", ".gitignore"],

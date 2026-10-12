@@ -172,10 +172,10 @@ const CLOCK_GRAMMAR = {
  * emitted. This is the shipped study's own convention (`const CHORD = (() =>
  * {…})()`), not a new one — and it is what lets chord.mjs and motion.mjs both
  * declare `mod12` in one file, which flat concatenation could not. */
-const nsOf = (relPath) => "__m_" + relPath.replace(/[^A-Za-z0-9]+/g, "_");
+export const nsOf = (relPath) => "__m_" + relPath.replace(/[^A-Za-z0-9]+/g, "_");
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
-function moduleChunk(relPath, src, resolveDep) {
+export function moduleChunk(relPath, src, resolveDep) {
   const binds = [];
   for (const s of importStatementsOf(src, relPath)) {
     const from = nsOf(resolveDep(relPath, s.spec));
@@ -374,5 +374,9 @@ __m_hub_shell_mjs.boot(MODULES, DOOR, document);
     `present/locked  tokens locked out: ${r.tokensAbsent.length}`);
 }
 
-const which = process.argv[2] ? [process.argv[2]] : listDoors();
-for (const id of which) await build(id);
+/* THE CLI RUNS ONLY WHEN THIS FILE IS THE COMMAND (261011c): hub/tools/vendor.mjs imports inlineForm, and an
+ * unguarded loop rebuilt every door into hub/build as a side effect of that import (261011b's slip). */
+if (process.argv[1] && import.meta.url === pathToFileURL(resolvePath(process.argv[1])).href) {
+  const which = process.argv[2] ? [process.argv[2]] : listDoors();
+  for (const id of which) await build(id);
+}
