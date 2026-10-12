@@ -153,7 +153,9 @@ export default {
      * row — shared files; nothing on this door's face moves. */
     /* v0.6.19 (261057, night 86): the zone clause has its own line under the readout row, at every width (ruling
      * 261054 §3, option (b)) — the same words; at 390 the readout beside the window buttons stays at four lines. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.19",
+    /* v0.6.20 (261012b): carried along — the shell gained a declared start-collapsed and a shut panel's summary that
+     * follows its one-liner; nothing on this door declares either, so nothing here looks or behaves differently. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.20",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

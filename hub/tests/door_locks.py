@@ -239,9 +239,33 @@ def run_door(pw, door_id):
     # Keyed on the DOOR, not on a control id — a gate block keyed to a control
     # that later disappears skips in silence (the suite's own recorded defect),
     # so the door demands its control instead of being gated by it.
+    # 261012b: the tuning card loads SHUT (a declared start-collapsed); a pin that drives the tuning rows opens it first
+    open_tuning = lambda pg: pg.evaluate("""() => { const t = document.getElementById('fdTuning'); const b = t && t.closest('.board');
+      if (b && b.classList.contains('clpsd')) b.querySelector(':scope > .clpsBtn').click(); }""")
+    tuning_card = lambda pg: pg.evaluate("""() => { const t = document.getElementById('fdTuning'); const b = t && t.closest('.board');
+      if (!b) return null; const btn = b.querySelector(':scope > .clpsBtn'), s = b.querySelector(':scope > .clpsSum');
+      return { shut: b.classList.contains('clpsd'), chev: btn && btn.textContent, title: btn && btn.title,
+        sum: s && s.textContent.trim(), sumShown: !!(s && s.getClientRects().length), rowsShown: t.getClientRects().length > 0,
+        neckInside: b.contains(document.getElementById('fieldSvg')), letters: [...t.querySelectorAll('.fd-open')].map(e => e.textContent) }; }""")
     if door_id == "multetudes":
         check("fieldSvg" in r["controlsPresent"],
               f"{tag} the multetudes door has no field board — fieldSvg is not in the partition")
+        # ---- 261012b item 1: THE TUNING CARD — its own board, shut on load, and its summary names the LIVE tuning ----
+        tc0 = tuning_card(page)
+        check(tc0 is not None and not tc0["neckInside"] and tc0["shut"] and tc0["chev"] == "▸" and tc0["title"] == "expand"
+              and tc0["sumShown"] and not tc0["rowsShown"] and tc0["sum"] == "Tuning · standard",
+              f"{tag} 261012b: the tuning rows are their own board, SHUT on load (▸, 'expand'), summary 'Tuning · standard': {tc0}")
+        # THE GATE (CC-1): a shut card never hides an altered neck — a tuning arriving from anywhere (here the bus, as a
+        # loaded étude or preset says it) rewrites the summary while the card stays shut, and the neck matches
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { tuning: { 6: -2 } } }))"); page.wait_for_timeout(200)
+        tc1 = tuning_card(page)
+        check(tc1["shut"] and tc1["sum"] == "Tuning · drop D" and tc1["letters"] == ["D", "A", "D", "G", "B", "E"],
+              f"{tag} 261012b: drop D said on the bus while the card is shut — the summary must read 'Tuning · drop D' and the neck match: {tc1}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { tuning: { 6: -1, 1: 1 } } }))"); page.wait_for_timeout(200)
+        check(tuning_card(page)["sum"] == "Tuning · custom", f"{tag} 261012b: a tuning that matches no name reads 'Tuning · custom' while shut: {tuning_card(page)}")
+        page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { tuning: null } }))"); page.wait_for_timeout(200)
+        check(tuning_card(page)["sum"] == "Tuning · standard" and tuning_card(page)["shut"],
+              f"{tag} 261012b: back to standard, still shut: {tuning_card(page)}")
         # the field's dot count, derived HERE in different arithmetic and a
         # different language, against the ARTIFACT (rendered SVG groups)
         OPEN = {6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64}
@@ -2894,8 +2918,11 @@ console.log(JSON.stringify(out));
         hint0 = page.inner_text("#fdHint")
         for dropped in ("the whole field", "Strings ", "the window from", "across the set", "Reference: string", "Placement is off"):
             check(dropped not in hint0, f"{tag} 3 (260919): the hint no longer narrates state — {dropped!r} is the readout's: {hint0!r}")
-        check(hint0.strip() == "Click the numbers to choose strings; ← → step the window.",
-              f"{tag} 3 (260919): in the ordinary case the hint is the affordance alone: {hint0!r}")
+        check(hint0.strip() == "",
+              f"{tag} 3 (260919; 261012b): in the ordinary case the hint is EMPTY — the standing affordance moved to the ⓘ: {hint0!r}")
+        neck_info = page.evaluate("() => [...document.getElementById('fieldSvg').closest('.board').querySelectorAll('.infoPop .info')].map(e => e.textContent).join(' ')")
+        check("Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window." in neck_info,
+              f"{tag} 261012b: the neck's ⓘ carries the string-and-window sentence: {neck_info[-200:]!r}")
         ro0 = page.inner_text("#roLine")
         for kept in ("the whole field", "frame from the", "strings", "across the set"):   # the reference clause varies by state
             check(kept in ro0, f"{tag} 3 (260919): the readout still carries the state the hint dropped — {kept!r}: {ro0[:100]!r}")
@@ -5422,6 +5449,7 @@ console.log(JSON.stringify(out));
         # once (the .clpsd lesson, third instance) — the buttons persist
         page.select_option("#hcObj", "scale")
         page.select_option("#hcObj", "tetrad")
+        open_tuning(page)
         # the tuning editor's three STATE rules (night 47): a moved string, an inert
         # stepper and a shown refusal exist only after an attempt — string 5 up five
         # leaves all three (C♯, the fifth step refused at string 4's D); standard
@@ -5470,10 +5498,27 @@ console.log(JSON.stringify(out));
         if not probe:
             continue
         try:
-            if page.query_selector(probe) is None:
-                orphans.append(sel)
+            with absent_ok("the sweep's own probe — an absent match IS the finding, and fails by name in the orphan check below"):
+                if page.query_selector(probe) is None:
+                    orphans.append(sel)
         except Exception:
             orphans.append(sel + "  (unparseable)")
+    # 261012b: TWO STATES THAT NEVER COEXIST — a LIT tuning name and an INERT stepper (no named tuning has an inert step:
+    # measured over the whole table, standard included). Until 261012b the names row rode the rail's grouped .on rule,
+    # which another seg kept matched; on its own board its lit rule needs its own state. The sweep above ran in the
+    # inert state; a names-row orphan from it is re-probed ONCE after a name is really lit — and only one that matches
+    # THERE is released. The lit state is asserted entered, so the release cannot be vacuous.
+    if door_id == "multetudes" and any("#fdTuneNames" in o for o in orphans):
+        open_tuning(page)
+        page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(80)
+        check(page.query_selector("#fdTuneNames button.on") is not None, f"{tag} 261012b: the lit-name state was not entered for the names row's re-probe")
+        released = []
+        for sel in [o for o in orphans if "#fdTuneNames" in o]:
+            probe = re.sub(r"::?[a-zA-Z-]+(\([^)]*\))?", "", sel).strip()
+            with absent_ok("a names-row orphan re-probed in the lit state; one still absent stays an orphan and fails below"):
+                if page.query_selector(probe) is not None:
+                    released.append(sel)
+        orphans = [o for o in orphans if o not in released]
     check(not orphans,
           f"{tag} CSS with nothing to match in this door: {orphans}\n"
           f"       a rule that survives its markup is the trace §4.2.1 forbids")
@@ -5663,6 +5708,7 @@ console.log(JSON.stringify(out));
     # drawn frets change. Nothing announces the retune: no toast, no translation.
     if door_id == "multetudes":
         check("fdTuning" in r["controlsPresent"] and "fdTuneNames" in r["controlsPresent"], f"{tag} the tuning editor is not in the partition")
+        open_tuning(page)
         page.evaluate("() => { window.__cfg = {}; document.addEventListener('atetudes:config', e => Object.assign(window.__cfg, e.detail)); }")
         ed = lambda: page.evaluate("""() => ({ letters: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent), name: document.getElementById('fdTuneName').textContent,
           lit: [...__may(() => document.querySelectorAll('#fdTuneNames button.on'), 'no tuning name lit off a named tuning, no refusal until a crossing; both are compared exactly')].map(b => b.textContent), why: [...__may(() => document.querySelectorAll('[data-role="refusal"]'), 'no tuning name lit off a named tuning, no refusal until a crossing; both are compared exactly')].map(e => e.textContent) })""")
@@ -5755,6 +5801,7 @@ console.log(JSON.stringify(out));
     # read as cells (spacing, measured); item 6 open D spells its F♯ at its own name only.
     if door_id == "multetudes":
         check("fdTuneAll" in r["controlsPresent"], f"{tag} the global stepper is not in the partition")
+        open_tuning(page)
         page.click('#fdTuneNames button[data-tuning="standard"]')
         rd = lambda: page.evaluate("""() => ({ letters: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent), offsets: [...document.querySelectorAll('#fdTuning .fd-open')].map(e => +e.dataset.offset),
           name: document.getElementById('fdTuneName').textContent, shift: document.getElementById('fdTuneName').dataset.shift,
@@ -5826,6 +5873,7 @@ console.log(JSON.stringify(out));
     if door_id == "multetudes":
         letters = lambda pg: pg.evaluate("() => [...document.querySelectorAll('#fdTuning .fd-open')].map(e => e.textContent)")
         name_of = lambda pg: pg.evaluate("() => document.getElementById('fdTuneName').textContent")
+        open_tuning(page)
         page.click('#fdTuneNames button[data-tuning="all fourths"]')
         check(letters(page) == ["E", "A", "D", "G", "C", "F"], f"{tag} all fourths did not build on the face: {letters(page)}")
         page.click('[data-cap="save"]')
@@ -5851,6 +5899,7 @@ console.log(JSON.stringify(out));
         offer = page2.query_selector('[data-cap="apply-file-tuning"]')
         check(offer is not None and "apply the tuning from this file" in offer.inner_text(), f"{tag} the file's own tuning was not offered as a click")
         page2.click('#histList .hist [data-cap="apply"]'); page2.wait_for_timeout(400)
+        open_tuning(page2)
         check(letters(page2) == ["E", "A", "D", "G", "C", "F"] and name_of(page2) == "all fourths",
               f"{tag} restoring the imported étude did not bring its tuning: {letters(page2)} {name_of(page2)!r}")
         # the EAR (the night-47 idiom): the walk's own audition sounds what the neck draws — strings 2 and 1 at 60/65 + fret
@@ -5886,13 +5935,24 @@ console.log(JSON.stringify(out));
         check(not errs2, f"{tag} the cold page raised errors: {errs2[:2]}")
         ctx2.close()
         # DADGAD saved, the page left and reopened (the stored notepad), the entry restored — in DADGAD
+        # 261012b: and a drop D entry saved before it, restored second — both while the tuning card is SHUT (it reopens shut)
+        page.click('#fdTuneNames button[data-tuning="drop D"]')
+        page.click('[data-cap="save"]')
         page.click('#fdTuneNames button[data-tuning="DADGAD"]')
         page.click('[data-cap="save"]')
         page.click('#fdTuneNames button[data-tuning="standard"]')
         page.goto(html_path.as_uri()); page.wait_for_selector("#cards", state="attached"); page.wait_for_timeout(300)
         check(letters(page) == ["E", "A", "D", "G", "B", "E"], f"{tag} the reopened page does not boot in standard")
+        check(tuning_card(page)["shut"] and tuning_card(page)["sum"] == "Tuning · standard", f"{tag} 261012b: the reopened page's tuning card is shut on standard: {tuning_card(page)}")
         page.click('#histList .hist [data-cap="apply"]'); page.wait_for_timeout(400)
         check(letters(page) == ["D", "A", "D", "G", "A", "D"] and name_of(page) == "DADGAD", f"{tag} DADGAD saved and reopened did not render in DADGAD: {letters(page)} {name_of(page)!r}")
+        tc_r = tuning_card(page)
+        check(tc_r["shut"] and tc_r["sum"] == "Tuning · DADGAD", f"{tag} 261012b: a DADGAD entry restored while the card is shut — the summary must say DADGAD: {tc_r}")
+        page.query_selector_all('#histList .hist')[1].query_selector('[data-cap="apply"]').click(); page.wait_for_timeout(400)
+        tc_d = tuning_card(page)
+        check(tc_d["shut"] and tc_d["sum"] == "Tuning · drop D" and tc_d["letters"] == ["D", "A", "D", "G", "B", "E"],
+              f"{tag} 261012b THE GATE: an entry saved in drop D restored while the card is shut — the summary must say drop D, the neck match: {tc_d}")
+        open_tuning(page)
         page.click('#fdTuneNames button[data-tuning="standard"]')
     if door_id in ("tetradetudes", "scribe"):
         # a note written in multetudes in DADGAD arrives here: the tuning is WITHHELD BY NAME — a door that keeps standard says so, a door without strings says so
@@ -6159,6 +6219,7 @@ console.log(JSON.stringify(out));
         # the tuning is the field's fact: in drop D with string 6 in the set, a member on string 6 sits two frets higher than in standard
         if page.get_attribute('#fieldSvg [data-fdstr="6"]', "aria-pressed") != "true": page.click('#fieldSvg [data-fdstr="6"]')
         std6 = [x for x in sel() if x["role"] == "member" and x["str"] == 6]
+        open_tuning(page)
         page.click('#fdTuneNames button[data-tuning="drop D"]'); page.wait_for_timeout(300)
         drop6 = [x for x in sel() if x["role"] == "member" and x["str"] == 6]
         if std6 and drop6:
@@ -6388,7 +6449,7 @@ console.log(JSON.stringify(out));
         check(seat["mixer"] and seat["rows"] == 3, f"{tag} the Mixer board exists below the neck with three rows: {seat}")
         check(len(seat["inMixer"]) == 10 and not seat["inNeck"], f"{tag} the ten mixer controls live in the Mixer board and none in the neck: {seat}")
         check(len(seat["clock"]) == 4 and seat["pairrows"] == 0, f"{tag} the neck keeps its clock row (the 260919 ruling; four members since the clock-row repeat went, ruling 261015) and no mixer row: {seat}")
-        check(seat["order"] == 1, f"{tag} the Mixer board is the one right after the neck: order {seat['order']}")
+        check(seat["order"] == 2, f"{tag} the Mixer board is the second after the neck — the tuning board sits between since 261012b: order {seat['order']}")
         check(seat["chevronInHeader"], f"{tag} the strip has a header, so the shell's chevron sits in it")
         # a level moved in the strip still moves the bus: the harmony level at zero starts no chord source
         page.evaluate("() => { if (!window.__n58) { window.__n58 = { raw: 0 }; for (const C of [AudioBufferSourceNode, OscillatorNode]) { const P = C.prototype.start; C.prototype.start = function(...a) { window.__n58.raw++; return P.apply(this, a); }; } } }")
@@ -7054,14 +7115,15 @@ console.log(JSON.stringify(out));
         p67b.goto(html_path.as_uri()); p67b.wait_for_selector("#cards", state="attached"); p67b.wait_for_timeout(300)
         clk67 = """() => { const R = id => document.getElementById(id).getBoundingClientRect(), h = R('fdHead'), c = R('fdClock'), m = R('fdMini'), r = R('fdMode');
           const inHead = ['fdSplit','fdBpm','fdMetChk'].every(id => document.getElementById('fdHead').contains(document.getElementById(id)));
-          const u = document.querySelector('.fd-underneck');
+          const nb = document.getElementById('fieldSvg').closest('.board'), nx = nb.nextElementSibling;
           return { inHead, left: Math.round(c.left), clockRight: Math.round(c.right), headRight: Math.round(h.right), miniLeft: Math.round(m.left),
             oneBand: c.top < m.bottom && m.top < c.bottom, readTop: Math.round(r.top), clockTop: Math.round(c.top), miniTop: Math.round(m.top),
-            underFirst: u.firstElementChild.className }; }"""
+            noBand: !__may(() => document.querySelector('.fd-underneck'), 'the under-neck band retired 261012b — its absence is the claim'), nextIsTuning: !!(nx && nx.querySelector('#fdTuning')),
+            mixerAfter: !!(nx && nx.nextElementSibling && nx.nextElementSibling.querySelector('#fdVoice')) }; }"""
         a67 = p67b.evaluate(clk67)
         check(a67["inHead"] and a67["oneBand"] and a67["clockRight"] <= a67["miniLeft"],
               f"{tag} night 67: at 1280 bar split, bpm and the metronome sit in the neck's header, one band with the transport, left of it: {a67}")
-        check("fd-tunerow" in a67["underFirst"], f"{tag} night 67: the under-neck band opens with the tuning rows — no gap where the clock row was: {a67['underFirst']!r}")
+        check(a67["noBand"] and a67["nextIsTuning"] and a67["mixerAfter"], f"{tag} 261012b: the neck board has no under-neck band; the tuning board is mounted directly under it, above the Mixer: {a67}")
         p67b.select_option("#hcKey", "F#"); p67b.wait_for_timeout(250)
         b67 = p67b.evaluate(clk67)
         check(b67["left"] == a67["left"], f"{tag} night 67: the clock does not slide with the readout's text (C {a67['left']}, F# {b67['left']})")

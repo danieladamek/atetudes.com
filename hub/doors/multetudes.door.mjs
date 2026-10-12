@@ -297,7 +297,10 @@ export default {
     /* v1.1.3 (261010, Daniel): the window reaches DOWN when the neck runs out (upward first, as 2026-09-07) — the
      * reach is `reachLo`, the anchor's start stays `fLo`; and when the window is why a role is absent, the figure
      * says so, with the note and where it sits. */
-    blurb: "one tool that holds many études · v1.1.3",
+    /* v1.1.4 (261012b, Daniel): the tuning gets its own card under the neck, above the Mixer — shut on every load, its
+     * summary naming the live tuning ("Tuning · standard" / "drop D" / "custom"), rewritten while shut; the neck's
+     * standing "click the numbers…" line left the hint for the neck's ⓘ, reworded. */
+    blurb: "one tool that holds many études · v1.1.4",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

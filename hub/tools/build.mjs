@@ -273,8 +273,11 @@ async function build(id) {
     for (const name of rowedParts)
       if (seated.has(name))
         throw new Error(`"${m.id}#${name}" is both rowed and seated — one part, one seat`);
+    /* A DECLARED START-COLLAPSED (261012b): a module that says `collapsed: true` is written SHUT — the shell's
+     * own collapse class on its container, so the first paint is the shut card; the shell's collapse honours it */
+    const wrapClass = [m.wrap_class, m.collapsed ? "clpsd" : ""].filter(Boolean).join(" ") || undefined;
     placeables.push({ order: m.order ?? 0, idx: i, id: m.id,
-      mount: m.mount_point ?? "cards", wrap_class: m.wrap_class,
+      mount: m.mount_point ?? "cards", wrap_class: wrapClass,
       html: markupWithout(m.markup, new Set([...seated.keys(), ...rowedParts])), rowable: true });
     for (const [name, spec] of seated)
       placeables.push({ order: spec.order ?? 0, idx: i, id: m.id + "#" + name,

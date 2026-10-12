@@ -116,8 +116,9 @@ export const fieldBoard = {
   order: 18,
   controls: ["fieldSvg", "fdNSeg", "fdMoveSeg", "fdAddrSeg", "fdFigIn", "fdMetChk", "fdSplit",
     "fdRailBtn",
-    "fdAllTones", "fdBpm", "fdMini", "fdMode",
-    "fdTuning", "fdTuneNames", "fdTuneName", "fdTuneAll"],
+    "fdAllTones", "fdBpm", "fdMini", "fdMode"],
+  /* the tuning rows' four ids (fdTuning · fdTuneNames · fdTuneName · fdTuneAll) are tuning-strip.mjs's markup since
+   * 261012b; this board still paints and wires them by id, as it reads the mixer strip's */
 
   markup: `
   <!-- THE HEADER (260919, night 25 item 1 — ruled): the harmonic readout is
@@ -230,32 +231,11 @@ export const fieldBoard = {
        Row 2 pairs voice with the harmony slider; row 3 pairs the
        reference with the bass slider. Layout only — the tracking
        semantics are the 260906 pins', untouched. -->
-  <div class="fd-underneck">
-    <!-- THE MIXER ROWS LEFT THE NECK (night 58, 261012): the voice and the harmony level, the reference tone,
-         the sounded bass and the bass level, the pad and its level are mixer-strip.mjs, the board below
-         this one — Daniel's 261009 mockup. The neck keeps the clock row above (the 260919 ruling) and the
-         tuning rows below (the strings are the neck's). Every moved control kept its id, its message and
-         its state; this board still READS the reference, the sounded bass and the pad for its hint. -->
-    <!-- THE STRING LABELS ARE THE EDITOR (night 47, alternate tunings item 2 — Daniel's
-         wireframe). ITS OWN SURFACE, layout (a): measured first (rule 4), at 390 px the whole
-         neck SVG renders 150 px wide and a set square 2.8 × 2.6 px — nothing drawn inside that
-         SVG is a touch control there, so the six steppers live in this HTML row, which keeps
-         full-size targets at every width; the set squares stay exactly as they are (their
-         390 px defect is filed, not made worse). Each label reads the open string by the
-         direction of its move (open-string.mjs); a move that would cross a neighbour is inert
-         at the point of the move and says why, there (tunings.mjs canStep) — never a toast,
-         never a silent clamp, never the throw. -->
-    <div class="fd-railrow fd-tunerow">
-      <span class="fd-lab2">tuning</span>
-      <div class="fd-tuning" id="fdTuning" data-control="fdTuning"></div>
-      <span class="fd-tunename" id="fdTuneName" data-control="fdTuneName"></span>
-      <span class="fd-tune fd-tuneall" id="fdTuneAll" data-control="fdTuneAll"></span>
-    </div>
-    <div class="fd-railrow fd-tunerow">
-      <span class="fd-lab2">named</span>
-      <div id="fdTuneNames" data-control="fdTuneNames"></div>
-    </div>
-  </div>
+  <!-- THE TUNING ROWS LEFT THE NECK (261012b — Daniel: "peel off the guitar tuning into its own collapsable item";
+       "default the tuning to its collapsed form"): tuning-strip.mjs, the board directly below this one, above the
+       Mixer — night 58's move made again. Every moved control kept its id, its message and its state; this board
+       still paints the steppers and the names and owns the tuning (the field's fact). The under-neck band went
+       with them: it held nothing else. -->
   <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
   owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
   deliberately: a line, an arpeggio and a block chord are all harmonic relationships, and "chord"
@@ -263,7 +243,8 @@ export const fieldBoard = {
   tone the object holds may sit in the bass instead; <b>a 3rd below</b> or <b>a 5th below</b> place a
   scale tone beneath the chord — a triad over a 3rd below is a seventh chord, and the readout
   names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
-  <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.</div>
+  <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.
+  Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window.</div>
   <div class="hint" id="fdHint"></div>
   <div class="legend" id="fdLegend"></div>`,
 
@@ -308,7 +289,6 @@ export const fieldBoard = {
 .fd-fignote{margin-top:6px}
 #fdFigIn{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;color:var(--ink)}
-.fd-underneck{display:block}
 /* #fdBpm's box and the pulse's dot moved to the clock grammar (night 69, hub/tools/build.mjs CLOCK_GRAMMAR) */
 /* THE HEADER MINI (night 62; was .fd-undermini in the under-neck row): the same buttons, in the header
  * beside the readout. At phone width the mini is on a row of its OWN below the title-and-readout row
@@ -327,32 +307,9 @@ export const fieldBoard = {
 .fd-headmini button:hover{border-color:var(--ink)}
 /* the neck's own 390 stack rules (night 62) RETIRED night 63: the shell's readhead grammar stacks every board's mini
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
-.fd-railrow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;
-  border-top:1px solid var(--line);margin-top:7px;font-size:12px;color:var(--gray);flex-wrap:wrap}
 /* .fd-railrow select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
  * clock; its look travelled with it as .fd-headclock select. A rule that matches nothing fails the door's CSS check. */
-.fd-lab2{font-size:12px;color:var(--gray)}
-/* the cells (item 5, 261009): the between-cell gap was 10px against a 2px within-cell gap
- * and still failed — a cell is ~98px and 10px is a third of one button, so the eye read an
- * even run of boxes and bound each − to the nearest letter. Proximity has to beat rhythm at
- * this scale: the between-cell gap is now most of a button; no ink (a divider would fight the
- * wrap at 390 and add an object the strip does not need) — measured both ways, see the run note */
-.fd-tuning{display:flex;flex-wrap:wrap;gap:8px 26px;align-items:flex-start}
-.fd-tune{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
-.fd-tune .fd-tunectl{display:inline-flex;align-items:center;gap:2px}
-.fd-tune button{font:inherit;font-size:14px;line-height:1;min-width:30px;min-height:30px;padding:0;border:1px solid var(--line);
-  border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
-.fd-tune button:hover{border-color:var(--ink)}
-.fd-tune button[aria-disabled="true"]{color:var(--gray);border-color:var(--edge);cursor:not-allowed}
-.fd-tune .fd-open{min-width:34px;text-align:center;font-size:14px;font-weight:600;color:var(--ink)}
-.fd-tune .fd-open[data-moved="true"]{text-decoration:underline;text-underline-offset:3px}
-.fd-tune .fd-tunestr{font-size:10.5px;color:var(--gray)}
-.fd-tune .fd-tunewhy{font-size:11px;color:var(--gray);max-width:150px;text-align:center;min-height:0}
-.fd-tunename{font-size:12.5px;font-weight:600;color:var(--ink)}
-.fd-tunename[data-shift]:not([data-shift="0"]):not([data-shift=""]){font-weight:500}
-.fd-tuneall{margin-left:14px}
-.fd-tuneall .fd-open{font-size:11.5px;font-weight:500;color:var(--gray)}
-#fdTuneNames button[data-shifted="true"]{border-style:dashed}
+/* the tuning editor's look moved with its rows to tuning-strip.mjs (261012b) */
 /* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
  * Repeat, sharing the mixer's column (margin-left:auto, the same 380px
  * basis) so it sits ABOVE the harmony and bass sliders. Card edge, not
@@ -365,18 +322,18 @@ export const fieldBoard = {
  * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
 /* the legend's rules moved to the build's LEGEND_GRAMMAR (night 85): three faces render it through hub/legend.mjs */
 #fdHint{margin:8px 2px 0}
+#fdHint:empty{display:none}   /* empty in the ordinary case (261012b) — no blank band under the neck */
 /* the seg's visual grammar, scoped to this module's own markup (260905):
  * the shell defines these rules in its STRIPS chrome block, which this
  * door's lock never mounts — so the .on state was applied and invisible.
  * Same facts, this module's own selectors (the minis' idiom); the shell
  * stays untouched. */
-/* the named-tunings row (night 47) is a seg of this rail like the three above — the same
- * rules, not a restatement: its lit member is one name or none (an unnamed tuning lights
- * nothing), which is why it takes the segs' grouped .on rule rather than a rule of its own */
-#fdNSeg,#fdMoveSeg,#fdAddrSeg,#fdTuneNames{display:flex;flex-wrap:wrap;gap:6px}
-#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button,#fdTuneNames button{font:inherit;font-size:12.5px;padding:5px 9px;
+/* the named-tunings row (night 47) shared these grouped rules until 261012b; it moved to tuning-strip.mjs with its
+ * own copy of the seg's look (a module styles only its own markup) */
+#fdNSeg,#fdMoveSeg,#fdAddrSeg{display:flex;flex-wrap:wrap;gap:6px}
+#fdNSeg button,#fdMoveSeg button,#fdAddrSeg button{font:inherit;font-size:12.5px;padding:5px 9px;
   border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on,#fdTuneNames button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#fdNSeg button.on,#fdMoveSeg button.on,#fdAddrSeg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 #fdNSeg button:disabled,#fdMoveSeg button:disabled,#fdAddrSeg button:disabled{opacity:.45;cursor:not-allowed}
 .fd-dot{cursor:pointer}
 .fd-sel{cursor:pointer}
@@ -1100,7 +1057,7 @@ export const fieldBoard = {
       }
       if (cfg.pad) padMsg = cfg.object === "scale" ? "The pad has no chord to sound under a scale. "
         : sel.length ? `The pad sounds ${cur.symbol} above the strings' register. ` : "The pad stays silent — nothing sits on top of it. ";
-      byId("fdHint").textContent =
+      byId("fdHint").textContent = (
         (selMsg ? `${selMsg}. ` : "") +
         (followMsg && followMsg.sd === cfg.startDeg && followMsg.nf === cfg.nearFret
           ? `${followMsg.text}. ` : "") +
@@ -1114,8 +1071,10 @@ export const fieldBoard = {
         (!pos.covered
           ? `The neck ends at fret ${pos.fHi} — step ← toward the nut to reach ${pos.uncovered.map((pc) => (fld.notes.find((n) => ((n.pc % 12) + 12) % 12 === pc) || { name: "?" }).name).join(" and ")}. `
           : windowLo(pos) < pos.fLo ? `The neck ends at fret ${pos.fHi}, so the window reaches down to fret ${windowLo(pos)} for what the set lacks above; step ← to bring it under the hand. `   // 261010
-          : pos.fHi > pos.frets[2] ? "Fewer strings widen the window until the set holds the whole scale; more strings narrow it. " : "") +
-        "Click the numbers to choose strings; ← → step the window.";
+          : pos.fHi > pos.frets[2] ? "Fewer strings widen the window until the set holds the whole scale; more strings narrow it. " : "")
+        /* the standing "click the numbers…" clause LEFT the hint (261012b, ruled): a sentence that never changes is
+         * reference, so it is the ⓘ's now, reworded; in the ordinary case this line is empty (the 260919 split) */
+        ).trim();
       /* THE LEGEND SAYS WHICH CENTRE (night 85, item 2 C — PO ruling 261053 §2): under "follows" this line said
        * "against the key" while the bold selection was re-read against the bar's centre — FALSE on the live page. It
        * now names the centre the selection speaks from, and the marks that stay in key space. */

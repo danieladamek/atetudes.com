@@ -277,6 +277,11 @@ function initCollapse(doc) {
       : "";
     const btn = doc.createElement("button");
     btn.className = "clpsBtn"; btn.textContent = "▾"; btn.title = "collapse" + scope;
+    /* A DECLARED START-COLLAPSED (261012b — the tuning card, Daniel: "default the tuning to its collapsed form"): a
+     * module that declares `collapsed: true` is written by the build with this class already on its container, so
+     * it paints shut; the chevron reads ▸ / "expand" from the start and the summary is filled now. Not persisted:
+     * every load opens it shut, by design. */
+    if (p.classList.contains("clpsd")) { btn.textContent = "▸"; btn.title = "expand" + scope; sum.textContent = summaryOf(p); }
     btn.addEventListener("click", () => {
       const on = p.classList.toggle("clpsd");
       btn.textContent = on ? "▸" : "▾";
@@ -299,6 +304,17 @@ function initCollapse(doc) {
       if (p.classList.contains("clpsd")) sum.textContent = summaryOf(p);
   };
   for (const ev of ["input", "change", "click"]) doc.addEventListener(ev, refresh, true);
+  /* …and a summary SOURCE rewritten by the bus, not by a gesture, reaches the shut panel too (261012b): the capture
+   * listeners above run BEFORE the click's own handler, so a Restore in the log rewrote the tuning after the
+   * refresh had read it. A panel's `.clpsum` (its declared one-liner) is watched, and a change re-reads the summary
+   * while the panel is shut — a shut card never hides an altered neck (CC-1). */
+  const Observer = doc.defaultView && doc.defaultView.MutationObserver;
+  if (Observer)
+    for (const [p, sum] of panels) {
+      const src = p.querySelector(".clpsum");
+      if (src) new Observer(() => { if (p.classList.contains("clpsd")) sum.textContent = summaryOf(p); })
+        .observe(src, { childList: true, characterData: true, subtree: true });
+    }
 }
 
 /** The info button + popout — page grammar, applied AFTER the modules mount so

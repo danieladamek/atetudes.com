@@ -1223,8 +1223,8 @@ def m42_a_state_clause_returns_to_the_hint():
     # 260919 item 3: a dropped state clause creeps back into the hint — the
     # same configuration narrated twice again; the trim pin must name it.
     p, original, mutated = patch("hub/modules/field-board.mjs",
-        '      byId("fdHint").textContent =\n        (selMsg ? `${selMsg}. ` : "") +',
-        '      byId("fdHint").textContent =\n        `Strings ${run.label} · ` + (selMsg ? `${selMsg}. ` : "") +')
+        '      byId("fdHint").textContent = (\n        (selMsg ? `${selMsg}. ` : "") +',   # re-targeted 261012b (the expression is wrapped for its .trim())
+        '      byId("fdHint").textContent = (\n        `Strings ${run.label} · ` + (selMsg ? `${selMsg}. ` : "") +')
     try:
         p.write_text(mutated)
         build()

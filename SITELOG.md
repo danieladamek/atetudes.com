@@ -1,3 +1,16 @@
+## 2026-10-12 — The tuning gets its own card, shut on load — Multetudes v1.1.4, Tetradetudes v0.6.20
+
+- **Multetudes v1.1.4** (Update Log 261012b.1, Daniel 261012): the tuning rows left the neck for a **Tuning** board
+  directly under it, above the Mixer, shut on every load. Shut, it reads "Tuning · standard" (or "drop D", "custom"…) and
+  stays current when a restored entry, a preset or an import changes the tuning. A non-standard tuning does not open it.
+- The neck's standing line "Click the numbers to choose strings; ← → step the window." moved from under the neck into the
+  neck's ⓘ, reworded: "Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the
+  window." The line under the neck now speaks only when something is off, refused or silent.
+- **Tetradetudes v0.6.20**: carried along — the shared shell moved (the declared start-collapsed and the live shut
+  summary); nothing on the page looks or behaves differently.
+- Source edition: `hub/build/multetudes.html` and `hub/build/tetradetudes.html`, copied byte-identical to
+  `static/studies/<slug>/study.html`; every other study unchanged.
+
 ## 2026-10-12 — Every study gets a Download link, and Tools joins the top bar
 
 - **Download, like RiffRaft's on `/tools/`** (Daniel, 261012). Every study page's bar now reads *One file — it keeps
