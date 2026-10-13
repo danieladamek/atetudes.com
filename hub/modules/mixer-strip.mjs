@@ -87,7 +87,7 @@ export const mixerStrip = {
    * styles only its own markup); the level row is the shell's .bpmrow with a mute icon per slider */
   styles: `
 .mx-headspace{flex:1 1 auto}
-.mx-head{padding-right:40px}   /* the shell's chevron band at the header's right (no ⓘ on this board) — a right-seated mini ends before it (injection 261015, measured: 19 px under it without this) */
+.mx-head{padding-right:66px}   /* the shell's ⓘ + chevron band at the header's right — a right-seated mini ends before it (injection 261015: 40 px for the chevron alone; 66 since 261012d, when the save sentence gave this board an ⓘ that lay over the repeat button) */
 #mxMini{display:flex;gap:4px;flex:0 0 auto;margin-left:12px}
 #mxMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5;text-transform:none;letter-spacing:0}

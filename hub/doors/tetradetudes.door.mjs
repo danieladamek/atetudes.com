@@ -157,7 +157,9 @@ export default {
      * follows its one-liner; nothing on this door declares either, so nothing here looks or behaves differently. */
     /* v0.6.21 (261012b, Daniel): every card's ⓘ says how a take is saved; the notepad's ⓘ, its new placeholder, and no
      * column head — the shared notepad card. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.21",
+    /* v0.6.22 (261012d, ruled by Daniel): the ⓘ takes its seat — 261012b's save sentence put an ⓘ over the ⏭ of the
+     * keys' and the étude's minis; the minis sit left of ⓘ + chevron now. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.22",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

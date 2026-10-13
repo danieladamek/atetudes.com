@@ -58,7 +58,8 @@ export const scoreBoard = {
   styles: `
 #score{width:100%;height:auto;display:block}
 #score .sc-hit{cursor:pointer}
-#scMini{position:absolute;top:7px;right:44px;display:flex;gap:4px;z-index:6}
+/* right:70px since 261012d — 44 cleared the chevron alone; the save sentence gave this board an ⓘ (right:38) that lay over ⏭ */
+#scMini{position:absolute;top:7px;right:70px;display:flex;gap:4px;z-index:6}
 #scMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 #scMini button:hover{border-color:var(--ink)}`,

@@ -1,3 +1,9 @@
+## 2026-10-12 — The ⓘ no longer covers a header button — Multetudes v1.1.7, Tetradetudes v0.6.22
+
+- Since the morning's every-card ⓘ, three ⓘ buttons lay over a header button: Multetudes' Mixer (repeat) and
+  Tetradetudes' keys and étude boards (⏭). Headers with an ⓘ now keep room for it (Update Log 261012d.3).
+- Source editions: `hub/build/{multetudes,tetradetudes}.html`, copied byte-identical to `static/studies/<slug>/study.html`.
+
 ## 2026-10-12 — Triadetudes' console is clean again — triadetudes v0.9.8
 
 - **triadetudes v0.9.8** (Update Log 261012d.2): the page's own self-test expected three ⓘ popouts and logged an error

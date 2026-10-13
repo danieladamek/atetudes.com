@@ -353,6 +353,15 @@ function initInfo(doc, about) {
       if (willOpen) { pop.hidden = false; btn.setAttribute("aria-expanded", "true"); openBtn = btn; openPop = pop; }
     });
     p.appendChild(btn);
+    /* THE ⓘ TAKES ITS SEAT IN THE HEADER (261012d — ruled by Daniel): since 261012b's every-panel sentence, a panel
+     * that never had prose has an ⓘ, and three headers had reserved their right edge for the chevron alone — the ⓘ
+     * lay over the Mixer's repeat and two Tetradetudes ⏭. A panel given an ⓘ reserves ⓘ + chevron (66 px, the
+     * readout headers' figure) on its header band. Inline, as the header slot is placed: a stylesheet rule would
+     * orphan in every door whose panels never grow an ⓘ. A header already reserving more keeps its own. */
+    const header = p.querySelector(":scope > h2, :scope > .bh");
+    const view = doc.defaultView;
+    if (header && view && view.getComputedStyle && (parseFloat(view.getComputedStyle(header).paddingRight) || 0) < 66)
+      header.style.paddingRight = "66px";
   }
   doc.addEventListener("click", (e) => { if (openPop && !openPop.contains(e.target)) close(); });
   doc.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });

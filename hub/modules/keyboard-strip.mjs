@@ -44,7 +44,8 @@ export const keyboardStrip = {
   <div class="bh"><span>On the keys</span></div>
   <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>`,
   styles: `#kbd rect{cursor:pointer}
-#kbMini{position:absolute;top:7px;right:44px;display:flex;gap:4px;z-index:6}
+/* right:70px since 261012d — 44 cleared the chevron alone; the save sentence gave this board an ⓘ (right:38) that lay over ⏭ */
+#kbMini{position:absolute;top:7px;right:70px;display:flex;gap:4px;z-index:6}
 #kbMini button{font:inherit;font-size:11px;padding:2px 8px;border:1px solid var(--line);
   border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
 #kbMini button:hover{border-color:var(--ink)}`,

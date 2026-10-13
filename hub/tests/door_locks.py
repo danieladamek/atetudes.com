@@ -5390,6 +5390,19 @@ console.log(JSON.stringify(out));
     else:
         check(all(saved_line not in x["prose"] and pad_about not in x["prose"] for x in per_panel),
               f"{tag} 261012b: a door without the notepad says nothing about saving a take — the sentence would be false here")
+    # ---- 261012d: NO ⓘ LIES OVER A CONTROL — 261012b's every-panel ⓘ landed on three headers whose right edge was
+    # reserved for the chevron alone (the Mixer's repeat, Tetradetudes' keys and étude ⏭). Every door, 1280 and 390.
+    info_cover = """() => { const out = []; let seen = 0; for (const p of document.querySelectorAll('.card, .board')) {
+      const ib = p.querySelector(':scope > .infoBtn'); if (!ib) continue; seen++; const a = ib.getBoundingClientRect();
+      for (const e of p.querySelectorAll('button, select, input, .readbox')) { if (e === ib || e.classList.contains('clpsBtn') || !e.getClientRects().length) continue;
+        const b = e.getBoundingClientRect(), ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (ox > 0.5 && oy > 0.5) out.push(((p.querySelector('h2, .bh span') || {}).textContent || '?').trim().slice(0, 24) + ' :: ' + (e.id || e.dataset.role || e.className)); } }
+      return { seen, out }; }"""
+    for w_ic in (1280, 390):
+        page.set_viewport_size({"width": w_ic, "height": 900}); page.wait_for_timeout(250)
+        ic = page.evaluate(info_cover)
+        check(ic["seen"] >= 1 and not ic["out"], f"{tag} 261012d @{w_ic}: an ⓘ lies over a control in its own panel ({ic['seen']} ⓘ checked): {ic['out']}")
+    page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(250)
     # OPEN a popout, and prove it dismisses without a modal — Escape and click-out
     ib = page.query_selector(".infoBtn")
     ib.click()

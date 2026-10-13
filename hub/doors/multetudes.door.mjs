@@ -304,7 +304,9 @@ export default {
      * .atchart.md file do; the placeholder reads "Type your session notes here in plain text."; the column head is gone. */
     /* v1.1.6 (261012d, Daniel): the tuning card says "Tuning" once — the shut summary is the name alone ("standard",
      * "drop D", "custom"), and the steppers row lost its "tuning" label; "named" stays. */
-    blurb: "one tool that holds many études · v1.1.6",
+    /* v1.1.7 (261012d, ruled by Daniel): the ⓘ takes its seat — 261012b's save sentence gave the Mixer an ⓘ that lay over
+     * its mini's repeat button; a header given an ⓘ now reserves ⓘ + chevron. */
+    blurb: "one tool that holds many études · v1.1.7",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
