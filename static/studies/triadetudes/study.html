@@ -286,7 +286,7 @@
 <div class="wrap">
 <header>
   <h1>Triadetudes</h1>
-  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.9.7</div>
+  <div class="tag">the triad étude designer · isolate, see it, hear it, practice it — At-Etudes · v0.9.8</div>
 </header>
 
 <div class="cards">
@@ -615,7 +615,7 @@
   logs and bare étude configs (.json) still open.</div>
 </div>
 
-<footer>Triadetudes v0.9.7 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.6
+<footer>Triadetudes v0.9.8 — triad isolation étude designer. Colors per At-Etudes Design Spec v1.6
 (red R · green 2 · blue 3 · silver 4 · black 5 · cyan 6 · amber 7; function relative to the
 sounding root). The score shows the whole étude; the arpeggio pattern's note count against each
 chord's beats sets the subdivision (4 notes over 2 beats = 8ths). Audio is synthesized; click any
@@ -8226,9 +8226,20 @@ renderHist();
  * see the prose, dismiss it and see it gone, and see the faces carry no
  * .info prose of their own any more. */
 (function popoutTests(){
-  const err=m=>console.error("TEST:",m);
+  let failed=0;
+  const err=m=>{failed++;console.error("TEST:",m);};
   const pops=[...document.querySelectorAll(".infoPop")];
-  if(pops.length!==3)err("three popouts expected (Metronome, Transport, Harmony), got "+pops.length);
+  /* THE EXPECTED SET IS THE PAGE'S OWN (261012d, rule 6): this line counted to three ("Metronome, Transport,
+   * Harmony") and went stale twice — night 58's re-cut gave the Mixer a card of its own, and Harmony became
+   * Centricity. Every card that carries static .info prose carries exactly one popout; no popout sits elsewhere. */
+  const named=c=>(c.querySelector("h2")||{textContent:"?"}).textContent.trim();
+  const prosed=[...document.querySelectorAll(".card")].filter(c=>c.querySelector(".info"));
+  if(!prosed.length)err("no card carries .info prose — the popout test would be vacuous");
+  for(const c of prosed){
+    const n=pops.filter(p2=>p2.closest(".card")===c).length;
+    if(n!==1)err(`card "${named(c)}" carries .info prose and ${n} popouts — expected one`);
+  }
+  for(const p2 of pops)if(!prosed.includes(p2.closest(".card")))err("a popout outside every card that carries prose");
   for(const pop of pops){
     const card=pop.closest(".card");
     const btn=card.querySelector(".infoBtn");
@@ -8256,6 +8267,8 @@ renderHist();
   const note=document.getElementById("noteCol")||document.body;
   if(!note.textContent.includes("Save entry files the note"))
     err("the notepad's filing prose left the face — it is the P1P3 guarantee block");
+  // the pass line (261012d): a test that is silent on success cannot be told from one that never ran
+  if(!failed)console.info("TEST: popouts pass — "+prosed.map(named).join(", ")+" ("+pops.length+" popouts)");
 })();
 </script>
 </body>

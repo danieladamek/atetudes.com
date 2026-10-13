@@ -1,3 +1,10 @@
+## 2026-10-12 — Triadetudes' console is clean again — triadetudes v0.9.8
+
+- **triadetudes v0.9.8** (Update Log 261012d.2): the page's own self-test expected three ⓘ popouts and logged an error
+  on every load since the Mixer got its own card (it has four: Metronome, Transport, Mixer, Centricity). The test now
+  derives what it expects from the page's own cards and logs a pass line. No visible change.
+- Source: the hand-authored page, `static/studies/triadetudes/study.html` (its own source of truth).
+
 ## 2026-10-12 — The tuning card says "Tuning" once — Multetudes v1.1.6
 
 - **Multetudes v1.1.6** (Update Log 261012d.1): shut, the Tuning card reads just the tuning's name ("standard", "drop D",
