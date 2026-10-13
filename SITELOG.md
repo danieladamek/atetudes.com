@@ -1,3 +1,10 @@
+## 2026-10-12 — The tuning card says "Tuning" once — Multetudes v1.1.6
+
+- **Multetudes v1.1.6** (Update Log 261012d.1): shut, the Tuning card reads just the tuning's name ("standard", "drop D",
+  "custom") under its header; open, the steppers row has no "tuning" label (the "named" row keeps its label).
+- Source edition: `hub/build/multetudes.html`, copied byte-identical to `static/studies/multetudes/study.html`; every
+  other study unchanged.
+
 ## 2026-10-12 — Every card says how a take is saved — Multetudes v1.1.5, Tetradetudes v0.6.21, metronome v1.5.2, triadetudes v0.9.7, modes
 
 - **Every card's ⓘ** (Update Log 261012b.2, Daniel 261012), on the pages built from the hub doors with a notepad, now

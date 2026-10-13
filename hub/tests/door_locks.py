@@ -247,24 +247,35 @@ def run_door(pw, door_id):
       return { shut: b.classList.contains('clpsd'), chev: btn && btn.textContent, title: btn && btn.title,
         sum: s && s.textContent.trim(), sumShown: !!(s && s.getClientRects().length), rowsShown: t.getClientRects().length > 0,
         neckInside: b.contains(document.getElementById('fieldSvg')), letters: [...t.querySelectorAll('.fd-open')].map(e => e.textContent) }; }""")
+    # 261012d: the summary is the tuning's NAME alone — read from describeTuning and the board's own word for an unnamed
+    # tuning (rule 6), for exactly the offsets the pins below send; never retyped here
+    _tn = subprocess.run(["node", "--input-type=module", "-e",
+        "const t = await import('./engine/tunings.mjs'); const s = await import('./hub/modules/tuning-strip.mjs');"
+        " const o = { standard: null, dropD: { 6: -2 }, custom: { 6: -1, 1: 1 }, DADGAD: { 6: -2, 2: -2, 1: -2 } };"
+        " console.log(JSON.stringify(Object.fromEntries(Object.entries(o).map(([k, v]) => [k, t.describeTuning(v) || s.UNNAMED_TUNING]))))"],
+        capture_output=True, text=True, cwd=REPO)
+    TN = json.loads(_tn.stdout) if _tn.returncode == 0 else {}
     if door_id == "multetudes":
+        check(set(TN) == {"standard", "dropD", "custom", "DADGAD"}, f"{tag} 261012d: the tuning names could not be read from the engine: {_tn.stderr[-300:]}")
         check("fieldSvg" in r["controlsPresent"],
               f"{tag} the multetudes door has no field board — fieldSvg is not in the partition")
         # ---- 261012b item 1: THE TUNING CARD — its own board, shut on load, and its summary names the LIVE tuning ----
         tc0 = tuning_card(page)
         check(tc0 is not None and not tc0["neckInside"] and tc0["shut"] and tc0["chev"] == "▸" and tc0["title"] == "expand"
-              and tc0["sumShown"] and not tc0["rowsShown"] and tc0["sum"] == "Tuning · standard",
-              f"{tag} 261012b: the tuning rows are their own board, SHUT on load (▸, 'expand'), summary 'Tuning · standard': {tc0}")
+              and tc0["sumShown"] and not tc0["rowsShown"] and tc0["sum"] == TN.get("standard"),
+              f"{tag} 261012b/d: the tuning rows are their own board, SHUT on load (▸, 'expand'), the summary the name alone {TN.get('standard')!r}: {tc0}")
+        labels = page.evaluate("() => [...document.querySelectorAll('.fd-tunerow')].map(r => [...__may(() => r.querySelectorAll(':scope > .fd-lab2'), 'the steppers row has no label since 261012d — its absence is the claim')].map(e => e.textContent))")
+        check(labels == [[], ["named"]], f"{tag} 261012d: the steppers row carries no 'tuning' label (the header names the card); the named row keeps 'named': {labels}")
         # THE GATE (CC-1): a shut card never hides an altered neck — a tuning arriving from anywhere (here the bus, as a
         # loaded étude or preset says it) rewrites the summary while the card stays shut, and the neck matches
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { tuning: { 6: -2 } } }))"); page.wait_for_timeout(200)
         tc1 = tuning_card(page)
-        check(tc1["shut"] and tc1["sum"] == "Tuning · drop D" and tc1["letters"] == ["D", "A", "D", "G", "B", "E"],
-              f"{tag} 261012b: drop D said on the bus while the card is shut — the summary must read 'Tuning · drop D' and the neck match: {tc1}")
+        check(tc1["shut"] and tc1["sum"] == TN.get("dropD") and tc1["letters"] == ["D", "A", "D", "G", "B", "E"],
+              f"{tag} 261012b: drop D said on the bus while the card is shut — the summary must read the name and the neck match: {tc1}")
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { tuning: { 6: -1, 1: 1 } } }))"); page.wait_for_timeout(200)
-        check(tuning_card(page)["sum"] == "Tuning · custom", f"{tag} 261012b: a tuning that matches no name reads 'Tuning · custom' while shut: {tuning_card(page)}")
+        check(tuning_card(page)["sum"] == TN.get("custom"), f"{tag} 261012b/d: a tuning that matches no name reads {TN.get('custom')!r} while shut: {tuning_card(page)}")
         page.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { tuning: null } }))"); page.wait_for_timeout(200)
-        check(tuning_card(page)["sum"] == "Tuning · standard" and tuning_card(page)["shut"],
+        check(tuning_card(page)["sum"] == TN.get("standard") and tuning_card(page)["shut"],
               f"{tag} 261012b: back to standard, still shut: {tuning_card(page)}")
         # the field's dot count, derived HERE in different arithmetic and a
         # different language, against the ARTIFACT (rendered SVG groups)
@@ -5979,14 +5990,14 @@ console.log(JSON.stringify(out));
         page.click('#fdTuneNames button[data-tuning="standard"]')
         page.goto(html_path.as_uri()); page.wait_for_selector("#cards", state="attached"); page.wait_for_timeout(300)
         check(letters(page) == ["E", "A", "D", "G", "B", "E"], f"{tag} the reopened page does not boot in standard")
-        check(tuning_card(page)["shut"] and tuning_card(page)["sum"] == "Tuning · standard", f"{tag} 261012b: the reopened page's tuning card is shut on standard: {tuning_card(page)}")
+        check(tuning_card(page)["shut"] and tuning_card(page)["sum"] == TN.get("standard"), f"{tag} 261012b: the reopened page's tuning card is shut on standard: {tuning_card(page)}")
         page.click('#histList .hist [data-cap="apply"]'); page.wait_for_timeout(400)
         check(letters(page) == ["D", "A", "D", "G", "A", "D"] and name_of(page) == "DADGAD", f"{tag} DADGAD saved and reopened did not render in DADGAD: {letters(page)} {name_of(page)!r}")
         tc_r = tuning_card(page)
-        check(tc_r["shut"] and tc_r["sum"] == "Tuning · DADGAD", f"{tag} 261012b: a DADGAD entry restored while the card is shut — the summary must say DADGAD: {tc_r}")
+        check(tc_r["shut"] and tc_r["sum"] == TN.get("DADGAD"), f"{tag} 261012b: a DADGAD entry restored while the card is shut — the summary must say DADGAD: {tc_r}")
         page.query_selector_all('#histList .hist')[1].query_selector('[data-cap="apply"]').click(); page.wait_for_timeout(400)
         tc_d = tuning_card(page)
-        check(tc_d["shut"] and tc_d["sum"] == "Tuning · drop D" and tc_d["letters"] == ["D", "A", "D", "G", "B", "E"],
+        check(tc_d["shut"] and tc_d["sum"] == TN.get("dropD") and tc_d["letters"] == ["D", "A", "D", "G", "B", "E"],
               f"{tag} 261012b THE GATE: an entry saved in drop D restored while the card is shut — the summary must say drop D, the neck match: {tc_d}")
         open_tuning(page)
         page.click('#fdTuneNames button[data-tuning="standard"]')

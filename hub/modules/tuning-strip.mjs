@@ -12,9 +12,15 @@
  * "Tuning · standard", "Tuning · drop D", "Tuning · custom" — in the words #fdTuneName shows (tunings.mjs
  * describeTuning, the one wording), rewritten on every announced tuning: a restored entry, a preset, an
  * imported file, a stepper. Ruled (Daniel, 261012, "correct"): a non-standard tuning does NOT open the card.
+ * 261012d (Daniel): the card says "Tuning" ONCE — the header names it, so the summary is the name alone ("standard",
+ * "drop D", "custom") and the steppers row lost its "tuning" label; the "named" label stays (it says something the
+ * header does not).
  */
 import { describeTuning } from "../../engine/tunings.mjs";
 import { CONFIG_CHANGED, listen } from "../bus.mjs";
+
+/** the summary's word for a tuning that matches no name, exactly or by shape — exported so the gate reads it (rule 6) */
+export const UNNAMED_TUNING = "custom";
 
 export const tuningStrip = {
   id: "tuning-strip",
@@ -39,7 +45,6 @@ export const tuningStrip = {
        never a silent clamp, never the throw. (261012b: the rows moved here from the neck
        board, ids unchanged.) -->
   <div class="fd-railrow fd-tunerow">
-    <span class="fd-lab2">tuning</span>
     <div class="fd-tuning" id="fdTuning" data-control="fdTuning"></div>
     <span class="fd-tunename" id="fdTuneName" data-control="fdTuneName"></span>
     <span class="fd-tune fd-tuneall" id="fdTuneAll" data-control="fdTuneAll"></span>
@@ -83,7 +88,7 @@ export const tuningStrip = {
     const d = ctx.doc, sum = ctx.byId("tnSum");
     /* the summary is a VIEW of the announced tuning (rule 10) — the same reading #fdTuneName shows; a
      * hand-stepped tuning that matches no name, exactly or by shape, is "custom" */
-    const say = (t) => { sum.textContent = `Tuning · ${describeTuning(t) || "custom"}`; };
+    const say = (t) => { sum.textContent = describeTuning(t) || UNNAMED_TUNING; };
     say(null);
     listen(d, CONFIG_CHANGED, (m) => { if (m && typeof m === "object" && "tuning" in m) say(m.tuning); });
   },

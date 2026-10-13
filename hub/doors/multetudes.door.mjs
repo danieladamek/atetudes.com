@@ -302,7 +302,9 @@ export default {
      * standing "click the numbers…" line left the hint for the neck's ⓘ, reworded. */
     /* v1.1.5 (261012b, Daniel): every card's ⓘ says how a take is saved; the notepad's ⓘ says what Save, the log and the
      * .atchart.md file do; the placeholder reads "Type your session notes here in plain text."; the column head is gone. */
-    blurb: "one tool that holds many études · v1.1.5",
+    /* v1.1.6 (261012d, Daniel): the tuning card says "Tuning" once — the shut summary is the name alone ("standard",
+     * "drop D", "custom"), and the steppers row lost its "tuning" label; "named" stays. */
+    blurb: "one tool that holds many études · v1.1.6",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
