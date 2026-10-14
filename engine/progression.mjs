@@ -199,7 +199,7 @@ export function beatsOf(bars, meter = 4, split = null) {
  * under even subdivision). Every schedule is asserted before it is returned:
  * times ascending within [0, span), the event count equal to the material's.
  */
-export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null, soundedMidi = null } = {}) {
+export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null, soundedMidi = null, carry = false } = {}) {
   if (!(beats > 0) || !(bpm > 0))
     throw new Error("walkSchedule: beats and bpm must be positive — the span is derived from them");
   const span = beats * 60 / bpm;
@@ -210,7 +210,11 @@ export function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi =
   const step = seq.length > 1 && !together ? span / seq.length : 0;
   /* a step may be a GROUP (261009, motion-grammar §11): an array of notes sounding together —
    * one onset, one step of the subdivision, no roll */
-  const events = seq.flatMap((st, k) => (Array.isArray(st) ? st : [st]).map((nt) => ({ midi: nt.midi, at: together ? 0 : k * step })));
+  /* `carry` (261014, the étude timeline): each note's string, fret and musical role ride along as `string`, `fret`,
+   * `tone` — opt-in, so the bus's NOTE events (built from midi and the bass role) are unchanged */
+  const events = seq.flatMap((st, k) => (Array.isArray(st) ? st : [st]).map((nt) => (carry
+    ? { midi: nt.midi, at: together ? 0 : k * step, string: nt.string, fret: nt.fret, tone: nt.role }
+    : { midi: nt.midi, at: together ? 0 : k * step })));
   /* the reference carries its ROLE (260906): it is the bass line's note, and
    * whoever realises audio may route it to the bass bus — the additive-field
    * precedent (STEP_CHANGED's attack) followed for NOTE */

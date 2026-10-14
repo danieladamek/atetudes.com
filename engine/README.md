@@ -47,6 +47,10 @@ engine/
 │                        drop-2, drop-3, the shells (arity 3, a separate stream)
 │                        and rootless 3-5-7-9. Voicing only — chord VOCABULARY
 │                        stays in chord.mjs. Feeds isolation.mjs's candidatesFor
+├── etude-timeline.mjs   THE ÉTUDE'S TIMELINE (261014): a saved étude (an etudeRecord
+│                        snapshot) → every chord's events {midi,onset,dur,role,string,
+│                        fret} in BEATS — the derivation the Multetudes walk used to
+│                        hold, moved out so any host can play an étude (pure)
 ├── progression.mjs      THE PROGRESSION (Multetudes child 7): cycle · form ·
 │                        custom into one walkable shape. The bar count is
 │                        DERIVED (the walk comes home; nothing says "eight");

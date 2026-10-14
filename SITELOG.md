@@ -1,3 +1,10 @@
+## 2026-10-14 — The étude timeline — Multetudes v1.1.12
+
+- **Multetudes v1.1.12** (Update Log 261014.3): what each chord plays is now worked out by one pure engine function
+  (`engine/etude-timeline.mjs`), so other tools can play an étude too. Nothing sounds different: every note the page
+  plays is identical to before, checked on 13 saved études.
+- Source edition: `hub/build/multetudes.html`, copied byte-identical to `static/studies/multetudes/study.html`.
+
 ## 2026-10-14 — The chart parser refuses a lone repeat sign — Multetudes v1.1.11, Tetradetudes v0.6.24, metronome v1.5.3, triadetudes v0.9.9, modes
 
 - Every study that reads charts (Update Log 261014.2): a `|:` at the end of a line, or a `:|` with no chord before it, is

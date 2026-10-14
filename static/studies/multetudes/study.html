@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -7683,7 +7683,7 @@ function beatsOf(bars, meter = 4, split = null) {
  * under even subdivision). Every schedule is asserted before it is returned:
  * times ascending within [0, span), the event count equal to the material's.
  */
-function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null, soundedMidi = null } = {}) {
+function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null, soundedMidi = null, carry = false } = {}) {
   if (!(beats > 0) || !(bpm > 0))
     throw new Error("walkSchedule: beats and bpm must be positive — the span is derived from them");
   const span = beats * 60 / bpm;
@@ -7694,7 +7694,11 @@ function walkSchedule(sel, order, beats, bpm, { spread = false, refMidi = null, 
   const step = seq.length > 1 && !together ? span / seq.length : 0;
   /* a step may be a GROUP (261009, motion-grammar §11): an array of notes sounding together —
    * one onset, one step of the subdivision, no roll */
-  const events = seq.flatMap((st, k) => (Array.isArray(st) ? st : [st]).map((nt) => ({ midi: nt.midi, at: together ? 0 : k * step })));
+  /* `carry` (261014, the étude timeline): each note's string, fret and musical role ride along as `string`, `fret`,
+   * `tone` — opt-in, so the bus's NOTE events (built from midi and the bass role) are unchanged */
+  const events = seq.flatMap((st, k) => (Array.isArray(st) ? st : [st]).map((nt) => (carry
+    ? { midi: nt.midi, at: together ? 0 : k * step, string: nt.string, fret: nt.fret, tone: nt.role }
+    : { midi: nt.midi, at: together ? 0 : k * step })));
   /* the reference carries its ROLE (260906): it is the bass line's note, and
    * whoever realises audio may route it to the bass bus — the additive-field
    * precedent (STEP_CHANGED's attack) followed for NOTE */
@@ -7836,17 +7840,184 @@ function chordAt(prog, index, fld, object, pick) {   // pick: tonePick(cfg) — 
 return { cycleDegreesWalk, progressionOf, AS_CHARTED, beatsOf, walkSchedule, movementWord, chartBodyOf, chordAt };
 })();
 
-/* ===== hub/modules/etude-walk.mjs ===== */
-const __m_hub_modules_etude_walk_mjs = (() => {
+/* ===== engine/etude-timeline.mjs ===== */
+const __m_engine_etude_timeline_mjs = (() => {
 const { field } = __m_engine_field_mjs;
 const { positionOf, materialIn } = __m_engine_position_mjs;
 const { makeRun } = __m_engine_string_run_mjs;
-const { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } = __m_engine_selection_mjs;
-const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord, AS_CHARTED } = __m_engine_progression_mjs;
-const { SPLITS, splitFor } = __m_engine_drill_mjs;
+const { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf, pickOf, tonePick, objectOf } = __m_engine_selection_mjs;
+const { progressionOf, chordAt, beatsOf, walkSchedule, movementWord } = __m_engine_progression_mjs;
 const { bassSeat, padSeat } = __m_engine_voices_mjs;
 const { placeReference, centreDegreeOf, centreMaterialRef, reRead, soundedBass } = __m_engine_reference_mjs;
-const { tonePick, pickOf } = __m_engine_selection_mjs;
+/* etude-timeline.mjs — THE ÉTUDE'S TIMELINE: one pure function from a saved étude to timed notes (261014).
+ *
+ * Daniel, 2026-10-14: an étude should play inside an ordinary Obsidian note (RiffRaft's étude block). Every part was
+ * already here and DOM-free — field, position, string-run, selection, progression, reference, voices — but the one
+ * place that PUT THEM TOGETHER was hub/modules/etude-walk.mjs, bound to the bus and to setTimeout, so no other host
+ * could ask what an étude sounds like. The derivation moved HERE, verbatim; the walk now keeps only its timing and
+ * bus duties and takes its notes from barAt — one derivation, never two that agree today (rule 6, the FLAT_KEYS
+ * failure).
+ *
+ * INPUT: a saved étude — the shape etudeRecord(doc).snapshot() produces, so a practice-log entry is valid input. A key
+ * the étude does not carry takes ETUDE_DEFAULTS (the walk's own starting configuration, moved here); legacy movement
+ * words normalise (movementWord); the saved `dyad` alias resolves through pickOf, as everywhere.
+ *
+ * OUTPUT: per chord, its symbol, degree and numeral, its beats, and its events
+ *   { midi, onset, dur, role, string?, fret?, unfretted? }
+ * with onset and dur in BEATS, never seconds: the tempo belongs to whoever plays it (the transport.mjs discipline), so
+ * a host can change tempo without recomputing anything. `role` is "bass" for the reference and the sounded bass (the
+ * NOTE contract's role), "pad" for the pad, and otherwise the note's musical role (R, 3, 5 … "approach"). A refused bar
+ * (nothing selected) has no events — it is silent, with its reason on the door's face.
+ *
+ * dur: a note sounding together, the reference, the sounded bass and the pad hold to the end of the chord; a
+ * sequenced note holds until the next onset. (The bus's NOTE carries a dur for the pad only; the rest are the
+ * timeline's own reading of the same schedule.)
+ */
+
+
+
+
+
+
+
+/** the walk's starting configuration (moved verbatim from etude-walk.mjs) — what a key the étude omits resolves to */
+const ETUDE_DEFAULTS = Object.freeze({ key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
+  startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, sounded: "none", pad: false,
+  tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "arpeggiate", repeat: false, centreSrc: "fixed",
+  source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null });
+const DEFAULT_METER = 4;
+
+/** a saved étude → the configuration the derivation reads, by RESTORE's rules (hub/etude-record.mjs restore and the
+ * owners that hear it): the defaults, overlaid by what the étude carries; an absent gamut is the whole field; the
+ * OBJECT is never stored (night 59) — it is derived from the tones (or the legacy `dyad`), tones winning over a v1
+ * entry's stored label, exactly as harmony-card and progression-card derive it on restore */
+function etudeOf(saved) {
+  const cfg = { ...ETUDE_DEFAULTS };
+  if (!saved || typeof saved !== "object") return cfg;
+  for (const k of Object.keys(ETUDE_DEFAULTS))
+    if (k in saved) {
+      const v = k === "movement" ? movementWord(saved[k]) : saved[k];
+      cfg[k] = Array.isArray(v) ? [...v] : v;
+    }
+  if ("tones" in saved || "dyad" in saved) {
+    const pick = tonePick(saved);
+    cfg.tones = pick == null ? null : [...pick];
+    try { cfg.object = objectOf(cfg.tones); } catch (_) { /* an unreadable pick keeps the label it came with */ }
+  }
+  return cfg;
+}
+
+const fieldOf = (cfg) => field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // the tuning is the field's fact (night 47)
+  ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
+
+/** how many chords the étude walks */
+function chordCount(cfg) {
+  return progressionOf(cfg, cfg.key, cfg.scale).chords.length;
+}
+
+/** the beats chord `index` holds — beatsOf over the bars, under the meter and the split */
+function beatsAt(cfg, index, meter = DEFAULT_METER) {
+  const prog = progressionOf(cfg, cfg.key, cfg.scale);
+  const per = beatsOf(prog.bars, meter, cfg.split);
+  const flat = [];
+  prog.bars.forEach((bar, bi) => bar.forEach((_, k) => flat.push(per[bi][k])));
+  return flat[index] ?? meter;
+}
+
+/** one chord of the étude: { index, symbol, degree, roman, beats, events } — events in beats from the chord's downbeat */
+function barAt(cfg, index, meter = DEFAULT_METER) {
+  const fld = fieldOf(cfg);
+  const prog = progressionOf(cfg, cfg.key, cfg.scale);
+  const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
+  const beats = beatsAt(cfg, index, meter);
+  const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
+  const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
+    startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
+  const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
+  let sel = [], walkAbsent = null;   // walkAbsent: what the placement dropped, for the figure's refusal (261011c)
+  const refDeg = cfg.object === "scale"
+    ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
+    : cur.degree;
+  if (cfg.object === "scale") {
+    sel = scaleTake(pool).notes;
+    /* the reading shifts to the bar's centre under "follows" */
+    if (cfg.centreSrc === "follows" && refDeg != null)
+      sel = reRead(sel, refDeg);
+  } else {
+    /* THE NAMED DROP (260914, item 3): an extended stack deeper than the placement's capacity reduces by gripFit's
+     * rule (the boards speak the dropped roles; the walk sounds the kept stack) */
+    const fit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
+      : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
+    const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply sounds too
+    const r = cfg.take === "all"
+      ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
+      : oneOfEach(fit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
+    sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL sounds beside its refusal (ruling 260922b/3)
+    walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
+  }
+  /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's ruling, 260904): with no harmony on top it has
+   * nothing to be under. THE CENTRE WORKS (260913b, item 4a): under a scale it places against the modal centre. */
+  let refNote = null;
+  if (cfg.bass !== "none" && refDeg != null && refDeg >= 0 && sel.length
+      && (cfg.object === "scale" || cur.degree >= 0)) {
+    const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos, pickOf(cfg));
+    if (rp.note) refNote = rp.note;
+  }
+  /* THE SOUNDED BASS (night 57): a pitch with no string, seated below the voicing's lowest note (bassSeat), on ANY
+   * set; silent through a refused bar for the reference's own reason */
+  let soundedMidi = null;
+  if (cfg.sounded && cfg.sounded !== "none" && refDeg != null && refDeg >= 0 && sel.length
+      && (cfg.object === "scale" || cur.degree >= 0)) {
+    const sb = soundedBass(cfg.sounded, refDeg, fld, cfg.object === "scale" ? null : pickOf(cfg));
+    if (sb.pc != null) soundedMidi = bassSeat(Math.min(...sel.map((x) => x.midi)), sb.pc);
+  }
+  /* THE SCHEDULE: the figure's order through orderBy — the same value the bracket and the polyline draw — or the
+   * take's own shape. 260905: Take chooses the MATERIAL, Movement together-or-sequence (a scale stays a run); a typed
+   * figure sequences regardless, as ruled. Scheduled at 60 bpm, so seconds ARE beats. */
+  const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent, tones: cfg.object === "scale" ? null : cur.tones });
+  const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
+  const { events: raw } = walkSchedule(sel, fig.err ? null : fig.steps || null,   // a group is one step, its notes one onset (261009)
+    beats, 60, { spread, refMidi: refNote ? refNote.midi : null, soundedMidi, carry: true });
+  /* dur: until the next later onset, or to the chord's end */
+  const onsets = [...new Set(raw.map((e) => e.at))].sort((a, b) => a - b);
+  const until = (at) => onsets.find((o) => o > at + 1e-9) ?? beats;
+  const events = raw.map((e) => {
+    if (e.role === "bass")
+      return e.unfretted ? { midi: e.midi, onset: 0, dur: beats, role: "bass", unfretted: true }
+        : { midi: e.midi, onset: 0, dur: beats, role: "bass", string: refNote.string, fret: refNote.fret };
+    return { midi: e.midi, onset: e.at, dur: until(e.at) - e.at, role: e.tone, string: e.string, fret: e.fret };
+  });
+  /* THE PAD (night 57): the bar's harmony seated above the strings' register (padSeat), at the attack, held for the
+   * chord. Never under a scale (no chord), never through a refused bar. Listed FIRST — the walk announces it first. */
+  const pad = (cfg.pad && cfg.object !== "scale" && cur.tones && cur.tones.length && sel.length)
+    ? padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12)).map((m) => ({ midi: m, onset: 0, dur: beats, role: "pad" }))
+    : [];
+  return { index, symbol: cur.symbol, degree: cur.degree, roman: cur.roman, beats, events: [...pad, ...events] };
+}
+
+/** THE TIMELINE: every chord of a saved étude, in order, each with its beats and its events (onsets in beats from that
+ * chord's downbeat; `at` is the chord's own downbeat from the étude's start, in beats) */
+function etudeTimeline(saved) {
+  const cfg = etudeOf(saved);
+  const meter = saved && typeof saved.meter === "number" ? saved.meter : DEFAULT_METER;
+  const n = chordCount(cfg);
+  const bars = [];
+  let at = 0;
+  for (let i = 0; i < n; i++) {
+    const b = barAt(cfg, i, meter);
+    bars.push({ ...b, at });
+    at += b.beats;
+  }
+  return { meter, beats: at, bars };
+}
+return { ETUDE_DEFAULTS, DEFAULT_METER, etudeOf, chordCount, beatsAt, barAt, etudeTimeline };
+})();
+
+/* ===== hub/modules/etude-walk.mjs ===== */
+const __m_hub_modules_etude_walk_mjs = (() => {
+const { ETUDE_DEFAULTS, barAt, beatsAt, chordCount } = __m_engine_etude_timeline_mjs;
+const { movementWord, AS_CHARTED } = __m_engine_progression_mjs;
+const { SPLITS, splitFor } = __m_engine_drill_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE, listen, announce } = __m_hub_bus_mjs;
 const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 /* etude-walk.mjs — THE WALK (child 7; the TIME DIMENSION 260902): Play
@@ -7891,15 +8062,13 @@ const { DEFAULT_BPM } = __m_hub_tempo_mjs;
  *                     metronome — 260902: meter was hardcoded 4 and the
  *                     split audibly did nothing).
  */
+/* THE DERIVATION LEFT THIS FILE (261014 — the étude timeline): what a chord sounds is engine/etude-timeline.mjs's
+ * barAt, a pure function from the étude to events in beats, so another host (RiffRaft's étude block) can ask the same
+ * question. The walk keeps its TIMING and its BUS duties only: beats become seconds at the clock's tempo here, and the
+ * notes are announced at their times. It holds no derivation of its own (rule 6 — two derivations agreeing today is
+ * the FLAT_KEYS failure); the door gate's equivalence oracle holds the door's NOTE stream to the function's output. */
 
 
-
-
-
-
-
-
-// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 
 
@@ -7915,10 +8084,7 @@ const etudeWalk = {
 
   mount(ctx) {
     const d = ctx.doc;
-    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, sounded: "none", pad: false,   // night 57
-      tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "arpeggiate", repeat: false, centreSrc: "fixed",
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
+    let cfg = { ...ETUDE_DEFAULTS };   // the starting configuration lives with the derivation (engine/etude-timeline.mjs)
     let meter = 4, bpm = DEFAULT_BPM;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
     let armed = false;
@@ -7940,103 +8106,27 @@ const etudeWalk = {
     d.addEventListener("pointerdown", () => { heard = true; }, true);
     const clearPending = () => { for (const t of timers) d.defaultView.clearTimeout(t); timers = []; };
 
-    const derive = () => {
-      /* the centre's SOURCE (260914): the material anchors on
-       * centreMaterialRef so the window never jumps per bar; the READING
-       * (degrees, colours, figure addressing, the bass) shifts per bar */
-      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // the tuning is the field's fact (night 47)
-        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
-      const prog = progressionOf(cfg, cfg.key, cfg.scale);
-      if (index >= prog.chords.length) index = 0;
-      return { fld, prog };
-    };
-    const chordBeats = (prog) => {
-      const per = beatsOf(prog.bars, meter, cfg.split);
-      const flat = [];
-      prog.bars.forEach((bar, bi) => bar.forEach((_, k) => flat.push(per[bi][k])));
-      return flat[index] ?? meter;
-    };
+    /* the position wraps when the étude shrinks under it (a shorter progression) — the walk's own state */
+    const wrap = () => { if (index >= chordCount(cfg)) index = 0; };
+    const chordBeats = () => { wrap(); return beatsAt(cfg, index, meter); };
     const soundCurrent = () => {
-      const { fld, prog } = derive();
-      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
-      const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
-        startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
-      const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
-      let sel = [], walkAbsent = null;   // walkAbsent: what the placement dropped, for the figure's refusal (261011c)
-      const refDeg = cfg.object === "scale"
-        ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
-        : cur.degree;
-      if (cfg.object === "scale") {
-        sel = scaleTake(pool).notes;
-        /* the reading shifts to the bar's centre under "follows" */
-        if (cfg.centreSrc === "follows" && refDeg != null)
-          sel = reRead(sel, refDeg);
-      }
-      else {
-        /* THE NAMED DROP (260914, item 3): an extended stack deeper than
-         * the placement's capacity reduces by gripFit's rule, and the
-         * dropped roles are SAID (the boards speak them; the walk sounds the kept stack) */
-        const fit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
-          : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
-        const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply sounds too
-        const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
-          : oneOfEach(fit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
-        sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
-        walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
-      }
-      /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
-       * ruling, 260904). His own ratification is the reason: the reference
-       * is "the reference tone on the bottom end for all of the harmony
-       * that sits on top of it" — with no harmony on top, it has nothing to
-       * be under. The bar is SILENT with the reason on the face; the boards
-       * still DRAW the ref (where it would sit is informative, and the
-       * sound⊆sight pin permits drawn-but-silent). A scale take keeps no
-       * reference path at all, as before. */
-      let refMidi = null;
-      /* THE CENTRE WORKS (260913b, item 4a): in scale mode the reference
-       * places against the MODAL CENTRE — same placeReference, same degree
-       * arithmetic, the origin is cfg.ref instead of the chord's degree.
-       * A mode is only audible against its centre; now it sounds. */
-      if (cfg.bass !== "none" && refDeg != null && refDeg >= 0 && sel.length
-          && (cfg.object === "scale" || cur.degree >= 0)) {
-        const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos, pickOf(cfg));
-        if (rp.note) refMidi = rp.note.midi;
-      }
-      /* THE SOUNDED BASS (night 57): a pitch with no string, seated below the voicing's lowest note
-       * (bassSeat — the bass register rule that already existed), on ANY set. Silent through a refused
-       * bar for the reference's own reason: nothing on top to be under. The walk hands it to the
-       * schedule flagged `unfretted` — the stringless bass event exists on purpose (G11, narrowed). */
-      let soundedMidi = null;
-      if (cfg.sounded && cfg.sounded !== "none" && refDeg != null && refDeg >= 0 && sel.length
-          && (cfg.object === "scale" || cur.degree >= 0)) {
-        const sb = soundedBass(cfg.sounded, refDeg, fld, cfg.object === "scale" ? null : pickOf(cfg));
-        if (sb.pc != null) soundedMidi = bassSeat(Math.min(...sel.map((x) => x.midi)), sb.pc);
-      }
-      /* THE SCHEDULE: the figure's order through orderBy — the same value
-       * the bracket and the polyline draw — or the take's own shape */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent, tones: cfg.object === "scale" ? null : cur.tones });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
-      /* 260905, the coupling severed: Take chooses the MATERIAL, the rail's
-       * Movement control chooses together-or-sequence (a scale stays a run —
-       * the box has no chord to sound as one). A typed figure sequences
-       * regardless, as ruled. */
-      const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
-      const { events, span } = walkSchedule(sel, fig.err ? null : fig.steps || null,   // a group is one step, its notes one onset (261009)
-        chordBeats(prog), bpm, { spread, refMidi, soundedMidi });
+      wrap();
+      /* the chord, as the engine derives it: events in BEATS from the downbeat (a refused bar has none — silent,
+       * with its reason on the face). Here they become seconds at the clock's tempo, and are announced: the pad
+       * first, at the attack with the chord's span as its duration; the downbeat's events now (the cold-play
+       * guarantee, 260819.2); the rest by view.setTimeout, cancelled on advance and on stop. */
+      const bar = barAt(cfg, index, meter);
+      const spb = 60 / bpm;
       clearPending();
-      /* THE PAD (night 57): the bar's harmony seated above the strings' register (padSeat), at the
-       * attack, held for the bar — a seat and a bus, no scheduler: the same announce as every note,
-       * with the bar's span as its duration. Never under a scale (no chord), never through a refused bar. */
-      if (cfg.pad && cfg.object !== "scale" && cur.tones && cur.tones.length && sel.length)
-        for (const m of padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12)))
-          announce(d, NOTE, { midi: m, role: "pad", dur: span });
-      for (const ev of events) {
-        const msg = ev.role ? { midi: ev.midi, role: ev.role, ...(ev.unfretted ? { unfretted: true } : {}) } : { midi: ev.midi };
-        if (ev.at <= 0) { announce(d, NOTE, msg); continue; }
+      for (const ev of bar.events) {
+        /* the pad's duration in the old span arithmetic (beats × 60 / bpm), so the NOTE it carries is the same to the bit */
+        if (ev.role === "pad") { announce(d, NOTE, { midi: ev.midi, role: "pad", dur: ev.dur * 60 / bpm }); continue; }
+        const msg = ev.role === "bass" ? { midi: ev.midi, role: "bass", ...(ev.unfretted ? { unfretted: true } : {}) } : { midi: ev.midi };
+        const at = ev.onset * spb;
+        if (at <= 0) { announce(d, NOTE, msg); continue; }
         timers.push(d.defaultView.setTimeout(() => {
           if (armed || auditioning) announce(d, NOTE, msg);
-        }, ev.at * 1000));
+        }, at * 1000));
       }
     };
 
@@ -8061,7 +8151,7 @@ const etudeWalk = {
        * seated the count before the clock, then the trace showed the chord
        * still losing its last beat to its own downbeat) */
       spent += 1;
-      if (spent > chordBeats(derive().prog)) {
+      if (spent > chordBeats()) {
         if (cfg.repeat) {
           /* REPEAT (260913, item 4 — ruled: the CURRENT bar): the boundary
            * that would advance repeats instead. Consulted only HERE, so a
@@ -16805,7 +16895,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip, __m_hub_modules_tuning_strip_mjs.tuningStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.11","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.12","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

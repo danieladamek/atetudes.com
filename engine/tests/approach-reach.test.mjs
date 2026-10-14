@@ -88,10 +88,16 @@ test("the window is REQUIRED: a caller that omits it is refused by name — neve
 });
 
 test("THE FOUR CALLERS pass the window: every orderBy call in hub/modules carries pos (the fitness function that keeps a fifth caller honest)", () => {
-  const HUB = join(here, "..", "..", "hub", "modules");
+  /* 261014 (rule 16 — the outermost scope the claim makes): the walk's caller MOVED to engine/etude-timeline.mjs, so
+   * the sweep reads the engine's callers too — every caller, wherever it lives (selection.mjs defines orderBy) */
+  const HUB = join(here, "..", "..", "hub", "modules"), ENGINE = join(here, "..");
+  const sources = [
+    ...readdirSync(HUB).filter((x) => x.endsWith(".mjs")).map((x) => [x, join(HUB, x)]),
+    ...readdirSync(ENGINE).filter((x) => x.endsWith(".mjs") && x !== "selection.mjs").map((x) => ["engine/" + x, join(ENGINE, x)]),
+  ];
   let calls = 0;
-  for (const f of readdirSync(HUB).filter((x) => x.endsWith(".mjs"))) {
-    const src = readFileSync(join(HUB, f), "utf8");
+  for (const [f, path] of sources) {
+    const src = readFileSync(path, "utf8");
     for (const m of src.matchAll(/orderBy\(([^;]*)\)/g)) {
       calls++;
       assert.match(m[1], /\bpos\b/, `${f}: orderBy call without the window — ${m[0].slice(0, 90)}`);

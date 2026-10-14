@@ -7248,6 +7248,44 @@ console.log(JSON.stringify(out));
     # under-neck band for the neck's header, just left of its mini. 1280: one band, left of the transport, not sliding
     # with the readout's text. 390: three rows — the readout, the clock, the transport — the clock inside the header
     # (stack, do not shrink). The under-neck band opens with the tuning rows; no gap where a row was.
+    # ---- 261014: THE ÉTUDE TIMELINE — THE EQUIVALENCE ORACLE. The walk's notes come from engine/etude-timeline.mjs
+    # now; this holds the DOOR's actual NOTE stream to the function's output, étude by étude, chord by chord: a saved
+    # étude (hub/tests/fixtures/etude-corpus.json — snapshots the door itself saved) is restored through the bus, each
+    # chord auditioned while stopped, and every NOTE (midi, role, unfretted, the pad's dur) and its onset (in beats, at
+    # the door's tempo) must equal the timeline's. A second derivation creeping back into the walk fails here by name.
+    if door_id == "multetudes":
+        corpus_tl = json.loads((HUB / "tests" / "fixtures" / "etude-corpus.json").read_text())
+        _tl = subprocess.run(["node", "hub/tests/_etude_timeline_expect.mjs", "hub/tests/fixtures/etude-corpus.json", "3"], capture_output=True, text=True, cwd=REPO)
+        check(_tl.returncode == 0, f"{tag} 261014: the timeline's expectation did not compute: {_tl.stderr[-300:]}")
+        exp_tl = json.loads(_tl.stdout) if _tl.returncode == 0 else {}
+        compared_tl = 0
+        for et in corpus_tl:
+            nm, sv = et["name"], et["saved"]
+            want_bars = exp_tl.get(nm, {}).get("bars", [])
+            ctx_tl = pw.new_context(viewport={"width": 1280, "height": 900}); pg_tl = ctx_tl.new_page()
+            pg_tl.goto(html_path.as_uri()); pg_tl.wait_for_selector("#cards", state="attached"); pg_tl.wait_for_timeout(300)
+            if sv.get("meter", 4) != 4: pg_tl.select_option("#meterSel", str(sv["meter"])); pg_tl.wait_for_timeout(120)
+            cfg_tl = {k: v for k, v in sv.items() if k not in ("bpm", "meter", "sub", "click", "accents", "clickLevel", "clickVoice", "mixer")}
+            pg_tl.evaluate("(p) => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: p }))", cfg_tl); pg_tl.wait_for_timeout(250)
+            pg_tl.fill("#bpmVal", "240"); pg_tl.dispatch_event("#bpmVal", "change"); pg_tl.wait_for_timeout(120)
+            pg_tl.evaluate("""() => { window.__tl = []; document.addEventListener('atetudes:note', e => window.__tl.push({ midi: e.detail.midi,
+              role: e.detail.role || null, unfretted: !!e.detail.unfretted, dur: e.detail.dur ?? null, t: performance.now() })); }""")
+            pg_tl.mouse.click(5, 5)   # the walk auditions only an answer to a gesture
+            for i, want in enumerate(want_bars):
+                pg_tl.evaluate("() => { window.__tl = []; }")
+                pg_tl.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", i)
+                pg_tl.wait_for_timeout(int(want["beats"] * 250) + 350)
+                got = pg_tl.evaluate("() => window.__tl.slice()")
+                t0 = got[0]["t"] if got else 0
+                g = [(n["midi"], n["role"], n["unfretted"]) for n in got]; w = [(n["midi"], n["role"], n["unfretted"]) for n in want["notes"]]
+                times = len(got) == len(want["notes"]) and all(abs((a["t"] - t0) / 1000 - b["onset"] * 0.25) < 0.06 for a, b in zip(got, want["notes"]))
+                durs = all((a["dur"] is None) == (b["dur"] is None) and (a["dur"] is None or abs(a["dur"] - b["dur"] * 0.25) < 1e-6) for a, b in zip(got, want["notes"]))
+                check(g == w and times and durs and len(w) > 0,
+                      f"{tag} 261014 THE ORACLE [{nm}] chord {i + 1} ({want['symbol']}): the door sounds what etude-timeline derives — door {g} timeline {w} times {times} durs {durs}")
+                compared_tl += 1
+            ctx_tl.close()
+        check(compared_tl >= 30 and len(corpus_tl) >= 12, f"{tag} 261014: the oracle actually ran — {compared_tl} chords over {len(corpus_tl)} études")
+
     if 'id="fdClock"' in html_path.read_text():
         ctx67b = pw.new_context(viewport={"width": 1280, "height": 900}); p67b = ctx67b.new_page()
         p67b.goto(html_path.as_uri()); p67b.wait_for_selector("#cards", state="attached"); p67b.wait_for_timeout(300)

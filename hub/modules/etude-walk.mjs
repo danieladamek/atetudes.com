@@ -40,16 +40,14 @@
  *                     metronome — 260902: meter was hardcoded 4 and the
  *                     split audibly did nothing).
  */
-import { field } from "../../engine/field.mjs";
-import { positionOf, materialIn } from "../../engine/position.mjs";
-import { makeRun } from "../../engine/string-run.mjs";
-import { oneOfEach, everyOccurrence, scaleTake, orderBy, gripFit, materialFor, capOf } from "../../engine/selection.mjs";
-import { progressionOf, chordAt, beatsOf, walkSchedule, movementWord, AS_CHARTED } from "../../engine/progression.mjs";
+/* THE DERIVATION LEFT THIS FILE (261014 — the étude timeline): what a chord sounds is engine/etude-timeline.mjs's
+ * barAt, a pure function from the étude to events in beats, so another host (RiffRaft's étude block) can ask the same
+ * question. The walk keeps its TIMING and its BUS duties only: beats become seconds at the clock's tempo here, and the
+ * notes are announced at their times. It holds no derivation of its own (rule 6 — two derivations agreeing today is
+ * the FLAT_KEYS failure); the door gate's equivalence oracle holds the door's NOTE stream to the function's output. */
+import { ETUDE_DEFAULTS, barAt, beatsAt, chordCount } from "../../engine/etude-timeline.mjs";
+import { movementWord, AS_CHARTED } from "../../engine/progression.mjs";
 import { SPLITS, splitFor } from "../../engine/drill.mjs";
-import { bassSeat, padSeat } from "../../engine/voices.mjs";
-import { placeReference, centreDegreeOf, centreMaterialRef, reRead, soundedBass } from "../../engine/reference.mjs";
-// 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
-import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { CONFIG_CHANGED, STEP_CHANGED, PLAY, CLOCK, CLOCK_STATE, BEAT, NOTE,
   listen, announce } from "../bus.mjs";
 import { DEFAULT_BPM } from "../tempo.mjs";
@@ -66,10 +64,7 @@ export const etudeWalk = {
 
   mount(ctx) {
     const d = ctx.doc;
-    let cfg = { key: "Bb", scale: "major", ref: 0, tuning: null, gamut: null, strings: [4, 3, 2, 1],
-      startDeg: 4, nearFret: 3, object: "tetrad", take: "one", notesPer: 3, sounded: "none", pad: false,   // night 57
-      tones: [1, 3, 5, 7], bass: "root", address: "pattern", figure: "", movement: "arpeggiate", repeat: false, centreSrc: "fixed",
-      source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0, split: null };
+    let cfg = { ...ETUDE_DEFAULTS };   // the starting configuration lives with the derivation (engine/etude-timeline.mjs)
     let meter = 4, bpm = DEFAULT_BPM;      // adopted from CLOCK_STATE — the metronome owns both
     let index = 0;
     let armed = false;
@@ -91,103 +86,27 @@ export const etudeWalk = {
     d.addEventListener("pointerdown", () => { heard = true; }, true);
     const clearPending = () => { for (const t of timers) d.defaultView.clearTimeout(t); timers = []; };
 
-    const derive = () => {
-      /* the centre's SOURCE (260914): the material anchors on
-       * centreMaterialRef so the window never jumps per bar; the READING
-       * (degrees, colours, figure addressing, the bass) shifts per bar */
-      const fld = field({ key: cfg.key, scale: cfg.scale, tuning: cfg.tuning,   // the tuning is the field's fact (night 47)
-        ref: cfg.object === "scale" ? centreMaterialRef(cfg.centreSrc, cfg.ref) : cfg.ref });
-      const prog = progressionOf(cfg, cfg.key, cfg.scale);
-      if (index >= prog.chords.length) index = 0;
-      return { fld, prog };
-    };
-    const chordBeats = (prog) => {
-      const per = beatsOf(prog.bars, meter, cfg.split);
-      const flat = [];
-      prog.bars.forEach((bar, bi) => bar.forEach((_, k) => flat.push(per[bi][k])));
-      return flat[index] ?? meter;
-    };
+    /* the position wraps when the étude shrinks under it (a shorter progression) — the walk's own state */
+    const wrap = () => { if (index >= chordCount(cfg)) index = 0; };
+    const chordBeats = () => { wrap(); return beatsAt(cfg, index, meter); };
     const soundCurrent = () => {
-      const { fld, prog } = derive();
-      const cur = chordAt(prog, index, fld, cfg.object, pickOf(cfg));
-      const run = makeRun(cfg.strings, fld.opens);   // the field's opens (night 44)
-      const pos = positionOf({ field: fld, anchorString: Math.max(...run.strings),
-        startDegree: cfg.startDeg, nearFret: cfg.nearFret, strings: run.strings });
-      const pool = materialIn(pos, run.strings, fld, cfg.gamut);   // the gamut narrows the offer (night 48)
-      let sel = [], walkAbsent = null;   // walkAbsent: what the placement dropped, for the figure's refusal (261011c)
-      const refDeg = cfg.object === "scale"
-        ? centreDegreeOf(cfg.centreSrc, cfg.ref, cur.degree)
-        : cur.degree;
-      if (cfg.object === "scale") {
-        sel = scaleTake(pool).notes;
-        /* the reading shifts to the bar's centre under "follows" */
-        if (cfg.centreSrc === "follows" && refDeg != null)
-          sel = reRead(sel, refDeg);
-      }
-      else {
-        /* THE NAMED DROP (260914, item 3): an extended stack deeper than
-         * the placement's capacity reduces by gripFit's rule, and the
-         * dropped roles are SAID (the boards speak them; the walk sounds the kept stack) */
-        const fit = cfg.take === "all" ? { tones: cur.tones, dropped: [] }
-          : gripFit(cur.tones, run.strings.length * capOf(cfg.notesPer));   // night 56: a line is uncapped
-        const mat = materialFor(cur.tones, pool, fld, run.strings, pos);   // role A (night 46): the chord's own supply sounds too
-        const r = cfg.take === "all"
-          ? everyOccurrence(cur.tones, mat, { n: capOf(cfg.notesPer) })
-          : oneOfEach(fit.tones, mat, { n: capOf(cfg.notesPer), centre: pos.centre });
-        sel = r.notes || r.partial || [];   // 260923: one-of-each's PARTIAL draws beside its refusal (ruling 260922b/3), the same in every view
-        walkAbsent = { dropped: [...fit.dropped, ...(r.dropped || []), ...(r.capped || [])], kept: sel.map((x) => x.role), strings: run.strings.length, notesPer: capOf(cfg.notesPer), resolvesAt: r.resolvesAt };
-      }
-      /* THE REFERENCE DOES NOT SOUND THROUGH A REFUSED BAR (Daniel's
-       * ruling, 260904). His own ratification is the reason: the reference
-       * is "the reference tone on the bottom end for all of the harmony
-       * that sits on top of it" — with no harmony on top, it has nothing to
-       * be under. The bar is SILENT with the reason on the face; the boards
-       * still DRAW the ref (where it would sit is informative, and the
-       * sound⊆sight pin permits drawn-but-silent). A scale take keeps no
-       * reference path at all, as before. */
-      let refMidi = null;
-      /* THE CENTRE WORKS (260913b, item 4a): in scale mode the reference
-       * places against the MODAL CENTRE — same placeReference, same degree
-       * arithmetic, the origin is cfg.ref instead of the chord's degree.
-       * A mode is only audible against its centre; now it sounds. */
-      if (cfg.bass !== "none" && refDeg != null && refDeg >= 0 && sel.length
-          && (cfg.object === "scale" || cur.degree >= 0)) {
-        const rp = placeReference(cfg.bass, refDeg, fld, run.strings, pos, pickOf(cfg));
-        if (rp.note) refMidi = rp.note.midi;
-      }
-      /* THE SOUNDED BASS (night 57): a pitch with no string, seated below the voicing's lowest note
-       * (bassSeat — the bass register rule that already existed), on ANY set. Silent through a refused
-       * bar for the reference's own reason: nothing on top to be under. The walk hands it to the
-       * schedule flagged `unfretted` — the stringless bass event exists on purpose (G11, narrowed). */
-      let soundedMidi = null;
-      if (cfg.sounded && cfg.sounded !== "none" && refDeg != null && refDeg >= 0 && sel.length
-          && (cfg.object === "scale" || cur.degree >= 0)) {
-        const sb = soundedBass(cfg.sounded, refDeg, fld, cfg.object === "scale" ? null : pickOf(cfg));
-        if (sb.pc != null) soundedMidi = bassSeat(Math.min(...sel.map((x) => x.midi)), sb.pc);
-      }
-      /* THE SCHEDULE: the figure's order through orderBy — the same value
-       * the bracket and the polyline draw — or the take's own shape */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent, tones: cfg.object === "scale" ? null : cur.tones });   // 260923: the window, for the approach reach; 261011c: what the placement dropped
-      /* 260905, the coupling severed: Take chooses the MATERIAL, the rail's
-       * Movement control chooses together-or-sequence (a scale stays a run —
-       * the box has no chord to sound as one). A typed figure sequences
-       * regardless, as ruled. */
-      const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
-      const { events, span } = walkSchedule(sel, fig.err ? null : fig.steps || null,   // a group is one step, its notes one onset (261009)
-        chordBeats(prog), bpm, { spread, refMidi, soundedMidi });
+      wrap();
+      /* the chord, as the engine derives it: events in BEATS from the downbeat (a refused bar has none — silent,
+       * with its reason on the face). Here they become seconds at the clock's tempo, and are announced: the pad
+       * first, at the attack with the chord's span as its duration; the downbeat's events now (the cold-play
+       * guarantee, 260819.2); the rest by view.setTimeout, cancelled on advance and on stop. */
+      const bar = barAt(cfg, index, meter);
+      const spb = 60 / bpm;
       clearPending();
-      /* THE PAD (night 57): the bar's harmony seated above the strings' register (padSeat), at the
-       * attack, held for the bar — a seat and a bus, no scheduler: the same announce as every note,
-       * with the bar's span as its duration. Never under a scale (no chord), never through a refused bar. */
-      if (cfg.pad && cfg.object !== "scale" && cur.tones && cur.tones.length && sel.length)
-        for (const m of padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12)))
-          announce(d, NOTE, { midi: m, role: "pad", dur: span });
-      for (const ev of events) {
-        const msg = ev.role ? { midi: ev.midi, role: ev.role, ...(ev.unfretted ? { unfretted: true } : {}) } : { midi: ev.midi };
-        if (ev.at <= 0) { announce(d, NOTE, msg); continue; }
+      for (const ev of bar.events) {
+        /* the pad's duration in the old span arithmetic (beats × 60 / bpm), so the NOTE it carries is the same to the bit */
+        if (ev.role === "pad") { announce(d, NOTE, { midi: ev.midi, role: "pad", dur: ev.dur * 60 / bpm }); continue; }
+        const msg = ev.role === "bass" ? { midi: ev.midi, role: "bass", ...(ev.unfretted ? { unfretted: true } : {}) } : { midi: ev.midi };
+        const at = ev.onset * spb;
+        if (at <= 0) { announce(d, NOTE, msg); continue; }
         timers.push(d.defaultView.setTimeout(() => {
           if (armed || auditioning) announce(d, NOTE, msg);
-        }, ev.at * 1000));
+        }, at * 1000));
       }
     };
 
@@ -212,7 +131,7 @@ export const etudeWalk = {
        * seated the count before the clock, then the trace showed the chord
        * still losing its last beat to its own downbeat) */
       spent += 1;
-      if (spent > chordBeats(derive().prog)) {
+      if (spent > chordBeats()) {
         if (cfg.repeat) {
           /* REPEAT (260913, item 4 — ruled: the CURRENT bar): the boundary
            * that would advance repeats instead. Consulted only HERE, so a

@@ -315,7 +315,9 @@ export default {
      * readout's strum and arpeggio clauses name their notes low to high. */
     /* v1.1.11 (261014): carried along — engine/atchart.mjs refuses a repeat sign with no bar to carry it (a trailing |:,
      * an orphan :|), by name, instead of dropping it. */
-    blurb: "one tool that holds many études · v1.1.11",
+    /* v1.1.12 (261014, Daniel): the étude timeline — what a chord sounds is engine/etude-timeline.mjs's pure barAt now;
+     * the walk keeps only its timing and bus duties. Nothing sounds different: the NOTE stream is byte-identical. */
+    blurb: "one tool that holds many études · v1.1.12",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",
