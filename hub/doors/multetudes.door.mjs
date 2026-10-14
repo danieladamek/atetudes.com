@@ -313,7 +313,9 @@ export default {
     /* v1.1.10 (261014, Daniel): the motif line under the neck — the notes in sounding order in large type, each string
      * under its name, then "over Eb — s5, f6"; a strum or one group low to high under a thin together-bracket; the
      * readout's strum and arpeggio clauses name their notes low to high. */
-    blurb: "one tool that holds many études · v1.1.10",
+    /* v1.1.11 (261014): carried along — engine/atchart.mjs refuses a repeat sign with no bar to carry it (a trailing |:,
+     * an orphan :|), by name, instead of dropping it. */
+    blurb: "one tool that holds many études · v1.1.11",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

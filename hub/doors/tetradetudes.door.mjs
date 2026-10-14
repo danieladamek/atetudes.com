@@ -160,7 +160,8 @@ export default {
     /* v0.6.22 (261012d, ruled by Daniel): the ⓘ takes its seat — 261012b's save sentence put an ⓘ over the ⏭ of the
      * keys' and the étude's minis; the minis sit left of ⓘ + chevron now. */
     /* v0.6.23 (261013, Daniel): each card's ⓘ explains that card; only the notepad's speaks of saving. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.23",
+    /* v0.6.24 (261014): carried along — the chart parser refuses a repeat sign with no bar to carry it. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.24",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

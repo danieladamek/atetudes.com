@@ -95,3 +95,16 @@ meter: 3/4
 \`\`\`
 `,
 };
+
+/* MUST-THROW (261014 — the RiffRaft palette build found it): a repeat sign with no bar to carry it. The parser used to
+ * drop these in silence, so the chart read clean and had lost what was typed (child 9, §4.4). Each must now throw,
+ * naming the sign — the way a bad chord symbol does. chart line → the words the refusal must contain. */
+const chartOf = (line) => `---\natchart: 1\n---\n\n\`\`\`chart\n${line}\n\`\`\`\n`;
+export const MUST_THROW = {
+  "|: at the end of a line — a repeat starts with no bar in it": [chartOf("| Cmaj7 ||:"), /"\|:" at the end of a line/],
+  "|: alone at the end, after a closed bar": [chartOf("| Cmaj7 | Dm7 | |:"), /"\|:" at the end of a line/],
+  ":| straight after | — it closes no bar": [chartOf("| Cmaj7 | :|"), /":\|" with no chord before it/],
+  ":| at the start of a line": [chartOf(":| Cmaj7 |"), /":\|" with no chord before it/],
+  ":|: straight after | — it closes no bar": [chartOf("| Cmaj7 | :|: Dm7 |"), /":\|:" with no chord before it/],
+  ":|: at the end of a line — the repeat it opens has no bar": [chartOf("| Cmaj7 :|:"), /":\|:" at the end of a line/],
+};

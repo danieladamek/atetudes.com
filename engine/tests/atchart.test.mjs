@@ -8,7 +8,7 @@ import { parseAtchart, serializeAtchart, readApp, writeApp } from "../atchart.mj
 // ---------------- the corpus ----------------
 // It lives in _atchart-corpus.mjs (261011c), shared with the vendored bundle's smoke test.
 
-import { CORPUS } from "./_atchart-corpus.mjs";
+import { CORPUS, MUST_THROW } from "./_atchart-corpus.mjs";
 
 for (const [name, src] of Object.entries(CORPUS)) {
   test(`round-trip law: ${name}`, () => {
@@ -263,4 +263,12 @@ test("v1.2 — the round trip: a file WITH a tuning is a fixed point; a file WIT
   // a hand-typed file carrying a tuning and nothing else loads
   const doc = parseAtchart("---\natchart: 1\ntuning: {6: -2}\n---\n\n\`\`\`chart\n| C |\n\`\`\`\n");
   assert.deepEqual(doc.meta.tuning, { 6: -2 });
+});
+
+// 261014: a repeat sign with no bar to carry it is REFUSED by name, never dropped (the RiffRaft palette build's find)
+test("a repeat sign with no bar to carry it throws, naming the sign — never a silently-shorter chart", () => {
+  const names = Object.keys(MUST_THROW);
+  assert.ok(names.length >= 6, "the must-throw cases are all here");
+  for (const [name, [text, words]] of Object.entries(MUST_THROW))
+    assert.throws(() => parseAtchart(text), words, name);
 });

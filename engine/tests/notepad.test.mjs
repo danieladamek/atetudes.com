@@ -11,7 +11,7 @@ import { emptyDoc, makeEntry, addEntry, editEntry, deleteEntry, reorderEntry,
   fromMetronomeV1, fromTriadetudesV1, toAtchart, fromAtchart } from "../notepad.mjs";
 import { parseAtchart, serializeAtchart, readApp } from "../atchart.mjs";
 import { readFileSync } from "node:fs";
-import { CENSUS, OWED_DRIFT } from "./_carriers.mjs";
+import { CENSUS, OWED_DRIFT, driftScope } from "./_carriers.mjs";
 
 const strip = (doc) => ({ pad: doc.pad,
   entries: doc.entries.map(({ id, savedAt, heading, text, payload }) =>
@@ -258,7 +258,12 @@ test("metronome and triadetudes carry atchart, markdown and notepad verbatim (no
    * are recorded debt (re-inline at the beta republish) — skipped here with
    * a self-expiring guard, verbatim for everything else. */
   let owedSeen = 0;
-  for (const [slug, files] of Object.entries(CARRIERS)) {
+  /* THE SUBJECT IS DRIFT, SO THE SCOPE IS THE MAINTAINED PAGES (261014 — the sixth pin night 77's driftScope names):
+   * this pin still reached the FROZEN tetrad-voice-leading study, silently, because its atchart copy had matched the
+   * source until the repeat-sign fix (261014) changed the source. A frozen study is never edited (R3); it is printed
+   * EXEMPT by name, never passed, never re-inlined. */
+  const { bound } = driftScope(Object.keys(CARRIERS), "whole-module inline (atchart, markdown, notepad…)");
+  for (const [slug, files] of Object.entries(CARRIERS).filter(([slug]) => bound.includes(slug))) {
     const src = readFileSync(here2 + "../../static/studies/" + slug + "/study.html", "utf8");
     for (const file of files) {
       if (OWED_DRIFT.has(file.slice(0, -4))) {

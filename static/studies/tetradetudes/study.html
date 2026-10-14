@@ -6888,12 +6888,16 @@ function parseBarLine(text, section) {
       flush();
       pendingRepeatStart = true;
     } else if (tok === ":|") {
-      if (bar) bar.repeatEnd = true;
+      /* 261014 (the RiffRaft palette build's find): a closing sign with no bar before it used to vanish — the chart
+       * read clean and had lost what was typed (child 9, §4.4). Refused by name, as a bad chord symbol is. */
+      if (!bar) throw new Error(`chart: ":|" with no chord before it closes a repeat with no bar in it — "${text.trim()}"`);
+      bar.repeatEnd = true;
       flush();
     } else if (tok === "|") {
       flush();
     } else if (tok === ":|:") {
-      if (bar) bar.repeatEnd = true;
+      if (!bar) throw new Error(`chart: ":|:" with no chord before it ends a repeat with no bar in it — "${text.trim()}"`);
+      bar.repeatEnd = true;
       flush();
       pendingRepeatStart = true;
     } else {
@@ -6909,6 +6913,11 @@ function parseBarLine(text, section) {
     i++;
   }
   flush();
+  /* …and an opening sign with nothing after it on its line starts a repeat that no bar carries (261014) */
+  if (pendingRepeatStart) {
+    const sign = /:\|:\s*$/.test(text) ? ":|:" : "|:";
+    throw new Error(`chart: "${sign}" at the end of a line starts a repeat with no bar in it — "${text.trim()}"`);
+  }
 }
 
 function serializeChartBlock(sections) {
@@ -11298,7 +11307,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.23","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}},"opensAs":null};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.24","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}},"opensAs":null};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

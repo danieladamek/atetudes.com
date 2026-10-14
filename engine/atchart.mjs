@@ -327,12 +327,16 @@ function parseBarLine(text, section) {
       flush();
       pendingRepeatStart = true;
     } else if (tok === ":|") {
-      if (bar) bar.repeatEnd = true;
+      /* 261014 (the RiffRaft palette build's find): a closing sign with no bar before it used to vanish — the chart
+       * read clean and had lost what was typed (child 9, §4.4). Refused by name, as a bad chord symbol is. */
+      if (!bar) throw new Error(`chart: ":|" with no chord before it closes a repeat with no bar in it — "${text.trim()}"`);
+      bar.repeatEnd = true;
       flush();
     } else if (tok === "|") {
       flush();
     } else if (tok === ":|:") {
-      if (bar) bar.repeatEnd = true;
+      if (!bar) throw new Error(`chart: ":|:" with no chord before it ends a repeat with no bar in it — "${text.trim()}"`);
+      bar.repeatEnd = true;
       flush();
       pendingRepeatStart = true;
     } else {
@@ -348,6 +352,11 @@ function parseBarLine(text, section) {
     i++;
   }
   flush();
+  /* …and an opening sign with nothing after it on its line starts a repeat that no bar carries (261014) */
+  if (pendingRepeatStart) {
+    const sign = /:\|:\s*$/.test(text) ? ":|:" : "|:";
+    throw new Error(`chart: "${sign}" at the end of a line starts a repeat with no bar in it — "${text.trim()}"`);
+  }
 }
 
 function serializeChartBlock(sections) {

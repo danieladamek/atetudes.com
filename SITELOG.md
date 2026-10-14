@@ -1,3 +1,11 @@
+## 2026-10-14 — The chart parser refuses a lone repeat sign — Multetudes v1.1.11, Tetradetudes v0.6.24, metronome v1.5.3, triadetudes v0.9.9, modes
+
+- Every study that reads charts (Update Log 261014.2): a `|:` at the end of a line, or a `:|` with no chord before it, is
+  now refused with a message naming the sign, instead of being dropped without a word. Charts that were already
+  correct read exactly as before. tetrad-voice-leading is frozen and unchanged.
+- Sources: the doors rebuilt; metronome and triadetudes re-inlined (`tools/reinline.py atchart`); modes re-emitted by
+  `generators/modes_pent_interactive.py`.
+
 ## 2026-10-14 — The motif line under the neck — Multetudes v1.1.10
 
 - **Multetudes v1.1.10** (Update Log 261014.1): under the neck, beside the colour legend, the notes this bar plays in
