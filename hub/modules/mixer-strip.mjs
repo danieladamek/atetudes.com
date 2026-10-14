@@ -81,7 +81,9 @@ export const mixerStrip = {
       <input type="range" id="fdPadVol" data-control="fdPadVol" min="0" max="100" value="100" aria-label="pad level">
       <span class="mx-val" id="fdPadVal">100</span>
     </div>
-  </div>`,
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">What sounds, and how loud. The first list picks the instrument sound for the notes; each slider sets one level — the harmony, the bass, the pad — and its speaker mutes it (muted is the slider at zero). The reference tone is a fretted note on string 5 or 6 under the harmony — the root, another chosen tone, or a scale tone a 3rd or 5th below — and the readout names the chord the stack makes over it; the sounded bass is a pitch with no string, never drawn, that plays under any set of strings. The pad holds the bar's chord above the guitar, also never drawn.</div>`,
 
   /* the row grammar is the neck's under-neck row, re-stated as this board's own tokens (a module
    * styles only its own markup); the level row is the shell's .bpmrow with a mute icon per slider */

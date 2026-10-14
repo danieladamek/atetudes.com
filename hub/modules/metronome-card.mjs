@@ -61,9 +61,7 @@ export const metronomeCard = {
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
   <div class="clpsum" id="metroSum">A metronome on its own clock — with or without the étude.</div>
-  <div class="hint info">A full metronome on its own clock — use it with or without the étude.
-  The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
-  metronome, first block, this look.)</div>`,
+  <div class="hint info">A full metronome on its own clock — use it with or without the étude. The étude subscribes to this grid. (Shared component: every At-Etudes app carries this metronome, first block, this look.) Its first button starts and stops the click (stopping it stops the étude too); tap the second in time to set the tempo, or type or slide it, 15 to 300. The time signature and subdivision are the grid the étude walks on, the accent marks each bar's first beat, and the speaker mutes the click — muted is the volume at zero.</div>`,
 
   /* Every rule names `metro`, `metrolabel`, `metroval`, `row2`,
    * `chk`, `bpmrow` or a control id — tokens no other module ships today. The

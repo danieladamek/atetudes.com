@@ -52,7 +52,9 @@ export const tuningStrip = {
   <div class="fd-railrow fd-tunerow">
     <span class="fd-lab2">named</span>
     <div id="fdTuneNames" data-control="fdTuneNames"></div>
-  </div>`,
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">Retune the six strings for this étude; the neck and the sound follow. Step any string a semitone down or up, or all six together; the named row sets a whole tuning in one click, and standard is always one click back. A step that would cross the next string or leave its six-semitone range doesn't happen — it says why, under that string. Shut, the card's line names the tuning, so an altered neck is never hidden.</div>`,
 
   styles: `
 .fd-tunerow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;font-size:12px;color:var(--gray);flex-wrap:wrap}

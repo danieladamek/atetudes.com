@@ -306,7 +306,9 @@ export default {
      * "drop D", "custom"), and the steppers row lost its "tuning" label; "named" stays. */
     /* v1.1.7 (261012d, ruled by Daniel): the ⓘ takes its seat — 261012b's save sentence gave the Mixer an ⓘ that lay over
      * its mini's repeat button; a header given an ⓘ now reserves ⓘ + chevron. */
-    blurb: "one tool that holds many études · v1.1.7",
+    /* v1.1.8 (261013, Daniel): each card's ⓘ explains that card — what it's for and how to use it — and only the
+     * notepad's speaks of saving (261012b's every-card save sentence removed); the readout sits under the neck. */
+    blurb: "one tool that holds many études · v1.1.8",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

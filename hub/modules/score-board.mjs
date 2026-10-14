@@ -53,7 +53,9 @@ export const scoreBoard = {
   markup: `
   <span id="scMini" data-control="scMini"></span>
   <div class="bh"><span>The étude — end to end (click a bar to jump there)</span></div>
-  <svg id="score" data-control="score" viewBox="0 0 1160 214" aria-label="etude notation"></svg>`,
+  <svg id="score" data-control="score" viewBox="0 0 1160 214" aria-label="etude notation"></svg>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">Every chord of the étude on a grand staff at sounding pitch, each bar as wide as its beats, with the symbol and numeral above; the current chord is shaded. Strummed, or with no figure, each chord is a stack; with a figure it's written as the run you hear, approach notes small, and with the root as a pedal it sits in the bass clef. Click anywhere in a chord's column to jump there.</div>`,
 
   styles: `
 #score{width:100%;height:auto;display:block}

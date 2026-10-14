@@ -324,7 +324,7 @@ function initCollapse(doc) {
  * and by Escape — never a browser modal (the file:// gate forbids a dialog).
  * Keyboard-reachable (a real button) and labelled, since the popout is now the
  * only route to that text. A panel with no static prose gets no button. */
-function initInfo(doc, about) {
+function initInfo(doc) {
   let openBtn = null, openPop = null;
   const close = () => {
     if (openPop) { openPop.hidden = true; openBtn.setAttribute("aria-expanded", "false"); }
@@ -333,9 +333,6 @@ function initInfo(doc, about) {
   let n = 0;
   for (const p of doc.querySelectorAll(".card, .board")) {
     const prose = [...p.querySelectorAll(".info")];
-    /* PROSE A MODULE SAYS OF EVERY PANEL (261012b): appended after the panel's own, so a panel with none grows an ⓘ */
-    for (const a of about)
-      if (!a.skip(p)) { const el = doc.createElement("div"); el.className = "hint info"; el.textContent = a.text; prose.push(el); }
     if (!prose.length) continue;
     const pop = doc.createElement("div");
     pop.className = "infoPop"; pop.hidden = true; pop.id = "infoPop-" + (++n);
@@ -353,8 +350,8 @@ function initInfo(doc, about) {
       if (willOpen) { pop.hidden = false; btn.setAttribute("aria-expanded", "true"); openBtn = btn; openPop = pop; }
     });
     p.appendChild(btn);
-    /* THE ⓘ TAKES ITS SEAT IN THE HEADER (261012d — ruled by Daniel): since 261012b's every-panel sentence, a panel
-     * that never had prose has an ⓘ, and three headers had reserved their right edge for the chevron alone — the ⓘ
+    /* THE ⓘ TAKES ITS SEAT IN THE HEADER (261012d — ruled by Daniel): since 261012b (and, from 261013, each card's own
+     * explanation), a panel that never had prose has an ⓘ, and three headers had reserved their right edge for the chevron alone — the ⓘ
      * lay over the Mixer's repeat and two Tetradetudes ⏭. A panel given an ⓘ reserves ⓘ + chevron (66 px, the
      * readout headers' figure) on its header band. Inline, as the header slot is placed: a stylesheet rule would
      * orphan in every door whose panels never grow an ⓘ. A header already reserving more keeps its own. */
@@ -372,17 +369,12 @@ export function boot(MODULES, door, doc) {
   doc.getElementById("doorTitle").textContent = door.present.title;
   doc.getElementById("doorTag").textContent = door.present.blurb;
   doc.getElementById("doorFoot").textContent = door.present.footer || "";
-  const about = [];
   const ctx = { door, doc, byId,
     /** modules report state changes here; the shell owns no readout of its
      * own, so this is a no-op seam the host page can take over */
-    changed() {},
-    /** A SENTENCE EVERY PANEL'S ⓘ CARRIES (261012b): a module that owns a claim about the whole page states it once
-     * here; the shell appends it to each panel's static prose (skip: the module's own panels). Door-aware by
-     * construction — a door that prunes the module never hears the claim. */
-    aboutEveryPanel(text, { skip = () => false } = {}) { about.push({ text, skip }); } };
+    changed() {} };
   for (const m of MODULES) m.mount(ctx);
-  initInfo(doc, about);
+  initInfo(doc);
   initCollapse(doc);
   return ctx;
 }

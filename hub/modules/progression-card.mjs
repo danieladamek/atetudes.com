@@ -89,7 +89,9 @@ export const progressionCard = {
     title="the pad holds no chart block yet">From the note's chart</button>
   <label class="pg-cyc">Start on</label>
   <select id="pgStart" data-control="pgStart" class="pg-cyc"></select>
-  <div class="hint" id="pgNote"></div>`,
+  <div class="hint" id="pgNote"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card says what is played, over which chords. The object names the material — a scale or mode, a dyad, triad or tetrad, a 9th, 11th or 13th chord, or a shell — and the tones beneath list it by role (R, 3, 5, 7…): type fewer to narrow it, or others and the object renames itself to match. The chords come from a cycle (with the degree it starts on), a stock form, or your own: romans or chord symbols, one per bar, or chord symbols between | bar lines |; when your note holds a chart block, one click brings it in. The bar split, tempo and click along the top are the same clock as everywhere else on the page.</div>`,
 
   styles: `
 .pg-clock{margin:0 0 10px}

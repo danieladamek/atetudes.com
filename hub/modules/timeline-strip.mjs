@@ -53,7 +53,9 @@ export const timelineStrip = {
   markup: `
   <div class="bh"><span>The chart line</span></div>
   <span class="clpsum">the chart line</span>
-  <div id="tlScroll" data-control="tlScroll"></div>`,
+  <div id="tlScroll" data-control="tlScroll"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The whole progression in one row: one chip per chord, as wide as the beats it lasts. The dot is the root's degree colour in the key (no dot means the root is outside the key), and the numeral under the symbol is its function. Click a chip to jump there; the row scrolls to keep the current bar in view. When a reference tone sits under a chord, a second line names the chord that stack makes.</div>`,
 
   /* the strip's rules are the family's, scoped under this strip; the sub-line rules
    * because this host derives a sub-line. This module owns no rules of its own: the

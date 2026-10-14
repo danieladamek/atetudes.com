@@ -50,7 +50,9 @@ export const neckReadout = {
   layer: "surface",
   requires: { surface: "multetudes" },
   mount_point: "boards",
-  order: 19,
+  /* 18.1 since 261013 (Daniel): On the neck → The readout → Tuning → Mixer — the readout reads the neck, so it sits
+   * directly under it; it was 19, after the Mixer */
+  order: 18.1,
   controls: ["roLine", "roAssert"],
 
   /* THE HEADER BAND (night 85 — the shell rule: every panel has a header, the chevron's only seat; this board had none,
@@ -59,7 +61,9 @@ export const neckReadout = {
   <div class="bh"><span>The readout</span></div>
   <span class="clpsum">the readout</span>
   <div class="ro-line" id="roLine" data-control="roLine"></div>
-  <div class="ro-assert" id="roAssert" data-control="roAssert"></div>`,
+  <div class="ro-assert" id="roAssert" data-control="roAssert"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The neck, in words, for the bar you're on: the key or mode and its notes, the bar and its chord, where the frame sits and how many notes it holds, which strings and how the notes fall across them, how they sound, and what the figure, the reference tone, the sounded bass and the pad are doing. Read it left to right; it changes with every bar and every control. Anything that couldn't be placed is said in red. Nothing here is clickable.</div>`,
 
   styles: `
 .ro-line{font-size:13px;line-height:1.6;color:var(--ink)}

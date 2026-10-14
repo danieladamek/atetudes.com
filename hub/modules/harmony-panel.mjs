@@ -93,7 +93,9 @@ export const harmonyPanel = {
       </div>
       <div class="hint" id="hpRule"></div>
     </div>
-  </div>`,
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card sets the key and its scale, and the progression that walks through them: a cycle of 4ths, 6ths, 3rds or 5ths, or up the scale, with the rule it follows written underneath. Choose the chord it starts on, and which chord tone sits lowest in the first voicing — after that, the voice-leading decides. The last list puts the root under every voicing as a pedal, heard and drawn on the score and the keys, or leaves the voicings alone.</div>`,
 
   /* the strip grammar (`striprow`, `grp`, `seg`) lived here while this was its
    * only user and was PROMOTED to the shell the moment Shape & Motion became

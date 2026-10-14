@@ -208,7 +208,9 @@ export const shapeMotion = {
     </div>
   </div>
   <div class="hint" id="smHint"></div>
-  <div class="smNote" id="smWhy"></div>`,
+  <div class="smNote" id="smWhy"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card shapes each voicing and how it moves. Pick the four strings and the voicing family (close, drop-2 or drop-3); a figure — a preset, or your own typed as string numbers (pattern) or roles (tones), separated by dashes — turns each chord into a line. Grip keeps one note per string anchored to the zone on the neck; Free takes the smoothest voice-leading. Strum, arpeggiate or both sets how it sounds, and the two checkboxes mark the roots on the lower strings and dim R and 5 to leave the guide tones.</div>`,
 
   /* `sm` tokens anchor every rule; the strip grammar is the harmony panel's
    * until the resolver promotes it (this module is that second user). */

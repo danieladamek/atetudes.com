@@ -565,9 +565,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
   <div class="clpsum" id="metroSum">A metronome on its own clock — with or without the étude.</div>
-  <div class="hint info">A full metronome on its own clock — use it with or without the étude.
-  The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
-  metronome, first block, this look.)</div></div>
+  <div class="hint info">A full metronome on its own clock — use it with or without the étude. The étude subscribes to this grid. (Shared component: every At-Etudes app carries this metronome, first block, this look.) Its first button starts and stops the click (stopping it stops the étude too); tap the second in time to set the tempo, or type or slide it, 15 to 300. The time signature and subdivision are the grid the étude walks on, the accent marks each bar's first beat, and the speaker mutes the click — muted is the volume at zero.</div></div>
 <div class="board">
   <div class="bh"><span>Notepad</span></div><div class="jcol" id="noteCol">
       <!-- THE DOCUMENT'S TITLE (260913b, item 2 — D11 unblocked): fills
@@ -683,7 +681,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        mode only — fixed (a pedal) or following the changes; the value is
        derived per bar by every consumer, never stored resolved -->
   <div class="seg hc-srcseg" id="hcCentreSrc" data-control="hcCentreSrc" hidden></div>
-  <div class="hint" id="hcNote"></div></div>
+  <div class="hint" id="hcNote"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card sets the ground everything stands on: the key and its scale — major, harmonic minor or melodic minor — and so the seven notes the neck draws faintly. When the object is a scale, you can narrow those seven to a pentatonic, a pair of triads or any set of degrees, from the list or by clicking the note buttons, and choose the centre the mode is read from: held as a pedal, or following each chord's root. Under a chord the note buttons can't be clicked; they light as the étude plays each tone, with its role above it.</div></div>
 <div class="card">
   <h2>Progression</h2>
   <!-- THE CLOCK, SEATED HERE (night 69 — ruling 261026, D5 approved): a second VIEW of the clock (hub/clock.mjs),
@@ -716,7 +716,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     title="the pad holds no chart block yet">From the note's chart</button>
   <label class="pg-cyc">Start on</label>
   <select id="pgStart" data-control="pgStart" class="pg-cyc"></select>
-  <div class="hint" id="pgNote"></div></div>
+  <div class="hint" id="pgNote"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card says what is played, over which chords. The object names the material — a scale or mode, a dyad, triad or tetrad, a 9th, 11th or 13th chord, or a shell — and the tones beneath list it by role (R, 3, 5, 7…): type fewer to narrow it, or others and the object renames itself to match. The chords come from a cycle (with the degree it starts on), a stock form, or your own: romans or chord symbols, one per bar, or chord symbols between | bar lines |; when your note holds a chart block, one click brings it in. The bar split, tempo and click along the top are the same clock as everywhere else on the page.</div></div>
 <div class="card">
   <h2>Settings</h2>
   <!-- A VIEW OF THE TRANSPORT (night 69 — ruling 261026, D5 approved): one more mini host (hub/mini.mjs). One press,
@@ -726,9 +728,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
   <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
-  <div class="hint ps-note info">A preset seeds every control and leaves them all live. The journal
-  page's exercises are here as the engine grows into them; the key, the scale and the reference stay
-  whatever you set them to.</div></div>
+  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here.</div></div>
 </div>
 <div class="cards" hidden></div>
 </div>
@@ -737,7 +737,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div id="boards"><div class="board">
   <div class="bh"><span>The chart line</span></div>
   <span class="clpsum">the chart line</span>
-  <div id="tlScroll" data-control="tlScroll"></div></div>
+  <div id="tlScroll" data-control="tlScroll"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The whole progression in one row: one chip per chord, as wide as the beats it lasts. The dot is the root's degree colour in the key (no dot means the root is outside the key), and the numeral under the symbol is its function. Click a chip to jump there; the row scrolls to keep the current bar in view. When a reference tone sits under a chord, a second line names the chord that stack makes.</div></div>
 <div class="board">
   <!-- THE HEADER (260919, night 25 item 1 — ruled): the harmonic readout is
        the neck's LABEL, so it sits in the board header immediately after the
@@ -854,17 +856,16 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
        Mixer — night 58's move made again. Every moved control kept its id, its message and its state; this board
        still paints the steppers and the names and owns the tuning (the field's fact). The under-neck band went
        with them: it held nothing else. -->
-  <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
-  owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
-  deliberately: a line, an arpeggio and a block chord are all harmonic relationships, and "chord"
-  is too narrow for what this app puts on the neck. <b>Bass tone:</b> the root by default; any
-  tone the object holds may sit in the bass instead; <b>a 3rd below</b> or <b>a 5th below</b> place a
-  scale tone beneath the chord — a triad over a 3rd below is a seventh chord, and the readout
-  names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
-  <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.
-  Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window.</div>
+  <div class="hint info">The neck draws the key's notes faintly and this bar's notes in full colour, by their function (the line under the neck says against what); click any note to hear it. The rail beside it shapes the motif: one note per string or a line of three, one of each tone or every one in the box, strummed or arpeggiated, and an optional figure — string numbers as a pattern, or roles like R-3-7-5 as tones. The bar split, tempo and metronome checkbox in the header are the same clock the Metronome card owns. Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window.</div>
   <div class="hint" id="fdHint"></div>
   <div class="legend" id="fdLegend"></div></div>
+<div class="board">
+  <div class="bh"><span>The readout</span></div>
+  <span class="clpsum">the readout</span>
+  <div class="ro-line" id="roLine" data-control="roLine"></div>
+  <div class="ro-assert" id="roAssert" data-control="roAssert"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The neck, in words, for the bar you're on: the key or mode and its notes, the bar and its chord, where the frame sits and how many notes it holds, which strings and how the notes fall across them, how they sound, and what the figure, the reference tone, the sounded bass and the pad are doing. Read it left to right; it changes with every bar and every control. Anything that couldn't be placed is said in red. Nothing here is clickable.</div></div>
 <div class="board clpsd">
   <div class="bh"><span>Tuning</span></div>
   <span class="clpsum" id="tnSum"></span>
@@ -886,7 +887,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <div class="fd-railrow fd-tunerow">
     <span class="fd-lab2">named</span>
     <div id="fdTuneNames" data-control="fdTuneNames"></div>
-  </div></div>
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">Retune the six strings for this étude; the neck and the sound follow. Step any string a semitone down or up, or all six together; the named row sets a whole tuning in one click, and standard is always one click back. A step that would cross the next string or leave its six-semitone range doesn't happen — it says why, under that string. Shut, the card's line names the tuning, so an altered neck is never hidden.</div></div>
 <div class="board">
   <!-- A SEVENTH VIEW OF THE TRANSPORT (night 62, 261014b — Daniel, ruled: "a second view is what I intended";
        "the user can start and stop wherever they are"): hub/mini.mjs's cluster mounted in this board's header,
@@ -935,25 +938,22 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       <input type="range" id="fdPadVol" data-control="fdPadVol" min="0" max="100" value="100" aria-label="pad level">
       <span class="mx-val" id="fdPadVal">100</span>
     </div>
-  </div></div>
-<div class="board">
-  <div class="bh"><span>The readout</span></div>
-  <span class="clpsum">the readout</span>
-  <div class="ro-line" id="roLine" data-control="roLine"></div>
-  <div class="ro-assert" id="roAssert" data-control="roAssert"></div></div>
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">What sounds, and how loud. The first list picks the instrument sound for the notes; each slider sets one level — the harmony, the bass, the pad — and its speaker mutes it (muted is the slider at zero). The reference tone is a fretted note on string 5 or 6 under the harmony — the root, another chosen tone, or a scale tone a 3rd or 5th below — and the readout names the chord the stack makes over it; the sounded bass is a pitch with no string, never drawn, that plays under any set of strings. The pad holds the bar's chord above the guitar, also never drawn.</div></div>
 <div class="board">
   <div class="bh readhead"><span>The étude — end to end</span><div class="readbox" id="stMode" data-control="stMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="stMini" data-control="stMini"></span></div>
-  <div class="hint info">Treble carries the material, written an octave above where it sounds —
-  the 8 under the clef. The bass clef carries the reference tone, at sounding pitch, when one is
-  chosen; the full progression of bars arrives with child 7. Until then the étude holds one bar.</div>
+  <div class="hint info">Every bar of the étude, the current one shaded. Treble carries the material, written an octave above where it sounds — the 8 under the clef — in degree colours, each note with its role; arpeggios and figures are written as runs, and a bar that can't be placed says why in red. The bass clef carries the reference tone, at sounding pitch, when one is chosen. Click a note to hear it, or anywhere else in a bar to jump there.</div>
   <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>
   <div class="legend" id="stLegend"></div></div>
 <div class="board">
   <div class="bh readhead"><span>On the keys</span><div class="readbox" id="kyMode" data-control="kyMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="kyMini" data-control="kyMini"></span></div>
   <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>
-  <div class="legend" id="kyLegend"></div></div>
+  <div class="legend" id="kyLegend"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This bar's notes on a piano, C2 to C6: dots in their degree colours, each labelled with its role, and the reference tone as a dashed ring. A key rings as its note sounds. Click any key to hear it.</div></div>
 <div class="board">
   <div class="bh"><span>Practice log — <span id="histCount" data-control="histCount">0</span> saved</span>
     <span id="storeNote" data-control="storeNote" class="storenote"></span></div>
@@ -9431,15 +9431,7 @@ const fieldBoard = {
        Mixer — night 58's move made again. Every moved control kept its id, its message and its state; this board
        still paints the steppers and the names and owns the tuning (the field's fact). The under-neck band went
        with them: it held nothing else. -->
-  <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
-  owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
-  deliberately: a line, an arpeggio and a block chord are all harmonic relationships, and "chord"
-  is too narrow for what this app puts on the neck. <b>Bass tone:</b> the root by default; any
-  tone the object holds may sit in the bass instead; <b>a 3rd below</b> or <b>a 5th below</b> place a
-  scale tone beneath the chord — a triad over a 3rd below is a seventh chord, and the readout
-  names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
-  <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.
-  Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window.</div>
+  <div class="hint info">The neck draws the key's notes faintly and this bar's notes in full colour, by their function (the line under the neck says against what); click any note to hear it. The rail beside it shapes the motif: one note per string or a line of three, one of each tone or every one in the box, strummed or arpeggiated, and an optional figure — string numbers as a pattern, or roles like R-3-7-5 as tones. The bar split, tempo and metronome checkbox in the header are the same clock the Metronome card owns. Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window.</div>
   <div class="hint" id="fdHint"></div>
   <div class="legend" id="fdLegend"></div>`,
 
@@ -10830,7 +10822,9 @@ const harmonyCard = {
        mode only — fixed (a pedal) or following the changes; the value is
        derived per bar by every consumer, never stored resolved -->
   <div class="seg hc-srcseg" id="hcCentreSrc" data-control="hcCentreSrc" hidden></div>
-  <div class="hint" id="hcNote"></div>`,
+  <div class="hint" id="hcNote"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card sets the ground everything stands on: the key and its scale — major, harmonic minor or melodic minor — and so the seven notes the neck draws faintly. When the object is a scale, you can narrow those seven to a pentatonic, a pair of triads or any set of degrees, from the list or by clicking the note buttons, and choose the centre the mode is read from: held as a pedal, or following each chord's root. Under a chord the note buttons can't be clicked; they light as the étude plays each tone, with its role above it.</div>`,
 
   styles: `
 /* THE 390 GRID (night 59 — the precondition, raised 260922): a 1fr track carries min-width:auto and cannot
@@ -11290,7 +11284,9 @@ const keysBoard = {
   <div class="bh readhead"><span>On the keys</span><div class="readbox" id="kyMode" data-control="kyMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="kyMini" data-control="kyMini"></span></div>
   <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>
-  <div class="legend" id="kyLegend"></div>`,
+  <div class="legend" id="kyLegend"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This bar's notes on a piano, C2 to C6: dots in their degree colours, each labelled with its role, and the reference tone as a dashed ring. A key rings as its note sounds. Click any key to hear it.</div>`,
 
   styles: `
 #kySvg{width:100%;height:auto;display:block}
@@ -11648,9 +11644,7 @@ const metronomeCard = {
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
   <div class="clpsum" id="metroSum">A metronome on its own clock — with or without the étude.</div>
-  <div class="hint info">A full metronome on its own clock — use it with or without the étude.
-  The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
-  metronome, first block, this look.)</div>`,
+  <div class="hint info">A full metronome on its own clock — use it with or without the étude. The étude subscribes to this grid. (Shared component: every At-Etudes app carries this metronome, first block, this look.) Its first button starts and stops the click (stopping it stops the étude too); tap the second in time to set the tempo, or type or slide it, 15 to 300. The time signature and subdivision are the grid the étude walks on, the accent marks each bar's first beat, and the speaker mutes the click — muted is the volume at zero.</div>`,
 
   /* Every rule names `metro`, `metrolabel`, `metroval`, `row2`,
    * `chk`, `bpmrow` or a control id — tokens no other module ships today. The
@@ -12005,7 +11999,9 @@ const mixerStrip = {
       <input type="range" id="fdPadVol" data-control="fdPadVol" min="0" max="100" value="100" aria-label="pad level">
       <span class="mx-val" id="fdPadVal">100</span>
     </div>
-  </div>`,
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">What sounds, and how loud. The first list picks the instrument sound for the notes; each slider sets one level — the harmony, the bass, the pad — and its speaker mutes it (muted is the slider at zero). The reference tone is a fretted note on string 5 or 6 under the harmony — the root, another chosen tone, or a scale tone a 3rd or 5th below — and the readout names the chord the stack makes over it; the sounded bass is a pitch with no string, never drawn, that plays under any set of strings. The pad holds the bar's chord above the guitar, also never drawn.</div>`,
 
   /* the row grammar is the neck's under-neck row, re-stated as this board's own tokens (a module
    * styles only its own markup); the level row is the shell's .bpmrow with a mute icon per slider */
@@ -12190,7 +12186,9 @@ const neckReadout = {
   layer: "surface",
   requires: { surface: "multetudes" },
   mount_point: "boards",
-  order: 19,
+  /* 18.1 since 261013 (Daniel): On the neck → The readout → Tuning → Mixer — the readout reads the neck, so it sits
+   * directly under it; it was 19, after the Mixer */
+  order: 18.1,
   controls: ["roLine", "roAssert"],
 
   /* THE HEADER BAND (night 85 — the shell rule: every panel has a header, the chevron's only seat; this board had none,
@@ -12199,7 +12197,9 @@ const neckReadout = {
   <div class="bh"><span>The readout</span></div>
   <span class="clpsum">the readout</span>
   <div class="ro-line" id="roLine" data-control="roLine"></div>
-  <div class="ro-assert" id="roAssert" data-control="roAssert"></div>`,
+  <div class="ro-assert" id="roAssert" data-control="roAssert"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The neck, in words, for the bar you're on: the key or mode and its notes, the bar and its chord, where the frame sits and how many notes it holds, which strings and how the notes fall across them, how they sound, and what the figure, the reference tone, the sounded bass and the pad are doing. Read it left to right; it changes with every bar and every control. Anything that couldn't be placed is said in red. Nothing here is clickable.</div>`,
 
   styles: `
 .ro-line{font-size:13px;line-height:1.6;color:var(--ink)}
@@ -14392,16 +14392,11 @@ const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
  * one rule, in the enumeration's index order (a sliding window of four down the six strings) */
 const SET_LABELS = [0, 1, 2].map((offset) => setLabel([6, 5, 4, 3].map((n) => n - offset), OPEN_MIDI, OPEN_MIDI));
 
-/* HOW A TAKE IS SAVED, SAID ON EVERY CARD (261012b — Daniel: "add instructions/information to every card including the
- * notepad"). Written ONCE, here, because the claim is this card's: on a door that locks the notepad out there is no log,
- * the sentence would be false, and the module that would say it is not mounted. The shell places it in every other
- * panel's ⓘ (ctx.aboutEveryPanel). Only what the code does: the pad lives in this tab until saved (nothing writes it as
- * you type); a saved entry is the note plus the whole étude (hub/etude-record.mjs), in this browser's storage under the
- * door's key; Export, Copy and Import all speak one .atchart.md. RULE 14 (ruled by Daniel, 261012b): no caption is
- * quoted — the captions are "Save note", "Restore étude", "Export (.atchart.md)", and a sentence quoting them goes stale
- * the day one is renamed; these name the actions. */
-const SAVED_WITH_EACH_TAKE = "Everything set here is saved with each take: saving a note in the notepad files it " +
-  "in the Practice log at the bottom of the page, where any take can be brought back or written out as a file.";
+/* THE NOTEPAD'S ⓘ (261012b, ruled by Daniel): only what the code does — the pad lives in this tab until saved (nothing
+ * writes it as you type); a saved entry is the note plus the whole étude (hub/etude-record.mjs), in this browser's storage
+ * under the door's key; Export, Copy and Import all speak one .atchart.md. Caption-free (rule 14). 261012b also put one
+ * save sentence on every OTHER card through a shell seam; 261013 removed both (Daniel: "no need to say in every info popout
+ * that the info will be saved in the practice log") — each card's ⓘ now explains its own card. */
 const NOTEPAD_ABOUT = "Type here as you practise; the note stays in this tab until you save it. Saving files it, " +
   "with every card's settings, in the Practice log at the bottom of the page, kept in this browser on this computer and " +
   "never uploaded. From the log, any take can be brought back or downloaded. Exporting, copying and importing all use " +
@@ -14542,9 +14537,8 @@ const notepadCard = {
     const KEY = doorId + ".v1.log";          // the door's OWN namespace, derived
 
     /* THE ⓘ PROSE (261012b): the pad's and the log's own panels carry NOTEPAD_ABOUT — each column gets it, once per panel
-     * (one panel on a door that keeps them together, two where the pad is seated in a row); every OTHER panel carries
-     * SAVED_WITH_EACH_TAKE through the shell. Static prose, so it is .info: the shell moves it into the ⓘ. Written into
-     * this card's own columns only — the other panels are the shell's to touch, not this card's. */
+     * (one panel on a door that keeps them together, two where the pad is seated in a row). Static prose, so it is .info:
+     * the shell moves it into the ⓘ. Written into this card's own columns only. */
     {
       const mine = [byId("noteCol"), byId("logCol")];
       const panelOf = (col) => col.closest(".card, .board");
@@ -14556,7 +14550,6 @@ const notepadCard = {
         about.className = "hint info"; about.textContent = NOTEPAD_ABOUT;
         col.appendChild(about);
       }
-      ctx.aboutEveryPanel(SAVED_WITH_EACH_TAKE, { skip: (p) => mine.some((col) => p.contains(col)) });
     }
 
     /* the last configuration heard on the bus, merged across its owners — the
@@ -14804,7 +14797,7 @@ const notepadCard = {
     byId("npTitle").placeholder = fallback();
   },
 };
-return { SET_LABELS, SAVED_WITH_EACH_TAKE, NOTEPAD_ABOUT, notepadCard };
+return { SET_LABELS, NOTEPAD_ABOUT, notepadCard };
 })();
 
 /* ===== hub/etude-describe.mjs ===== */
@@ -14988,9 +14981,7 @@ const presetsCard = {
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
   <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
-  <div class="hint ps-note info">A preset seeds every control and leaves them all live. The journal
-  page's exercises are here as the engine grows into them; the key, the scale and the reference stay
-  whatever you set them to.</div>`,
+  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here.</div>`,
 
   styles: `
 .ps-miniseat{margin:0 0 8px}
@@ -15189,7 +15180,9 @@ const progressionCard = {
     title="the pad holds no chart block yet">From the note's chart</button>
   <label class="pg-cyc">Start on</label>
   <select id="pgStart" data-control="pgStart" class="pg-cyc"></select>
-  <div class="hint" id="pgNote"></div>`,
+  <div class="hint" id="pgNote"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card says what is played, over which chords. The object names the material — a scale or mode, a dyad, triad or tetrad, a 9th, 11th or 13th chord, or a shell — and the tones beneath list it by role (R, 3, 5, 7…): type fewer to narrow it, or others and the object renames itself to match. The chords come from a cycle (with the degree it starts on), a stock form, or your own: romans or chord symbols, one per bar, or chord symbols between | bar lines |; when your note holds a chart block, one click brings it in. The bar split, tempo and click along the top are the same clock as everywhere else on the page.</div>`,
 
   styles: `
 .pg-clock{margin:0 0 10px}
@@ -15470,9 +15463,7 @@ const staffBoard = {
   markup: `
   <div class="bh readhead"><span>The étude — end to end</span><div class="readbox" id="stMode" data-control="stMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="stMini" data-control="stMini"></span></div>
-  <div class="hint info">Treble carries the material, written an octave above where it sounds —
-  the 8 under the clef. The bass clef carries the reference tone, at sounding pitch, when one is
-  chosen; the full progression of bars arrives with child 7. Until then the étude holds one bar.</div>
+  <div class="hint info">Every bar of the étude, the current one shaded. Treble carries the material, written an octave above where it sounds — the 8 under the clef — in degree colours, each note with its role; arpeggios and figures are written as runs, and a bar that can't be placed says why in red. The bass clef carries the reference tone, at sounding pitch, when one is chosen. Click a note to hear it, or anywhere else in a bar to jump there.</div>
   <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>
   <div class="legend" id="stLegend"></div>`,
 
@@ -16070,7 +16061,9 @@ const timelineStrip = {
   markup: `
   <div class="bh"><span>The chart line</span></div>
   <span class="clpsum">the chart line</span>
-  <div id="tlScroll" data-control="tlScroll"></div>`,
+  <div id="tlScroll" data-control="tlScroll"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The whole progression in one row: one chip per chord, as wide as the beats it lasts. The dot is the root's degree colour in the key (no dot means the root is outside the key), and the numeral under the symbol is its function. Click a chip to jump there; the row scrolls to keep the current bar in view. When a reference tone sits under a chord, a second line names the chord that stack makes.</div>`,
 
   /* the strip's rules are the family's, scoped under this strip; the sub-line rules
    * because this host derives a sub-line. This module owns no rules of its own: the
@@ -16245,7 +16238,9 @@ const tuningStrip = {
   <div class="fd-railrow fd-tunerow">
     <span class="fd-lab2">named</span>
     <div id="fdTuneNames" data-control="fdTuneNames"></div>
-  </div>`,
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">Retune the six strings for this étude; the neck and the sound follow. Step any string a semitone down or up, or all six together; the named row sets a whole tuning in one click, and standard is always one click back. A step that would cross the next string or leave its six-semitone range doesn't happen — it says why, under that string. Shut, the card's line names the tuning, so an altered neck is never hidden.</div>`,
 
   styles: `
 .fd-tunerow{display:flex;gap:9px;align-items:center;padding:8px 2px 2px;font-size:12px;color:var(--gray);flex-wrap:wrap}
@@ -16617,7 +16612,7 @@ function initCollapse(doc) {
  * and by Escape — never a browser modal (the file:// gate forbids a dialog).
  * Keyboard-reachable (a real button) and labelled, since the popout is now the
  * only route to that text. A panel with no static prose gets no button. */
-function initInfo(doc, about) {
+function initInfo(doc) {
   let openBtn = null, openPop = null;
   const close = () => {
     if (openPop) { openPop.hidden = true; openBtn.setAttribute("aria-expanded", "false"); }
@@ -16626,9 +16621,6 @@ function initInfo(doc, about) {
   let n = 0;
   for (const p of doc.querySelectorAll(".card, .board")) {
     const prose = [...p.querySelectorAll(".info")];
-    /* PROSE A MODULE SAYS OF EVERY PANEL (261012b): appended after the panel's own, so a panel with none grows an ⓘ */
-    for (const a of about)
-      if (!a.skip(p)) { const el = doc.createElement("div"); el.className = "hint info"; el.textContent = a.text; prose.push(el); }
     if (!prose.length) continue;
     const pop = doc.createElement("div");
     pop.className = "infoPop"; pop.hidden = true; pop.id = "infoPop-" + (++n);
@@ -16646,8 +16638,8 @@ function initInfo(doc, about) {
       if (willOpen) { pop.hidden = false; btn.setAttribute("aria-expanded", "true"); openBtn = btn; openPop = pop; }
     });
     p.appendChild(btn);
-    /* THE ⓘ TAKES ITS SEAT IN THE HEADER (261012d — ruled by Daniel): since 261012b's every-panel sentence, a panel
-     * that never had prose has an ⓘ, and three headers had reserved their right edge for the chevron alone — the ⓘ
+    /* THE ⓘ TAKES ITS SEAT IN THE HEADER (261012d — ruled by Daniel): since 261012b (and, from 261013, each card's own
+     * explanation), a panel that never had prose has an ⓘ, and three headers had reserved their right edge for the chevron alone — the ⓘ
      * lay over the Mixer's repeat and two Tetradetudes ⏭. A panel given an ⓘ reserves ⓘ + chevron (66 px, the
      * readout headers' figure) on its header band. Inline, as the header slot is placed: a stylesheet rule would
      * orphan in every door whose panels never grow an ⓘ. A header already reserving more keeps its own. */
@@ -16665,17 +16657,12 @@ function boot(MODULES, door, doc) {
   doc.getElementById("doorTitle").textContent = door.present.title;
   doc.getElementById("doorTag").textContent = door.present.blurb;
   doc.getElementById("doorFoot").textContent = door.present.footer || "";
-  const about = [];
   const ctx = { door, doc, byId,
     /** modules report state changes here; the shell owns no readout of its
      * own, so this is a no-op seam the host page can take over */
-    changed() {},
-    /** A SENTENCE EVERY PANEL'S ⓘ CARRIES (261012b): a module that owns a claim about the whole page states it once
-     * here; the shell appends it to each panel's static prose (skip: the module's own panels). Door-aware by
-     * construction — a door that prunes the module never hears the claim. */
-    aboutEveryPanel(text, { skip = () => false } = {}) { about.push({ text, skip }); } };
+    changed() {} };
   for (const m of MODULES) m.mount(ctx);
-  initInfo(doc, about);
+  initInfo(doc);
   initCollapse(doc);
   return ctx;
 }
@@ -16684,7 +16671,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip, __m_hub_modules_tuning_strip_mjs.tuningStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.7","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.8","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

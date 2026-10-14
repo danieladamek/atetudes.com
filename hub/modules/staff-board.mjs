@@ -53,9 +53,7 @@ export const staffBoard = {
   markup: `
   <div class="bh readhead"><span>The étude — end to end</span><div class="readbox" id="stMode" data-control="stMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="stMini" data-control="stMini"></span></div>
-  <div class="hint info">Treble carries the material, written an octave above where it sounds —
-  the 8 under the clef. The bass clef carries the reference tone, at sounding pitch, when one is
-  chosen; the full progression of bars arrives with child 7. Until then the étude holds one bar.</div>
+  <div class="hint info">Every bar of the étude, the current one shaded. Treble carries the material, written an octave above where it sounds — the 8 under the clef — in degree colours, each note with its role; arpeggios and figures are written as runs, and a bar that can't be placed says why in red. The bass clef carries the reference tone, at sounding pitch, when one is chosen. Click a note to hear it, or anywhere else in a bar to jump there.</div>
   <svg id="stSvg" data-control="stSvg" viewBox="0 0 1290 240" aria-label="the étude"></svg>
   <div class="legend" id="stLegend"></div>`,
 

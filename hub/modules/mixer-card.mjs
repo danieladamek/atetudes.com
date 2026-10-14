@@ -43,9 +43,7 @@ export const mixerCard = {
     <span class="mxVal" id="bassVolVal">100</span>
   </div>
   <div class="clpsum">What sounds — the voice, and each bus's level.</div>
-  <div class="hint info">Each slider's speaker icon mutes that bus — the icon is the slider at zero.
-  A muted chord with bass and click sounding is play-along: you supply the voicings. The click's own
-  level lives in the Metronome card — the metronome owns its sound.</div>`,
+  <div class="hint info">What sounds, and how loud: the first list picks the instrument sound for the voicings, and the two sliders set the chord's level and the bass's. Each slider's speaker icon mutes it — the icon is the slider at zero. A muted chord with bass and click sounding is play-along: you supply the voicings. The click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
   styles: `
 .mxVoice select{width:auto;padding:3px 6px;margin-left:4px}

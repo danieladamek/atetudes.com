@@ -42,7 +42,9 @@ export const keyboardStrip = {
   markup: `
   <span id="kbMini" data-control="kbMini"></span>
   <div class="bh"><span>On the keys</span></div>
-  <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>`,
+  <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This chord on a piano, C2 to C6: the four voicing notes as dots in their degree colours, each labelled, and the root below them when the pedal is on. Click any key to hear it.</div>`,
   styles: `#kbd rect{cursor:pointer}
 /* right:70px since 261012d — 44 cleared the chevron alone; the save sentence gave this board an ⓘ (right:38) that lay over ⏭ */
 #kbMini{position:absolute;top:7px;right:70px;display:flex;gap:4px;z-index:6}

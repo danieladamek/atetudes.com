@@ -5355,13 +5355,14 @@ console.log(JSON.stringify(out));
         face = page.query_selector("#handoffNote")
         check(face is not None and "nothing is uploaded" in face.inner_text() and face.is_visible(),
               f"{tag} the privacy guarantee is not visible on the notepad face")
-    # ---- 261012b item 2: EVERY panel says how a take is saved — where the notepad is, and nowhere where it is not ----
-    # The two sentences are read from the module's exports (rule 6), never retyped here. Door-aware: the notepad's own
-    # panels carry NOTEPAD_ABOUT, every other panel SAVED_WITH_EACH_TAKE; a door without the notepad carries neither.
+    # ---- 261012b item 2, CORRECTED 261013: every panel has an ⓘ that explains ITSELF; only the notepad's own panels
+    # speak of saving. 261012b put one save sentence on every panel (the PO's misread of the brief — Daniel, 261013:
+    # "no need to say in every info popout that the info will be saved in the practice log"). NOTEPAD_ABOUT is read from
+    # the module's export (rule 6); the rest of the panels must not mention the Practice log at all.
     _ab = subprocess.run(["node", "--input-type=module", "-e",
-        "const m = await import('./hub/modules/notepad-card.mjs'); console.log(JSON.stringify([m.SAVED_WITH_EACH_TAKE, m.NOTEPAD_ABOUT]))"],
+        "const m = await import('./hub/modules/notepad-card.mjs'); console.log(JSON.stringify(m.NOTEPAD_ABOUT))"],
         capture_output=True, text=True, cwd=REPO)
-    saved_line, pad_about = json.loads(_ab.stdout)
+    pad_about = json.loads(_ab.stdout)
     per_panel = page.evaluate("""() => [...document.querySelectorAll('.card, .board')].map(p => ({
         name: ((p.querySelector('h2, .bh span') || {}).textContent || '?').replace(/\\s+/g, ' ').trim().slice(0, 40),
         btn: !!__may(() => p.querySelector(':scope > .infoBtn'), 'a panel without an ⓘ is the finding, named below'),
@@ -5371,9 +5372,11 @@ console.log(JSON.stringify(out));
         check(len(per_panel) >= 2 and all(x["btn"] for x in per_panel),
               f"{tag} 261012b: every panel shows an ⓘ on a door with the notepad: {[x['name'] for x in per_panel if not x['btn']]}")
         for x in per_panel:
-            want, other = (pad_about, saved_line) if x["mine"] else (saved_line, pad_about)
-            check(x["prose"].count(want) == 1 and other not in x["prose"],
-                  f"{tag} 261012b: panel {x['name']!r}'s ⓘ carries {'the notepad paragraph' if x['mine'] else 'the save sentence'} once, and not the other: {x['prose'][-2:]}")
+            if x["mine"]:
+                check(x["prose"].count(pad_about) == 1, f"{tag} 261012b: the notepad panel {x['name']!r}'s ⓘ carries the notepad paragraph once, unchanged: {x['prose'][-1:]}")
+            else:
+                check(pad_about not in x["prose"] and not any("Practice log" in t for t in x["prose"]) and len(" ".join(x["prose"])) >= 80,
+                      f"{tag} 261013: panel {x['name']!r}'s ⓘ explains its own card and never mentions the Practice log: {[t[:90] for t in x['prose']]}")
         check(sum(x["mine"] for x in per_panel) >= 1, f"{tag} 261012b: no panel holds the notepad — the paragraph's site was not found")
         ta = page.query_selector("#journalIn")
         check(ta.get_attribute("placeholder") == "Type your session notes here in plain text.",
@@ -5388,8 +5391,8 @@ console.log(JSON.stringify(out));
         if side is not None and side["sideBySide"]:
             check(abs(side["taTop"] - side["colTop"]) <= 2, f"{tag} 261012b: with the head gone the note box's top meets the log column's top: {side}")
     else:
-        check(all(saved_line not in x["prose"] and pad_about not in x["prose"] for x in per_panel),
-              f"{tag} 261012b: a door without the notepad says nothing about saving a take — the sentence would be false here")
+        check(all(pad_about not in x["prose"] and not any("Practice log" in t for t in x["prose"]) for x in per_panel),
+              f"{tag} 261012b/261013: a door without the notepad never speaks of the Practice log")
     # ---- 261012d: NO ⓘ LIES OVER A CONTROL — 261012b's every-panel ⓘ landed on three headers whose right edge was
     # reserved for the chevron alone (the Mixer's repeat, Tetradetudes' keys and étude ⏭). Every door, 1280 and 390.
     info_cover = """() => { const out = []; let seen = 0; for (const p of document.querySelectorAll('.card, .board')) {
@@ -6509,7 +6512,15 @@ console.log(JSON.stringify(out));
         check(seat["mixer"] and seat["rows"] == 3, f"{tag} the Mixer board exists below the neck with three rows: {seat}")
         check(len(seat["inMixer"]) == 10 and not seat["inNeck"], f"{tag} the ten mixer controls live in the Mixer board and none in the neck: {seat}")
         check(len(seat["clock"]) == 4 and seat["pairrows"] == 0, f"{tag} the neck keeps its clock row (the 260919 ruling; four members since the clock-row repeat went, ruling 261015) and no mixer row: {seat}")
-        check(seat["order"] == 2, f"{tag} the Mixer board is the second after the neck — the tuning board sits between since 261012b: order {seat['order']}")
+        check(seat["order"] == 3, f"{tag} the Mixer board is the third after the neck — the readout (261013) and the tuning board (261012b) sit between: order {seat['order']}")
+        # 261013 (Daniel): On the neck → The readout → Tuning → Mixer, consecutive boards, at both widths
+        for w_bo in (1280, 390):
+            page.set_viewport_size({"width": w_bo, "height": 900}); page.wait_for_timeout(200)
+            bo = page.evaluate("""() => { const ids = ['fieldSvg', 'roLine', 'fdTuning', 'fdVoice']; const bs = ids.map(i => document.getElementById(i).closest('.board'));
+              const all = [...document.querySelectorAll('#boards > .board')]; const at = bs.map(b => all.indexOf(b));
+              return { at, consecutive: at.every((x, k) => k === 0 || x === at[k - 1] + 1), stacked: bs.every((b, k) => k === 0 || b.getBoundingClientRect().top > bs[k - 1].getBoundingClientRect().top) }; }""")
+            check(bo["consecutive"] and bo["stacked"] and min(bo["at"]) >= 0, f"{tag} 261013 @{w_bo}: the boards read On the neck → The readout → Tuning → Mixer, consecutive and in that order down the page: {bo}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(200)
         check(seat["chevronInHeader"], f"{tag} the strip has a header, so the shell's chevron sits in it")
         # a level moved in the strip still moves the bus: the harmony level at zero starts no chord source
         page.evaluate("() => { if (!window.__n58) { window.__n58 = { raw: 0 }; for (const C of [AudioBufferSourceNode, OscillatorNode]) { const P = C.prototype.start; C.prototype.start = function(...a) { window.__n58.raw++; return P.apply(this, a); }; } } }")
@@ -7178,12 +7189,12 @@ console.log(JSON.stringify(out));
           const nb = document.getElementById('fieldSvg').closest('.board'), nx = nb.nextElementSibling;
           return { inHead, left: Math.round(c.left), clockRight: Math.round(c.right), headRight: Math.round(h.right), miniLeft: Math.round(m.left),
             oneBand: c.top < m.bottom && m.top < c.bottom, readTop: Math.round(r.top), clockTop: Math.round(c.top), miniTop: Math.round(m.top),
-            noBand: !__may(() => document.querySelector('.fd-underneck'), 'the under-neck band retired 261012b — its absence is the claim'), nextIsTuning: !!(nx && nx.querySelector('#fdTuning')),
-            mixerAfter: !!(nx && nx.nextElementSibling && nx.nextElementSibling.querySelector('#fdVoice')) }; }"""
+            noBand: !__may(() => document.querySelector('.fd-underneck'), 'the under-neck band retired 261012b — its absence is the claim'), nextIsTuning: !!(nx && nx.nextElementSibling && nx.querySelector('#roLine') && nx.nextElementSibling.querySelector('#fdTuning')),
+            mixerAfter: !!(nx && nx.nextElementSibling && nx.nextElementSibling.nextElementSibling && nx.nextElementSibling.nextElementSibling.querySelector('#fdVoice')) }; }"""
         a67 = p67b.evaluate(clk67)
         check(a67["inHead"] and a67["oneBand"] and a67["clockRight"] <= a67["miniLeft"],
               f"{tag} night 67: at 1280 bar split, bpm and the metronome sit in the neck's header, one band with the transport, left of it: {a67}")
-        check(a67["noBand"] and a67["nextIsTuning"] and a67["mixerAfter"], f"{tag} 261012b: the neck board has no under-neck band; the tuning board is mounted directly under it, above the Mixer: {a67}")
+        check(a67["noBand"] and a67["nextIsTuning"] and a67["mixerAfter"], f"{tag} 261012b: the neck board has no under-neck band; the readout follows it (261013), then the tuning board, then the Mixer: {a67}")
         p67b.select_option("#hcKey", "F#"); p67b.wait_for_timeout(250)
         b67 = p67b.evaluate(clk67)
         check(b67["left"] == a67["left"], f"{tag} night 67: the clock does not slide with the readout's text (C {a67['left']}, F# {b67['left']})")

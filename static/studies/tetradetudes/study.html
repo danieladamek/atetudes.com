@@ -346,9 +346,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
   <div class="clpsum" id="metroSum">A metronome on its own clock — with or without the étude.</div>
-  <div class="hint info">A full metronome on its own clock — use it with or without the étude.
-  The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
-  metronome, first block, this look.)</div></div>
+  <div class="hint info">A full metronome on its own clock — use it with or without the étude. The étude subscribes to this grid. (Shared component: every At-Etudes app carries this metronome, first block, this look.) Its first button starts and stops the click (stopping it stops the étude too); tap the second in time to set the tempo, or type or slide it, 15 to 300. The time signature and subdivision are the grid the étude walks on, the accent marks each bar's first beat, and the speaker mutes the click — muted is the volume at zero.</div></div>
 <div class="card">
   <h2>Transport</h2>
   <div class="transport">
@@ -374,11 +372,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       <select id="splitSel" data-control="splitSel"></select></div>
   </div>
   <div class="clpsum">The étude's walk — Play joins the grid at the next bar.</div>
-  <div class="hint info">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2
-  beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next bar</b> — the
-  click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first).
-  Sound starts on your first click. What sounds — the voice and each bus's level — lives in the Mixer
-  card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div></div>
+  <div class="hint info">Plays the étude: the arrows step a chord back or forward, and the middle button plays from the first chord — or from the chord you stepped to while stopped. Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2 beats, next chord 3, new bar. If the metronome is running, Play joins it at the next bar — the click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first). Sound starts on your first click. What sounds — the voice and each level — lives in the Mixer card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div></div>
 <div class="card">
   <h2>Mixer</h2>
   <div class="row2 alignEnd mxVoice">
@@ -398,9 +392,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     <span class="mxVal" id="bassVolVal">100</span>
   </div>
   <div class="clpsum">What sounds — the voice, and each bus's level.</div>
-  <div class="hint info">Each slider's speaker icon mutes that bus — the icon is the slider at zero.
-  A muted chord with bass and click sounding is play-along: you supply the voicings. The click's own
-  level lives in the Metronome card — the metronome owns its sound.</div></div>
+  <div class="hint info">What sounds, and how loud: the first list picks the instrument sound for the voicings, and the two sliders set the chord's level and the bass's. Each slider's speaker icon mutes it — the icon is the slider at zero. A muted chord with bass and click sounding is play-along: you supply the voicings. The click's own level lives in the Metronome card — the metronome owns its sound.</div></div>
 </div>
   <div id="strips"><div class="card strip">
   <h2>Centricity</h2>   <!-- was Harmony — ruled 260923: "Centricity for sure across all" (night 34) -->
@@ -432,7 +424,9 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       </div>
       <div class="hint" id="hpRule"></div>
     </div>
-  </div></div>
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card sets the key and its scale, and the progression that walks through them: a cycle of 4ths, 6ths, 3rds or 5ths, or up the scale, with the rule it follows written underneath. Choose the chord it starts on, and which chord tone sits lowest in the first voicing — after that, the voice-leading decides. The last list puts the root under every voicing as a pedal, heard and drawn on the score and the keys, or leaves the voicings alone.</div></div>
 <div class="card strip">
   <h2>Shape &amp; Motion</h2>
   <div class="striprow">
@@ -478,14 +472,18 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
     </div>
   </div>
   <div class="hint" id="smHint"></div>
-  <div class="smNote" id="smWhy"></div></div>
+  <div class="smNote" id="smWhy"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card shapes each voicing and how it moves. Pick the four strings and the voicing family (close, drop-2 or drop-3); a figure — a preset, or your own typed as string numbers (pattern) or roles (tones), separated by dashes — turns each chord into a line. Grip keeps one note per string anchored to the zone on the neck; Free takes the smoothest voice-leading. Strum, arpeggiate or both sets how it sounds, and the two checkboxes mark the roots on the lower strings and dim R and 5 to leave the guide tones.</div></div>
 <div class="card strip tl-strip">
   <h2>Timeline</h2>
   <div class="clpsum">The chords in order — click a bar to jump, or step with the transport.</div>
   <div class="tlrow">
     <div id="tlBars" data-control="tlBars"></div>
     <span id="tlMini" data-control="tlMini"></span>
-  </div></div>
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The progression in one row: one chip per chord, as wide as its beats, with the root's degree colour and its function. Click a chip to jump there; the current chord is outlined, and the row scrolls to keep it in view. The transport beside it plays and steps the étude from here.</div></div>
 </div>
   <div id="boards"><div class="board">
   <div class="bh"><span>On the neck</span></div>
@@ -501,15 +499,21 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   </div>
   <div class="fsLeaves" id="fsLeaves"></div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
-  <div class="hint fsBoxHint" id="fsBoxHint" hidden></div></div>
+  <div class="hint fsBoxHint" id="fsBoxHint" hidden></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The faint dots are every note of the key; the four solid ones are this chord's voicing, coloured and labelled by degree against the chord's root, gliding to the next chord — a black ring marks a voice that moves at the next change. The window shows the whole neck, follows the frets the progression uses, or draws the zone as a box you can drag (or move with ← → once the neck is focused). The checkbox beside them holds the anchor voice in the zone; a bar that can't reach it says so under the readout. Click any dot to hear it.</div></div>
 <div class="board">
   <span id="scMini" data-control="scMini"></span>
   <div class="bh"><span>The étude — end to end (click a bar to jump there)</span></div>
-  <svg id="score" data-control="score" viewBox="0 0 1160 214" aria-label="etude notation"></svg></div>
+  <svg id="score" data-control="score" viewBox="0 0 1160 214" aria-label="etude notation"></svg>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">Every chord of the étude on a grand staff at sounding pitch, each bar as wide as its beats, with the symbol and numeral above; the current chord is shaded. Strummed, or with no figure, each chord is a stack; with a figure it's written as the run you hear, approach notes small, and with the root as a pedal it sits in the bass clef. Click anywhere in a chord's column to jump there.</div></div>
 <div class="board">
   <span id="kbMini" data-control="kbMini"></span>
   <div class="bh"><span>On the keys</span></div>
-  <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg></div>
+  <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This chord on a piano, C2 to C6: the four voicing notes as dots in their degree colours, each labelled, and the root below them when the pedal is on. Click any key to hear it.</div></div>
 <div class="board">
   <div class="bh"><span>Practice log — <span id="histCount" data-control="histCount">0</span> saved</span>
     <span id="storeNote" data-control="storeNote" class="storenote"></span></div>
@@ -5023,7 +5027,9 @@ const chordTimeline = {
   <div class="tlrow">
     <div id="tlBars" data-control="tlBars"></div>
     <span id="tlMini" data-control="tlMini"></span>
-  </div>`,
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The progression in one row: one chip per chord, as wide as its beats, with the root's degree colour and its function. Click a chip to jump there; the current chord is outlined, and the row scrolls to keep it in view. The transport beside it plays and steps the étude from here.</div>`,
 
   /* the reference's timeline rules, verbatim values; the strip's own padding
    * replaces the card's so the row sits tight, as the study's `#timeline` does */
@@ -5228,7 +5234,9 @@ const fretboardStage = {
   </div>
   <div class="fsLeaves" id="fsLeaves"></div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
-  <div class="hint fsBoxHint" id="fsBoxHint" hidden></div>`,
+  <div class="hint fsBoxHint" id="fsBoxHint" hidden></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The faint dots are every note of the key; the four solid ones are this chord's voicing, coloured and labelled by degree against the chord's root, gliding to the next chord — a black ring marks a voice that moves at the next change. The window shows the whole neck, follows the frets the progression uses, or draws the zone as a box you can drag (or move with ← → once the neck is focused). The checkbox beside them holds the anchor voice in the zone; a bar that can't reach it says so under the readout. Click any dot to hear it.</div>`,
 
   /* Every rule names an `fs` token. The three transitions below are the whole
    * animation; they travel with the stage and cannot outlive it. */
@@ -5751,7 +5759,9 @@ const harmonyPanel = {
       </div>
       <div class="hint" id="hpRule"></div>
     </div>
-  </div>`,
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card sets the key and its scale, and the progression that walks through them: a cycle of 4ths, 6ths, 3rds or 5ths, or up the scale, with the rule it follows written underneath. Choose the chord it starts on, and which chord tone sits lowest in the first voicing — after that, the voice-leading decides. The last list puts the root under every voicing as a pedal, heard and drawn on the score and the keys, or leaves the voicings alone.</div>`,
 
   /* the strip grammar (`striprow`, `grp`, `seg`) lived here while this was its
    * only user and was PROMOTED to the shell the moment Shape & Motion became
@@ -5880,7 +5890,9 @@ const keyboardStrip = {
   markup: `
   <span id="kbMini" data-control="kbMini"></span>
   <div class="bh"><span>On the keys</span></div>
-  <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>`,
+  <svg id="kbd" data-control="kbd" viewBox="0 0 660 96" aria-label="keyboard"></svg>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This chord on a piano, C2 to C6: the four voicing notes as dots in their degree colours, each labelled, and the root below them when the pedal is on. Click any key to hear it.</div>`,
   styles: `#kbd rect{cursor:pointer}
 /* right:70px since 261012d — 44 cleared the chevron alone; the save sentence gave this board an ⓘ (right:38) that lay over ⏭ */
 #kbMini{position:absolute;top:7px;right:70px;display:flex;gap:4px;z-index:6}
@@ -6161,9 +6173,7 @@ const metronomeCard = {
     <span id="clickVolVal" data-control="clickVolVal" class="metroval">80</span>
   </div>
   <div class="clpsum" id="metroSum">A metronome on its own clock — with or without the étude.</div>
-  <div class="hint info">A full metronome on its own clock — use it with or without the étude.
-  The étude subscribes to this grid. (Shared component: every At-Etudes app carries this
-  metronome, first block, this look.)</div>`,
+  <div class="hint info">A full metronome on its own clock — use it with or without the étude. The étude subscribes to this grid. (Shared component: every At-Etudes app carries this metronome, first block, this look.) Its first button starts and stops the click (stopping it stops the étude too); tap the second in time to set the tempo, or type or slide it, 15 to 300. The time signature and subdivision are the grid the étude walks on, the accent marks each bar's first beat, and the speaker mutes the click — muted is the volume at zero.</div>`,
 
   /* Every rule names `metro`, `metrolabel`, `metroval`, `row2`,
    * `chk`, `bpmrow` or a control id — tokens no other module ships today. The
@@ -6477,9 +6487,7 @@ const mixerCard = {
     <span class="mxVal" id="bassVolVal">100</span>
   </div>
   <div class="clpsum">What sounds — the voice, and each bus's level.</div>
-  <div class="hint info">Each slider's speaker icon mutes that bus — the icon is the slider at zero.
-  A muted chord with bass and click sounding is play-along: you supply the voicings. The click's own
-  level lives in the Metronome card — the metronome owns its sound.</div>`,
+  <div class="hint info">What sounds, and how loud: the first list picks the instrument sound for the voicings, and the two sliders set the chord's level and the bass's. Each slider's speaker icon mutes it — the icon is the slider at zero. A muted chord with bass and click sounding is play-along: you supply the voicings. The click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
   styles: `
 .mxVoice select{width:auto;padding:3px 6px;margin-left:4px}
@@ -9436,16 +9444,11 @@ const { SHARED, pcOfKey } = __m_engine_shared_config_mjs;
  * one rule, in the enumeration's index order (a sliding window of four down the six strings) */
 const SET_LABELS = [0, 1, 2].map((offset) => setLabel([6, 5, 4, 3].map((n) => n - offset), OPEN_MIDI, OPEN_MIDI));
 
-/* HOW A TAKE IS SAVED, SAID ON EVERY CARD (261012b — Daniel: "add instructions/information to every card including the
- * notepad"). Written ONCE, here, because the claim is this card's: on a door that locks the notepad out there is no log,
- * the sentence would be false, and the module that would say it is not mounted. The shell places it in every other
- * panel's ⓘ (ctx.aboutEveryPanel). Only what the code does: the pad lives in this tab until saved (nothing writes it as
- * you type); a saved entry is the note plus the whole étude (hub/etude-record.mjs), in this browser's storage under the
- * door's key; Export, Copy and Import all speak one .atchart.md. RULE 14 (ruled by Daniel, 261012b): no caption is
- * quoted — the captions are "Save note", "Restore étude", "Export (.atchart.md)", and a sentence quoting them goes stale
- * the day one is renamed; these name the actions. */
-const SAVED_WITH_EACH_TAKE = "Everything set here is saved with each take: saving a note in the notepad files it " +
-  "in the Practice log at the bottom of the page, where any take can be brought back or written out as a file.";
+/* THE NOTEPAD'S ⓘ (261012b, ruled by Daniel): only what the code does — the pad lives in this tab until saved (nothing
+ * writes it as you type); a saved entry is the note plus the whole étude (hub/etude-record.mjs), in this browser's storage
+ * under the door's key; Export, Copy and Import all speak one .atchart.md. Caption-free (rule 14). 261012b also put one
+ * save sentence on every OTHER card through a shell seam; 261013 removed both (Daniel: "no need to say in every info popout
+ * that the info will be saved in the practice log") — each card's ⓘ now explains its own card. */
 const NOTEPAD_ABOUT = "Type here as you practise; the note stays in this tab until you save it. Saving files it, " +
   "with every card's settings, in the Practice log at the bottom of the page, kept in this browser on this computer and " +
   "never uploaded. From the log, any take can be brought back or downloaded. Exporting, copying and importing all use " +
@@ -9586,9 +9589,8 @@ const notepadCard = {
     const KEY = doorId + ".v1.log";          // the door's OWN namespace, derived
 
     /* THE ⓘ PROSE (261012b): the pad's and the log's own panels carry NOTEPAD_ABOUT — each column gets it, once per panel
-     * (one panel on a door that keeps them together, two where the pad is seated in a row); every OTHER panel carries
-     * SAVED_WITH_EACH_TAKE through the shell. Static prose, so it is .info: the shell moves it into the ⓘ. Written into
-     * this card's own columns only — the other panels are the shell's to touch, not this card's. */
+     * (one panel on a door that keeps them together, two where the pad is seated in a row). Static prose, so it is .info:
+     * the shell moves it into the ⓘ. Written into this card's own columns only. */
     {
       const mine = [byId("noteCol"), byId("logCol")];
       const panelOf = (col) => col.closest(".card, .board");
@@ -9600,7 +9602,6 @@ const notepadCard = {
         about.className = "hint info"; about.textContent = NOTEPAD_ABOUT;
         col.appendChild(about);
       }
-      ctx.aboutEveryPanel(SAVED_WITH_EACH_TAKE, { skip: (p) => mine.some((col) => p.contains(col)) });
     }
 
     /* the last configuration heard on the bus, merged across its owners — the
@@ -9848,7 +9849,7 @@ const notepadCard = {
     byId("npTitle").placeholder = fallback();
   },
 };
-return { SET_LABELS, SAVED_WITH_EACH_TAKE, NOTEPAD_ABOUT, notepadCard };
+return { SET_LABELS, NOTEPAD_ABOUT, notepadCard };
 })();
 
 /* ===== hub/marks.mjs ===== */
@@ -9951,7 +9952,9 @@ const scoreBoard = {
   markup: `
   <span id="scMini" data-control="scMini"></span>
   <div class="bh"><span>The étude — end to end (click a bar to jump there)</span></div>
-  <svg id="score" data-control="score" viewBox="0 0 1160 214" aria-label="etude notation"></svg>`,
+  <svg id="score" data-control="score" viewBox="0 0 1160 214" aria-label="etude notation"></svg>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">Every chord of the étude on a grand staff at sounding pitch, each bar as wide as its beats, with the symbol and numeral above; the current chord is shaded. Strummed, or with no figure, each chord is a stack; with a figure it's written as the run you hear, approach notes small, and with the root as a pedal it sits in the bass clef. Click anywhere in a chord's column to jump there.</div>`,
 
   styles: `
 #score{width:100%;height:auto;display:block}
@@ -10398,7 +10401,9 @@ const shapeMotion = {
     </div>
   </div>
   <div class="hint" id="smHint"></div>
-  <div class="smNote" id="smWhy"></div>`,
+  <div class="smNote" id="smWhy"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card shapes each voicing and how it moves. Pick the four strings and the voicing family (close, drop-2 or drop-3); a figure — a preset, or your own typed as string numbers (pattern) or roles (tones), separated by dashes — turns each chord into a line. Grip keeps one note per string anchored to the zone on the neck; Free takes the smoothest voice-leading. Strum, arpeggiate or both sets how it sounds, and the two checkboxes mark the roots on the lower strings and dim R and 5 to leave the guide tones.</div>`,
 
   /* `sm` tokens anchor every rule; the strip grammar is the harmony panel's
    * until the resolver promotes it (this module is that second user). */
@@ -10693,11 +10698,7 @@ const transportCard = {
       <select id="splitSel" data-control="splitSel"></select></div>
   </div>
   <div class="clpsum">The étude's walk — Play joins the grid at the next bar.</div>
-  <div class="hint info">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2
-  beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next bar</b> — the
-  click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first).
-  Sound starts on your first click. What sounds — the voice and each bus's level — lives in the Mixer
-  card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
+  <div class="hint info">Plays the étude: the arrows step a chord back or forward, and the middle button plays from the first chord — or from the chord you stepped to while stopped. Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2 beats, next chord 3, new bar. If the metronome is running, Play joins it at the next bar — the click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first). Sound starts on your first click. What sounds — the voice and each level — lives in the Mixer card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
   /* Play is red, as the reference's is (until 2026-10-01 through the shell's `.primary`; now by its own rule below) — Daniel reversed
    * the earlier retire-the-red call in the 2026-08-19 side-by-side ("more
@@ -11238,7 +11239,7 @@ function initCollapse(doc) {
  * and by Escape — never a browser modal (the file:// gate forbids a dialog).
  * Keyboard-reachable (a real button) and labelled, since the popout is now the
  * only route to that text. A panel with no static prose gets no button. */
-function initInfo(doc, about) {
+function initInfo(doc) {
   let openBtn = null, openPop = null;
   const close = () => {
     if (openPop) { openPop.hidden = true; openBtn.setAttribute("aria-expanded", "false"); }
@@ -11247,9 +11248,6 @@ function initInfo(doc, about) {
   let n = 0;
   for (const p of doc.querySelectorAll(".card, .board")) {
     const prose = [...p.querySelectorAll(".info")];
-    /* PROSE A MODULE SAYS OF EVERY PANEL (261012b): appended after the panel's own, so a panel with none grows an ⓘ */
-    for (const a of about)
-      if (!a.skip(p)) { const el = doc.createElement("div"); el.className = "hint info"; el.textContent = a.text; prose.push(el); }
     if (!prose.length) continue;
     const pop = doc.createElement("div");
     pop.className = "infoPop"; pop.hidden = true; pop.id = "infoPop-" + (++n);
@@ -11267,8 +11265,8 @@ function initInfo(doc, about) {
       if (willOpen) { pop.hidden = false; btn.setAttribute("aria-expanded", "true"); openBtn = btn; openPop = pop; }
     });
     p.appendChild(btn);
-    /* THE ⓘ TAKES ITS SEAT IN THE HEADER (261012d — ruled by Daniel): since 261012b's every-panel sentence, a panel
-     * that never had prose has an ⓘ, and three headers had reserved their right edge for the chevron alone — the ⓘ
+    /* THE ⓘ TAKES ITS SEAT IN THE HEADER (261012d — ruled by Daniel): since 261012b (and, from 261013, each card's own
+     * explanation), a panel that never had prose has an ⓘ, and three headers had reserved their right edge for the chevron alone — the ⓘ
      * lay over the Mixer's repeat and two Tetradetudes ⏭. A panel given an ⓘ reserves ⓘ + chevron (66 px, the
      * readout headers' figure) on its header band. Inline, as the header slot is placed: a stylesheet rule would
      * orphan in every door whose panels never grow an ⓘ. A header already reserving more keeps its own. */
@@ -11286,17 +11284,12 @@ function boot(MODULES, door, doc) {
   doc.getElementById("doorTitle").textContent = door.present.title;
   doc.getElementById("doorTag").textContent = door.present.blurb;
   doc.getElementById("doorFoot").textContent = door.present.footer || "";
-  const about = [];
   const ctx = { door, doc, byId,
     /** modules report state changes here; the shell owns no readout of its
      * own, so this is a no-op seam the host page can take over */
-    changed() {},
-    /** A SENTENCE EVERY PANEL'S ⓘ CARRIES (261012b): a module that owns a claim about the whole page states it once
-     * here; the shell appends it to each panel's static prose (skip: the module's own panels). Door-aware by
-     * construction — a door that prunes the module never hears the claim. */
-    aboutEveryPanel(text, { skip = () => false } = {}) { about.push({ text, skip }); } };
+    changed() {} };
   for (const m of MODULES) m.mount(ctx);
-  initInfo(doc, about);
+  initInfo(doc);
   initCollapse(doc);
   return ctx;
 }
@@ -11305,7 +11298,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_chord_timeline_mjs.chordTimeline, __m_hub_modules_fretboard_stage_mjs.fretboardStage, __m_hub_modules_harmony_panel_mjs.harmonyPanel, __m_hub_modules_keyboard_strip_mjs.keyboardStrip, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_card_mjs.mixerCard, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_score_board_mjs.scoreBoard, __m_hub_modules_shape_motion_mjs.shapeMotion, __m_hub_modules_transport_card_mjs.transportCard];
-const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.22","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}},"opensAs":null};
+const DOOR = {"id":"tetradetudes","lock":{"material":"tetrad","notepad":true,"audio":true,"transport":true},"present":{"title":"Tetradetudes","blurb":"four voices, moving as little as they have to — hub door #1 · v0.6.23","footer":"A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes."},"shared":{"carries":["key","scale","progression","startOn","stringSet","bpm","meter"],"stringSet":{"size":4}},"opensAs":null};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

@@ -62,9 +62,7 @@ export const presetsCard = {
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
   <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
-  <div class="hint ps-note info">A preset seeds every control and leaves them all live. The journal
-  page's exercises are here as the engine grows into them; the key, the scale and the reference stay
-  whatever you set them to.</div>`,
+  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here.</div>`,
 
   styles: `
 .ps-miniseat{margin:0 0 8px}

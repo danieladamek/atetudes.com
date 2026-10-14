@@ -236,15 +236,7 @@ export const fieldBoard = {
        Mixer — night 58's move made again. Every moved control kept its id, its message and its state; this board
        still paints the steppers and the names and owns the tuning (the field's fact). The under-neck band went
        with them: it held nothing else. -->
-  <div class="hint info">The metronome checkbox is the click's second view — the Metronome card
-  owns the clock. The mixer labels say <b>harmony</b> rather than the tetrad card's <b>chord</b>,
-  deliberately: a line, an arpeggio and a block chord are all harmonic relationships, and "chord"
-  is too narrow for what this app puts on the neck. <b>Bass tone:</b> the root by default; any
-  tone the object holds may sit in the bass instead; <b>a 3rd below</b> or <b>a 5th below</b> place a
-  scale tone beneath the chord — a triad over a 3rd below is a seventh chord, and the readout
-  names what the stack becomes over it. <b>Mode:</b> under Scale or mode, the line beside
-  <b>voice</b> names the mode each passing chord is, in the context of the chosen scale.
-  Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window.</div>
+  <div class="hint info">The neck draws the key's notes faintly and this bar's notes in full colour, by their function (the line under the neck says against what); click any note to hear it. The rail beside it shapes the motif: one note per string or a line of three, one of each tone or every one in the box, strummed or arpeggiated, and an optional figure — string numbers as a pattern, or roles like R-3-7-5 as tones. The bar split, tempo and metronome checkbox in the header are the same clock the Metronome card owns. Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window.</div>
   <div class="hint" id="fdHint"></div>
   <div class="legend" id="fdLegend"></div>`,
 

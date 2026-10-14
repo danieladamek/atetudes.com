@@ -73,7 +73,9 @@ export const fretboardStage = {
   </div>
   <div class="fsLeaves" id="fsLeaves"></div>
   <svg id="fretSvg" data-control="fretSvg" viewBox="0 0 1160 260" aria-label="fretboard"></svg>
-  <div class="hint fsBoxHint" id="fsBoxHint" hidden></div>`,
+  <div class="hint fsBoxHint" id="fsBoxHint" hidden></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The faint dots are every note of the key; the four solid ones are this chord's voicing, coloured and labelled by degree against the chord's root, gliding to the next chord — a black ring marks a voice that moves at the next change. The window shows the whole neck, follows the frets the progression uses, or draws the zone as a box you can drag (or move with ← → once the neck is focused). The checkbox beside them holds the anchor voice in the zone; a bar that can't reach it says so under the readout. Click any dot to hear it.</div>`,
 
   /* Every rule names an `fs` token. The three transitions below are the whole
    * animation; they travel with the stage and cannot outlive it. */

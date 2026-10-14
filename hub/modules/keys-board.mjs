@@ -46,7 +46,9 @@ export const keysBoard = {
   <div class="bh readhead"><span>On the keys</span><div class="readbox" id="kyMode" data-control="kyMode"
         title="this bar's chord, and the mode it is in the context of the chosen scale"></div><span class="headspace"></span><span class="mini" id="kyMini" data-control="kyMini"></span></div>
   <svg id="kySvg" data-control="kySvg" viewBox="0 0 1290 150" aria-label="keyboard"></svg>
-  <div class="legend" id="kyLegend"></div>`,
+  <div class="legend" id="kyLegend"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This bar's notes on a piano, C2 to C6: dots in their degree colours, each labelled with its role, and the reference tone as a dashed ring. A key rings as its note sounds. Click any key to hear it.</div>`,
 
   styles: `
 #kySvg{width:100%;height:auto;display:block}

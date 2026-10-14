@@ -45,7 +45,9 @@ export const chordTimeline = {
   <div class="tlrow">
     <div id="tlBars" data-control="tlBars"></div>
     <span id="tlMini" data-control="tlMini"></span>
-  </div>`,
+  </div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">The progression in one row: one chip per chord, as wide as its beats, with the root's degree colour and its function. Click a chip to jump there; the current chord is outlined, and the row scrolls to keep it in view. The transport beside it plays and steps the étude from here.</div>`,
 
   /* the reference's timeline rules, verbatim values; the strip's own padding
    * replaces the card's so the row sits tight, as the study's `#timeline` does */

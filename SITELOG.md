@@ -1,3 +1,12 @@
+## 2026-10-13 — Each card's ⓘ explains that card; the readout sits under the neck — Multetudes v1.1.8, Tetradetudes v0.6.23
+
+- **Every card's ⓘ** on Multetudes and Tetradetudes now explains that card — what it's for and how to enter or change what
+  it holds, or, for a display, how to read it (Update Log 261013.1, Daniel 261013). Yesterday's repeated save sentence is
+  gone; only the notepad's ⓘ speaks of saving, unchanged.
+- **Multetudes:** The readout moved up, directly under the neck — On the neck → The readout → Tuning → Mixer.
+- Source editions: `hub/build/{multetudes,tetradetudes}.html`, copied byte-identical to `static/studies/<slug>/study.html`;
+  every other study unchanged.
+
 ## 2026-10-12 — The ⓘ no longer covers a header button — Multetudes v1.1.7, Tetradetudes v0.6.22
 
 - Since the morning's every-card ⓘ, three ⓘ buttons lay over a header button: Multetudes' Mixer (repeat) and

@@ -135,7 +135,9 @@ export const harmonyCard = {
        mode only — fixed (a pedal) or following the changes; the value is
        derived per bar by every consumer, never stored resolved -->
   <div class="seg hc-srcseg" id="hcCentreSrc" data-control="hcCentreSrc" hidden></div>
-  <div class="hint" id="hcNote"></div>`,
+  <div class="hint" id="hcNote"></div>
+  <!-- the ⓘ (261013): what this card is for and how to use it — the review sheet is the run note -->
+  <div class="hint info">This card sets the ground everything stands on: the key and its scale — major, harmonic minor or melodic minor — and so the seven notes the neck draws faintly. When the object is a scale, you can narrow those seven to a pentatonic, a pair of triads or any set of degrees, from the list or by clicking the note buttons, and choose the centre the mode is read from: held as a pedal, or following each chord's root. Under a chord the note buttons can't be clicked; they light as the étude plays each tone, with its role above it.</div>`,
 
   styles: `
 /* THE 390 GRID (night 59 — the precondition, raised 260922): a 1fr track carries min-width:auto and cannot

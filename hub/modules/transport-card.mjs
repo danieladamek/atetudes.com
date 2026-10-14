@@ -66,11 +66,7 @@ export const transportCard = {
       <select id="splitSel" data-control="splitSel"></select></div>
   </div>
   <div class="clpsum">The étude's walk — Play joins the grid at the next bar.</div>
-  <div class="hint info">Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2
-  beats, next chord 3, new bar. <b>If the metronome is running, Play joins it at the next bar</b> — the
-  click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first).
-  Sound starts on your first click. What sounds — the voice and each bus's level — lives in the Mixer
-  card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
+  <div class="hint info">Plays the étude: the arrows step a chord back or forward, and the middle button plays from the first chord — or from the chord you stepped to while stopped. Chords take the bar's slots in order — e.g. 5/4 split 2+3: first chord 2 beats, next chord 3, new bar. If the metronome is running, Play joins it at the next bar — the click you already hear is your count-in. If it isn't, Play starts it (count-in adds one clicked bar first). Sound starts on your first click. What sounds — the voice and each level — lives in the Mixer card beside this one; the click's own level lives in the Metronome card — the metronome owns its sound.</div>`,
 
   /* Play is red, as the reference's is (until 2026-10-01 through the shell's `.primary`; now by its own rule below) — Daniel reversed
    * the earlier retire-the-red call in the 2026-08-19 side-by-side ("more

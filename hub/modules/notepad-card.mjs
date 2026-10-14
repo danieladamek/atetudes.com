@@ -42,16 +42,11 @@ import { SHARED, pcOfKey } from "../../engine/shared-config.mjs";
  * one rule, in the enumeration's index order (a sliding window of four down the six strings) */
 export const SET_LABELS = [0, 1, 2].map((offset) => setLabel([6, 5, 4, 3].map((n) => n - offset), OPEN_MIDI, OPEN_MIDI));
 
-/* HOW A TAKE IS SAVED, SAID ON EVERY CARD (261012b — Daniel: "add instructions/information to every card including the
- * notepad"). Written ONCE, here, because the claim is this card's: on a door that locks the notepad out there is no log,
- * the sentence would be false, and the module that would say it is not mounted. The shell places it in every other
- * panel's ⓘ (ctx.aboutEveryPanel). Only what the code does: the pad lives in this tab until saved (nothing writes it as
- * you type); a saved entry is the note plus the whole étude (hub/etude-record.mjs), in this browser's storage under the
- * door's key; Export, Copy and Import all speak one .atchart.md. RULE 14 (ruled by Daniel, 261012b): no caption is
- * quoted — the captions are "Save note", "Restore étude", "Export (.atchart.md)", and a sentence quoting them goes stale
- * the day one is renamed; these name the actions. */
-export const SAVED_WITH_EACH_TAKE = "Everything set here is saved with each take: saving a note in the notepad files it " +
-  "in the Practice log at the bottom of the page, where any take can be brought back or written out as a file.";
+/* THE NOTEPAD'S ⓘ (261012b, ruled by Daniel): only what the code does — the pad lives in this tab until saved (nothing
+ * writes it as you type); a saved entry is the note plus the whole étude (hub/etude-record.mjs), in this browser's storage
+ * under the door's key; Export, Copy and Import all speak one .atchart.md. Caption-free (rule 14). 261012b also put one
+ * save sentence on every OTHER card through a shell seam; 261013 removed both (Daniel: "no need to say in every info popout
+ * that the info will be saved in the practice log") — each card's ⓘ now explains its own card. */
 export const NOTEPAD_ABOUT = "Type here as you practise; the note stays in this tab until you save it. Saving files it, " +
   "with every card's settings, in the Practice log at the bottom of the page, kept in this browser on this computer and " +
   "never uploaded. From the log, any take can be brought back or downloaded. Exporting, copying and importing all use " +
@@ -192,9 +187,8 @@ export const notepadCard = {
     const KEY = doorId + ".v1.log";          // the door's OWN namespace, derived
 
     /* THE ⓘ PROSE (261012b): the pad's and the log's own panels carry NOTEPAD_ABOUT — each column gets it, once per panel
-     * (one panel on a door that keeps them together, two where the pad is seated in a row); every OTHER panel carries
-     * SAVED_WITH_EACH_TAKE through the shell. Static prose, so it is .info: the shell moves it into the ⓘ. Written into
-     * this card's own columns only — the other panels are the shell's to touch, not this card's. */
+     * (one panel on a door that keeps them together, two where the pad is seated in a row). Static prose, so it is .info:
+     * the shell moves it into the ⓘ. Written into this card's own columns only. */
     {
       const mine = [byId("noteCol"), byId("logCol")];
       const panelOf = (col) => col.closest(".card, .board");
@@ -206,7 +200,6 @@ export const notepadCard = {
         about.className = "hint info"; about.textContent = NOTEPAD_ABOUT;
         col.appendChild(about);
       }
-      ctx.aboutEveryPanel(SAVED_WITH_EACH_TAKE, { skip: (p) => mine.some((col) => p.contains(col)) });
     }
 
     /* the last configuration heard on the bus, merged across its owners — the
