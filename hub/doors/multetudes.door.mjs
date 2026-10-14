@@ -308,7 +308,9 @@ export default {
      * its mini's repeat button; a header given an ⓘ now reserves ⓘ + chevron. */
     /* v1.1.8 (261013, Daniel): each card's ⓘ explains that card — what it's for and how to use it — and only the
      * notepad's speaks of saving (261012b's every-card save sentence removed); the readout sits under the neck. */
-    blurb: "one tool that holds many études · v1.1.8",
+    /* v1.1.9 (261013, Daniel): the readout says the figure once — as typed, then this bar's notes in the order it sounds
+     * them (a group in its < >, an approach dim with an arrow); the switch's movement word only when there is no figure. */
+    blurb: "one tool that holds many études · v1.1.9",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

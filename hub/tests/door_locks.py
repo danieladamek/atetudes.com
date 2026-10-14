@@ -2941,8 +2941,11 @@ console.log(JSON.stringify(out));
         page.click('#fdAddrSeg button[data-addr="tones"]')
         page.fill("#fdFigIn", "R,3,7,5"); page.dispatch_event("#fdFigIn", "input")
         ro1 = page.inner_text("#roLine")
-        check("figure 4 steps" in ro1 and "(tones)" in ro1,
-              f"{tag} 3 (260919): the figure clause lives in the readout now — 4 typed steps read back: {ro1[-80:]!r}")
+        # REWRITTEN 261013 (rule 7): the clause no longer counts steps or echoes the address — it reads the figure back as
+        # typed and names its four notes in order
+        m1 = re.search(r"figure R,3,7,5 — in sequence: (.+?)(?: · |$)", ro1)
+        check(m1 is not None and len(m1.group(1).split()) == 4 and "(tones)" not in ro1,
+              f"{tag} 3 (260919; 261013): the figure clause lives in the readout — the typed figure read back with its 4 notes: {ro1[-80:]!r}")
         check("Figure:" not in page.inner_text("#fdHint"), f"{tag} 3 (260919): …and no longer in the hint")
         # ---- 260919 item 4: the sentence names the centre an absolute degree speaks from ----
         page.fill("#fdFigIn", "(b3)[3]"); page.dispatch_event("#fdFigIn", "input")
@@ -7094,10 +7097,29 @@ console.log(JSON.stringify(out));
         p65.click('#fdMoveSeg button[data-move="arpeggiate"]'); p65.wait_for_timeout(200)
         check("arpeggiated (in sequence, low to high)" in ro65() and "strummed" not in ro65(), f"{tag} night 65: arpeggiate at the neck, the readout follows: {ro65()[-200:]!r}")
         p65.fill("#fdFigIn", "4,3,4,3,2,1"); p65.dispatch_event("#fdFigIn", "change"); p65.wait_for_timeout(250)
-        check("the figure orders it" in ro65() and "figure 6 steps" in ro65(), f"{tag} night 65: under a resolving figure the readout says the figure orders the movement: {ro65()[-240:]!r}")
-        order65 = ro65()
-        check(order65.index("line") < order65.index("arpeggiated") < order65.index("figure 6 steps"),   # night 72: the placement opens on line
-              f"{tag} night 65: the readout speaks the motif in its order — placement, movement, figure: {order65[-240:]!r}")
+        # REWRITTEN 261013 (rule 7; Daniel: the movement and figure clauses only restated the rail): under a resolving
+        # figure the readout says the figure ONCE, as the notes it resolves to — checked at the EFFECT: the names, read as
+        # pitch classes, are the notes the walk SOUNDS, in that order; and no movement word comes from the switch.
+        ro_a = ro65()
+        check("strummed" not in ro_a and "arpeggiated" not in ro_a and "figure 4,3,4,3,2,1 — in sequence: " in ro_a,
+              f"{tag} 261013: under a resolving figure, one clause — the figure as typed, then its notes; no switch word: {ro_a[-240:]!r}")
+        check(0 <= ro_a.find("line") < ro_a.find("figure 4,3,4,3,2,1"), f"{tag} night 65: the readout speaks the motif in its order — placement, then the figure: {ro_a[-240:]!r}")
+        PC = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+        pc_of = lambda nm: (PC[nm[0]] + nm.count("#") + nm.count("♯") - nm.count("b") - nm.count("♭")) % 12
+        names_of = lambda txt: [t.replace("→", "") for t in re.split(r"[\s<>]+", txt) if t.replace("→", "")]
+        p65.evaluate("() => { window.__n65 = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass' && e.detail.role !== 'pad') window.__n65.push(e.detail.midi); }); }")
+        p65.click('#fdMini button[data-role="next"]'); p65.wait_for_timeout(2600)   # stopped: a step auditions the new bar
+        ro_b = ro65(); m65 = re.search(r"in sequence: (.+?)(?: · |$)", ro_b)
+        heard = p65.evaluate("() => window.__n65.slice()")
+        said = names_of(m65.group(1)) if m65 else []
+        check(len(said) == 6 and len(heard) >= 6 and [pc_of(n) for n in said] == [h % 12 for h in heard[:6]],
+              f"{tag} 261013 THE EFFECT: the readout's notes are the notes the walk sounds, in order — said {said}, heard {heard[:8]}")
+        p65.click('#fdMini button[data-role="prev"]'); p65.wait_for_timeout(300)   # back to bar 1 — the block's later pins assume it
+        p65.fill("#fdFigIn", "<4321>"); p65.dispatch_event("#fdFigIn", "change"); p65.wait_for_timeout(250)
+        ro_c = ro65(); mg = re.search(r"together: (.+?)(?: · |$)", ro_c)
+        check(mg is not None and "<" in mg.group(1) and "strummed" not in ro_c and "arpeggiated" not in ro_c and len(names_of(mg.group(1))) == 4,
+              f"{tag} 261013: one group reads 'together', its notes in the figure's own < >: {ro_c[-200:]!r}")
+        p65.fill("#fdFigIn", "4,3,4,3,2,1"); p65.dispatch_event("#fdFigIn", "change"); p65.wait_for_timeout(200)
         # REWRITTEN night 66 (261024 item 0, rule 7): night 65 pinned that a shut rail at 1280 HIDES the word — the label's
         # only job is to say something is there WHEN SHUT (Daniel: "an indicator next to the side collapse"). Now: shut,
         # the word is legible at both widths — down the 30 px column at 1280, across the 30 px bar at 390 — and inside the rail.

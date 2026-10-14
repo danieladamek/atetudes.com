@@ -1,3 +1,10 @@
+## 2026-10-14 — The readout says the figure once — Multetudes v1.1.9
+
+- **Multetudes v1.1.9** (Update Log 261013.2): with a figure typed, the readout now says it once — the figure, then the
+  notes it plays in this bar, in order ("figure r537 — in sequence: G D Bb F"; a group "together"; approach notes in gray
+  with an arrow). The settings description follows suit.
+- Source edition: `hub/build/multetudes.html`, copied byte-identical to `static/studies/multetudes/study.html`.
+
 ## 2026-10-13 — Each card's ⓘ explains that card; the readout sits under the neck — Multetudes v1.1.8, Tetradetudes v0.6.23
 
 - **Every card's ⓘ** on Multetudes and Tetradetudes now explains that card — what it's for and how to enter or change what

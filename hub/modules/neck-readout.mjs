@@ -27,7 +27,7 @@ import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen } from "../bus.mjs";
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
 import { inGamut } from "../../engine/position.mjs";
-import { alteredDegree } from "../../engine/chord.mjs";
+import { alteredDegree, chromaticSpeller } from "../../engine/chord.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
@@ -263,19 +263,36 @@ export const neckReadout = {
          * that resolves sequences the notes whatever the switch says (the neck greys strum then), and a scale
          * with no figure is a run with nothing to move (the neck greys both) — said, not guessed. */
         const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones }) : null;
-        if (fgm && fgm.order && fgm.order.length && fgm.steps.length === 1 && fgm.steps[0].length > 1)
-          bits.push(`<b>strummed</b> <span class="ro-dim">(together — the figure is one group)</span>`);   // 261009: <r357> is the strum, said so
-        else if (fgm && fgm.order && fgm.order.length)
-          bits.push(`<b>arpeggiated</b> <span class="ro-dim">(in sequence — the figure orders it)</span>`);
-        else if (cfg.object !== "scale")
-          bits.push(/^arpeggi/.test(String(cfg.movement))   // a restored v0.1.0 étude says "arpeggio"
-            ? `<b>arpeggiated</b> <span class="ro-dim">(in sequence, low to high)</span>`
-            : `<b>strummed</b> <span class="ro-dim">(together)</span>`);
-        if (String(cfg.figure || "").trim()) {
-          const fg = fgm;   // 260923: the window, for the approach reach; 261011c: what the placement dropped
-          if (fg.order && fg.order.length)
-            bits.push(`figure <b>${fg.steps.length} step${fg.steps.length === 1 ? "" : "s"}</b> <span class="ro-dim">(${cfg.address === "pattern" ? "a pattern" : "tones"}${fg.order.some((n) => n.role === "approach") ? ", with approaches" : ""}${groupClause(fg, sel) ? " — " + groupClause(fg, sel) : ""})</span>`);   // a group is one step (261009)
-          else if (fg.err) bits.push(`<span style="color:#B82929">figure: ${fg.err}</span>`);   // the refusal reaches the readout too (rule 10, 261011c)
+        /* THE FIGURE, SAID ONCE, AS THE NOTES IT RESOLVES TO (261013 — Daniel: "can this … not be derived from the
+         * figure?"). The movement clause and the figure clause both only restated the rail (the switch the figure
+         * overrides, its step count, the address). One clause now: the figure as typed, then this bar's notes in the
+         * order it sounds them — from the same orderBy result the neck uses, never read off the neck. A group is
+         * written in the figure's own < >; an approach is named dim, with an arrow into its target. Names: a
+         * chord-supplied tone as its chord spells it, everything else through chord.mjs's speller (the key's own
+         * names for the seven, rule C for a chromatic approach) — the staff's two paths, so the two views agree. */
+        if (fgm && fgm.order && fgm.order.length) {
+          const spell = chromaticSpeller(cfg.key, cfg.scale);
+          const nameOf = (n) => (n.member && n.name ? n.name : spell(n.midi).name);
+          const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          let names = "";
+          for (const st of fgm.steps) {
+            const word = st.length > 1 ? `&lt;${st.map(nameOf).join(" ")}&gt;` : nameOf(st[0]);
+            const approach = st.length === 1 && st[0].role === "approach";
+            names += (names && !names.endsWith("→</span>") ? " " : "") + (approach ? `<span class="ro-dim">${word}→</span>` : word);
+          }
+          const together = fgm.steps.length === 1 && fgm.steps[0].length > 1;   // 261009: <r357> is the strum
+          /* what the names alone cannot show: two notes of one group on one string (sounded, not fingered together) */
+          const left = (groupClause(fgm, sel) || "").split("; ").filter((x) => x.startsWith("string "));
+          bits.push(`figure <b>${esc(cfg.figure.trim())}</b> — ${together ? "together" : "in sequence"}: <b>${names}</b>`
+            + (left.length ? ` <span class="ro-dim">(${left.join("; ")})</span>` : ""));
+        } else {
+          /* no figure (or one that does not resolve): the switch is the only thing that decides the movement */
+          if (cfg.object !== "scale")
+            bits.push(/^arpeggi/.test(String(cfg.movement))   // a restored v0.1.0 étude says "arpeggio"
+              ? `<b>arpeggiated</b> <span class="ro-dim">(in sequence, low to high)</span>`
+              : `<b>strummed</b> <span class="ro-dim">(together)</span>`);
+          const fg = fgm;   // the granted ledger line names this literal (golden rule 8's red ledger) — keep its spelling
+          if (fg && fg.err) bits.push(`<span style="color:#B82929">figure: ${fg.err}</span>`);   // the refusal reaches the readout too (rule 10, 261011c)
         }
         /* THE REFERENCE, fretted and NAMED (child 5): the readout says what
          * the stack becomes over it — R19's sentence. The name arrives from

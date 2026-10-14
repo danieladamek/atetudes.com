@@ -66,9 +66,13 @@ export function describe(s) {
   const place = s.notesPer === 1 || s.notesPer == null ? "grip" : "line";
   const take = s.take === "all" ? "every occurrence" : "one of each";
   const figured = String(s.figure || "").trim();
-  const move = figured ? "arpeggiated in the figure's order" : /^arpeggi/.test(String(s.movement)) ? "arpeggiated" : "strummed";
-  const fig = figured ? `, ${figured.replace(/\s+/g, "")} (${s.address === "tones" ? "by tone" : "by string"})` : ", no figure";
-  say("motif", `a motif of ${place}, ${take}, ${move}${fig} — on ${strings}`);
+  /* 261013 (the readout's figure clause, in line): under a figure the switch decides nothing — the figure orders the
+   * notes, or sounds them together when it is one <group> — so the movement word is said only when there is no figure.
+   * Unlike the readout, this line has no bar to resolve the figure against, so it keeps the address: for a digit figure
+   * like 537 it is the only thing that says whether the digits are strings or tones. */
+  const move = figured ? "" : /^arpeggi/.test(String(s.movement)) ? ", arpeggiated" : ", strummed";
+  const fig = figured ? `, figure ${figured.replace(/\s+/g, "")} (${s.address === "tones" ? "by tone" : "by string"})` : ", no figure";
+  say("motif", `a motif of ${place}, ${take}${move}${fig} — on ${strings}`);
   say("repeat", s.repeat ? "repeating the current bar" : "running through the chart");
   // under the harmony
   const fretted = underWord(s.bass ?? "root");
