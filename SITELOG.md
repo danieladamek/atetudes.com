@@ -1,3 +1,10 @@
+## 2026-10-14 — The motif line under the neck — Multetudes v1.1.10
+
+- **Multetudes v1.1.10** (Update Log 261014.1): under the neck, beside the colour legend, the notes this bar plays in
+  large type — in the order they sound, each string number beneath, then "over Eb — s5, f6". A strum shows its voicing
+  low to high under a thin bracket; the readout says the same ("strummed, low to high: G D Eb Bb").
+- Source edition: `hub/build/multetudes.html`, copied byte-identical to `static/studies/multetudes/study.html`.
+
 ## 2026-10-14 — The readout says the figure once — Multetudes v1.1.9
 
 - **Multetudes v1.1.9** (Update Log 261013.2): with a figure typed, the readout now says it once — the figure, then the

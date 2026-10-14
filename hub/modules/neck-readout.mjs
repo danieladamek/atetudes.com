@@ -27,7 +27,8 @@ import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen } from "../bus.mjs";
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
 import { inGamut } from "../../engine/position.mjs";
-import { alteredDegree, chromaticSpeller } from "../../engine/chord.mjs";
+import { alteredDegree } from "../../engine/chord.mjs";
+import { motifOf, motifNamer } from "../motif.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
@@ -270,25 +271,32 @@ export const neckReadout = {
          * written in the figure's own < >; an approach is named dim, with an arrow into its target. Names: a
          * chord-supplied tone as its chord spells it, everything else through chord.mjs's speller (the key's own
          * names for the seven, rule C for a chromatic approach) — the staff's two paths, so the two views agree. */
-        if (fgm && fgm.order && fgm.order.length) {
-          const spell = chromaticSpeller(cfg.key, cfg.scale);
-          const nameOf = (n) => (n.member && n.name ? n.name : spell(n.midi).name);
-          const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-          let names = "";
-          for (const st of fgm.steps) {
-            const word = st.length > 1 ? `&lt;${st.map(nameOf).join(" ")}&gt;` : nameOf(st[0]);
+        /* 261014: the ORDER and the NAMES come from hub/motif.mjs — the neck's motif line reads the same file, so the two
+         * faces say the same notes; a group (sounding together) is named low to high, so the voicing reads */
+        const motif = cfg.object === "scale" && !(fgm && fgm.order && fgm.order.length) ? null
+          : motifOf({ fig: fgm, sel, movement: cfg.movement });
+        const nameOf = motifNamer(cfg.key, cfg.scale);
+        const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const wordsOf = (steps, bracket) => {
+          let out = "";
+          for (const st of steps) {
+            const word = st.length > 1 ? (bracket ? `&lt;${st.map(nameOf).join(" ")}&gt;` : st.map(nameOf).join(" ")) : nameOf(st[0]);
             const approach = st.length === 1 && st[0].role === "approach";
-            names += (names && !names.endsWith("→</span>") ? " " : "") + (approach ? `<span class="ro-dim">${word}→</span>` : word);
+            out += (out && !out.endsWith("→</span>") ? " " : "") + (approach ? `<span class="ro-dim">${word}→</span>` : word);
           }
-          const together = fgm.steps.length === 1 && fgm.steps[0].length > 1;   // 261009: <r357> is the strum
+          return out;
+        };
+        if (motif && (motif.kind === "sequence" || motif.kind === "together")) {
           /* what the names alone cannot show: two notes of one group on one string (sounded, not fingered together) */
           const left = (groupClause(fgm, sel) || "").split("; ").filter((x) => x.startsWith("string "));
-          bits.push(`figure <b>${esc(cfg.figure.trim())}</b> — ${together ? "together" : "in sequence"}: <b>${names}</b>`
+          bits.push(`figure <b>${esc(cfg.figure.trim())}</b> — ${motif.kind === "together" ? "together" : "in sequence"}: <b>${wordsOf(motif.steps, true)}</b>`
             + (left.length ? ` <span class="ro-dim">(${left.join("; ")})</span>` : ""));
         } else {
-          /* no figure (or one that does not resolve): the switch is the only thing that decides the movement */
-          if (cfg.object !== "scale")
-            bits.push(/^arpeggi/.test(String(cfg.movement))   // a restored v0.1.0 étude says "arpeggio"
+          /* no figure (or one that does not resolve): the switch decides the movement, and the notes say the voicing,
+           * low to high (Daniel, 261014: "instead of just saying strum … show the notes in order low to high") */
+          if (motif) bits.push(`<b>${motif.kind === "arpeggio" ? "arpeggiated" : "strummed"}</b>, low to high: <b>${wordsOf(motif.steps, false)}</b>`);
+          else if (cfg.object !== "scale")
+            bits.push(/^arpeggi/.test(String(cfg.movement))
               ? `<b>arpeggiated</b> <span class="ro-dim">(in sequence, low to high)</span>`
               : `<b>strummed</b> <span class="ro-dim">(together)</span>`);
           const fg = fgm;   // the granted ledger line names this literal (golden rule 8's red ledger) — keep its spelling

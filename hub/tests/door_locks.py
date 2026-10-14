@@ -7091,11 +7091,12 @@ console.log(JSON.stringify(out));
         check(rail65["btnTitle"] == "collapse this rail", f"{tag} night 65: the button keeps its own name — the word names the rail (rule 12): {rail65['btnTitle']!r}")
         ro65 = lambda: p65.inner_text("#roLine")
         # REWRITTEN night 72 (rule 7): the neck opens arpeggiated now; strum is asked for, then arpeggiate.
-        check("arpeggiated (in sequence, low to high)" in ro65(), f"{tag} night 72: the neck opens arpeggiated, and the readout says so: {ro65()[-200:]!r}")
+        # REWRITTEN 261014 (rule 7): the movement now says its notes, low to high — "arpeggiated, low to high: …"
+        check("arpeggiated, low to high: " in ro65(), f"{tag} night 72: the neck opens arpeggiated, and the readout says so, with its notes: {ro65()[-200:]!r}")
         p65.click('#fdMoveSeg button[data-move="strum"]'); p65.wait_for_timeout(200)
-        check("strummed (together)" in ro65() and "arpeggiated" not in ro65(), f"{tag} night 65: the readout says the movement — strummed (together): {ro65()[-200:]!r}")
+        check("strummed, low to high: " in ro65() and "arpeggiated" not in ro65(), f"{tag} night 65 / 261014: the readout says the movement — strummed, low to high, with the voicing: {ro65()[-200:]!r}")
         p65.click('#fdMoveSeg button[data-move="arpeggiate"]'); p65.wait_for_timeout(200)
-        check("arpeggiated (in sequence, low to high)" in ro65() and "strummed" not in ro65(), f"{tag} night 65: arpeggiate at the neck, the readout follows: {ro65()[-200:]!r}")
+        check("arpeggiated, low to high: " in ro65() and "strummed" not in ro65(), f"{tag} night 65: arpeggiate at the neck, the readout follows: {ro65()[-200:]!r}")
         p65.fill("#fdFigIn", "4,3,4,3,2,1"); p65.dispatch_event("#fdFigIn", "change"); p65.wait_for_timeout(250)
         # REWRITTEN 261013 (rule 7; Daniel: the movement and figure clauses only restated the rail): under a resolving
         # figure the readout says the figure ONCE, as the notes it resolves to — checked at the EFFECT: the names, read as
@@ -7120,6 +7121,50 @@ console.log(JSON.stringify(out));
         check(mg is not None and "<" in mg.group(1) and "strummed" not in ro_c and "arpeggiated" not in ro_c and len(names_of(mg.group(1))) == 4,
               f"{tag} 261013: one group reads 'together', its notes in the figure's own < >: {ro_c[-200:]!r}")
         p65.fill("#fdFigIn", "4,3,4,3,2,1"); p65.dispatch_event("#fdFigIn", "change"); p65.wait_for_timeout(200)
+        # ---- 261014: THE MOTIF LINE under the neck says the same notes as the readout (hub/motif.mjs, one order) ----
+        # For each state: the line's names = the readout clause's names, in order; strum and arpeggio run low to high by
+        # PITCH (the line's data-midi, never the string number); a strum is one together-bracket; an arpeggio's order is
+        # what the walk SOUNDS; under a scale or a refused figure there is no line. Then the layout at 1280 and 390.
+        line61 = lambda: p65.evaluate("""() => ({ names: [...__may(() => document.querySelectorAll('#fdMotif .fd-mp b'), 'no line under a scale or a refused figure — its absence is checked by name')].map(b => b.textContent),
+          strs: [...__may(() => document.querySelectorAll('#fdMotif .fd-mp i'), 'no line under a scale or a refused figure — its absence is checked by name')].map(i => +i.textContent), midis: [...__may(() => document.querySelectorAll('#fdMotif .fd-mp'), 'no line under a scale or a refused figure — its absence is checked by name')].map(x => +x.dataset.midi),
+          together: __may(() => document.querySelectorAll('#fdMotif [data-together]'), 'a sequence has no together-bracket — the count is checked').length, over: (__may(() => document.querySelector('#fdMotif [data-role=over]'), 'no reference, no over-part') || {}).textContent || '' })""")
+        def ro_names61():
+            seg = next((b for b in ro65().split(" · ") if re.match(r"(figure \S.* — (in sequence|together)|strummed, low to high|arpeggiated, low to high): ", b)), "")
+            return [t for t in re.split(r"[\s<>→]+", seg.split(": ", 1)[1]) if t] if seg else []
+        def set61(addr, fig, move=None):
+            p65.click(f'#fdAddrSeg button[data-addr="{addr}"]'); p65.fill("#fdFigIn", fig); p65.dispatch_event("#fdFigIn", "input"); p65.wait_for_timeout(200)
+            if move: p65.click(f'#fdMoveSeg button[data-move="{move}"]'); p65.wait_for_timeout(200)
+        for addr, fig, move, want in (("pattern", "", "strum", "strum"), ("pattern", "", "arpeggiate", "arpeggio"), ("pattern", "4,3,4,3,2,1", None, "sequence"),
+                                      ("pattern", "<4321>", None, "together"), ("pattern", "4<32>1", None, "mixed")):
+            set61(addr, fig, move); ln = line61(); rn = ro_names61()
+            check(ln["names"] and ln["names"] == rn and len(ln["strs"]) == len(ln["names"]),
+                  f"{tag} 261014 [{want}]: the motif line's names are the readout's names, in order, each with its string: line {ln['names']} readout {rn}")
+            if want in ("strum", "arpeggio", "together"):
+                check(ln["midis"] == sorted(ln["midis"]), f"{tag} 261014 [{want}]: low to high by pitch (midi), not by string: {ln['midis']}")
+            check(ln["together"] == (1 if want in ("strum", "together", "mixed") else 0), f"{tag} 261014 [{want}]: one together-bracket exactly where notes sound together: {ln['together']}")
+            if want == "arpeggio":
+                p65.evaluate("() => { window.__n61 = []; document.addEventListener('atetudes:note', e => { if (e.detail.role !== 'bass' && e.detail.role !== 'pad') window.__n61.push(e.detail.midi); }); }")
+                p65.click('#fdMini button[data-role="next"]'); p65.wait_for_timeout(2600)
+                ln2 = line61(); heard61 = p65.evaluate("() => window.__n61.slice()")
+                check(ln2["midis"] and heard61[:len(ln2["midis"])] == ln2["midis"], f"{tag} 261014 THE EFFECT: the arpeggio's line is the order the walk sounds: line {ln2['midis']} heard {heard61[:8]}")
+                p65.click('#fdMini button[data-role="prev"]'); p65.wait_for_timeout(300)
+        set61("tones", "r5x"); ln = line61()
+        check(not ln["names"] and "figure:" in ro65(), f"{tag} 261014: a refused figure leaves no line — the readout says why: {ln}")
+        set61("pattern", "", "arpeggiate")
+        check(re.search(r"over \S+ — s\d, f\d+$", line61()["over"]) is not None, f"{tag} 261014: the reference rides the line, abbreviated (s = string, f = fret): {line61()['over']!r}")
+        for w61 in (1280, 390):
+            p65.set_viewport_size({"width": w61, "height": 900}); p65.wait_for_timeout(250)
+            lay = p65.evaluate("""() => { const R = e => e.getBoundingClientRect(); if (!document.getElementById('fdMotif')) return { missing: true, overlap: true, inside: false, pairs: false, h: 0 };
+              const m = R(document.getElementById('fdMotif')), l = R(document.getElementById('fdLegend')),
+              b = R(document.getElementById('fieldSvg').closest('.board')); const ov = Math.min(m.right, l.right) - Math.max(m.left, l.left) > 0.5 && Math.min(m.bottom, l.bottom) - Math.max(m.top, l.top) > 0.5;
+              const pairs = [...document.querySelectorAll('#fdMotif .fd-mp')].every(p => { const n = R(p.querySelector('b')), s = R(p.querySelector('i')); return s.top >= n.bottom - 1 && Math.abs((s.left + s.right) / 2 - (n.left + n.right) / 2) < 2; });
+              return { overlap: ov, inside: m.bottom <= b.bottom && m.left >= b.left && m.right <= b.right + 0.5, pairs, h: Math.round(m.height) }; }""")
+            check(not lay["overlap"] and lay["inside"] and lay["pairs"] and lay["h"] > 10, f"{tag} 261014 @{w61}: the motif line clears the legend, stays in the neck's card, each string centred under its name: {lay}")
+        p65.set_viewport_size({"width": 1280, "height": 900}); p65.wait_for_timeout(250)
+        p65.select_option("#hcObj", "scale"); p65.wait_for_timeout(250)
+        check(not line61()["names"], f"{tag} 261014: under a scale there is no motif line")
+        p65.select_option("#hcObj", "tetrad"); p65.wait_for_timeout(250)
+        set61("pattern", "4,3,4,3,2,1")   # back to the state the block's later pins assume
         # REWRITTEN night 66 (261024 item 0, rule 7): night 65 pinned that a shut rail at 1280 HIDES the word — the label's
         # only job is to say something is there WHEN SHUT (Daniel: "an indicator next to the side collapse"). Now: shut,
         # the word is legible at both widths — down the 30 px column at 1280, across the 30 px bar at 390 — and inside the rail.

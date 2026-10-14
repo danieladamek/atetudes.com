@@ -310,7 +310,10 @@ export default {
      * notepad's speaks of saving (261012b's every-card save sentence removed); the readout sits under the neck. */
     /* v1.1.9 (261013, Daniel): the readout says the figure once — as typed, then this bar's notes in the order it sounds
      * them (a group in its < >, an approach dim with an arrow); the switch's movement word only when there is no figure. */
-    blurb: "one tool that holds many études · v1.1.9",
+    /* v1.1.10 (261014, Daniel): the motif line under the neck — the notes in sounding order in large type, each string
+     * under its name, then "over Eb — s5, f6"; a strum or one group low to high under a thin together-bracket; the
+     * readout's strum and arpeggio clauses name their notes low to high. */
+    blurb: "one tool that holds many études · v1.1.10",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

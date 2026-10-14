@@ -45,7 +45,7 @@ import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn, windowLo } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
 import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
-import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead, soundedBass, soundedChoicesFor } from "../../engine/reference.mjs";
+import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead, soundedBass, soundedChoicesFor, compositeOver } from "../../engine/reference.mjs";
 // 260917 item 5: the mode names, the one table
 import { MODES } from "../../engine/field.mjs";
 import { progressionOf, chordAt, movementWord } from "../../engine/progression.mjs";
@@ -56,6 +56,7 @@ import { CONFIG_CHANGED, STEP_CHANGED, NOTE, MIXER, CLOCK, CLOCK_STATE, BEAT, li
 import { mountMini } from "../mini.mjs";
 import { clockMarkup, mountClock } from "../clock.mjs";
 import { legendHTML } from "../legend.mjs";
+import { motifOf, motifNamer } from "../motif.mjs";
 import { mountReadout } from "../readout.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
@@ -238,7 +239,12 @@ export const fieldBoard = {
        with them: it held nothing else. -->
   <div class="hint info">The neck draws the key's notes faintly and this bar's notes in full colour, by their function (the line under the neck says against what); click any note to hear it. The rail beside it shapes the motif: one note per string or a line of three, one of each tone or every one in the box, strummed or arpeggiated, and an optional figure — string numbers as a pattern, or roles like R-3-7-5 as tones. The bar split, tempo and metronome checkbox in the header are the same clock the Metronome card owns. Click a string number (right of the neck) to add or drop it; click the neck, then ← → slide the window.</div>
   <div class="hint" id="fdHint"></div>
-  <div class="legend" id="fdLegend"></div>`,
+  <!-- THE MOTIF LINE (261014 — Daniel: "expose in larger type font the note sequence over the string sequence"):
+       beside the legend, what this bar's motif sounds — the names in sounding order, each string number under its
+       name, then "over Eb — s5, f6". A strum, or one group, reads low to high under a thin together-bracket. Plain
+       text, not degree colours; it changes with the bar and stays still while it plays. hub/motif.mjs is the order,
+       the same file the readout reads. -->
+  <div class="fd-foot"><div class="legend" id="fdLegend"></div><div class="fd-motif" id="fdMotif" aria-label="this bar's motif: the notes in sounding order, each string beneath"></div></div>`,
 
   styles: `
 #fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
@@ -314,7 +320,14 @@ export const fieldBoard = {
  * three boards render it through hub/readout.mjs — see .readhead / .readbox there */
 /* the legend's rules moved to the build's LEGEND_GRAMMAR (night 85): three faces render it through hub/legend.mjs */
 #fdHint{margin:8px 2px 0}
-#fdHint:empty{display:none}   /* empty in the ordinary case (261012b) — no blank band under the neck */
+#fdHint:empty{display:none}
+/* the motif line (261014): beside the legend, wrapping below it at phone width; a name and its string never part */
+.fd-foot{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 28px}
+.fd-motif{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 10px;margin-top:8px}
+.fd-motif:empty{display:none}
+.fd-mp{display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
+.fd-mp b{font-size:16px;color:var(--ink)}
+.fd-mp i{font-style:normal;font-size:10.5px;color:var(--gray)}   /* empty in the ordinary case (261012b) — no blank band under the neck */
 /* the seg's visual grammar, scoped to this module's own markup (260905):
  * the shell defines these rules in its STRIPS chrome block, which this
  * door's lock never mounts — so the .on state was applied and invisible.
@@ -1070,6 +1083,31 @@ export const fieldBoard = {
       /* THE LEGEND SAYS WHICH CENTRE (night 85, item 2 C — PO ruling 261053 §2): under "follows" this line said
        * "against the key" while the bold selection was re-read against the bar's centre — FALSE on the live page. It
        * now names the centre the selection speaks from, and the marks that stay in key space. */
+      /* THE MOTIF LINE (261014): the same order and names as the readout (hub/motif.mjs), from this board's own
+       * resolved figure and selection — never read back off the drawn neck. No line under a scale, with nothing
+       * selected, or when the typed figure is refused (the readout carries those sentences). */
+      {
+        const host = byId("fdMotif");
+        const motif = cfg.object === "scale" || (String(cfg.figure || "").trim() && fig.err) ? null
+          : motifOf({ fig, sel, movement: cfg.movement });
+        let html = "";
+        if (motif) {
+          const nameOf = motifNamer(cfg.key, cfg.scale);
+          const pair = (n) => `<span class="fd-mp" data-midi="${n.midi}" data-str="${n.string}"${n.role === "approach" ? ' data-approach="true"' : ""}>`
+            + `<b${n.role === "approach" ? ' style="color:#73737A;font-weight:600"' : ""}>${nameOf(n)}</b><i>${n.string}</i></span>`;
+          /* ONE together-mark, the same everywhere (Daniel's pick, 261014): a thin bracket over the names. Inline, because
+           * a rule for a state the boot never shows would orphan in the door's CSS check */
+          const together = (st) => `<span data-together="true" title="these sound together" style="display:inline-flex;flex-direction:column">`
+            + `<span aria-hidden="true" style="height:5px;margin:0 1px 3px;border:1.5px solid #73737A;border-bottom:none;border-radius:2px 2px 0 0"></span>`
+            + `<span style="display:inline-flex;gap:10px">${st.map(pair).join("")}</span></span>`;
+          html = motif.steps.map((st) => (st.length > 1 ? together(st) : pair(st[0]))).join("");
+          /* the reference, abbreviated HERE only (s = string, f = fret); unfretted said so; refused, nothing */
+          const over = refP.note ? `over ${compositeOver(fld, refP.note.keyDeg, cur.tones.map((t) => t.pc)).bassName} — s${refP.note.string}, f${refP.note.fret}`
+            : refP.offer ? `over ${refP.offer.name} — unfretted` : "";
+          if (over) html += `<span data-role="over" style="font-size:16px;font-weight:bold;color:var(--ink);padding-bottom:14px;margin-left:8px">${over}</span>`;
+        }
+        host.innerHTML = html;
+      }
       byId("fdLegend").innerHTML = legendHTML({
         follows: cfg.object === "scale" && cfg.centreSrc === "follows" && fdRefDeg != null,
         centreName: fdRefDeg != null ? fld.notes[fdRefDeg].name : null,
