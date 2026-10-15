@@ -3,7 +3,7 @@
  * the 390 render). Words from the one law; absence is "not recorded" (2026-10-02). */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { describe } from "../etude-describe.mjs";
+import { describe } from "../../engine/etude-describe.mjs";
 
 const said = (split) => describe({ bpm: 120, meter: 4, split, key: "Bb", scale: "major" })[0].text;
 

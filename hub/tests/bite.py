@@ -2506,7 +2506,7 @@ def m113_the_settings_card_reads_its_own_list():
 
 def m114_a_setting_without_words_leaves_the_face():
     # night 66: describe drops the keys it has no words for — a later setting would reach the log and never the face. The one-list pin must bite.
-    p, original, mutated = patch('hub/etude-describe.mjs',
+    p, original, mutated = patch('engine/etude-describe.mjs',   # moved from hub/ 261014 (bundle 2.1.0)
         '  if (also.length) say(',
         '  if (false) say(')
     try:

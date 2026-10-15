@@ -47,6 +47,8 @@ engine/
 │                        drop-2, drop-3, the shells (arity 3, a separate stream)
 │                        and rootless 3-5-7-9. Voicing only — chord VOCABULARY
 │                        stays in chord.mjs. Feeds isolation.mjs's candidatesFor
+├── etude-describe.mjs   THE ÉTUDE IN WORDS (night 66; moved from hub/ 261014): describe(snapshot)
+│                        → the Settings card's lines, the same list the practice log saves (pure)
 ├── etude-timeline.mjs   THE ÉTUDE'S TIMELINE (261014): a saved étude (an etudeRecord
 │                        snapshot) → every chord's events {midi,onset,dur,role,string,
 │                        fret} in BEATS — the derivation the Multetudes walk used to

@@ -1,9 +1,11 @@
 /* etude-describe.mjs — the étude, in a musician's words (night 66, 261024): describe(snapshot) for the Settings
  * card. The SNAPSHOT comes from hub/etude-record.mjs — the one record the practice log saves; this file only
  * words it, so the face and the log cannot hold different lists. Kept apart from the record so the engine
- * modules it needs (selection, tunings) reach only the door that shows the card. */
-import { objectOf, tonePick } from "../engine/selection.mjs";
-import { describeTuning } from "../engine/tunings.mjs";
+ * modules it needs (selection, tunings) reach only the door that shows the card.
+ * MOVED from hub/ to engine/ (261014, Daniel — bundle 2.1.0): its imports were already engine code, so the move
+ * changes where it lives and nothing it says; RiffRaft's étude card now describes an étude in these same words. */
+import { objectOf, tonePick } from "./selection.mjs";
+import { describeTuning } from "./tunings.mjs";
 
 /* ---------------- the description: the snapshot, in a musician's words ---------------- */
 

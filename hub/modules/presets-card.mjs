@@ -20,7 +20,7 @@ import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake } f
 import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 import { etudeRecord } from "../etude-record.mjs";
-import { describe } from "../etude-describe.mjs";
+import { describe } from "../../engine/etude-describe.mjs";
 
 /* label · the config it seeds. `take` defaults back to "one" exactly as v0.9
  * resets it, so a preset states only what it means. */
