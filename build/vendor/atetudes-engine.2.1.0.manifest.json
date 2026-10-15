@@ -1,0 +1,150 @@
+{
+  "name": "atetudes-engine",
+  "version": "2.1.0",
+  "file": "atetudes-engine.2.1.0.mjs",
+  "sha256": "aec478ce86c2f4f502fc385115b1237de4a88b6d8b22feef3a0e72f42da64852",
+  "sourceCommit": "4c5fa1633174e2d468238f0ce935e76f643ab8e2",
+  "sources": [
+    {
+      "path": "engine/chord.mjs",
+      "blob": "bbfecb34ea016a9c99418394f4ee1bc5e9305a8c"
+    },
+    {
+      "path": "engine/field.mjs",
+      "blob": "37372800a00c61572d669a3443852f10aa7e5b8c"
+    },
+    {
+      "path": "engine/atchart.mjs",
+      "blob": "b8b4efca099c5ffbb58b98fd1ee316ea8eb187f6"
+    },
+    {
+      "path": "engine/structures.mjs",
+      "blob": "ea11c3ab27a491bdabb6c04e0556c6a0141f12ed"
+    },
+    {
+      "path": "engine/markdown.mjs",
+      "blob": "3bd1904297a6173c1dafa658d5602f3aef3db7ee"
+    },
+    {
+      "path": "engine/numeral.mjs",
+      "blob": "111a6c17a9d5d534a93a2a096aad726dc1e8d2d4"
+    },
+    {
+      "path": "engine/string-sets.mjs",
+      "blob": "293dc6decf6f847c4a6a3979ed7752c6ab24fad9"
+    },
+    {
+      "path": "engine/position.mjs",
+      "blob": "c8b4e857d4883e11a9ae8c3191870ddfda1c2af5"
+    },
+    {
+      "path": "engine/open-string.mjs",
+      "blob": "b48f0bc0cfe588e6aece9dab1ba2f57dc78acbad"
+    },
+    {
+      "path": "engine/string-run.mjs",
+      "blob": "ec3d38f67b37c80e2e8497b4c2caef1037e407dd"
+    },
+    {
+      "path": "engine/motion.mjs",
+      "blob": "324255b75e372f687d4556f40184504f145f28ab"
+    },
+    {
+      "path": "engine/selection.mjs",
+      "blob": "150e6a1f36730579f06cb1ca232b354419dc801b"
+    },
+    {
+      "path": "engine/tetrad-voicings.mjs",
+      "blob": "809040f76bb2898cbdcafb9b5c68fbc90acff114"
+    },
+    {
+      "path": "engine/isolation.mjs",
+      "blob": "24a8e9599bb20610b29c83f6b83e9b50ae36ccc9"
+    },
+    {
+      "path": "engine/voice-identity.mjs",
+      "blob": "ddd16c8aaa45ea8abbaae02088e8d3bdf4841904"
+    },
+    {
+      "path": "engine/tetrad-sequence.mjs",
+      "blob": "d71c0fc253dc81fe6f571bbf3129dd1b0ce9273b"
+    },
+    {
+      "path": "engine/role.mjs",
+      "blob": "89f571acae6f5a15090459f40a1584f411c2cdef"
+    },
+    {
+      "path": "engine/reference.mjs",
+      "blob": "d7054becde70f823a0806097e6dd6fa0d21ea44f"
+    },
+    {
+      "path": "engine/progression.mjs",
+      "blob": "f681d81a290680655cad38852a0b27915fe0eddf"
+    },
+    {
+      "path": "engine/note-events.mjs",
+      "blob": "edb762cde2ecb64164bf7f6f892e9e60f1e2a280"
+    },
+    {
+      "path": "engine/voices.mjs",
+      "blob": "05c71c811eb91b3244357c7e6fd72a4b6084a8d3"
+    },
+    {
+      "path": "engine/etude-timeline.mjs",
+      "blob": "d2b4e48abe10f3b6ab7e5085cc24c6b788615904"
+    },
+    {
+      "path": "engine/degree-palette.mjs",
+      "blob": "697c02d6cd43388d4ef1d49b98ded48a19279c5c"
+    },
+    {
+      "path": "engine/tunings.mjs",
+      "blob": "080fe7b132a731504ffa4d637fe04bed551e03a3"
+    },
+    {
+      "path": "engine/etude-describe.mjs",
+      "blob": "2e7ae1f05372f7461da87197b12c728b98c8734f"
+    }
+  ],
+  "api": [
+    "LETTER_PC",
+    "accOf",
+    "pcOf",
+    "parseChord",
+    "SCALE_STEPS",
+    "scaleNotes",
+    "chromaticSpeller",
+    "spellRole",
+    "alteredDegree",
+    "resolveRoman",
+    "ATCHART_VERSION",
+    "CHART_SLOT",
+    "readApp",
+    "writeApp",
+    "parseAtchart",
+    "serializeAtchart",
+    "STRUCTURES",
+    "CHORD_ROOTS",
+    "CHORD_QUALITIES",
+    "GLYPHS",
+    "resolveStructure",
+    "chartBody",
+    "chartFence",
+    "changesLine",
+    "chordSymbol",
+    "applyEdit",
+    "grammarRoman",
+    "ETUDE_DEFAULTS",
+    "DEFAULT_METER",
+    "etudeOf",
+    "chordCount",
+    "beatsAt",
+    "barAt",
+    "etudeTimeline",
+    "FAM",
+    "FAM_COLOR",
+    "DESCRIBED",
+    "describe"
+  ],
+  "ruling": "2.0.0 + 2026-10-14 (Daniel): adds etude-describe (describe, DESCRIBED), moved from hub/ into engine/; the engine-only closure not widened; palette.mjs still forbidden; parseRoman not in the API"
+}

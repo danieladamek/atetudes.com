@@ -1,3 +1,10 @@
+## 2026-10-14 — Multetudes v1.1.13 — nothing visible changed
+
+- **Multetudes v1.1.13** (Update Log 261014.5): the code that writes the Settings card's description moved into the
+  engine, so RiffRaft can describe an étude in the same words. Nothing visible changed: the card's text is identical
+  for every étude checked.
+- Source edition: `hub/build/multetudes.html`, copied byte-identical to `static/studies/multetudes/study.html`.
+
 ## 2026-10-14 — The étude timeline — Multetudes v1.1.12
 
 - **Multetudes v1.1.12** (Update Log 261014.3): what each chord plays is now worked out by one pure engine function

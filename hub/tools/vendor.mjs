@@ -14,8 +14,11 @@
  * retyped). THE MOTION LOCK IS LIFTED FOR 2.0.0 ("for sure"): an étude with an approach cannot be played without
  * motion.mjs, and the lock was a scope for 1.0.0, never a safety rule. palette.mjs STAYS forbidden (tier 4 and the
  * panel are At-Etudes'). The lock is PER VERSION: 1.0.0 still checks both. Carrying motion does not mean storing
- * derived notes — RiffRaft derives every time it plays (charter §7). hub/etude-describe.mjs is NOT carried: it lives
- * in hub/ and imports ../engine/, and the closure carries engine modules only (reported, not moved).
+ * derived notes — RiffRaft derives every time it plays (charter §7).
+ *
+ * 2.1.0 (Daniel, 2026-10-14): 2.0.0's contents plus etude-describe (`describe`, `DESCRIBED`) — the étude in Multetudes'
+ * own words, moved from hub/ into engine/ (its imports were already engine code); the engine-only closure is NOT
+ * widened. Additive, so the minor version. palette.mjs still forbidden.
  * parseRoman is NOT in the API (its docstring is stale and chord.mjs is carried by every study, so it is not
  * edited); resolveRoman, which is exported, parses through it.
  *
@@ -41,7 +44,7 @@ import { execFileSync } from "node:child_process";
 import { REPO, importStatementsOf } from "./resolve.mjs";
 import { inlineForm, moduleChunk, nsOf } from "./build.mjs";
 
-export const VERSION = "2.0.0";
+export const VERSION = "2.1.0";
 export const OUT_DIR = join(REPO, "build", "vendor");
 export const bundleName = (v) => `atetudes-engine.${v}.mjs`;
 export const manifestName = (v) => `atetudes-engine.${v}.manifest.json`;
@@ -54,20 +57,24 @@ const ENTRIES_1 = [
   { mod: "markdown", only: ["applyEdit"] },
   { mod: "numeral", only: ["grammarRoman"] },
 ];
-export const ENTRIES = [...ENTRIES_1,
+const ENTRIES_2_0 = [...ENTRIES_1,
   { mod: "etude-timeline" },                                // 2.0.0: the étude chain (RiffRaft's étude block)
   { mod: "degree-palette", only: ["FAM", "FAM_COLOR"] },    // 2.0.0: the Spec's degree colours, read, never retyped
 ];
-/** each version's entries — a past version rebuilds from its own (1.0.0's are 1.0.0's forever) */
-export const ENTRIES_OF = { "1.0.0": ENTRIES_1, "2.0.0": ENTRIES };
+export const ENTRIES = [...ENTRIES_2_0,
+  { mod: "etude-describe" },                                // 2.1.0: the étude in Multetudes' own words
+];
+/** each version's entries — a past version rebuilds from its own (1.0.0's are 1.0.0's forever, 2.0.0's likewise) */
+export const ENTRIES_OF = { "1.0.0": ENTRIES_1, "2.0.0": ENTRIES_2_0, "2.1.0": ENTRIES };
 
 /** modules whose code a version must never carry (the lock); reaching one refuses the build. PER VERSION (261014):
  * the motion lock is lifted for 2.0.0 (Daniel); palette stays forbidden in every version */
-export const FORBIDDEN_OF = { "1.0.0": ["motion", "palette"], "2.0.0": ["palette"] };
+export const FORBIDDEN_OF = { "1.0.0": ["motion", "palette"], "2.0.0": ["palette"], "2.1.0": ["palette"] };
 export const FORBIDDEN = FORBIDDEN_OF[VERSION];
 const RULING_OF = {
   "1.0.0": "261011c (option C): no palette.mjs, no motion.mjs, parseRoman not in the API",
   "2.0.0": "261011c + 2026-10-14 (the étude chain): adds etude-timeline and FAM/FAM_COLOR; the motion lock lifted for 2.0.0, palette.mjs still forbidden; parseRoman not in the API",
+  "2.1.0": "2.0.0 + 2026-10-14 (Daniel): adds etude-describe (describe, DESCRIBED), moved from hub/ into engine/; the engine-only closure not widened; palette.mjs still forbidden; parseRoman not in the API",
 };
 
 const EXPORT_NAME = /^export\s+(?:async\s+)?(?:const|let|var|function\*?|class)\s+([A-Za-z_$][\w$]*)/gm;

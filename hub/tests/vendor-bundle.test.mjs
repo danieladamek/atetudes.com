@@ -16,6 +16,7 @@ import { inlineForm } from "../tools/build.mjs";
 import { CORPUS, MUST_THROW } from "../../engine/tests/_atchart-corpus.mjs";
 import { etudeTimeline as sourceTimeline } from "../../engine/etude-timeline.mjs";
 import { FAM as SOURCE_FAM, FAM_COLOR as SOURCE_FAM_COLOR } from "../../engine/degree-palette.mjs";
+import { describe as sourceDescribe } from "../../engine/etude-describe.mjs";
 
 const BUNDLE = join(OUT_DIR, bundleName(VERSION));
 const text = readFileSync(BUNDLE, "utf8");
@@ -180,4 +181,26 @@ test("smoke: the degree palette is read from the bundle, equal to the engine's (
   assert.deepEqual(E.FAM, SOURCE_FAM);
   assert.deepEqual(E.FAM_COLOR, SOURCE_FAM_COLOR);
   assert.equal(E.FAM_COLOR.R, SOURCE_FAM_COLOR.R);
+});
+
+// ---- 2.1.0: the étude in words ----
+
+test("2.1.0 manifest lists describe by name, and 2.0.0 is untouched (no describe)", async () => {
+  assert.ok(manifest.api.includes("describe") && typeof E.describe === "function", "describe is in 2.1.0's manifest and exported");
+  const E2 = await import(pathToFileURL(join(OUT_DIR, bundleName("2.0.0"))).href);
+  assert.deepEqual(Object.keys(E2).sort(), [...manifestOf("2.0.0").api].sort(), "2.0.0 still exports exactly its own API");
+  assert.equal(E2.describe, undefined, "2.0.0 has no describe");
+});
+
+test("smoke: every corpus étude is described in the SAME words through the bundle as through the source", () => {
+  const corpus = JSON.parse(readFileSync(join(REPO, "hub", "tests", "fixtures", "etude-corpus.json"), "utf8"));
+  let lines = 0;
+  for (const { name, saved } of corpus) {
+    const viaBundle = E.describe(saved), viaSource = sourceDescribe(saved);
+    assert.deepEqual(viaBundle, viaSource, `${name}: the bundle's words equal the source's`);
+    assert.ok(viaBundle.length >= 6, `${name}: a real description`);
+    lines += viaBundle.length;
+  }
+  assert.ok(corpus.length >= 12, `the corpus ran (${corpus.length} études)`);
+  console.log(`  ${corpus.length} études, ${lines} lines: bundle words = source words`);
 });
