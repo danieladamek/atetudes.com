@@ -7,7 +7,15 @@
  * WHAT IT CARRIES (ruling 261011c): chord · atchart · structures · applyEdit from markdown · grammarRoman from
  * numeral, and whatever those import (field, today), DERIVED from their import statements. palette.mjs is NOT
  * carried: every word it offers lives in structures.mjs; its panel, padInsert and tier 4 stay At-Etudes'.
- * motion.mjs is NOT carried: FORBIDDEN below is a lock, and the build refuses a bundle that reaches it.
+ * motion.mjs is NOT carried in 1.0.0: FORBIDDEN_OF below is a lock, and the build refuses a bundle that reaches it.
+ *
+ * 2.0.0 (Daniel, 2026-10-14 — the étude chain): adds etude-timeline (a saved étude → timed notes, for RiffRaft's
+ * étude block) and the degree palette's FAM / FAM_COLOR (the card reads the Spec's colours from the bundle, never
+ * retyped). THE MOTION LOCK IS LIFTED FOR 2.0.0 ("for sure"): an étude with an approach cannot be played without
+ * motion.mjs, and the lock was a scope for 1.0.0, never a safety rule. palette.mjs STAYS forbidden (tier 4 and the
+ * panel are At-Etudes'). The lock is PER VERSION: 1.0.0 still checks both. Carrying motion does not mean storing
+ * derived notes — RiffRaft derives every time it plays (charter §7). hub/etude-describe.mjs is NOT carried: it lives
+ * in hub/ and imports ../engine/, and the closure carries engine modules only (reported, not moved).
  * parseRoman is NOT in the API (its docstring is stale and chord.mjs is carried by every study, so it is not
  * edited); resolveRoman, which is exported, parses through it.
  *
@@ -33,22 +41,34 @@ import { execFileSync } from "node:child_process";
 import { REPO, importStatementsOf } from "./resolve.mjs";
 import { inlineForm, moduleChunk, nsOf } from "./build.mjs";
 
-export const VERSION = "1.0.0";
+export const VERSION = "2.0.0";
 export const OUT_DIR = join(REPO, "build", "vendor");
 export const bundleName = (v) => `atetudes-engine.${v}.mjs`;
 export const manifestName = (v) => `atetudes-engine.${v}.manifest.json`;
 
 /** the API, declared per module: `only` picks names, `except` drops them, neither exports every name */
-export const ENTRIES = [
+const ENTRIES_1 = [
   { mod: "chord", except: ["parseRoman"] },
   { mod: "atchart" },
   { mod: "structures" },
   { mod: "markdown", only: ["applyEdit"] },
   { mod: "numeral", only: ["grammarRoman"] },
 ];
+export const ENTRIES = [...ENTRIES_1,
+  { mod: "etude-timeline" },                                // 2.0.0: the étude chain (RiffRaft's étude block)
+  { mod: "degree-palette", only: ["FAM", "FAM_COLOR"] },    // 2.0.0: the Spec's degree colours, read, never retyped
+];
+/** each version's entries — a past version rebuilds from its own (1.0.0's are 1.0.0's forever) */
+export const ENTRIES_OF = { "1.0.0": ENTRIES_1, "2.0.0": ENTRIES };
 
-/** modules whose code the bundle must never carry (the lock); reaching one refuses the build */
-export const FORBIDDEN = ["motion", "palette"];
+/** modules whose code a version must never carry (the lock); reaching one refuses the build. PER VERSION (261014):
+ * the motion lock is lifted for 2.0.0 (Daniel); palette stays forbidden in every version */
+export const FORBIDDEN_OF = { "1.0.0": ["motion", "palette"], "2.0.0": ["palette"] };
+export const FORBIDDEN = FORBIDDEN_OF[VERSION];
+const RULING_OF = {
+  "1.0.0": "261011c (option C): no palette.mjs, no motion.mjs, parseRoman not in the API",
+  "2.0.0": "261011c + 2026-10-14 (the étude chain): adds etude-timeline and FAM/FAM_COLOR; the motion lock lifted for 2.0.0, palette.mjs still forbidden; parseRoman not in the API",
+};
 
 const EXPORT_NAME = /^export\s+(?:async\s+)?(?:const|let|var|function\*?|class)\s+([A-Za-z_$][\w$]*)/gm;
 export const exportNamesOf = (src) => [...src.matchAll(EXPORT_NAME)].map((m) => m[1]);
@@ -92,11 +112,11 @@ export function apiOf(entries, read = readTree) {
  * banner, and its SIGNATURE (every line of its inline form 40+ chars long that no carried module also has; generic
  * helpers such as mod12 are shared and prove nothing), must be absent from the bundle's bytes. An empty signature is
  * itself a problem: a lock with nothing to look for cannot prove it ran. */
-export function lockProblems(text, read = readTree, carried = closureOf(ENTRIES, read)) {
+export function lockProblems(text, read = readTree, carried = closureOf(ENTRIES, read), forbidden = FORBIDDEN) {
   const out = [];
   const lines = (src, rel) => inlineForm(src, rel).split("\n").map((l) => l.trim()).filter((l) => l.length >= 40);
-  const shared = new Set(carried.filter((f) => !FORBIDDEN.map(modPath).includes(f)).flatMap((f) => lines(read(f), f)));
-  for (const mod of FORBIDDEN) {
+  const shared = new Set(carried.filter((f) => !forbidden.map(modPath).includes(f)).flatMap((f) => lines(read(f), f)));
+  for (const mod of forbidden) {
     if (text.includes(`/* ${mod}.mjs`) || text.includes(`/* ===== ${modPath(mod)} =====`))
       out.push(`${mod}.mjs: its banner is in the bundle`);
     const sig = lines(read(modPath(mod)), modPath(mod)).filter((l) => !shared.has(l));
@@ -109,8 +129,9 @@ export function lockProblems(text, read = readTree, carried = closureOf(ENTRIES,
 
 /** build in memory → { text, manifest }. `read` lets the gate rebuild from recorded blobs. */
 export function buildBundle({ version = VERSION, entries = ENTRIES, read = readTree, sourceCommit, blobs } = {}) {
+  const forbidden = FORBIDDEN_OF[version] ?? FORBIDDEN;
   const files = closureOf(entries, read);
-  const reached = FORBIDDEN.filter((m) => files.includes(modPath(m)));
+  const reached = forbidden.filter((m) => files.includes(modPath(m)));
   if (reached.length) throw new Error(`vendor: the bundle reaches ${reached.map(modPath).join(", ")} — forbidden (the lock)`);
   const api = apiOf(entries, read);
   const resolveDep = (from, spec) => relative(REPO, resolvePath(REPO, dirname(from), spec)).split("\\").join("/");
@@ -130,7 +151,7 @@ ${files.map((f) => moduleChunk(f, read(f), resolveDep)).join("\n\n")}
 
 ${exportLines.join("\n")}
 `;
-  const problems = lockProblems(text, read, files);
+  const problems = lockProblems(text, read, files, forbidden);
   if (problems.length) throw new Error("vendor: the lock is open —\n  " + problems.join("\n  "));
   // a fresh build records each source's COMMITTED blob, and refuses a source whose working copy is not that blob —
   // otherwise the bytes built and the blob recorded would describe two different files
@@ -148,7 +169,7 @@ ${exportLines.join("\n")}
     sourceCommit: sourceCommit ?? git("log", "-1", "--format=%H", "--", ...files).trim(),
     sources: files.map((f) => ({ path: f, blob: blob(f) })),
     api,
-    ruling: "261011c (option C): no palette.mjs, no motion.mjs, parseRoman not in the API",
+    ruling: RULING_OF[version] ?? RULING_OF[VERSION],
   };
   return { text, manifest };
 }
@@ -166,7 +187,8 @@ export function checkCommitted() {
     if (!existsSync(p)) { problems.push(`${m.file}: missing beside its manifest`); continue; }
     const text = readFileSync(p, "utf8");
     if (sha256(text) !== m.sha256) problems.push(`${m.file}: sha256 ${sha256(text).slice(0, 12)} ≠ manifest ${m.sha256.slice(0, 12)}`);
-    for (const x of lockProblems(text)) problems.push(`${m.file}: ${x}`);
+    const entriesV = ENTRIES_OF[m.version] ?? ENTRIES, forbiddenV = FORBIDDEN_OF[m.version] ?? FORBIDDEN;
+    for (const x of lockProblems(text, readTree, closureOf(entriesV), forbiddenV)) problems.push(`${m.file}: ${x}`);
     // reproduce from the recorded blobs: the bytes must be exactly the inliner's output on exactly those sources
     const blobs = new Map(m.sources.map((s) => [s.path, s.blob]));
     const read = (rel) => {
@@ -174,7 +196,7 @@ export function checkCommitted() {
       return git("cat-file", "blob", blobs.get(rel));
     };
     try {
-      const re = buildBundle({ version: m.version, read, blobs, sourceCommit: m.sourceCommit, entries: ENTRIES_OF[m.version] ?? ENTRIES });
+      const re = buildBundle({ version: m.version, read, blobs, sourceCommit: m.sourceCommit, entries: entriesV });
       if (re.text !== text) problems.push(`${m.file}: does not reproduce from its recorded sources`);
       if (JSON.stringify(re.manifest.api) !== JSON.stringify(m.api)) problems.push(`${m.file}: API differs from its manifest`);
     } catch (e) {
@@ -187,8 +209,6 @@ export function checkCommitted() {
   return { problems, notes, versions };
 }
 
-/** a past version's entries, if they ever differ from ENTRIES (none yet: 1.0.0 is the first) */
-const ENTRIES_OF = {};
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolvePath(process.argv[1])).href) {
   if (process.argv.includes("--check")) {

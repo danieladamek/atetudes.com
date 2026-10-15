@@ -2,17 +2,20 @@
  *
  * Every musical assertion below imports the committed bundle file and nothing else from the engine: the bundle has
  * no imports, so what passes here is what RiffRaft gets. The corpus fixture is data, not engine code.
- * The lock (no motion.mjs, no palette.mjs) is checked on the bundle's bytes, and is shown to BITE: a bundle with
- * motion's code put back must be refused, by the closure and by the byte check separately.
+ * The lock is checked on the bundle's bytes, PER VERSION (261014), and is shown to BITE by the closure and by the byte
+ * check separately: 1.0.0 carries neither motion.mjs nor palette.mjs; 2.0.0 carries motion (the lock lifted for the
+ * étude chain, Daniel 2026-10-14) and still never palette.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { VERSION, OUT_DIR, ENTRIES, bundleName, manifestName, buildBundle, lockProblems, checkCommitted } from "../tools/vendor.mjs";
+import { VERSION, OUT_DIR, ENTRIES, ENTRIES_OF, FORBIDDEN_OF, bundleName, manifestName, buildBundle, lockProblems, checkCommitted, closureOf } from "../tools/vendor.mjs";
 import { inlineForm } from "../tools/build.mjs";
-import { CORPUS } from "../../engine/tests/_atchart-corpus.mjs";
+import { CORPUS, MUST_THROW } from "../../engine/tests/_atchart-corpus.mjs";
+import { etudeTimeline as sourceTimeline } from "../../engine/etude-timeline.mjs";
+import { FAM as SOURCE_FAM, FAM_COLOR as SOURCE_FAM_COLOR } from "../../engine/degree-palette.mjs";
 
 const BUNDLE = join(OUT_DIR, bundleName(VERSION));
 const text = readFileSync(BUNDLE, "utf8");
@@ -36,20 +39,39 @@ test("the bundle stands alone: no import of any kind, and it exports exactly the
   console.log(`  ${manifest.api.length} names exported`);
 });
 
-test("THE LOCK: no motion.mjs or palette.mjs code in the bundle — and the lock bites", () => {
-  assert.deepEqual(lockProblems(text), []);
-  assert.ok(!manifest.sources.some((s) => /\/(motion|palette)\.mjs$/.test(s.path)), "neither is a recorded source");
-  // bite 1 — the closure refuses an entry that reaches motion (palette reaches it too)
-  for (const mod of ["motion", "palette"])
-    assert.throws(() => buildBundle({ entries: [...ENTRIES, { mod }], sourceCommit: "x", blobs: new Map() }),
-      /forbidden/, `an entry reaching ${mod}.mjs is refused`);
-  // bite 2 — the byte check, independent of the closure: motion's code appended to the real bundle is seen
-  const motion = inlineForm(readFileSync(join(REPO, "engine", "motion.mjs"), "utf8"), "engine/motion.mjs");
-  const p = lockProblems(text + "\n" + motion);
-  assert.ok(p.some((x) => x.startsWith("motion.mjs:")), "motion's code in the bytes opens the lock: " + p.join(" / "));
-  // and a single signature line is enough (a partial copy cannot slip through)
-  const one = motion.split("\n").map((l) => l.trim()).find((l) => l.length >= 40 && !text.includes(l));
-  assert.ok(lockProblems(text + "\n" + one).some((x) => x.startsWith("motion.mjs:")), "one line of motion is seen");
+/* THE LOCK, PER VERSION (261014): each committed version's bytes against its OWN forbidden list and closure, and the
+ * lock shown to bite for each — the closure refuses an entry reaching a forbidden module, and the byte check sees a
+ * forbidden module's code appended, even one line of it */
+const textOf = (v) => readFileSync(join(OUT_DIR, bundleName(v)), "utf8");
+const manifestOf = (v) => JSON.parse(readFileSync(join(OUT_DIR, manifestName(v)), "utf8"));
+for (const v of Object.keys(FORBIDDEN_OF)) {
+  test(`THE LOCK ${v}: none of ${FORBIDDEN_OF[v].join(", ")} in the bundle — and the lock bites`, () => {
+    const t = textOf(v), m = manifestOf(v), forbidden = FORBIDDEN_OF[v], carried = closureOf(ENTRIES_OF[v]);
+    assert.deepEqual(lockProblems(t, undefined, carried, forbidden), []);
+    for (const mod of forbidden) {
+      assert.ok(!m.sources.some((s) => s.path === `engine/${mod}.mjs`), `${mod}.mjs is not a recorded source of ${v}`);
+      // bite 1 — the closure refuses an entry that reaches it
+      assert.throws(() => buildBundle({ version: v, entries: [...ENTRIES_OF[v], { mod }], sourceCommit: "x", blobs: new Map() }),
+        /forbidden/, `${v}: an entry reaching ${mod}.mjs is refused`);
+      // bite 2 — the byte check, independent of the closure: its code appended to the real bundle is seen, one line is enough
+      const code = inlineForm(readFileSync(join(REPO, "engine", `${mod}.mjs`), "utf8"), `engine/${mod}.mjs`);
+      assert.ok(lockProblems(t + "\n" + code, undefined, carried, forbidden).some((x) => x.startsWith(`${mod}.mjs:`)), `${v}: ${mod}'s code in the bytes opens the lock`);
+      const one = code.split("\n").map((l) => l.trim()).find((l) => l.length >= 40 && !t.includes(l));
+      assert.ok(lockProblems(t + "\n" + one, undefined, carried, forbidden).some((x) => x.startsWith(`${mod}.mjs:`)), `${v}: one line of ${mod} is seen`);
+    }
+  });
+}
+
+test("2.0.0 carries motion.mjs (the lock lifted for the étude chain) and 1.0.0 still does not", () => {
+  assert.ok(manifest.sources.some((s) => s.path === "engine/motion.mjs"), "2.0.0 records motion.mjs as a source");
+  assert.ok(!manifestOf("1.0.0").sources.some((s) => s.path === "engine/motion.mjs"), "1.0.0's sources are untouched");
+  assert.deepEqual(FORBIDDEN_OF["2.0.0"], ["palette"], "palette stays forbidden");
+});
+
+test("1.0.0 is untouched: it still exports exactly its own API, and none of the étude chain", async () => {
+  const E1 = await import(pathToFileURL(join(OUT_DIR, bundleName("1.0.0"))).href), m1 = manifestOf("1.0.0");
+  assert.deepEqual(Object.keys(E1).sort(), [...m1.api].sort());
+  for (const n of ["etudeTimeline", "barAt", "FAM_COLOR"]) assert.equal(E1[n], undefined, `1.0.0 has no ${n}`);
 });
 
 test("smoke: the atchart corpus round-trips through the bundle's parser", () => {
@@ -125,4 +147,37 @@ test("smoke: grammarRoman spells every in-key structure chord as a numeral that 
   }
   assert.ok(spelled > 300, `numerals spelled (${spelled})`);
   console.log(`  ${spelled} numerals spelled and resolved back, ${offKey} off-key roots ("—")`);
+});
+
+// ---- 2.0.0: the étude chain ----
+
+test("2.0.0 manifest lists the new API by name", () => {
+  for (const n of ["etudeTimeline", "etudeOf", "barAt", "beatsAt", "chordCount", "ETUDE_DEFAULTS", "DEFAULT_METER", "FAM", "FAM_COLOR"])
+    assert.ok(manifest.api.includes(n) && typeof E[n] !== "undefined", `${n} is in the manifest and exported`);
+});
+
+test("smoke: the parser fix rides in 2.0.0 — a RiffRaft lane ending in |: throws through the bundle, and every must-throw case does", () => {
+  assert.throws(() => E.parseAtchart("---\natchart: 1\n---\n```chart\n| Dm7 G7 | Cmaj7 ||:\n```\n"), /"\|:" at the end of a line/);
+  let n = 0;
+  for (const [name, [src, words]] of Object.entries(MUST_THROW)) { assert.throws(() => E.parseAtchart(src), words, name); n++; }
+  assert.ok(n >= 6, `the must-throw cases ran (${n})`);
+});
+
+test("smoke: every corpus étude gives the SAME timeline through the bundle as through the source modules", () => {
+  const corpus = JSON.parse(readFileSync(join(REPO, "hub", "tests", "fixtures", "etude-corpus.json"), "utf8"));
+  let chords = 0;
+  for (const { name, saved } of corpus) {
+    const viaBundle = E.etudeTimeline(saved), viaSource = sourceTimeline(saved);
+    assert.deepEqual(viaBundle, viaSource, `${name}: the bundle's timeline equals the source's`);
+    assert.ok(viaBundle.bars.length > 0 && viaBundle.bars.every((b) => b.events.length > 0), `${name}: a real timeline, every chord sounding`);
+    chords += viaBundle.bars.length;
+  }
+  assert.ok(corpus.length >= 12 && chords > 50, `the corpus ran (${corpus.length} études, ${chords} chords)`);
+  console.log(`  ${corpus.length} études, ${chords} chords: bundle timeline = source timeline`);
+});
+
+test("smoke: the degree palette is read from the bundle, equal to the engine's (never retyped)", () => {
+  assert.deepEqual(E.FAM, SOURCE_FAM);
+  assert.deepEqual(E.FAM_COLOR, SOURCE_FAM_COLOR);
+  assert.equal(E.FAM_COLOR.R, SOURCE_FAM_COLOR.R);
 });
