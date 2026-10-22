@@ -53,6 +53,9 @@ engine/
 │                        snapshot) → every chord's events {midi,onset,dur,role,string,
 │                        fret} in BEATS — the derivation the Multetudes walk used to
 │                        hold, moved out so any host can play an étude (pure)
+├── etude-block.mjs      THE ÉTUDE BLOCK (261022; docs/etude-block-format.md v1): a saved étude ↔ a fenced
+│                        `etude` block of plain key-value lines — writer, reader, preservation, the
+│                        bench's own refusals; settings only, never notes (pure)
 ├── progression.mjs      THE PROGRESSION (Multetudes child 7): cycle · form ·
 │                        custom into one walkable shape. The bar count is
 │                        DERIVED (the walk comes home; nothing says "eight");

@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, engine/etude-describe.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, engine/etude-describe.mjs, engine/etude-block.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -453,6 +453,12 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .ps-trace b{font-weight:600;color:var(--ink)}
 .ps-desc{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;line-height:1.45}
 .ps-desc .ps-line{margin:0 0 3px}
+.ps-block{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+#psCopyBlock{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#psCopyBlock:hover{border-color:var(--ink)}
+#psPasteBlock{flex:1 1 120px;min-width:0;font:inherit;font-size:11px;padding:2px 7px;border:1px solid var(--line);border-radius:6px;color:var(--ink);resize:none;height:22px;line-height:1.5}
+.ps-blockmsg{flex-basis:100%;margin:0}
+.ps-blockmsg:empty{display:none}
 
 .pg-clock{margin:0 0 10px}
 .pg-clock .clk-row{display:flex;align-items:center;gap:9px}
@@ -735,7 +741,15 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
   <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
-  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here.</div></div>
+  <!-- THE ÉTUDE BLOCK (261022 — docs/etude-block-format.md v1): the étude above, as a note block, both ways. Here and not
+       in the notepad's row: that row is v0.9's ratified six, and its markup is carried byte for byte into two hand pages. -->
+  <div class="ps-block">
+    <button id="psCopyBlock" data-control="psCopyBlock">Copy note block</button>
+    <textarea id="psPasteBlock" data-control="psPasteBlock" rows="1" aria-label="paste an étude block to bring that étude back"
+      placeholder="or paste a block here"></textarea>
+    <div class="hint ps-blockmsg" id="psBlockMsg"></div>
+  </div>
+  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here. Copy note block copies the étude's settings (never its notes) as an etude block, to paste into an Obsidian note where RiffRaft plays it; paste such a block into the field beside it and the étude comes back here, every setting at once.</div></div>
 </div>
 <div class="cards" hidden></div>
 </div>
@@ -15135,6 +15149,192 @@ function describe(s) {
 return { DESCRIBED, describe };
 })();
 
+/* ===== engine/etude-block.mjs ===== */
+const __m_engine_etude_block_mjs = (() => {
+const { readApp, writeApp } = __m_engine_atchart_mjs;
+const { field, opensOf } = __m_engine_field_mjs;
+/* etude-block.mjs — THE ÉTUDE BLOCK: a saved étude as plain key-value lines, and back (261022).
+ *
+ * The format is docs/etude-block-format.md v1 (approved by Daniel, 2026-10-22, all seven §9 decisions as recommended).
+ * This module is its one writer and its one reader. Multetudes writes the block (Settings → Copy note block) and reads
+ * it back (a block pasted into the notepad restores the bench); RiffRaft reads it to play the étude.
+ *
+ * THE KEYS ARE THE SNAPSHOT'S OWN (format §2): the writer iterates whatever etudeRecord(doc).snapshot() hands it, in its
+ * order. There is no key list here — a setting added to the bench later reaches the block with no edit to this file.
+ * The one key left out is named, with its reason (BLOCK_OMITS).
+ *
+ * THE VALUE GRAMMAR (format §3) is the family's flow grammar, engine/atchart.mjs's, reused — reached through the two
+ * public functions that already speak it (readApp and writeApp, on a one-entry apps map: FLOW below), so the grammar
+ * stays one function and atchart's export list, which six published pages carry, does not move. One addition the
+ * format rules: TOP-LEVEL TEXT IS WRITTEN BARE WHENEVER READING IT BACK BARE GIVES THE SAME TEXT,
+ * and quoted (JSON) only when it would not. The writer proves every line reads back to the value it wrote before it
+ * returns, so a value the grammar cannot carry is refused at the write, never shipped.
+ *
+ * A BAD VALUE IS FLAGGED, NEVER GUESSED (format §6): the reader returns what it could read and names what it could not.
+ * checkEtude adds the bench's own refusals (the field's key, scale and reference; opensOf's tuning) — the bench's
+ * functions, called, not a second table of what is allowed.
+ *
+ * SETTINGS, NEVER NOTES (format §1, charter §7): nothing here derives or stores a note. The notes are etude-timeline.mjs's,
+ * derived from these settings every time the étude plays.
+ */
+
+
+/** the fence's info string (format §9 decision 1) */
+const ETUDE_FENCE = "etude";
+
+/** the envelope lines that come first, in the practice log's own words (format §9 decision 4) */
+const ENVELOPE = ["app", "v"];
+
+/** the snapshot schema a block written today names on its `v:` line — the practice log's own payload version
+ * (hub/modules/notepad-card.mjs, `version:` in its adapter); engine/tests/etude-block.test.mjs holds the two equal */
+const ETUDE_V = 2;
+
+/** what the block does not carry — the only list in this file, each with its reason (format §9 decision 5) */
+const BLOCK_OMITS = {
+  chart: "the notepad's own chart-block text, mirrored — the note the block is pasted into has its own",
+};
+
+const NUMBER = /^-?\d+(\.\d+)?$/;   // the flow grammar's number, exactly (parseFlow)
+const KEY_LINE = /^([A-Za-z_][A-Za-z0-9_.-]*):(.*)$/;
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+/** THE FLOW GRAMMAR, atchart's own: a value is read or written as a one-entry apps map's entry. readApp answers null
+ * for flow it cannot read; read() is only asked for a list or a map, which never reads as null, so null means refused. */
+const FLOW = {
+  read: (s) => readApp({ _fm: [{ kind: "apps", entries: [{ id: "x", raw: `x: ${s}` }] }] }, "x"),
+  write: (v) => writeApp({ _fm: [], meta: {} }, "x", v)._fm[0].entries[0].raw.replace(/^\s*x: /, ""),
+};
+
+/** one top-level value → { value } or { reason } (format §3) */
+function readValue(raw) {
+  const s = String(raw).trim();
+  if (s === "") return { value: "" };
+  if (s[0] === "[" || s[0] === "{") {
+    const v = FLOW.read(s);
+    return v !== null ? { value: v } : { reason: `not a readable ${s[0] === "[" ? "list" : "map"}: ${s}` };
+  }
+  if (s[0] === '"') {
+    try { const v = JSON.parse(s); if (typeof v === "string") return { value: v }; } catch { /* named below */ }
+    return { reason: `an unfinished quote: ${s}` };
+  }
+  if (s === "true") return { value: true };
+  if (s === "false") return { value: false };
+  if (s === "null") return { value: null };
+  if (NUMBER.test(s)) return { value: Number(s) };
+  return { value: s };
+}
+
+/** one top-level value → its text; refuses a value that would not read back as itself */
+function writeValue(v) {
+  let out;
+  if (typeof v === "string") {
+    const bare = readValue(v);
+    out = v === v.trim() && !/[\r\n]/.test(v) && "value" in bare && bare.value === v ? v : JSON.stringify(v);
+  } else out = FLOW.write(v);
+  const back = readValue(out);
+  if (!("value" in back) || !same(back.value, v))
+    throw new Error(`etude block: the value ${JSON.stringify(v)} does not read back as itself — it cannot be written`);
+  return out;
+}
+
+const line = (k, v) => { const t = writeValue(v); return t === "" ? `${k}:` : `${k}: ${t}`; };
+
+/** a snapshot (and its envelope) → the block's body, one key per line: app, v, then the snapshot's keys in order */
+function etudeBlockBody(snapshot, { app, v }) {
+  if (!snapshot || typeof snapshot !== "object") throw new Error("etude block: no étude to write");
+  for (const k of ENVELOPE)
+    if (k in snapshot) throw new Error(`etude block: the étude carries "${k}", which the envelope's line already names`);
+  const out = [line("app", app), line("v", v)];
+  for (const [k, val] of Object.entries(snapshot)) {
+    if (k in BLOCK_OMITS) continue;
+    if (!KEY_LINE.test(`${k}:`)) throw new Error(`etude block: "${k}" cannot be a key line`);
+    out.push(line(k, val));
+  }
+  return out.join("\n");
+}
+
+/** the fenced block, ready to paste into a note */
+const etudeBlock = (snapshot, envelope) => "```" + ETUDE_FENCE + "\n" + etudeBlockBody(snapshot, envelope) + "\n```";
+
+/** the body of the first etude fence in a note's text, or null — the notepad's chart-fence scan, for this fence */
+function findEtudeBlock(text) {
+  const lines = String(text || "").split("\n");
+  const open = lines.findIndex((l) => l.trim() === "```" + ETUDE_FENCE);
+  if (open < 0) return null;
+  const close = lines.findIndex((l, i) => i > open && /^\s*```\s*$/.test(l));
+  return close > open ? lines.slice(open + 1, close).join("\n") : null;
+}
+
+/** a block's body → { app, v, snapshot, flagged, lines }
+ *   snapshot  every key that read, in the block's order (the envelope's lines are not in it)
+ *   flagged   [{ n, key?, raw, reason }] — what did not read, by line number; never in the snapshot
+ *   lines     every line, kept verbatim with its kind (pair · comment · blank · other) — format §5's preservation */
+function readEtudeBlock(body) {
+  const lines = [], flagged = [], seen = new Map(), read = new Map();
+  String(body ?? "").replace(/\r\n?/g, "\n").split("\n").forEach((raw, i) => {
+    const n = i + 1, t = raw.trim();
+    if (t === "") { lines.push({ kind: "blank", raw }); return; }
+    if (t[0] === "#") { lines.push({ kind: "comment", raw }); return; }
+    const m = t.match(KEY_LINE);
+    if (!m) { lines.push({ kind: "other", raw }); flagged.push({ n, raw, reason: "not a key: value line" }); return; }
+    const key = m[1];
+    lines.push({ kind: "pair", key, raw });
+    if (seen.has(key)) {
+      flagged.push({ n, key, raw, reason: `${key} is said twice (lines ${seen.get(key)} and ${n})` });
+      read.delete(key); seen.set(key, n); return;   // neither is taken: picking one would be a guess
+    }
+    seen.set(key, n);
+    const r = readValue(m[2]);
+    if ("value" in r) read.set(key, r.value);
+    else flagged.push({ n, key, raw, reason: r.reason });
+  });
+  const snapshot = {};
+  for (const [k, v] of read) if (!ENVELOPE.includes(k)) snapshot[k] = v;
+  const app = read.get("app"), v = read.get("v");
+  if (app !== undefined && typeof app !== "string")
+    flagged.push({ n: seen.get("app"), key: "app", raw: `app: ${app}`, reason: "app names the app that wrote the étude, as a word" });
+  if (v !== undefined && !Number.isInteger(v))
+    flagged.push({ n: seen.get("v"), key: "v", raw: `v: ${v}`, reason: "v is the snapshot's schema, a whole number" });
+  return { app: typeof app === "string" ? app : null, v: Number.isInteger(v) ? v : null, snapshot, flagged, lines };
+}
+
+/** a body with its values set to a snapshot's, everything else kept in place (format §5): a pair whose value is
+ * unchanged keeps its own text, a changed one is rewritten, a snapshot key the body lacks is added at the end, and
+ * comments, blanks and unread lines are written back exactly as they were */
+function rewriteEtudeBlock(body, snapshot, envelope) {
+  const was = readEtudeBlock(body);
+  const want = { ...(envelope || {}), ...snapshot };
+  for (const k of Object.keys(BLOCK_OMITS)) delete want[k];
+  const said = new Set();
+  const out = was.lines.map((l) => {
+    if (l.kind !== "pair" || !(l.key in want) || said.has(l.key)) return l.raw;
+    said.add(l.key);
+    const now = readValue(l.raw.slice(l.raw.indexOf(":") + 1));
+    return "value" in now && same(now.value, want[l.key]) ? l.raw : line(l.key, want[l.key]);
+  });
+  for (const k of Object.keys(want)) if (!said.has(k)) out.push(line(k, want[k]));
+  return out.join("\n");
+}
+
+/** the bench's own refusals of a read snapshot → [{ key, reason }] (format §6). Each check calls the function the bench
+ * itself calls; a key no bench function refuses is not checked here — its owner hears it on restore. */
+function checkEtude(snapshot) {
+  const bad = [];
+  const tryIt = (key, fn) => { try { fn(); } catch (e) { bad.push({ key, reason: String(e.message || e) }); } };
+  const s = snapshot || {};
+  if ("key" in s) tryIt("key", () => field({ key: s.key }));
+  if ("scale" in s) tryIt("scale", () => field({ key: "C", scale: s.scale }));
+  if ("ref" in s) tryIt("ref", () => field({ key: "C", ref: s.ref }));
+  if ("tuning" in s && s.tuning !== null) tryIt("tuning", () => {
+    if (typeof s.tuning !== "object" || Array.isArray(s.tuning)) throw new Error("a tuning is a map of string number to semitone offset");
+    opensOf(s.tuning);
+  });
+  return bad;
+}
+return { ETUDE_FENCE, ENVELOPE, ETUDE_V, BLOCK_OMITS, readValue, writeValue, etudeBlockBody, etudeBlock, findEtudeBlock, readEtudeBlock, rewriteEtudeBlock, checkEtude };
+})();
+
 /* ===== hub/modules/presets-card.mjs ===== */
 const __m_hub_modules_presets_card_mjs = (() => {
 const { field } = __m_engine_field_mjs;
@@ -15144,6 +15344,7 @@ const { CONFIG_CHANGED, listen, announce } = __m_hub_bus_mjs;
 const { mountMini } = __m_hub_mini_mjs;
 const { etudeRecord } = __m_hub_etude_record_mjs;
 const { describe } = __m_engine_etude_describe_mjs;
+const { etudeBlock, findEtudeBlock, readEtudeBlock, checkEtude, ETUDE_V } = __m_engine_etude_block_mjs;
 /* presets-card.mjs — v0.9's PRESETS card, LIVE (Multetudes surface,
  * 2026-08-29).
  *
@@ -15160,6 +15361,7 @@ const { describe } = __m_engine_etude_describe_mjs;
  * selection and asserted to produce a non-empty, lawful take, so a recipe
  * that stops building fails here at import, not in Daniel's browser.
  */
+
 
 
 
@@ -15191,7 +15393,7 @@ const presetsCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 12,
-  controls: ["psMini", "psSel"],
+  controls: ["psMini", "psSel", "psCopyBlock", "psPasteBlock"],
 
   /* THE SETTINGS CARD (261024, night 66 — Daniel, 261014: "a complete view of the étude the user has just
    * structured… all of that content should echo what then gets saved in the practice log"). The FACE renames;
@@ -15207,7 +15409,15 @@ const presetsCard = {
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
   <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
-  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here.</div>`,
+  <!-- THE ÉTUDE BLOCK (261022 — docs/etude-block-format.md v1): the étude above, as a note block, both ways. Here and not
+       in the notepad's row: that row is v0.9's ratified six, and its markup is carried byte for byte into two hand pages. -->
+  <div class="ps-block">
+    <button id="psCopyBlock" data-control="psCopyBlock">Copy note block</button>
+    <textarea id="psPasteBlock" data-control="psPasteBlock" rows="1" aria-label="paste an étude block to bring that étude back"
+      placeholder="or paste a block here"></textarea>
+    <div class="hint ps-blockmsg" id="psBlockMsg"></div>
+  </div>
+  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here. Copy note block copies the étude's settings (never its notes) as an etude block, to paste into an Obsidian note where RiffRaft plays it; paste such a block into the field beside it and the étude comes back here, every setting at once.</div>`,
 
   styles: `
 .ps-miniseat{margin:0 0 8px}
@@ -15219,7 +15429,13 @@ const presetsCard = {
 .ps-trace{margin-top:6px;color:var(--gray)}
 .ps-trace b{font-weight:600;color:var(--ink)}
 .ps-desc{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;line-height:1.45}
-.ps-desc .ps-line{margin:0 0 3px}`,
+.ps-desc .ps-line{margin:0 0 3px}
+.ps-block{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+#psCopyBlock{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#psCopyBlock:hover{border-color:var(--ink)}
+#psPasteBlock{flex:1 1 120px;min-width:0;font:inherit;font-size:11px;padding:2px 7px;border:1px solid var(--line);border-radius:6px;color:var(--ink);resize:none;height:22px;line-height:1.5}
+.ps-blockmsg{flex-basis:100%;margin:0}
+.ps-blockmsg:empty{display:none}`,
 
   mount(ctx) {
     mountMini(ctx, ctx.byId("psMini"));
@@ -15274,6 +15490,35 @@ const presetsCard = {
       }
     };
     record.onChange(paintDesc); paintDesc();
+    /* THE ÉTUDE BLOCK, BOTH WAYS (261022). Out: the record's snapshot, written by engine/etude-block.mjs — the same object
+     * the description above says and a saved note keeps, so the three cannot disagree. In: a pasted block is read, every
+     * value the grammar or the bench refuses is skipped and named (format §6, decision 7), and the rest goes home by the
+     * record's own restore, exactly as a practice-log entry does. An étude another app wrote is named and left alone. */
+    const blockMsg = byId("psBlockMsg");
+    const say = (text) => { blockMsg.textContent = text; };
+    byId("psCopyBlock").addEventListener("click", async () => {
+      let text;
+      try { text = etudeBlock(record.snapshot(), { app: ctx.door.id, v: ETUDE_V }); }
+      catch (e) { say(String(e.message || e)); return; }
+      try { await d.defaultView.navigator.clipboard.writeText(text); say("copied: an etude block, ready to paste into a note"); }
+      catch (_) { say("clipboard unavailable: this browser would not let the page copy"); }
+    });
+    const paste = byId("psPasteBlock");
+    paste.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
+      const r = readEtudeBlock(findEtudeBlock(text) ?? text);
+      if (!r.lines.some((l) => l.kind === "pair")) { say("nothing to restore: no key: value lines in what was pasted"); return; }
+      if (r.app && r.app !== ctx.door.id) { say(`an étude ${r.app} wrote: this page restores its own (app: ${ctx.door.id})`); return; }
+      const refused = [...r.flagged.map((f) => ({ what: f.key || `line ${f.n}`, key: f.key, reason: f.reason })),
+        ...checkEtude(r.snapshot).map((b) => ({ what: b.key, key: b.key, reason: b.reason }))];
+      const snap = { ...r.snapshot };
+      for (const f of refused) if (f.key) delete snap[f.key];
+      record.restore(snap);
+      const n = Object.keys(snap).length;
+      say(`restored ${n} setting${n === 1 ? "" : "s"} from the block` +
+        (refused.length ? `; skipped ${refused.map((f) => `${f.what} (${f.reason})`).join("; ")}` : ""));
+    });
     /* the trace re-derives on every config move — drift is a comparison,
      * never a flag */
     listen(d, CONFIG_CHANGED, (m) => {
@@ -16897,7 +17142,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip, __m_hub_modules_tuning_strip_mjs.tuningStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.13","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.14","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

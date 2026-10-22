@@ -319,7 +319,9 @@ export default {
      * the walk keeps only its timing and bus duties. Nothing sounds different: the NOTE stream is byte-identical. */
     /* v1.1.13 (261014, Daniel): carried along — the Settings card's describer moved from hub/ to engine/ (bundle 2.1.0);
      * nothing visible changed: its words are identical for every corpus étude. */
-    blurb: "one tool that holds many études · v1.1.13",
+    /* v1.1.14 (261022, Daniel): the étude block — Settings → Copy note block writes the étude's settings as a fenced
+     * etude block (docs/etude-block-format.md v1, engine/etude-block.mjs); a block pasted beside it restores the bench. */
+    blurb: "one tool that holds many études · v1.1.14",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

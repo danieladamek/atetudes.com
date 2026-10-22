@@ -21,6 +21,7 @@ import { CONFIG_CHANGED, listen, announce } from "../bus.mjs";
 import { mountMini } from "../mini.mjs";
 import { etudeRecord } from "../etude-record.mjs";
 import { describe } from "../../engine/etude-describe.mjs";
+import { etudeBlock, findEtudeBlock, readEtudeBlock, checkEtude, ETUDE_V } from "../../engine/etude-block.mjs";
 
 /* label · the config it seeds. `take` defaults back to "one" exactly as v0.9
  * resets it, so a preset states only what it means. */
@@ -46,7 +47,7 @@ export const presetsCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 12,
-  controls: ["psMini", "psSel"],
+  controls: ["psMini", "psSel", "psCopyBlock", "psPasteBlock"],
 
   /* THE SETTINGS CARD (261024, night 66 — Daniel, 261014: "a complete view of the étude the user has just
    * structured… all of that content should echo what then gets saved in the practice log"). The FACE renames;
@@ -62,7 +63,15 @@ export const presetsCard = {
   <select id="psSel" data-control="psSel"></select>
   <div class="hint ps-trace" id="psTrace"></div>
   <div class="ps-desc" id="psDesc" aria-label="what this étude is — what a saved note keeps"></div>
-  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here.</div>`,
+  <!-- THE ÉTUDE BLOCK (261022 — docs/etude-block-format.md v1): the étude above, as a note block, both ways. Here and not
+       in the notepad's row: that row is v0.9's ratified six, and its markup is carried byte for byte into two hand pages. -->
+  <div class="ps-block">
+    <button id="psCopyBlock" data-control="psCopyBlock">Copy note block</button>
+    <textarea id="psPasteBlock" data-control="psPasteBlock" rows="1" aria-label="paste an étude block to bring that étude back"
+      placeholder="or paste a block here"></textarea>
+    <div class="hint ps-blockmsg" id="psBlockMsg"></div>
+  </div>
+  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here. Copy note block copies the étude's settings (never its notes) as an etude block, to paste into an Obsidian note where RiffRaft plays it; paste such a block into the field beside it and the étude comes back here, every setting at once.</div>`,
 
   styles: `
 .ps-miniseat{margin:0 0 8px}
@@ -74,7 +83,13 @@ export const presetsCard = {
 .ps-trace{margin-top:6px;color:var(--gray)}
 .ps-trace b{font-weight:600;color:var(--ink)}
 .ps-desc{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;line-height:1.45}
-.ps-desc .ps-line{margin:0 0 3px}`,
+.ps-desc .ps-line{margin:0 0 3px}
+.ps-block{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+#psCopyBlock{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#psCopyBlock:hover{border-color:var(--ink)}
+#psPasteBlock{flex:1 1 120px;min-width:0;font:inherit;font-size:11px;padding:2px 7px;border:1px solid var(--line);border-radius:6px;color:var(--ink);resize:none;height:22px;line-height:1.5}
+.ps-blockmsg{flex-basis:100%;margin:0}
+.ps-blockmsg:empty{display:none}`,
 
   mount(ctx) {
     mountMini(ctx, ctx.byId("psMini"));
@@ -129,6 +144,35 @@ export const presetsCard = {
       }
     };
     record.onChange(paintDesc); paintDesc();
+    /* THE ÉTUDE BLOCK, BOTH WAYS (261022). Out: the record's snapshot, written by engine/etude-block.mjs — the same object
+     * the description above says and a saved note keeps, so the three cannot disagree. In: a pasted block is read, every
+     * value the grammar or the bench refuses is skipped and named (format §6, decision 7), and the rest goes home by the
+     * record's own restore, exactly as a practice-log entry does. An étude another app wrote is named and left alone. */
+    const blockMsg = byId("psBlockMsg");
+    const say = (text) => { blockMsg.textContent = text; };
+    byId("psCopyBlock").addEventListener("click", async () => {
+      let text;
+      try { text = etudeBlock(record.snapshot(), { app: ctx.door.id, v: ETUDE_V }); }
+      catch (e) { say(String(e.message || e)); return; }
+      try { await d.defaultView.navigator.clipboard.writeText(text); say("copied: an etude block, ready to paste into a note"); }
+      catch (_) { say("clipboard unavailable: this browser would not let the page copy"); }
+    });
+    const paste = byId("psPasteBlock");
+    paste.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
+      const r = readEtudeBlock(findEtudeBlock(text) ?? text);
+      if (!r.lines.some((l) => l.kind === "pair")) { say("nothing to restore: no key: value lines in what was pasted"); return; }
+      if (r.app && r.app !== ctx.door.id) { say(`an étude ${r.app} wrote: this page restores its own (app: ${ctx.door.id})`); return; }
+      const refused = [...r.flagged.map((f) => ({ what: f.key || `line ${f.n}`, key: f.key, reason: f.reason })),
+        ...checkEtude(r.snapshot).map((b) => ({ what: b.key, key: b.key, reason: b.reason }))];
+      const snap = { ...r.snapshot };
+      for (const f of refused) if (f.key) delete snap[f.key];
+      record.restore(snap);
+      const n = Object.keys(snap).length;
+      say(`restored ${n} setting${n === 1 ? "" : "s"} from the block` +
+        (refused.length ? `; skipped ${refused.map((f) => `${f.what} (${f.reason})`).join("; ")}` : ""));
+    });
     /* the trace re-derives on every config move — drift is a comparison,
      * never a flag */
     listen(d, CONFIG_CHANGED, (m) => {

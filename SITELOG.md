@@ -1,3 +1,11 @@
+## 2026-10-22 — The étude block — Multetudes v1.1.14
+
+- **Multetudes v1.1.14** (Update Log 261022.2): the Settings card's **Copy note block** copies the étude's settings,
+  never its notes, as a fenced `etude` block of plain lines. Paste it into an Obsidian note and RiffRaft plays it.
+  Paste such a block into the field beside the button and the whole bench comes back. A value the page can't accept
+  is skipped and named; the rest still loads. Format: `docs/etude-block-format.md` v1.
+- Source edition: `hub/build/multetudes.html`, copied byte-identical to `static/studies/multetudes/study.html`.
+
 ## 2026-10-22 — triadetudes' footer names Spec v1.7
 
 - **Spec v1.7** (Update Log 261022.1): the Spec's scope now covers RiffRaft; nothing in §2–§3 changed. Triadetudes'
