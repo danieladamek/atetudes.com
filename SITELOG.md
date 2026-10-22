@@ -1,3 +1,10 @@
+## 2026-10-22 — triadetudes' footer names Spec v1.7
+
+- **Spec v1.7** (Update Log 261022.1): the Spec's scope now covers RiffRaft; nothing in §2–§3 changed. Triadetudes'
+  footer, the only page that names a Spec version, now reads v1.7 (`engine/tests/spec-version.test.mjs`). Committed
+  with the Spec change so no push has the check red. Nothing else on the page moved (still triadetudes v0.9.9).
+- Source edition: `static/studies/triadetudes/study.html` (the hand page is its own source).
+
 ## 2026-10-14 — Multetudes v1.1.13 — nothing visible changed
 
 - **Multetudes v1.1.13** (Update Log 261014.5): the code that writes the Settings card's description moved into the

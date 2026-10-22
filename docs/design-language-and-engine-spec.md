@@ -7,7 +7,7 @@ date: 2026-08-05
 type: spec
 status: active
 reviewed: true
-doc_version: v1.6
+doc_version: v1.7
 tags: [Etudes, knowledge-base, specification, design-language, canonical]
 ---
 
@@ -36,6 +36,15 @@ Three finished publications exist:
 | **Voicing Studies for Jazz Guitar** | 21 | 4 chapters: shells → drop-2 cycling 4ths → cycling 6ths/3rds → tune etudes; all three 4-string sets |
 | **Voicing Studies for Jazz Piano** | 12 | The same music at the same pitches, as guide-tone shells + spread voicings; keyboard strips aligned over engraved grand-staff notation |
 | **Modes from Pentatonics** | 2 | Six mode boxes (pentatonic + 2 added notes) + cheat sheet; rebuilt and corrected from a hand-made PowerPoint original |
+
+**Scope (v1.7).** The visual design language (§2) and the verification doctrine (§3.3) govern every
+surface At-Etudes publishes **and RiffRaft** (GrandsTech, `obsidian-riffraft`): its web edition, its
+Obsidian card and RiffRaft.app. A note RiffRaft captures is user data (Charter §7); every mark it draws
+and everything it derives is held to this Spec. RiffRaft's product principles govern its triage, not
+its appearance.
+
+*(v1.7, 2026-10-22: scope widened to RiffRaft, Daniel's approval. Nothing in §2–§3 changed. See Update
+Log 261022.1.)*
 
 ---
 
