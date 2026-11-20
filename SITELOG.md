@@ -1,3 +1,19 @@
+## 2026-11-20 — The étude link (engine) — nothing on the site changed
+
+- **`engine/etude-link.mjs`** (Update Log 261120.3): an étude block carried in a URL fragment (`#etude=`,
+  percent-encoded), read back through the étude block's own reader. Typed changes (`source: custom`) are refused in
+  both directions (charter §6, §8). No page uses it yet; the player and Multetudes will.
+
+## 2026-11-20 — Engine bundle 2.2.0: RiffRaft's étude chain plays extensions — nothing on the site changed
+
+- **`build/vendor/atetudes-engine.2.2.0.mjs`** (Update Log 261120.2, Daniel's go-ahead 261120): the same 38 names as
+  2.1.0, rebuilt from `4668d57` so that `selection.mjs` and `etude-timeline.mjs` carry the 261119 extensions ruling
+  (Multetudes v1.1.15). A tones figure naming 9, 11, 13 beyond the chord now plays through the bundle as it does on
+  the door. 367,891 bytes, 25 sources, sha256 `1093daf8f868…`. palette.mjs stays forbidden. 1.0.0–2.1.0 are
+  untouched and stay pinnable; `--check` is green for all five versions.
+- Smoke: repro 2 (G7 in C melodic minor, `r,3,5,9,11,13`) gives the same timeline through the bundle as through the
+  source, with A, C and E♭ at s3f2, s3f5, s2f4. Shown red first against 2.1.0's bytes, which play the plain arpeggio.
+
 ## 2026-11-19 — The card shell: the family's tokens from one source — nothing visible changed
 
 - **Shell 1.0.0** (Update Log 261119.2): the family's chrome tokens and card grammar now live in one file,
