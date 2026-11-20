@@ -91,7 +91,8 @@
  */
 import { parseChord } from "./chord.mjs";
 import { field } from "./field.mjs";
-import { positionOf, materialIn, windowLo } from "./position.mjs";
+import { positionOf, materialIn, windowLo, regionOf } from "./position.mjs";
+import { stackRole } from "./role.mjs";
 // 260918 (CR-1): the approach grammar and arithmetic, owned by motion.mjs — imported by their exported names (the door build blanks imports; an alias would name nothing)
 import { parseMotion, describeMotion, approachMidi, placeNear } from "./motion.mjs";
 
@@ -839,7 +840,7 @@ export function orderBy(address, text, notes, ctx) {
     if (hit.err) return { order: null, err: hit.err };
     order.push(hit.note);
   }
-  assertOrder(order, notes);
+  assertOrder(order, notes, ctx);
   return { order, steps: order.map((n) => [n]), err: null };
 }
 
@@ -869,6 +870,54 @@ function tokensOf(address, raw) {
   return { toks };
 }
 
+/* the scale steps above the chord's root an extension sits at: the 9 one step, the 11 three, the 13 five — the stack's
+ * own arithmetic (degree d is d − 1 steps up, mod 7), stated as that arithmetic, never as pitches */
+const EXT_STEP = Object.fromEntries(["9", "11", "13"].map((t) => [t, (Number(t) - 1) % 7]));
+const extWord = (t) => t + "th";
+
+/** extensionIn(tok, ctx) → { occ, label, pc, name } | { err } — THE FIELD'S 9th, 11th or 13th over the chord's root
+ * (Daniel, 261119): bare 9/11/13 name the FIELD's, so the field supplies the alteration and stackRole spells the true
+ * role (a b13 over G in C melodic minor). Its occurrences are the field's notes INSIDE THE WINDOW on the run's strings,
+ * low → high; none there → the window's own sentence. Ruling A: Line only — under Grip a figure that reaches past the
+ * chord is refused, with Line named as the way through. */
+function extensionIn(tok, ctx) {
+  const word = extWord(tok);
+  const ch = ctx && ctx.chord;
+  if (!ctx || !ctx.fld || !ctx.pos || !Array.isArray(ctx.strings) || !ch)
+    return { err: `this selection carries no ${word} — the figure can reach past the chord only where the caller hands it the field, the window and the chord` };
+  if (!(ch.degree >= 0))
+    return { err: `the ${word} is beyond ${ch.symbol}, and ${ch.symbol}'s root is not in the key — the field has no ${word} to give it` };
+  const keyDeg = (ch.degree + EXT_STEP[tok]) % 7;
+  const pc = mod12(ctx.fld.pcs[keyDeg]);
+  const label = stackRole(Number(tok), mod12(pc - ch.rootPc));
+  const name = ctx.fld.notes[keyDeg] ? ctx.fld.notes[keyDeg].name : null;
+  if (ctx.absent && ctx.absent.notesPer === 1)
+    return { err: `the ${label} is beyond ${ch.symbol} — a grip holds only the chord's own tones; under Line the figure can reach past them` };
+  const offered = (gamut) => materialIn(ctx.pos, ctx.strings, ctx.fld, gamut).filter((n) => n.keyDeg === keyDeg);
+  const occ = offered(ctx.gamut == null ? null : ctx.gamut).sort((a, b) => a.midi - b.midi);   // the gamut applies at materialIn, nowhere else
+  if (!occ.length && ctx.gamut != null && offered(null).length)
+    return { err: `the ${label} of ${ch.symbol}${name ? ` (${name})` : ""} is outside the gamut — the figure takes an extension only from the notes the gamut offers` };
+  if (!occ.length)
+    return { err: windowRoleSentence(tok, { ...ctx, tones: [{ role: tok, pc, name }] }) || `this window holds no ${word} of ${ch.symbol} on these strings` };
+  return { occ, label, pc, name };
+}
+
+/** extensionsOf(fig) → the extension labels a resolved figure sounds, each once, in the order the figure first names
+ * them — DERIVED from the order's own entries, so the sentence can never name a tone the figure does not play */
+export function extensionsOf(fig) {
+  const out = [];
+  for (const n of (fig && fig.order) || []) if (n.role === "extension" && !out.includes(n.label)) out.push(n.label);
+  return out;
+}
+
+/** extensionSentence(fig, symbol) → the plain-ink line that says the figure goes beyond the base chord (ruling C,
+ * 261119), or "" when it does not: "G7 · the figure adds 9, 11, b13 — beyond the chord, taken from the field" */
+export function extensionSentence(fig, symbol) {
+  const ext = extensionsOf(fig);
+  if (!ext.length) return "";
+  return `${symbol} · the figure adds ${ext.join(", ")} — beyond the chord, taken from the field`;
+}
+
 /** resolverFor(address, notes, ctx) → tok → { note } | { err }: one token onto the selection,
  * the ordinal law's `used` count living in the closure (a figure shares one count, groups and all) */
 function resolverFor(address, notes, ctx) {
@@ -882,6 +931,16 @@ function resolverFor(address, notes, ctx) {
   const wordOf = (t) => t === "R" ? "root"
     : t + ({ "3": "rd" }[t] || "th");
   const used = {};
+  const placedExt = new Map();   // one entry object per placed spot, so a group naming one note twice is still caught
+  const extensionOf = (tok) => {
+    const r = extensionIn(tok, ctx);
+    if (r.err) return r;
+    const k = (used[tok] || 0) % r.occ.length;      // the ordinal law: a repeated 9 takes the next 9 up, wrapping
+    used[tok] = (used[tok] || 0) + 1;
+    const n = r.occ[k], at = n.string + "/" + n.fret;
+    if (!placedExt.has(at)) placedExt.set(at, { ...n, role: "extension", ext: tok, label: r.label });
+    return { note: placedExt.get(at) };
+  };
   return (tok) => {
     if (address === "pattern") {
       const s = +tok;
@@ -900,9 +959,12 @@ function resolverFor(address, notes, ctx) {
       used[tok] = (used[tok] || 0) + 1;
       return { note: occ[k] };
     } else {
-      if (!"R357".includes(tok) || tok.length > 1)
-        return { err: `${wordOf(tok)}s live in the SCALE box — a chord selection carries R, 3, 5, 7` };
       const hit = notes.find((n) => n.role === tok);
+      /* THE EXTENSION (Daniel, 261119 — supersedes 260927's "refuse when Tones lacks it"): a 9, 11 or 13 the CHORD does
+       * not hold is legal in the figure — it sounds from the field, inside the window, and the chord stays what Tones
+       * says it is. A role Tones holds is a chord tone and never reaches this branch as an extension. */
+      if (!hit && EXT_STEP[tok] != null && !(ctx && Array.isArray(ctx.tones) && ctx.tones.some((t) => String(t.role) === tok)))
+        return extensionOf(tok);
       if (!hit) {
         /* a role the PLACEMENT dropped is not absent from the chord: the cause and the way
          * through (injection 261011c); a role the chord does not hold reads as before */
@@ -964,7 +1026,7 @@ function orderGroups(address, raw, notes, ctx) {
   }
   if (!steps.length) return { order: null, err: null };
   const order = steps.flat();
-  assertOrder(order, notes);
+  assertOrder(order, notes, ctx);
   for (const st of steps) if (new Set(st).size !== st.length) throw new Error("orderBy: a group holds one note twice — a note cannot sound against itself");
   return { order, steps, err: null };
 }
@@ -996,9 +1058,10 @@ export function groupClause(fig, sel) {
  * or if it is an APPROACH that carries a target the selection holds. An
  * off-field step with no role, or a role with no target, throws NAMING the
  * missing role — the bug class the old assertion caught stays caught. */
-function assertOrder(order, notes) {
+export function assertOrder(order, notes, ctx) {
   for (const n of order) {
     if (notes.includes(n)) continue;
+    if (n.role === "extension") { assertExtension(n, notes, ctx); continue; }
     if (n.role !== "approach")
       throw new Error("orderBy: an ordered step left the selection carrying no role — " +
         "an off-field note must be an approach (CR-1), and this one is unlabelled");
@@ -1006,6 +1069,20 @@ function assertOrder(order, notes) {
       throw new Error("orderBy: an approach step names no target in the selection — " +
         "an approach exists only while it points at one");
   }
+}
+
+/* THE EXTENSION'S TEST (261119, ruling 4 — the third honest case, added NARROWLY; CR-1: the guards get stronger): an
+ * extension is a FIELD note, placed honestly on one of the run's strings INSIDE THE WINDOW, wearing a 9, 11 or 13 the
+ * chord does not hold. Anything else wearing the role throws — an off-window field note included. */
+function assertExtension(n, notes, ctx) {
+  const why = (s) => { throw new Error("orderBy: an extension step " + s + " — an extension is a field note inside the window, a 9, 11 or 13 the chord does not hold"); };
+  if (!ctx || !ctx.fld || !ctx.pos || !Array.isArray(ctx.strings)) why("has no field or window to stand in");
+  if (EXT_STEP[n.ext] == null) why(`names "${n.ext}", which is not an extension`);
+  if (notes.some((x) => x.role === n.ext) || (Array.isArray(ctx.tones) && ctx.tones.some((t) => String(t.role) === n.ext))) why(`names the ${n.ext}, which the chord holds`);
+  if (!ctx.strings.includes(n.string) || ctx.fld.opens[n.string] + n.fret !== n.midi) why("is not placed honestly on the run's strings");
+  if (ctx.fld.degOf(n.midi) < 0) why("left the field");
+  const region = regionOf(ctx.pos, ctx.strings);
+  if (n.fret < region.fLo || n.fret > region.fHi) why(`sits at fret ${n.fret}, outside the window (frets ${region.fLo}–${region.fHi})`);
 }
 
 /** orderWithApproaches(text, notes, {fld, strings}) → { order, err, describe }
@@ -1050,6 +1127,10 @@ function orderWithApproaches(text, notes, ctx) {
         const ab = ctx && ctx.absent;
         if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(role))
           return { order: null, err: droppedRoleSentence(t.deg, ab) };
+        /* an approach into an EXTENSION (261119): the bare 9/11/13 sound from the field, but an approach leads into a
+         * chord tone — into an extension it is not ruled, so it is refused with the way through */
+        if (EXT_STEP[role] != null && !(Array.isArray(ctx.tones) && ctx.tones.some((x) => String(x.role) === role)) && ctx.chord)
+          return { order: null, err: `the ${wordOf(t.deg)} is beyond ${ctx.chord.symbol} — an approach leads into a chord tone, and into an extension it is not ruled yet; write the ${wordOf(t.deg)} bare and it sounds from the field` };
         return { order: null, err: windowRoleSentence(role, ctx) || `this selection carries no ${wordOf(t.deg)}` };   // 261010
       }
     }
@@ -1106,7 +1187,7 @@ function orderWithApproaches(text, notes, ctx) {
     if (fld.opens[n.string] + n.fret !== n.midi) throw new Error("orderBy: an approach's placement is dishonest");
     if (n.chromatic !== (fld.degOf(n.midi) < 0)) throw new Error("orderBy: an approach's function disagrees with the field");
   }
-  assertOrder(order, notes);
+  assertOrder(order, notes, ctx);
   return { order, steps: order.map((n) => [n]), err: null, describe: describeMotion(parsed) };
 }
 

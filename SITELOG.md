@@ -1,3 +1,15 @@
+## 2026-11-19 — A tones figure reaches past the chord — Multetudes v1.1.15
+
+- **Multetudes v1.1.15** (Update Log 261119.1): a tones figure may name 9, 11 and 13 that the chord doesn't hold
+  (Daniel, 261119). They sound from the field under Line, in the figure's order, and stay greyed on the neck. The
+  playback ring outlines each one at the spot it was placed, never by pitch. A plain-ink line under the figure says so:
+  *"G7 · the figure adds 9, 11, b13 — beyond the chord, taken from the field"*. They work inside `< >` too:
+  `r,3,5,7,<9,11,13>` strums the upper structure. Under Grip they are refused, with Line named as the way through. The
+  old refusal (*"9ths live in the SCALE box"*) is gone. It was false whenever Tones held the 9.
+- `tools/check.py`'s engine gate now runs `node --test engine/tests/*.test.mjs`. Under Node 22 the bare directory
+  failed before any test ran. CI already used the glob.
+- Source edition: `hub/build/multetudes.html`, copied byte-identical to `static/studies/multetudes/study.html`.
+
 ## 2026-10-22 — The étude block — Multetudes v1.1.14
 
 - **Multetudes v1.1.14** (Update Log 261022.2): the Settings card's **Copy note block** copies the étude's settings,

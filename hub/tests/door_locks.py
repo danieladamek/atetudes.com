@@ -7782,6 +7782,87 @@ console.log(JSON.stringify(out));
         check(not errs77, f"{tag} night 77: no page errors: {errs77[:3]}")
         ctx77.close()
 
+    # ---------------- 261119 (Daniel): A TONES FIGURE REACHES PAST THE CHORD — greyed, ringed AT ITS PLACED SPOT ----------
+    # Item "Multetudes - a tones figure can only name R 3 5 7", the 261119 sections. Repro 2: C melodic minor, the chart
+    # line, G7 (V), strings 1–3, frets 2–6, Line · arpeggiate · tones, r,3,5,9,11,13. The extensions (A s3f2, C s3f5,
+    # E♭ s2f4) sound, stay FADED background dots (never .fd-sel), and the playback ring outlines each AT ITS PLACED SPOT —
+    # the NOTE carries string and fret. THE TRAP: A3 also sits at s4f7; a ring by MIDI over the background rings both.
+    if door_id == "multetudes":
+        cx119 = pw.new_context(viewport={"width": 1280, "height": 900}); p119 = cx119.new_page()
+        errs119 = []; p119.on("pageerror", lambda e: errs119.append(str(e)))
+        p119.goto(html_path.as_uri()); p119.wait_for_selector("#cards", state="attached"); p119.wait_for_timeout(300)
+        p119.select_option("#hcKey", "C"); p119.select_option("#hcScale", "mel")
+        p119.click('#pgSrcSeg button[data-src="custom"]')
+        p119.fill("#pgCustom", "CmMaj7 F7 Bm7b5 Ebmaj7#5 Am7b5 Dm7 G7 CmMaj7"); p119.dispatch_event("#pgCustom", "input")
+        p119.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))")
+        p119.wait_for_timeout(200)
+        on119 = lambda: p119.evaluate("() => [...document.querySelectorAll('[data-fdstr]')].filter(g => g.getAttribute('aria-pressed') === 'true').map(g => +g.dataset.fdstr)")
+        for s119 in (1, 2, 3):
+            if s119 not in on119(): p119.click(f'[data-fdstr="{s119}"]')
+        for s119 in (4, 5, 6):
+            if s119 in on119(): p119.click(f'[data-fdstr="{s119}"]')
+        p119.click('#fdNSeg button[data-nps="3"]'); p119.click('#fdMoveSeg button[data-move="arpeggiate"]'); p119.click('#fdAddrSeg button[data-addr="tones"]')
+        p119.fill("#fdFigIn", ""); p119.dispatch_event("#fdFigIn", "input")
+        p119.click("#fieldSvg", position={"x": 5, "y": 5})
+        for _ in range(30):
+            m119 = re.search(r"frets (\d+)–(\d+)", p119.inner_text("#roLine"))
+            if m119 and m119[1] == "2": break
+            p119.keyboard.press("ArrowRight" if (m119 and int(m119[1]) < 2) else "ArrowLeft"); p119.wait_for_timeout(30)
+        check(bool(m119) and m119[1] == "2" and m119[2] == "6", f"{tag} 261119: the repro's window is frets 2–6 on strings 1–3: {m119 and m119[0]}")
+        p119.fill("#bpmVal", "240"); p119.dispatch_event("#bpmVal", "change"); p119.wait_for_timeout(120)
+        RING119 = """() => { window.__r119 = []; window.__n119 = [];
+          document.addEventListener('atetudes:note', e => window.__n119.push({ midi: e.detail.midi, ext: !!e.detail.extension, s: e.detail.string ?? null, f: e.detail.fret ?? null }));
+          new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.classList && n.classList.contains('fd-pulse')) {
+            const d = [...document.querySelectorAll('#fieldSvg .fd-dot circle, #fieldSvg .fd-sel circle, #fieldSvg .fd-ref circle')].find(c => c.getAttribute('cx') === n.getAttribute('cx') && c.getAttribute('cy') === n.getAttribute('cy'));
+            const g = d && d.parentNode;
+            window.__r119.push({ t: performance.now(), ext: n.getAttribute('data-ext') === 'true',
+              at: g ? (g.dataset.str || g.dataset.selstr || g.dataset.refstr) + '/' + (g.dataset.fret || g.dataset.selfret || g.dataset.reffret) : null,
+              bg: !!(g && g.classList.contains('fd-dot')) }); } })
+            .observe(document.getElementById('fieldSvg'), { childList: true, subtree: true }); }"""
+        p119.evaluate(RING119)
+        def figure119(f):
+            p119.fill("#fdFigIn", f); p119.dispatch_event("#fdFigIn", "input"); p119.wait_for_timeout(150)
+            return p119.evaluate("""() => { const n = document.getElementById('fdFigNote'), s = document.getElementById('fieldSvg');
+              return { note: n.textContent, color: getComputedStyle(n).color, order: s.getAttribute('data-figorder'),
+                lit: [...s.querySelectorAll('.fd-sel')].map(g => g.dataset.selstr + '/' + g.dataset.selfret).sort() }; }""")
+        def sound119():
+            p119.evaluate("() => { window.__r119 = []; window.__n119 = []; }")
+            p119.mouse.click(5, 5)   # the walk auditions only an answer to a gesture
+            p119.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))")
+            p119.wait_for_timeout(4 * 250 + 450)
+            return p119.evaluate("() => ({ rings: window.__r119.slice(), notes: window.__n119.slice() })")
+        f119 = figure119("r,3,5,9,11,13")
+        check(f119["note"] == "G7 · the figure adds 9, 11, b13 — beyond the chord, taken from the field" and f119["color"] == "rgb(33, 33, 38)",
+              f"{tag} 261119 rulings 2/C: the figure is accepted and the line says so in PLAIN INK, never the refusal's red: {f119['note']!r} {f119['color']}")
+        check(f119["order"] == "1/3,3/4,2/3,3/2,3/5,2/4", f"{tag} 261119: R s1f3 · 3 s3f4 · 5 s2f3 · 9 s3f2 · 11 s3f5 · b13 s2f4 in the figure's order: {f119['order']!r}")
+        check(not ({"3/2", "3/5", "2/4"} & set(f119["lit"])), f"{tag} 261119 ruling 3: an extension is never promoted to a chord marker — lit {f119['lit']}")
+        snd119 = sound119()
+        ext_notes = [(n["midi"], n["s"], n["f"]) for n in snd119["notes"] if n["ext"]]
+        check(ext_notes == [(57, 3, 2), (60, 3, 5), (63, 2, 4)], f"{tag} 261119: A, C and E♭ sound in order, each NOTE carrying its placed string and fret: {ext_notes}")
+        ext_rings = [r_["at"] for r_ in snd119["rings"] if r_["ext"]]
+        check(ext_rings == ["3/2", "3/5", "2/4"] and all(r_["bg"] for r_ in snd119["rings"] if r_["ext"]),
+              f"{tag} 261119 ruling 3: each extension is ringed ONCE, on its faded background dot, at its placed spot: {ext_rings}")
+        a3 = [r_["at"] for r_ in snd119["rings"] if r_["at"] in ("3/2", "4/7")]
+        check(a3 == ["3/2"], f"{tag} 261119 THE TRAP: A3 sits at s3f2 AND s4f7 — only the placed one rings, never by pitch: {a3}")
+        # ruling 4: r,3,5,7,<9,11,13> — four steps, then one strum of A, C, E♭: three greyed dots ringing together
+        f119g = figure119("r,3,5,7,<9,11,13>")
+        check(f119g["order"].endswith(",3/2+3/5+2/4") and "adds 9, 11, b13" in f119g["note"], f"{tag} 261119 ruling 4: the group closes the figure as one step: {f119g}")
+        snd119g = sound119()
+        tg = [r_["t"] for r_ in snd119g["rings"] if r_["ext"]]
+        check(len(tg) == 3 and max(tg) - min(tg) < 40, f"{tag} 261119 ruling 4: the three extensions ring TOGETHER (one onset): {[(r_['at'], round(r_['t'])) for r_ in snd119g['rings'] if r_['ext']]}")
+        # <3,7,13>: rootless — B and F lit (the chord's), E♭ greyed, the message names only the b13
+        f119r = figure119("<3,7,13>")
+        check({"3/4", "2/6"} <= set(f119r["lit"]) and "2/4" not in f119r["lit"] and "adds b13 —" in f119r["note"] and f119r["order"].count("+") == 2,
+              f"{tag} 261119 ruling 4: <3,7,13> is one rootless group, E♭ greyed: {f119r}")
+        # ruling A: Grip refuses, with Line named — the same sentence for a group
+        p119.click('#fdNSeg button[data-nps="1"]'); p119.wait_for_timeout(120)
+        f119a = figure119("<9,11,13>")
+        check("a grip holds only the chord's own tones; under Line the figure can reach past them" in f119a["note"] and f119a["color"] == "rgb(184, 41, 41)",
+              f"{tag} 261119 ruling A: under Grip an extension is refused by name, Line the way through: {f119a['note']!r}")
+        p119.click('#fdNSeg button[data-nps="3"]')
+        check(not errs119, f"{tag} 261119: no page errors: {errs119[:3]}")
+        cx119.close()
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.

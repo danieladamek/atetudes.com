@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/role.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, engine/etude-describe.mjs, engine/etude-block.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/role.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, engine/etude-describe.mjs, engine/etude-block.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -846,7 +846,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
       <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
         <button data-addr="pattern" class="on"
           title="a sequence of STRING numbers — 4,3,4,3,2,1; a repeat is the ordinal">pattern</button>
-        <button data-addr="tones" title="roles — R, 3, 5, 7">tones</button>
+        <button data-addr="tones" title="roles — R, 3, 5, 7, 9, 11, 13">tones</button>
       </div>
       <div class="fd-cap">Figure</div>
       <input type="text" id="fdFigIn" data-control="fdFigIn" placeholder="4,3,4,3,2,1"
@@ -5246,11 +5246,76 @@ function translateFigure(pattern, fromRun, toRun) {
 return { makeRun, fromSetIndex, translateFigure };
 })();
 
+/* ===== engine/role.mjs ===== */
+const __m_engine_role_mjs = (() => {
+const { SCALE_STEPS } = __m_engine_chord_mjs;
+/* role.mjs — THE ROLE A TONE WEARS IN A CHORD, spelled once (night 71, 261028 — PO ruling 261028).
+ *
+ * NAMED stackRole, NOT spellRole (the name the ruling approved): engine/chord.mjs already exports a spellRole — it
+ * spells a tone's NOTE NAME (the 7th of C7 is Bb) from the root's letter — and chord.mjs is pinned byte for byte into
+ * the hand-authored studies, so it cannot be renamed. Two exports of one name for two different things is a trap; the
+ * name here says the doctrine instead: the STACK position names the role.
+ *
+ * *** AN INTERVAL DOES NOT NAME A CHORD ROLE. THE STACK POSITION DOES. ***
+ *
+ * Five semitones above a root is the 11 of a tetrad's stack or the 4 of a sus chord; six is the b5 of a diminished
+ * fifth or the #11 over a perfect one. So semitones → role is not a function, and a table keyed by the interval alone
+ * must pick one answer arbitrarily. stackRole takes BOTH facts — the stack degree the tone fills (1, 3, 5, 7, 9, 11,
+ * 13, or 2, 4, 6 where a chord carries them) and its distance above the root — and COMPUTES the accidental: the
+ * distance measured against the major scale's own distance for that degree (golden rule 1: computed, never chosen).
+ *   stackRole(5, 6)  → "b5"    stackRole(11, 6) → "#11"    stackRole(7, 9) → "bb7"    stackRole(1, 0) → "R"
+ *
+ * THE SOURCE FOR ANYTHING NEW. Its consumers tonight: the chord symbol (reference.mjs's assembly) and the chip row's
+ * role labels — both on one face, so they agree by construction.
+ *
+ * THE ONE NAMED SECOND VOCABULARY (outstanding, step B of ruling 261028): engine/upper-structure.mjs keeps its own
+ * label tables (LABEL_SEMIS / LABEL_LETTER / IV_LABEL). It serves only triadetudes — a hand-authored published page
+ * that the carrier census pins byte for byte — so it moves onto this function when triadetudes becomes a door, or by
+ * a re-copy ruled separately. It is named HERE and in the step-B item only. A THIRD vocabulary must never appear.
+ */
+
+/* the major scale's distance above its root for degrees 1…7 — DERIVED from the one scale table, not typed */
+const MAJOR = SCALE_STEPS.major.slice(0, 6).reduce((acc, s) => acc.concat(acc[acc.length - 1] + s), [0]);
+
+/** the role of a tone that fills stack `degree` (1…13) at `semitones` above the chord's root */
+function stackRole(degree, semitones) {
+  if (!Number.isInteger(degree) || degree < 1 || degree > 13)
+    throw new Error(`stackRole: a stack degree is 1…13, not ${degree}`);
+  if (!Number.isInteger(semitones)) throw new Error(`stackRole: semitones must be an integer, not ${semitones}`);
+  const ref = MAJOR[(degree - 1) % 7];
+  let d = (((semitones - ref) % 12) + 12) % 12;
+  if (d > 6) d -= 12;
+  if (degree === 1) {
+    if (d !== 0) throw new Error(`stackRole: the root is 0 semitones above itself, not ${semitones}`);
+    return "R";
+  }
+  if (Math.abs(d) > 2) throw new Error(`stackRole: ${semitones} semitones cannot fill degree ${degree} (${d > 0 ? "+" : ""}${d} from its major distance)`);
+  return (d < 0 ? "b".repeat(-d) : "#".repeat(d)) + degree;
+}
+
+/* ---------------- load-time assertions (golden rule 1, site form) ---------------- */
+{
+  if (MAJOR.join(",") !== "0,2,4,5,7,9,11") throw new Error(`role: the major reference did not derive to 0,2,4,5,7,9,11 — ${MAJOR}`);
+  const cases = [[1, 0, "R"], [3, 4, "3"], [3, 3, "b3"], [5, 7, "5"], [5, 6, "b5"], [5, 8, "#5"], [7, 11, "7"], [7, 10, "b7"],
+    [7, 9, "bb7"], [9, 2, "9"], [9, 1, "b9"], [9, 3, "#9"], [11, 5, "11"], [11, 6, "#11"], [13, 9, "13"], [13, 8, "b13"],
+    [4, 5, "4"], [2, 2, "2"], [6, 9, "6"]];
+  for (const [deg, st, want] of cases) {
+    const got = stackRole(deg, st);
+    if (got !== want) throw new Error(`role: stackRole(${deg}, ${st}) is "${got}", not "${want}"`);
+  }
+  // THE DOCTRINE, asserted: one interval, two stack positions, two roles
+  if (stackRole(5, 6) === stackRole(11, 6) || stackRole(11, 5) === stackRole(4, 5))
+    throw new Error("role: an interval named a role on its own — the stack position must decide it");
+}
+return { stackRole };
+})();
+
 /* ===== engine/selection.mjs ===== */
 const __m_engine_selection_mjs = (() => {
 const { parseChord } = __m_engine_chord_mjs;
 const { field } = __m_engine_field_mjs;
-const { positionOf, materialIn, windowLo } = __m_engine_position_mjs;
+const { positionOf, materialIn, windowLo, regionOf } = __m_engine_position_mjs;
+const { stackRole } = __m_engine_role_mjs;
 const { parseMotion, describeMotion, approachMidi, placeNear } = __m_engine_motion_mjs;
 /* selection.mjs — THE SELECTION: what is taken from the field's pool
  * (Multetudes child 3a — Route B, ratified 2026-08-28).
@@ -5343,6 +5408,7 @@ const { parseMotion, describeMotion, approachMidi, placeNear } = __m_engine_moti
  *
  * Pure: no DOM, no globals, load-time structural assertions.
  */
+
 
 
 
@@ -6092,7 +6158,7 @@ function orderBy(address, text, notes, ctx) {
     if (hit.err) return { order: null, err: hit.err };
     order.push(hit.note);
   }
-  assertOrder(order, notes);
+  assertOrder(order, notes, ctx);
   return { order, steps: order.map((n) => [n]), err: null };
 }
 
@@ -6122,6 +6188,54 @@ function tokensOf(address, raw) {
   return { toks };
 }
 
+/* the scale steps above the chord's root an extension sits at: the 9 one step, the 11 three, the 13 five — the stack's
+ * own arithmetic (degree d is d − 1 steps up, mod 7), stated as that arithmetic, never as pitches */
+const EXT_STEP = Object.fromEntries(["9", "11", "13"].map((t) => [t, (Number(t) - 1) % 7]));
+const extWord = (t) => t + "th";
+
+/** extensionIn(tok, ctx) → { occ, label, pc, name } | { err } — THE FIELD'S 9th, 11th or 13th over the chord's root
+ * (Daniel, 261119): bare 9/11/13 name the FIELD's, so the field supplies the alteration and stackRole spells the true
+ * role (a b13 over G in C melodic minor). Its occurrences are the field's notes INSIDE THE WINDOW on the run's strings,
+ * low → high; none there → the window's own sentence. Ruling A: Line only — under Grip a figure that reaches past the
+ * chord is refused, with Line named as the way through. */
+function extensionIn(tok, ctx) {
+  const word = extWord(tok);
+  const ch = ctx && ctx.chord;
+  if (!ctx || !ctx.fld || !ctx.pos || !Array.isArray(ctx.strings) || !ch)
+    return { err: `this selection carries no ${word} — the figure can reach past the chord only where the caller hands it the field, the window and the chord` };
+  if (!(ch.degree >= 0))
+    return { err: `the ${word} is beyond ${ch.symbol}, and ${ch.symbol}'s root is not in the key — the field has no ${word} to give it` };
+  const keyDeg = (ch.degree + EXT_STEP[tok]) % 7;
+  const pc = mod12(ctx.fld.pcs[keyDeg]);
+  const label = stackRole(Number(tok), mod12(pc - ch.rootPc));
+  const name = ctx.fld.notes[keyDeg] ? ctx.fld.notes[keyDeg].name : null;
+  if (ctx.absent && ctx.absent.notesPer === 1)
+    return { err: `the ${label} is beyond ${ch.symbol} — a grip holds only the chord's own tones; under Line the figure can reach past them` };
+  const offered = (gamut) => materialIn(ctx.pos, ctx.strings, ctx.fld, gamut).filter((n) => n.keyDeg === keyDeg);
+  const occ = offered(ctx.gamut == null ? null : ctx.gamut).sort((a, b) => a.midi - b.midi);   // the gamut applies at materialIn, nowhere else
+  if (!occ.length && ctx.gamut != null && offered(null).length)
+    return { err: `the ${label} of ${ch.symbol}${name ? ` (${name})` : ""} is outside the gamut — the figure takes an extension only from the notes the gamut offers` };
+  if (!occ.length)
+    return { err: windowRoleSentence(tok, { ...ctx, tones: [{ role: tok, pc, name }] }) || `this window holds no ${word} of ${ch.symbol} on these strings` };
+  return { occ, label, pc, name };
+}
+
+/** extensionsOf(fig) → the extension labels a resolved figure sounds, each once, in the order the figure first names
+ * them — DERIVED from the order's own entries, so the sentence can never name a tone the figure does not play */
+function extensionsOf(fig) {
+  const out = [];
+  for (const n of (fig && fig.order) || []) if (n.role === "extension" && !out.includes(n.label)) out.push(n.label);
+  return out;
+}
+
+/** extensionSentence(fig, symbol) → the plain-ink line that says the figure goes beyond the base chord (ruling C,
+ * 261119), or "" when it does not: "G7 · the figure adds 9, 11, b13 — beyond the chord, taken from the field" */
+function extensionSentence(fig, symbol) {
+  const ext = extensionsOf(fig);
+  if (!ext.length) return "";
+  return `${symbol} · the figure adds ${ext.join(", ")} — beyond the chord, taken from the field`;
+}
+
 /** resolverFor(address, notes, ctx) → tok → { note } | { err }: one token onto the selection,
  * the ordinal law's `used` count living in the closure (a figure shares one count, groups and all) */
 function resolverFor(address, notes, ctx) {
@@ -6135,6 +6249,16 @@ function resolverFor(address, notes, ctx) {
   const wordOf = (t) => t === "R" ? "root"
     : t + ({ "3": "rd" }[t] || "th");
   const used = {};
+  const placedExt = new Map();   // one entry object per placed spot, so a group naming one note twice is still caught
+  const extensionOf = (tok) => {
+    const r = extensionIn(tok, ctx);
+    if (r.err) return r;
+    const k = (used[tok] || 0) % r.occ.length;      // the ordinal law: a repeated 9 takes the next 9 up, wrapping
+    used[tok] = (used[tok] || 0) + 1;
+    const n = r.occ[k], at = n.string + "/" + n.fret;
+    if (!placedExt.has(at)) placedExt.set(at, { ...n, role: "extension", ext: tok, label: r.label });
+    return { note: placedExt.get(at) };
+  };
   return (tok) => {
     if (address === "pattern") {
       const s = +tok;
@@ -6153,9 +6277,12 @@ function resolverFor(address, notes, ctx) {
       used[tok] = (used[tok] || 0) + 1;
       return { note: occ[k] };
     } else {
-      if (!"R357".includes(tok) || tok.length > 1)
-        return { err: `${wordOf(tok)}s live in the SCALE box — a chord selection carries R, 3, 5, 7` };
       const hit = notes.find((n) => n.role === tok);
+      /* THE EXTENSION (Daniel, 261119 — supersedes 260927's "refuse when Tones lacks it"): a 9, 11 or 13 the CHORD does
+       * not hold is legal in the figure — it sounds from the field, inside the window, and the chord stays what Tones
+       * says it is. A role Tones holds is a chord tone and never reaches this branch as an extension. */
+      if (!hit && EXT_STEP[tok] != null && !(ctx && Array.isArray(ctx.tones) && ctx.tones.some((t) => String(t.role) === tok)))
+        return extensionOf(tok);
       if (!hit) {
         /* a role the PLACEMENT dropped is not absent from the chord: the cause and the way
          * through (injection 261011c); a role the chord does not hold reads as before */
@@ -6217,7 +6344,7 @@ function orderGroups(address, raw, notes, ctx) {
   }
   if (!steps.length) return { order: null, err: null };
   const order = steps.flat();
-  assertOrder(order, notes);
+  assertOrder(order, notes, ctx);
   for (const st of steps) if (new Set(st).size !== st.length) throw new Error("orderBy: a group holds one note twice — a note cannot sound against itself");
   return { order, steps, err: null };
 }
@@ -6249,9 +6376,10 @@ function groupClause(fig, sel) {
  * or if it is an APPROACH that carries a target the selection holds. An
  * off-field step with no role, or a role with no target, throws NAMING the
  * missing role — the bug class the old assertion caught stays caught. */
-function assertOrder(order, notes) {
+function assertOrder(order, notes, ctx) {
   for (const n of order) {
     if (notes.includes(n)) continue;
+    if (n.role === "extension") { assertExtension(n, notes, ctx); continue; }
     if (n.role !== "approach")
       throw new Error("orderBy: an ordered step left the selection carrying no role — " +
         "an off-field note must be an approach (CR-1), and this one is unlabelled");
@@ -6259,6 +6387,20 @@ function assertOrder(order, notes) {
       throw new Error("orderBy: an approach step names no target in the selection — " +
         "an approach exists only while it points at one");
   }
+}
+
+/* THE EXTENSION'S TEST (261119, ruling 4 — the third honest case, added NARROWLY; CR-1: the guards get stronger): an
+ * extension is a FIELD note, placed honestly on one of the run's strings INSIDE THE WINDOW, wearing a 9, 11 or 13 the
+ * chord does not hold. Anything else wearing the role throws — an off-window field note included. */
+function assertExtension(n, notes, ctx) {
+  const why = (s) => { throw new Error("orderBy: an extension step " + s + " — an extension is a field note inside the window, a 9, 11 or 13 the chord does not hold"); };
+  if (!ctx || !ctx.fld || !ctx.pos || !Array.isArray(ctx.strings)) why("has no field or window to stand in");
+  if (EXT_STEP[n.ext] == null) why(`names "${n.ext}", which is not an extension`);
+  if (notes.some((x) => x.role === n.ext) || (Array.isArray(ctx.tones) && ctx.tones.some((t) => String(t.role) === n.ext))) why(`names the ${n.ext}, which the chord holds`);
+  if (!ctx.strings.includes(n.string) || ctx.fld.opens[n.string] + n.fret !== n.midi) why("is not placed honestly on the run's strings");
+  if (ctx.fld.degOf(n.midi) < 0) why("left the field");
+  const region = regionOf(ctx.pos, ctx.strings);
+  if (n.fret < region.fLo || n.fret > region.fHi) why(`sits at fret ${n.fret}, outside the window (frets ${region.fLo}–${region.fHi})`);
 }
 
 /** orderWithApproaches(text, notes, {fld, strings}) → { order, err, describe }
@@ -6303,6 +6445,10 @@ function orderWithApproaches(text, notes, ctx) {
         const ab = ctx && ctx.absent;
         if (ab && Array.isArray(ab.dropped) && ab.dropped.includes(role))
           return { order: null, err: droppedRoleSentence(t.deg, ab) };
+        /* an approach into an EXTENSION (261119): the bare 9/11/13 sound from the field, but an approach leads into a
+         * chord tone — into an extension it is not ruled, so it is refused with the way through */
+        if (EXT_STEP[role] != null && !(Array.isArray(ctx.tones) && ctx.tones.some((x) => String(x.role) === role)) && ctx.chord)
+          return { order: null, err: `the ${wordOf(t.deg)} is beyond ${ctx.chord.symbol} — an approach leads into a chord tone, and into an extension it is not ruled yet; write the ${wordOf(t.deg)} bare and it sounds from the field` };
         return { order: null, err: windowRoleSentence(role, ctx) || `this selection carries no ${wordOf(t.deg)}` };   // 261010
       }
     }
@@ -6359,7 +6505,7 @@ function orderWithApproaches(text, notes, ctx) {
     if (fld.opens[n.string] + n.fret !== n.midi) throw new Error("orderBy: an approach's placement is dishonest");
     if (n.chromatic !== (fld.degOf(n.midi) < 0)) throw new Error("orderBy: an approach's function disagrees with the field");
   }
-  assertOrder(order, notes);
+  assertOrder(order, notes, ctx);
   return { order, steps: order.map((n) => [n]), err: null, describe: describeMotion(parsed) };
 }
 
@@ -6444,7 +6590,7 @@ function bracketOf(order) {
   if (dy.tones.length !== 1 || dy.absent.join() !== "7")
     throw new Error("selection: a dyad's 7 on a plain triad must be ABSENT BY NAME, never silently narrowed");
 }
-return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, objectOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, UNCAPPED, capOf, gripFit, chordSupply, materialFor, chordSuppliedSentence, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, windowRoleSentence, orderBy, groupClause, bracketOf };
+return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, objectOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, UNCAPPED, capOf, gripFit, chordSupply, materialFor, chordSuppliedSentence, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, windowRoleSentence, orderBy, extensionsOf, extensionSentence, groupClause, assertOrder, bracketOf };
 })();
 
 /* ===== engine/atchart.mjs ===== */
@@ -7088,70 +7234,6 @@ function chordSymbol(root, quality) {
     throw new Error("structures: derivation must go through resolveRoman");
 }
 return { STRUCTURES, CHORD_ROOTS, CHORD_QUALITIES, GLYPHS, resolveStructure, chartBody, chartFence, changesLine, chordSymbol };
-})();
-
-/* ===== engine/role.mjs ===== */
-const __m_engine_role_mjs = (() => {
-const { SCALE_STEPS } = __m_engine_chord_mjs;
-/* role.mjs — THE ROLE A TONE WEARS IN A CHORD, spelled once (night 71, 261028 — PO ruling 261028).
- *
- * NAMED stackRole, NOT spellRole (the name the ruling approved): engine/chord.mjs already exports a spellRole — it
- * spells a tone's NOTE NAME (the 7th of C7 is Bb) from the root's letter — and chord.mjs is pinned byte for byte into
- * the hand-authored studies, so it cannot be renamed. Two exports of one name for two different things is a trap; the
- * name here says the doctrine instead: the STACK position names the role.
- *
- * *** AN INTERVAL DOES NOT NAME A CHORD ROLE. THE STACK POSITION DOES. ***
- *
- * Five semitones above a root is the 11 of a tetrad's stack or the 4 of a sus chord; six is the b5 of a diminished
- * fifth or the #11 over a perfect one. So semitones → role is not a function, and a table keyed by the interval alone
- * must pick one answer arbitrarily. stackRole takes BOTH facts — the stack degree the tone fills (1, 3, 5, 7, 9, 11,
- * 13, or 2, 4, 6 where a chord carries them) and its distance above the root — and COMPUTES the accidental: the
- * distance measured against the major scale's own distance for that degree (golden rule 1: computed, never chosen).
- *   stackRole(5, 6)  → "b5"    stackRole(11, 6) → "#11"    stackRole(7, 9) → "bb7"    stackRole(1, 0) → "R"
- *
- * THE SOURCE FOR ANYTHING NEW. Its consumers tonight: the chord symbol (reference.mjs's assembly) and the chip row's
- * role labels — both on one face, so they agree by construction.
- *
- * THE ONE NAMED SECOND VOCABULARY (outstanding, step B of ruling 261028): engine/upper-structure.mjs keeps its own
- * label tables (LABEL_SEMIS / LABEL_LETTER / IV_LABEL). It serves only triadetudes — a hand-authored published page
- * that the carrier census pins byte for byte — so it moves onto this function when triadetudes becomes a door, or by
- * a re-copy ruled separately. It is named HERE and in the step-B item only. A THIRD vocabulary must never appear.
- */
-
-/* the major scale's distance above its root for degrees 1…7 — DERIVED from the one scale table, not typed */
-const MAJOR = SCALE_STEPS.major.slice(0, 6).reduce((acc, s) => acc.concat(acc[acc.length - 1] + s), [0]);
-
-/** the role of a tone that fills stack `degree` (1…13) at `semitones` above the chord's root */
-function stackRole(degree, semitones) {
-  if (!Number.isInteger(degree) || degree < 1 || degree > 13)
-    throw new Error(`stackRole: a stack degree is 1…13, not ${degree}`);
-  if (!Number.isInteger(semitones)) throw new Error(`stackRole: semitones must be an integer, not ${semitones}`);
-  const ref = MAJOR[(degree - 1) % 7];
-  let d = (((semitones - ref) % 12) + 12) % 12;
-  if (d > 6) d -= 12;
-  if (degree === 1) {
-    if (d !== 0) throw new Error(`stackRole: the root is 0 semitones above itself, not ${semitones}`);
-    return "R";
-  }
-  if (Math.abs(d) > 2) throw new Error(`stackRole: ${semitones} semitones cannot fill degree ${degree} (${d > 0 ? "+" : ""}${d} from its major distance)`);
-  return (d < 0 ? "b".repeat(-d) : "#".repeat(d)) + degree;
-}
-
-/* ---------------- load-time assertions (golden rule 1, site form) ---------------- */
-{
-  if (MAJOR.join(",") !== "0,2,4,5,7,9,11") throw new Error(`role: the major reference did not derive to 0,2,4,5,7,9,11 — ${MAJOR}`);
-  const cases = [[1, 0, "R"], [3, 4, "3"], [3, 3, "b3"], [5, 7, "5"], [5, 6, "b5"], [5, 8, "#5"], [7, 11, "7"], [7, 10, "b7"],
-    [7, 9, "bb7"], [9, 2, "9"], [9, 1, "b9"], [9, 3, "#9"], [11, 5, "11"], [11, 6, "#11"], [13, 9, "13"], [13, 8, "b13"],
-    [4, 5, "4"], [2, 2, "2"], [6, 9, "6"]];
-  for (const [deg, st, want] of cases) {
-    const got = stackRole(deg, st);
-    if (got !== want) throw new Error(`role: stackRole(${deg}, ${st}) is "${got}", not "${want}"`);
-  }
-  // THE DOCTRINE, asserted: one interval, two stack positions, two roles
-  if (stackRole(5, 6) === stackRole(11, 6) || stackRole(11, 5) === stackRole(4, 5))
-    throw new Error("role: an interval named a role on its own — the stack position must decide it");
-}
-return { stackRole };
 })();
 
 /* ===== engine/reference.mjs ===== */
@@ -7988,7 +8070,7 @@ function barAt(cfg, index, meter = DEFAULT_METER) {
   /* THE SCHEDULE: the figure's order through orderBy — the same value the bracket and the polyline draw — or the
    * take's own shape. 260905: Take chooses the MATERIAL, Movement together-or-sequence (a scale stays a run); a typed
    * figure sequences regardless, as ruled. Scheduled at 60 bpm, so seconds ARE beats. */
-  const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent, tones: cfg.object === "scale" ? null : cur.tones });
+  const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent, tones: cfg.object === "scale" ? null : cur.tones, chord: cfg.object === "scale" ? null : cur, gamut: cfg.gamut });
   const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
   const { events: raw } = walkSchedule(sel, fig.err ? null : fig.steps || null,   // a group is one step, its notes one onset (261009)
     beats, 60, { spread, refMidi: refNote ? refNote.midi : null, soundedMidi, carry: true });
@@ -8135,7 +8217,10 @@ const etudeWalk = {
       for (const ev of bar.events) {
         /* the pad's duration in the old span arithmetic (beats × 60 / bpm), so the NOTE it carries is the same to the bit */
         if (ev.role === "pad") { announce(d, NOTE, { midi: ev.midi, role: "pad", dur: ev.dur * 60 / bpm }); continue; }
-        const msg = ev.role === "bass" ? { midi: ev.midi, role: "bass", ...(ev.unfretted ? { unfretted: true } : {}) } : { midi: ev.midi };
+        /* an EXTENSION (261119) carries its placed string and fret: the neck rings it THERE, never by pitch — the same
+         * pitch sits elsewhere on the neck as a background dot, and a pitch match would ring both */
+        const msg = ev.role === "bass" ? { midi: ev.midi, role: "bass", ...(ev.unfretted ? { unfretted: true } : {}) }
+          : ev.role === "extension" ? { midi: ev.midi, extension: true, string: ev.string, fret: ev.fret } : { midi: ev.midi };
         const at = ev.onset * spb;
         if (at <= 0) { announce(d, NOTE, msg); continue; }
         timers.push(d.defaultView.setTimeout(() => {
@@ -9348,7 +9433,7 @@ const { SHARED } = __m_engine_shared_config_mjs;
 const { alteredDegree } = __m_engine_chord_mjs;
 const { positionOf, step, reanchor, regionOf, materialIn, windowLo } = __m_engine_position_mjs;
 const { makeRun, fromSetIndex } = __m_engine_string_run_mjs;
-const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } = __m_engine_selection_mjs;
+const { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf, extensionSentence } = __m_engine_selection_mjs;
 const { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead, soundedBass, soundedChoicesFor, compositeOver } = __m_engine_reference_mjs;
 const { MODES } = __m_engine_field_mjs;
 const { progressionOf, chordAt, movementWord } = __m_engine_progression_mjs;
@@ -9571,7 +9656,7 @@ const fieldBoard = {
       <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
         <button data-addr="pattern" class="on"
           title="a sequence of STRING numbers — 4,3,4,3,2,1; a repeat is the ordinal">pattern</button>
-        <button data-addr="tones" title="roles — R, 3, 5, 7">tones</button>
+        <button data-addr="tones" title="roles — R, 3, 5, 7, 9, 11, 13">tones</button>
       </div>
       <div class="fd-cap">Figure</div>
       <input type="text" id="fdFigIn" data-control="fdFigIn" placeholder="4,3,4,3,2,1"
@@ -10091,7 +10176,7 @@ const fieldBoard = {
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
        * slur is drawn UNDER the dots (the under-draw convention) */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones });   // 261010: the chord's tones, so the window can be named as a cause   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones, chord: cfg.object === "scale" ? null : cur, gamut: cfg.gamut });   // 261010: the chord's tones, so the window can be named as a cause   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const approaches = (fig.order || []).filter((n) => n.role === "approach");
       /* §2.6 "Connection. An approach figure joins its target with a slur in
        * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */
@@ -10375,6 +10460,12 @@ const fieldBoard = {
       } else if (fig.open) {
         noteEl.textContent = fig.open;   // an open group is incomplete, not invalid (261009)
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
+      } else if (extensionSentence(fig, cur.symbol)) {
+        /* THE FIGURE GOES BEYOND THE CHORD (Daniel, 261119, rulings 2 and C): information, not a refusal — PLAIN INK,
+         * never the refusal's red (golden rule 8). The tones it lists are derived from the resolved order, spelled by
+         * stackRole, so it cannot name one the figure does not play. */
+        noteEl.textContent = extensionSentence(fig, cur.symbol);
+        noteEl.style.color = "var(--ink)"; noteEl.style.fontStyle = "";
       } else {
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
         /* WHICH CENTRE THE DEGREE SPEAKS FROM (260919, item 4): motion's grammar
@@ -10391,7 +10482,7 @@ const fieldBoard = {
           ? named + (approaches.some((a2) => a2.chromatic) ? " A chromatic approach is a starburst in the colour of the degree it alters; a diatonic one keeps its degree colour." : "")
           : cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
-          : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
+          : "Tones name roles — R, 3, 5, 7, 9, 11, 13; a 9, 11 or 13 the chord does not hold sounds from the field under Line, greyed on the neck and ringed as it passes; under a scale they are degrees from the CENTRE. The bracket still shows the order, greyed, because it is derived rather than typed.";
       }
 
       const isScale = cfg.object === "scale";
@@ -10481,7 +10572,7 @@ const fieldBoard = {
        * of its 320ms — survivors of the wipe and first-notes alike */
       const now = d.defaultView.performance.now();
       livePulses = livePulses.filter((p2) => p2.until > now);
-      for (const p2 of livePulses) ringFor(p2.midi, p2.until - now);
+      for (const p2 of livePulses) p2.at ? ringAt(p2.at, p2.until - now) : ringFor(p2.midi, p2.until - now);
     };
 
     const push = () => {
@@ -10600,6 +10691,19 @@ const fieldBoard = {
       }
       return hits.length;
     };
+    /* THE EXTENSION'S RING (Daniel, 261119, ruling 3): an extension stays a faded background dot — never promoted to a
+     * chord marker — and when it sounds the SAME ring outlines it, drawn at the string and fret the NOTE carries, on
+     * that one dot. Never a pitch match over the background: the same A3 sits at s3f2 and s4f7, and only one sounds. */
+    const ringAt = (at, ttl = 320) => {
+      const svg = byId("fieldSvg");
+      const layer = svg && svg.querySelector(".fd-pulselayer");
+      const c = svg && svg.querySelector(`.fd-dot[data-str="${at.string}"][data-fret="${at.fret}"] circle`);
+      if (!layer || !c) return 0;
+      const ring = el("circle", { class: "fd-pulse", "data-ext": "true", cx: c.getAttribute("cx"), cy: c.getAttribute("cy"),
+        r: 19, fill: "none", stroke: "#212126", "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
+      pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), ttl));
+      return 1;
+    };
     /* THE FIRST NOTE'S RING (260909, item 2, measured): on an advance the
      * walk's STEP listener runs before this board's — the new chord's first
      * NOTE arrives while the OLD bar's dots are still drawn (no matching
@@ -10611,8 +10715,9 @@ const fieldBoard = {
       if (!m || typeof m.midi !== "number") return;
       const now = d.defaultView.performance.now();
       livePulses = livePulses.filter((p2) => p2.until > now);
-      livePulses.push({ midi: m.midi, until: now + 320 });
-      ringFor(m.midi);
+      const at = m.extension && Number.isInteger(m.string) && Number.isInteger(m.fret) ? { string: m.string, fret: m.fret } : null;
+      livePulses.push({ midi: m.midi, at, until: now + 320 });
+      if (at) ringAt(at); else ringFor(m.midi);
     });
 
     const toggleSquare = (sq) => {
@@ -12608,7 +12713,7 @@ const neckReadout = {
          * placement and the figure and never said strum or arpeggiate). Stated as the neck resolves it: a figure
          * that resolves sequences the notes whatever the switch says (the neck greys strum then), and a scale
          * with no figure is a run with nothing to move (the neck greys both) — said, not guessed. */
-        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones }) : null;
+        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones, chord: cfg.object === "scale" ? null : cur, gamut: cfg.gamut }) : null;
         /* THE FIGURE, SAID ONCE, AS THE NOTES IT RESOLVES TO (261013 — Daniel: "can this … not be derived from the
          * figure?"). The movement clause and the figure clause both only restated the rail (the switch the figure
          * overrides, its step count, the address). One clause now: the figure as typed, then this bar's notes in the
@@ -16073,7 +16178,7 @@ const staffBoard = {
        * figure resolves against EACH bar's own selection, exactly as the
        * walk will sound it when the bar arrives. A bar whose selection
        * cannot honour it prints the refusal in the bar. */
-      const figs = sels.map((sl, i) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos, absent: rs[i].absent || null, tones: cfg.object === "scale" ? null : chords[i].tones }));   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+      const figs = sels.map((sl, i) => orderBy(cfg.address, cfg.figure, sl, { fld, strings: cfg.strings, pos, absent: rs[i].absent || null, tones: cfg.object === "scale" ? null : chords[i].tones, chord: cfg.object === "scale" ? null : chords[i], gamut: cfg.gamut }));   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const fig = figs[index] || { order: null, err: null };
       const allSteps = [];
       for (const sl of sels) for (const nt of sl) allSteps.push(stepOf(nt.midi, nt.role, nt.member, nt.name));
@@ -17142,7 +17247,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip, __m_hub_modules_tuning_strip_mjs.tuningStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.14","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.15","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

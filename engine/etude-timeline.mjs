@@ -124,7 +124,7 @@ export function barAt(cfg, index, meter = DEFAULT_METER) {
   /* THE SCHEDULE: the figure's order through orderBy — the same value the bracket and the polyline draw — or the
    * take's own shape. 260905: Take chooses the MATERIAL, Movement together-or-sequence (a scale stays a run); a typed
    * figure sequences regardless, as ruled. Scheduled at 60 bpm, so seconds ARE beats. */
-  const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent, tones: cfg.object === "scale" ? null : cur.tones });
+  const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent: walkAbsent, tones: cfg.object === "scale" ? null : cur.tones, chord: cfg.object === "scale" ? null : cur, gamut: cfg.gamut });
   const spread = cfg.object === "scale" || cfg.movement === "arpeggiate";
   const { events: raw } = walkSchedule(sel, fig.err ? null : fig.steps || null,   // a group is one step, its notes one onset (261009)
     beats, 60, { spread, refMidi: refNote ? refNote.midi : null, soundedMidi, carry: true });

@@ -101,7 +101,10 @@ export const etudeWalk = {
       for (const ev of bar.events) {
         /* the pad's duration in the old span arithmetic (beats × 60 / bpm), so the NOTE it carries is the same to the bit */
         if (ev.role === "pad") { announce(d, NOTE, { midi: ev.midi, role: "pad", dur: ev.dur * 60 / bpm }); continue; }
-        const msg = ev.role === "bass" ? { midi: ev.midi, role: "bass", ...(ev.unfretted ? { unfretted: true } : {}) } : { midi: ev.midi };
+        /* an EXTENSION (261119) carries its placed string and fret: the neck rings it THERE, never by pitch — the same
+         * pitch sits elsewhere on the neck as a background dot, and a pitch match would ring both */
+        const msg = ev.role === "bass" ? { midi: ev.midi, role: "bass", ...(ev.unfretted ? { unfretted: true } : {}) }
+          : ev.role === "extension" ? { midi: ev.midi, extension: true, string: ev.string, fret: ev.fret } : { midi: ev.midi };
         const at = ev.onset * spb;
         if (at <= 0) { announce(d, NOTE, msg); continue; }
         timers.push(d.defaultView.setTimeout(() => {

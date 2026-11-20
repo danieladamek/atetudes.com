@@ -263,7 +263,7 @@ export const neckReadout = {
          * placement and the figure and never said strum or arpeggiate). Stated as the neck resolves it: a figure
          * that resolves sequences the notes whatever the switch says (the neck greys strum then), and a scale
          * with no figure is a run with nothing to move (the neck greys both) — said, not guessed. */
-        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones }) : null;
+        const fgm = String(cfg.figure || "").trim() ? orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones, chord: cfg.object === "scale" ? null : cur, gamut: cfg.gamut }) : null;
         /* THE FIGURE, SAID ONCE, AS THE NOTES IT RESOLVES TO (261013 — Daniel: "can this … not be derived from the
          * figure?"). The movement clause and the figure clause both only restated the rail (the switch the figure
          * overrides, its step count, the address). One clause now: the figure as typed, then this bar's notes in the

@@ -29,7 +29,7 @@ def main():
     stamp = datetime.datetime.now().strftime("%m%d-%H%M%S")
     door_cmd = ["python3", "hub/tests/door_locks.py"] + (["--doors", a.doors] if a.doors else [])
     gates = [
-        ("engine", ["node", "--test", "engine/tests/"]),
+        ("engine", ["sh", "-c", "node --test engine/tests/*.test.mjs"]),   # 261119: Node 22 refuses a bare directory — the gate failed before it tested anything
         ("hub", ["sh", "-c", "node --test hub/tests/*.test.mjs"]),
         ("build", ["node", "hub/tools/build.mjs"]),
         ("doors", door_cmd),

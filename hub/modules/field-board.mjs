@@ -44,7 +44,7 @@ import { SHARED } from "../../engine/shared-config.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
 import { positionOf, step, reanchor, regionOf, materialIn, windowLo } from "../../engine/position.mjs";
 import { makeRun, fromSetIndex } from "../../engine/string-run.mjs";
-import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf } from "../../engine/selection.mjs";
+import { diatonicTones, objectOffsets, oneOfEach, everyOccurrence, scaleTake, orderBy, bracketOf, offersOn, gripFit, materialFor, chordSuppliedSentence, capOf, extensionSentence } from "../../engine/selection.mjs";
 import { placeReference, referenceChoicesFor, centreDegreeOf, centreMaterialRef, reRead, soundedBass, soundedChoicesFor, compositeOver } from "../../engine/reference.mjs";
 // 260917 item 5: the mode names, the one table
 import { MODES } from "../../engine/field.mjs";
@@ -206,7 +206,7 @@ export const fieldBoard = {
       <div class="seg" id="fdAddrSeg" data-control="fdAddrSeg">
         <button data-addr="pattern" class="on"
           title="a sequence of STRING numbers — 4,3,4,3,2,1; a repeat is the ordinal">pattern</button>
-        <button data-addr="tones" title="roles — R, 3, 5, 7">tones</button>
+        <button data-addr="tones" title="roles — R, 3, 5, 7, 9, 11, 13">tones</button>
       </div>
       <div class="fd-cap">Figure</div>
       <input type="text" id="fdFigIn" data-control="fdFigIn" placeholder="4,3,4,3,2,1"
@@ -726,7 +726,7 @@ export const fieldBoard = {
       }
       /* THE FIGURE, resolved here — before the selection dots — because §2.6's
        * slur is drawn UNDER the dots (the under-draw convention) */
-      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones });   // 261010: the chord's tones, so the window can be named as a cause   // 260923: the window, for the approach reach; 261011c: what the placement dropped
+      const fig = orderBy(cfg.address, cfg.figure, sel, { fld, strings: run.strings, pos, absent, tones: cfg.object === "scale" ? null : cur.tones, chord: cfg.object === "scale" ? null : cur, gamut: cfg.gamut });   // 261010: the chord's tones, so the window can be named as a cause   // 260923: the window, for the approach reach; 261011c: what the placement dropped
       const approaches = (fig.order || []).filter((n) => n.role === "approach");
       /* §2.6 "Connection. An approach figure joins its target with a slur in
        * annotation gray (0.45, 0.45, 0.48), line 1.2, drawn UNDER the dots" */
@@ -1010,6 +1010,12 @@ export const fieldBoard = {
       } else if (fig.open) {
         noteEl.textContent = fig.open;   // an open group is incomplete, not invalid (261009)
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
+      } else if (extensionSentence(fig, cur.symbol)) {
+        /* THE FIGURE GOES BEYOND THE CHORD (Daniel, 261119, rulings 2 and C): information, not a refusal — PLAIN INK,
+         * never the refusal's red (golden rule 8). The tones it lists are derived from the resolved order, spelled by
+         * stackRole, so it cannot name one the figure does not play. */
+        noteEl.textContent = extensionSentence(fig, cur.symbol);
+        noteEl.style.color = "var(--ink)"; noteEl.style.fontStyle = "";
       } else {
         noteEl.style.color = ""; noteEl.style.fontStyle = "";
         /* WHICH CENTRE THE DEGREE SPEAKS FROM (260919, item 4): motion's grammar
@@ -1026,7 +1032,7 @@ export const fieldBoard = {
           ? named + (approaches.some((a2) => a2.chromatic) ? " A chromatic approach is a starburst in the colour of the degree it alters; a diatonic one keeps its degree colour." : "")
           : cfg.address === "pattern"
           ? "A pattern is a sequence of string numbers: 4,3,4,3,2,1. Repeats walk that string's notes low → high; the bracket shows where each step lands."
-          : "Tones name roles — R, 3, 5, 7; under a scale they are degrees from the CENTRE, and 9, 11, 13 reach the extensions. The bracket still shows the order, greyed, because it is derived rather than typed.";
+          : "Tones name roles — R, 3, 5, 7, 9, 11, 13; a 9, 11 or 13 the chord does not hold sounds from the field under Line, greyed on the neck and ringed as it passes; under a scale they are degrees from the CENTRE. The bracket still shows the order, greyed, because it is derived rather than typed.";
       }
 
       const isScale = cfg.object === "scale";
@@ -1116,7 +1122,7 @@ export const fieldBoard = {
        * of its 320ms — survivors of the wipe and first-notes alike */
       const now = d.defaultView.performance.now();
       livePulses = livePulses.filter((p2) => p2.until > now);
-      for (const p2 of livePulses) ringFor(p2.midi, p2.until - now);
+      for (const p2 of livePulses) p2.at ? ringAt(p2.at, p2.until - now) : ringFor(p2.midi, p2.until - now);
     };
 
     const push = () => {
@@ -1235,6 +1241,19 @@ export const fieldBoard = {
       }
       return hits.length;
     };
+    /* THE EXTENSION'S RING (Daniel, 261119, ruling 3): an extension stays a faded background dot — never promoted to a
+     * chord marker — and when it sounds the SAME ring outlines it, drawn at the string and fret the NOTE carries, on
+     * that one dot. Never a pitch match over the background: the same A3 sits at s3f2 and s4f7, and only one sounds. */
+    const ringAt = (at, ttl = 320) => {
+      const svg = byId("fieldSvg");
+      const layer = svg && svg.querySelector(".fd-pulselayer");
+      const c = svg && svg.querySelector(`.fd-dot[data-str="${at.string}"][data-fret="${at.fret}"] circle`);
+      if (!layer || !c) return 0;
+      const ring = el("circle", { class: "fd-pulse", "data-ext": "true", cx: c.getAttribute("cx"), cy: c.getAttribute("cy"),
+        r: 19, fill: "none", stroke: "#212126", "stroke-width": 2.4, opacity: 0.9, "pointer-events": "none" }, layer);
+      pulseTimers.push(d.defaultView.setTimeout(() => ring.remove(), ttl));
+      return 1;
+    };
     /* THE FIRST NOTE'S RING (260909, item 2, measured): on an advance the
      * walk's STEP listener runs before this board's — the new chord's first
      * NOTE arrives while the OLD bar's dots are still drawn (no matching
@@ -1246,8 +1265,9 @@ export const fieldBoard = {
       if (!m || typeof m.midi !== "number") return;
       const now = d.defaultView.performance.now();
       livePulses = livePulses.filter((p2) => p2.until > now);
-      livePulses.push({ midi: m.midi, until: now + 320 });
-      ringFor(m.midi);
+      const at = m.extension && Number.isInteger(m.string) && Number.isInteger(m.fret) ? { string: m.string, fret: m.fret } : null;
+      livePulses.push({ midi: m.midi, at, until: now + 320 });
+      if (at) ringAt(at); else ringFor(m.midi);
     });
 
     const toggleSquare = (sq) => {
