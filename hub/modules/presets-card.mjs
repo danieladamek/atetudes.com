@@ -22,6 +22,7 @@ import { mountMini } from "../mini.mjs";
 import { etudeRecord } from "../etude-record.mjs";
 import { describe } from "../../engine/etude-describe.mjs";
 import { etudeBlock, findEtudeBlock, readEtudeBlock, checkEtude, ETUDE_V } from "../../engine/etude-block.mjs";
+import { LINK_KEY, linkable, toFragment, fromFragment } from "../../engine/etude-link.mjs";
 
 /* label · the config it seeds. `take` defaults back to "one" exactly as v0.9
  * resets it, so a preset states only what it means. */
@@ -47,7 +48,7 @@ export const presetsCard = {
   requires: { surface: "multetudes" },
   mount_point: "cards",
   order: 12,
-  controls: ["psMini", "psSel", "psCopyBlock", "psPasteBlock"],
+  controls: ["psMini", "psSel", "psCopyBlock", "psCopyEmbed", "psPasteBlock"],
 
   /* THE SETTINGS CARD (261024, night 66 — Daniel, 261014: "a complete view of the étude the user has just
    * structured… all of that content should echo what then gets saved in the practice log"). The FACE renames;
@@ -67,11 +68,13 @@ export const presetsCard = {
        in the notepad's row: that row is v0.9's ratified six, and its markup is carried byte for byte into two hand pages. -->
   <div class="ps-block">
     <button id="psCopyBlock" data-control="psCopyBlock">Copy note block</button>
+    <button id="psCopyEmbed" data-control="psCopyEmbed">Copy embed code</button>
     <textarea id="psPasteBlock" data-control="psPasteBlock" rows="1" aria-label="paste an étude block to bring that étude back"
       placeholder="or paste a block here"></textarea>
-    <div class="hint ps-blockmsg" id="psBlockMsg"></div>
+    <div class="hint ps-blockmsg" id="psEmbedWhy"></div>
+    <div class="hint ps-blockmsg" id="psBlockMsg" role="status"></div>
   </div>
-  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here. Copy note block copies the étude's settings (never its notes) as an etude block, to paste into an Obsidian note where RiffRaft plays it; paste such a block into the field beside it and the étude comes back here, every setting at once.</div>`,
+  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here. Copy note block copies the étude's settings (never its notes) as an etude block, to paste into an Obsidian note where RiffRaft plays it; paste such a block into the field beside it and the étude comes back here, every setting at once. Copy embed code copies a player of this étude for a web page: an iframe, with a plain link beneath it for sites that take no iframes. A link to an étude opens it here the same way; an étude with typed changes travels in neither, and the button says why.</div>`,
 
   styles: `
 .ps-miniseat{margin:0 0 8px}
@@ -85,8 +88,9 @@ export const presetsCard = {
 .ps-desc{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;line-height:1.45}
 .ps-desc .ps-line{margin:0 0 3px}
 .ps-block{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
-#psCopyBlock{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
-#psCopyBlock:hover{border-color:var(--ink)}
+#psCopyBlock,#psCopyEmbed{font:inherit;font-size:11px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;color:var(--ink);line-height:1.5}
+#psCopyBlock:hover,#psCopyEmbed:hover{border-color:var(--ink)}
+#psCopyEmbed:disabled{color:var(--gray);cursor:default;border-color:var(--line)}
 #psPasteBlock{flex:1 1 120px;min-width:0;font:inherit;font-size:11px;padding:2px 7px;border:1px solid var(--line);border-radius:6px;color:var(--ink);resize:none;height:22px;line-height:1.5}
 .ps-blockmsg{flex-basis:100%;margin:0}
 .ps-blockmsg:empty{display:none}`,
@@ -150,6 +154,19 @@ export const presetsCard = {
      * record's own restore, exactly as a practice-log entry does. An étude another app wrote is named and left alone. */
     const blockMsg = byId("psBlockMsg");
     const say = (text) => { blockMsg.textContent = text; };
+    /* A BLOCK GOES HOME (shared by a paste and a link, 261120): another app's étude is named and left alone; every value
+     * the grammar or the bench refuses is skipped and named; the rest goes by the record's own restore */
+    const bring = (r, from) => {
+      if (r.app && r.app !== ctx.door.id) { say(`an étude ${r.app} wrote: this page restores its own (app: ${ctx.door.id})`); return; }
+      const refused = [...r.flagged.map((f) => ({ what: f.key || `line ${f.n}`, key: f.key, reason: f.reason })),
+        ...checkEtude(r.snapshot).map((b) => ({ what: b.key, key: b.key, reason: b.reason }))];
+      const snap = { ...r.snapshot };
+      for (const f of refused) if (f.key) delete snap[f.key];
+      record.restore(snap);
+      const n = Object.keys(snap).length;
+      say(`restored ${n} setting${n === 1 ? "" : "s"} from the ${from}` +
+        (refused.length ? `; skipped ${refused.map((f) => `${f.what} (${f.reason})`).join("; ")}` : ""));
+    };
     byId("psCopyBlock").addEventListener("click", async () => {
       let text;
       try { text = etudeBlock(record.snapshot(), { app: ctx.door.id, v: ETUDE_V }); }
@@ -163,16 +180,43 @@ export const presetsCard = {
       const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
       const r = readEtudeBlock(findEtudeBlock(text) ?? text);
       if (!r.lines.some((l) => l.kind === "pair")) { say("nothing to restore: no key: value lines in what was pasted"); return; }
-      if (r.app && r.app !== ctx.door.id) { say(`an étude ${r.app} wrote: this page restores its own (app: ${ctx.door.id})`); return; }
-      const refused = [...r.flagged.map((f) => ({ what: f.key || `line ${f.n}`, key: f.key, reason: f.reason })),
-        ...checkEtude(r.snapshot).map((b) => ({ what: b.key, key: b.key, reason: b.reason }))];
-      const snap = { ...r.snapshot };
-      for (const f of refused) if (f.key) delete snap[f.key];
-      record.restore(snap);
-      const n = Object.keys(snap).length;
-      say(`restored ${n} setting${n === 1 ? "" : "s"} from the block` +
-        (refused.length ? `; skipped ${refused.map((f) => `${f.what} (${f.reason})`).join("; ")}` : ""));
+      bring(r, "block");
     });
+    /* COPY EMBED CODE (261120 — child 4 of the étude embed epic): the player of THIS étude, as a web page takes it — an
+     * iframe of the door's declared player address and, beneath it, a plain link to the full app for a site that strips
+     * iframes. The fragment is etude-link's writer's; whether the étude may travel is etude-link's linkable(), whose
+     * reason is shown as it stands — this card never restates the rule (charter §6, §8). */
+    const embed = ctx.door.embed, embedBtn = byId("psCopyEmbed"), embedWhy = byId("psEmbedWhy");
+    if (!embed) embedBtn.hidden = true;
+    else {
+      const paintEmbed = () => {
+        const ok = linkable(record.snapshot());
+        embedBtn.disabled = ok !== true;
+        embedWhy.textContent = ok === true ? "" : `No embed code: ${ok.reason}.`;
+      };
+      record.onChange(paintEmbed); paintEmbed();
+      embedBtn.addEventListener("click", async () => {
+        let frag;
+        try { frag = toFragment(record.snapshot(), { app: ctx.door.id, v: ETUDE_V }); }
+        catch (e) { say(String(e.message || e)); return; }
+        const text = `<iframe src="${embed.player}${frag}" title="An étude on the neck, from At-Etudes" loading="lazy" ` +
+          `style="display:block;width:100%;height:${embed.height}px;border:0"></iframe>\n` +
+          `<p><a href="${embed.open}${frag}">Play this étude on At-Etudes</a></p>\n`;
+        try { await d.defaultView.navigator.clipboard.writeText(text); say("copied: embed code, ready to paste into a web page's HTML"); }
+        catch (_) { say("clipboard unavailable: this browser would not let the page copy"); }
+      });
+    }
+    /* OPEN FROM A LINK (261120): a #etude= fragment is read by etude-link's reader — the same reader and refusals as a
+     * pasted block (charter §8) — and goes home once every module has mounted and the clock has said what it is. The
+     * fragment is then CLEARED, read or refused, so a reload opens the bench as left, never the link again over later
+     * edits; it is never written anywhere (§8: nothing stored). A refused link says why, and the bench opens as usual. */
+    const win = d.defaultView;
+    if (new RegExp(`^#${LINK_KEY}=`).test(win.location.hash)) {
+      const r = fromFragment(win.location.hash);
+      try { win.history.replaceState(null, "", win.location.pathname + win.location.search); } catch (_) {}
+      if (r.reason) say(`${r.reason}; the bench opened as usual`);
+      else queueMicrotask(() => bring(r, "link"));
+    }
     /* the trace re-derives on every config move — drift is a comparison,
      * never a flag */
     listen(d, CONFIG_CHANGED, (m) => {

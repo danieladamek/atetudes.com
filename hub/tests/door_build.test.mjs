@@ -132,7 +132,8 @@ test("hub: a door's shared-config declaration reaches the artifact — the notep
     assert.deepEqual(lit.opensAs, door.opensAs || null, `[${d}] DOOR.opensAs in the artifact is the door's declaration`);
     // 261120: the player door's declaration travels the same seam (field-board and etude-player read it at runtime)
     if (door.player) assert.deepEqual(lit.player, door.player, `[${d}] DOOR.player in the artifact is the door's declaration`);
-    assert.deepEqual(Object.keys(lit).sort(), ["id", "lock", "opensAs", ...(door.player ? ["player"] : []), "present", "shared"]);
+    if (door.embed) assert.deepEqual(lit.embed, door.embed, `[${d}] DOOR.embed in the artifact is the door's declaration`);
+    assert.deepEqual(Object.keys(lit).sort(), [...(door.embed ? ["embed"] : []), "id", "lock", "opensAs", ...(door.player ? ["player"] : []), "present", "shared"]);
   }
 });
 

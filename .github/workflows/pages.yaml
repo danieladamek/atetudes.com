@@ -75,6 +75,7 @@ jobs:
           node hub/tools/build.mjs
           python3 hub/tests/door_locks.py
           python3 hub/tests/player_door.py   # 261120: the embed player — plays, refuses, one at a time across origins
+          python3 hub/tests/multetudes_link.py   # 261120: Multetudes opens an étude link and copies embed code
       - name: Generator identity (every generated study is what its generator emits — moved out of check_site, night 82)
         run: python3 tools/generator_identity.py
 

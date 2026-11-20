@@ -494,6 +494,15 @@ export async function resolveDoor(doorId) {
     }
   }
 
+  /* EMBED (261120 — child 4 of the étude embed epic): where an étude of this door plays (the player's address), where
+   * the plain fallback link opens it, and the iframe's height. Every value is published into strangers' pages the
+   * moment one is copied, so it is checked here, not trusted at runtime. */
+  if (door.embed != null) {
+    const e = door.embed;
+    if (typeof e !== "object" || !/^https:\/\//.test(e.player ?? "") || !/^https:\/\//.test(e.open ?? "") || !(Number.isInteger(e.height) && e.height > 0))
+      throw new Error(`${rel(doorFile)}: embed needs { player: "https://…", open: "https://…", height: <whole px> }`);
+  }
+
   const present = [...new Set(roots.flatMap((m) => m.controls))].sort();
   const absent = [...new Set(prunedMods.flatMap((m) => m.controls))].sort();
   const both = present.filter((c) => absent.includes(c));
@@ -510,6 +519,7 @@ export async function resolveDoor(doorId) {
     seats,
     hide,
     player: door.player || null,   // 261120: the player door's declaration (field-board reads it at runtime)
+    embed: door.embed || null,     // 261120: where this door's études play and open (the Settings card's Copy embed code)
     modulesIn: roots.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,
       controls: m.controls, owns: [...owned.get(m.id)].sort() })),
     modulesOut: prunedMods.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,

@@ -336,7 +336,7 @@ ${chunks.join("\n\n")}
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [${names.join(", ")}];
-const DOOR = ${JSON.stringify({ id: r.door, lock: r.lock, present: r.present, shared: r.shared, opensAs: r.opensAs, ...(r.player ? { player: r.player } : {}) })};
+const DOOR = ${JSON.stringify({ id: r.door, lock: r.lock, present: r.present, shared: r.shared, opensAs: r.opensAs, ...(r.player ? { player: r.player } : {}), ...(r.embed ? { embed: r.embed } : {}) })};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

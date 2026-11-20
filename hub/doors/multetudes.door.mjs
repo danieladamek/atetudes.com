@@ -56,6 +56,13 @@ export default {
    * the wording drafted night 84, awaiting his approval). What the file STATES wins: its own `tempo:`, or an
    * `apps.multetudes` block's keys. */
   opensAs: { notesPer: 3, movement: "arpeggiate", bpm: 120 },
+  /* WHERE AN ÉTUDE OF THIS DOOR PLAYS AND OPENS (261120 — child 4 of the étude embed epic): Settings → Copy embed code
+   * writes an iframe of `player` and a plain fallback link to `open`, each carrying the étude's #etude= fragment. Both
+   * addresses are PERMANENT from the first paste. THE HEIGHT is measured, not chosen: the player's natural height over
+   * the 11 linkable corpus études is 518–638 px at 360 wide, 534–645 at 390, 390–484 at 700 and 487–539 at 1280 — so
+   * 660 holds every one at every width without an inner scrollbar, at the price of up to ~270 px of ground below the
+   * player in a wide column. hub/tests/multetudes_link.py checks the copied iframe against it. */
+  embed: { player: "https://atetudes.com/embed/multetudes/", open: "https://atetudes.com/studies/multetudes/study.html", height: 660 },
   lock: {
     field: true,
     notepad: true,
@@ -326,7 +333,11 @@ export default {
     /* v1.1.16 (261120): the neck's bpm box, emptied, asks nothing — it had asked the clock for 0, which clamped to 15
      * (found by the player door's gate). Nothing else visible: the neck, the walk and the chart line now also serve the
      * player door (hub/doors/player.door.mjs), and that changed only code paths this page never takes. */
-    blurb: "one tool that holds many études · v1.1.16",
+    /* v1.1.17 (261120, Daniel — child 4 of the étude embed epic): a link to an étude (#etude=…, the player's Open in
+     * Multetudes) opens it on the bench, every setting at once, and the link is then cleared; a refused one says why and
+     * the bench opens as usual. Settings → Copy embed code copies a player of the étude for a web page — an iframe and a
+     * plain link — and is disabled, saying why, for an étude with typed changes. */
+    blurb: "one tool that holds many études · v1.1.17",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

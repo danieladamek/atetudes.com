@@ -1,3 +1,18 @@
+## 2026-11-20 — Multetudes v1.1.17: an étude opens from its link, and Copy embed code
+
+- **Multetudes v1.1.17** (Update Log 261120.5; child 4 of the étude embed epic, *Multetudes - open an étude from a
+  link, and copy embed code*), re-ingested byte-identical from `hub/build/multetudes.html`:
+  - **A link to an étude** (`study.html#etude=…` — the embed player's *Open in Multetudes ↗*) opens it on the bench,
+    every setting at once, through the same reader and refusals as a pasted note block (charter §8). The fragment is
+    then cleared, so a reload opens the bench as left, and it is never stored. A refused link (typed changes, §6)
+    says why, and the bench opens as usual.
+  - **Settings → Copy embed code** copies a player of the étude for any web page: an `<iframe>` of
+    `atetudes.com/embed/multetudes/#etude=…` (lazy, borderless, titled, full width, 660 px — the player's measured
+    worst case on the corpus, so no inner scrollbar at any width) and beneath it a plain link, *Play this étude on
+    At-Etudes*, for sites that strip iframes. For an étude with typed changes it is disabled, showing
+    `linkable()`'s reason.
+- The embed player (`/embed/multetudes/`) is unchanged, byte for byte. No other page changed.
+
 ## 2026-11-20 — The étude link (engine) — nothing on the site changed
 
 - **`engine/etude-link.mjs`** (Update Log 261120.3): an étude block carried in a URL fragment (`#etude=`,
