@@ -98,6 +98,69 @@ def check_downloads():
     return problems, found
 
 
+class EmbedCollector(HTMLParser):
+    """every player iframe (src under /embed/) and the fallback link after it, in page order"""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.players = []   # [{src, style, link}]
+
+    def handle_starttag(self, tag, attrs):
+        d = dict(attrs)
+        if tag == "iframe" and (d.get("src") or "").startswith("/embed/"):
+            self.players.append({"src": d["src"], "style": d.get("style") or "", "link": None})
+        elif tag == "a" and self.players and self.players[-1]["link"] is None and (d.get("href") or "").startswith("/studies/"):
+            self.players[-1]["link"] = d["href"]
+
+
+def check_etude_embeds(root=ROOT, content=(ROOT.parent / "content",)):
+    """AN ETUDE FENCE NEVER SHIPS AS A BROKEN PLAYER (261120 — child 5 of the étude embed epic). Read on the ARTIFACT:
+    every player iframe in the built pages (layouts/_markup/render-codeblock-etude.html writes them from `etude`
+    fences) is asked the player's OWN question — hub/modules/etude-player.mjs playable(hash, app), the function that
+    decides what /embed/<app>/ plays — so a bad or custom block fails here, by page and by name, exactly as the player
+    would refuse it; nothing here restates a rule. Also: the fallback link carries the same étude; the iframe's height is
+    the app door's measured embed.height. The fences in the content sources are counted, and every one must have
+    become a player — a check that found no iframe because the hook stopped running would otherwise pass on nothing."""
+    import json, re, subprocess
+    problems, found = [], []
+    for path in sorted(root.rglob("*.html")):
+        rel = path.relative_to(root)
+        if str(rel).startswith(("embed/", "studies/")) and path.name != "index.html":
+            continue   # the published apps themselves, never content
+        c = EmbedCollector()
+        c.feed(path.read_text(encoding="utf-8"))
+        for i, pl in enumerate(c.players, 1):
+            found.append({"page": str(rel), "n": i, "of": len(c.players), **pl})
+    fences = sum(len(re.findall(r"^```etude[ \t]*$", f.read_text(encoding="utf-8"), re.M))
+                 for d in content for f in Path(d).rglob("*.md"))
+    pages_with = {f["page"] for f in found}
+    if len(found) < fences:
+        problems.append(f"etude fences: {fences} in the content, but {len(found)} player(s) in the built pages — the render hook did not run on every fence")
+    js = """import { playable } from './hub/modules/etude-player.mjs';
+      import { existsSync } from 'node:fs';
+      const out = [];
+      for (const p of JSON.parse(process.argv[1])) {
+        const m = p.src.match(/^\\/embed\\/([a-z0-9-]+)\\/(#[\\s\\S]*)?$/);
+        const name = `${p.page}, player ${p.n} of ${p.of}`;
+        if (!m) { out.push(`${name}: not a player address: ${p.src.slice(0, 60)}`); continue; }
+        const [, app, hash = ''] = m;
+        const got = playable(hash, app);
+        if (got.reason) out.push(`${name}: ${got.reason}`);
+        if (p.link !== `/studies/${app}/study.html${hash}`) out.push(`${name}: its fallback link does not carry the same étude`);
+        const door = `./hub/doors/${app}.door.mjs`;
+        if (!existsSync(door)) { out.push(`${name}: no door ${app} to measure its height against`); continue; }
+        const h = (await import(door)).default.embed?.height;
+        if (!p.style.includes(`height:${h}px`)) out.push(`${name}: its height is not the ${app} door's measured embed.height (${h}px)`);
+      }
+      process.stdout.write(JSON.stringify(out));"""
+    if found:
+        r = subprocess.run(["node", "--input-type=module", "-e", js, json.dumps(found)], cwd=ROOT.parent, capture_output=True, text=True)
+        if r.returncode:
+            problems.append("etude fences: the player's reader did not run — " + r.stderr.strip()[:300])
+        else:
+            problems += [f"etude fence: {x}" for x in json.loads(r.stdout)]
+    return problems, len(found), fences, len(pages_with)
+
+
 def main():
     problems = []
     if not ROOT.is_dir():
@@ -137,6 +200,9 @@ def main():
     dl_problems, dl_found = check_downloads()
     problems += dl_problems
     print(f"downloads: {dl_found} study Download link(s) found (study page, landing card, /studies/ row per study)")
+    em_problems, em_found, em_fences, em_pages = check_etude_embeds()
+    problems += em_problems
+    print(f"etude fences: {em_fences} in the content; {em_found} player(s) on {em_pages} built page(s), each read by the player's own playable()")
     # THE DEPLOY RECORDS ARE VERIFIED AGAINST GITHUB (260921, night 27 item 3): every
     # SITELOG deploy record above the mechanism marker must carry the `record:` line
     # tools/deploy_record.py wrote from the fetched run, and its run id, conclusion

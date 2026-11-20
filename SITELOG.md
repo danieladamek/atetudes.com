@@ -1,3 +1,20 @@
+## 2026-11-20 — An `etude` fence on a content page renders the player
+
+- **New render hook `layouts/_markup/render-codeblock-etude.html`** (Update Log 261120.6; child 5 of the étude embed
+  epic, *Blog - an etude fence on a content page renders the player*). A fenced `etude` block in a post's markdown —
+  exactly what Multetudes' Settings → Copy note block copies — renders as the site's own player
+  (`/embed/<app>/#etude=…`, the app from the block's `app:` line, 660 px tall) with a plain *Play this étude on
+  At-Etudes* link beneath it. The post keeps the readable block, never pasted HTML. A fence with no `app:` line fails
+  the Hugo build at its position. `hugo.yaml` gains `params.etudeEmbedHeight: 660` (the Multetudes door's measured
+  height; the check holds them equal).
+- **`tools/check_site.py` reads every player iframe in the built pages** through the player's own `playable()` and
+  fails on a bad or custom block, naming the page and which player; it also checks the fallback link carries the same
+  étude, the height matches the door, and every fence in the content became a player. No post carries a fence yet,
+  so no page changed: it reports 0 fences, 0 players.
+- **New gate `tools/etude_fence.py`**: a throwaway test post mounted into a temp build (never shipped). In CI's
+  publish job (`--no-browser --minify`, every run) and in `tools/check.py` (with the browser: two players on the post
+  play and stop each other at 1280 and 390).
+
 ## 2026-11-20 — Multetudes v1.1.17: an étude opens from its link, and Copy embed code
 
 - **Multetudes v1.1.17** (Update Log 261120.5; child 4 of the étude embed epic, *Multetudes - open an étude from a

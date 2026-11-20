@@ -37,6 +37,7 @@ def main():
         ("link", ["python3", "hub/tests/multetudes_link.py"]),   # 261120: Multetudes opens a link, copies embed code
         ("hugo", ["hugo", "--quiet"]),
         ("check_site", ["python3", "tools/check_site.py"]),          # the site: links, CNAME, .nojekyll, deploy records
+        ("fence", ["python3", "tools/etude_fence.py", "--minify"]),  # 261120: an etude fence renders the player; bad/custom fails
         ("check_studies", ["python3", "tools/check_studies.py"]),    # the permanent-URL guard (night 82)
         ("check_tools", ["python3", "tools/check_tools.py", "--offline"]),  # the pinned tools, and each one offline from file://
         ("generators", ["python3", "tools/generator_identity.py"]),  # moved out of check_site (night 82): the app's subject

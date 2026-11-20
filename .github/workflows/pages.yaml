@@ -121,6 +121,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}   # tools/deploy_record.py verify re-fetches every recorded run (260921)
         run: python3 tools/check_site.py
+      - name: Etude fence — a bad or custom etude block on a content page fails the build, by name (261120)
+        # a throwaway post mounted into a temp Hugo build, minified as deployed; the browser half (two players playing,
+        # stopping each other) is tools/check.py's, and the player's own behaviour is the app gate's player_door.py
+        run: python3 tools/etude_fence.py --no-browser --minify
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:

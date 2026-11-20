@@ -1,0 +1,26 @@
+{{- /* THE ETUDE FENCE (261120 — child 5 of the étude embed epic, *Blog - an etude fence on a content page renders the
+  player*). A fenced `etude` block in a content page's markdown — exactly what Multetudes' Settings → Copy note block
+  copies — renders as atetudes.com's own player of that étude, with the block as its #etude= fragment, and a plain link
+  beneath it for a reader that strips iframes (a feed reader). The post keeps the READABLE block; nothing here reads
+  its values or restates a rule. Whether the étude may play is the player's own playable() — checked on the BUILT pages
+  by tools/check_site.py, which fails the build on a bad or custom block, by name.
+
+  THE ENCODING is etude-link's (engine/etude-link.mjs): the block body percent-encoded after #etude=. urlquery is Go's
+  QueryEscape — every reserved character escaped, a space written "+" — so "+" becomes "%20" (a literal "+" in the
+  block is already "%2B"). The reader is decodeURIComponent, which reads this as it reads encodeURIComponent's output.
+  THE PATH is the block's own `app:` line: /embed/<app>/ (a published, permanent address — the epic's permanence note).
+  THE HEIGHT is the Multetudes door's measured embed height (hub/doors/multetudes.door.mjs `embed.height`), stated in
+  hugo.yaml `params.etudeEmbedHeight`; check_site.py asserts the two agree.
+
+  SURVIVING CONSTRAINT (the item): whichever shell wins the re-scope, this becomes a hook in engine/markdown.mjs's
+  renderToHtml — so it stays this small: one regex for the app, one encoding, one piece of markup. */ -}}
+{{- $body := strings.TrimSpace .Inner -}}
+{{- $app := index (index (findRESubmatch `(?m)^app:[ \t]*([a-z0-9-]+)[ \t]*$` $body 1) 0 | default (slice "" "")) 1 -}}
+{{- if not $app -}}{{- errorf "%s: an etude fence carries no app: line — it cannot name a player" .Position -}}{{- end -}}
+{{- $frag := printf "#etude=%s" (replace (urlquery $body) "+" "%20") -}}
+{{- $h := site.Params.etudeEmbedHeight -}}
+{{- if not $h -}}{{- errorf "%s: hugo.yaml states no params.etudeEmbedHeight for an etude fence" .Position -}}{{- end -}}
+<div class="etude-embed">
+<iframe src="/embed/{{ $app }}/{{ $frag | safeURL }}" title="An étude on the neck, from At-Etudes" loading="lazy" style="display:block;width:100%;height:{{ $h }}px;border:0"></iframe>
+<p><a href="/studies/{{ $app }}/study.html{{ $frag | safeURL }}">Play this étude on At-Etudes</a></p>
+</div>
