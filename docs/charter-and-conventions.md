@@ -59,6 +59,12 @@ The site's interactive studies operate under the Contracts above, plus:
    both crafts — Python generators may emit it, the apps read and write it. **The file is
    the only supported handoff channel between applications** (format §5); browser storage is
    a per-app cache and never a transport.
+   **An étude block carried in a link is the file, inline** (amended 2026-11-20). A URL
+   fragment holding an étude block (`docs/etude-block-format.md`) is the same handoff as the
+   note the block would be pasted into: the same reader, the same refusals, nothing stored,
+   nothing sent to a server (the fragment never leaves the browser). A link carries only what a
+   block may carry, and under §6 never user-typed changes (`source: custom`). Browser storage
+   is still never a transport.
 
 ## Project conventions
 
