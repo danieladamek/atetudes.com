@@ -57,7 +57,7 @@ jobs:
   app-gate:
     needs: classify
     if: needs.classify.outputs.app == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # 261119: ubuntu-latest became 26.04, where Playwright 1.55 cannot install Chromium (the gate failed before it tested anything)
     steps:
       - uses: actions/checkout@v4
         with:
