@@ -1,0 +1,44 @@
+{
+  "name": "atetudes-shell",
+  "version": "1.0.0",
+  "file": "atetudes-shell.1.0.0.mjs",
+  "sha256": "c2d513ab695b8781d91b05bcd85d995115e1c5ae2b66b154a0c6d75edc7cc7e5",
+  "sourceCommit": "b088f1eec66431e4d9f783fae063506472c4b436",
+  "sources": [
+    {
+      "path": "hub/card-shell.mjs",
+      "blob": "ea9575e04fed065db2a68cf1d9f966f26d359f70"
+    },
+    {
+      "path": "hub/readout-grammar.mjs",
+      "blob": "5d1a241182ab2cabee6311880a1ecf8552b5d14d"
+    }
+  ],
+  "api": [
+    "SHELL_VERSION",
+    "TOKENS",
+    "SPEC_TOKENS",
+    "tokensCss",
+    "FIELD_CSS",
+    "TRANSPORT_CSS",
+    "SEG_CSS",
+    "CONTROLS_CSS",
+    "HINT_CSS",
+    "CARD_FRAME_CSS",
+    "STRIP_FRAME_CSS",
+    "BOARD_FRAME_CSS",
+    "COLLAPSE_CSS",
+    "INFO_CSS",
+    "CARD_CSS",
+    "initCollapse",
+    "initInfo",
+    "READOUT_CSS"
+  ],
+  "ruling": "card shell bundle decisions A–E, Daniel 2026-11-19: both skins named (door, page); ink and gray asserted against Spec §2.1, the rest chrome; CONTROLS_CSS in; a second kind in vendor.mjs; the site out; no degree colours",
+  "excluded": [
+    "static/studies/tetrad-voice-leading — frozen (R3); its own chrome copies stay",
+    "assets/css/custom.css and layouts/study.html — Hextra's chrome, the site (decision E)",
+    "the boards' SVG grays (field, staff, score, keys, keyboard strip, fretboard stage, hub/palette.mjs, engine/chart-line.mjs) — drawing ink, not card chrome",
+    "the hand pages' card frame, ▾ and ⓘ rules (triadetudes, metronome) — v0.8's values, a visible change to converge; they carry the page skin's tokens only"
+  ]
+}
