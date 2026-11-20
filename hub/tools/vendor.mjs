@@ -19,6 +19,11 @@
  * 2.1.0 (Daniel, 2026-10-14): 2.0.0's contents plus etude-describe (`describe`, `DESCRIBED`) — the étude in Multetudes'
  * own words, moved from hub/ into engine/ (its imports were already engine code); the engine-only closure is NOT
  * widened. Additive, so the minor version. palette.mjs still forbidden.
+ *
+ * 2.2.0 (Daniel, 2026-11-20): 2.1.0's entries and API unchanged, its sources moved — selection.mjs and
+ * etude-timeline.mjs now play a tones figure that names 9, 11, 13 beyond the chord (261119, Multetudes v1.1.15:
+ * extensions sound from the field inside the window, under Line only, and in < > groups); degree-palette.mjs moved by
+ * a comment only. Additive behaviour, so the minor version. palette.mjs still forbidden.
  * parseRoman is NOT in the API (its docstring is stale and chord.mjs is carried by every study, so it is not
  * edited); resolveRoman, which is exported, parses through it.
  *
@@ -52,7 +57,7 @@ import { execFileSync } from "node:child_process";
 import { REPO, importStatementsOf } from "./resolve.mjs";
 import { inlineForm, moduleChunk, nsOf } from "./build.mjs";
 
-export const VERSION = "2.1.0";
+export const VERSION = "2.2.0";
 export const OUT_DIR = join(REPO, "build", "vendor");
 export const bundleName = (v, kind = "engine") => `${kind === "shell" ? "atetudes-shell" : "atetudes-engine"}.${v}.mjs`;
 export const manifestName = (v, kind = "engine") => `${kind === "shell" ? "atetudes-shell" : "atetudes-engine"}.${v}.manifest.json`;
@@ -73,16 +78,17 @@ export const ENTRIES = [...ENTRIES_2_0,
   { mod: "etude-describe" },                                // 2.1.0: the étude in Multetudes' own words
 ];
 /** each version's entries — a past version rebuilds from its own (1.0.0's are 1.0.0's forever, 2.0.0's likewise) */
-export const ENTRIES_OF = { "1.0.0": ENTRIES_1, "2.0.0": ENTRIES_2_0, "2.1.0": ENTRIES };
+export const ENTRIES_OF = { "1.0.0": ENTRIES_1, "2.0.0": ENTRIES_2_0, "2.1.0": ENTRIES, "2.2.0": ENTRIES };
 
 /** modules whose code a version must never carry (the lock); reaching one refuses the build. PER VERSION (261014):
  * the motion lock is lifted for 2.0.0 (Daniel); palette stays forbidden in every version */
-export const FORBIDDEN_OF = { "1.0.0": ["motion", "palette"], "2.0.0": ["palette"], "2.1.0": ["palette"] };
+export const FORBIDDEN_OF = { "1.0.0": ["motion", "palette"], "2.0.0": ["palette"], "2.1.0": ["palette"], "2.2.0": ["palette"] };
 export const FORBIDDEN = FORBIDDEN_OF[VERSION];
 const RULING_OF = {
   "1.0.0": "261011c (option C): no palette.mjs, no motion.mjs, parseRoman not in the API",
   "2.0.0": "261011c + 2026-10-14 (the étude chain): adds etude-timeline and FAM/FAM_COLOR; the motion lock lifted for 2.0.0, palette.mjs still forbidden; parseRoman not in the API",
   "2.1.0": "2.0.0 + 2026-10-14 (Daniel): adds etude-describe (describe, DESCRIBED), moved from hub/ into engine/; the engine-only closure not widened; palette.mjs still forbidden; parseRoman not in the API",
+  "2.2.0": "2.1.0 + 2026-11-20 (Daniel): the same API, the sources moved — a tones figure names 9, 11, 13 beyond the chord (261119); palette.mjs still forbidden; parseRoman not in the API",
 };
 
 /* ---- THE SHELL KIND (261119) ---- */

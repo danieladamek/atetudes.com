@@ -204,3 +204,28 @@ test("smoke: every corpus étude is described in the SAME words through the bund
   assert.ok(corpus.length >= 12, `the corpus ran (${corpus.length} études)`);
   console.log(`  ${corpus.length} études, ${lines} lines: bundle words = source words`);
 });
+
+// ---- 2.2.0: a tones figure reaches past the chord (261119) ----
+
+/* REPRO 2 as a saved étude: C melodic minor, the chart line, strings 1–3, Line · arpeggiate · tones, r,3,5,9,11,13.
+ * Bar 7 is G7: its 9, 11 and b13 sound from the field at their placed spots. 2.1.0 cannot: it plays the plain arpeggio. */
+const REPRO2 = () => {
+  const corpus = JSON.parse(readFileSync(join(REPO, "hub", "tests", "fixtures", "etude-corpus.json"), "utf8"));
+  const base = corpus.find((x) => x.name.startsWith("a tones figure")).saved;
+  return { ...base, key: "C", scale: "mel", source: "custom", custom: "CmMaj7 F7 Bm7b5 Ebmaj7#5 Am7b5 Dm7 G7 CmMaj7",
+    strings: [3, 2, 1], startDeg: 5, nearFret: 2, address: "tones", movement: "arpeggiate", figure: "r,3,5,9,11,13" };
+};
+const g7Of = (t) => t.bars[6].events.filter((e) => e.role !== "bass" && e.role !== "pad").map((e) => `${e.role}@${e.string}/${e.fret}`);
+
+test("smoke: 2.2.0 plays repro 2's extensions exactly as the source does, and 2.1.0 does not", async () => {
+  assert.equal(VERSION, "2.2.0");
+  const saved = REPRO2();
+  const viaBundle = E.etudeTimeline(saved), viaSource = sourceTimeline(saved);
+  assert.deepEqual(viaBundle, viaSource, "the bundle's timeline equals the source's");
+  assert.equal(viaBundle.bars[6].symbol, "G7");
+  assert.deepEqual(g7Of(viaBundle), ["R@1/3", "3@3/4", "5@2/3", "extension@3/2", "extension@3/5", "extension@2/4"],
+    "R G s1f3 · 3 B s3f4 · 5 D s2f3 · 9 A s3f2 · 11 C s3f5 · b13 E♭ s2f4 — each at its one placed spot");
+  const E21 = await import(pathToFileURL(join(OUT_DIR, bundleName("2.1.0"))).href);
+  assert.equal(g7Of(E21.etudeTimeline(saved)).some((x) => x.startsWith("extension")), false, "2.1.0 has no extensions (a pin is a snapshot)");
+  assert.deepEqual(Object.keys(E).sort(), Object.keys(E21).sort(), "2.2.0's API is 2.1.0's: the same names");
+});
