@@ -62,7 +62,7 @@ export const progressionCard = {
   <!-- THE CLOCK, SEATED HERE (night 69 — ruling 261026, D5 approved): a second VIEW of the clock (hub/clock.mjs),
        addressed by data-role, owning nothing. TWO DECLARED ROWS — bar split · bpm, then the click · its pulse —
        Daniel's grouping, a wrapper per row, never a wrap flex finds. The neck keeps its own view. -->
-  <div class="pg-clock" id="pgClock" data-control="pgClock">${clockMarkup({ rows: 2 })}</div>
+  <div class="pg-clock" id="pgClock" data-control="pgClock">${clockMarkup({ rows: (a, b) => `<span class="clk-row">${a}</span><span class="clk-row">${b}</span>` })}</div>
   <!-- OBJECT AND TONES FIRST, above Source (night 64): they are what the progression acts on, so they are read
        before how it moves. STACKED, not adjacent — this card is a narrow column (281 px at 1280, 250 at 390) and
        its own idiom is label-above-control at full width; two selects side by side would clip the object's

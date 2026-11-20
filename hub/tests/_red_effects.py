@@ -237,6 +237,10 @@ def effect_scan(browser, check, build_dir, log=print):
                     has_metro = page.query_selector("#metroBtn") is not None
                 if not has_metro:
                     log(f"  [{name}] red effect-scan, {state}: no metronome on this page — state not entered"); ctx.close(); continue
+                # THE PLAYER (261120, Daniel's ruling 2): its metronome card ships HIDDEN — the clock runs, nothing of the card
+                # shows, so there is no button a visitor could press; said, not skipped in silence
+                if not page.is_visible("#metroBtn"):
+                    log(f"  [{name}] red effect-scan, {state}: the metronome card is mounted hidden on this door (ruling 261120) — state not entered"); ctx.close(); continue
                 page.click("#metroBtn")
                 hits, seen = [], set()
                 for _ in range(10):   # about a bar at the boot tempo, sampled: the first beat lights only while it plays

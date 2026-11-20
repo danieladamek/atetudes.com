@@ -75,6 +75,19 @@ def code_lines(rel_path):
     return out
 
 
+PLAYER_ETUDE = "a reference tone (3rd in the bass)"   # a reference tone: the chart line's composite state is entered   # the corpus étude a player door is loaded with (hub/tests/fixtures/etude-corpus.json)
+
+def player_link(app):
+    """the `#etude=…` link for PLAYER_ETUDE, written by engine/etude-link.mjs's toFragment — derived, never typed"""
+    js = ("import { toFragment } from './engine/etude-link.mjs'; import { ETUDE_V } from './engine/etude-block.mjs';"
+          "import { readFileSync } from 'node:fs';"
+          "const c = JSON.parse(readFileSync('hub/tests/fixtures/etude-corpus.json', 'utf8'));"
+          f"const e = c.find((x) => x.name === {json.dumps(PLAYER_ETUDE)});"
+          f"process.stdout.write(toFragment(e.saved, {{ app: {json.dumps(app)}, v: ETUDE_V }}));")
+    out = subprocess.run(["node", "--input-type=module", "-e", js], cwd=REPO, capture_output=True, text=True, check=True).stdout
+    assert out.startswith("#etude="), out
+    return out
+
 def markers(rel_path, retained):
     """Derived from the source: every identifier it declares at top level, plus
     every code line of its own that no reached file also has. Comment-blind by
@@ -144,10 +157,20 @@ SELECTOR_JS = """() => {
 }"""
 
 
+def press(el):
+    """click as a visitor would; a control a door mounts HIDDEN (the player's metronome card, ruling 261120) cannot be
+    reached by a visitor, so it is pressed by a DOM click — its CSS still ships, and the orphan sweep must see it match"""
+    if el.is_visible(): el.click()
+    else: el.evaluate("e => e.click()")
+
 def run_door(pw, door_id):
     r = node(door_id, "--json")
     html_path = BUILD / f"{door_id}.html"
     check(html_path.exists(), f"[{door_id}] no built file — run node hub/tools/build.mjs")
+    # THE PLAYER DOOR (261120) plays the étude its link carries and shows a refusal without one — so a door that declares
+    # `player` is loaded WITH a link, everywhere this suite loads it: one corpus étude, written by the engine's own link
+    # writer (never a hand-typed fragment), so every generic block below meets a player that is playing
+    page_uri = html_path.as_uri() + (player_link(r["player"]["app"]) if r.get("player") else "")
     html = html_path.read_text()
     tag = f"[{door_id}]"
 
@@ -187,6 +210,18 @@ def run_door(pw, door_id):
     # non-distinctive probe fails a door that is correct) arriving in the
     # markup grep, found by the first door to prune chord-timeline while
     # carrying audio (260829)
+    # THE SELECTOR FORMS ARE READ WHERE A SELECTOR CAN SHIP (261120 — the player door). `.tok` / `#tok` are read on
+    # the page's STYLES and its MARKUP — the built file with its <script> elements cut out — because that is where a
+    # pruned module's styles or markup would be: every module's styles are concatenated into the <style>, every
+    # module's markup into the page. Read across the script too, the probe was reading engine CODE: the player is
+    # the first door to reach the neck and the engine without the notepad, and `refP.note` / `hit.note` (35
+    # property reads in reference, selection, field-board…) and `.atchart.md` in comments read as the notepad's
+    # `.note` and `.md` — the '.cur' / '.currentTime' lesson above, a non-distinctive probe failing a correct door.
+    # NOT narrowed: the element forms (id="…", class="…") and the pruned-path names stay on the WHOLE file,
+    # comments included — the doctrine's comment-stripping lesson stands; nothing here strips a comment.
+    page_text = re.sub(r"<script\b[^>]*>[\s\S]*?</script>", "", html)
+    check(len(page_text) < len(html) and "<style" in page_text,
+          f"{tag} the selector-form grep has nothing to read — no script was cut, or no <style> is left")
     for tok in r["tokensAbsent"]:
         for form in (f'id="{tok}"', f'class="{tok}"'):
             check(form not in html,
@@ -194,7 +229,7 @@ def run_door(pw, door_id):
                   f"this lock prunes, so neither its markup nor its styles may ship")
         for pre in ("#", "."):
             pat = re.compile(re.escape(pre + tok) + r"(?![\w-])")
-            check(not pat.search(html),
+            check(not pat.search(page_text),
                   f"{tag} built file contains {pre + tok!r} — {tok} belongs to a module "
                   f"this lock prunes, so neither its markup nor its styles may ship")
     check(r["tokensAbsent"] or not r["modulesOut"],
@@ -214,7 +249,7 @@ def run_door(pw, door_id):
     console, errors = [], []
     page.on("console", lambda m: console.append((m.type, m.text)))
     page.on("pageerror", lambda e: errors.append(str(e)))
-    page.goto(html_path.as_uri())
+    page.goto(page_uri)
     page.wait_for_selector("#cards", state="attached")
 
     check(not errors, f"{tag} page errors: {errors}")
@@ -3926,14 +3961,33 @@ console.log(JSON.stringify(out));
     # ---------------- exercise the door -------------------------------------
     # a page that loads is not a page that works — and the orphan-selector
     # check below is only honest once the door's states have been entered
-    page.click("#metroBtn")
-    page.wait_for_timeout(250)
-    check(page.inner_text("#metroBtn") == "Stop", f"{tag} the metronome did not start")
-    check(page.eval_on_selector_all("#beatLamp span.on", "e => e.length") >= 1,
-          f"{tag} the beat lamp never lit — the clock is not running")
-    page.fill("#bpmRange", "120")
-    page.dispatch_event("#bpmRange", "input")
-    check(page.input_value("#bpmVal") == "120", f"{tag} the BPM readout did not follow")   # night 77: a field, read by value
+    if "metronome-card" not in r.get("hide", []):
+        page.click("#metroBtn")
+        page.wait_for_timeout(250)
+        check(page.inner_text("#metroBtn") == "Stop", f"{tag} the metronome did not start")
+        check(page.eval_on_selector_all("#beatLamp span.on", "e => e.length") >= 1,
+              f"{tag} the beat lamp never lit — the clock is not running")
+        page.fill("#bpmRange", "120")
+        page.dispatch_event("#bpmRange", "input")
+        check(page.input_value("#bpmVal") == "120", f"{tag} the BPM readout did not follow")   # night 77: a field, read by value
+    else:
+        # THE PLAYER (261120, Daniel's ruling 2): the metronome card is mounted hidden — its clock is the grid, and the
+        # card is shown nowhere. The same clock is driven through what the player DOES show: the neck's transport and
+        # its bpm field. The hidden card's own controls still read the clock (it is one state), so they are the probe.
+        check(not page.is_visible("#metroBtn") and page.query_selector("#metroBtn") is not None,
+              f"{tag} the player hides the metronome card — its clock must be mounted, and nothing of it shown")
+        page.click('#fdMini [data-role="play"]')
+        page.wait_for_timeout(400)
+        check(page.inner_text("#metroBtn") == "Stop", f"{tag} the player's Play did not start the clock")
+        check(page.eval_on_selector_all("#beatLamp span.on", "e => e.length") >= 1,
+              f"{tag} the beat lamp never lit — the clock is not running under the player's Play")
+        page.fill("#fdBpm", "96"); page.dispatch_event("#fdBpm", "change"); page.wait_for_timeout(100)
+        check(page.input_value("#bpmVal") == "96" and page.input_value("#fdBpm") == "96",
+              f"{tag} the player's bpm did not reach the clock (hidden card reads {page.input_value('#bpmVal')})")
+        page.click('#fdMini [data-role="stop"]'); page.wait_for_timeout(150)
+        check(page.inner_text("#metroBtn") == "Start", f"{tag} the player's Stop did not stop the clock")
+        page.click('#fdMini [data-role="play"]'); page.wait_for_timeout(300)   # left RUNNING, as the card's block leaves it
+        check(page.inner_text("#metroBtn") == "Stop", f"{tag} the player's Play did not restart the clock")
 
     if "journalIn" in r["controlsPresent"]:
         page.fill("#journalIn", "a note from the door lock suite\n\nwith `inline code` and a fence:\n\n```\nCmaj7\n```\n")
@@ -4873,7 +4927,7 @@ console.log(JSON.stringify(out));
         # Reload into a fresh page for this block: it is the only way to assert
         # "nothing before a gesture" honestly rather than instrumenting after
         # the fact and calling it proof.
-        page.goto(html_path.as_uri())
+        page.goto(page_uri)
         page.wait_for_timeout(300)
         page.evaluate("""() => {
           window.__starts = 0;
@@ -4956,7 +5010,7 @@ console.log(JSON.stringify(out));
         # This block counts REAL audio sources at the first attack of a COLD
         # Play: the thing that makes noise, reached. Demonstrated failing
         # against v0.1.1 (0 sources at an announced step-0 attack).
-        page.goto(html_path.as_uri())
+        page.goto(page_uri)
         page.wait_for_timeout(300)
         page.evaluate("""() => { window.__starts = 0; window.__att = [];
           for (const P of [window.OscillatorNode, window.AudioBufferSourceNode]) {
@@ -5051,7 +5105,7 @@ console.log(JSON.stringify(out));
         # that mount before it, snapshotting "set · drop-2" and nothing else. The
         # bus now replays state-shaped messages to late listeners; assert the
         # consequence — every one of the seven facts, with nothing touched.
-        page.goto(html_path.as_uri())
+        page.goto(page_uri)
         page.wait_for_timeout(300)
         page.fill("#journalIn", "fresh-page entry — nothing touched\n\nwith `inline code` and a fence:\n\n```\nCmaj7\n```\n")
         page.dispatch_event("#journalIn", "input")
@@ -5121,7 +5175,7 @@ console.log(JSON.stringify(out));
                   f"{tag} bind was OFF at save but the stored zone does not carry the exception: {zone_saved!r}")
 
         # RELOAD. Everything in the page is gone; the log must not be.
-        page.goto(html_path.as_uri())
+        page.goto(page_uri)
         page.wait_for_timeout(400)
         count = page.inner_text("#histCount").strip()
         check(count not in ("", "0"), f"{tag} after reload the log says {count!r} saved — persistence is false")
@@ -5264,8 +5318,15 @@ console.log(JSON.stringify(out));
     panels_n = len(page.query_selector_all(".card, .board"))
     check(panels_n >= 1 and len(toggles) == panels_n,
           f"{tag} {len(toggles)} chevrons for {panels_n} panels — collapse must reach every panel")
-    panel = page.query_selector(".card")                 # the metronome card, first panel
-    body = panel.query_selector("h2 ~ *:not(.clpsSum):not(.clpsBtn)")
+    if "metronome-card" not in r.get("hide", []):
+        panel = page.query_selector(".card")                 # the metronome card, first panel
+        body = panel.query_selector("h2 ~ *:not(.clpsSum):not(.clpsBtn)")
+    else:
+        # the player (261120): the metronome card is hidden, so the first panel a visitor SEES is the neck's board —
+        # exercised the same way, its body the first thing after its header band
+        panel = next((p for p in page.query_selector_all(".card, .board") if p.is_visible()), None)
+        check(panel is not None, f"{tag} the player shows no panel at all")
+        body = panel.query_selector(".bh ~ *:not(.clpsSum):not(.clpsBtn):not(.clpsum)")
     check(body is not None and body.is_visible(), f"{tag} the panel body is not visible before collapse")
     before_h = panel.bounding_box()["height"]
     panel.query_selector(".clpsBtn").click()
@@ -5296,7 +5357,9 @@ console.log(JSON.stringify(out));
     # shared row stretch together — the triad app's own behaviour — so one
     # collapsed card keeps the row's height while its neighbour stands. The
     # honest claim: collapse EVERY card in the row and the row itself shrinks.
-    rowmates = [p2 for p2 in page.query_selector_all(".cards > .card, .cardrow > *") if p2.bounding_box() and abs(p2.bounding_box()["y"] - panel.bounding_box()["y"]) < 2]
+    with absent_ok("the player (261120) has no cards row — its one visible panel is the neck's board, alone in its row"):
+        rowmates = [p2 for p2 in page.query_selector_all(".cards > .card, .cardrow > *") if p2.bounding_box() and abs(p2.bounding_box()["y"] - panel.bounding_box()["y"]) < 2]
+    if not rowmates: rowmates = [panel]
     toggled = []                                          # exactly the cards THIS loop collapsed
     for p2 in rowmates:
         if "clpsd" not in (p2.get_attribute("class") or ""):
@@ -5328,18 +5391,19 @@ console.log(JSON.stringify(out));
     # to break in silence, because the .hint that used to feed it just moved away
     for p in page.query_selector_all(".card, .board"):
         btn = p.query_selector(".clpsBtn")
-        btn.click()
+        press(btn)               # a panel the door mounts hidden (the player's, 261120) is pressed by a DOM click
         summ = page.evaluate("(el) => el.querySelector('.clpsSum').textContent.trim()", p)
         with absent_ok("headless boards carry no h2/.bh title; the name only labels the message"):
             t = p.query_selector("h2, .bh span")
         check(summ != "",
               f"{tag} panel {(t.inner_text() if t else '?')!r} collapses to an EMPTY summary — the moved prose broke the coupling")
-        btn.click()              # expand again
+        press(btn)               # expand again
     # each popout carries the prose it replaced, verbatim (read the moved .info,
     # text_content so a hidden popout still reports its text)
     allinfo = " ".join(e.text_content() for e in page.query_selector_all(".infoPop .info") if e.text_content())
-    check("A full metronome on its own clock" in allinfo,
-          f"{tag} the Metronome prose did not move into a popout verbatim")
+    if "metronome-card" not in r.get("hide", []):   # the player shows no metronome card (ruling 261120), so no popout of it
+        check("A full metronome on its own clock" in allinfo,
+              f"{tag} the Metronome prose did not move into a popout verbatim")
     if "splitSel" in r["controlsPresent"]:
         check("Chords take the bar's slots" in allinfo and "at the next bar" in allinfo,
               f"{tag} the Transport prose did not move into a popout verbatim (with the beat-fix clause)")
@@ -5410,7 +5474,8 @@ console.log(JSON.stringify(out));
         check(ic["seen"] >= 1 and not ic["out"], f"{tag} 261012d @{w_ic}: an ⓘ lies over a control in its own panel ({ic['seen']} ⓘ checked): {ic['out']}")
     page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(250)
     # OPEN a popout, and prove it dismisses without a modal — Escape and click-out
-    ib = page.query_selector(".infoBtn")
+    # the first ⓘ a visitor can SEE (on every door but the player that is the metronome's; the player's is the neck's)
+    ib = next((b for b in page.query_selector_all(".infoBtn") if b.is_visible()), None)
     ib.click()
     check(page.query_selector(".infoPop:not([hidden])") is not None,
           f"{tag} the info button did not open its popout")
@@ -5483,13 +5548,14 @@ console.log(JSON.stringify(out));
         muted_for_check = page.query_selector("#bassMute")
     muted_for_check = muted_for_check or page.query_selector("#clickMute")
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") != "true":
-        muted_for_check.click()
+        press(muted_for_check)
     collapsed_for_check = []
     for sel in (".card", ".board"):
         with absent_ok("plain has no boards; a door with boards still orphans .clpsd>.bh in the sweep if not collapsed"):
-            p = page.query_selector(sel)
+            # the first panel of its kind a visitor SEES (on the player the first board is the hidden chart line)
+            p = next((x for x in page.query_selector_all(sel) if x.is_visible()), None) or page.query_selector(sel)
         if p and "clpsd" not in (p.get_attribute("class") or ""):
-            p.query_selector(".clpsBtn").click()
+            press(p.query_selector(".clpsBtn"))
             collapsed_for_check.append(p)
     check(page.query_selector(".clpsd") is not None,
           f"{tag} no panel is collapsed going into the orphan check — .clpsd rules would orphan")
@@ -5498,14 +5564,24 @@ console.log(JSON.stringify(out));
     # shots with the collapsed panels (the same lesson as .clpsd and the mute)
     rail_shut_for_check = False
     with absent_ok("reads whether the rail is already shut; open is the normal state, and the sweep catches no-shut"):
-        rail_open_for_check = door_id == "multetudes" and page.query_selector(".fd-rail.fd-shut") is None
+        rail_open_for_check = door_id in ("multetudes", "player") and page.query_selector(".fd-rail.fd-shut") is None
     if rail_open_for_check:
-        page.click("#fdRailBtn")
+        press(page.query_selector("#fdRailBtn"))   # the player's rail is not shown (ruling 261120) — its rules still ship
         rail_shut_for_check = True
     # multetudes: the REFUSAL state and the COMPOSITE chip going into the
     # check — #pgNote.pg-err and .tl-us are STATE rules, and a check against
     # a door that never refused would call them orphans (the .clpsd lesson)
     err_state_for_check = False
+    # the player (261120): its étude carries a reference tone, so bars 2–5 of the chart line carry the composite line —
+    # the CURRENT chip wears it only while the pass is on one of them. Stepped there by the neck's own transport and
+    # played from it: four bars of 2 s at 120, all composite, cover the sweep.
+    if r.get("player"):
+        mini = lambda role: press(page.query_selector(f'#fdMini [data-role="{role}"]'))   # the board is collapsed by now
+        mini("stop"); page.wait_for_timeout(120)
+        mini("next"); mini("next"); page.wait_for_timeout(120)
+        mini("play"); page.wait_for_timeout(300)
+        check(page.query_selector("#tlScroll .tl-bar button.tl-cur .tl-us") is not None,
+              f"{tag} the player did not reach a composite bar going into the orphan check")
     if door_id == "multetudes":
         page.click('#pgSrcSeg button[data-src=\"custom\"]')
         page.fill("#pgCustom", "Qx7"); page.dispatch_event("#pgCustom", "input")
@@ -5603,9 +5679,9 @@ console.log(JSON.stringify(out));
     for p in collapsed_for_check:
         btn = p.query_selector(".clpsBtn")
         if btn:
-            btn.click()
+            press(btn)
     if rail_shut_for_check:
-        page.click("#fdRailBtn")
+        press(page.query_selector("#fdRailBtn"))
     if err_state_for_check:
         page.select_option("#fdBass2", "none")
         page.fill("#pgCustom", ""); page.dispatch_event("#pgCustom", "input")
@@ -5614,7 +5690,7 @@ console.log(JSON.stringify(out));
         with absent_ok("back at standard no string is moved; the same selector was asserted present at L5378/5390"):
             check(page.query_selector('.fd-tune .fd-open[data-moved="true"]') is None, f"{tag} the tuning did not return to standard after the orphan check")
     if muted_for_check and muted_for_check.get_attribute("aria-pressed") == "true":
-        muted_for_check.click()
+        press(muted_for_check)
 
     if SHOTS:
         # open the LARGEST popout for the shots — the item wants the popout open
@@ -5662,6 +5738,9 @@ console.log(JSON.stringify(out));
         # card ground); fixed the same night to the ramp's --gray (4.51:1) — the exemption RETIRED,
         # as the loud-both-ways check demands. axe now gates the captions at AA.
     }
+    # the metronome card's exemptions follow the card: a door that mounts it hidden (the player, ruling 261120) shows
+    # none of its controls, axe reads none of them, and an exemption there would be one that can never be seen
+    metro_exempt = {} if "metronome-card" in r.get("hide", []) else METRO_CARD_EXEMPT
     AXE_JS = Path(HUB / "tests" / "vendor" / "axe.min.js")
     check(AXE_JS.exists(), f"{tag} axe-core is not vendored at {AXE_JS} — the accessibility check cannot run")
     for aw in (1280, 390):
@@ -5673,14 +5752,14 @@ console.log(JSON.stringify(out));
           .then(r => ({ passes: r.passes.length, violations: r.violations.map(v => ({ id: v.id, impact: v.impact, targets: v.nodes.map(n => n.target.join(' ')) })) }))""", AXE_FLOOR)
         failed, exempt_hits, seen = [], 0, {}
         for v in res["violations"]:
-            allowed = AXE_EXEMPT.get(v["id"], {}).get(door_id, set()) | METRO_CARD_EXEMPT.get(v["id"], set())
+            allowed = AXE_EXEMPT.get(v["id"], {}).get(door_id, set()) | metro_exempt.get(v["id"], set())
             for t in v["targets"]:
                 if t in allowed:
                     exempt_hits += 1; seen.setdefault(v["id"], set()).add(t)
                 else:
                     failed.append(f"{v['id']}[{v['impact']}] {t}")
         stale = [f"{rule} {t}" for rule, doors in AXE_EXEMPT.items() for t in doors.get(door_id, set()) if t not in seen.get(rule, set())] \
-            + [f"{rule} {t}" for rule, ts in METRO_CARD_EXEMPT.items() for t in ts if t not in seen.get(rule, set())]
+            + [f"{rule} {t}" for rule, ts in metro_exempt.items() for t in ts if t not in seen.get(rule, set())]
         check(not failed, f"{tag} axe @{aw}: {len(failed)} WCAG 2 A/AA violation(s) not on the 260923 exemption list — a control without a role or a name is red on arrival: {failed[:8]}")
         check(not stale, f"{tag} axe @{aw}: {len(stale)} exemption(s) match nothing — the finding was fixed, retire its exemption: {stale[:6]}")
         n_ex_rules = len({r for r in seen})
@@ -5958,7 +6037,7 @@ console.log(JSON.stringify(out));
         # THE COLD PAGE: a fresh context, the all-fourths file imported — offered, not applied; restored — the neck and the ear in all fourths
         ctx2 = pw.new_context(viewport={"width": 1280, "height": 900}); page2 = ctx2.new_page()
         errs2 = []; page2.on("pageerror", lambda e: errs2.append(str(e)))
-        page2.goto(html_path.as_uri()); page2.wait_for_selector("#cards", state="attached"); page2.wait_for_timeout(200)
+        page2.goto(page_uri); page2.wait_for_selector("#cards", state="attached"); page2.wait_for_timeout(200)
         check(letters(page2) == ["E", "A", "D", "G", "B", "E"], f"{tag} the cold page does not boot in standard: {letters(page2)}")
         import_text(page2, fourths_file, "all-fourths.atchart.md")
         check(letters(page2) == ["E", "A", "D", "G", "B", "E"], f"{tag} importing alone retuned the page — applying is a click")
@@ -6007,7 +6086,7 @@ console.log(JSON.stringify(out));
         page.click('#fdTuneNames button[data-tuning="DADGAD"]')
         page.click('[data-cap="save"]')
         page.click('#fdTuneNames button[data-tuning="standard"]')
-        page.goto(html_path.as_uri()); page.wait_for_selector("#cards", state="attached"); page.wait_for_timeout(300)
+        page.goto(page_uri); page.wait_for_selector("#cards", state="attached"); page.wait_for_timeout(300)
         check(letters(page) == ["E", "A", "D", "G", "B", "E"], f"{tag} the reopened page does not boot in standard")
         check(tuning_card(page)["shut"] and tuning_card(page)["sum"] == TN.get("standard"), f"{tag} 261012b: the reopened page's tuning card is shut on standard: {tuning_card(page)}")
         page.click('#histList .hist [data-cap="apply"]'); page.wait_for_timeout(400)
@@ -6473,7 +6552,7 @@ console.log(JSON.stringify(out));
         n57_file = export_newest(page)
         check('"sounded":"root"' in n57_file and '"pad":true' in n57_file, f"{tag} the exported étude carries both new settings: {n57_file[:300]!r}")
         ctx3 = pw.new_context(viewport={"width": 1280, "height": 900}); page3 = ctx3.new_page(); errs3 = []; page3.on("pageerror", lambda e: errs3.append(str(e)))
-        page3.goto(html_path.as_uri()); page3.wait_for_selector("#cards", state="attached"); page3.wait_for_timeout(200)
+        page3.goto(page_uri); page3.wait_for_selector("#cards", state="attached"); page3.wait_for_timeout(200)
         check(page3.evaluate("() => document.getElementById('fdSounded').value") == "none" and not page3.is_checked("#fdPad"), f"{tag} the cold page boots with both absent")
         import_text(page3, n57_file, "night57.atchart.md")
         page3.click('#histList .hist [data-cap="apply"]'); page3.wait_for_timeout(400)
@@ -6623,7 +6702,7 @@ console.log(JSON.stringify(out));
         v1_file = n59_file.replace('"v":2', '"v":1').replace('"tones":[1,3,5,7]', '"object":"dyad","tones":[1,5]')
         check('"object":"dyad"' in v1_file and '"v":1' in v1_file, f"{tag} the v1 fixture is what it claims")
         ctx4 = pw.new_context(viewport={"width": 1280, "height": 900}); page4 = ctx4.new_page(); errs4 = []; page4.on("pageerror", lambda e: errs4.append(str(e)))
-        page4.goto(html_path.as_uri()); page4.wait_for_selector("#cards", state="attached"); page4.wait_for_timeout(200)
+        page4.goto(page_uri); page4.wait_for_selector("#cards", state="attached"); page4.wait_for_timeout(200)
         import_text(page4, v1_file, "night59-v1.atchart.md")
         page4.click('#histList .hist [data-cap="apply"]'); page4.wait_for_timeout(400)
         cold = page4.evaluate("() => ({ obj: document.getElementById('hcObj').value, tones: document.getElementById('hcTones').value, note: document.getElementById('pgObjNote').textContent })")   # night 64: the object's sentence is Progression's
@@ -6734,7 +6813,7 @@ console.log(JSON.stringify(out));
         mixed = n60_file.replace('"gamut":null', '"gamut":[2,3,5,6,7]')
         check('"gamut":[2,3,5,6,7]' in mixed, f"{tag} the fixture is what it claims")
         ctx5 = pw.new_context(viewport={"width": 1280, "height": 900}); page5 = ctx5.new_page(); errs5 = []; page5.on("pageerror", lambda e: errs5.append(str(e)))
-        page5.goto(html_path.as_uri()); page5.wait_for_selector("#cards", state="attached"); page5.wait_for_timeout(200)
+        page5.goto(page_uri); page5.wait_for_selector("#cards", state="attached"); page5.wait_for_timeout(200)
         import_text(page5, mixed, "night60-mixed.atchart.md")
         page5.click('#histList .hist [data-cap="apply"]'); page5.wait_for_timeout(400)
         cold = page5.evaluate("() => ({ obj: document.getElementById('hcObj').value, tones: document.getElementById('hcTones').value, gamut: document.getElementById('hcGamut').dataset.gamut, note: document.getElementById('hcNote').textContent, lit: [...document.querySelectorAll('#hcChips .hc-chip')].map(b => b.dataset.lit) })")
@@ -6746,7 +6825,7 @@ console.log(JSON.stringify(out));
         # Pinned where the effect is: the scale entry restores as the scale it is, its gamut intact, no drop sentence.
         ctx5.close()
         ctx6 = pw.new_context(viewport={"width": 1280, "height": 900}); page5b = ctx6.new_page(); errs5b = []; page5b.on("pageerror", lambda e: errs5b.append(str(e)))   # its own context: one entry in the history, its own id
-        page5b.goto(html_path.as_uri()); page5b.wait_for_selector("#cards", state="attached"); page5b.wait_for_timeout(200)
+        page5b.goto(page_uri); page5b.wait_for_selector("#cards", state="attached"); page5b.wait_for_timeout(200)
         scale_file = n60_file.replace('"tones":[1,3,5,7]', '"tones":null').replace('"gamut":null', '"gamut":[2,3,5,6,7]').replace('"id":"', '"id":"n60scale-', 1)
         check('"tones":null' in scale_file, f"{tag} the scale fixture is what it claims")
         check(page5b.evaluate("() => document.getElementById('hcObj').value") == "tetrad", f"{tag} the cold page boots under a chord — the case that hid the defect")
@@ -6787,7 +6866,7 @@ console.log(JSON.stringify(out));
         check('"gamut":null' in n61_file and '"tones":[1,3,5,7]' in n61_file, f"{tag} the export under a chord (the fixture's base)")
         n61_mixed = n61_file.replace('"gamut":null', '"gamut":[2,3,5,6,7]').replace('"id":"', '"id":"n61mixed-', 1)
         ctx7 = pw.new_context(viewport={"width": 1280, "height": 900}); page7 = ctx7.new_page(); errs7 = []; page7.on("pageerror", lambda e: errs7.append(str(e)))
-        page7.goto(html_path.as_uri()); page7.wait_for_selector("#cards", state="attached"); page7.wait_for_timeout(200)
+        page7.goto(page_uri); page7.wait_for_selector("#cards", state="attached"); page7.wait_for_timeout(200)
         import_text(page7, n61_mixed, "night61-mixed.atchart.md")
         page7.click('#histList .hist [data-cap="apply"]'); page7.wait_for_timeout(500)
         face = page7.evaluate("() => ({ hint: document.getElementById('fdHint').textContent, ro: document.getElementById('roLine').textContent, sel: [...document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)')].map(g => +g.dataset.selmidi % 12).sort((a, b) => a - b), gamut: document.getElementById('hcGamut').dataset.gamut, obj: document.getElementById('hcObj').value })")
@@ -6800,7 +6879,7 @@ console.log(JSON.stringify(out));
         # the READOUT had kept "this dyad's stack" (the stale outer value landing after the correction). Pinned on the face.
         n61_v1 = n61_file.replace('"v":2', '"v":1').replace('"tones":[1,3,5,7]', '"object":"dyad","tones":[1,5]').replace('"id":"', '"id":"n61v1-', 1)
         ctx8 = pw.new_context(viewport={"width": 1280, "height": 900}); page8 = ctx8.new_page(); errs8 = []; page8.on("pageerror", lambda e: errs8.append(str(e)))
-        page8.goto(html_path.as_uri()); page8.wait_for_selector("#cards", state="attached"); page8.wait_for_timeout(200)
+        page8.goto(page_uri); page8.wait_for_selector("#cards", state="attached"); page8.wait_for_timeout(200)
         import_text(page8, n61_v1, "night61-v1.atchart.md")
         page8.click('#histList .hist [data-cap="apply"]'); page8.wait_for_timeout(500)
         face8 = page8.evaluate("() => ({ card: document.getElementById('hcObj').value, ro: document.getElementById('roLine').textContent, hint: document.getElementById('fdHint').textContent })")
@@ -7056,7 +7135,8 @@ console.log(JSON.stringify(out));
       const edge = info && Math.abs(R(info).top - R(m).top) < 20 ? R(info).left : R(board).right - 12; return { id, gapRight: Math.round(edge - R(m).right), l: Math.round(R(m).left) }; })""", here64)
     r1280 = right() if here64 else []
     if here64:
-        check(len(here64) >= 3 and all(x["gapRight"] <= 60 for x in r1280), f"{tag} every mini this door carries sits at the RIGHT of its header at 1280 — hosts computed from the sources: {r1280}")
+        # the player (261120) carries exactly ONE transport view — the neck's (Daniel's scope: play/stop, nothing else)
+        check(len(here64) >= (1 if r.get("player") else 3) and all(x["gapRight"] <= 60 for x in r1280), f"{tag} every mini this door carries sits at the RIGHT of its header at 1280 — hosts computed from the sources: {r1280}")
     if door_id == "multetudes":
         lefts = {}
         for k in ("C", "F#"):
@@ -7078,7 +7158,7 @@ console.log(JSON.stringify(out));
     # figure orders it — as the neck resolves it (strum greyed then). Asserted at the effect: the readout's own line.
     if 'id="fdRail"' in html_path.read_text() and 'id="roLine"' in html_path.read_text():
         ctx65 = pw.new_context(viewport={"width": 1280, "height": 900}); p65 = ctx65.new_page(); errs65 = []; p65.on("pageerror", lambda e: errs65.append(str(e)))
-        p65.goto(html_path.as_uri()); p65.wait_for_selector("#cards", state="attached"); p65.wait_for_timeout(300)
+        p65.goto(page_uri); p65.wait_for_selector("#cards", state="attached"); p65.wait_for_timeout(300)
         rail65 = p65.evaluate("""() => { const R = e => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; };
           const n = document.getElementById('fdRailName'), top = document.querySelector('#fdRail > .fd-railtop');
           const heads = [...document.querySelectorAll('#fieldSvg text')].filter(t => /^(set|pattern)$/i.test(t.textContent.trim())).map(t => R(t));
@@ -7191,7 +7271,7 @@ console.log(JSON.stringify(out));
     # never by its caption (rule 12); the caption itself is pinned once, as the rename's claim.
     if 'id="psDesc"' in html_path.read_text():
         ctx66 = pw.new_context(viewport={"width": 1280, "height": 900}); p66 = ctx66.new_page(); errs66 = []; p66.on("pageerror", lambda e: errs66.append(str(e)))
-        p66.goto(html_path.as_uri()); p66.wait_for_selector("#cards", state="attached"); p66.wait_for_timeout(300)
+        p66.goto(page_uri); p66.wait_for_selector("#cards", state="attached"); p66.wait_for_timeout(300)
         card66 = p66.evaluate("() => { const c = document.getElementById('psSel').closest('.card'); return { h2: c.querySelector('h2').textContent.trim(), desc: !!c.querySelector('#psDesc') }; }")
         check(card66["h2"] == "Settings" and card66["desc"], f"{tag} night 66: the card holding the preset picker is headed Settings and carries the description: {card66}")
         d66 = lambda: p66.inner_text("#psDesc")
@@ -7227,7 +7307,7 @@ console.log(JSON.stringify(out));
     # name every door's inlined shell contains — a notepad door that lost its slot printed "does not apply" and passed
     if 'id="npTitle"' in html_path.read_text():
         ctx67 = pw.new_context(viewport={"width": 1280, "height": 900}); p67 = ctx67.new_page()
-        p67.goto(html_path.as_uri()); p67.wait_for_selector("#cards", state="attached"); p67.wait_for_timeout(300)
+        p67.goto(page_uri); p67.wait_for_selector("#cards", state="attached"); p67.wait_for_timeout(300)
         slot67 = """() => [...document.querySelectorAll('[data-header-slot]')].filter(s => s.getClientRects().length).map(s => {
           const p = s.closest('.card, .board'), h = __may(() => p.querySelector('h2'), 'the slot panel is a card (h2) or a board (.bh); the other answers nothing') || p.querySelector('.bh'), rr = document.createRange(); rr.selectNodeContents(h);
           const a = rr.getBoundingClientRect(), b = s.getBoundingClientRect(), c = p.getBoundingClientRect();
@@ -7263,7 +7343,7 @@ console.log(JSON.stringify(out));
             nm, sv = et["name"], et["saved"]
             want_bars = exp_tl.get(nm, {}).get("bars", [])
             ctx_tl = pw.new_context(viewport={"width": 1280, "height": 900}); pg_tl = ctx_tl.new_page()
-            pg_tl.goto(html_path.as_uri()); pg_tl.wait_for_selector("#cards", state="attached"); pg_tl.wait_for_timeout(300)
+            pg_tl.goto(page_uri); pg_tl.wait_for_selector("#cards", state="attached"); pg_tl.wait_for_timeout(300)
             if sv.get("meter", 4) != 4: pg_tl.select_option("#meterSel", str(sv["meter"])); pg_tl.wait_for_timeout(120)
             cfg_tl = {k: v for k, v in sv.items() if k not in ("bpm", "meter", "sub", "click", "accents", "clickLevel", "clickVoice", "mixer")}
             pg_tl.evaluate("(p) => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: p }))", cfg_tl); pg_tl.wait_for_timeout(250)
@@ -7286,9 +7366,11 @@ console.log(JSON.stringify(out));
             ctx_tl.close()
         check(compared_tl >= 30 and len(corpus_tl) >= 12, f"{tag} 261014: the oracle actually ran — {compared_tl} chords over {len(corpus_tl)} études")
 
-    if 'id="fdClock"' in html_path.read_text():
+    # Multetudes' page layout under the neck (tuning, mixer) and its Harmony key: keyed to the card it drives — the
+    # player (261120) carries the neck without either
+    if 'id="fdClock"' in html_path.read_text() and "hcKey" in r["controlsPresent"]:
         ctx67b = pw.new_context(viewport={"width": 1280, "height": 900}); p67b = ctx67b.new_page()
-        p67b.goto(html_path.as_uri()); p67b.wait_for_selector("#cards", state="attached"); p67b.wait_for_timeout(300)
+        p67b.goto(page_uri); p67b.wait_for_selector("#cards", state="attached"); p67b.wait_for_timeout(300)
         clk67 = """() => { const R = id => document.getElementById(id).getBoundingClientRect(), h = R('fdHead'), c = R('fdClock'), m = R('fdMini'), r = R('fdMode');
           const inHead = ['fdSplit','fdBpm','fdMetChk'].every(id => document.getElementById('fdHead').contains(document.getElementById(id)));
           const nb = document.getElementById('fieldSvg').closest('.board'), nx = nb.nextElementSibling;
@@ -7316,7 +7398,7 @@ console.log(JSON.stringify(out));
     # document's scroll width never exceeds the viewport, at 390 and at 1280, in every door (no door is exempt; a door
     # with no rows still has a page).
     ctx68 = pw.new_context(viewport={"width": 390, "height": 900}); p68 = ctx68.new_page()
-    p68.goto(html_path.as_uri()); p68.wait_for_selector("#cards", state="attached"); p68.wait_for_timeout(400)
+    p68.goto(page_uri); p68.wait_for_selector("#cards", state="attached"); p68.wait_for_timeout(400)
     for w68 in (390, 1280):
         p68.set_viewport_size({"width": w68, "height": 900}); p68.wait_for_timeout(300)
         pw68 = p68.evaluate("() => ({ docW: document.documentElement.scrollWidth, vw: window.innerWidth })")
@@ -7330,7 +7412,7 @@ console.log(JSON.stringify(out));
     # BODY under the chip legend — the box whole, only its seat new. Asserted at the effect.
     if 'id="pgClock"' in html_path.read_text():
         ctx69 = pw.new_context(viewport={"width": 1280, "height": 900}); p69 = ctx69.new_page(); errs69 = []; p69.on("pageerror", lambda e: errs69.append(str(e)))
-        p69.goto(html_path.as_uri()); p69.wait_for_selector("#cards", state="attached"); p69.wait_for_timeout(400)
+        p69.goto(page_uri); p69.wait_for_selector("#cards", state="attached"); p69.wait_for_timeout(400)
         pg69 = lambda role: f"#pgClock [data-role=\"{role}\"]"
         # a LATE view paints the current state on subscribe: its inputs start empty in the markup, so a value here is the replay's
         boot69 = p69.evaluate("() => { const q = r => document.querySelector('#pgClock [data-role=\"' + r + '\"]'); return { bpm: q('bpm').value, neck: document.getElementById('fdBpm').value, click: q('click').checked, neckClick: document.getElementById('fdMetChk').checked, splits: q('split').options.length, ids: __may(() => [...document.querySelectorAll('#pgClock [id]')], 'the second clock view carries no ids, addressed by data-role only (night 69)').map(e => e.id) }; }")
@@ -7407,14 +7489,14 @@ console.log(JSON.stringify(out));
     # where the PO measured. So this pin runs at BOTH widths, in every door the rendered page shows a chip row in (decided
     # from the page, never a typed list), and compares an untouched row with the same row holding a chord.
     ctx70 = pw.new_context(viewport={"width": 1280, "height": 900}); p70 = ctx70.new_page()
-    p70.goto(html_path.as_uri()); p70.wait_for_selector("#cards", state="attached"); p70.wait_for_timeout(300)
+    p70.goto(page_uri); p70.wait_for_selector("#cards", state="attached"); p70.wait_for_timeout(300)
     # night 81: keyed on the door's FACT (#hcChips), not the rendered count — a chip-row door that rendered no chips skipped
     if 'id="hcChips"' not in html_path.read_text():
         print(f"  {tag} renders no chip row — the night-70 row pin does not apply here")
     else:
         row70b = "() => [...document.querySelectorAll('.hc-chip')].map(b => { const c = b.getBoundingClientRect(); return [Math.round(c.left*100)/100, Math.round(c.width*100)/100, Math.round(c.height*100)/100]; })"
         for w70b in (390, 1280):
-            p70.set_viewport_size({"width": w70b, "height": 900}); p70.goto(html_path.as_uri()); p70.wait_for_selector("#cards", state="attached"); p70.wait_for_timeout(400)
+            p70.set_viewport_size({"width": w70b, "height": 900}); p70.goto(page_uri); p70.wait_for_selector("#cards", state="attached"); p70.wait_for_timeout(400)
             untouched = p70.evaluate(row70b)
             p70.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: 6, request: true } }))")
             for m in (65, 69, 72, 63):
@@ -7435,7 +7517,7 @@ console.log(JSON.stringify(out));
           return { roles: [...document.querySelectorAll('#hcRoles > span')].map(s => s.textContent), numeral: n.textContent, readout: document.getElementById('hcMode').innerText.trim(),
             inside: !n.textContent || (r.left >= card.left - 0.5 && r.right <= card.right + 0.5) }; }"""
         def hold71(idx, obj="tetrad"):
-            p71.goto(html_path.as_uri()); p71.wait_for_selector("#cards", state="attached"); p71.wait_for_timeout(300)
+            p71.goto(page_uri); p71.wait_for_selector("#cards", state="attached"); p71.wait_for_timeout(300)
             if obj != "tetrad": p71.select_option("#hcObj", obj); p71.wait_for_timeout(250)
             p71.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", idx)
             for m in (58, 60, 62, 63, 65, 67, 69):   # every note of the key: every chord tone is lit
@@ -7457,7 +7539,7 @@ console.log(JSON.stringify(out));
             for idx in (0, 1, 2, 6):
                 q71 = hold71(idx)
                 check(q71["numeral"] and q71["inside"], f"{tag} night 71: at {w71} the numeral of bar {idx + 1} is present and INSIDE the card: {q71}")
-            p71.goto(html_path.as_uri()); p71.wait_for_selector("#cards", state="attached"); p71.wait_for_timeout(300)
+            p71.goto(page_uri); p71.wait_for_selector("#cards", state="attached"); p71.wait_for_timeout(300)
             p71.select_option("#hcObj", "scale"); p71.wait_for_timeout(300)
             s71 = p71.evaluate(st71)
             check(not any(s71["roles"]) and not s71["numeral"], f"{tag} night 71: at {w71}, under a scale the row goes quiet — no role, no numeral: {s71}")
@@ -7471,7 +7553,7 @@ console.log(JSON.stringify(out));
     # names one on the console — and this holds the effect: no panel without a header, no chevron outside its band.
     ctx85c = pw.new_context(viewport={"width": 1280, "height": 900}); p85c = ctx85c.new_page(); errs85c = []
     p85c.on("console", lambda m: errs85c.append(m.text) if m.type == "error" and "[shell]" in m.text else None)
-    p85c.goto(html_path.as_uri()); p85c.wait_for_selector("#cards", state="attached"); p85c.wait_for_timeout(350)
+    p85c.goto(page_uri); p85c.wait_for_selector("#cards", state="attached"); p85c.wait_for_timeout(350)
     for w85 in (1280, 390):
         p85c.set_viewport_size({"width": w85, "height": 900}); p85c.wait_for_timeout(250)
         panels85 = p85c.evaluate("""() => [...document.querySelectorAll('.card, .board')].filter(p => p.getClientRects().length).map(p => {
@@ -7494,7 +7576,7 @@ console.log(JSON.stringify(out));
     src85 = html_path.read_text()
     if 'id="fdLegend"' in src85 and 'id="hcCentreSrc"' in src85:
         ctx85t = pw.new_context(viewport={"width": 1280, "height": 900}); t85 = ctx85t.new_page(); errs85t = []; t85.on("pageerror", lambda e: errs85t.append(str(e)))
-        t85.goto(html_path.as_uri()); t85.wait_for_selector("#cards", state="attached"); t85.wait_for_timeout(350)
+        t85.goto(page_uri); t85.wait_for_selector("#cards", state="attached"); t85.wait_for_timeout(350)
         legs85 = lambda: {k: t85.inner_text(f"#{k}") for k in ("fdLegend", "kyLegend", "stLegend") if f'id="{k}"' in src85}
         boot85 = legs85()
         check(len(boot85) == 3 and all(v.endswith("colour = function against the key") for v in boot85.values()),
@@ -7508,7 +7590,7 @@ console.log(JSON.stringify(out));
               and "faint field" in fol85["fdLegend"] and "bass clef" in fol85["stLegend"],
               f"{tag} night 85: under follows (bar 2, box {box85!r}) each face names the centre it re-reads against, and the marks that stay in key space: {fol85}")
         # item 7 — set 6, seated on the root at fret 6: the window reaches the neck's end without A
-        t85.goto(html_path.as_uri()); t85.wait_for_selector("#cards", state="attached"); t85.wait_for_timeout(350)
+        t85.goto(page_uri); t85.wait_for_selector("#cards", state="attached"); t85.wait_for_timeout(350)
         t85.evaluate("() => document.dispatchEvent(new CustomEvent('atetudes:config', { detail: { strings: [6], startDeg: 0, nearFret: 6 } }))"); t85.wait_for_timeout(300)
         ro85, hint85 = t85.inner_text("#roLine"), t85.inner_text("#fdHint")
         # CORRECTED 261010 (doctrine 3): these two pinned the window that stopped at 15 short of A — the state Daniel
@@ -7539,7 +7621,7 @@ console.log(JSON.stringify(out));
               f"{tag} night 86: a passing self-check shows the visitor nothing — no count of internal checks: {page.inner_text('#roAssert')!r}")
     if 'id="bindChk"' in src85 and 'id="readout"' in src85:
         ctx85z = pw.new_context(viewport={"width": 1280, "height": 900}); z85 = ctx85z.new_page(); errs85z = []; z85.on("pageerror", lambda e: errs85z.append(str(e)))
-        z85.goto(html_path.as_uri()); z85.wait_for_selector("#cards", state="attached"); z85.wait_for_timeout(350)
+        z85.goto(page_uri); z85.wait_for_selector("#cards", state="attached"); z85.wait_for_timeout(350)
         z85.select_option("#keySel", "Bb"); z85.select_option("#scaleSel", "harm"); z85.select_option("#progSel", "scale")
         z85.click('#famSeg button:has-text("Close")'); z85.wait_for_timeout(250)
         named85, inside86, geo86 = [], [], {}
@@ -7598,7 +7680,7 @@ console.log(JSON.stringify(out));
         for w84, cases in ((1280, (("major", "tetrad"), ("major", "triad"), ("harm", "tetrad"))), (390, (("major", "tetrad"),))):
             p84.set_viewport_size({"width": w84, "height": 900})
             for scale84, obj84 in cases:
-                p84.goto(html_path.as_uri()); p84.wait_for_selector("#cards", state="attached"); p84.wait_for_timeout(300)
+                p84.goto(page_uri); p84.wait_for_selector("#cards", state="attached"); p84.wait_for_timeout(300)
                 p84.select_option("#hcKey", "Bb"); p84.select_option("#hcScale", scale84)
                 if obj84 != "tetrad": p84.select_option("#hcObj", obj84)
                 p84.select_option("#pgCycle", "scale"); p84.wait_for_timeout(250)
@@ -7635,7 +7717,7 @@ console.log(JSON.stringify(out));
     if m84o:
         pin84 = json.loads(m84o.group(1))
         ctx84o = pw.new_context(viewport={"width": 1280, "height": 900}); q84 = ctx84o.new_page(); errs84o = []; q84.on("pageerror", lambda e: errs84o.append(str(e)))
-        q84.goto(html_path.as_uri()); q84.wait_for_selector("#cards", state="attached"); q84.wait_for_timeout(350)
+        q84.goto(page_uri); q84.wait_for_selector("#cards", state="attached"); q84.wait_for_timeout(350)
         opened84 = lambda: q84.evaluate("""() => ({ notesPer: +document.querySelector('#fdNSeg button.on').dataset.nps,
           movement: document.querySelector('#fdMoveSeg button.on').dataset.move, bpm: +document.getElementById('bpmVal').value })""")
         def move84():
@@ -7675,7 +7757,7 @@ console.log(JSON.stringify(out));
         def open72():
             # 240 bpm: a bar is one second, and under the default ARPEGGIATE (night 72, item B) the audition sounds the bar's
             # notes in sequence across it — the row is read after the whole bar has passed, not at its first note
-            p72.goto(html_path.as_uri()); p72.wait_for_selector("#cards", state="attached"); p72.wait_for_timeout(400)
+            p72.goto(page_uri); p72.wait_for_selector("#cards", state="attached"); p72.wait_for_timeout(400)
             p72.fill("#fdBpm", "240"); p72.dispatch_event("#fdBpm", "change"); p72.wait_for_timeout(200)
         def at72(i):
             p72.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", i); p72.wait_for_timeout(500)
@@ -7712,7 +7794,7 @@ console.log(JSON.stringify(out));
     # shows or uses the tempo moves with it — asserted on each face that exists in this door, and on the HEARD beat.
     if 'id="bpmRange"' in html_path.read_text():
         ctx72c = pw.new_context(viewport={"width": 1280, "height": 900}); p72c = ctx72c.new_page()
-        p72c.goto(html_path.as_uri()); p72c.wait_for_selector("#cards", state="attached"); p72c.wait_for_timeout(500)
+        p72c.goto(page_uri); p72c.wait_for_selector("#cards", state="attached"); p72c.wait_for_timeout(500)
         with absent_ok("WRONG-DOOR, LEFT: faces read on every door; a lost carried tempo face or #psDesc goes unasserted"):
             faces72 = p72c.evaluate("""() => { const v = (sel, prop) => { const e = document.querySelector(sel); return e ? (prop === 'text' ? e.textContent.trim() : e.value) : null; };
           return { bpmRange: v('#bpmRange'), bpmVal: v('#bpmVal'), bpmRange2: v('#bpmRange2'), bpmVal2: v('#bpmVal2'), fdBpm: v('#fdBpm'),
@@ -7721,7 +7803,10 @@ console.log(JSON.stringify(out));
         check(present72 and all((x == "120" if k != "settings" else x.startswith("120 bpm")) for k, x in present72.items()),
               f"{tag} night 72: the boot tempo is 120 on every face this door shows: {present72}")
         p72c.evaluate("() => { window.__b72 = []; document.addEventListener('atetudes:beat', e => { if (!e.detail || !e.detail.sub) window.__b72.push(performance.now()); }); }")
-        p72c.click("#metroBtn"); p72c.wait_for_timeout(2300); p72c.click("#metroBtn")
+        if "metronome-card" not in r.get("hide", []):
+            p72c.click("#metroBtn"); p72c.wait_for_timeout(2300); p72c.click("#metroBtn")
+        else:   # the player (261120): the clock is started and stopped by what it shows — the neck's transport
+            p72c.click('#fdMini [data-role="play"]'); p72c.wait_for_timeout(2300); p72c.click('#fdMini [data-role="stop"]')
         ts72 = p72c.evaluate("() => window.__b72"); iv72 = [ts72[i + 1] - ts72[i] for i in range(len(ts72) - 1)]
         med72 = sorted(iv72)[len(iv72) // 2] if iv72 else 0
         check(len(iv72) >= 3 and 480 <= med72 <= 520, f"{tag} night 72: the heard beat is 500 ms at the boot tempo (median {med72:.0f} ms of {[round(x) for x in iv72]})")
@@ -7735,7 +7820,7 @@ console.log(JSON.stringify(out));
     if 'id="bpmVal"' in html_path.read_text():
         ctx77 = pw.new_context(viewport={"width": 1280, "height": 900}); p77 = ctx77.new_page()
         errs77 = []; p77.on("pageerror", lambda e: errs77.append(str(e)))
-        p77.goto(html_path.as_uri()); p77.wait_for_selector("#cards", state="attached"); p77.wait_for_timeout(300)
+        p77.goto(page_uri); p77.wait_for_selector("#cards", state="attached"); p77.wait_for_timeout(300)
         # night 81: the seats are the door's FACT, read before the lookup — a carried seat that failed to render dropped out
         seats77 = [i for i in ("bpmVal", "bpmVal2", "fdBpm") if f'id="{i}"' in html_path.read_text()]
         # ONE DEFINITION: every seat is the same field — the clock view's attributes, byte for byte, bar the address
@@ -7753,10 +7838,13 @@ console.log(JSON.stringify(out));
         def type77(sel, val):
             p77.fill(sel, val); p77.dispatch_event(sel, "change")
         # the field WRITES THE CLOCK — the owner's echo carries it, and every face paints it
-        type77("#bpmVal", "144"); ok, f = agree77("144")
-        check(ok, f"{tag} night 77: 144 typed in the Metronome card's field sets the clock, and every face shows the clock's 144: {f}")
+        # the seats a visitor can TYPE in: every door shows the Metronome card's; the player (261120) shows only the neck's
+        vis77 = [x for x in seats77 if p77.is_visible("#" + x)]
+        first77 = "bpmVal" if "bpmVal" in vis77 else vis77[0]
+        type77("#" + first77, "144"); ok, f = agree77("144")
+        check(ok, f"{tag} night 77: 144 typed in #{first77} sets the clock, and every face shows the clock's 144: {f}")
         # the OWNER CLAMPS a typed value — both ends, and a second 999 at the ceiling (a change-only paint keeps the 999)
-        for seat in [x for x in ("bpmVal", "bpmVal2") if x in seats77]:
+        for seat in [x for x in ("bpmVal", "bpmVal2") if x in vis77] or [first77]:
             type77("#" + seat, "999"); ok, f = agree77("300")
             check(ok, f"{tag} night 77: 999 typed in #{seat} comes back as the owner's clamp, 300, on every face: {f}")
             type77("#" + seat, "999"); ok, f = agree77("300")
@@ -7764,13 +7852,17 @@ console.log(JSON.stringify(out));
             type77("#" + seat, "3"); ok, f = agree77("15")
             check(ok, f"{tag} night 77: 3 typed in #{seat} comes back as the owner's floor, 15, on every face: {f}")
         # an emptied box asks nothing — the clock keeps its tempo and the box shows it again
-        type77("#bpmVal", "100"); type77("#bpmVal", ""); ok, f = agree77("100")
-        check(ok, f"{tag} night 77: an emptied field asks nothing — the clock keeps 100 and the box shows it again: {f}")
-        # the SLIDER AND THE FIELD are two views of one value — both directions
-        p77.fill("#bpmRange", "88"); p77.dispatch_event("#bpmRange", "input"); ok, f = agree77("88")
-        check(ok, f"{tag} night 77: the slider at 88 — the field, the clock and every other face agree: {f}")
-        type77("#bpmVal", "133"); ok, f = agree77("133")
-        check(ok, f"{tag} night 77: the field at 133 — the slider, the clock and every other face agree: {f}")
+        # EVERY seat a visitor can type in (261120): the neck's #fdBpm asked the clock for 0 when emptied — 15 — while only
+        # the card's own field was ever emptied here; the player's gate found it, Multetudes carried it
+        for seat in vis77:
+            type77("#" + first77, "100"); type77("#" + seat, ""); ok, f = agree77("100")
+            check(ok, f"{tag} night 77: #{seat} emptied asks nothing — the clock keeps 100 and the box shows it again: {f}")
+        if p77.is_visible("#bpmRange"):   # the player (261120) shows no slider — the hidden card's is still a FACE, read above
+            # the SLIDER AND THE FIELD are two views of one value — both directions
+            p77.fill("#bpmRange", "88"); p77.dispatch_event("#bpmRange", "input"); ok, f = agree77("88")
+            check(ok, f"{tag} night 77: the slider at 88 — the field, the clock and every other face agree: {f}")
+            type77("#bpmVal", "133"); ok, f = agree77("133")
+            check(ok, f"{tag} night 77: the field at 133 — the slider, the clock and every other face agree: {f}")
         if "bpmVal2" in seats77:
             # the TWO CARDS' FIELDS are two views of one value — both directions, and the transport's slider
             type77("#bpmVal2", "166"); ok, f = agree77("166")
@@ -7790,7 +7882,7 @@ console.log(JSON.stringify(out));
     if door_id == "multetudes":
         cx119 = pw.new_context(viewport={"width": 1280, "height": 900}); p119 = cx119.new_page()
         errs119 = []; p119.on("pageerror", lambda e: errs119.append(str(e)))
-        p119.goto(html_path.as_uri()); p119.wait_for_selector("#cards", state="attached"); p119.wait_for_timeout(300)
+        p119.goto(page_uri); p119.wait_for_selector("#cards", state="attached"); p119.wait_for_timeout(300)
         p119.select_option("#hcKey", "C"); p119.select_option("#hcScale", "mel")
         p119.click('#pgSrcSeg button[data-src="custom"]')
         p119.fill("#pgCustom", "CmMaj7 F7 Bm7b5 Ebmaj7#5 Am7b5 Dm7 G7 CmMaj7"); p119.dispatch_event("#pgCustom", "input")

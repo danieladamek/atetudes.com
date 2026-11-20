@@ -48,10 +48,34 @@ def check(src=SRC, out=OUT):
     return problems, seen
 
 
+EMBED_SRC = REPO / "static" / "embed"
+EMBED_OUT = REPO / "public" / "embed"
+
+
+def check_embeds(src=EMBED_SRC, out=EMBED_OUT):
+    """THE EMBED PLAYERS (261120): /embed/<app>/ is a permanent URL from the first embed on someone else's page — the
+    same guard as a study's: every player in the repo is in the built site, byte for byte, and none the repo lacks"""
+    problems, seen = [], []
+    for f in sorted(src.glob("*/index.html")):
+        app = f.parent.name
+        built = out / app / "index.html"
+        seen.append(app)
+        if not built.exists():
+            problems.append(f"embed/{app}: the published player is MISSING from the built site"); continue
+        if f.read_bytes() != built.read_bytes():
+            problems.append(f"embed/{app}: the built player is NOT byte-identical to the repo's — the site never modifies it")
+    stray = sorted(p.parent.name for p in out.glob("*/index.html") if p.parent.name not in seen) if out.is_dir() else []
+    if stray:
+        problems.append(f"the built site publishes player(s) the repo does not have: {stray}")
+    return problems, seen
+
+
 if __name__ == "__main__":
     probs, seen = check()
-    for p in probs:
+    eprobs, eseen = check_embeds()
+    for p in probs + eprobs:
         print("PROBLEM: " + p)
-    if probs:
+    if probs or eprobs:
         sys.exit(1)
     print(f"studies: {len(seen)} published, each byte-identical in the built site: {', '.join(seen)}")
+    print(f"embeds: {len(eseen)} published, each byte-identical in the built site: {', '.join(eseen) or '(none)'}")

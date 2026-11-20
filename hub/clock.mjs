@@ -12,7 +12,7 @@
  *                                has always addressed these controls by id keeps its ids (rule 10 — nothing a
  *                                gate or the control census reaches is re-pointed); a new host passes none and
  *                                is addressed by data-role only, which is what makes a second seat legal.
- *                                `rows: 2` DECLARES the break — split · bpm, then the click · pulse (Daniel's
+ *                                `rows` (the host's row wrapper) DECLARES the break — split · bpm, then the click · pulse (Daniel's
  *                                grouping, 261026) — a wrapper per row, never a wrap flex happens to find.
  *   mountClock(ctx, host)        wires every control inside `host` by data-role, to the bus and nothing else.
  *
@@ -34,15 +34,16 @@ const TITLE = {
   click: "the click — one state, two views; the Metronome card's Sound is the other",
 };
 
+/* THE ROWS ARE THE HOST'S (261120 — the player door): `rows` is 1, or a function the host passes to wrap the two
+ * groups — split · bpm, then the click · pulse — in ITS OWN row markup. The row class belongs to the host that lays the
+ * clock out in rows (the Progression card); a door that reaches this file without that host ships none of it. */
 export function clockMarkup({ ids = null, rows = 1 } = {}) {
   const ctl = (k) => (ids && ids[k] ? ` id="${ids[k]}" data-control="${ids[k]}"` : "");
   const split = `<span class="clk-lab">bar split</span><select data-role="split"${ctl("split")}  title="${TITLE.split}"></select>`;
   const bpm = `<span class="clk-lab">bpm</span>${bpmField({ id: ids && ids.bpm ? ids.bpm : null })}`;
   const click = `<label class="chk" title="${TITLE.click}"><input type="checkbox" data-role="click"${ctl("click")}> metronome</label>`;
   const pulse = `<span class="clk-pulse" data-role="pulse"${ids && ids.pulse ? ` id="${ids.pulse}"` : ""}></span>`;
-  return rows === 2
-    ? `<span class="clk-row">${split}${bpm}</span><span class="clk-row">${click}${pulse}</span>`
-    : `${split}${bpm}${click}${pulse}`;
+  return typeof rows === "function" ? rows(`${split}${bpm}`, `${click}${pulse}`) : `${split}${bpm}${click}${pulse}`;
 }
 
 export function mountClock(ctx, host) {
@@ -64,14 +65,20 @@ export function mountClock(ctx, host) {
   fillSplits(4);
   sp.addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { split: e.target.value === "chart" ? "chart" : e.target.value.split("+").map(Number) }));
   click.addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
+  /* AN EMPTIED BOX ASKS NOTHING (261120 — found by the player door's gate): `+""` is 0, a finite number, so emptying this
+   * field asked the clock for 0 and the owner clamped it to 15. The Metronome card's own field has refused an empty box
+   * since night 77; this one — the neck's, Multetudes' too — never did. Now the same: not a number asks nothing, and the
+   * clock's own tempo is painted back. */
+  let heardBpm = null;
   bpm.addEventListener("change", (e) => {
-    const v = +e.target.value;
+    const v = e.target.value === "" ? NaN : +e.target.value;
     if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+    else if (heardBpm !== null) bpm.value = heardBpm;
   });
   listen(d, CLOCK_STATE, (m) => {
     if (!m) return;
     if (typeof m.click === "boolean") click.checked = m.click;
-    if (typeof m.bpm === "number") bpm.value = m.bpm;
+    if (typeof m.bpm === "number") { heardBpm = m.bpm; bpm.value = m.bpm; }
     if (typeof m.meter === "number") fillSplits(m.meter);
   });
   /* ONE STATE, EVERY VIEW (night 69): a split set at one view is painted at every other — before tonight the one

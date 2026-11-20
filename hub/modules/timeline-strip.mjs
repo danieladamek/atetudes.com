@@ -43,7 +43,7 @@ import { renderChartLine, chartLineStyles } from "../../engine/chart-line.mjs";
 export const timelineStrip = {
   id: "timeline-strip",
   layer: "surface",
-  requires: { surface: "multetudes" },
+  requires: { surface: ["multetudes", "player"] },   // 261120: the player door walks the étude too
   mount_point: "boards",
   order: 16,
   controls: ["tlScroll"],

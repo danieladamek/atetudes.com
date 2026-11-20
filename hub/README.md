@@ -82,6 +82,7 @@ neck it configures.
 | `scribe` | `{notepad: true}` | metronome + notepad, 12 files | 148 kB |
 | `plain` | `{notepad: false}` | metronome only, 3 files | 21 kB |
 | `tetradetudes` | `{material:"tetrad", notepad:true, audio:true, transport:true}` | door #1 — the whole reference page at four voices: nine panels, 29 files | 314 kB |
+| `player` | `{field:true, audio:true, surface:"player"}` + `hide` | the embed player (261120): the neck, the chord, play/stop and tempo from an `#etude=` link; the metronome card and chart line mounted hidden, 49 files | 667 kB |
 
 The plain door drops six engine modules (notepad, markdown, palette, structures, atchart, chord)
 along with the card, plus 39 markup/style tokens. Its built file contains no trace of any of it —

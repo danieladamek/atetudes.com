@@ -305,7 +305,7 @@ export const fieldBoard = {
 .fd-headmini button:hover{border-color:var(--ink)}
 /* the neck's own 390 stack rules (night 62) RETIRED night 63: the shell's readhead grammar stacks every board's mini
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
-/* .fd-railrow select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
+/* the rail row's select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
  * clock; its look travelled with it as .fd-headclock select. A rule that matches nothing fails the door's CSS check. */
 /* the tuning editor's look moved with its rows to tuning-strip.mjs (261012b) */
 /* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
@@ -1344,6 +1344,23 @@ export const fieldBoard = {
     /* the reference / sounded bass / pad announce from mixer-strip.mjs (night 58); this board adopts them from the bus */
     mountMini(ctx, byId("fdMini"));
     mountReadout(ctx, byId("fdMode"));   // 260920: the shared readout, its own derivation
+    /* THE PLAYER DOOR (261120 — Daniel's ruling 1: the player's neck is THIS board, drawn once). A door that declares
+     * `player` shows the neck, its chord readout, the transport and the bpm, and nothing that changes the étude: the
+     * motif rail and the bar split are not shown, nor the metronome checkbox (the card it is a second view of is not
+     * shown either — ruling 2). Inline display, not a rule: a rule naming these tokens would be dead CSS in every other
+     * door (the door gate's every-selector-matches check). The controls still mount; nothing reaches them. */
+    if (ctx.door.player) {
+      const off = (el) => { if (el) el.style.display = "none"; };
+      off(byId("fdRail"));
+      const split = byId("fdSplit");
+      off(split); off(split && split.previousElementSibling);
+      off(byId("fdMetChk") && byId("fdMetChk").closest("label"));
+      /* the neck itself is shown, not handled: its window handles and string badges move the placement, which changes
+       * the étude — so it takes no pointer and no focus (its keys only act while it is focused) */
+      const svg = byId("fieldSvg");
+      svg.style.pointerEvents = "none";
+      svg.removeAttribute("tabindex");
+    }
     /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */
 

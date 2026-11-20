@@ -4,6 +4,28 @@
   percent-encoded), read back through the étude block's own reader. Typed changes (`source: custom`) are refused in
   both directions (charter §6, §8). No page uses it yet; the player and Multetudes will.
 
+## 2026-11-20 — The embed player, /embed/multetudes/ — and Multetudes v1.1.16
+
+- **New permanent URL: `atetudes.com/embed/multetudes/`** (Update Log 261120.4; child 3 of the étude embed epic,
+  *Player door — the neck, chord symbols, transport and tempo*). A Multetudes étude, played from its link
+  (`#etude=…`, engine/etude-link.mjs): the neck, the current chord, play/stop and tempo, and "Open in Multetudes ↗"
+  in a new tab. Nothing that changes the étude is shown or reachable. Built from `hub/doors/player.door.mjs`, copied
+  byte-identical from `hub/build/player.html` to `static/embed/multetudes/index.html` (667 kB, one self-contained
+  file, no request beyond its own load). A link it cannot play (typed changes under charter §6, a newer version,
+  another app, a broken link, no link) shows its reason where the neck would be, and plays nothing.
+  Daniel's rulings, 2026-11-20: (1) the neck is Multetudes' own module, its motif rail and bar split not shown;
+  (2) the player is exempt from family spec §4.3 — its metronome card is mounted hidden (the clock runs; nothing of
+  the card shows). Starting one player stops every other on the same page, across origins (BroadcastChannel).
+  Framing: GitHub Pages serves no `X-Frame-Options` and no CSP `frame-ancestors` (checked on
+  `/studies/multetudes/study.html` before deploy, and on `/embed/multetudes/` after), so any site may iframe it.
+  Not yet: Multetudes reading the link Open sends (child 4), and a blog fence rendering the player (child 5).
+- **Multetudes v1.1.16**: the neck's bpm box, emptied, asks nothing. It had asked the clock for 0, clamped to 15 —
+  found by the player's gate (the field is shared), pinned on every tempo seat of every door, red without the fix.
+- Re-published with nothing visible changed (DOM outside scripts, CSS rules and pixels at 1280 and 390, before vs
+  after): tetradetudes (door build), triadetudes and metronome (`atchart.mjs` re-inlined: a comment named a notepad
+  path), modes-from-pentatonic-boxes (re-emitted by its generator). Multetudes is identical bar its blurb's version
+  and one CSS comment. tetrad-voice-leading is frozen and untouched.
+
 ## 2026-11-20 — Engine bundle 2.2.0: RiffRaft's étude chain plays extensions — nothing on the site changed
 
 - **`build/vendor/atetudes-engine.2.2.0.mjs`** (Update Log 261120.2, Daniel's go-ahead 261120): the same 38 names as

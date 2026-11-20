@@ -249,7 +249,8 @@ async function build(id) {
      * own collapse class on its container, so the first paint is the shut card; the shell's collapse honours it */
     const wrapClass = [m.wrap_class, m.collapsed ? "clpsd" : ""].filter(Boolean).join(" ") || undefined;
     placeables.push({ order: m.order ?? 0, idx: i, id: m.id,
-      mount: m.mount_point ?? "cards", wrap_class: wrapClass,
+      mount: (r.hide ?? []).includes(m.id) ? "hidden" : (m.mount_point ?? "cards"), wrap_class: wrapClass,
+      hiddenFrom: (r.hide ?? []).includes(m.id) ? (m.mount_point ?? "cards") : null,
       html: markupWithout(m.markup, new Set([...seated.keys(), ...rowedParts])), rowable: true });
     for (const [name, spec] of seated)
       placeables.push({ order: spec.order ?? 0, idx: i, id: m.id + "#" + name,
@@ -270,7 +271,11 @@ async function build(id) {
     if (!wrap) throw new Error(`${pl.id}: unknown mount point "${pl.mount}" — the shell offers ${Object.keys(shell.WRAPPERS).join(", ")}`);
     if (!pl.rowable && pl.mount === "hidden")
       throw new Error(`${pl.id}: a part cannot be seated hidden — a part that ships invisibly is half a module in silence`);
-    const html = wrap.html(pl.html, pl.wrap_class);
+    /* a module a DOOR hides (resolve.mjs `hide`, 261120) keeps its own container INSIDE the hidden one — the card it
+     * would have been, unshown — so its rules (.card.metro …) match the DOM they were written for, and the door's
+     * every-selector-matches check holds without exempting a byte */
+    const own = pl.hiddenFrom ? shell.WRAPPERS[pl.hiddenFrom].html(pl.html, pl.wrap_class) : null;
+    const html = own !== null ? wrap.html(own) : wrap.html(pl.html, pl.wrap_class);
     if (pl.rowable && pl.mount !== "hidden" && rowed.has(pl.id)) { rowHtml.set(pl.id, html); rowedMounts.add(pl.mount); }
     else slots[pl.mount].push(html);
   }
@@ -331,7 +336,7 @@ ${chunks.join("\n\n")}
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [${names.join(", ")}];
-const DOOR = ${JSON.stringify({ id: r.door, lock: r.lock, present: r.present, shared: r.shared, opensAs: r.opensAs })};
+const DOOR = ${JSON.stringify({ id: r.door, lock: r.lock, present: r.present, shared: r.shared, opensAs: r.opensAs, ...(r.player ? { player: r.player } : {}) })};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

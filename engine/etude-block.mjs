@@ -32,7 +32,7 @@ export const ETUDE_FENCE = "etude";
 export const ENVELOPE = ["app", "v"];
 
 /** the snapshot schema a block written today names on its `v:` line — the practice log's own payload version
- * (hub/modules/notepad-card.mjs, `version:` in its adapter); engine/tests/etude-block.test.mjs holds the two equal */
+ * (the notepad card's adapter, its `version:`); engine/tests/etude-block.test.mjs holds the two equal */
 export const ETUDE_V = 2;
 
 /** what the block does not carry — the only list in this file, each with its reason (format §9 decision 5) */

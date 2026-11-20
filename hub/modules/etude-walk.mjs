@@ -55,7 +55,7 @@ import { DEFAULT_BPM } from "../tempo.mjs";
 export const etudeWalk = {
   id: "etude-walk",
   layer: "surface",
-  requires: { surface: "multetudes" },
+  requires: { surface: ["multetudes", "player"] },   // 261120: the player door walks the étude too
   mount_point: "hidden",
   order: 6,
   controls: [],

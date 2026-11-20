@@ -197,7 +197,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .fd-headmini button:hover{border-color:var(--ink)}
 /* the neck's own 390 stack rules (night 62) RETIRED night 63: the shell's readhead grammar stacks every board's mini
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
-/* .fd-railrow select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
+/* the rail row's select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
  * clock; its look travelled with it as .fd-headclock select. A rule that matches nothing fails the door's CSS check. */
 /* the tuning editor's look moved with its rows to tuning-strip.mjs (261012b) */
 /* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
@@ -6596,7 +6596,7 @@ const { opensOf } = __m_engine_field_mjs;
 
 const ATCHART_VERSION = 1;
 // the body-skeleton slot markers (§2.5 preservation): exported so consumers
-// building documents THROUGH this engine (engine/notepad.mjs) can place the
+// building documents THROUGH this engine (the notepad engine) can place the
 // chart slot without copying the literal
 const CHART_SLOT = "\x00CHART\x00";
 
@@ -8148,7 +8148,7 @@ const { DEFAULT_BPM } = __m_hub_tempo_mjs;
 const etudeWalk = {
   id: "etude-walk",
   layer: "surface",
-  requires: { surface: "multetudes" },
+  requires: { surface: ["multetudes", "player"] },   // 261120: the player door walks the étude too
   mount_point: "hidden",
   order: 6,
   controls: [],
@@ -9019,7 +9019,7 @@ const { bpmField } = __m_hub_bpm_field_mjs;
  *                                has always addressed these controls by id keeps its ids (rule 10 — nothing a
  *                                gate or the control census reaches is re-pointed); a new host passes none and
  *                                is addressed by data-role only, which is what makes a second seat legal.
- *                                `rows: 2` DECLARES the break — split · bpm, then the click · pulse (Daniel's
+ *                                `rows` (the host's row wrapper) DECLARES the break — split · bpm, then the click · pulse (Daniel's
  *                                grouping, 261026) — a wrapper per row, never a wrap flex happens to find.
  *   mountClock(ctx, host)        wires every control inside `host` by data-role, to the bus and nothing else.
  *
@@ -9040,15 +9040,16 @@ const TITLE = {
   click: "the click — one state, two views; the Metronome card's Sound is the other",
 };
 
+/* THE ROWS ARE THE HOST'S (261120 — the player door): `rows` is 1, or a function the host passes to wrap the two
+ * groups — split · bpm, then the click · pulse — in ITS OWN row markup. The row class belongs to the host that lays the
+ * clock out in rows (the Progression card); a door that reaches this file without that host ships none of it. */
 function clockMarkup({ ids = null, rows = 1 } = {}) {
   const ctl = (k) => (ids && ids[k] ? ` id="${ids[k]}" data-control="${ids[k]}"` : "");
   const split = `<span class="clk-lab">bar split</span><select data-role="split"${ctl("split")}  title="${TITLE.split}"></select>`;
   const bpm = `<span class="clk-lab">bpm</span>${bpmField({ id: ids && ids.bpm ? ids.bpm : null })}`;
   const click = `<label class="chk" title="${TITLE.click}"><input type="checkbox" data-role="click"${ctl("click")}> metronome</label>`;
   const pulse = `<span class="clk-pulse" data-role="pulse"${ids && ids.pulse ? ` id="${ids.pulse}"` : ""}></span>`;
-  return rows === 2
-    ? `<span class="clk-row">${split}${bpm}</span><span class="clk-row">${click}${pulse}</span>`
-    : `${split}${bpm}${click}${pulse}`;
+  return typeof rows === "function" ? rows(`${split}${bpm}`, `${click}${pulse}`) : `${split}${bpm}${click}${pulse}`;
 }
 
 function mountClock(ctx, host) {
@@ -9070,14 +9071,20 @@ function mountClock(ctx, host) {
   fillSplits(4);
   sp.addEventListener("change", (e) => announce(d, CONFIG_CHANGED, { split: e.target.value === "chart" ? "chart" : e.target.value.split("+").map(Number) }));
   click.addEventListener("change", (e) => announce(d, CLOCK, { click: e.target.checked }));
+  /* AN EMPTIED BOX ASKS NOTHING (261120 — found by the player door's gate): `+""` is 0, a finite number, so emptying this
+   * field asked the clock for 0 and the owner clamped it to 15. The Metronome card's own field has refused an empty box
+   * since night 77; this one — the neck's, Multetudes' too — never did. Now the same: not a number asks nothing, and the
+   * clock's own tempo is painted back. */
+  let heardBpm = null;
   bpm.addEventListener("change", (e) => {
-    const v = +e.target.value;
+    const v = e.target.value === "" ? NaN : +e.target.value;
     if (Number.isFinite(v)) announce(d, CLOCK, { bpm: v });
+    else if (heardBpm !== null) bpm.value = heardBpm;
   });
   listen(d, CLOCK_STATE, (m) => {
     if (!m) return;
     if (typeof m.click === "boolean") click.checked = m.click;
-    if (typeof m.bpm === "number") bpm.value = m.bpm;
+    if (typeof m.bpm === "number") { heardBpm = m.bpm; bpm.value = m.bpm; }
     if (typeof m.meter === "number") fillSplits(m.meter);
   });
   /* ONE STATE, EVERY VIEW (night 69): a split set at one view is painted at every other — before tonight the one
@@ -9732,7 +9739,7 @@ const fieldBoard = {
 .fd-headmini button:hover{border-color:var(--ink)}
 /* the neck's own 390 stack rules (night 62) RETIRED night 63: the shell's readhead grammar stacks every board's mini
  * the same way now (hub/tools/build.mjs READOUT_GRAMMAR — one site, rule 6); the claim is pinned on this board still. */
-/* .fd-railrow select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
+/* the rail row's select RETIRED night 67: the under-neck band's only select (bar split) moved to the header with the
  * clock; its look travelled with it as .fd-headclock select. A rule that matches nothing fails the door's CSS check. */
 /* the tuning editor's look moved with its rows to tuning-strip.mjs (261012b) */
 /* THE HARMONIC READOUT (260918, item 2): boxed, larger, bold — right of
@@ -10771,6 +10778,23 @@ const fieldBoard = {
     /* the reference / sounded bass / pad announce from mixer-strip.mjs (night 58); this board adopts them from the bus */
     mountMini(ctx, byId("fdMini"));
     mountReadout(ctx, byId("fdMode"));   // 260920: the shared readout, its own derivation
+    /* THE PLAYER DOOR (261120 — Daniel's ruling 1: the player's neck is THIS board, drawn once). A door that declares
+     * `player` shows the neck, its chord readout, the transport and the bpm, and nothing that changes the étude: the
+     * motif rail and the bar split are not shown, nor the metronome checkbox (the card it is a second view of is not
+     * shown either — ruling 2). Inline display, not a rule: a rule naming these tokens would be dead CSS in every other
+     * door (the door gate's every-selector-matches check). The controls still mount; nothing reaches them. */
+    if (ctx.door.player) {
+      const off = (el) => { if (el) el.style.display = "none"; };
+      off(byId("fdRail"));
+      const split = byId("fdSplit");
+      off(split); off(split && split.previousElementSibling);
+      off(byId("fdMetChk") && byId("fdMetChk").closest("label"));
+      /* the neck itself is shown, not handled: its window handles and string badges move the placement, which changes
+       * the étude — so it takes no pointer and no focus (its keys only act while it is focused) */
+      const svg = byId("fieldSvg");
+      svg.style.pointerEvents = "none";
+      svg.removeAttribute("tabindex");
+    }
     /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */
 
@@ -15268,7 +15292,7 @@ const ETUDE_FENCE = "etude";
 const ENVELOPE = ["app", "v"];
 
 /** the snapshot schema a block written today names on its `v:` line — the practice log's own payload version
- * (hub/modules/notepad-card.mjs, `version:` in its adapter); engine/tests/etude-block.test.mjs holds the two equal */
+ * (the notepad card's adapter, its `version:`); engine/tests/etude-block.test.mjs holds the two equal */
 const ETUDE_V = 2;
 
 /** what the block does not carry — the only list in this file, each with its reason (format §9 decision 5) */
@@ -15706,7 +15730,7 @@ const progressionCard = {
   <!-- THE CLOCK, SEATED HERE (night 69 — ruling 261026, D5 approved): a second VIEW of the clock (hub/clock.mjs),
        addressed by data-role, owning nothing. TWO DECLARED ROWS — bar split · bpm, then the click · its pulse —
        Daniel's grouping, a wrapper per row, never a wrap flex finds. The neck keeps its own view. -->
-  <div class="pg-clock" id="pgClock" data-control="pgClock">${clockMarkup({ rows: 2 })}</div>
+  <div class="pg-clock" id="pgClock" data-control="pgClock">${clockMarkup({ rows: (a, b) => `<span class="clk-row">${a}</span><span class="clk-row">${b}</span>` })}</div>
   <!-- OBJECT AND TONES FIRST, above Source (night 64): they are what the progression acts on, so they are read
        before how it moves. STACKED, not adjacent — this card is a narrow column (281 px at 1280, 250 at 390) and
        its own idiom is label-above-control at full width; two selects side by side would clip the object's
@@ -16604,7 +16628,7 @@ const { renderChartLine, chartLineStyles } = __m_engine_chart_line_mjs;
 const timelineStrip = {
   id: "timeline-strip",
   layer: "surface",
-  requires: { surface: "multetudes" },
+  requires: { surface: ["multetudes", "player"] },   // 261120: the player door walks the étude too
   mount_point: "boards",
   order: 16,
   controls: ["tlScroll"],
@@ -17286,7 +17310,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip, __m_hub_modules_tuning_strip_mjs.tuningStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.15","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.16","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

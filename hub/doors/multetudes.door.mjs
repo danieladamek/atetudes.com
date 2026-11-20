@@ -323,7 +323,10 @@ export default {
      * etude block (docs/etude-block-format.md v1, engine/etude-block.mjs); a block pasted beside it restores the bench. */
     /* v1.1.15 (261119, Daniel): a tones figure reaches past the chord — 9, 11, 13 the chord does not hold sound from the
      * field under Line, stay greyed on the neck, ring at their placed spot as they pass; a plain-ink line names them */
-    blurb: "one tool that holds many études · v1.1.15",
+    /* v1.1.16 (261120): the neck's bpm box, emptied, asks nothing — it had asked the clock for 0, which clamped to 15
+     * (found by the player door's gate). Nothing else visible: the neck, the walk and the chart line now also serve the
+     * player door (hub/doors/player.door.mjs), and that changed only code paths this page never takes. */
+    blurb: "one tool that holds many études · v1.1.16",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

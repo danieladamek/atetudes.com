@@ -260,12 +260,16 @@ async function loadModules() {
 
 // ---------------- the lock predicate ----------------
 
+/* A MODULE MAY SERVE MORE THAN ONE SURFACE (261120 — the player door): a requirement's value may be a list, read as
+ * "any of these". It is how the étude walk and the chart line's position owner reach the player door
+ * (surface: "player") without the player reaching every Multetudes card (surface: "multetudes"). A lock-side list
+ * already meant "this door is each of these"; the two compose — one shared value is enough. */
 export function satisfies(lock, requires) {
   for (const [k, want] of Object.entries(requires)) {
     if (!(k in lock)) return false;             // FAIL CLOSED
-    const have = lock[k];
-    if (Array.isArray(have)) { if (!have.includes(want)) return false; }
-    else if (have !== want) return false;
+    const have = Array.isArray(lock[k]) ? lock[k] : [lock[k]];
+    const wants = Array.isArray(want) ? want : [want];
+    if (!wants.some((w) => have.includes(w))) return false;
   }
   return true;
 }
@@ -274,7 +278,7 @@ function validateLock(doorId, lock, mods) {
   const known = new Map();
   for (const m of mods)
     for (const [k, v] of Object.entries(m.requires))
-      (known.get(k) ?? known.set(k, new Set()).get(k)).add(v);
+      for (const w of Array.isArray(v) ? v : [v]) (known.get(k) ?? known.set(k, new Set()).get(k)).add(w);
   for (const [k, have] of Object.entries(lock)) {
     if (!known.has(k))
       throw new Error(`door "${doorId}": lock key "${k}" is required by no module. Known keys: ${[...known.keys()].join(", ") || "(none)"}`);
@@ -474,6 +478,22 @@ export async function resolveDoor(doorId) {
     }
   }
 
+  /* HIDE (261120 — the player door; Daniel's ruling 2 exempts it from family spec §4.3): a door may mount a reached
+   * module HIDDEN — its script runs, its markup ships inside the shell's hidden container, and nothing of it shows.
+   * It is how the player keeps the metronome card's clock (the grid every view asks) without the card. A WHOLE module
+   * only — a part stays unhideable (build.mjs). Names an unreached module, or one rowed or seated, and it is refused. */
+  const hide = door.hide ?? [];
+  {
+    if (!Array.isArray(hide)) throw new Error(`${rel(doorFile)}: hide must be an array of module ids`);
+    const rootIds = new Set(roots.map((m) => m.id));
+    for (const id of hide) {
+      if (!rootIds.has(id))
+        throw new Error(`${rel(doorFile)}: hide names "${id}", which this lock does not reach — hide places reached modules, never extends the reach-set`);
+      if (seats.some((st) => st.part.startsWith(id + "#")) || rows.some((row) => row.cards.some((e) => (typeof e === "string" ? e : e.part).split("#")[0] === id)))
+        throw new Error(`${rel(doorFile)}: "${id}" is both hidden and placed — one module, one seat`);
+    }
+  }
+
   const present = [...new Set(roots.flatMap((m) => m.controls))].sort();
   const absent = [...new Set(prunedMods.flatMap((m) => m.controls))].sort();
   const both = present.filter((c) => absent.includes(c));
@@ -488,6 +508,8 @@ export async function resolveDoor(doorId) {
     opensAs: door.opensAs || null,   // night 84: what a hand-typed chart opens as — travels the same way
     rows,
     seats,
+    hide,
+    player: door.player || null,   // 261120: the player door's declaration (field-board reads it at runtime)
     modulesIn: roots.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,
       controls: m.controls, owns: [...owned.get(m.id)].sort() })),
     modulesOut: prunedMods.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,

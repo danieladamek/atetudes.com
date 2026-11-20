@@ -33,6 +33,7 @@ def main():
         ("hub", ["sh", "-c", "node --test hub/tests/*.test.mjs"]),
         ("build", ["node", "hub/tools/build.mjs"]),
         ("doors", door_cmd),
+        ("player", ["python3", "hub/tests/player_door.py"]),   # 261120: the player door's own Done when, cross-origin
         ("hugo", ["hugo", "--quiet"]),
         ("check_site", ["python3", "tools/check_site.py"]),          # the site: links, CNAME, .nojekyll, deploy records
         ("check_studies", ["python3", "tools/check_studies.py"]),    # the permanent-URL guard (night 82)

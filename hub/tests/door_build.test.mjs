@@ -83,7 +83,12 @@ test("hub: every door builds, and the artifact carries exactly its reach-set", a
       assert.ok(names.some((n) => has(html, n)),
         `[${d}] built file carries no marker of REACHED ${rel}`);
     }
-    // markup and styles: a pruned module's tokens in any form they could survive
+    // markup and styles: a pruned module's tokens in any form they could survive. THE SELECTOR FORMS are read on the
+    // page's styles and markup — the file with its <script> elements cut — mirroring door_locks.py (261120, the player
+    // door): read across the script they matched engine code (`refP.note`, `.atchart.md` in comments) as the notepad's
+    // `.note` and `.md`. The element forms stay on the whole file.
+    const pageText = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+    assert.ok(pageText.length < html.length && pageText.includes("<style"), `[${d}] the selector grep has nothing to read`);
     for (const tok of r.tokensAbsent) {
       for (const form of [`id="${tok}"`, `class="${tok}"`])
         assert.ok(!html.includes(form),
@@ -92,7 +97,7 @@ test("hub: every door builds, and the artifact carries exactly its reach-set", a
       // boundary-matched: ".cur" must not hit ".currentTime" — the marker
       // lesson in the markup grep (mirrors door_locks.py, 260829)
       for (const pre of ["#", "."])
-        assert.ok(!new RegExp(escapeRe(pre + tok) + "(?![\\w-])").test(html),
+        assert.ok(!new RegExp(escapeRe(pre + tok) + "(?![\\w-])").test(pageText),
           `[${d}] built file contains ${pre}${tok} — its module is pruned, so neither its ` +
           `markup nor its styles may ship`);
     }
@@ -125,7 +130,9 @@ test("hub: a door's shared-config declaration reaches the artifact — the notep
     // night 84: what a hand-typed chart opens as travels the same seam — a declaration the artifact dropped would open
     // every silent chart on the page's live state, which the card cannot tell from "no pins declared"
     assert.deepEqual(lit.opensAs, door.opensAs || null, `[${d}] DOOR.opensAs in the artifact is the door's declaration`);
-    assert.deepEqual(Object.keys(lit).sort(), ["id", "lock", "opensAs", "present", "shared"]);
+    // 261120: the player door's declaration travels the same seam (field-board and etude-player read it at runtime)
+    if (door.player) assert.deepEqual(lit.player, door.player, `[${d}] DOOR.player in the artifact is the door's declaration`);
+    assert.deepEqual(Object.keys(lit).sort(), ["id", "lock", "opensAs", ...(door.player ? ["player"] : []), "present", "shared"]);
   }
 });
 
