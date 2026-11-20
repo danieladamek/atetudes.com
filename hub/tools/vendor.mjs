@@ -33,8 +33,16 @@
  * bytes: the bundle is provably the inliner's output, not a hand edit. A source that has moved since is
  * reported as BEHIND, not red: a pin is a snapshot, and RiffRaft takes a new one deliberately (MIDI-LOOP-FORMAT §5.2).
  *
- * CLI:  node hub/tools/vendor.mjs           build the current VERSION (refuses to change an existing version's bytes)
- *       node hub/tools/vendor.mjs --check   verify every committed version; exit 1 on any problem
+ * THE SHELL KIND (261119 — decision D of the card shell bundle, ruled by Daniel 2026-11-19): a SECOND bundle kind in
+ * this one tool, not a sibling — one inliner, one manifest law, one --check. build/vendor/atetudes-shell.<v>.mjs carries
+ * hub/card-shell.mjs (the tokens, the frames, the controls, ▾ and ⓘ) and hub/readout-grammar.mjs (the readout's type).
+ * Its lock is the ruling's "no degree colours": its closure never leaves hub/, and its BYTES hold no degree hex but the
+ * ink the 5th shares by value — read on the artifact, as the engine lock reads motion.mjs's signature. The engine
+ * bundle is untouched (its engine-only closure stays as ruled 10-14), and a shell manifest is checked as a shell's.
+ *
+ * CLI:  node hub/tools/vendor.mjs                   build the engine's current VERSION (refuses to change an existing version's bytes)
+ *       node hub/tools/vendor.mjs --shell           build the shell's current SHELL_VERSION, under the same law
+ *       node hub/tools/vendor.mjs --check           verify every committed version of both kinds; exit 1 on any problem
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname, resolve as resolvePath, relative } from "node:path";
@@ -46,8 +54,8 @@ import { inlineForm, moduleChunk, nsOf } from "./build.mjs";
 
 export const VERSION = "2.1.0";
 export const OUT_DIR = join(REPO, "build", "vendor");
-export const bundleName = (v) => `atetudes-engine.${v}.mjs`;
-export const manifestName = (v) => `atetudes-engine.${v}.manifest.json`;
+export const bundleName = (v, kind = "engine") => `${kind === "shell" ? "atetudes-shell" : "atetudes-engine"}.${v}.mjs`;
+export const manifestName = (v, kind = "engine") => `${kind === "shell" ? "atetudes-shell" : "atetudes-engine"}.${v}.manifest.json`;
 
 /** the API, declared per module: `only` picks names, `except` drops them, neither exports every name */
 const ENTRIES_1 = [
@@ -77,9 +85,44 @@ const RULING_OF = {
   "2.1.0": "2.0.0 + 2026-10-14 (Daniel): adds etude-describe (describe, DESCRIBED), moved from hub/ into engine/; the engine-only closure not widened; palette.mjs still forbidden; parseRoman not in the API",
 };
 
+/* ---- THE SHELL KIND (261119) ---- */
+export const SHELL_VERSION = "1.0.0";
+const SHELL_ENTRIES_1 = [
+  { mod: "card-shell" },        // TOKENS · tokensCss · the frames, controls, hint, ▾ and ⓘ rules · initCollapse · initInfo
+  { mod: "readout-grammar" },   // READOUT_CSS — the readout's type
+];
+/** named OUTSIDE 1.0.0 (the proposal's §2), so the manifest says what the family still holds elsewhere */
+const SHELL_EXCLUDED_1 = [
+  "static/studies/tetrad-voice-leading — frozen (R3); its own chrome copies stay",
+  "assets/css/custom.css and layouts/study.html — Hextra's chrome, the site (decision E)",
+  "the boards' SVG grays (field, staff, score, keys, keyboard strip, fretboard stage, hub/palette.mjs, engine/chart-line.mjs) — drawing ink, not card chrome",
+  "the hand pages' card frame, ▾ and ⓘ rules (triadetudes, metronome) — v0.8's values, a visible change to converge; they carry the page skin's tokens only",
+];
+export const KINDS = {
+  engine: { name: "atetudes-engine", dir: "engine", what: "the At-Etudes engine subset RiffRaft vendors",
+    version: () => VERSION, entriesOf: (v) => ENTRIES_OF[v] ?? ENTRIES, forbiddenOf: (v) => FORBIDDEN_OF[v] ?? FORBIDDEN,
+    rulingOf: (v) => RULING_OF[v] ?? RULING_OF[VERSION], excludedOf: () => null },
+  shell: { name: "atetudes-shell", dir: "hub", what: "the family's chrome tokens and card grammar, the one copy RiffRaft vendors",
+    version: () => SHELL_VERSION, entriesOf: () => SHELL_ENTRIES_1, forbiddenOf: () => [],
+    rulingOf: () => "card shell bundle decisions A–E, Daniel 2026-11-19: both skins named (door, page); ink and gray asserted against Spec §2.1, the rest chrome; CONTROLS_CSS in; a second kind in vendor.mjs; the site out; no degree colours",
+    excludedOf: () => SHELL_EXCLUDED_1 },
+};
+const kindOfManifest = (m) => (m.name === KINDS.shell.name ? "shell" : "engine");
+
+/** THE SHELL'S LOCK, on the artifact: every degree colour but the 5th's (the ink, the same hex by value — Spec §2.1
+ * names it ink) is absent from the bytes. The hexes are READ from the degree palette, never typed; an empty list is
+ * itself a problem (a lock with nothing to look for cannot prove it ran). */
+export async function degreeHexProblems(text) {
+  const { FAM_COLOR } = await import(pathToFileURL(join(REPO, "engine", "degree-palette.mjs")).href);
+  const hexes = Object.entries(FAM_COLOR).filter(([k]) => k !== "5").map(([, v]) => v);
+  if (hexes.length !== 6) return [`the degree palette gave ${hexes.length} hexes to look for, not 6 — the lock cannot see`];
+  return hexes.filter((h) => text.toLowerCase().includes(h.toLowerCase())).map((h) => `a degree colour is in the shell's bytes: ${h}`);
+}
+
 const EXPORT_NAME = /^export\s+(?:async\s+)?(?:const|let|var|function\*?|class)\s+([A-Za-z_$][\w$]*)/gm;
 export const exportNamesOf = (src) => [...src.matchAll(EXPORT_NAME)].map((m) => m[1]);
-const modPath = (mod) => `engine/${mod}.mjs`;
+const modPathIn = (kind) => (mod) => `${KINDS[kind].dir}/${mod}.mjs`;
+const modPath = modPathIn("engine");
 const sha256 = (s) => createHash("sha256").update(s).digest("hex");
 const git = (...a) => execFileSync("git", ["-C", REPO, ...a], { encoding: "utf8" });
 
@@ -87,28 +130,28 @@ const git = (...a) => execFileSync("git", ["-C", REPO, ...a], { encoding: "utf8"
 const readTree = (rel) => readFileSync(join(REPO, rel), "utf8");
 
 /** the import closure of the entries, dependencies first, from the sources' own import statements */
-export function closureOf(entries, read = readTree) {
-  const order = [], seen = new Set();
+export function closureOf(entries, read = readTree, kind = "engine") {
+  const order = [], seen = new Set(), dir = KINDS[kind].dir;
   const visit = (rel) => {
     if (seen.has(rel)) return;
     seen.add(rel);
     for (const s of importStatementsOf(read(rel), rel)) {
-      if (!s.spec.startsWith("./")) throw new Error(`${rel}: import "${s.spec}" leaves engine/ — the bundle carries engine modules only`);
+      if (!s.spec.startsWith("./")) throw new Error(`${rel}: import "${s.spec}" leaves ${dir}/ — the bundle carries ${dir} modules only`);
       visit(relative(REPO, resolvePath(REPO, dirname(rel), s.spec)));
     }
     order.push(rel);
   };
-  for (const e of entries) visit(modPath(e.mod));
+  for (const e of entries) visit(modPathIn(kind)(e.mod));
   return order;
 }
 
 /** the declared API resolved against the sources: [name, …] in entry order; a declared name that is not exported refuses */
-export function apiOf(entries, read = readTree) {
-  const api = [];
+export function apiOf(entries, read = readTree, kind = "engine") {
+  const api = [], mp = modPathIn(kind);
   for (const e of entries) {
-    const names = exportNamesOf(read(modPath(e.mod)));
+    const names = exportNamesOf(read(mp(e.mod)));
     for (const n of [...(e.only || []), ...(e.except || [])])
-      if (!names.includes(n)) throw new Error(`vendor: ${modPath(e.mod)} exports no "${n}"`);
+      if (!names.includes(n)) throw new Error(`vendor: ${mp(e.mod)} exports no "${n}"`);
     api.push(...(e.only ? e.only : names.filter((n) => !(e.except || []).includes(n))));
   }
   if (new Set(api).size !== api.length) throw new Error("vendor: a name is exported twice");
@@ -135,21 +178,24 @@ export function lockProblems(text, read = readTree, carried = closureOf(ENTRIES,
 }
 
 /** build in memory → { text, manifest }. `read` lets the gate rebuild from recorded blobs. */
-export function buildBundle({ version = VERSION, entries = ENTRIES, read = readTree, sourceCommit, blobs } = {}) {
-  const forbidden = FORBIDDEN_OF[version] ?? FORBIDDEN;
-  const files = closureOf(entries, read);
-  const reached = forbidden.filter((m) => files.includes(modPath(m)));
-  if (reached.length) throw new Error(`vendor: the bundle reaches ${reached.map(modPath).join(", ")} — forbidden (the lock)`);
-  const api = apiOf(entries, read);
+export async function buildBundle({ kind = "engine", version, entries, read = readTree, sourceCommit, blobs } = {}) {
+  const K = KINDS[kind], mp = modPathIn(kind);
+  version = version ?? K.version();
+  entries = entries ?? K.entriesOf(version);
+  const forbidden = K.forbiddenOf(version);
+  const files = closureOf(entries, read, kind);
+  const reached = forbidden.filter((m) => files.includes(mp(m)));
+  if (reached.length) throw new Error(`vendor: the bundle reaches ${reached.map(mp).join(", ")} — forbidden (the lock)`);
+  const api = apiOf(entries, read, kind);
   const resolveDep = (from, spec) => relative(REPO, resolvePath(REPO, dirname(from), spec)).split("\\").join("/");
-  const byMod = new Map(entries.map((e) => [modPath(e.mod), e]));
+  const byMod = new Map(entries.map((e) => [mp(e.mod), e]));
   const exportLines = [];
   for (const [f, e] of byMod) {
-    const names = apiOf([e], read);
+    const names = apiOf([e], read, kind);
     exportLines.push(`export const { ${names.join(", ")} } = ${nsOf(f)};`);
   }
   const text =
-`/* atetudes-engine ${version} — the At-Etudes engine subset RiffRaft vendors. BUILT FILE: never edit it.
+`/* ${K.name} ${version} — ${K.what}. BUILT FILE: never edit it.
  * Built by hub/tools/vendor.mjs with the door build's inliner (build.mjs moduleChunk).
  * Contains: ${files.join(", ")}
  * Rebuild under a NEW version; a version's bytes never change. The manifest beside it pins this file's sha256. */
@@ -158,7 +204,7 @@ ${files.map((f) => moduleChunk(f, read(f), resolveDep)).join("\n\n")}
 
 ${exportLines.join("\n")}
 `;
-  const problems = lockProblems(text, read, files, forbidden);
+  const problems = kind === "shell" ? await degreeHexProblems(text) : lockProblems(text, read, files, forbidden);
   if (problems.length) throw new Error("vendor: the lock is open —\n  " + problems.join("\n  "));
   // a fresh build records each source's COMMITTED blob, and refuses a source whose working copy is not that blob —
   // otherwise the bytes built and the blob recorded would describe two different files
@@ -169,14 +215,15 @@ ${exportLines.join("\n")}
     return head;
   };
   const manifest = {
-    name: "atetudes-engine",
+    name: K.name,
     version,
-    file: bundleName(version),
+    file: bundleName(version, kind),
     sha256: sha256(text),
     sourceCommit: sourceCommit ?? git("log", "-1", "--format=%H", "--", ...files).trim(),
     sources: files.map((f) => ({ path: f, blob: blob(f) })),
     api,
-    ruling: RULING_OF[version] ?? RULING_OF[VERSION],
+    ruling: K.rulingOf(version),
+    ...(K.excludedOf(version) ? { excluded: K.excludedOf(version) } : {}),
   };
   return { text, manifest };
 }
@@ -184,18 +231,20 @@ ${exportLines.join("\n")}
 const manifestText = (m) => JSON.stringify(m, null, 2) + "\n";
 
 /** every committed version, checked → { problems, notes, versions } */
-export function checkCommitted() {
+export async function checkCommitted() {
   const problems = [], notes = [], versions = [];
   if (!existsSync(OUT_DIR)) return { problems: [`${relative(REPO, OUT_DIR)}: missing`], notes, versions };
   for (const f of readdirSync(OUT_DIR).filter((f) => f.endsWith(".manifest.json")).sort()) {
     const m = JSON.parse(readFileSync(join(OUT_DIR, f), "utf8"));
-    versions.push(m.version);
+    versions.push(kindOfManifest(m) === "shell" ? `shell ${m.version}` : m.version);
     const p = join(OUT_DIR, m.file);
     if (!existsSync(p)) { problems.push(`${m.file}: missing beside its manifest`); continue; }
     const text = readFileSync(p, "utf8");
     if (sha256(text) !== m.sha256) problems.push(`${m.file}: sha256 ${sha256(text).slice(0, 12)} ≠ manifest ${m.sha256.slice(0, 12)}`);
-    const entriesV = ENTRIES_OF[m.version] ?? ENTRIES, forbiddenV = FORBIDDEN_OF[m.version] ?? FORBIDDEN;
-    for (const x of lockProblems(text, readTree, closureOf(entriesV), forbiddenV)) problems.push(`${m.file}: ${x}`);
+    const kind = kindOfManifest(m), K = KINDS[kind];
+    const entriesV = K.entriesOf(m.version), forbiddenV = K.forbiddenOf(m.version);
+    const locked = kind === "shell" ? await degreeHexProblems(text) : lockProblems(text, readTree, closureOf(entriesV), forbiddenV);
+    for (const x of locked) problems.push(`${m.file}: ${x}`);
     // reproduce from the recorded blobs: the bytes must be exactly the inliner's output on exactly those sources
     const blobs = new Map(m.sources.map((s) => [s.path, s.blob]));
     const read = (rel) => {
@@ -203,7 +252,7 @@ export function checkCommitted() {
       return git("cat-file", "blob", blobs.get(rel));
     };
     try {
-      const re = buildBundle({ version: m.version, read, blobs, sourceCommit: m.sourceCommit, entries: entriesV });
+      const re = await buildBundle({ kind, version: m.version, read, blobs, sourceCommit: m.sourceCommit, entries: entriesV });
       if (re.text !== text) problems.push(`${m.file}: does not reproduce from its recorded sources`);
       if (JSON.stringify(re.manifest.api) !== JSON.stringify(m.api)) problems.push(`${m.file}: API differs from its manifest`);
     } catch (e) {
@@ -213,23 +262,25 @@ export function checkCommitted() {
     if (moved.length) notes.push(`${m.file}: BEHIND source (${moved.join(", ")}) — a pin is a snapshot; bump VERSION to take a new one`);
   }
   if (!versions.includes(VERSION)) problems.push(`VERSION ${VERSION} has no committed manifest — run node hub/tools/vendor.mjs`);
+  if (!versions.includes(`shell ${SHELL_VERSION}`)) problems.push(`SHELL_VERSION ${SHELL_VERSION} has no committed manifest — run node hub/tools/vendor.mjs --shell`);
   return { problems, notes, versions };
 }
 
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolvePath(process.argv[1])).href) {
   if (process.argv.includes("--check")) {
-    const { problems, notes, versions } = checkCommitted();
+    const { problems, notes, versions } = await checkCommitted();
     for (const n of notes) console.log("NOTE  " + n);
     for (const p of problems) console.log("PROBLEM  " + p);
     console.log(`${problems.length ? "RED" : "GREEN"}  vendor: ${versions.length} version(s) checked (${versions.join(", ")})`);
     process.exit(problems.length ? 1 : 0);
   }
-  const { text, manifest } = buildBundle();
+  const kind = process.argv.includes("--shell") ? "shell" : "engine", v = KINDS[kind].version();
+  const { text, manifest } = await buildBundle({ kind });
   mkdirSync(OUT_DIR, { recursive: true });
-  const bp = join(OUT_DIR, bundleName(VERSION)), mp = join(OUT_DIR, manifestName(VERSION));
+  const bp = join(OUT_DIR, bundleName(v, kind)), mp = join(OUT_DIR, manifestName(v, kind));
   if (existsSync(bp) && readFileSync(bp, "utf8") !== text) {
-    console.error(`REFUSED: ${bundleName(VERSION)} exists with other bytes — a version's bytes never change; bump VERSION in hub/tools/vendor.mjs`);
+    console.error(`REFUSED: ${bundleName(v, kind)} exists with other bytes — a version's bytes never change; bump ${kind === "shell" ? "SHELL_VERSION" : "VERSION"} in hub/tools/vendor.mjs`);
     process.exit(1);
   }
   writeFileSync(bp, text);

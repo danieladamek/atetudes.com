@@ -24,8 +24,8 @@ const manifest = JSON.parse(readFileSync(join(OUT_DIR, manifestName(VERSION)), "
 const E = await import(pathToFileURL(BUNDLE).href);
 const REPO = join(OUT_DIR, "..", "..");
 
-test("every committed version is its manifest's sha, reproduces from its recorded sources, and is locked", () => {
-  const { problems, notes, versions } = checkCommitted();
+test("every committed version is its manifest's sha, reproduces from its recorded sources, and is locked", async () => {
+  const { problems, notes, versions } = await checkCommitted();
   for (const n of notes) console.log("  " + n);
   assert.deepEqual(problems, []);
   assert.ok(versions.includes(VERSION), `the current VERSION ${VERSION} is committed`);
@@ -46,13 +46,13 @@ test("the bundle stands alone: no import of any kind, and it exports exactly the
 const textOf = (v) => readFileSync(join(OUT_DIR, bundleName(v)), "utf8");
 const manifestOf = (v) => JSON.parse(readFileSync(join(OUT_DIR, manifestName(v)), "utf8"));
 for (const v of Object.keys(FORBIDDEN_OF)) {
-  test(`THE LOCK ${v}: none of ${FORBIDDEN_OF[v].join(", ")} in the bundle — and the lock bites`, () => {
+  test(`THE LOCK ${v}: none of ${FORBIDDEN_OF[v].join(", ")} in the bundle — and the lock bites`, async () => {
     const t = textOf(v), m = manifestOf(v), forbidden = FORBIDDEN_OF[v], carried = closureOf(ENTRIES_OF[v]);
     assert.deepEqual(lockProblems(t, undefined, carried, forbidden), []);
     for (const mod of forbidden) {
       assert.ok(!m.sources.some((s) => s.path === `engine/${mod}.mjs`), `${mod}.mjs is not a recorded source of ${v}`);
       // bite 1 — the closure refuses an entry that reaches it
-      assert.throws(() => buildBundle({ version: v, entries: [...ENTRIES_OF[v], { mod }], sourceCommit: "x", blobs: new Map() }),
+      await assert.rejects(() => buildBundle({ version: v, entries: [...ENTRIES_OF[v], { mod }], sourceCommit: "x", blobs: new Map() }),
         /forbidden/, `${v}: an entry reaching ${mod}.mjs is refused`);
       // bite 2 — the byte check, independent of the closure: its code appended to the real bundle is seen, one line is enough
       const code = inlineForm(readFileSync(join(REPO, "engine", `${mod}.mjs`), "utf8"), `engine/${mod}.mjs`);

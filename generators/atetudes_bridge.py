@@ -177,17 +177,44 @@ def metronome_guarantee():
 # the family's page grammar for a page WITHOUT the shell — the card styles above name only their
 # own tokens; these are the rules the cards sit in (.card/.transport/.bpmrow/.row2/.chk/…), taken
 # from the appliance page (static/studies/metronome/study.html), the family's own metronome look
+def card_shell_tokens():
+    """THE CARD SHELL'S TOKENS (261119, shell 1.0.0): hub/card-shell.mjs's TOKENS, read from its source — the one
+    copy. {skin: [(name, hex or None), …]} in the module's own order."""
+    src = (HUB / "card-shell.mjs").read_text()
+    body = re.search(r"^export const TOKENS = Object\.freeze\(\{([\s\S]*?)^\}\);", src, re.M).group(1)
+    skins = {}
+    for m in re.finditer(r"^\s*(\w+): Object\.freeze\(\{ (.*?) \}\),$", body, re.M):
+        skins[m.group(1)] = [(k, None if v == "null" else v.strip('"')) for k, v in re.findall(r'(\w+): ("#[0-9A-F]{6}"|null)', m.group(2))]
+    if set(skins) != {"door", "page"} or any(len(v) != 6 for v in skins.values()):
+        raise ValueError(f"atetudes_bridge: card-shell.mjs's TOKENS did not read as two skins of six: {skins}")
+    return skins
+
+
+def degree_root_colour():
+    """the Root's colour, lent to chrome as --red by rule 8 — read from engine/degree-palette.mjs, never typed"""
+    m = re.search(r'FAM_COLOR = \{ R: "(#[0-9A-F]{6})"', module_source("degree-palette"))
+    if not m:
+        raise ValueError("atetudes_bridge: engine/degree-palette.mjs gave no Root colour")
+    return m.group(1)
+
+
+def tokens_css(skin, extra=()):
+    """card-shell.mjs's tokensCss(skin, extra), the same text: the skin's tokens then extra's, nulls left out, four
+    declarations to a line. host-conformance and vendor-shell.test hold the page to the JS function's bytes."""
+    decl = [f"--{k}:{v};" for k, v in [*card_shell_tokens()[skin], *extra] if v is not None]
+    return ":root{\n" + "\n".join("  " + " ".join(decl[i:i + 4]) for i in range(0, len(decl), 4)) + "\n}"
+
+
 def shell_css():
-    """the door SHELL's tokens and the one shell rule the carried cards rely on — sliced from
-    hub/shell.mjs, never restated. 261005: the cards' styles say var(--line), the --red token,
-    var(--card), var(--edge) and size their messages through the shell's `.hint`; a page that
-    carries the cards without these renders borderless buttons, a black Delete and a 16px
-    import message (seen in the night-41 renders). host-conformance computes the token list
-    from the carried styles and asserts each resolves on the page."""
-    src = (HUB / "shell.mjs").read_text()
-    root = re.search(r"^:root\{[\s\S]*?^\}", src, re.M).group(0)
-    hint = re.search(r"^\.hint\{[^}]*\}$", src, re.M).group(0)
-    return root + "\n" + hint
+    """the door skin's tokens and the one shell rule the carried cards rely on — from hub/card-shell.mjs (261119; it was
+    sliced from hub/shell.mjs until the card shell became the one copy), never restated. 261005: the cards' styles say
+    var(--line), the --red token, var(--card), var(--edge) and size their messages through the shell's `.hint`; a page
+    that carries the cards without these renders borderless buttons, a black Delete and a 16px import message (seen in
+    the night-41 renders). host-conformance computes the token list from the carried styles and asserts each resolves
+    on the page."""
+    src = (HUB / "card-shell.mjs").read_text()
+    hint = re.search(r"^export const HINT_CSS = `(\.hint\{[^}]*\})\n`;$", src, re.M).group(1)
+    return tokens_css("door", [("red", degree_root_colour())]) + "\n" + hint
 
 
 def chart_line_styles(scope, subline=False):
@@ -201,12 +228,15 @@ def chart_line_styles(scope, subline=False):
     return (css + ("\n" + sub if subline else "")).replace("SCOPE", scope)
 
 
+# the generator pages wear the PAGE skin's card and line (261119: read from hub/card-shell.mjs, the one copy — the two
+# literals this block typed were those values); a control's own white (a select, a transport button) is not a token
+_PAGE = dict(card_shell_tokens()["page"])
 FAMILY_GRAMMAR_CSS = """
   .cards{display:flex;flex-wrap:wrap;gap:12px;margin:14px auto 12px;width:min(1040px, 94vw)}
-  .card{background:#fff;border:1px solid #D8D8DC;border-radius:10px;padding:12px 14px;flex:1 1 300px;min-width:280px;position:relative;text-align:left}
+  .card{background:__PAGE_CARD__;border:1px solid __PAGE_LINE__;border-radius:10px;padding:12px 14px;flex:1 1 300px;min-width:280px;position:relative;text-align:left}
   .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:0 0 10px;font-weight:bold}
   .card label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
-  .card select{font:inherit;font-size:13px;padding:5px 7px;border:1px solid #D8D8DC;border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
+  .card select{font:inherit;font-size:13px;padding:5px 7px;border:1px solid __PAGE_LINE__;border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
   .card .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px;font-style:normal;text-align:left;padding:0}
   .card.metro .hint{color:#85858D}
   .chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
@@ -216,13 +246,13 @@ FAMILY_GRAMMAR_CSS = """
   .row2>.rowEnd{margin-left:auto;flex:0 0 auto;display:flex;gap:9px;align-items:flex-end}
   .rowEnd .chk{margin:0}
   .transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
-  .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid #D8D8DC;border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
+  .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid __PAGE_LINE__;border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
   .transport button.primary{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:bold}
   .bpmrow{display:flex;align-items:center;gap:8px;margin-top:10px}
   .bpmrow input[type=range]{flex:1;accent-color:var(--ink)}
   .row2{display:flex;gap:10px;flex-wrap:wrap}
   .row2>div{flex:1 1 90px}
-  .board{background:#fff;border:1px solid #D8D8DC;border-radius:10px;padding:10px 12px;margin:0 auto 12px;width:min(1040px, 94vw);box-sizing:border-box;position:relative;text-align:left}
+  .board{background:__PAGE_CARD__;border:1px solid __PAGE_LINE__;border-radius:10px;padding:10px 12px;margin:0 auto 12px;width:min(1040px, 94vw);box-sizing:border-box;position:relative;text-align:left}
   .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
   .hint.nomargin{margin:0}
-"""
+""".replace("__PAGE_CARD__", _PAGE["card"]).replace("__PAGE_LINE__", _PAGE["line"])

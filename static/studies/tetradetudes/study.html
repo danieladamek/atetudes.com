@@ -4,19 +4,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tetradetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "tetradetudes", lock {"material":"tetrad","notepad":true,"audio":true,"transport":true}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/bpm-field.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, engine/tunings.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/transport.mjs, hub/mini.mjs, engine/degree-palette.mjs, engine/chart-line.mjs, engine/roman.mjs, hub/modules/chord-timeline.mjs, hub/palette.mjs, hub/modules/fretboard-stage.mjs, hub/modules/harmony-panel.mjs, hub/modules/keyboard-strip.mjs, engine/metronome.mjs, hub/bpm-field.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-card.mjs, engine/atchart.mjs, engine/notepad.mjs, engine/shared-config.mjs, engine/markdown.mjs, engine/structures.mjs, engine/palette.mjs, engine/notepad-surface.mjs, engine/tunings.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, hub/marks.mjs, hub/modules/score-board.mjs, hub/modules/shape-motion.mjs, hub/modules/transport-card.mjs, hub/card-shell.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs tetradetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
 <style>
 :root{
-  /* THE HOUSE SKIN IS v0.9's (register entry 3, direction set 2026-08-28,
-   * landed 260915 at the beta reconciliation): white ground, #FAFAFB cards
-   * with #E6E6EA edges, the system font stack, the 17px title. v0.9's own
-   * distinction is kept: cards wear --edge, controls wear --line. */
   --ground:#FFFFFF; --card:#FAFAFB; --ink:#212126; --gray:#73737A;
-  --line:#B9B9BF; --edge:#E6E6EA;
-  --red:#B82929;
+  --line:#B9B9BF; --edge:#E6E6EA; --red:#B82929;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);
@@ -59,14 +54,6 @@ select,input[type=text]{
 .rowEnd .chk{margin:0}
 footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 
-/* EXPAND/COLLAPSE ON EVERY PANEL (Shell 4) — the reference's chevron, its look
- * and its persistence behaviour, which is NONE: collapse is a DOM class only,
- * session-only, never stored and never on the bus. A shared étude opens the way
- * its author left it. The chevron and one-line summary are injected by the shell
- * (initCollapse) into every card, strip and board; collapse hard-hides every
- * direct child, then re-shows the header, the chevron and the summary. The
- * board-header variant (.bh) lives with the boards wrapper, since only a door
- * with boards can match it — the rest is universal and belongs here. */
 .clpsBtn{position:absolute;top:8px;right:10px;font:inherit;font-size:11px;
   padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
   cursor:pointer;color:var(--gray);z-index:7}
@@ -78,16 +65,6 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .clpsd>.clpsBtn{display:block!important}
 .clpsd>.clpsSum{display:block!important}
 
-/* THE INFO BUTTON + POPOUT (Daniel: static instructional prose "takes up real
- * estate and lends to visual clutter"). Shell-level like the chevron: a panel
- * marks its STATIC prose with the grammar class .info, and the shell moves it
- * off the panel face into a popout behind a neutral circle-i, immediately left
- * of the collapse chevron. A panel with no .info prose gets no button. LIVE
- * readouts (a .hint written at runtime) are never .info, so they stay on the
- * face — the whole point of the item. House neutrals only; --red is the degree
- * palette's Root. The popout is a plain element, never a dialog element: the
- * file:// gate forbids a modal. .clpsum is a hidden one-line collapse summary a
- * panel supplies when moving its prose would otherwise leave it summariless. */
 .infoBtn{position:absolute;top:8px;right:38px;font:inherit;font-size:11px;
   padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
   cursor:pointer;color:var(--gray);z-index:7}
@@ -10920,79 +10897,95 @@ const transportCard = {
 return { transportCard };
 })();
 
-/* ===== hub/shell.mjs ===== */
-const __m_hub_shell_mjs = (() => {
-/* shell.mjs — the hub's host surface: page grammar and nothing else.
+/* ===== hub/card-shell.mjs ===== */
+const __m_hub_card_shell_mjs = (() => {
+/* card-shell.mjs — THE FAMILY'S CHROME TOKENS AND CARD GRAMMAR, ONE SOURCE (shell 1.0.0; item "The card shell bundle",
+ * FAMILY-REDESIGN decision 4; decisions A–E ruled by Daniel 2026-11-19, as the card shell proposal, §2, specifies).
  *
- * It owns the family's layout vocabulary — the wrap, the card, the transport
- * row, the hint — and it mounts contributions FROM A LIST IT DOES NOT WRITE.
- * It never names a module (§4.2.1's structural constraint) and it renders no
- * control of its own.
+ * The doors' shell (hub/shell.mjs) composes its page grammar from these pieces; the two hand pages carry tokensCss("page")
+ * byte for byte; the generator bridge emits the same :root from TOKENS. RiffRaft vendors the lot as
+ * build/vendor/atetudes-shell.<version>.mjs (hub/tools/vendor.mjs, the shell kind). Every rule below MOVED here verbatim
+ * from hub/shell.mjs on 261119; nothing in what a page shows changed.
  *
- * SHELL_STYLES is the page grammar, lifted verbatim in spirit from the shipped
- * Triadetudes study so the doors look like the family rather than like a test
- * rig. Every rule here either uses a bare element selector or names something
- * this file's own markup contains — the resolver enforces that, because a
- * shell rule anchored in a MODULE's markup is CSS that outlives its module.
+ * NEVER IN IT: a degree colour. --red is the Root's (FAM_COLOR R), lent to chrome by rule 8 — a caller that wants it
+ * passes it in tokensCss's second argument from the degree palette; this file states no degree hex, and the bundle's
+ * lock reads its bytes for one. No bus, no mount code, no mini: those are door machinery.
  *
- * `.chk` and `.row2` are here by PROMOTION rather than by decree: each lived
- * in the metronome card while exactly one module used it, and moved up on
- * 2026-08-17 when a second user arrived (`.chk`: the transport card; `.row2`:
- * the harmony panel). Grammar is earned with evidence (§4.2.2), and the
- * resolver refused the build until they moved — the rule doing its job.
+ * DECISION A — two skins, named: `door` (v0.9's: white ground, #FAFAFB cards, #E6E6EA edges — the doors and RiffRaft)
+ * and `page` (the hand pages': #ECECEE ground, white cards, a #D8D8DC line; it has no --edge today, so it states none).
+ * Each page keeps exactly the values it shows; one-skin convergence is its own item.
+ * DECISION B — ink and gray are the Spec's (§2.1's supporting grays) and are asserted against it at test time; ground,
+ * card, line and edge are CHROME, not Spec, until an amendment makes them law.
  */
 
-const SHELL_STYLES = `
-:root{
-  /* THE HOUSE SKIN IS v0.9's (register entry 3, direction set 2026-08-28,
-   * landed 260915 at the beta reconciliation): white ground, #FAFAFB cards
-   * with #E6E6EA edges, the system font stack, the 17px title. v0.9's own
-   * distinction is kept: cards wear --edge, controls wear --line. */
-  --ground:#FFFFFF; --card:#FAFAFB; --ink:#212126; --gray:#73737A;
-  --line:#B9B9BF; --edge:#E6E6EA;
-  --red:#B82929;
+const SHELL_VERSION = "1.0.0";
+
+/** the two skins (decision A), in the order the :root block states them; null = the skin states no such token */
+const TOKENS = Object.freeze({
+  door: Object.freeze({ ground: "#FFFFFF", card: "#FAFAFB", ink: "#212126", gray: "#73737A", line: "#B9B9BF", edge: "#E6E6EA" }),
+  page: Object.freeze({ ground: "#ECECEE", card: "#FFFFFF", ink: "#212126", gray: "#73737A", line: "#D8D8DC", edge: null }),
+});
+/** which tokens the Spec fixes (decision B) — the rest are chrome */
+const SPEC_TOKENS = Object.freeze(["ink", "gray"]);
+
+/** tokensCss(skin, extra) → the :root block, emitted from TOKENS — "--ground:#FFFFFF; --card:…" in TOKENS' order, then
+ * `extra`'s (the caller's, e.g. { red } from the degree palette), four to a line as the hand-written blocks were */
+function tokensCss(skin, extra = {}) {
+  const t = TOKENS[skin];
+  if (!t) throw new Error(`tokensCss: no skin "${skin}" — the skins are ${Object.keys(TOKENS).join(", ")}`);
+  const decl = [...Object.entries(t), ...Object.entries(extra)].filter(([, v]) => v != null).map(([k, v]) => `--${k}:${v};`);
+  const lines = [];
+  for (let i = 0; i < decl.length; i += 4) lines.push("  " + decl.slice(i, i + 4).join(" "));
+  return `:root{\n${lines.join("\n")}\n}`;
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--ground);color:var(--ink);
-     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-     -webkit-font-smoothing:antialiased}
-.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
-header h1{font-size:17px;margin:6px 0 2px}
-header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
-/* cards in one row share a height (default stretch), exactly the triad app's
- * rule — align-items:flex-start had let the metronome fall short of the
- * transport, the dead gap Daniel saw (shell parity N1, 260819.4) */
-.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
-label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
+
+/* ---------------- the controls (decision C) ---------------- */
+const FIELD_CSS = `label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
 select,input[type=text]{
   font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);
   border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
-.bpmrow{display:flex;align-items:center;gap:8px;margin-top:10px}
-.bpmrow input[type=range]{flex:1;accent-color:var(--ink)}
-.hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
-.chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
-.chk input{width:auto}
-.row2{display:flex;gap:10px;flex-wrap:wrap}
-.row2>div{flex:1 1 90px}
-.transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+`;
+const TRANSPORT_CSS = `.transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .transport button{font:inherit;font-size:14px;padding:7px 13px;border:1px solid var(--line);
   border-radius:8px;background:#fff;cursor:pointer;color:var(--ink)}
 .transport button.primary{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:bold}
-/* ONE MUTE ICON PER SLIDER (260820.3, Daniel's design) — page grammar because
- * two cards render it (the transport's chord and bass rows, the metronome's
- * Vol). The icon is a VIEW of its slider's level: level 0 renders muted however
- * it got there — v0.8.7's mute-is-the-slider-at-zero rule made universal. */
-.muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
-  background:transparent;cursor:pointer}
-.muteBtn[aria-pressed="true"]{opacity:.55}
-/* THE CARD GRAMMAR (260820.4, Daniel's sketch): no row spent on a checkbox —
- * state toggles ride the right-hand end of a row that already exists. .rowEnd
- * is that seat, in both cards, in every app. (Right-alignment is an inference
- * from the sketch, flagged in the item.) */
-.row2>.rowEnd{margin-left:auto;flex:0 0 auto;display:flex;gap:9px;align-items:flex-end}
-.rowEnd .chk{margin:0}
-footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
+`;
+const SEG_CSS = `.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
+.seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}`;
+/** the family's controls: labels, selects and text fields, the transport's buttons and its ink primary, the segmented row */
+const CONTROLS_CSS = FIELD_CSS + TRANSPORT_CSS + SEG_CSS;
 
+/* ---------------- the card grammar ---------------- */
+const HINT_CSS = `.hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
+`;
+/** the three containers — a card, a full-width strip, a board — each shipped only where a page mounts one */
+const CARD_FRAME_CSS = `
+.card{background:var(--card);border:1px solid var(--edge);border-radius:10px;
+      padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
+.card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+         color:var(--gray);margin:0 0 10px;font-weight:bold}
+`;
+const STRIP_FRAME_CSS = `
+.card.strip{background:var(--card);border:1px solid var(--edge);border-radius:10px;
+      padding:12px 14px;margin-bottom:12px;position:relative}
+.card.strip h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+         color:var(--gray);margin:0 0 10px;font-weight:bold}
+.card.strip .row2.alignEnd{align-items:flex-end}
+.striprow{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-start}
+.striprow .grp{flex:0 1 auto;min-width:170px}
+`;
+const BOARD_FRAME_CSS = `
+.board{background:var(--card);border:1px solid var(--edge);border-radius:10px;
+       padding:10px 12px;margin-bottom:12px;position:relative}
+.board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
+           font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+/* the collapse header-variant for a board (.bh, not h2) rides with the boards
+ * wrapper — it ships only when a door has boards, so it can never orphan */
+.clpsd>.bh{display:flex!important;margin-bottom:2px}
+`;
 /* EXPAND/COLLAPSE ON EVERY PANEL (Shell 4) — the reference's chevron, its look
  * and its persistence behaviour, which is NONE: collapse is a DOM class only,
  * session-only, never stored and never on the bus. A shared étude opens the way
@@ -11001,7 +10994,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * direct child, then re-shows the header, the chevron and the summary. The
  * board-header variant (.bh) lives with the boards wrapper, since only a door
  * with boards can match it — the rest is universal and belongs here. */
-.clpsBtn{position:absolute;top:8px;right:10px;font:inherit;font-size:11px;
+const COLLAPSE_CSS = `.clpsBtn{position:absolute;top:8px;right:10px;font:inherit;font-size:11px;
   padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
   cursor:pointer;color:var(--gray);z-index:7}
 .clpsBtn:hover{border-color:var(--ink);color:var(--ink)}
@@ -11011,7 +11004,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .clpsd>h2{display:block!important;margin-bottom:2px}
 .clpsd>.clpsBtn{display:block!important}
 .clpsd>.clpsSum{display:block!important}
-
+`;
 /* THE INFO BUTTON + POPOUT (Daniel: static instructional prose "takes up real
  * estate and lends to visual clutter"). Shell-level like the chevron: a panel
  * marks its STATIC prose with the grammar class .info, and the shell moves it
@@ -11022,7 +11015,7 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
  * palette's Root. The popout is a plain element, never a dialog element: the
  * file:// gate forbids a modal. .clpsum is a hidden one-line collapse summary a
  * panel supplies when moving its prose would otherwise leave it summariless. */
-.infoBtn{position:absolute;top:8px;right:38px;font:inherit;font-size:11px;
+const INFO_CSS = `.infoBtn{position:absolute;top:8px;right:38px;font:inherit;font-size:11px;
   padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;
   cursor:pointer;color:var(--gray);z-index:7}
 .infoBtn:hover{border-color:var(--ink);color:var(--ink)}
@@ -11033,81 +11026,8 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .infoPop .info{font-size:12px;color:var(--ink);line-height:1.55;margin:0}
 .clpsum{display:none}
 `;
-
-/** The layout CONTAINERS are the shell's, and the shell writes them — that is
- * why `.card` and `.board` are page grammar rather than one module's property.
- * A module contributes the contents and names the container it wants; it never
- * writes the container itself, exactly as it never writes the module list.
- *
- * A container's STYLES travel with the container, and the build emits them only
- * for mount points a door actually fills. Otherwise `.board` outlives the last
- * module that asked for a board — page grammar becomes a trace, which is the
- * orphan the suite caught on first run. */
-const WRAPPERS = {
-  /* a contribution with NO surface of its own — script that realises what
-   * other cards control (the audio realiser). It gets no container, so it can
-   * never be the empty box the reference has none of. */
-  hidden: {
-    html: (inner) => inner ? `<div hidden>${inner}</div>` : "",
-    styles: "",
-  },
-  cards: {
-    html: (inner, extra) => `<div class="card${extra ? " " + extra : ""}">${inner}</div>`,
-    styles: `
-.card{background:var(--card);border:1px solid var(--edge);border-radius:10px;
-      padding:12px 14px;flex:1 1 260px;min-width:250px;position:relative}
-.card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-         color:var(--gray);margin:0 0 10px;font-weight:bold}
-`,
-  },
-  /* the reference page's THIRD container: a full-width material strip between
-   * the clock row and the boards — `.card.strip` in the study, where Harmony,
-   * Shape & Motion and the timeline live. It was missing here, and its absence
-   * is most of why the page read airy: strips were being mounted as boards. */
-  strips: {
-    html: (inner, extra) => `<div class="card strip${extra ? " " + extra : ""}">${inner}</div>`,
-    styles: `
-.card.strip{background:var(--card);border:1px solid var(--edge);border-radius:10px;
-      padding:12px 14px;margin-bottom:12px;position:relative}
-.card.strip h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-         color:var(--gray);margin:0 0 10px;font-weight:bold}
-.card.strip .row2.alignEnd{align-items:flex-end}
-.striprow{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-start}
-.striprow .grp{flex:0 1 auto;min-width:170px}
-.seg{display:flex;flex-wrap:wrap;gap:6px}
-.seg button{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--line);
-  border-radius:6px;background:#fff;cursor:pointer;color:var(--ink)}
-.seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-.seg button:disabled{opacity:.45;cursor:not-allowed}`,
-  },
-  boards: {
-    html: (inner, extra) => `<div class="board${extra ? " " + extra : ""}">${inner}</div>`,
-    styles: `
-.board{background:var(--card);border:1px solid var(--edge);border-radius:10px;
-       padding:10px 12px;margin-bottom:12px;position:relative}
-.board .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);
-           font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
-/* the collapse header-variant for a board (.bh, not h2) rides with the boards
- * wrapper — it ships only when a door has boards, so it can never orphan */
-.clpsd>.bh{display:flex!important;margin-bottom:2px}
-`,
-  },
-};
-
-/** the page skeleton. cards and boards are the two mount points a
- * contribution can ask for; everything else is chrome. */
-const SHELL_MARKUP = `
-<div class="wrap">
-  <header>
-    <h1 id="doorTitle"></h1>
-    <div class="tag" id="doorTag"></div>
-  </header>
-  <div id="hidden"></div>
-  <div class="cards" id="cards"></div>
-  <div id="strips"></div>
-  <div id="boards"></div>
-  <footer id="doorFoot"></footer>
-</div>`;
+/** the whole card grammar in one string, for a host that mounts every container (RiffRaft's card) */
+const CARD_CSS = CARD_FRAME_CSS + STRIP_FRAME_CSS + BOARD_FRAME_CSS + HINT_CSS + COLLAPSE_CSS + INFO_CSS;
 
 /** Expand/collapse on every panel — page grammar, applied AFTER the modules
  * mount so it wraps whatever a door actually rendered without naming one. The
@@ -11287,6 +11207,125 @@ function initInfo(doc) {
   doc.addEventListener("click", (e) => { if (openPop && !openPop.contains(e.target)) close(); });
   doc.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 }
+return { SHELL_VERSION, TOKENS, SPEC_TOKENS, tokensCss, FIELD_CSS, TRANSPORT_CSS, SEG_CSS, CONTROLS_CSS, HINT_CSS, CARD_FRAME_CSS, STRIP_FRAME_CSS, BOARD_FRAME_CSS, COLLAPSE_CSS, INFO_CSS, CARD_CSS, initCollapse, initInfo };
+})();
+
+/* ===== hub/shell.mjs ===== */
+const __m_hub_shell_mjs = (() => {
+const { tokensCss, FIELD_CSS, TRANSPORT_CSS, SEG_CSS, HINT_CSS, CARD_FRAME_CSS, STRIP_FRAME_CSS, BOARD_FRAME_CSS, COLLAPSE_CSS, INFO_CSS, initCollapse, initInfo } = __m_hub_card_shell_mjs;
+const { FAM_COLOR } = __m_engine_degree_palette_mjs;
+/* shell.mjs — the hub's host surface: page grammar and nothing else.
+ *
+ * It owns the family's layout vocabulary — the wrap, the card, the transport
+ * row, the hint — and it mounts contributions FROM A LIST IT DOES NOT WRITE.
+ * It never names a module (§4.2.1's structural constraint) and it renders no
+ * control of its own.
+ *
+ * SHELL_STYLES is the page grammar, lifted verbatim in spirit from the shipped
+ * Triadetudes study so the doors look like the family rather than like a test
+ * rig. Every rule here either uses a bare element selector or names something
+ * this file's own markup contains — the resolver enforces that, because a
+ * shell rule anchored in a MODULE's markup is CSS that outlives its module.
+ *
+ * `.chk` and `.row2` are here by PROMOTION rather than by decree: each lived
+ * in the metronome card while exactly one module used it, and moved up on
+ * 2026-08-17 when a second user arrived (`.chk`: the transport card; `.row2`:
+ * the harmony panel). Grammar is earned with evidence (§4.2.2), and the
+ * resolver refused the build until they moved — the rule doing its job.
+ *
+ * THE CARD SHELL (261119, shell 1.0.0): the tokens, the containers' frames, the controls, the hint, the ▾ and the ⓘ —
+ * their rules and their behaviour — now live in hub/card-shell.mjs, the family's one copy (RiffRaft vendors it). This
+ * file composes them, in the order they always stood, around the page grammar that is the doors' alone. --red is the
+ * Root's, lent by rule 8: it arrives from the degree palette, never typed here.
+ */
+
+
+const SHELL_STYLES = `
+${tokensCss("door", { red: FAM_COLOR.R })}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+     -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+header h1{font-size:17px;margin:6px 0 2px}
+header .tag{color:var(--gray);font-size:13px;margin-bottom:14px}
+/* cards in one row share a height (default stretch), exactly the triad app's
+ * rule — align-items:flex-start had let the metronome fall short of the
+ * transport, the dead gap Daniel saw (shell parity N1, 260819.4) */
+.cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+${FIELD_CSS}.bpmrow{display:flex;align-items:center;gap:8px;margin-top:10px}
+.bpmrow input[type=range]{flex:1;accent-color:var(--ink)}
+${HINT_CSS}.chk{display:flex;align-items:center;gap:7px;font-size:13px;margin:7px 0;cursor:pointer}
+.chk input{width:auto}
+.row2{display:flex;gap:10px;flex-wrap:wrap}
+.row2>div{flex:1 1 90px}
+${TRANSPORT_CSS}/* ONE MUTE ICON PER SLIDER (260820.3, Daniel's design) — page grammar because
+ * two cards render it (the transport's chord and bass rows, the metronome's
+ * Vol). The icon is a VIEW of its slider's level: level 0 renders muted however
+ * it got there — v0.8.7's mute-is-the-slider-at-zero rule made universal. */
+.muteBtn{font:inherit;font-size:12px;line-height:1;padding:2px 4px;border:none;
+  background:transparent;cursor:pointer}
+.muteBtn[aria-pressed="true"]{opacity:.55}
+/* THE CARD GRAMMAR (260820.4, Daniel's sketch): no row spent on a checkbox —
+ * state toggles ride the right-hand end of a row that already exists. .rowEnd
+ * is that seat, in both cards, in every app. (Right-alignment is an inference
+ * from the sketch, flagged in the item.) */
+.row2>.rowEnd{margin-left:auto;flex:0 0 auto;display:flex;gap:9px;align-items:flex-end}
+.rowEnd .chk{margin:0}
+footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
+
+${COLLAPSE_CSS}
+${INFO_CSS}`;
+
+/** The layout CONTAINERS are the shell's, and the shell writes them — that is
+ * why `.card` and `.board` are page grammar rather than one module's property.
+ * A module contributes the contents and names the container it wants; it never
+ * writes the container itself, exactly as it never writes the module list.
+ *
+ * A container's STYLES travel with the container, and the build emits them only
+ * for mount points a door actually fills. Otherwise `.board` outlives the last
+ * module that asked for a board — page grammar becomes a trace, which is the
+ * orphan the suite caught on first run. */
+const WRAPPERS = {
+  /* a contribution with NO surface of its own — script that realises what
+   * other cards control (the audio realiser). It gets no container, so it can
+   * never be the empty box the reference has none of. */
+  hidden: {
+    html: (inner) => inner ? `<div hidden>${inner}</div>` : "",
+    styles: "",
+  },
+  cards: {
+    html: (inner, extra) => `<div class="card${extra ? " " + extra : ""}">${inner}</div>`,
+    styles: `${CARD_FRAME_CSS}`,
+  },
+  /* the reference page's THIRD container: a full-width material strip between
+   * the clock row and the boards — `.card.strip` in the study, where Harmony,
+   * Shape & Motion and the timeline live. It was missing here, and its absence
+   * is most of why the page read airy: strips were being mounted as boards. */
+  strips: {
+    html: (inner, extra) => `<div class="card strip${extra ? " " + extra : ""}">${inner}</div>`,
+    styles: `${STRIP_FRAME_CSS}${SEG_CSS}`,
+  },
+  boards: {
+    html: (inner, extra) => `<div class="board${extra ? " " + extra : ""}">${inner}</div>`,
+    styles: `${BOARD_FRAME_CSS}`,
+  },
+};
+
+/** the page skeleton. cards and boards are the two mount points a
+ * contribution can ask for; everything else is chrome. */
+const SHELL_MARKUP = `
+<div class="wrap">
+  <header>
+    <h1 id="doorTitle"></h1>
+    <div class="tag" id="doorTag"></div>
+  </header>
+  <div id="hidden"></div>
+  <div class="cards" id="cards"></div>
+  <div id="strips"></div>
+  <div id="boards"></div>
+  <footer id="doorFoot"></footer>
+</div>`;
 
 function boot(MODULES, door, doc) {
   const byId = (id) => doc.getElementById(id);

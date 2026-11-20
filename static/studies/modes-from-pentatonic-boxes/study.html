@@ -11,13 +11,8 @@
   :root { --ink:#212126; --gray:#73737A; --light:#CCCCCE; }
   /* ===== hub/shell.mjs · the door shell's tokens and its .hint rule, VERBATIM (the bridge) ===== */
 :root{
-  /* THE HOUSE SKIN IS v0.9's (register entry 3, direction set 2026-08-28,
-   * landed 260915 at the beta reconciliation): white ground, #FAFAFB cards
-   * with #E6E6EA edges, the system font stack, the 17px title. v0.9's own
-   * distinction is kept: cards wear --edge, controls wear --line. */
   --ground:#FFFFFF; --card:#FAFAFB; --ink:#212126; --gray:#73737A;
-  --line:#B9B9BF; --edge:#E6E6EA;
-  --red:#B82929;
+  --line:#B9B9BF; --edge:#E6E6EA; --red:#B82929;
 }
 .hint{font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:8px}
   body { margin:0; background:#F6F6F8; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); }
@@ -80,7 +75,7 @@
   .boxfig svg { max-width:100%; height:auto; }
   /* ===== the family's page grammar for a page without the shell (generators/atetudes_bridge.py) ===== */
   .cards{display:flex;flex-wrap:wrap;gap:12px;margin:14px auto 12px;width:min(1040px, 94vw)}
-  .card{background:#fff;border:1px solid #D8D8DC;border-radius:10px;padding:12px 14px;flex:1 1 300px;min-width:280px;position:relative;text-align:left}
+  .card{background:#FFFFFF;border:1px solid #D8D8DC;border-radius:10px;padding:12px 14px;flex:1 1 300px;min-width:280px;position:relative;text-align:left}
   .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:0 0 10px;font-weight:bold}
   .card label{font-size:12px;color:var(--gray);display:block;margin:8px 0 3px}
   .card select{font:inherit;font-size:13px;padding:5px 7px;border:1px solid #D8D8DC;border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
@@ -99,7 +94,7 @@
   .bpmrow input[type=range]{flex:1;accent-color:var(--ink)}
   .row2{display:flex;gap:10px;flex-wrap:wrap}
   .row2>div{flex:1 1 90px}
-  .board{background:#fff;border:1px solid #D8D8DC;border-radius:10px;padding:10px 12px;margin:0 auto 12px;width:min(1040px, 94vw);box-sizing:border-box;position:relative;text-align:left}
+  .board{background:#FFFFFF;border:1px solid #D8D8DC;border-radius:10px;padding:10px 12px;margin:0 auto 12px;width:min(1040px, 94vw);box-sizing:border-box;position:relative;text-align:left}
   .bh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);font-weight:bold;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
   .hint.nomargin{margin:0}
   /* ===== hub/modules/notepad-card.mjs · styles, VERBATIM (the bridge) — host-conformance pins these bytes ===== */

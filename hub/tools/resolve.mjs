@@ -303,7 +303,8 @@ function validateLock(doorId, lock, mods) {
  * it is the violation the whole check exists for (`#journalIn` styled by the
  * page, as it is in the shipped study today). */
 export function ownership(mods, reachOf) {
-  const shellMentions = tokensOf(readFileSync(SHELL, "utf8"));
+  // 261119: the card shell (hub/card-shell.mjs) is the shell's other half — its grammar is the page's, not a module's
+  const shellMentions = tokensOf(readFileSync(SHELL, "utf8") + "\n" + readFileSync(join(HUB, "card-shell.mjs"), "utf8"));
 
   const owners = new Map();          // file → the module ids that reach it
   for (const m of mods)

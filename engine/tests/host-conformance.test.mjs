@@ -310,6 +310,8 @@ test("rule 14: no error string in engine/ or hub/modules/ quotes a caption the l
 import { notepadCard } from "../../hub/modules/notepad-card.mjs";
 import { metronomeCard } from "../../hub/modules/metronome-card.mjs";
 import { BPM_FIELD_STYLES } from "../../hub/bpm-field.mjs";
+import { tokensCss, HINT_CSS } from "../../hub/card-shell.mjs";
+import { FAM_COLOR } from "../degree-palette.mjs";
 import { partsOf, markupWithout } from "../../hub/tools/parts.mjs";
 
 /* metronome-card's pinned region is its FOUR ROW GROUPS — the grammar the
@@ -391,8 +393,8 @@ test("§4.3 card carriers: a maintained carrier seating the one bpm field carrie
 });
 
 test("§4.3 card carriers: every var(--token) the carried card styles reference is defined on the page, and the shell's .hint rule is carried", () => {
-  const shell = readFileSync(join(here, "..", "..", "hub", "shell.mjs"), "utf8");
-  const hintRule = shell.match(/^\.hint\{[^}]*\}$/m)[0];
+  const hintRule = HINT_CSS.trim();   // 261119: the shell's .hint lives in hub/card-shell.mjs, the one copy
+  assert.match(hintRule, /^\.hint\{[^}]*\}$/, "card-shell.mjs's HINT_CSS is one .hint rule");
   let checked = 0;
   for (const name of GRAMMAR_HOSTS) {
     const page = studyOf(name);
@@ -406,6 +408,27 @@ test("§4.3 card carriers: every var(--token) the carried card styles reference 
     assert.ok(page.includes(hintRule), `[${name}] carries the shell's .hint rule verbatim: ${hintRule}`);
   }
   assert.ok(checked >= 4 * GRAMMAR_HOSTS.length, `not vacuous: ${checked} token checks`);
+});
+
+// ================= THE CARD SHELL'S TOKENS, ONE COPY (261119 — shell 1.0.0, decision A) =================
+// The tokens are written ONCE, in hub/card-shell.mjs; every carrier holds tokensCss(skin) BYTE FOR BYTE, --red lent by
+// the degree palette. The two hand pages wear the PAGE skin (their values, unchanged); the two bridge pages and the doors
+// wear the DOOR skin. A page that types its own :root again is the drift this pin exists for.
+// tetrad-voice-leading is FROZEN (R3, the generator-identity exemption): it keeps the :root it was frozen with, named in
+// shell 1.0.0's manifest as outside the bundle
+const SKIN_OF = { triadetudes: "page", metronome: "page", tetradetudes: "door", multetudes: "door",
+  "modes-from-pentatonic-boxes": "door" };
+test("§4.3 the card shell: every carrier's :root is hub/card-shell.mjs's tokensCss, byte for byte, and the only one it types", () => {
+  let checked = 0;
+  for (const [slug, skin] of Object.entries(SKIN_OF)) {
+    const page = studyOf(slug), want = tokensCss(skin, { red: FAM_COLOR.R });
+    assert.ok(page.includes(want), `[${slug}] carries tokensCss("${skin}") byte for byte:\n${want}`);
+    const roots = [...page.matchAll(/:root\s*\{[^}]*\}/g)].map((m) => m[0]).filter((r) => r !== want);
+    // the generator pages also state their own --light (and ink/gray restated) for the charts — a drawing token, named in shell 1.0.0's manifest
+    for (const r of roots) assert.doesNotMatch(r, /--(ground|card|line|edge|red)\s*:/, `[${slug}] types a chrome token outside the card shell: ${r}`);
+    checked++;
+  }
+  assert.equal(checked, 5, "five carriers — the frozen one exempt");
 });
 
 // ================= v1.4's mark, on the artifacts (night 45, 261009 — "remove the violet colour function for good") =================
