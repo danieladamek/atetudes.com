@@ -37,8 +37,9 @@ def fences():
     js = """import { etudeBlock, ETUDE_V } from './engine/etude-block.mjs'; import { readFileSync } from 'node:fs';
       const c = JSON.parse(readFileSync('hub/tests/fixtures/etude-corpus.json', 'utf8')); const by = (n) => c.find((x) => x.name === n).saved;
       const env = { app: 'multetudes', v: ETUDE_V };
+      const { default: door } = await import('./hub/doors/multetudes.door.mjs');
       process.stdout.write(JSON.stringify({ a: etudeBlock(by('an arpeggio'), env), b: etudeBlock(by('a cycle (6ths)'), env),
-        custom: etudeBlock(by('a custom progression'), env) }));"""
+        custom: etudeBlock(by('a custom progression'), env), height: door.embed.height }));"""
     return json.loads(subprocess.run(["node", "--input-type=module", "-e", js], cwd=REPO, capture_output=True, text=True, check=True).stdout)
 
 def build(tmp, body):
@@ -59,7 +60,7 @@ def serve(root):
     return httpd, port
 
 def main():
-    F = fences()
+    F = fences(); H = F.pop("height")   # the door's measured embed height — never a number typed here
     check(all(F[k].startswith("```etude\n") for k in F), "4. the fences are the note block's own (```etude)")
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
@@ -105,7 +106,7 @@ def main():
                   check(s1 == [True, False] and s2 == [False, True], f"2. @{w}: starting one stops the other: {s1} → {s2}")
                   fr[1].click('#fdMini [data-role="stop"]')
                   h = [f.evaluate("document.documentElement.scrollHeight") for f in fr]
-                  check(all(x <= 660 for x in h), f"2. @{w}: each player fits its iframe: {h}")
+                  check(all(x <= H for x in h), f"2. @{w}: each player fits its iframe: {h} of {H}")
                   links = pg.eval_on_selector_all(".etude-embed a", "as => as.map(a => a.textContent)")
                   check(links == ["Play this étude on At-Etudes"] * 2, f"2. @{w}: a fallback link under each: {links}")
                   check(not errs, f"2. @{w}: no console errors: {errs[:3]}")

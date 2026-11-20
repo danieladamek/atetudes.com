@@ -244,7 +244,10 @@ export const fieldBoard = {
        name, then "over Eb — s5, f6". A strum, or one group, reads low to high under a thin together-bracket. Plain
        text, not degree colours; it changes with the bar and stays still while it plays. hub/motif.mjs is the order,
        the same file the readout reads. -->
-  <div class="fd-foot"><div class="legend" id="fdLegend"></div><div class="fd-motif" id="fdMotif" aria-label="this bar's motif: the notes in sounding order, each string beneath"></div></div>`,
+  <!-- THE SEQUENCE ABOVE THE LEGEND (261120 — Daniel, 15:17): the motif is its own line, the legend always the last; beside
+       it, the motif's chord-by-chord width made it jump between the legend's row and the next. Here, so every door that
+       draws this neck inherits it. -->
+  <div class="fd-foot"><div class="fd-motif" id="fdMotif" aria-label="this bar's motif: the notes in sounding order, each string beneath"></div><div class="legend" id="fdLegend"></div></div>`,
 
   styles: `
 #fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
@@ -321,8 +324,9 @@ export const fieldBoard = {
 /* the legend's rules moved to the build's LEGEND_GRAMMAR (night 85): three faces render it through hub/legend.mjs */
 #fdHint{margin:8px 2px 0}
 #fdHint:empty{display:none}
-/* the motif line (261014): beside the legend, wrapping below it at phone width; a name and its string never part */
-.fd-foot{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 28px}
+/* the motif line (261014): its own line ABOVE the legend at every width since 261120 (it may wrap onto more lines for a
+ * long figure, never beside the legend); a name and its string never part */
+.fd-foot{display:flex;flex-direction:column;align-items:flex-start}
 .fd-motif{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 10px;margin-top:8px}
 .fd-motif:empty{display:none}
 .fd-mp{display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
@@ -1360,6 +1364,13 @@ export const fieldBoard = {
       const svg = byId("fieldSvg");
       svg.style.pointerEvents = "none";
       svg.removeAttribute("tabindex");
+      /* THE CHORD NAME IS NEVER CUT (261120 — Daniel saw "Bbmaj7…" live): the readout's one-line ellipsis is the
+       * shell's grammar for three boards and stays theirs; in the player the header GIVES WAY instead — it wraps, and
+       * the box keeps its natural width, so the clock and the transport take the next row before a letter goes.
+       * Inline, as above: a rule here would name the shell's tokens for one door. */
+      const head = byId("fdHead");
+      head.style.flexWrap = "wrap"; head.style.rowGap = "6px";
+      byId("fdMode").style.flex = "0 0 auto";
     }
     /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */

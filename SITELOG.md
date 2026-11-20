@@ -1,3 +1,19 @@
+## 2026-11-20 — The player shows the chart line; Multetudes v1.1.18; embed height 760
+
+- **`/embed/multetudes/`** (Update Log 261120.7, *Player - the chart line travels with the neck*), re-published
+  byte-identical from `hub/build/player.html`: the étude's chart line under the neck (the family's drawing, the current
+  chip red, its bar shaded); a chip click jumps there, playing or stopped. The chord name in the readout is never cut:
+  in the player the header wraps, putting the transport on a second row, before a letter goes. Same address; every
+  existing embed link plays as before.
+- **Multetudes v1.1.18**: under the neck the note sequence is its own line above the colour legend at every width, so
+  it no longer jumps between the legend's row and the next from chord to chord. Proven to be the only change: the old
+  page with just the new foot applied is pixel-identical to the new one at 1280 and 390. Every other study is
+  byte-identical.
+- **The embed height is 760** (was 660): Copy embed code and the blog `etude` fence (`hugo.yaml`
+  `params.etudeEmbedHeight`, held equal by `tools/check_site.py`). Re-measured with the chart line in, at the tallest
+  chord of every linkable corpus étude and a 21-note figure (worst 753 px at 390 wide), and now gated: the player gate
+  fails if any outgrows it. Snippets copied before today carry 660 and show an inner scrollbar on narrow screens.
+
 ## 2026-11-20 — An `etude` fence on a content page renders the player
 
 - **New render hook `layouts/_markup/render-codeblock-etude.html`** (Update Log 261120.6; child 5 of the étude embed

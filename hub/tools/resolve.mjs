@@ -503,6 +503,20 @@ export async function resolveDoor(doorId) {
       throw new Error(`${rel(doorFile)}: embed needs { player: "https://…", open: "https://…", height: <whole px> }`);
   }
 
+  /* ORDER (261120 — *Player - the chart line travels with the neck*): a door may move a reached, visible module down or
+   * up its mount point — the module's own `order` is its home, this is the door's placement, as rows and seats are.
+   * Names an unreached or hidden module, or a non-number, and it is refused. */
+  const placeOrder = door.order ?? {};
+  {
+    if (typeof placeOrder !== "object" || Array.isArray(placeOrder)) throw new Error(`${rel(doorFile)}: order must be { moduleId: number }`);
+    const rootIds = new Set(roots.map((m) => m.id));
+    for (const [id, v] of Object.entries(placeOrder)) {
+      if (!rootIds.has(id)) throw new Error(`${rel(doorFile)}: order names "${id}", which this lock does not reach`);
+      if (hide.includes(id)) throw new Error(`${rel(doorFile)}: order places "${id}", which this door hides`);
+      if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${rel(doorFile)}: order for "${id}" must be a number`);
+    }
+  }
+
   const present = [...new Set(roots.flatMap((m) => m.controls))].sort();
   const absent = [...new Set(prunedMods.flatMap((m) => m.controls))].sort();
   const both = present.filter((c) => absent.includes(c));
@@ -518,6 +532,7 @@ export async function resolveDoor(doorId) {
     rows,
     seats,
     hide,
+    placeOrder,
     player: door.player || null,   // 261120: the player door's declaration (field-board reads it at runtime)
     embed: door.embed || null,     // 261120: where this door's études play and open (the Settings card's Copy embed code)
     modulesIn: roots.map((m) => ({ rel: m.rel, name: m.name, id: m.id, layer: m.layer,

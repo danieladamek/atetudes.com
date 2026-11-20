@@ -37,7 +37,7 @@ cascade:
 params:
   # an `etude` fence's iframe height (layouts/_markup/render-codeblock-etude.html) — the Multetudes door's measured
   # embed.height, never a new number: tools/check_site.py fails if the two disagree (261120)
-  etudeEmbedHeight: 660
+  etudeEmbedHeight: 760
   description: "Interactive Fretboard Logic — see the shapes, hear the relationships, understand the fretboard. Living, interactive études for guitar: chords, scales, modes and intervals across the neck."
   theme:
     default: "light"

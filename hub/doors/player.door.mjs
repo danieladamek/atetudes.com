@@ -11,8 +11,11 @@
  *   hide: metronome-card   ruling 2 (Daniel, 2026-11-20): the player is EXEMPT from family spec §4.3 — no metronome
  *                          card is shown. Its clock still runs, mounted hidden: it is the grid the walk and the
  *                          neck's bpm and transport ask.
- *   hide: timeline-strip   the chart line owns the position the walk steps; the scope shows the CURRENT chord (the
- *                          neck's readout), so its chips are not shown.
+ *   the chart line         SHOWN since 261120 (*Player - the chart line travels with the neck* — Daniel, looking at the
+ *                          live player: "no indication of the progression"; it was hidden here on the first build).
+ *                          The family's one drawing, the current chip red and its bar shaded; a chip click jumps
+ *                          there — navigation, as ⏮ ⏭ are, so nothing that changes the étude is reached.
+ *   order: timeline-strip  19 — under the neck (18), not above it as in Multetudes (Daniel: "under the neck").
  *   player                 read by field-board (ruling 1: the neck module, its rail and structural header controls
  *                          not shown) and by etude-player (which app's étude it plays, and where Open goes).
  */
@@ -23,7 +26,8 @@ export default {
     audio: true,
     surface: "player",
   },
-  hide: ["metronome-card", "timeline-strip"],
+  hide: ["metronome-card"],
+  order: { "timeline-strip": 19 },
   player: {
     app: "multetudes",
     open: "https://atetudes.com/studies/multetudes/study.html",

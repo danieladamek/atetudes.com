@@ -35,6 +35,7 @@ def main():
         ("doors", door_cmd),
         ("player", ["python3", "hub/tests/player_door.py"]),   # 261120: the player door's own Done when, cross-origin
         ("link", ["python3", "hub/tests/multetudes_link.py"]),   # 261120: Multetudes opens a link, copies embed code
+        ("foot", ["python3", "hub/tests/neck_foot.py"]),   # 261120: the sequence above the legend, still through every chord
         ("hugo", ["hugo", "--quiet"]),
         ("check_site", ["python3", "tools/check_site.py"]),          # the site: links, CNAME, .nojekyll, deploy records
         ("fence", ["python3", "tools/etude_fence.py", "--minify"]),  # 261120: an etude fence renders the player; bad/custom fails

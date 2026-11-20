@@ -58,11 +58,15 @@ export default {
   opensAs: { notesPer: 3, movement: "arpeggiate", bpm: 120 },
   /* WHERE AN ÉTUDE OF THIS DOOR PLAYS AND OPENS (261120 — child 4 of the étude embed epic): Settings → Copy embed code
    * writes an iframe of `player` and a plain fallback link to `open`, each carrying the étude's #etude= fragment. Both
-   * addresses are PERMANENT from the first paste. THE HEIGHT is measured, not chosen: the player's natural height over
-   * the 11 linkable corpus études is 518–638 px at 360 wide, 534–645 at 390, 390–484 at 700 and 487–539 at 1280 — so
-   * 660 holds every one at every width without an inner scrollbar, at the price of up to ~270 px of ground below the
-   * player in a wide column. hub/tests/multetudes_link.py checks the copied iframe against it. */
-  embed: { player: "https://atetudes.com/embed/multetudes/", open: "https://atetudes.com/studies/multetudes/study.html", height: 660 },
+   * addresses are PERMANENT from the first paste. THE HEIGHT IS MEASURED AND GATED, NEVER CHOSEN (re-measured 261120 for
+   * *Player - the chart line travels with the neck*: the chart line under the neck, the sequence above the legend). The
+   * player's natural height, the TALLEST CHORD of each of the 11 linkable corpus études: 631–746 px at 360 wide, 648–753
+   * at 390, 639–737 at 500, 511–599 at 650, 521–609 at 700, 533–615 at 900, 590–661 at 1280; Daniel's 21-note figure
+   * 573–744. So 760. hub/tests/player_door.py loads every one at every width and FAILS if the player outgrows this —
+   * red on the old 660. A typed figure can be any length, so no constant fits every étude: this one fits the corpus and
+   * the longest figure we have been shown, and the gate names the étude that outgrows it. hugo.yaml's
+   * params.etudeEmbedHeight follows it (tools/check_site.py holds them equal). */
+  embed: { player: "https://atetudes.com/embed/multetudes/", open: "https://atetudes.com/studies/multetudes/study.html", height: 760 },
   lock: {
     field: true,
     notepad: true,
@@ -337,7 +341,11 @@ export default {
      * Multetudes) opens it on the bench, every setting at once, and the link is then cleared; a refused one says why and
      * the bench opens as usual. Settings → Copy embed code copies a player of the étude for a web page — an iframe and a
      * plain link — and is disabled, saying why, for an étude with typed changes. */
-    blurb: "one tool that holds many études · v1.1.17",
+    /* v1.1.18 (261120, Daniel — *Player - the chart line travels with the neck*): under the neck, the note sequence is its
+     * own line ABOVE the colour legend at every width, so it no longer jumps between the legend's row and the next as
+     * its width changes chord to chord; the legend is always the last line. Copy embed code's height is 760 (re-measured
+     * with the player's chart line). */
+    blurb: "one tool that holds many études · v1.1.18",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

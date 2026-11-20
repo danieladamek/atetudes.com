@@ -248,7 +248,7 @@ async function build(id) {
     /* A DECLARED START-COLLAPSED (261012b): a module that says `collapsed: true` is written SHUT — the shell's
      * own collapse class on its container, so the first paint is the shut card; the shell's collapse honours it */
     const wrapClass = [m.wrap_class, m.collapsed ? "clpsd" : ""].filter(Boolean).join(" ") || undefined;
-    placeables.push({ order: m.order ?? 0, idx: i, id: m.id,
+    placeables.push({ order: (r.placeOrder ?? {})[m.id] ?? m.order ?? 0, idx: i, id: m.id,
       mount: (r.hide ?? []).includes(m.id) ? "hidden" : (m.mount_point ?? "cards"), wrap_class: wrapClass,
       hiddenFrom: (r.hide ?? []).includes(m.id) ? (m.mount_point ?? "cards") : null,
       html: markupWithout(m.markup, new Set([...seated.keys(), ...rowedParts])), rowable: true });
