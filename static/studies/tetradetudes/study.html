@@ -4746,10 +4746,10 @@ const __m_engine_degree_palette_mjs = (() => {
  * Design Spec §2.1 is the law: colour encodes FUNCTION against the current root and
  * nothing else (golden rule 8 — never status, selection, error or emphasis). These are
  * its seven hexes, keyed by the degree family the legend names. Night 24 (260918) moved
- * the table out of five hub modules into hub/palette.mjs; night 43 moves the table one
+ * the table out of five hub modules into the hub's palette module; night 43 moves the table one
  * step further, into the engine, because the family's chart line (chart-line.mjs) paints
  * the root-degree dot on every study that has a chart line — two of which are not doors
- * and cannot import a hub file. hub/palette.mjs binds to this table (FAM, FAM_COLOR) and
+ * and cannot import a hub file. The hub's palette module binds to this table (FAM, FAM_COLOR) and
  * keeps the hub's own additions (the text rule, the annotation colours). Nothing
  * restates the map: a hand-authored page carries this module and binds to it.
  */

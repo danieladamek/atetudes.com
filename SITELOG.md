@@ -1,3 +1,17 @@
+## 2026-11-19 — The card shell: the family's tokens from one source — nothing visible changed
+
+- **Shell 1.0.0** (Update Log 261119.2): the family's chrome tokens and card grammar now live in one file,
+  `hub/card-shell.mjs`, which RiffRaft vendors as `build/vendor/atetudes-shell.1.0.0.mjs`. The doors build their
+  chrome from it. Triadetudes and metronome carry its page-skin `:root`, and modes-from-pentatonic-boxes gets its
+  tokens through the generator bridge. **Nothing on any page changed**: DOM, CSS rules and pixels are identical before
+  and after at 1280 and 390, for multetudes, tetradetudes, triadetudes, metronome and modes-from-pentatonic-boxes.
+  tetrad-voice-leading is frozen and untouched.
+- CI: the browser gate's runner is pinned to `ubuntu-24.04`. `ubuntu-latest` moved to 26.04, where Playwright 1.55
+  has no Chromium, so the gate failed and the publish was held. Multetudes v1.1.15 went live after the pin.
+- Source editions: `hub/build/{multetudes,tetradetudes}.html` copied byte-identical to `static/studies/…`;
+  triadetudes and metronome edited in place (their `:root`, and triadetudes' re-inlined `degree-palette.mjs`
+  comment); modes re-emitted by `generators/modes_pent_interactive.py`.
+
 ## 2026-11-19 — A tones figure reaches past the chord — Multetudes v1.1.15
 
 - **Multetudes v1.1.15** (Update Log 261119.1): a tones figure may name 9, 11 and 13 that the chord doesn't hold
