@@ -57,7 +57,8 @@ import { mountMini } from "../mini.mjs";
 import { clockMarkup, mountClock } from "../clock.mjs";
 import { legendHTML } from "../legend.mjs";
 import { motifOf, motifNamer } from "../motif.mjs";
-import { mountReadout } from "../readout.mjs";
+import { mountReadout, seatReadout } from "../readout.mjs";
+import { BRAND_AT } from "../brand.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
@@ -1371,6 +1372,29 @@ export const fieldBoard = {
       const head = byId("fdHead");
       head.style.flexWrap = "wrap"; head.style.rowGap = "6px";
       byId("fdMode").style.flex = "0 0 auto";
+      /* THE @ IS THE TITLE (261120 — Daniel: "Can we replace On the Neck with a small red @?" … "in the type font of
+       * the logo of course"): a reader of a blog post has no other card to tell this one from, and the mark says where
+       * the player comes from. The logo's glyph, typeface and root red, from hub/brand.mjs (held to the logo file by
+       * hub/tests/brand.test.mjs); it opens atetudes.com — the origin of the door's own Open address, not retyped — in
+       * a new tab (ruling 3), a quiet link. It sits INSIDE the title span, so the shell's header grammar (the collapse
+       * summary, the chevron's seat) still finds its title where it looks. Multetudes keeps "On the neck". */
+      const title = head.firstElementChild, at = d.createElement("a");
+      at.textContent = BRAND_AT.glyph;
+      at.href = new URL("/", ctx.door.player.open).href;
+      at.target = "_blank"; at.rel = "noopener";
+      at.setAttribute("aria-label", BRAND_AT.label); at.title = BRAND_AT.label;
+      at.setAttribute("data-role", "brand-at");
+      Object.assign(at.style, { fontFamily: BRAND_AT.font, color: BRAND_AT.colour, fontSize: "20px", lineHeight: "1",
+        letterSpacing: "0", textTransform: "none", textDecoration: "none", display: "inline-block" });
+      title.textContent = ""; title.appendChild(at);
+      /* THE HEADER HOLDS ITS SHAPE (same item, decision 4): the box is seated at the étude's LONGEST readout, so where
+       * the header wraps is a function of the width alone — no chord moves the transport or the neck */
+      seatReadout(ctx, byId("fdMode"), { home: head, room: () => {
+        /* the row's content width, less the title (the @) and the gap after it: the box's seat beside its title */
+        const cs = d.defaultView.getComputedStyle(head);
+        return head.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+          - title.getBoundingClientRect().width - (parseFloat(cs.columnGap) || 0);
+      } });
     }
     /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */

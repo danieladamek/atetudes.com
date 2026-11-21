@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/role.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, engine/etude-describe.mjs, engine/etude-block.mjs, engine/etude-link.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/card-shell.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/role.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/brand.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, engine/etude-describe.mjs, engine/etude-block.mjs, engine/etude-link.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/card-shell.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -9319,6 +9319,35 @@ const BOOT = () => ({ key: "Bb", scale: "major", ref: 0, object: "tetrad",
   take: "one", notesPer: 3, tones: [1, 3, 5, 7],   // night 72: the neck opens on Line
   source: "cycle", cycle: "fourths", form: "ii-V-I", custom: "", start: 0 });
 
+/** the chord at one position of one configuration — the ONE derivation chordNow and seatReadout both run; `n` is how
+ * many chords the chart line holds (the positions a seat must hold) */
+function deriveAt(cfg, index) {
+  try {
+    const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
+    const prog = progressionOf(cfg, cfg.key, cfg.scale);
+    return { fld, cur: chordAt(prog, index, fld, cfg.object, pickOf(cfg)), cfg, index, n: prog.chords.length };
+  } catch (e) { return { err: String(e && e.message || e), cfg, index }; }
+}
+
+/** the readout's words for one derived chord, painted into its `.readtext` span — the one painter, so a seat measured
+ * from it is the box's own width at that chord */
+function paintText(d, text, now) {
+  text.textContent = "";
+  if (now.err) { text.textContent = now.err; return; }
+  const { fld, cur, cfg } = now;
+  if (cur.degree >= 0) {
+    const dot = d.createElement("i"); dot.className = "readdot";
+    dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[cur.degree]);
+    dot.style.background = FAM_COLOR[FAM[cur.degree]]; text.appendChild(dot);
+  }
+  const ch = d.createElement("b"); ch.className = "readchord"; ch.textContent = cur.symbol;
+  const md = d.createElement("span"); md.className = "readmode";
+  md.textContent = cur.degree >= 0
+    ? ` — ${fld.notes[cur.degree].name} ${MODES[cfg.scale][cur.degree]}`
+    : " — not in the key";
+  text.appendChild(ch); text.appendChild(md);
+}
+
 /** Fill `host` (a declared `.readbox` element) with the readout and wire it
  * to the bus. Returns the instance's own paint, for a board that wants to
  * repaint in step with its own render (it re-derives; it is handed nothing). */
@@ -9330,13 +9359,7 @@ const BOOT = () => ({ key: "Bb", scale: "major", ref: 0, object: "tetrad",
 function chordNow(ctx, onChange) {
   const d = ctx.doc;
   let cfg = BOOT(), index = 0;
-  const derive = () => {
-    try {
-      const fld = field({ key: cfg.key, scale: cfg.scale, ref: cfg.ref });
-      const prog = progressionOf(cfg, cfg.key, cfg.scale);
-      return { fld, cur: chordAt(prog, index, fld, cfg.object, pickOf(cfg)), cfg, index };
-    } catch (e) { return { err: String(e && e.message || e), cfg, index }; }
-  };
+  const derive = () => deriveAt(cfg, index);
   listen(d, CONFIG_CHANGED, (m) => {
     if (!m) return;
     let changed = false;
@@ -9355,29 +9378,103 @@ function mountReadout(ctx, host) {
   host.textContent = "";
   const text = d.createElement("span"); text.className = "readtext"; host.appendChild(text);
 
-  const paint = (now) => {
-    text.textContent = "";
-    if (now.err) { text.textContent = now.err; return; }
-    const { fld, cur, cfg } = now;
-    if (cur.degree >= 0) {
-      const dot = d.createElement("i"); dot.className = "readdot";
-      dot.setAttribute("data-role", "degree-dot"); dot.setAttribute("data-deg", FAM[cur.degree]);
-      dot.style.background = FAM_COLOR[FAM[cur.degree]]; text.appendChild(dot);
-    }
-    const ch = d.createElement("b"); ch.className = "readchord"; ch.textContent = cur.symbol;
-    const md = d.createElement("span"); md.className = "readmode";
-    md.textContent = cur.degree >= 0
-      ? ` — ${fld.notes[cur.degree].name} ${MODES[cfg.scale][cur.degree]}`
-      : " — not in the key";
-    text.appendChild(ch); text.appendChild(md);
-  };
+  const paint = (now) => paintText(d, text, now);
 
   const now = chordNow(ctx, paint);
   const repaint = () => paint(now());
   repaint();
   return repaint;
 }
-return { chordNow, mountReadout };
+
+/** THE SEAT HOLDS ITS SHAPE (261120 — *Player - the @ mark replaces the card title, and the header holds its shape*):
+ * a box sized to the chord it shows makes every row after it move when a long mode name comes up (Daniel: "the
+ * transport going to the next line with a longer mode name"). This sizes `host`'s seat to the LONGEST readout of the
+ * whole chart line — every position derived and painted by the readout's own painter into a hidden twin of the box,
+ * in the box's own place, and measured — so the header's rows depend on the width alone. Nothing is typed: the words
+ * are the derivation's, the width is the browser's. It keeps its own mirror (§4.2.3) and re-seats on every
+ * configuration and on a resize.
+ *
+ * BESIDE ITS TITLE, AND NO CHORD CUT AT ANY WIDTH: the box keeps its seat beside whatever precedes it on the row
+ * (the player's @). Where the longest readout is wider than that seat (G harmonic minor at 390 px: "GmMaj7 — G
+ * Harmonic minor" wants 256 px; beside the @ there are 236 — measured; the one-line box dropped under the title, and
+ * at 360 it was cut), the box takes the seat's width and the mode name WRAPS under the chord, and the seat's HEIGHT
+ * is the étude's tallest, measured the same way — so a chord that needs two lines moves nothing either.
+ *
+ * It reaches for no one's DOM (the 260920 rule): the board that owns the header hands it `room()` — the width the box
+ * may take beside what precedes it — and `home`, where the hidden twin lives so it takes the box's own styles. Returns
+ * the seat function, which returns the seat it set. */
+function seatReadout(ctx, host, { room, home }) {
+  const d = ctx.doc, win = d.defaultView;
+  let cfg = BOOT();
+  const twin = host.cloneNode(false);
+  twin.removeAttribute("id"); twin.removeAttribute("data-control"); twin.removeAttribute("title");
+  twin.setAttribute("aria-hidden", "true");
+  Object.assign(twin.style, { position: "absolute", visibility: "hidden", left: "0", top: "0", minWidth: "0",
+    maxWidth: "none", minHeight: "0", pointerEvents: "none" });
+  const text = d.createElement("span"); text.className = "readtext"; twin.appendChild(text);
+  host.style.boxSizing = twin.style.boxSizing = "border-box";
+  const wrapAs = (box, on) => {
+    box.style.whiteSpace = on ? "normal" : "";
+    const t = box.firstElementChild; if (t) t.style.whiteSpace = on ? "normal" : "";   // the box's .readtext — the painter's one child
+  };
+  const each = (fn) => {
+    const first = deriveAt(cfg, 0), n = first.err ? 1 : first.n;
+    let most = 0;
+    for (let i = 0; i < n; i++) { paintText(d, text, i ? deriveAt(cfg, i) : first); most = Math.max(most, fn()); }
+    return most;
+  };
+  let last = null;
+  const seat = () => {
+    const avail = Math.floor(room());
+    if (!(avail > 0)) return last;   // not laid out (a refused link hides the board) — nothing to measure against
+    if (!twin.isConnected) home.appendChild(twin);
+    wrapAs(twin, false); twin.style.width = "auto";
+    const widest = Math.ceil(each(() => twin.getBoundingClientRect().width));
+    if (widest <= avail) {
+      wrapAs(host, false);
+      host.style.minWidth = widest + "px"; host.style.width = ""; host.style.minHeight = "";
+      last = { wraps: false, width: widest, avail };
+    } else {
+      wrapAs(twin, true); twin.style.width = avail + "px";
+      const tallest = Math.ceil(each(() => twin.getBoundingClientRect().height));
+      wrapAs(host, true);
+      host.style.minWidth = ""; host.style.width = avail + "px"; host.style.minHeight = tallest + "px";
+      last = { wraps: true, width: widest, avail, height: tallest };
+    }
+    return last;
+  };
+  listen(d, CONFIG_CHANGED, (m) => {
+    if (!m) return;
+    let changed = false;
+    for (const k of Object.keys(cfg)) if (k in m) { cfg = { ...cfg, [k]: m[k] }; changed = true; }
+    if (changed) seat();
+  });
+  win.addEventListener("resize", seat);
+  seat();
+  return seat;
+}
+return { chordNow, mountReadout, seatReadout };
+})();
+
+/* ===== hub/brand.mjs ===== */
+const __m_hub_brand_mjs = (() => {
+const { FAM_COLOR } = __m_hub_palette_mjs;
+/* brand.mjs — THE @ MARK, stated once for the apps (261120; *Player - the @ mark replaces the card title*).
+ *
+ * The shipped logo (static/assets/logo.svg) sets its @ in Georgia, falling back to a serif, filled root red — the
+ * Spec's R token (§2.1), the wordmark's own reading of the degree sequence R 2 3 4 5 6 7. The player's card title is
+ * that @ (Daniel, 2026-11-20: "a small red @ … in the type font of the logo of course"). The glyph and its typeface are
+ * stated HERE and the colour is the palette's R, never retyped; hub/tests/brand.test.mjs reads the logo file and fails
+ * if the two ever part. If the logo is outlined to paths one day, the mark here takes the same path.
+ */
+
+const BRAND_AT = Object.freeze({
+  glyph: "@",
+  font: "Georgia, 'Times New Roman', serif",
+  colour: FAM_COLOR.R,
+  label: "At-Etudes — opens atetudes.com",
+});
+return { BRAND_AT };
 })();
 
 /* ===== hub/marks.mjs ===== */
@@ -9436,7 +9533,8 @@ const { mountMini } = __m_hub_mini_mjs;
 const { clockMarkup, mountClock } = __m_hub_clock_mjs;
 const { legendHTML } = __m_hub_legend_mjs;
 const { motifOf, motifNamer } = __m_hub_motif_mjs;
-const { mountReadout } = __m_hub_readout_mjs;
+const { mountReadout, seatReadout } = __m_hub_readout_mjs;
+const { BRAND_AT } = __m_hub_brand_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { FAM_COLOR, FAM_TEXT, FAM, ANNOTATION_GRAY } = __m_hub_palette_mjs;
 const { starburst } = __m_hub_marks_mjs;
@@ -9489,6 +9587,7 @@ const { starburst } = __m_hub_marks_mjs;
 
 
 // 260917 item 5: the mode names, the one table
+
 
 
 
@@ -10812,6 +10911,29 @@ const fieldBoard = {
       const head = byId("fdHead");
       head.style.flexWrap = "wrap"; head.style.rowGap = "6px";
       byId("fdMode").style.flex = "0 0 auto";
+      /* THE @ IS THE TITLE (261120 — Daniel: "Can we replace On the Neck with a small red @?" … "in the type font of
+       * the logo of course"): a reader of a blog post has no other card to tell this one from, and the mark says where
+       * the player comes from. The logo's glyph, typeface and root red, from hub/brand.mjs (held to the logo file by
+       * hub/tests/brand.test.mjs); it opens atetudes.com — the origin of the door's own Open address, not retyped — in
+       * a new tab (ruling 3), a quiet link. It sits INSIDE the title span, so the shell's header grammar (the collapse
+       * summary, the chevron's seat) still finds its title where it looks. Multetudes keeps "On the neck". */
+      const title = head.firstElementChild, at = d.createElement("a");
+      at.textContent = BRAND_AT.glyph;
+      at.href = new URL("/", ctx.door.player.open).href;
+      at.target = "_blank"; at.rel = "noopener";
+      at.setAttribute("aria-label", BRAND_AT.label); at.title = BRAND_AT.label;
+      at.setAttribute("data-role", "brand-at");
+      Object.assign(at.style, { fontFamily: BRAND_AT.font, color: BRAND_AT.colour, fontSize: "20px", lineHeight: "1",
+        letterSpacing: "0", textTransform: "none", textDecoration: "none", display: "inline-block" });
+      title.textContent = ""; title.appendChild(at);
+      /* THE HEADER HOLDS ITS SHAPE (same item, decision 4): the box is seated at the étude's LONGEST readout, so where
+       * the header wraps is a function of the width alone — no chord moves the transport or the neck */
+      seatReadout(ctx, byId("fdMode"), { home: head, room: () => {
+        /* the row's content width, less the title (the @) and the gap after it: the box's seat beside its title */
+        const cs = d.defaultView.getComputedStyle(head);
+        return head.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+          - title.getBoundingClientRect().width - (parseFloat(cs.columnGap) || 0);
+      } });
     }
     /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */
@@ -17437,7 +17559,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip, __m_hub_modules_tuning_strip_mjs.tuningStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.18","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120},"embed":{"player":"https://atetudes.com/embed/multetudes/","open":"https://atetudes.com/studies/multetudes/study.html","height":760}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.19","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120},"embed":{"player":"https://atetudes.com/embed/multetudes/","open":"https://atetudes.com/studies/multetudes/study.html","height":760}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

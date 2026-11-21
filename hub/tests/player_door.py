@@ -11,10 +11,16 @@ to its OWN Done when (*Player door — the neck, chord symbols, transport and te
   6. the published embed is the build, byte for byte (static/embed/multetudes/index.html = hub/build/player.html)
   --- *Player - the chart line travels with the neck* (261120) ---
   7. the chart line shows under the neck: its playhead follows playback; a chip click jumps there, playing and stopped
-  8. no chord name is ever cut in the readout — every chord of every linkable corpus étude, at every width below
+  8. no chord name is ever cut in the readout, across or down — every chord of every linkable corpus étude, at every width below
   9. THE EMBED HEIGHT IS GATED: the player's natural height, at its TALLEST chord, for every linkable corpus étude and
      Daniel's 21-note figure, at seven widths from phone to desktop, never exceeds the Multetudes door's embed.height —
      the number Copy embed code writes. A typed figure can be any length; the failure names the étude that outgrew it.
+  --- *Player - the @ mark replaces the card title, and the header holds its shape* (261120) ---
+ 10. THE HEADER HOLDS ITS SHAPE: at each of the seven widths, through every chord of every étude in 8/9 — and Daniel's
+     G harmonic minor cycle, whose F#dim7 — F# Altered ♭♭7 dropped the transport a row (his shot, 17:23) — the
+     transport's top and the neck's top never move from chord to chord: the header's rows depend on the width alone
+ 11. the card title is the logo's @ — its typeface and colour READ FROM static/assets/logo.svg, not typed here — linking
+     to atetudes.com in a new tab, named for a screen reader; and Multetudes still says "On the neck", with no @
 
 Prints its assertion count; exits 1 on any failure. Two throwaway local servers stand in for atetudes.com and a
 stranger's blog — 127.0.0.1 and localhost are different SITES to the browser, which is the point.
@@ -50,7 +56,9 @@ def links():
         newer: enc(by('an arpeggio'), { app: 'multetudes', v: ETUDE_V + 1 }),
         all: c.filter((x) => linkable(x.saved) === true).map((x) => [x.name, toFragment(x.saved, { app: 'multetudes', v: ETUDE_V })])
           .concat([["Daniel's 21-note figure (the pattern étude, its figure lengthened)",
-            toFragment({ ...by('a pattern figure'), figure: '4,3,4,3,2,1,2,3,4,3,2,1,2,3,4,3,2,1,2,3,4' }, { app: 'multetudes', v: ETUDE_V })]]),
+            toFragment({ ...by('a pattern figure'), figure: '4,3,4,3,2,1,2,3,4,3,2,1,2,3,4,3,2,1,2,3,4' }, { app: 'multetudes', v: ETUDE_V })],
+            ["Daniel's G harmonic minor cycle (the arpeggio in G harm: F#dim7 — F# Altered bb7)",
+            toFragment({ ...by('an arpeggio'), key: 'G', scale: 'harm' }, { app: 'multetudes', v: ETUDE_V })]]),
         height: Number(process.env.EMBED_HEIGHT_OVERRIDE || door.embed.height),
         v: ETUDE_V }));"""
     return json.loads(subprocess.run(["node", "--input-type=module", "-e", js], cwd=REPO, capture_output=True, text=True, check=True).stdout)
@@ -151,25 +159,77 @@ def main():
             pg.close()
             # ---- 8 + 9. every chord whole in the readout; the tallest chord inside the embed height ----
             worst = {}
-            for w in (360, 390, 500, 650, 700, 900, 1280):
+            for w in (360, 390, 440, 500, 650, 700, 750, 900, 1280):   # 440, 750: where the old header moved Daniel's G harmonic minor (swept, 261120)
                 pg = b.new_page(viewport={"width": w, "height": 100})
                 for name, link in L["all"]:
                     pg.goto("about:blank"); pg.goto(f"http://127.0.0.1:{ps}/embed/multetudes/{link}"); pg.wait_for_timeout(300)
                     n_ch = pg.evaluate("document.querySelectorAll('#tlScroll button').length")
-                    tallest, cut = 0, []
+                    tallest, cut, shape, said = 0, [], {}, set()
                     for i in range(max(n_ch, 1)):
                         pg.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", i)
                         pg.wait_for_timeout(30)
-                        h, c = pg.evaluate("""() => { const t = document.querySelector('#fdMode .readtext');
-                          return [document.documentElement.scrollHeight, t.scrollWidth > t.clientWidth + 0.5 ? t.textContent : null]; }""")
+                        h, c, tops, words = pg.evaluate("""() => { const t = document.querySelector('#fdMode .readtext'), top = (id) => Math.round(document.getElementById(id).getBoundingClientRect().top * 2) / 2;
+                          return [document.documentElement.scrollHeight, t.scrollWidth > t.clientWidth + 0.5 || t.scrollHeight > t.clientHeight + 0.5 ? t.textContent : null,
+                                  [top('fdMini'), top('fieldSvg')], t.textContent]; }""")
                         tallest = max(tallest, h)
                         if c: cut.append(c)
+                        shape.setdefault(tuple(tops), []).append(words); said.add(words)
                     check(n_ch >= 3, f"8. @{w} {name}: the chart line has its chords ({n_ch})")
                     check(not cut, f"8. @{w} {name}: no chord name cut in the readout — {cut[:2]}")
                     check(tallest <= L["height"], f"9. @{w} {name}: the player at its tallest chord is {tallest} px — over the embed height {L['height']}")
+                    check(len(said) >= 2, f"10. @{w} {name}: the readout changed through the run ({len(said)} readings) — else nothing was stepped")
+                    check(len(shape) == 1, f"10. @{w} {name}: the transport and the neck hold still through every chord — "
+                          + "; ".join(f"transport/neck top {k} at {v[0]!r}" for k, v in list(shape.items())[:3]))
                     worst[w] = max(worst.get(w, 0), tallest)
                 pg.close()
             print("tallest player per width:", worst, "— embed height", L["height"])
+            # ---- 10, swept: Daniel's étude, the window RESIZED every 10 px from 340 to 1300 — the seat re-measures on a
+            # resize, so the shape holds at widths no list names (the old header moved it at 410-470 and 720-780) ----
+            name, link = L["all"][-1]
+            pg = b.new_page(viewport={"width": 1300, "height": 900}); pg.goto(f"http://127.0.0.1:{ps}/embed/multetudes/{link}"); pg.wait_for_timeout(400)
+            n_ch = pg.evaluate("document.querySelectorAll('#tlScroll button').length"); moved, widths = [], 0
+            for w in range(340, 1301, 10):
+                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(30); tops = set(); widths += 1
+                for i in range(n_ch):
+                    pg.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", i); pg.wait_for_timeout(15)
+                    tops.add(tuple(pg.evaluate("() => ['fdMini', 'fieldSvg'].map((id) => Math.round(document.getElementById(id).getBoundingClientRect().top))")))
+                if len(tops) > 1: moved.append(w)
+            check(widths == 97 and n_ch >= 3, f"10. swept {widths} widths through {n_ch} chords of {name}")
+            check(not moved, f"10. resized from 340 to 1300 px, {name}: the transport and the neck never move between chords — they did at {moved[:12]}")
+            pg.close()
+            # ---- 11. the @ is the title, the logo's own; Multetudes keeps its title ----
+            import re
+            logo = (REPO / "static" / "assets" / "logo.svg").read_text()
+            at_attrs = re.findall(r'<text\b([^>]*)>\s*@\s*</text>', logo)
+            check(len(at_attrs) == 1, f"11. the logo draws one @ ({len(at_attrs)})")
+            la = (lambda k: (re.search(rf'\b{k}="([^"]*)"', at_attrs[0]) or [None, ""])[1]) if at_attrs else (lambda k: "")
+            fam = lambda v: [x.strip().strip("'\"") for x in v.split(",")]
+            fill = la("fill").lstrip("#"); want_rgb = f"rgb({int(fill[0:2], 16)}, {int(fill[2:4], 16)}, {int(fill[4:6], 16)})" if len(fill) == 6 else "?"
+            ctx = b.new_context(viewport={"width": 1280, "height": 800})
+            ctx.route("https://atetudes.com/**", lambda r: r.fulfill(status=200, content_type="text/html", body="<title>atetudes.com</title>"))
+            pg = ctx.new_page(); pg.goto(player("arpeggio")); pg.wait_for_timeout(400)
+            m = pg.evaluate("""() => { const h = document.getElementById('fdHead'), t = h.firstElementChild, a = t.querySelector('[data-role=brand-at]');
+              if (!a) return { title: t.textContent };
+              const cs = getComputedStyle(a), ch = document.querySelector('#fdMode .readchord').getBoundingClientRect(), r = a.getBoundingClientRect();
+              return { title: t.textContent, tag: a.tagName, font: cs.fontFamily, colour: cs.color, href: a.href, target: a.target, rel: a.rel,
+                       label: a.getAttribute('aria-label'), deco: cs.textDecorationLine, left: r.right <= document.getElementById('fdMode').getBoundingClientRect().left,
+                       mid: Math.abs((r.top + r.bottom) / 2 - (ch.top + ch.bottom) / 2) }; }""")
+            check(m.get("tag") == "A" and m["title"] == "@", f"11. the player's card title is the @ alone, a link — {m.get('title')!r}")
+            check(m.get("font") and fam(m["font"]) == fam(la("font-family")), f"11. the @ is set in the logo's typeface: {m.get('font')!r} vs the logo's {la('font-family')!r}")
+            check(m.get("colour") == want_rgb, f"11. the @ is the logo's colour: {m.get('colour')} vs the logo's #{fill}")
+            check(m.get("href") == "https://atetudes.com/" and m.get("target") == "_blank" and m.get("rel") == "noopener",
+                  f"11. the @ opens atetudes.com in a new tab, noopener: {m.get('href')} {m.get('target')} {m.get('rel')}")
+            check(m.get("label") == "At-Etudes — opens atetudes.com" and m.get("deco") == "none", f"11. named for a screen reader, a quiet link: {m.get('label')!r} {m.get('deco')}")
+            check(m.get("left") and m.get("mid", 99) <= 3, f"11. it sits left of the readout, centred on the chord name's line (off by {m.get('mid')})")
+            if m.get("tag") == "A":
+                with ctx.expect_page() as np: pg.click("[data-role=brand-at]")
+                nt = np.value; nt.wait_for_load_state()
+                check(nt.url == "https://atetudes.com/" and pg.url.startswith(player("arpeggio").split("#")[0]), f"11. clicking the @ opens atetudes.com in a NEW tab, the player stays: {nt.url}")
+            ctx.close()
+            pg = b.new_page(viewport={"width": 1280, "height": 800}); pg.goto((REPO / "hub" / "build" / "multetudes.html").as_uri()); pg.wait_for_timeout(500)
+            mt = pg.evaluate("() => [document.getElementById('fdHead').firstElementChild.textContent, document.querySelectorAll('[data-role=brand-at]').length]")
+            check(mt == ["On the neck", 0], f"11. Multetudes still says \"On the neck\", and carries no @: {mt}")
+            pg.close()
             # ---- 4 + 5. two players on another site's page: one at a time; no request beyond the page loads ----
             ctx = b.new_context(viewport={"width": 900, "height": 1100}); pg = ctx.new_page(); reqs = []
             pg.on("request", lambda r: reqs.append(r.url.split("#")[0]))

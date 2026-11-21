@@ -345,7 +345,10 @@ export default {
      * own line ABOVE the colour legend at every width, so it no longer jumps between the legend's row and the next as
      * its width changes chord to chord; the legend is always the last line. Copy embed code's height is 760 (re-measured
      * with the player's chart line). */
-    blurb: "one tool that holds many études · v1.1.18",
+    /* v1.1.19 (261120, Daniel — *Player - the @ mark replaces the card title, and the header holds its shape*): the
+     * player's card title is the logo's red @, linking to atetudes.com, and its chord readout is seated at the étude's
+     * longest, so no chord moves the transport or the neck. Multetudes itself renders as before. */
+    blurb: "one tool that holds many études · v1.1.19",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

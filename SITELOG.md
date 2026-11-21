@@ -1,3 +1,18 @@
+## 2026-11-21 — The player's title is the logo's @; its header holds its shape; Multetudes v1.1.19
+
+- **`/embed/multetudes/`** (Update Log 261121.1, *Player - the @ mark replaces the card title, and the header holds
+  its shape*), re-published byte-identical from `hub/build/player.html`:
+  - The card title "ON THE NECK" is now a small root-red @ in the logo's typeface. It links to atetudes.com in a new
+    tab, and its typeface and colour are held to `static/assets/logo.svg` by a test.
+  - The chord readout's box is sized to the étude's longest readout, so no chord moves the transport or the neck
+    (before, a long mode name like "F#dim7 — F# Altered ♭♭7" dropped the transport a row at some widths).
+  - On narrow screens, where an étude's longest readout won't fit beside the @, the mode name wraps under the chord
+    instead of being cut. It was cut at 360 px on a G harmonic minor étude.
+  - Same address; every embed link plays as before; the embed height stays 760 (tallest now 755).
+- **Multetudes v1.1.19** (`static/studies/multetudes/study.html`): renders exactly as v1.1.18, pixel-identical at 1280
+  and 390 except the version; its bytes changed because the neck's shared code changed. Every other study is
+  byte-identical.
+
 ## 2026-11-20 — The player shows the chart line; Multetudes v1.1.18; embed height 760
 
 - **`/embed/multetudes/`** (Update Log 261120.7, *Player - the chart line travels with the neck*), re-published
