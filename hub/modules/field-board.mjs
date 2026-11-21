@@ -64,6 +64,7 @@ import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
 import { FAM_COLOR, FAM_TEXT, FAM, ANNOTATION_GRAY } from "../palette.mjs";
 import { starburst } from "../marks.mjs";
+import { objectFollowsTones } from "../object-of-tones.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* the reference's neck geometry, verbatim; the viewBox is 120 wider to seat
@@ -1399,6 +1400,7 @@ export const fieldBoard = {
     /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;

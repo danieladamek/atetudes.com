@@ -348,7 +348,10 @@ export default {
     /* v1.1.19 (261120, Daniel — *Player - the @ mark replaces the card title, and the header holds its shape*): the
      * player's card title is the logo's red @, linking to atetudes.com, and its chord readout is seated at the étude's
      * longest, so no chord moves the transport or the neck. Multetudes itself renders as before. */
-    blurb: "one tool that holds many études · v1.1.19",
+    /* v1.1.20 (261121, Daniel — *Player - the object comes from the tones, so a 9th chord plays as a 9th*): the object is
+     * the name the tones make in every door, not only where the Progression card is mounted (hub/object-of-tones.mjs) —
+     * the player plays a 9th, 11th, 13th or scale étude as Multetudes does. Multetudes' own bus traffic is unchanged. */
+    blurb: "one tool that holds many études · v1.1.20",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

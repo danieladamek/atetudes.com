@@ -29,6 +29,7 @@ import { describeGamut, pentatonicBreak } from "../../engine/gamut.mjs";
 import { inGamut } from "../../engine/position.mjs";
 import { alteredDegree } from "../../engine/chord.mjs";
 import { motifOf, motifNamer } from "../motif.mjs";
+import { objectFollowsTones } from "../object-of-tones.mjs";
 
 const ORD = ["root", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 const SCALE_WORD = { major: "major", harm: "harmonic minor", mel: "melodic minor" };
@@ -380,6 +381,7 @@ export const neckReadout = {
       }
     };
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))

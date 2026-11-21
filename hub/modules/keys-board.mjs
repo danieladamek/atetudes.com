@@ -27,6 +27,7 @@ import { legendHTML } from "../legend.mjs";
 import { FAM, FAM_COLOR, FAM_TEXT } from "../palette.mjs";
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
+import { objectFollowsTones } from "../object-of-tones.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* 260920 (night 26): the palette's, not a copy — night 24 retired five hand
@@ -219,6 +220,7 @@ export const keysBoard = {
       if (hit) announce(d, NOTE, { midi: +hit.dataset.kymidi });
     });
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))

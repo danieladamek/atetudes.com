@@ -700,5 +700,380 @@
     "pad": 1
    }
   }
+ },
+ {
+  "name": "a guide-tone dyad (R26 — the 3 and the 7)",
+  "saved": {
+   "split": "chart",
+   "strings": [
+    4,
+    3
+   ],
+   "startDeg": 4,
+   "nearFret": 3,
+   "notesPer": 1,
+   "address": "pattern",
+   "figure": "",
+   "movement": "arpeggiate",
+   "take": "one",
+   "repeat": false,
+   "tuning": null,
+   "key": "Bb",
+   "scale": "major",
+   "ref": 0,
+   "bass": "root",
+   "centreSrc": "fixed",
+   "gamut": null,
+   "sounded": "none",
+   "pad": false,
+   "chart": null,
+   "tones": [
+    3,
+    7
+   ],
+   "source": "cycle",
+   "cycle": "fourths",
+   "form": "ii-V-I",
+   "custom": "",
+   "start": 0,
+   "bpm": 120,
+   "meter": 4,
+   "sub": 1,
+   "click": true,
+   "accents": true,
+   "clickLevel": 0.8,
+   "clickVoice": "beep",
+   "mixer": {
+    "voice": "tone",
+    "chord": 1,
+    "bass": 1,
+    "pad": 1
+   }
+  }
+ },
+ {
+  "name": "a two-tone pick (R and 5 — the stack names it a triad)",
+  "saved": {
+   "split": "chart",
+   "strings": [
+    4,
+    3,
+    2,
+    1
+   ],
+   "startDeg": 4,
+   "nearFret": 3,
+   "notesPer": 3,
+   "address": "pattern",
+   "figure": "",
+   "movement": "arpeggiate",
+   "take": "one",
+   "repeat": false,
+   "tuning": null,
+   "key": "Bb",
+   "scale": "major",
+   "ref": 0,
+   "bass": "root",
+   "centreSrc": "fixed",
+   "gamut": null,
+   "sounded": "none",
+   "pad": false,
+   "chart": null,
+   "tones": [
+    1,
+    5
+   ],
+   "source": "cycle",
+   "cycle": "fourths",
+   "form": "ii-V-I",
+   "custom": "",
+   "start": 0,
+   "bpm": 120,
+   "meter": 4,
+   "sub": 1,
+   "click": true,
+   "accents": true,
+   "clickLevel": 0.8,
+   "clickVoice": "beep",
+   "mixer": {
+    "voice": "tone",
+    "chord": 1,
+    "bass": 1,
+    "pad": 1
+   }
+  }
+ },
+ {
+  "name": "a shell (R 3 7)",
+  "saved": {
+   "split": "chart",
+   "strings": [
+    6,
+    4,
+    3
+   ],
+   "startDeg": 4,
+   "nearFret": 3,
+   "notesPer": 1,
+   "address": "pattern",
+   "figure": "",
+   "movement": "arpeggiate",
+   "take": "one",
+   "repeat": false,
+   "tuning": null,
+   "key": "Bb",
+   "scale": "major",
+   "ref": 0,
+   "bass": "root",
+   "centreSrc": "fixed",
+   "gamut": null,
+   "sounded": "none",
+   "pad": false,
+   "chart": null,
+   "tones": [
+    1,
+    3,
+    7
+   ],
+   "source": "cycle",
+   "cycle": "fourths",
+   "form": "ii-V-I",
+   "custom": "",
+   "start": 0,
+   "bpm": 120,
+   "meter": 4,
+   "sub": 1,
+   "click": true,
+   "accents": true,
+   "clickLevel": 0.8,
+   "clickVoice": "beep",
+   "mixer": {
+    "voice": "tone",
+    "chord": 1,
+    "bass": 1,
+    "pad": 1
+   }
+  }
+ },
+ {
+  "name": "a triad",
+  "saved": {
+   "split": "chart",
+   "strings": [
+    4,
+    3,
+    2,
+    1
+   ],
+   "startDeg": 4,
+   "nearFret": 3,
+   "notesPer": 3,
+   "address": "pattern",
+   "figure": "",
+   "movement": "arpeggiate",
+   "take": "one",
+   "repeat": false,
+   "tuning": null,
+   "key": "Bb",
+   "scale": "major",
+   "ref": 0,
+   "bass": "root",
+   "centreSrc": "fixed",
+   "gamut": null,
+   "sounded": "none",
+   "pad": false,
+   "chart": null,
+   "tones": [
+    1,
+    3,
+    5
+   ],
+   "source": "cycle",
+   "cycle": "fourths",
+   "form": "ii-V-I",
+   "custom": "",
+   "start": 0,
+   "bpm": 120,
+   "meter": 4,
+   "sub": 1,
+   "click": true,
+   "accents": true,
+   "clickLevel": 0.8,
+   "clickVoice": "beep",
+   "mixer": {
+    "voice": "tone",
+    "chord": 1,
+    "bass": 1,
+    "pad": 1
+   }
+  }
+ },
+ {
+  "name": "a 9th chord (Daniel's, 261121 — F, cycling 4ths, R 3 5 7 9)",
+  "saved": {
+   "split": "chart",
+   "strings": [
+    4,
+    3,
+    2,
+    1
+   ],
+   "startDeg": 1,
+   "nearFret": 5,
+   "notesPer": 3,
+   "address": "pattern",
+   "figure": "",
+   "movement": "arpeggiate",
+   "take": "one",
+   "repeat": false,
+   "tuning": null,
+   "key": "F",
+   "scale": "major",
+   "ref": 0,
+   "bass": "root",
+   "centreSrc": "fixed",
+   "gamut": null,
+   "sounded": "none",
+   "pad": true,
+   "chart": null,
+   "tones": [
+    1,
+    3,
+    5,
+    7,
+    9
+   ],
+   "source": "cycle",
+   "cycle": "fourths",
+   "form": "ii-V-I",
+   "custom": "",
+   "start": 0,
+   "bpm": 120,
+   "meter": 4,
+   "sub": 1,
+   "click": false,
+   "accents": true,
+   "clickLevel": 0,
+   "clickVoice": "beep",
+   "mixer": {
+    "voice": "tone",
+    "chord": 0.75,
+    "bass": 0.07,
+    "pad": 0.04
+   }
+  }
+ },
+ {
+  "name": "an 11th chord",
+  "saved": {
+   "split": "chart",
+   "strings": [
+    4,
+    3,
+    2,
+    1
+   ],
+   "startDeg": 4,
+   "nearFret": 3,
+   "notesPer": 3,
+   "address": "pattern",
+   "figure": "",
+   "movement": "arpeggiate",
+   "take": "one",
+   "repeat": false,
+   "tuning": null,
+   "key": "Bb",
+   "scale": "major",
+   "ref": 0,
+   "bass": "root",
+   "centreSrc": "fixed",
+   "gamut": null,
+   "sounded": "none",
+   "pad": false,
+   "chart": null,
+   "tones": [
+    1,
+    3,
+    5,
+    7,
+    9,
+    11
+   ],
+   "source": "cycle",
+   "cycle": "fourths",
+   "form": "ii-V-I",
+   "custom": "",
+   "start": 0,
+   "bpm": 120,
+   "meter": 4,
+   "sub": 1,
+   "click": true,
+   "accents": true,
+   "clickLevel": 0.8,
+   "clickVoice": "beep",
+   "mixer": {
+    "voice": "tone",
+    "chord": 1,
+    "bass": 1,
+    "pad": 1
+   }
+  }
+ },
+ {
+  "name": "a 13th chord",
+  "saved": {
+   "split": "chart",
+   "strings": [
+    4,
+    3,
+    2,
+    1
+   ],
+   "startDeg": 4,
+   "nearFret": 3,
+   "notesPer": 3,
+   "address": "pattern",
+   "figure": "",
+   "movement": "arpeggiate",
+   "take": "one",
+   "repeat": false,
+   "tuning": null,
+   "key": "Bb",
+   "scale": "major",
+   "ref": 0,
+   "bass": "root",
+   "centreSrc": "fixed",
+   "gamut": null,
+   "sounded": "none",
+   "pad": false,
+   "chart": null,
+   "tones": [
+    1,
+    3,
+    5,
+    7,
+    9,
+    11,
+    13
+   ],
+   "source": "cycle",
+   "cycle": "fourths",
+   "form": "ii-V-I",
+   "custom": "",
+   "start": 0,
+   "bpm": 120,
+   "meter": 4,
+   "sub": 1,
+   "click": true,
+   "accents": true,
+   "clickLevel": 0.8,
+   "clickVoice": "beep",
+   "mixer": {
+    "voice": "tone",
+    "chord": 1,
+    "bass": 1,
+    "pad": 1
+   }
+  }
  }
 ]

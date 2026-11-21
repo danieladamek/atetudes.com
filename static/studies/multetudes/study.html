@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "multetudes", lock {"field":true,"notepad":true,"audio":true,"surface":"multetudes"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/role.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/brand.mjs, hub/marks.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, engine/etude-describe.mjs, engine/etude-block.mjs, engine/etude-link.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/card-shell.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/position.mjs, engine/string-run.mjs, engine/role.mjs, engine/selection.mjs, engine/atchart.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/brand.mjs, hub/marks.mjs, hub/object-of-tones.mjs, hub/modules/field-board.mjs, engine/numeral.mjs, hub/lexicon.mjs, hub/modules/harmony-card.mjs, hub/modules/keys-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, hub/modules/mixer-strip.mjs, hub/modules/neck-readout.mjs, engine/notepad.mjs, engine/markdown.mjs, engine/palette.mjs, engine/notepad-surface.mjs, hub/etude-record.mjs, hub/modules/notepad-card.mjs, engine/etude-describe.mjs, engine/etude-block.mjs, engine/etude-link.mjs, hub/modules/presets-card.mjs, hub/modules/progression-card.mjs, hub/modules/staff-board.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/modules/tuning-strip.mjs, hub/card-shell.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs multetudes
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -9511,6 +9511,60 @@ function starburst(cx, cy, r, { points = STARBURST.points, inner = STARBURST.inn
 return { STARBURST, starburst };
 })();
 
+/* ===== hub/object-of-tones.mjs ===== */
+const __m_hub_object_of_tones_mjs = (() => {
+const { CONFIG_CHANGED, announce, listen } = __m_hub_bus_mjs;
+const { objectOf, tonePick } = __m_engine_selection_mjs;
+/* object-of-tones.mjs — THE OBJECT IS THE NAME THE TONES MAKE, whatever cards a door mounts (261121; *Player - the
+ * object comes from the tones, so a 9th chord plays as a 9th*).
+ *
+ * Daniel, 2026-11-21: "the 9th didn't get captured in the embedding code." The link carried tones R 3 5 7 9; the player
+ * played Fmaj7. `object` is never stored (night 59: only the tones are, etude-record.mjs EXCLUDED), and until tonight
+ * only the Progression card said the object a restore's tones make. A door without that card (the player) left every
+ * reader's mirror on its default tetrad, so a 9th étude played as a 7th chord and a scale étude as a chord.
+ *
+ * So every module that READS the object calls objectFollowsTones(doc) when it mounts. Once per document, whoever
+ * calls first, it listens to CONFIG_CHANGED: a message that carries tones is named through the engine's one function
+ * (selection.mjs objectOf), and if the object on the bus is not that name, it is said. It never says one the bus
+ * already holds.
+ *
+ * IT LANDS LAST, so it never takes the floor from an owner. A correction from inside a listener is announced in a
+ * microtask (bus.mjs announceAfter), so this one waits two. Where the Progression card is mounted (Multetudes), its own
+ * correction lands first and this one finds the object already said, and stays silent. Where the card is not mounted,
+ * this is the correction.
+ *
+ * Not in etude-record.mjs: the record is in every door that saves notes, and selection.mjs would follow it into Scribe
+ * and Tetradetudes, which read no object (engine/tests/carrier-census.test.mjs caught that first draft). The readers
+ * already carry selection.mjs.
+ */
+
+
+const FOLLOWING = new WeakSet();
+
+function objectFollowsTones(doc) {
+  if (!doc || FOLLOWING.has(doc)) return;
+  FOLLOWING.add(doc);
+  /* the bus's own state, as far as the object goes: what it last said the object is, and the tones it last carried
+   * (a late listener hears the merged state first). The correction is judged WHEN IT LANDS, against these — never
+   * against the message that queued it, which may be stale by then (the first draft's: a check queued by the boot
+   * state's tetrad landed after a restore's 9th and said "tetrad" over it, and Multetudes never stopped answering). */
+  const bus = {};
+  listen(doc, CONFIG_CHANGED, (m) => {
+    if (!m || typeof m !== "object") return;
+    for (const k of ["object", "tones", "dyad"]) if (k in m) bus[k] = m[k];
+    if (!("tones" in m) && !("dyad" in m)) return;
+    const win = doc.defaultView;
+    if (!win) return;
+    win.queueMicrotask(() => win.queueMicrotask(() => {
+      let derived;
+      try { derived = objectOf(tonePick(bus)); } catch (_) { return; }   // an unreadable pick: its owner says why; nothing to name
+      if (bus.object !== derived) announce(doc, CONFIG_CHANGED, { object: derived });
+    }));
+  });
+}
+return { objectFollowsTones };
+})();
+
 /* ===== hub/modules/field-board.mjs ===== */
 const __m_hub_modules_field_board_mjs = (() => {
 const { field, notesOn, OPEN_MIDI, STRINGS } = __m_engine_field_mjs;
@@ -9538,6 +9592,7 @@ const { BRAND_AT } = __m_hub_brand_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { FAM_COLOR, FAM_TEXT, FAM, ANNOTATION_GRAY } = __m_hub_palette_mjs;
 const { starburst } = __m_hub_marks_mjs;
+const { objectFollowsTones } = __m_hub_object_of_tones_mjs;
 /* field-board.mjs — ON THE NECK: Multetudes' neck, v0.9's card (children 0,
  * 2, 3a; the surface rework of 2026-08-29 under the identical-to-v0.9
  * ruling).
@@ -9602,6 +9657,7 @@ const { starburst } = __m_hub_marks_mjs;
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -10938,6 +10994,7 @@ const fieldBoard = {
     /* the pulse and the bar split moved with the clock view (night 69, hub/clock.mjs) */
     /* the voice and the three levels are mixer-strip.mjs's (night 58) */
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
@@ -11691,6 +11748,7 @@ const { mountReadout } = __m_hub_readout_mjs;
 const { legendHTML } = __m_hub_legend_mjs;
 const { FAM, FAM_COLOR, FAM_TEXT } = __m_hub_palette_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
+const { objectFollowsTones } = __m_hub_object_of_tones_mjs;
 /* keys-board.mjs — v0.9's ON THE KEYS for Multetudes (surface, 2026-08-29).
  *
  * C2–C6, whites then blacks, C labels, and the current SELECTION as coloured
@@ -11719,6 +11777,7 @@ const { tonePick, pickOf } = __m_engine_selection_mjs;
 
 
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+
 
 const SVGNS = "http://www.w3.org/2000/svg";
 /* 260920 (night 26): the palette's, not a copy — night 24 retired five hand
@@ -11911,6 +11970,7 @@ const keysBoard = {
       if (hit) announce(d, NOTE, { midi: +hit.dataset.kymidi });
     });
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))
@@ -12590,6 +12650,7 @@ const { describeGamut, pentatonicBreak } = __m_engine_gamut_mjs;
 const { inGamut } = __m_engine_position_mjs;
 const { alteredDegree } = __m_engine_chord_mjs;
 const { motifOf, motifNamer } = __m_hub_motif_mjs;
+const { objectFollowsTones } = __m_hub_object_of_tones_mjs;
 /* neck-readout.mjs — v0.9's READOUT and ASSERT lines (Multetudes surface,
  * 2026-08-29).
  *
@@ -12616,6 +12677,7 @@ const { motifOf, motifNamer } = __m_hub_motif_mjs;
 
 
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+
 
 
 
@@ -12971,6 +13033,7 @@ const neckReadout = {
       }
     };
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))
@@ -16235,6 +16298,7 @@ const { mountReadout } = __m_hub_readout_mjs;
 const { legendHTML } = __m_hub_legend_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { FAM_COLOR, FAM_TEXT, FAM } = __m_hub_palette_mjs;
+const { objectFollowsTones } = __m_hub_object_of_tones_mjs;
 /* staff-board.mjs — v0.9's ÉTUDE STAFF for Multetudes (surface, 2026-08-29).
  *
  * "The étude — end to end": the grand staff, treble carrying the material
@@ -16272,6 +16336,7 @@ const { FAM_COLOR, FAM_TEXT, FAM } = __m_hub_palette_mjs;
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
+
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
@@ -16665,6 +16730,7 @@ const staffBoard = {
       if (ci >= 0) announce(d, STEP_CHANGED, { index: ci, request: true });
     });
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))
@@ -16833,6 +16899,7 @@ const { diatonicTones, objectOffsets } = __m_engine_selection_mjs;
 const { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } = __m_hub_bus_mjs;
 const { tonePick, pickOf } = __m_engine_selection_mjs;
 const { renderChartLine, chartLineStyles } = __m_engine_chart_line_mjs;
+const { objectFollowsTones } = __m_hub_object_of_tones_mjs;
 /* timeline-strip.mjs — v0.9's CHART LINE, LIVE (child 7).
  *
  * Bars of chips, one per chord, widths from the chord's beats — so the split
@@ -16872,6 +16939,7 @@ const { renderChartLine, chartLineStyles } = __m_engine_chart_line_mjs;
 
 
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
+
 
 
 const timelineStrip = {
@@ -16971,6 +17039,7 @@ const timelineStrip = {
       announce(d, STEP_CHANGED, { index, attack: true });
     };
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;
@@ -17559,7 +17628,7 @@ return { SHELL_STYLES, WRAPPERS, SHELL_MARKUP, boot };
 
 /* ===== generated: the reach-set, derived from the lock ===== */
 const MODULES = [__m_hub_modules_audio_card_mjs.audioCard, __m_hub_modules_etude_walk_mjs.etudeWalk, __m_hub_modules_field_board_mjs.fieldBoard, __m_hub_modules_harmony_card_mjs.harmonyCard, __m_hub_modules_keys_board_mjs.keysBoard, __m_hub_modules_metronome_card_mjs.metronomeCard, __m_hub_modules_mixer_strip_mjs.mixerStrip, __m_hub_modules_neck_readout_mjs.neckReadout, __m_hub_modules_notepad_card_mjs.notepadCard, __m_hub_modules_presets_card_mjs.presetsCard, __m_hub_modules_progression_card_mjs.progressionCard, __m_hub_modules_staff_board_mjs.staffBoard, __m_hub_modules_timeline_strip_mjs.timelineStrip, __m_hub_modules_tuning_strip_mjs.tuningStrip];
-const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.19","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120},"embed":{"player":"https://atetudes.com/embed/multetudes/","open":"https://atetudes.com/studies/multetudes/study.html","height":760}};
+const DOOR = {"id":"multetudes","lock":{"field":true,"notepad":true,"audio":true,"surface":"multetudes"},"present":{"title":"Multetudes","blurb":"one tool that holds many études · v1.1.20","footer":"A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. The bracket right of the string numbers is the figure's order (child 3b)."},"shared":{"carries":["key","scale","progression","startOn","stringSet","tuning","bpm","meter"],"stringSet":{"min":1}},"opensAs":{"notesPer":3,"movement":"arpeggiate","bpm":120},"embed":{"player":"https://atetudes.com/embed/multetudes/","open":"https://atetudes.com/studies/multetudes/study.html","height":760}};
 __m_hub_shell_mjs.boot(MODULES, DOOR, document);
 </script>
 </body></html>

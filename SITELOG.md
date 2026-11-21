@@ -1,3 +1,14 @@
+## 2026-11-21 — The player plays a 9th as a 9th; Multetudes v1.1.20
+
+- **`/embed/multetudes/`** (Update Log 261121.2, *Player - the object comes from the tones, so a 9th chord plays as a
+  9th*), re-published byte-identical from `hub/build/player.html`. An étude saved as a 9th, 11th or 13th chord, or as
+  a scale, used to play in the player as a plain 7th chord, though its link was right. It now plays exactly what
+  Multetudes plays: readout, chart line, note sequence and lit tones, checked chord by chord on every corpus étude.
+  Embed links already copied are correct and now play right; nobody needs to re-copy. The embed height stays 760.
+- **Multetudes v1.1.20** (`static/studies/multetudes/study.html`): behaves exactly as v1.1.19. Its bus traffic is
+  byte-identical over every corpus étude. Its bytes changed because the neck's shared code gained the fix. Every other
+  study is byte-identical.
+
 ## 2026-11-21 — The player's title is the logo's @; its header holds its shape; Multetudes v1.1.19
 
 - **`/embed/multetudes/`** (Update Log 261121.1, *Player - the @ mark replaces the card title, and the header holds

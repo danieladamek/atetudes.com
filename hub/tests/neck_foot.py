@@ -37,7 +37,15 @@ GEOM = """() => { const r = (id) => { const e = document.getElementById(id); con
   const foot = document.querySelector('.fd-foot').getBoundingClientRect(), svg = document.getElementById('fieldSvg').getBoundingClientRect();
   return { m: r('fdMotif'), g: r('fdLegend'), fl: foot.left, sb: svg.bottom }; }"""
 
+# OWED (261121, Daniel's ruling on *Player - the object comes from the tones*): these corpus études, added that night,
+# show the neck's hint line (#fdHint, above the foot) growing on some chords, so the sequence drops. It is present in
+# the old builds as well, in both doors. Owed to the backlog item *Neck - the hint line holds its height, so the
+# sequence stays put*. They are still measured: a jump is reported as OWED, not failed, and an owed étude that no
+# longer jumps anywhere FAILS, so this list is cut the night the item lands.
+OWED = {"a shell (R 3 7)", "a 9th chord (Daniel's, 261121 — F, cycling 4ths, R 3 5 7 9)", "an 11th chord"}
+
 def main():
+    jumped = set()
     with sync_playwright() as p:
         b = p.chromium.launch(); errs = []
         for door in ("multetudes", "player"):
@@ -58,7 +66,10 @@ def main():
                     check(n_ch >= 3 and len(seen) == n_ch, f"[{door} @{w}] {name}: stepped every chord ({n_ch})")
                     # an étude whose movement draws no sequence (a scale, a legacy slot figure) has nothing to hold still
                     with_seq += bool(starts)
-                    check(len(starts) <= 1, f"[{door} @{w}] {name}: the sequence starts at one place through the run — {sorted(starts)}")
+                    if name in OWED:
+                        if len(starts) > 1: jumped.add(name); print(f"OWED [{door} @{w}] {name}: the sequence moves — {sorted(starts)}")
+                    else:
+                        check(len(starts) <= 1, f"[{door} @{w}] {name}: the sequence starts at one place through the run — {sorted(starts)}")
                     check(not beside, f"[{door} @{w}] {name}: the legend is its own last line below the sequence — not at chords {beside}")
                     for i in range(1, len(seen)):
                         dw = abs(seen[i]["m"]["w"] - seen[i - 1]["m"]["w"])
@@ -75,6 +86,9 @@ def main():
                     print(f"[{door} @{w}] shot pair: {name}, chords {i0 + 1}→{i1 + 1}, sequence width differs {best[0]:.0f} px")
                 pg.close()
         check(not errs, f"no page errors: {errs[:3]}")
+        for name in sorted(OWED):
+            check(any(x == name for x, _ in ETUDES), f"OWED names a corpus étude: {name}")
+            check(name in jumped, f"OWED {name} no longer jumps anywhere — the hint item has landed; cut it from OWED")
         b.close()
     print(f"neck foot — {n} assertions, {len(fails)} failed")
     for f in fails: print("FAIL", f)

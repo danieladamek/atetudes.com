@@ -39,6 +39,7 @@ import { CONFIG_CHANGED, STEP_CHANGED, CLOCK_STATE, listen, announce } from "../
 // 260917 item 1: the pick, and the ONE alias site for saved études' `dyad`
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 import { renderChartLine, chartLineStyles } from "../../engine/chart-line.mjs";
+import { objectFollowsTones } from "../object-of-tones.mjs";
 
 export const timelineStrip = {
   id: "timeline-strip",
@@ -137,6 +138,7 @@ export const timelineStrip = {
       announce(d, STEP_CHANGED, { index, attack: true });
     };
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       let changed = false;

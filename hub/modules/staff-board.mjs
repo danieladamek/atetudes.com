@@ -36,6 +36,7 @@ import { legendHTML } from "../legend.mjs";
 import { tonePick, pickOf } from "../../engine/selection.mjs";
 // the degree palette, stated once (260918, item 2a — was a hand-copied literal here)
 import { FAM_COLOR, FAM_TEXT, FAM } from "../palette.mjs";
+import { objectFollowsTones } from "../object-of-tones.mjs";
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
@@ -429,6 +430,7 @@ export const staffBoard = {
       if (ci >= 0) announce(d, STEP_CHANGED, { index: ci, request: true });
     });
 
+    objectFollowsTones(d);   // the object is the name the tones make, whatever this door mounts (261121)
     listen(d, CONFIG_CHANGED, (m) => {
       if (!m || typeof m !== "object") return;
       for (const k of Object.keys(cfg))
