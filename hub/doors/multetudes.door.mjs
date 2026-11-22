@@ -351,7 +351,13 @@ export default {
     /* v1.1.20 (261121, Daniel — *Player - the object comes from the tones, so a 9th chord plays as a 9th*): the object is
      * the name the tones make in every door, not only where the Progression card is mounted (hub/object-of-tones.mjs) —
      * the player plays a 9th, 11th, 13th or scale étude as Multetudes does. Multetudes' own bus traffic is unchanged. */
-    blurb: "one tool that holds many études · v1.1.20",
+    /* v1.1.21 (261121b, Daniel — *Pad - rootless and rounder, held through the barline* and *Voices - tone, pluck,
+     * sustain and bass, as picked by ear*): the five synth voices are the ones he picked by ear on the audition pages —
+     * the pad rootless at four tones or more, rounder, lower, slower, half the level, ±2 ¢, held through the barline;
+     * tone and sustain detuned, every note voice's filter following the note, a softer and shorter pluck, softer
+     * drawbars, the bass a sine and its octave (engine/voices.mjs). Stored études and the mixer's levels mean what
+     * they meant. */
+    blurb: "one tool that holds many études · v1.1.21",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

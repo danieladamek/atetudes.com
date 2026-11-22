@@ -31,6 +31,7 @@
 import {
   NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf,
   pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES,
+  cutoffOf, oscillatorsOf, PAD_LEVEL,
 } from "../../engine/voices.mjs";
 import { tetradPass } from "../../engine/tetrad-sequence.mjs";
 import { scaleNotes } from "../../engine/chord.mjs";
@@ -91,7 +92,7 @@ export const audioCard = {
     const pluckBuffer = (midi) => {
       let b = buffers.get(midi);
       if (b) return b;
-      const s = pluckSamples(midi, ac.sampleRate);
+      const s = pluckSamples(midi, ac.sampleRate, 1.2, NOTE_VOICES.pluck.source);
       b = ac.createBuffer(1, s.length, ac.sampleRate);
       b.getChannelData(0).set(s);
       buffers.set(midi, b);
@@ -112,32 +113,50 @@ export const audioCard = {
 
     /** realise ONE described voice as nodes. Every source is counted and its
      * whole chain disconnects on ended, so the node ceiling is bounded rather
-     * than hoped — the shipped study's discipline, kept. */
+     * than hoped — the shipped study's discipline, kept.
+     *
+     * 261121: the description's two new fields are realised, not decided, here —
+     * the cutoff is `cutoffOf` (fixed, or following the note), and a detuned
+     * source is `oscillatorsOf`'s pair: one oscillator per cent offset into ONE
+     * filter and ONE gain (the chain is linear, so a shared filter is the sum of
+     * two), the envelope scaled by the level each carries. Each oscillator is a
+     * source and counts against the ceiling. */
     const sound = (spec, midi, at, dur, vel) => {
       if (!ac || live > 240) return;
       const { points, start, stop } = envelopeOf(spec, at, dur, vel);
-      let src;
-      if (spec.source.kind === "pluck") {
-        src = ac.createBufferSource();
-        src.buffer = pluckBuffer(midi);
-      } else {
-        src = ac.createOscillator();
-        if (spec.source.kind === "wave") src.setPeriodicWave(waveFor(spec.source.partials || SUSTAIN_PARTIALS));
-        else src.type = spec.source.type;
-        src.frequency.value = hzOf(midi);
-      }
       const f = ac.createBiquadFilter();
-      f.type = spec.filter.type; f.frequency.value = spec.filter.freq; f.Q.value = spec.filter.q;
+      f.type = spec.filter.type; f.frequency.value = cutoffOf(spec.filter, midi); f.Q.value = spec.filter.q;
       const g = ac.createGain();
-      for (const p of points) {
-        if (p.kind === "set") g.gain.setValueAtTime(p.value, p.at);
-        else if (p.kind === "linear") g.gain.linearRampToValueAtTime(p.value, p.at);
-        else g.gain.exponentialRampToValueAtTime(Math.max(1e-5, p.value), p.at);
+      let srcs, k = 1;
+      if (spec.source.kind === "pluck") {
+        const src = ac.createBufferSource();
+        src.buffer = pluckBuffer(midi);
+        srcs = [src];
+      } else {
+        const o = oscillatorsOf(spec.source);
+        k = o.level;
+        srcs = o.cents.map((c) => {
+          const src = ac.createOscillator();
+          if (spec.source.kind === "wave") src.setPeriodicWave(waveFor(spec.source.partials || SUSTAIN_PARTIALS));
+          else src.type = spec.source.type;
+          src.frequency.value = hzOf(midi);
+          src.detune.value = c;
+          return src;
+        });
       }
-      src.connect(f).connect(g).connect(busFor(spec.bus));
-      src.start(start); src.stop(stop);
-      live++;
-      src.onended = () => { live--; src.disconnect(); f.disconnect(); g.disconnect(); };
+      for (const p of points) {
+        if (p.kind === "set") g.gain.setValueAtTime(p.value * k, p.at);
+        else if (p.kind === "linear") g.gain.linearRampToValueAtTime(p.value * k, p.at);
+        else g.gain.exponentialRampToValueAtTime(Math.max(1e-5, p.value * k), p.at);
+      }
+      f.connect(g).connect(busFor(spec.bus));
+      let running = srcs.length;
+      for (const src of srcs) {
+        src.connect(f);
+        src.start(start); src.stop(stop);
+        live++;
+        src.onended = () => { live--; src.disconnect(); if (--running === 0) { f.disconnect(); g.disconnect(); } };
+      }
     };
 
     /** the whole chord: the schedule comes from the engine, never from here */
@@ -264,7 +283,7 @@ export const audioCard = {
       if (!a) return;
       const dur = typeof m.dur === "number" && m.dur > 0 ? m.dur : 0.7;
       sound(voiceFor(role, voice), m.midi, a.currentTime + 0.02, dur,
-        role === "bass" ? 0.3 : role === "pad" ? 0.12 : 0.24);
+        role === "bass" ? 0.3 : role === "pad" ? PAD_LEVEL : 0.24);   // 261121: the pad's level is the pad's own (voices.mjs)
     });
     listen(d, ATTACK, (m) => {
       if (!m || typeof m.index !== "number") return;

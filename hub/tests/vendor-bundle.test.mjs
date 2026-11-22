@@ -164,17 +164,44 @@ test("smoke: the parser fix rides in 2.0.0 — a RiffRaft lane ending in |: thro
   assert.ok(n >= 6, `the must-throw cases ran (${n})`);
 });
 
+/* A DECLARED LAG (261121b, *Pad - rootless and rounder, held through the barline*): the source's pad is ROOTLESS at four
+ * tones or more; 2.2.0 — cut 261120, before it — carries night 57's seat, every chord tone. The bundle is RiffRaft's,
+ * and a version is cut on Daniel's word ("Yes, cut 2.2.0"); RiffRaft was outside that build, so 2.3.0 is his to cut and
+ * the lag is stated here rather than hidden: every NON-pad event is still compared exactly; the pad's events are
+ * compared BY THE RULE — the source's seat is the bundle's less exactly the chord's root when the bundle seats four or
+ * more, else the same. LOUD BOTH WAYS: the lag must be real (some bar differs), so a bundle that catches up fails this
+ * until the declaration is retired. */
+const PAD_LAG = ["2.2.0"];
+const padOf = (bar) => bar.events.filter((e) => e.role === "pad");
+const restOf = (bar) => ({ ...bar, events: bar.events.filter((e) => e.role !== "pad") });
 test("smoke: every corpus étude gives the SAME timeline through the bundle as through the source modules", () => {
   const corpus = JSON.parse(readFileSync(join(REPO, "hub", "tests", "fixtures", "etude-corpus.json"), "utf8"));
-  let chords = 0;
+  let chords = 0, lagged = 0;
   for (const { name, saved } of corpus) {
     const viaBundle = E.etudeTimeline(saved), viaSource = sourceTimeline(saved);
-    assert.deepEqual(viaBundle, viaSource, `${name}: the bundle's timeline equals the source's`);
+    if (!PAD_LAG.includes(VERSION)) assert.deepEqual(viaBundle, viaSource, `${name}: the bundle's timeline equals the source's`);
+    else {
+      assert.deepEqual({ ...viaBundle, bars: viaBundle.bars.map(restOf) }, { ...viaSource, bars: viaSource.bars.map(restOf) },
+        `${name}: apart from the pad (the declared lag), the bundle's timeline equals the source's`);
+      viaBundle.bars.forEach((bb, i) => {
+        const was = padOf(bb), now = padOf(viaSource.bars[i]);
+        if (was.length >= 4) {
+          assert.equal(now.length, was.length - 1, `${name} bar ${i + 1}: the source's pad leaves out exactly one note`);
+          assert.ok(now.every((e) => was.some((w) => w.midi === e.midi && w.dur === e.dur && w.onset === e.onset)), `${name} bar ${i + 1}: nothing added`);
+          // the one left out is the ROOT — read from the bar's sounded root (role "R"), which this corpus étude plays
+          const gone = was.find((w) => !now.some((e) => e.midi === w.midi)), r = bb.events.find((e) => e.role === "R");
+          assert.ok(r, `${name} bar ${i + 1}: the bar sounds its root, so the left-out note can be checked against it`);
+          assert.equal(gone.midi % 12, r.midi % 12, `${name} bar ${i + 1}: the note left out is the chord's root`);
+          lagged++;
+        } else assert.deepEqual(now, was, `${name} bar ${i + 1}: a pad of three or fewer is the same in both`);
+      });
+    }
     assert.ok(viaBundle.bars.length > 0 && viaBundle.bars.every((b) => b.events.length > 0), `${name}: a real timeline, every chord sounding`);
     chords += viaBundle.bars.length;
   }
   assert.ok(corpus.length >= 12 && chords > 50, `the corpus ran (${corpus.length} études, ${chords} chords)`);
-  console.log(`  ${corpus.length} études, ${chords} chords: bundle timeline = source timeline`);
+  if (PAD_LAG.includes(VERSION)) assert.ok(lagged > 0, `the declared pad lag for ${VERSION} is not real any more — retire PAD_LAG`);
+  console.log(`  ${corpus.length} études, ${chords} chords: bundle timeline = source timeline` + (lagged ? ` (the pad's declared lag: ${lagged} bars, rootless in the source)` : ""));
 });
 
 test("smoke: the degree palette is read from the bundle, equal to the engine's (never retyped)", () => {

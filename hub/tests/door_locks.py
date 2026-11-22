@@ -43,6 +43,35 @@ SHOTS = "--shots" in sys.argv
 failures = []
 checks = 0
 
+# 261121b: THE CENTS EACH VOICE'S NOTE STARTS, read from engine/voices.mjs (oscillatorsOf) and never typed here —
+# tone [-3, 3], sustain and pad [-2, 2], bass [0]; a pluck is one buffer. The click is the audio card's one oscillator.
+VOICE_CENTS = json.loads(subprocess.run(["node", "--input-type=module", "-e",
+    "import { NOTE_VOICES, BASS_VOICE, PAD_VOICE, oscillatorsOf } from './engine/voices.mjs';"
+    "const all = { ...NOTE_VOICES, bass: BASS_VOICE, pad: PAD_VOICE };"
+    "process.stdout.write(JSON.stringify(Object.fromEntries(Object.entries(all).map(([n, v]) => [n, oscillatorsOf(v.source).cents]))))"],
+    cwd=REPO, capture_output=True, text=True, check=True).stdout)
+
+
+def check_groups(page, tag, where):
+    """every NOTE group started since the last call holds EXACTLY the sources its voice describes — two for a detuned
+    voice at its own −d/+d, one for the bass, the pluck's one buffer, the click's one oscillator. A double-trigger (the
+    same note started twice at the same moment) makes a group of four, or two at 0 ¢, and fails here (261121b)."""
+    r = page.evaluate("""(vc) => { const sel = (document.getElementById('fdVoice') || {}).value || 'tone';
+      const ok = [vc[sel] || vc.tone, vc.bass, vc.pad, [0]].map((l) => JSON.stringify([...l].sort((a, b) => a - b)));
+      const out = { n: 0, bad: [] };
+      for (const [k, cents] of (window.__grp || new Map())) {
+        out.n++;
+        const c = JSON.stringify([...cents].sort((a, b) => a - b));
+        if (k[0] === 'b' ? cents.length !== vc.pluck.length : !ok.includes(c)) out.bad.push(k + ' ' + c);
+      }
+      if (out.bad.length) { out.notes = (window.__nt || []).slice(-12).map((x) => [x.m, x.r, Math.round(x.t)]);
+        out.ac = __may(() => document.__atetudesLast && document.__atetudesLast.get('atetudes:config'), 'diagnosis only, on a failed group check');
+        out.voice = sel; out.now = Math.round(performance.now()); }
+      window.__grp = new Map(); return out; }""", VOICE_CENTS)
+    check(r["n"] > 0, f"{tag} {where}: the group check saw no started source — it would pass vacuously")
+    check(not r["bad"], f"{tag} {where}: a NOTE started other than its voice's sources (a double-trigger?): {r['bad'][:4]}"
+          + (f" — voice {r.get('voice')}, last NOTEs [midi, role, ms] {r.get('notes')} at {r.get('now')} ms, config {json.dumps(r.get('ac'))[:600]}" if r["bad"] else ""))
+
 
 def check(cond, msg):
     global checks
@@ -944,12 +973,12 @@ def run_door(pw, door_id):
               if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
                 document.addEventListener('atetudes:note', e =>
                   window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
-              if (!window.__rawHooked) { window.__rawHooked = true;
+              window.__groupOf = window.__groupOf || (() => { /* 261121b: every start joins its NOTE's group. A NOTE is tagged while it is dispatched (a CAPTURE listener runs before the audio card's, a listener added now runs after it), so every source the card starts for ONE NOTE shares one group — a unison of two NOTEs is two groups, one NOTE sounded twice is one group of four. A start outside any NOTE (the click) is keyed by start time and pitch. check_groups() holds each group to the cents its voice describes. */ window.__grp = new Map(); let tag = null, seq = 0; document.addEventListener('atetudes:note', () => { tag = ++seq; }, true); document.addEventListener('atetudes:note', () => { tag = null; }); return (node, a) => { const pitch = node instanceof OscillatorNode ? node.frequency.value : 'buf'; const k = tag !== null ? 'n' + tag + '|' + pitch : 't' + pitch + '@' + (a[0] || 0); const c = node instanceof OscillatorNode ? node.detune.value : 0; const g = window.__grp.get(k); if (g) { g.push(c); return true; } window.__grp.set(k, [c]); return false; }; })(); if (!window.__rawHooked) { window.__rawHooked = true;
                 for (const C of [AudioBufferSourceNode, OscillatorNode]) {
                   const P = C.prototype.start;
-                  C.prototype.start = function(...a) { (window.__raw ||= []).push(1);
+                  C.prototype.start = function(...a) { if (window.__groupOf(this, a)) return P.apply(this, a); (window.__raw ||= []).push(1);
                     return P.apply(this, a); }; } }
-              window.__nt = []; window.__raw = []; }""")
+              window.__nt = []; window.__raw = []; window.__grp = new Map(); }""")
             page.uncheck("#fdMetChk"); page.wait_for_timeout(120)
             def cs_basses():
                 out = []
@@ -983,6 +1012,7 @@ def run_door(pw, door_id):
             check(all(g["raw"] == g["nt"] for g in cs_v),
                   f"{tag} FOLLOWS: raw parity holds "
                   f"({[(g['nt'], g['raw']) for g in cs_v]})")
+            check_groups(page, tag, "the centre-source bars")
             check(len(set(g["win"] for g in cs_f + cs_v)) == 1,
                   f"{tag} the WINDOW never jumps under either source "
                   f"({sorted(set(g['win'] for g in cs_f + cs_v))})")
@@ -1619,12 +1649,12 @@ def run_door(pw, door_id):
                 document.addEventListener('atetudes:step', e => {
                   if (e.detail && e.detail.request !== true)
                     window.__adv.push({ i: e.detail.index, t: performance.now() }); }); }
-              if (!window.__rawHooked) { window.__rawHooked = true;
+              window.__groupOf = window.__groupOf || (() => { /* 261121b: every start joins its NOTE's group. A NOTE is tagged while it is dispatched (a CAPTURE listener runs before the audio card's, a listener added now runs after it), so every source the card starts for ONE NOTE shares one group — a unison of two NOTEs is two groups, one NOTE sounded twice is one group of four. A start outside any NOTE (the click) is keyed by start time and pitch. check_groups() holds each group to the cents its voice describes. */ window.__grp = new Map(); let tag = null, seq = 0; document.addEventListener('atetudes:note', () => { tag = ++seq; }, true); document.addEventListener('atetudes:note', () => { tag = null; }); return (node, a) => { const pitch = node instanceof OscillatorNode ? node.frequency.value : 'buf'; const k = tag !== null ? 'n' + tag + '|' + pitch : 't' + pitch + '@' + (a[0] || 0); const c = node instanceof OscillatorNode ? node.detune.value : 0; const g = window.__grp.get(k); if (g) { g.push(c); return true; } window.__grp.set(k, [c]); return false; }; })(); if (!window.__rawHooked) { window.__rawHooked = true;
                 for (const C of [AudioBufferSourceNode, OscillatorNode]) {
                   const P = C.prototype.start;
-                  C.prototype.start = function(...a) { (window.__raw ||= []).push(1);
+                  C.prototype.start = function(...a) { if (window.__groupOf(this, a)) return P.apply(this, a); (window.__raw ||= []).push(1);
                     return P.apply(this, a); }; } }
-              window.__nt = []; window.__adv = []; window.__raw = []; }""")
+              window.__nt = []; window.__adv = []; window.__raw = []; window.__grp = new Map(); }""")
             page.click('#fdMini button[data-role="play"]')
             page.wait_for_timeout(3300)   # >3 bar-lengths at 240
             rp = page.evaluate("""() => ({ nt: window.__nt.map(n => n.m),
@@ -1638,6 +1668,7 @@ def run_door(pw, door_id):
             check(rp["raw"] == len(rp["nt"]),
                   f"{tag} at the AudioContext: every repetition's raw start IS an "
                   f"announced NOTE (raws {rp['raw']}, NOTEs {len(rp['nt'])})")
+            check_groups(page, tag, "the repeated bar")
             # switching off resumes at the RIGHT bar — the next boundary
             # advances to bar 2, exactly where the repeated bar left off
             # THE RESUME PROPERTY, derived from the artifact (never a magic
@@ -2413,10 +2444,10 @@ console.log(JSON.stringify(out));
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
               window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
-          if (!window.__rawHooked) { window.__rawHooked = true; window.__raw = [];
+          window.__groupOf = window.__groupOf || (() => { /* 261121b: every start joins its NOTE's group. A NOTE is tagged while it is dispatched (a CAPTURE listener runs before the audio card's, a listener added now runs after it), so every source the card starts for ONE NOTE shares one group — a unison of two NOTEs is two groups, one NOTE sounded twice is one group of four. A start outside any NOTE (the click) is keyed by start time and pitch. check_groups() holds each group to the cents its voice describes. */ window.__grp = new Map(); let tag = null, seq = 0; document.addEventListener('atetudes:note', () => { tag = ++seq; }, true); document.addEventListener('atetudes:note', () => { tag = null; }); return (node, a) => { const pitch = node instanceof OscillatorNode ? node.frequency.value : 'buf'; const k = tag !== null ? 'n' + tag + '|' + pitch : 't' + pitch + '@' + (a[0] || 0); const c = node instanceof OscillatorNode ? node.detune.value : 0; const g = window.__grp.get(k); if (g) { g.push(c); return true; } window.__grp.set(k, [c]); return false; }; })(); if (!window.__rawHooked) { window.__rawHooked = true; window.__raw = [];
             for (const C of [AudioBufferSourceNode, OscillatorNode]) {
               const P = C.prototype.start;
-              C.prototype.start = function(...a) { window.__raw.push(performance.now());
+              C.prototype.start = function(...a) { if (window.__groupOf(this, a)) return P.apply(this, a); window.__raw.push(performance.now());
                 return P.apply(this, a); }; } } }""")
 
         def play_bar_counts():
@@ -2427,10 +2458,12 @@ console.log(JSON.stringify(out));
             page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(250)
             return page.evaluate("() => [window.__nt.length, window.__raw.length]")
 
+        page.evaluate("() => { window.__grp = new Map(); }")   # 261121b: the group check's window opens here
         base = play_bar_counts()
         check(base == [5, 5],
               f"{tag} the baseline bar is four chord notes plus the fretted reference, "
               f"at the AudioContext: NOTEs/raw {base}")
+        check_groups(page, tag, "the baseline bar")
         page.fill("#fdBassVol", "0"); page.dispatch_event("#fdBassVol", "input")
         muted_bass = play_bar_counts()
         check(muted_bass[1] == base[1] - 1,
@@ -3484,14 +3517,14 @@ console.log(JSON.stringify(out));
           if (!window.__ntHooked) { window.__ntHooked = true; window.__nt = [];
             document.addEventListener('atetudes:note', e =>
               window.__nt.push({ m: e.detail.midi, t: performance.now(), r: e.detail.role || null })); }
-          if (!window.__rawHooked) { window.__rawHooked = true;
+          window.__groupOf = window.__groupOf || (() => { /* 261121b: every start joins its NOTE's group. A NOTE is tagged while it is dispatched (a CAPTURE listener runs before the audio card's, a listener added now runs after it), so every source the card starts for ONE NOTE shares one group — a unison of two NOTEs is two groups, one NOTE sounded twice is one group of four. A start outside any NOTE (the click) is keyed by start time and pitch. check_groups() holds each group to the cents its voice describes. */ window.__grp = new Map(); let tag = null, seq = 0; document.addEventListener('atetudes:note', () => { tag = ++seq; }, true); document.addEventListener('atetudes:note', () => { tag = null; }); return (node, a) => { const pitch = node instanceof OscillatorNode ? node.frequency.value : 'buf'; const k = tag !== null ? 'n' + tag + '|' + pitch : 't' + pitch + '@' + (a[0] || 0); const c = node instanceof OscillatorNode ? node.detune.value : 0; const g = window.__grp.get(k); if (g) { g.push(c); return true; } window.__grp.set(k, [c]); return false; }; })(); if (!window.__rawHooked) { window.__rawHooked = true;
             for (const C of [AudioBufferSourceNode, OscillatorNode]) {
               const P = C.prototype.start;
-              C.prototype.start = function(...a) { (window.__raw ||= []).push(performance.now());
+              C.prototype.start = function(...a) { if (window.__groupOf(this, a)) return P.apply(this, a); (window.__raw ||= []).push(performance.now());
                 return P.apply(this, a); }; } }
           if (!window.__clkHooked) { window.__clkHooked = true; window.__clk = [];
             document.addEventListener('atetudes:clock', e => window.__clk.push(e.detail)); }
-          window.__nt = []; window.__raw = []; window.__clk = []; }""")
+          window.__nt = []; window.__raw = []; window.__grp = new Map(); window.__clk = []; }""")
         # Daniel's own refusing configuration: Bb triads on {3,2,1} at the low
         # window — six bars place, Adim and Cm refuse by name (260908)
         page.select_option("#hcKey", "Bb"); page.wait_for_timeout(100)
@@ -3521,6 +3554,7 @@ console.log(JSON.stringify(out));
                 check(st["drawn"] > 0 and st["nt"] == st["drawn"] and st["raw"] == st["nt"],
                       f"{tag} audition bar {aud_bar + 1}: sounded == drawn == raw starts "
                       f"(drawn {st['drawn']}, NOTEs {st['nt']}, raws {st['raw']})")
+        check_groups(page, tag, "the audition walk")
         check(any(st["refused"] for st in aud_states) and any(not st["refused"] for st in aud_states),
               f"{tag} the audition walk covered BOTH states (refused bars: "
               f"{sum(1 for st in aud_states if st['refused'])}/8)")
@@ -3580,12 +3614,12 @@ console.log(JSON.stringify(out));
         # muted, raw source starts must EQUAL the NOTE count, and a chip
         # click while stopped must start nothing.
         page.evaluate("""() => {
-          if (!window.__rawHooked) { window.__rawHooked = true;
+          window.__groupOf = window.__groupOf || (() => { /* 261121b: every start joins its NOTE's group. A NOTE is tagged while it is dispatched (a CAPTURE listener runs before the audio card's, a listener added now runs after it), so every source the card starts for ONE NOTE shares one group — a unison of two NOTEs is two groups, one NOTE sounded twice is one group of four. A start outside any NOTE (the click) is keyed by start time and pitch. check_groups() holds each group to the cents its voice describes. */ window.__grp = new Map(); let tag = null, seq = 0; document.addEventListener('atetudes:note', () => { tag = ++seq; }, true); document.addEventListener('atetudes:note', () => { tag = null; }); return (node, a) => { const pitch = node instanceof OscillatorNode ? node.frequency.value : 'buf'; const k = tag !== null ? 'n' + tag + '|' + pitch : 't' + pitch + '@' + (a[0] || 0); const c = node instanceof OscillatorNode ? node.detune.value : 0; const g = window.__grp.get(k); if (g) { g.push(c); return true; } window.__grp.set(k, [c]); return false; }; })(); if (!window.__rawHooked) { window.__rawHooked = true;
             for (const C of [AudioBufferSourceNode, OscillatorNode]) {
               const P = C.prototype.start;
-              C.prototype.start = function(...a) { (window.__raw ||= []).push(performance.now());
+              C.prototype.start = function(...a) { if (window.__groupOf(this, a)) return P.apply(this, a); (window.__raw ||= []).push(performance.now());
                 return P.apply(this, a); }; } }
-          window.__raw = []; }""")
+          window.__raw = []; window.__grp = new Map(); }""")
         # REWRITTEN 260910 (item 1), reason stated: this pin asserted a chip
         # click while stopped starts NO audio — evidence the rogue tetrad
         # pass was dead (260905). Correct then, and still what it guards:
@@ -3610,6 +3644,7 @@ console.log(JSON.stringify(out));
               f"{tag} with the click muted, every raw audio start must BE an announced "
               f"NOTE — the walk's schedule is the only sounding path (NOTEs {counts[0]}, "
               f"raw starts {counts[1]})")
+        check_groups(page, tag, "the walk with the click muted")
         page.check("#fdMetChk")
         page.evaluate("""() => document.dispatchEvent(new CustomEvent('atetudes:step',
           { detail: { index: 0, request: true } }))""")
@@ -4979,8 +5014,11 @@ console.log(JSON.stringify(out));
         b_b = page.evaluate("() => window.__starts")
         page.click("#nextBtn"); page.wait_for_timeout(400)
         n_b = page.evaluate("() => window.__starts") - b_b
-        check(4 <= n_b <= 5 and page.input_value("#bassVolR") == "0",
-              f"{tag} bass muted but a step started {n_b} sources / slider {page.input_value('#bassVolR')!r}")
+        # 261121b: four chord notes, each the sources its voice describes (VOICE_CENTS, from oscillatorsOf — the tone
+        # voice is a detuned pair now), plus at most the click; was "4 to 5" when every voice started one source
+        per_note = len(VOICE_CENTS[page.input_value("#noteVoiceSel")])
+        check(4 * per_note <= n_b <= 4 * per_note + 1 and page.input_value("#bassVolR") == "0",
+              f"{tag} bass muted but a step started {n_b} sources (four notes × {per_note} per note, plus at most the click) / slider {page.input_value('#bassVolR')!r}")
         page.click("#bassMute")
         # RULE 1: drag the chord slider to zero BY HAND -> its icon shows muted
         page.fill("#chordVolR", "0"); page.dispatch_event("#chordVolR", "input")
@@ -6512,7 +6550,9 @@ console.log(JSON.stringify(out));
         check(pressed == [1, 2, 3, 4, 5, 6], f"{tag} the six-string set: {pressed}")
         with absent_ok("six strings: the reference has no string — no fretted reference mark may be drawn"):
             check(page.query_selector("#fieldSvg .fd-ref[data-refstr]") is None and "offered unfretted" in page.inner_text("#fdHint"), f"{tag} the reference is refused a string here and offered unfretted, as night 37 left it: {page.inner_text('#fdHint')[:200]!r}")
-        hook = "() => { if (!window.__n57) { window.__n57 = { notes: [], raw: 0 }; document.addEventListener('atetudes:note', e => window.__n57.notes.push({ m: e.detail.midi, r: e.detail.role || 'chord', u: !!e.detail.unfretted, d: e.detail.dur || null })); for (const C of [AudioBufferSourceNode, OscillatorNode]) { const P = C.prototype.start; C.prototype.start = function(...a) { window.__n57.raw++; return P.apply(this, a); }; } } window.__n57.notes = []; window.__n57.raw = 0; }"
+        # 261121b: the hook also records each started OSCILLATOR's pitch and detune, so the pad's sources are counted
+        # where they are made (rule 3) — a raw delta between two bars would also move with the chord notes' doubling
+        hook = "() => { if (!window.__n57) { window.__n57 = { notes: [], raw: 0, osc: [] }; document.addEventListener('atetudes:note', e => window.__n57.notes.push({ m: e.detail.midi, r: e.detail.role || 'chord', u: !!e.detail.unfretted, d: e.detail.dur || null })); for (const C of [AudioBufferSourceNode, OscillatorNode]) { const P = C.prototype.start; C.prototype.start = function(...a) { window.__n57.raw++; if (this instanceof OscillatorNode) window.__n57.osc.push([Math.round(69 + 12 * Math.log2(this.frequency.value / 440)), this.detune.value]); return P.apply(this, a); }; } } window.__n57.notes = []; window.__n57.raw = 0; window.__n57.osc = []; }"
         def bar():
             page.evaluate(hook)
             page.click('#fdMini button[data-role="play"]'); page.wait_for_timeout(1200); page.click('#fdMini button[data-role="stop"]'); page.wait_for_timeout(300)
@@ -6539,13 +6579,20 @@ console.log(JSON.stringify(out));
         page.check("#fdPad"); page.wait_for_timeout(300)
         check("The pad sounds" in page.inner_text("#fdHint") and "pad" in page.inner_text("#roLine"), f"{tag} the pad is said on the neck and in the readout: {page.inner_text('#fdHint')!r}")
         b3 = bar(); pads = [n for n in b3["notes"] if n["r"] == "pad"]
-        check(len(pads) == 4 and all(74 <= n["m"] < 86 for n in pads) and all(n["d"] and n["d"] > 1 for n in pads), f"{tag} the pad: the bar's four tones in [74, 86), each held for the bar: {pads}")
-        check(b3["raw"] >= b2["raw"] + 4, f"{tag} the pad is AUDIBLE — four more sources started at the AudioContext: {b3['raw']} vs {b2['raw']}")
+        # REWRITTEN 261121b ON PURPOSE (*Pad - rootless and rounder*): night 57 pinned "the bar's four tones"; the pad is
+        # rootless at four tones or more now, so Bbmaj7's pad is D F A — three notes, none a Bb — each two oscillators
+        check(len(pads) == 3 and all(74 <= n["m"] < 86 for n in pads) and all(n["d"] and n["d"] > 1 for n in pads), f"{tag} the pad: Bbmaj7's tones less its root, in [74, 86), each held for the bar: {pads}")
+        check(sorted(n["m"] % 12 for n in pads) == [2, 5, 9], f"{tag} the pad leaves out the ROOT (Bb) and nothing else — D F A: {pads}")
+        pad_osc = sorted(o for o in b3["osc"] if 74 <= o[0] < 86 and abs(o[1]) == 2)
+        want_osc = sorted([n["m"], c] for n in pads for c in (-2, 2))
+        check(pad_osc == want_osc, f"{tag} the pad is AUDIBLE — two oscillators per pad note, at −2 and +2 cents, started at the AudioContext: {pad_osc} vs {want_osc}")
         check(page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-sel').length") == page.evaluate("() => document.querySelectorAll('#fieldSvg .fd-sel:not(.fd-appr)').length"), f"{tag} the pad draws nothing on the neck")
         # the pad's level at zero schedules nothing (the mute rule, one state two views)
         page.fill("#fdPadVol", "0"); page.dispatch_event("#fdPadVol", "input")
         b4 = bar()
-        check(b4["raw"] <= b2["raw"] + 1 and page.get_attribute("#fdPadMute", "aria-pressed") == "true", f"{tag} the pad slider at zero starts no pad source and reads muted: {b4['raw']} vs {b2['raw']}")
+        # 261121b: read at the pad's own oscillators (±2 ¢ in its register), not as a raw delta — the tone voice's notes are pairs now
+        b4_pad = [o for o in b4["osc"] if 74 <= o[0] < 86 and abs(o[1]) == 2]
+        check(not b4_pad and b4["raw"] >= 1 and page.get_attribute("#fdPadMute", "aria-pressed") == "true", f"{tag} the pad slider at zero starts no pad source (while the bar still sounds) and reads muted: pad oscillators {b4_pad}, sources {b4['raw']}")
         page.fill("#fdPadVol", "100"); page.dispatch_event("#fdPadVol", "input")
         # SAVE · EXPORT · IMPORT INTO A COLD PAGE · both restored
         page.click('[data-cap="save"]')

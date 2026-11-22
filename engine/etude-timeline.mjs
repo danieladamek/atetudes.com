@@ -138,9 +138,10 @@ export function barAt(cfg, index, meter = DEFAULT_METER) {
     return { midi: e.midi, onset: e.at, dur: until(e.at) - e.at, role: e.tone, string: e.string, fret: e.fret };
   });
   /* THE PAD (night 57): the bar's harmony seated above the strings' register (padSeat), at the attack, held for the
-   * chord. Never under a scale (no chord), never through a refused bar. Listed FIRST — the walk announces it first. */
+   * chord. Never under a scale (no chord), never through a refused bar. Listed FIRST — the walk announces it first.
+   * 261121: rootless at four tones or more — the root handed in is the CHORD's own (rootPc), never read off the seat. */
   const pad = (cfg.pad && cfg.object !== "scale" && cur.tones && cur.tones.length && sel.length)
-    ? padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12)).map((m) => ({ midi: m, onset: 0, dur: beats, role: "pad" }))
+    ? padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12), ((cur.rootPc % 12) + 12) % 12).map((m) => ({ midi: m, onset: 0, dur: beats, role: "pad" }))
     : [];
   return { index, symbol: cur.symbol, degree: cur.degree, roman: cur.roman, beats, events: [...pad, ...events] };
 }

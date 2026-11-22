@@ -1,3 +1,25 @@
+## 2026-11-21 — The voices Daniel picked by ear; Multetudes v1.1.21, Tetradetudes v0.6.25
+
+- **Multetudes v1.1.21** (`static/studies/multetudes/study.html`) and **`/embed/multetudes/`** (re-published
+  byte-identical from `hub/build/player.html`), Update Log 261121.3: the five synth voices are the ones Daniel picked
+  on tonight's audition pages.
+  - **The pad** leaves out the root of a chord of four tones or more, so a 7th chord's pad no longer holds a
+    rubbing second. It is rounder, darker, swells in more slowly, sits at half the level, is very slightly detuned,
+    and holds through the barline instead of dipping to silence at every chord change.
+  - **Tone and sustain** are slightly detuned.
+  - **Every note voice's filter follows the note**, so high notes are as bright as low ones.
+  - **The pluck** has a softer pick, a shorter ring and no click at its start.
+  - **The sustain** uses softer drawbars and a longer release.
+  - **The bass** is a sine and its octave.
+  - Saved études and mixer levels mean what they meant: a saved étude opens the same and sounds like this.
+- **Tetradetudes v0.6.25** (`static/studies/tetradetudes/study.html`): the same tone, pluck, sustain and bass voices
+  (this door has no pad). Nothing on the page moved.
+- **Modes from Pentatonic Boxes** (`static/studies/modes-from-pentatonic-boxes/study.html`): re-emitted by its
+  generator, because it carries the shared voices file for its metronome click. Its click and every sound it makes
+  are unchanged.
+- **Unchanged:** Triadetudes keeps its own voices (whether it takes the new ones is Daniel's call). tetrad-voice-leading
+  is frozen. The metronome study is untouched.
+
 ## 2026-11-21 — The player plays a 9th as a 9th; Multetudes v1.1.20
 
 - **`/embed/multetudes/`** (Update Log 261121.2, *Player - the object comes from the tones, so a 9th chord plays as a

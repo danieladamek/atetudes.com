@@ -161,7 +161,10 @@ export default {
      * keys' and the étude's minis; the minis sit left of ⓘ + chevron now. */
     /* v0.6.23 (261013, Daniel): each card's ⓘ explains that card; only the notepad's speaks of saving. */
     /* v0.6.24 (261014): carried along — the chart parser refuses a repeat sign with no bar to carry it. */
-    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.24",
+    /* v0.6.25 (261121b, Daniel's picks by ear): carried along — the shared voices (engine/voices.mjs) are the ones he
+     * picked on the audition pages: tone and sustain detuned, filters that follow the note, a softer and shorter pluck,
+     * softer drawbars, the bass a sine and its octave. This door has no pad; nothing on its face moves. */
+    blurb: "four voices, moving as little as they have to — hub door #1 · v0.6.25",
     footer: "A hub door built from hub/doors/tetradetudes.door.mjs · At-Etudes.",
   },
 };

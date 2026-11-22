@@ -653,34 +653,53 @@ function bassSeat(lowMidi, bassPc, floor = 28) {
 
 /* ---------------- the Karplus-Strong string, as arithmetic ---------------- */
 
+/** THE PLUCK'S STRING, as Daniel picked it by ear (261121, *Voices - tone, pluck, sustain and bass*): `loss` is
+ * the factor in the feedback path (0.996 until then — a shorter ring now), `soften` the passes of a circular
+ * two-tap average over the noise burst BEFORE it rings (none until then — a softer pick). */
+const PLUCK_STRING = Object.freeze({ kind: "pluck", loss: 0.994, soften: 3 });
+
 /** The pluck, rendered SYNCHRONOUSLY into samples: deterministic, no worklet,
  * no async load — which is what keeps the `file://` zero-errors gate honest.
  *
  * The seed is a function of PITCH, so the same note is the same waveform in
- * every session and the test can assert it rather than eyeball it. The 0.996
- * factor is the loss in the feedback path; the two-tap average is the lowpass.
+ * every session and the test can assert it rather than eyeball it. `loss` is
+ * the loss in the feedback path; the two-tap average is the lowpass; `soften`
+ * passes of the same average smooth the burst first (the audition page's
+ * pluckSamples, 261121, is the reference). The string is the voice's own
+ * description unless a caller names another.
  */
-function pluckSamples(midi, sampleRate, seconds = 1.2) {
+function pluckSamples(midi, sampleRate, seconds = 1.2, { loss, soften } = PLUCK_STRING) {
   if (!Number.isFinite(sampleRate) || sampleRate <= 0)
     throw new Error("pluckSamples: a real sample rate is required");
+  if (!(loss > 0 && loss < 1)) throw new Error(`pluckSamples: the loss must lie in (0, 1), not ${loss}`);
+  if (!Number.isInteger(soften) || soften < 0) throw new Error(`pluckSamples: soften is a count of passes, not ${soften}`);
   const N = Math.max(2, Math.round(sampleRate / hzOf(midi)));
   const len = Math.floor(sampleRate * seconds);
   const out = new Float32Array(len);
-  const ring = new Float32Array(N);
+  let ring = new Float32Array(N);
   let seed = (midi * 2654435761) >>> 0;          // deterministic per pitch — testable
   for (let i = 0; i < N; i++) { seed = (seed * 1664525 + 1013904223) >>> 0; ring[i] = seed / 2147483648 - 1; }
+  for (let p = 0; p < soften; p++) {             // the softer pick: the burst smoothed before it rings
+    const nx = new Float32Array(N);
+    for (let i = 0; i < N; i++) nx[i] = 0.5 * (ring[i] + ring[(i + 1) % N]);
+    ring = nx;
+  }
   let idx = 0;
   for (let i = 0; i < len; i++) {
     const cur = ring[idx], nxt = ring[(idx + 1) % N];
     out[i] = cur;
-    ring[idx] = 0.996 * 0.5 * (cur + nxt);        // the lowpass in the feedback path
+    ring[idx] = loss * 0.5 * (cur + nxt);         // the lowpass in the feedback path
     idx = (idx + 1) % N;
   }
   return out;
 }
 
-/** drawbar-ish partials for the sustain voice; index 0 is DC and stays 0 */
-const SUSTAIN_PARTIALS = Object.freeze([0, 1, 0.45, 0.22, 0.10, 0.05]);
+/** drawbar-ish partials for the sustain voice; index 0 is DC and stays 0. Softer drawbars since 261121 (Daniel's pick;
+ * [0, 1, 0.45, 0.22, 0.10, 0.05] until then). */
+const SUSTAIN_PARTIALS = Object.freeze([0, 1, 0.25, 0.08, 0.02]);
+
+/** the bass: a sine and its octave (261121, Daniel's pick; a triangle until then) */
+const BASS_PARTIALS = Object.freeze([0, 1, 0.4]);
 
 /* ---------------- the voices, as descriptions ---------------- */
 
@@ -690,37 +709,68 @@ const SUSTAIN_PARTIALS = Object.freeze([0, 1, 0.45, 0.22, 0.10, 0.05]);
  * makes it assertable without an AudioContext. */
 const env = (kind, at, value) => ({ kind, at, value });
 
+/* TWO FIELDS A HOST REALISES, both as data (261121, Daniel's picks by ear):
+ *
+ *   - `filter.track` — a low-pass that FOLLOWS THE NOTE: the cutoff is `track` × the note's frequency, capped at
+ *     FILTER_CEILING (the audition page's cap). A filter has either `freq` (fixed) or `track`, never both — asserted
+ *     at load. So a voice is as bright on the high strings as on the low ones.
+ *   - `source.detune` — in cents: the note is realised as TWO oscillators at −detune and +detune, each at 1/√2 of the
+ *     level, so the pair carries one oscillator's power. Only an oscillator source takes it (a pluck is a buffer).
+ *
+ * `cutoffOf` and `oscillatorsOf` are the one reading of each; the host realises what they return and decides nothing. */
+const FILTER_CEILING = 18000;
+
+/** the low-pass cutoff for one note of a voice: its fixed `freq`, or `track` × the note's frequency, capped */
+function cutoffOf(filter, midi) {
+  return filter.track ? Math.min(FILTER_CEILING, filter.track * hzOf(midi)) : filter.freq;
+}
+
+/** the oscillators one note sounds: `cents` per oscillator, and the `level` each carries (a multiplier on the envelope) */
+function oscillatorsOf(source) {
+  const d = source.detune || 0;
+  return d > 0 ? { cents: [-d, d], level: Math.SQRT1_2 } : { cents: [0], level: 1 };
+}
+
+/* THE NOTE VOICES AS DANIEL PICKED THEM BY EAR (261121, notes/working/Voices audition 261121.html — its `play`,
+ * `envelope` and `pluckSamples` are the reference for every number). Each level is the role's velocity (the host's,
+ * shared by role) times the voice's own multiplier, here. Until 261121: tone 2,200 Hz fixed, no detune, ×1; pluck
+ * 3,400 Hz fixed, set at full level, an 80 ms release, ×1.5; sustain 2,600 Hz fixed, a 30 ms attack, a 90 ms release,
+ * ×0.85; bass a triangle at 520 Hz fixed, a 12 ms attack. */
 const NOTE_VOICES = {
   tone: {
     bus: "chord", tail: 0.05,
-    source: { kind: "osc", type: "triangle" },
-    filter: { type: "lowpass", freq: 2200, q: 0.4 },
+    source: { kind: "osc", type: "triangle", detune: 3 },
+    filter: { type: "lowpass", track: 8.5, q: 0.4 },
     envelope: (t, dur, vel) => [
       env("set", t, 0),
-      env("linear", t + 0.008, vel),
+      env("linear", t + 0.008, vel * 1.225),
       env("exp", t + dur, 0.0008),
     ],
   },
   pluck: {
     bus: "chord", tail: 0.02,
-    source: { kind: "pluck" },
-    filter: { type: "lowpass", freq: 3400, q: 0.2 },
-    envelope: (t, dur, vel) => [
-      env("set", t, vel * 1.5),
-      env("set", t + Math.max(0.01, dur - 0.08), vel * 1.5),
-      env("linear", t + dur, 0),
-    ],
+    source: PLUCK_STRING,
+    filter: { type: "lowpass", track: 9.5, q: 0.2 },
+    envelope: (t, dur, vel) => {
+      const a = Math.min(0.003, dur * 0.3);
+      return [
+        env("set", t, 0),
+        env("linear", t + a, vel * 1.3),
+        env("set", t + Math.max(a, 0.01, dur - 0.13), vel * 1.3),
+        env("linear", t + dur, 0),
+      ];
+    },
   },
   sustain: {
     bus: "chord", tail: 0.05,
-    source: { kind: "wave", partials: SUSTAIN_PARTIALS },
-    filter: { type: "lowpass", freq: 2600, q: 0.3 },
+    source: { kind: "wave", partials: SUSTAIN_PARTIALS, detune: 2 },
+    filter: { type: "lowpass", track: 12, q: 0.3 },
     envelope: (t, dur, vel) => {
-      const a = Math.min(0.03, dur * 0.3), r = Math.min(0.09, dur * 0.4);
+      const a = Math.min(0.027, dur * 0.3), r = Math.min(0.37, dur * 0.4);
       return [
         env("set", t, 0),
-        env("linear", t + a, vel * 0.85),
-        env("set", t + Math.max(a, dur - r), vel * 0.85),
+        env("linear", t + a, vel * 0.7),
+        env("set", t + Math.max(a, dur - r), vel * 0.7),
         env("linear", t + dur, 0),
       ];
     },
@@ -728,17 +778,18 @@ const NOTE_VOICES = {
 };
 
 /** A bass of its own (roadmap §2): mellower, darker filter, so the pedal no
- * longer smears into the triads' register. */
+ * longer smears into the triads' register. Since 261121 a sine and its octave
+ * under a filter at four times the note. */
 const BASS_VOICE = {
   bus: "bass", tail: 0.05,
-  source: { kind: "osc", type: "triangle" },
-  filter: { type: "lowpass", freq: 520, q: 0.5 },
+  source: { kind: "wave", partials: BASS_PARTIALS },
+  filter: { type: "lowpass", track: 4, q: 0.5 },
   envelope: (t, dur, vel) => {
-    const r = Math.min(0.12, dur * 0.4);
+    const a = Math.min(0.02, dur * 0.3), r = Math.min(0.12, dur * 0.4);
     return [
       env("set", t, 0),
-      env("linear", t + 0.012, vel),
-      env("set", t + Math.max(0.012, dur - r), vel),
+      env("linear", t + a, vel),
+      env("set", t + Math.max(a, dur - r), vel),
       env("linear", t + dur, 0),
     ];
   },
@@ -756,12 +807,19 @@ const BASS_VOICE = {
  * voicing anyone plays, never drawn. Daniel's to move; the constant is the one place it lives. */
 const PAD_REGISTER = Object.freeze([74, 86]);
 
-/** the pad's notes: each of the chord's pitch classes at its one midi inside PAD_REGISTER, low → high */
-function padSeat(pcs) {
+/** THE PAD'S NOTES — ONE RULE (261121, Daniel's pick by ear, *Pad - rootless and rounder*): the chord's pitch
+ * classes WITHOUT ITS ROOT when the chord has four or more tones, each at its one midi inside PAD_REGISTER, low →
+ * high; a triad or smaller keeps every tone. Until 261121 every tone sat here, and in that seat six of the seven
+ * diatonic tetrads held two notes a second apart (Cmaj7: E5 G5 B5 C6). The ROOT is the chord's, handed in by the
+ * caller (the chord knows it) — never guessed from the seat; a pick that holds no root has nothing to leave out. */
+function padSeat(pcs, rootPc) {
   const [lo, hi] = PAD_REGISTER;
+  const isPc = (pc) => Number.isInteger(pc) && pc >= 0 && pc <= 11;
+  for (const pc of pcs) if (!isPc(pc)) throw new Error(`padSeat: ${pc} is not a pitch class (0..11)`);
+  if (pcs.length && !isPc(rootPc)) throw new Error(`padSeat: the chord's root ${rootPc} is not a pitch class (0..11)`);
+  const kept = pcs.length >= 4 ? pcs.filter((pc) => pc !== rootPc) : pcs;
   const out = [];
-  for (const pc of pcs) {
-    if (!Number.isInteger(pc) || pc < 0 || pc > 11) throw new Error(`padSeat: ${pc} is not a pitch class (0..11)`);
+  for (const pc of kept) {
     const m = lo + ((((pc - lo) % 12) + 12) % 12);
     if (m >= hi) throw new Error("padSeat: the register is narrower than an octave");
     out.push(m);
@@ -769,20 +827,29 @@ function padSeat(pcs) {
   return out.sort((a, b) => a - b);
 }
 
-/** fundamentals-heavy, dark: the pad is heard under the material, not beside the guitar's lines */
-const PAD_PARTIALS = Object.freeze([0, 1, 0.35, 0.12, 0.04]);
+/** fundamentals-heavy, dark: the pad is heard under the material, not beside the guitar's lines. Rounder since
+ * 261121 (Daniel's pick; [0, 1, 0.35, 0.12, 0.04] until then). */
+const PAD_PARTIALS = Object.freeze([0, 1, 0.15, 0.03]);
 
+/** the pad's level per note — the pad's own, so it lives with the pad (261121: 0.06, half the 0.12 the host passed) */
+const PAD_LEVEL = 0.06;
+
+/** THE PAD, as picked 261121 (notes/working/Pad audition 261121.html, `padNote` is the reference): rounder partials
+ * under a lower filter, a slower swell, ±2 ¢, and the barline HELD — full level to the chord's end, then a linear
+ * release past it, under the next chord's swell, so the pad never falls to silence at a change. Its envelope is the
+ * one that runs past `dur`; envelopeOf's `stop` follows the last breakpoint, and the tail covers the source past it.
+ * Until 261121: 1,400 Hz, a 0.18 s swell, no detune, a release that ENDED at the chord's end. */
 const PAD_VOICE = {
   bus: "pad", tail: 0.1,
-  source: { kind: "wave", partials: PAD_PARTIALS },
-  filter: { type: "lowpass", freq: 1400, q: 0.3 },
+  source: { kind: "wave", partials: PAD_PARTIALS, detune: 2 },
+  filter: { type: "lowpass", freq: 1100, q: 0.3 },
   envelope: (t, dur, vel) => {
-    const a = Math.min(0.18, dur * 0.35), r = Math.min(0.3, dur * 0.4);
+    const a = Math.min(0.5, dur * 0.35), r = Math.min(0.3, dur * 0.4);
     return [
       env("set", t, 0),
       env("linear", t + a, vel),
-      env("set", t + Math.max(a, dur - r), vel),
-      env("linear", t + dur, 0),
+      env("set", t + dur, vel),
+      env("linear", t + dur + Math.max(a, r), 0),
     ];
   },
 };
@@ -795,13 +862,15 @@ function voiceFor(role, name) {
 }
 
 /** the envelope for one note, as data. `tail` is how long the source must run
- * past the envelope's end so the release is not cut off. */
+ * past the envelope's end so the release is not cut off. The END is the last
+ * breakpoint (261121) — `t + dur` for every voice but the pad, whose release
+ * runs past the barline. */
 function envelopeOf(spec, t, dur, vel) {
   const points = spec.envelope(t, dur, vel);
   for (let i = 1; i < points.length; i++)
     if (points[i].at < points[i - 1].at)
       throw new Error(`envelopeOf: breakpoints out of order at ${i} (${points[i].at} < ${points[i - 1].at})`);
-  return { points, start: t, stop: t + dur + spec.tail };
+  return { points, start: t, stop: Math.max(t + dur, points[points.length - 1].at) + spec.tail };
 }
 
 /* ---------------- the click ---------------- */
@@ -838,6 +907,11 @@ function clickSpec(name, level, { accents = true, vol = 1 } = {}) {
   for (const [n, v] of Object.entries({ ...NOTE_VOICES, bass: BASS_VOICE, pad: PAD_VOICE })) {
     if (!v.source || !v.filter || typeof v.envelope !== "function")
       throw new Error(`voices: ${n} is not a realisable description`);
+    // a filter is fixed OR follows the note, never both, never neither (261121)
+    if (("freq" in v.filter) === ("track" in v.filter))
+      throw new Error(`voices: ${n}'s filter must have exactly one of freq and track`);
+    if (v.source.detune && v.source.kind === "pluck")
+      throw new Error(`voices: ${n} detunes a pluck — a buffer has no second oscillator`);
     const { points } = envelopeOf(v, 0, 0.5, 0.2);
     if (points.length < 2) throw new Error(`voices: ${n} has no envelope`);
     if (Math.max(...points.map((p) => p.value)) > 1)
@@ -855,7 +929,7 @@ function clickSpec(name, level, { accents = true, vol = 1 } = {}) {
   if (clickSpec("beep", 2, { accents: false }).gain !== clickSpec("beep", 0, { accents: true }).gain)
     throw new Error("voices: accents off must make a downbeat sound exactly like a beat");
 }
-return { hzOf, NOTE_VOICE_NAMES, SUSTAIN_HOLD, voiceSchedule, chordSchedule, bassSeat, pluckSamples, SUSTAIN_PARTIALS, NOTE_VOICES, BASS_VOICE, PAD_REGISTER, padSeat, PAD_PARTIALS, PAD_VOICE, voiceFor, envelopeOf, CLICK_VOICES, CLICK_VOICE_NAMES, clickSpec };
+return { hzOf, NOTE_VOICE_NAMES, SUSTAIN_HOLD, voiceSchedule, chordSchedule, bassSeat, PLUCK_STRING, pluckSamples, SUSTAIN_PARTIALS, BASS_PARTIALS, FILTER_CEILING, cutoffOf, oscillatorsOf, NOTE_VOICES, BASS_VOICE, PAD_REGISTER, padSeat, PAD_PARTIALS, PAD_LEVEL, PAD_VOICE, voiceFor, envelopeOf, CLICK_VOICES, CLICK_VOICE_NAMES, clickSpec };
 })();
 
 /* ===== engine/chord.mjs ===== */
@@ -4055,7 +4129,7 @@ return { DEFAULT_BPM };
 
 /* ===== hub/modules/audio-card.mjs ===== */
 const __m_hub_modules_audio_card_mjs = (() => {
-const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES } = __m_engine_voices_mjs;
+const { NOTE_VOICE_NAMES, NOTE_VOICES, BASS_VOICE, voiceFor, envelopeOf, hzOf, pluckSamples, SUSTAIN_PARTIALS, voiceSchedule, bassSeat, clickSpec, CLICK_VOICE_NAMES, cutoffOf, oscillatorsOf, PAD_LEVEL } = __m_engine_voices_mjs;
 const { tetradPass } = __m_engine_tetrad_sequence_mjs;
 const { scaleNotes } = __m_engine_chord_mjs;
 const { parseFigure, figureEvents, playbackWord } = __m_engine_figure_mjs;
@@ -4150,7 +4224,7 @@ const audioCard = {
     const pluckBuffer = (midi) => {
       let b = buffers.get(midi);
       if (b) return b;
-      const s = pluckSamples(midi, ac.sampleRate);
+      const s = pluckSamples(midi, ac.sampleRate, 1.2, NOTE_VOICES.pluck.source);
       b = ac.createBuffer(1, s.length, ac.sampleRate);
       b.getChannelData(0).set(s);
       buffers.set(midi, b);
@@ -4171,32 +4245,50 @@ const audioCard = {
 
     /** realise ONE described voice as nodes. Every source is counted and its
      * whole chain disconnects on ended, so the node ceiling is bounded rather
-     * than hoped — the shipped study's discipline, kept. */
+     * than hoped — the shipped study's discipline, kept.
+     *
+     * 261121: the description's two new fields are realised, not decided, here —
+     * the cutoff is `cutoffOf` (fixed, or following the note), and a detuned
+     * source is `oscillatorsOf`'s pair: one oscillator per cent offset into ONE
+     * filter and ONE gain (the chain is linear, so a shared filter is the sum of
+     * two), the envelope scaled by the level each carries. Each oscillator is a
+     * source and counts against the ceiling. */
     const sound = (spec, midi, at, dur, vel) => {
       if (!ac || live > 240) return;
       const { points, start, stop } = envelopeOf(spec, at, dur, vel);
-      let src;
-      if (spec.source.kind === "pluck") {
-        src = ac.createBufferSource();
-        src.buffer = pluckBuffer(midi);
-      } else {
-        src = ac.createOscillator();
-        if (spec.source.kind === "wave") src.setPeriodicWave(waveFor(spec.source.partials || SUSTAIN_PARTIALS));
-        else src.type = spec.source.type;
-        src.frequency.value = hzOf(midi);
-      }
       const f = ac.createBiquadFilter();
-      f.type = spec.filter.type; f.frequency.value = spec.filter.freq; f.Q.value = spec.filter.q;
+      f.type = spec.filter.type; f.frequency.value = cutoffOf(spec.filter, midi); f.Q.value = spec.filter.q;
       const g = ac.createGain();
-      for (const p of points) {
-        if (p.kind === "set") g.gain.setValueAtTime(p.value, p.at);
-        else if (p.kind === "linear") g.gain.linearRampToValueAtTime(p.value, p.at);
-        else g.gain.exponentialRampToValueAtTime(Math.max(1e-5, p.value), p.at);
+      let srcs, k = 1;
+      if (spec.source.kind === "pluck") {
+        const src = ac.createBufferSource();
+        src.buffer = pluckBuffer(midi);
+        srcs = [src];
+      } else {
+        const o = oscillatorsOf(spec.source);
+        k = o.level;
+        srcs = o.cents.map((c) => {
+          const src = ac.createOscillator();
+          if (spec.source.kind === "wave") src.setPeriodicWave(waveFor(spec.source.partials || SUSTAIN_PARTIALS));
+          else src.type = spec.source.type;
+          src.frequency.value = hzOf(midi);
+          src.detune.value = c;
+          return src;
+        });
       }
-      src.connect(f).connect(g).connect(busFor(spec.bus));
-      src.start(start); src.stop(stop);
-      live++;
-      src.onended = () => { live--; src.disconnect(); f.disconnect(); g.disconnect(); };
+      for (const p of points) {
+        if (p.kind === "set") g.gain.setValueAtTime(p.value * k, p.at);
+        else if (p.kind === "linear") g.gain.linearRampToValueAtTime(p.value * k, p.at);
+        else g.gain.exponentialRampToValueAtTime(Math.max(1e-5, p.value * k), p.at);
+      }
+      f.connect(g).connect(busFor(spec.bus));
+      let running = srcs.length;
+      for (const src of srcs) {
+        src.connect(f);
+        src.start(start); src.stop(stop);
+        live++;
+        src.onended = () => { live--; src.disconnect(); if (--running === 0) { f.disconnect(); g.disconnect(); } };
+      }
     };
 
     /** the whole chord: the schedule comes from the engine, never from here */
@@ -4323,7 +4415,7 @@ const audioCard = {
       if (!a) return;
       const dur = typeof m.dur === "number" && m.dur > 0 ? m.dur : 0.7;
       sound(voiceFor(role, voice), m.midi, a.currentTime + 0.02, dur,
-        role === "bass" ? 0.3 : role === "pad" ? 0.12 : 0.24);
+        role === "bass" ? 0.3 : role === "pad" ? PAD_LEVEL : 0.24);   // 261121: the pad's level is the pad's own (voices.mjs)
     });
     listen(d, ATTACK, (m) => {
       if (!m || typeof m.index !== "number") return;
@@ -8057,9 +8149,10 @@ function barAt(cfg, index, meter = DEFAULT_METER) {
     return { midi: e.midi, onset: e.at, dur: until(e.at) - e.at, role: e.tone, string: e.string, fret: e.fret };
   });
   /* THE PAD (night 57): the bar's harmony seated above the strings' register (padSeat), at the attack, held for the
-   * chord. Never under a scale (no chord), never through a refused bar. Listed FIRST — the walk announces it first. */
+   * chord. Never under a scale (no chord), never through a refused bar. Listed FIRST — the walk announces it first.
+   * 261121: rootless at four tones or more — the root handed in is the CHORD's own (rootPc), never read off the seat. */
   const pad = (cfg.pad && cfg.object !== "scale" && cur.tones && cur.tones.length && sel.length)
-    ? padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12)).map((m) => ({ midi: m, onset: 0, dur: beats, role: "pad" }))
+    ? padSeat(cur.tones.map((t) => ((t.pc % 12) + 12) % 12), ((cur.rootPc % 12) + 12) % 12).map((m) => ({ midi: m, onset: 0, dur: beats, role: "pad" }))
     : [];
   return { index, symbol: cur.symbol, degree: cur.degree, roman: cur.roman, beats, events: [...pad, ...events] };
 }

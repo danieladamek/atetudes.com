@@ -37,6 +37,7 @@ def main():
         ("link", ["python3", "hub/tests/multetudes_link.py"]),   # 261120: Multetudes opens a link, copies embed code
         ("foot", ["python3", "hub/tests/neck_foot.py"]),   # 261120: the sequence above the legend, still through every chord
     ("parity", ["python3", "hub/tests/player_parity.py"]),   # 261121: the player plays what Multetudes plays, every object
+        ("voices", ["python3", "hub/tests/voice_render.py"]),   # 261121b: the voices, offline-rendered — the pad holds the barline, no click, the ceiling
         ("hugo", ["hugo", "--quiet"]),
         ("check_site", ["python3", "tools/check_site.py"]),          # the site: links, CNAME, .nojekyll, deploy records
         ("fence", ["python3", "tools/etude_fence.py", "--minify"]),  # 261120: an etude fence renders the player; bad/custom fails
