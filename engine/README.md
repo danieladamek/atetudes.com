@@ -25,6 +25,12 @@ working, not breaking. Document the contract beside the grep in the test file.
 engine/
 ├── chord.mjs            chord-symbol parser: string → structured chord; roman-numeral
 │                        parsing + key resolution (resolveRoman, scaleNotes) (pure)
+├── collection.mjs       THE COLLECTION ENGINE, mod N (Chromatetudes child 1, 261122): seven collections as step
+│                        lists only; the stack a cycle {d, d+k, …} mod N with k offered when it closes on 3 or 4
+│                        notes; quality read from chord.mjs; the ruled degree-name spelling (brief §3) (pure)
+├── collection-walk.mjs  THE WALK (Chromatetudes child 2): a collection's chords placed on a string set and walked
+│                        along the neck, every voice one collection step on its own string — voicings from
+│                        tetrad-voicings / triad-voicings, never a second generator (pure)
 ├── gamut.mjs            THE PARTIAL COLLECTION (night 48): pentatonics by the anhemitonic rule, the seven triad pairs, stacks, any degrees — derived, never tabled; the predicate itself lives in position.mjs
 ├── tunings.mjs          THE NAMED TUNINGS, THE STEP AND THE GLOBAL STEP (alternate tunings item 2; the 261009 injection): the one table
 │                        (drop D · DADGAD · open G · open D · open E · half-step down ·

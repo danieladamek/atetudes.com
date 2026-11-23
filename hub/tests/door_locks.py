@@ -8002,6 +8002,135 @@ console.log(JSON.stringify(out));
         check(not errs119, f"{tag} 261119: no page errors: {errs119[:3]}")
         cx119.close()
 
+    # ---------------- CHROMATETUDES (261122, child 3): the collection door's own locks ----------
+    # Keyed on the DOOR (a block keyed to a control skips in silence when the control goes). Every expectation is
+    # derived by the engine in a subprocess — the walk's positions, the distinct chord counts, the §2.1 hexes — and
+    # compared with what the BUILT page draws and sounds (verification doctrine rule 1: the artifact, not the model).
+    if door_id == "chromatetudes":
+        _cxe = subprocess.run(["node", "--input-type=module", "-e",
+            "const C = await import('./engine/collection.mjs'); const W = await import('./engine/collection-walk.mjs');"
+            " const P = await import('./engine/degree-palette.mjs');"
+            " const counts = []; for (const id of Object.keys(C.COLLECTIONS)) for (const k of C.stackIntervals(id))"
+            "   counts.push([id, k, C.walkChords(C.collection({ key: 'C', id }), k).distinct]);"
+            " const w = W.walk({ key: 'C', id: 'sixth-dim-major', k: 2, family: 'drop2', set: W.setsFor(4)[2] });"
+            " console.log(JSON.stringify({ counts, colors: P.FAM_COLOR,"
+            "   walk: w.positions.map((p) => p.notes.map((n) => n.string + '/' + n.midi).join(' ')) }))"],
+            capture_output=True, text=True, cwd=REPO)
+        CXE = json.loads(_cxe.stdout) if _cxe.returncode == 0 else {}
+        check(bool(CXE), f"{tag} the engine's expectations could not be read: {_cxe.stderr[-300:]}")
+        cx_state = lambda: page.evaluate("""() => ({ chord: document.querySelector('#cxChord').textContent,
+          pos: document.querySelector('#cxPos').textContent, says: document.querySelector('#cxSays').textContent,
+          key: document.querySelector('#cxKey').value, coll: document.querySelector('#cxColl').value,
+          set: document.querySelector('#cxSet').selectedOptions[0].textContent,
+          stackShown: !document.querySelector('#cxStackGrp').hidden,
+          dots: [...document.querySelectorAll('#cxNeck [data-midi]')].map((g) => ({ midi: +g.dataset.midi, deg: g.dataset.deg,
+            fam: g.dataset.fam, fill: g.querySelector('circle').getAttribute('fill'), label: g.querySelector('text').textContent,
+            name: g.getAttribute('aria-label') })) })""")
+        cx0 = cx_state()
+        # boot: the sixth-diminished in C, on its first chord; the stacking interval hidden (one is offered)
+        check(cx0["chord"] == "C6" and cx0["key"] == "C" and cx0["coll"] == "sixth-dim-major" and not cx0["stackShown"],
+              f"{tag} 261122: boots on C6 in C sixth-diminished with the stacking interval hidden: {cx0['chord']} {cx0['coll']} {cx0['stackShown']}")
+        # drop 3 is WITHHELD, named on the face — never offered, never silently absent
+        cx_fam = page.evaluate("[...document.querySelectorAll('#cxFam option')].map((o) => [o.textContent, o.disabled])")
+        check(["drop 3 — withheld", True] in cx_fam and ["drop 2", False] in cx_fam,
+              f"{tag} 261122: drop 3 is withheld by name in the voicing list, drop 2 offered: {cx_fam}")
+        check("Drop 3 is withheld" in page.evaluate("document.querySelector('#cxReadings').textContent"),
+              f"{tag} 261122: the info note does not say why drop 3 is withheld")
+        # §6.2 NAMING: every collection, every offered k — as many distinct names as the engine has distinct chords
+        for cx_id, cx_k, cx_n in CXE.get("counts", []):
+            page.select_option("#cxColl", cx_id)
+            if page.is_visible("#cxStack"):
+                page.select_option("#cxStack", str(cx_k))
+            cx_s = cx_state()
+            cx_m = re.search(r": (\d+) chords? — ([^.]+)\.", cx_s["says"])
+            cx_names = cx_m.group(2).split(" · ") if cx_m else []
+            check(cx_m is not None and int(cx_m.group(1)) == cx_n and len(set(cx_names)) == cx_n,
+                  f"{tag} 261122 §6.2: {cx_id} k={cx_k} shows {cx_names} — the engine has {cx_n} distinct chords")
+            check(cx_s["stackShown"] == (cx_id == "chromatic"),
+                  f"{tag} 261122: the stacking interval is shown only where more than one is offered ({cx_id}: {cx_s['stackShown']})")
+        # §6.3 THE TRAP, on the page: in D♭ the ♭6 is shown as A — and it is the sixth's cyan, labelled ♭6
+        page.select_option("#cxColl", "sixth-dim-major"); page.select_option("#cxKey", "Db")
+        cx_b6 = None
+        for _ in range(4):
+            cx_b6 = next((x for x in cx_state()["dots"] if x["deg"] == "♭6"), None)
+            if cx_b6: break
+            page.click("#cxNext")
+        check(cx_b6 is not None and cx_b6["name"].startswith("A,") and cx_b6["label"] == "♭6" and cx_b6["fam"] == "6"
+              and cx_b6["fill"] == CXE.get("colors", {}).get("6") and cx_b6["fill"] != CXE.get("colors", {}).get("5"),
+              f"{tag} 261122 §6.3 THE TRAP: D♭'s ♭6 is A, labelled ♭6, painted the sixth's colour (never A's letter's fifth): {cx_b6}")
+        check(all(x["fill"] == CXE.get("colors", {}).get(x["fam"]) and x["fam"] == x["deg"].strip("♭♯") for x in cx_state()["dots"]),
+              f"{tag} 261122 §6.3: every dot wears its degree name's colour: {cx_state()['dots']}")
+        # THE WALK ON THE ARTIFACT: C sixth-diminished, drop 2, strings 4-3-2-1 — the page's positions, end to end, are
+        # the engine's walk, note for note (stepped with the board's own arrows)
+        page.select_option("#cxKey", "C"); page.select_option("#cxSet", "2")
+        for _ in range(len(CXE.get("walk", [])) + 2):
+            page.click("#cxPrev")
+        cx_walk = []
+        for _ in range(len(CXE.get("walk", []))):
+            cx_walk.append(" ".join(f"{x['name'].split('string ')[1].split(' ')[0]}/{x['midi']}" for x in cx_state()["dots"]))
+            page.click("#cxNext")
+        check(cx_walk == CXE.get("walk") and len(cx_walk) >= 9,
+              f"{tag} 261122: the page's walk is not the engine's ({len(cx_walk)} positions): {cx_walk[:3]} vs {CXE.get('walk', [])[:3]}")
+        # PLAY sounds what the neck draws, and a bar later the walk has moved one position up
+        page.evaluate("window.__cxNotes = []; document.addEventListener('atetudes:note', (e) => window.__cxNotes.push(e.detail.midi))")
+        for _ in range(len(CXE.get("walk", [])) + 2):
+            page.click("#cxPrev")
+        cx_p0 = cx_state()
+        page.fill("#bpmVal", "300"); page.dispatch_event("#bpmVal", "change")
+        # an earlier block may leave the metronome running, and the owner rule keeps a clock the walk did not start —
+        # so the clock is stopped first (no owner named stops everything) and this pin proves Pause stops what Play started
+        page.click("#metroBtn") if page.evaluate("(document.__atetudesLast.get('atetudes:clock-state') || {}).running === true") else None
+        page.wait_for_timeout(100)
+        cx_was = page.evaluate("(document.__atetudesLast.get('atetudes:clock-state') || {}).running === true")
+        check(cx_was is False, f"{tag} 261122: the clock could not be stopped before the Pause pin — it would pass on a running metronome")
+        page.evaluate("window.__cxNotes = []")   # the arrows sound too — hear only what Play sounds
+        page.click("#cxPlay"); page.wait_for_timeout(150)
+        cx_heard = page.evaluate("window.__cxNotes.slice()")
+        check(sorted(cx_heard) == sorted(x["midi"] for x in cx_p0["dots"]),
+              f"{tag} 261122: Play sounds the drawn chord, every voice once: heard {cx_heard}, drawn {[x['midi'] for x in cx_p0['dots']]}")
+        page.wait_for_timeout(1100)
+        cx_p1 = cx_state()
+        check(cx_p1["pos"].split(" of ")[0] != cx_p0["pos"].split(" of ")[0] and int(cx_p1["pos"].split(" ")[0]) > int(cx_p0["pos"].split(" ")[0]),
+              f"{tag} 261122: a bar of Play did not walk up the neck: {cx_p0['pos']} → {cx_p1['pos']}")
+        page.click("#cxPlay"); page.wait_for_timeout(200)
+        # the metroOwner rule: Pause stops the clock ONLY if the walk started it — a metronome already running survives
+        check(page.evaluate("document.querySelector('#cxPlay').textContent") == "Play"
+              and page.evaluate("document.__atetudesLast.get('atetudes:clock-state').running") is cx_was,
+              f"{tag} 261122: Pause stops the clock the walk started, and only that (running before Play: {cx_was})")
+        page.fill("#bpmVal", "120"); page.dispatch_event("#bpmVal", "change")
+        # THE NECK AT 390: a window of frets around the chord, every chord dot inside it
+        page.set_viewport_size({"width": 390, "height": 900}); page.wait_for_timeout(200)
+        cx_win = page.evaluate("""() => { const s = document.querySelector('#cxNeck'); const vb = s.viewBox.baseVal;
+          return { win: s.getAttribute('data-window'), inside: [...s.querySelectorAll('[data-midi] circle')].every((c) =>
+            +c.getAttribute('cx') >= vb.x && +c.getAttribute('cx') <= vb.x + vb.width), w: s.getBoundingClientRect().width }; }""")
+        check(cx_win["win"] is not None and cx_win["inside"] and cx_win["w"] <= 390,
+              f"{tag} 261122: at 390 the neck is a window around the chord, every chord dot inside it: {cx_win}")
+        page.set_viewport_size({"width": 1280, "height": 900}); page.wait_for_timeout(150)
+        # §6.4 SHARED: a foreign note (the triadetudes oracle) — key, string set, bpm and meter offered; its scale withheld BY NAME
+        cx_note = (REPO / "hub/tests/oracles/triadetudes-night41.atchart.md").read_text()
+        page.evaluate("""(txt) => { const inp = document.querySelector('#importFile');
+          const f = new File([txt], 'triadetudes-night41.atchart.md', { type: 'text/markdown' });
+          const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); }""", cx_note)
+        page.wait_for_timeout(400)
+        cx_offer = page.query_selector('#histList .hist [data-cap="apply-shared"]')
+        cx_offer_text = cx_offer.inner_text() if cx_offer else ""
+        with absent_ok("a foreign note's scale must be withheld — checked below by name"):
+            cx_wh = page.query_selector('#histList .hist [data-cap="withheld"]')
+        cx_wh_text = cx_wh.inner_text() if cx_wh is not None else ""
+        check("key" in cx_offer_text and "string set" in cx_offer_text and "scale" not in cx_offer_text,
+              f"{tag} 261122 §6.4: the offer takes the key and the string set, never the scale: {cx_offer_text!r}")
+        check("scale — chromatetudes has no scale" in cx_wh_text,
+              f"{tag} 261122 §6.4: a seven-note scale is withheld BY NAME: {cx_wh_text!r}")
+        check(page.input_value("#cxKey") == "C", f"{tag} 261122 §6.4: importing alone moved the key — applying is a click")
+        if cx_offer is not None:
+            cx_offer.click(); page.wait_for_timeout(400)
+        cx_after = cx_state()
+        check(cx_after["key"] == "Eb" and "kept for the three-note collections" in cx_after["says"],
+              f"{tag} 261122 §6.4: the click brings E♭, and the three-string set is kept for the three-note collections, said: {cx_after['key']} {cx_after['says']!r}")
+        page.select_option("#cxColl", "whole-tone")
+        check(cx_state()["set"] == "B–G–D", f"{tag} 261122 §6.4: the whole-tone walk takes the note's strings 4-3-2: {cx_state()['set']!r}")
+        check(not errors, f"{tag} 261122: the collection door raised page errors: {errors[:3]}")
+
     # ---------------- SHARE WHAT YOU MAKE (261005, night 41): the offer, in the door ----------
     # A note written by the triadetudes PAGE (hub/tests/oracles/triadetudes-night41.atchart.md,
     # exported by that page on 261005 — an artifact, not a hand-typed form) is imported here.
