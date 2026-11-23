@@ -357,7 +357,12 @@ export default {
      * tone and sustain detuned, every note voice's filter following the note, a softer and shorter pluck, softer
      * drawbars, the bass a sine and its octave (engine/voices.mjs). Stored études and the mixer's levels mean what
      * they meant. */
-    blurb: "one tool that holds many études · v1.1.21",
+    /* v1.1.22 (261123, Daniel — *Player - the frame fits the étude, no white space under it*): Copy embed code measures
+     * this étude in the real player at every width from 300 to 1300 px (a couple of seconds, once per étude) and writes
+     * a frame whose height follows its column's width, with one measured number beneath it for a host that drops the
+     * width-following part (hub/embed-fit.mjs); embed.height below stays the general height — the fence's no-script
+     * height, and the code's height when the player cannot be reached. */
+    blurb: "one tool that holds many études · v1.1.22",
     footer: "A hub door built from hub/doors/multetudes.door.mjs · At-Etudes. " +
       "Colour is function against the key — or the reference, when one re-roots the field — or the centre, when it follows the changes. " +
       "The bracket right of the string numbers is the figure's order (child 3b).",

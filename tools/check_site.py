@@ -152,6 +152,13 @@ def check_etude_embeds(root=ROOT, content=(ROOT.parent / "content",)):
         if (!p.style.includes(`height:${h}px`)) out.push(`${name}: its height is not the ${app} door's measured embed.height (${h}px)`);
       }
       process.stdout.write(JSON.stringify(out));"""
+    # THE FRAME FITS ITS ÉTUDE (261123): every page with a player carries the fence's one script, listening for the
+    # message the player sends — its name read from the module that names it (hub/embed-fit.mjs HEIGHT_MSG)
+    msg = re.search(r'export const HEIGHT_MSG = "([^"]+)";', (ROOT.parent / "hub" / "embed-fit.mjs").read_text(encoding="utf-8"))
+    for page in sorted(pages_with):
+        n = (root / page).read_text(encoding="utf-8").count(f'"{msg.group(1)}"') if msg else -1
+        if n != 1:
+            problems.append(f"etude fence: {page} carries {n} frame-fitting script(s) listening for the player's height — one per page")
     if found:
         r = subprocess.run(["node", "--input-type=module", "-e", js, json.dumps(found)], cwd=ROOT.parent, capture_output=True, text=True)
         if r.returncode:

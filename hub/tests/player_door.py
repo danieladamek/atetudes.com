@@ -15,6 +15,12 @@ to its OWN Done when (*Player door — the neck, chord symbols, transport and te
   9. THE EMBED HEIGHT IS GATED: the player's natural height, at its TALLEST chord, for every linkable corpus étude and
      Daniel's 21-note figure, at seven widths from phone to desktop, never exceeds the Multetudes door's embed.height —
      the number Copy embed code writes. A typed figure can be any length; the failure names the étude that outgrew it.
+     --- *Player - the frame fits the étude, no white space under it* (261123) ---
+     9b. the height the player REPORTS to the page holding it (hub/embed-fit.mjs HEIGHT_MSG) is its tallest chord's,
+     as stepped here, for every étude at every width (to the rounding pixel) — read from a host page of another site
+     12. THE FENCE ON ATETUDES.COM: a content page built by Hugo with the shortest and the tallest corpus étude — each
+     frame is set to what ITS player reported, ends within a few px of the player's last line at its tallest chord,
+     never overflows at any chord, holds its height while playing, and the page logs no console error; at 390/740/1280
   --- *Player - the @ mark replaces the card title, and the header holds its shape* (261120) ---
  10. THE HEADER HOLDS ITS SHAPE: at each of the seven widths, through every chord of every étude in 8/9 — and Daniel's
      G harmonic minor cycle, whose F#dim7 — F# Altered ♭♭7 dropped the transport a row (his shot, 17:23) — the
@@ -25,7 +31,7 @@ to its OWN Done when (*Player door — the neck, chord symbols, transport and te
 Prints its assertion count; exits 1 on any failure. Two throwaway local servers stand in for atetudes.com and a
 stranger's blog — 127.0.0.1 and localhost are different SITES to the browser, which is the point.
 """
-import json, os, socket, subprocess, sys, tempfile, threading, time
+import json, os, shutil, socket, subprocess, sys, tempfile, threading, time
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -158,7 +164,7 @@ def main():
             check("no étude in this link" in pg.inner_text("#plMsg"), "2. no link: it says so, and plays nothing (there is no default étude)")
             pg.close()
             # ---- 8 + 9. every chord whole in the readout; the tallest chord inside the embed height ----
-            worst = {}
+            worst, T = {}, {}
             for w in (360, 390, 440, 500, 650, 700, 750, 900, 1280):   # 440, 750: where the old header moved Daniel's G harmonic minor (swept, 261120)
                 pg = b.new_page(viewport={"width": w, "height": 100})
                 for name, link in L["all"]:
@@ -180,9 +186,78 @@ def main():
                     check(len(said) >= 2, f"10. @{w} {name}: the readout changed through the run ({len(said)} readings) — else nothing was stepped")
                     check(len(shape) == 1, f"10. @{w} {name}: the transport and the neck hold still through every chord — "
                           + "; ".join(f"transport/neck top {k} at {v[0]!r}" for k, v in list(shape.items())[:3]))
-                    worst[w] = max(worst.get(w, 0), tallest)
+                    worst[w] = max(worst.get(w, 0), tallest); T[(w, name)] = tallest
                 pg.close()
             print("tallest player per width:", worst, "— embed height", L["height"])
+            # ---- 9b. what the player REPORTS is that tallest height: every étude, framed on another site's page ----
+            reported = 0
+            for w in sorted(worst):
+                (blog / "host.html").write_text("<!doctype html><meta charset=utf-8><body style='margin:0'><script>window.__h = {};"
+                    "addEventListener('message', (e) => { const fs = [...document.querySelectorAll('iframe')], i = fs.findIndex((f) => f.contentWindow === e.source);"
+                    " if (i >= 0 && e.data && e.data.type === 'atetudes:player-height') window.__h[i] = e.data; });</script>"
+                    + "".join(f"<iframe src='http://127.0.0.1:{ps}/embed/multetudes/{link}' style='display:block;width:100%;height:1600px;border:0'></iframe>" for _, link in L["all"]))
+                pg = b.new_page(viewport={"width": w, "height": 900}); pg.goto(f"http://localhost:{pb}/host.html")
+                try: pg.wait_for_function(f"() => Object.keys(window.__h).length === {len(L['all'])}", timeout=30000)
+                except Exception: pass
+                got = pg.evaluate("window.__h")
+                for i, (name, _) in enumerate(L["all"]):
+                    r = got.get(str(i)) or {}
+                    ok = r.get("width") == w and isinstance(r.get("height"), (int, float)) and 0 <= r["height"] - T[(w, name)] <= 1
+                    reported += ok
+                    check(ok, f"9b. @{w} {name}: the player reports {r.get('height')} px at width {r.get('width')} — its tallest chord, stepped, is {T[(w, name)]}")
+                pg.close()
+            print(f"reported heights matching the tallest chord: {reported} of {len(worst) * len(L['all'])}")
+            # ---- 12. the fence on an atetudes.com content page: each frame is what its player reported, ending at its last line ----
+            by_max = sorted({name for _, name in T}, key=lambda nm: max(T[(w, nm)] for w in worst))
+            fence_names = [by_max[0], by_max[-1]]
+            fence_dir = Path(tmp) / "fence"; shutil.copytree(REPO / "content", fence_dir / "content")
+            blocks = subprocess.run(["node", "--input-type=module", "-e", """import { etudeBlock, ETUDE_V } from './engine/etude-block.mjs';
+              import { readFileSync } from 'node:fs'; const c = JSON.parse(readFileSync('hub/tests/fixtures/etude-corpus.json', 'utf8'));
+              const want = JSON.parse(process.argv[1]); process.stdout.write(JSON.stringify(want.map((n) => etudeBlock(c.find((x) => x.name === n).saved, { app: 'multetudes', v: ETUDE_V }))));""",
+              json.dumps(fence_names)], cwd=REPO, capture_output=True, text=True, check=True).stdout
+            (fence_dir / "content" / "blog" / "fence-gate.md").write_text("---\ntitle: the fence gate\ndate: 2026-11-23\n---\n\nBefore.\n\n"
+                + "\n\nBetween.\n\n".join(json.loads(blocks)) + "\n\nAfter.\n")
+            hugo = subprocess.run(["hugo", "--quiet", "--contentDir", str(fence_dir / "content"), "--destination", str(fence_dir / "public")],
+                                  cwd=REPO, capture_output=True, text=True)
+            check(hugo.returncode == 0, f"12. Hugo built the fence page: {hugo.stderr[-300:]}")
+            (fence_dir / "public" / "embed" / "multetudes" / "index.html").write_bytes(BUILD.read_bytes())
+            hf, pf = serve(fence_dir / "public", "127.0.0.1")
+            LAST = """() => Math.max(...[...document.querySelectorAll('.wrap *')].filter((e) => e.getClientRects().length
+                && getComputedStyle(e).visibility !== 'hidden').map((e) => e.getBoundingClientRect().bottom))"""
+            fenced = 0
+            for w in (390, 740, 1280):
+                pg = b.new_page(viewport={"width": w, "height": 900}); errs = []
+                pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: m.type == "error" and errs.append(m.text))
+                pg.add_init_script("window.__h = []; addEventListener('message', (e) => { if (e.data && e.data.type === 'atetudes:player-height') window.__h.push([e.source, e.data.height]); });")
+                pg.goto(f"http://127.0.0.1:{pf}/blog/fence-gate/")
+                els = pg.query_selector_all("iframe[data-etude-player]")
+                check(len(els) == 2, f"12. @{w}: the page carries the two étude frames ({len(els)})")
+                for el in els: el.scroll_into_view_if_needed(); pg.wait_for_timeout(600)
+                pg.wait_for_timeout(400)
+                for i, el in enumerate(els):
+                    fr = el.content_frame(); nm = fence_names[i]
+                    said = pg.evaluate("(i) => { const f = document.querySelectorAll('iframe[data-etude-player]')[i]; const m = window.__h.filter((x) => x[0] === f.contentWindow); return m.length ? m[m.length - 1][1] : null; }", i)
+                    fh = el.bounding_box()["height"]
+                    check(said is not None and abs(fh - said) < 0.5, f"12. @{w} {nm}: the frame is {fh} px — its player reported {said}")
+                    n_ch = fr.evaluate("document.querySelectorAll('#tlScroll button').length"); gaps, over = [], []
+                    for c in range(n_ch):
+                        fr.evaluate("(i) => document.dispatchEvent(new CustomEvent('atetudes:step', { detail: { index: i, request: true } }))", c); fr.wait_for_timeout(30)
+                        gaps.append(fr.evaluate("document.documentElement.clientHeight") - fr.evaluate(LAST))
+                        over.append(fr.evaluate("document.documentElement.scrollHeight - document.documentElement.clientHeight"))
+                    check(n_ch >= 3 and 0 <= min(gaps) <= 8, f"12. @{w} {nm}: at its tallest chord the frame ends {min(gaps):.1f} px under the player's last line (0–8)")
+                    check(not any(over), f"12. @{w} {nm}: the player never overflows its frame, at any chord: {over}")
+                    if i == 1:
+                        fr.click('#fdMini [data-role="play"]'); hts = set()
+                        for _ in range(8): pg.wait_for_timeout(400); hts.add(round(el.bounding_box()["height"], 1))
+                        fr.click('#fdMini [data-role="stop"]')
+                        check(len(hts) == 1, f"12. @{w} {nm}: the frame holds its height while playing: {sorted(hts)}")
+                    fenced += 1
+                check(not errs, f"12. @{w}: the fence page logs no error: {errs[:3]}")
+                pg.screenshot(path=str(Path(tmp) / f"fence-{w}.png"))
+                if os.environ.get("FENCE_SHOTS"): shutil.copy(Path(tmp) / f"fence-{w}.png", Path(os.environ["FENCE_SHOTS"]) / f"fence-{w}.png")
+                pg.close()
+            hf.shutdown()
+            check(fenced == 6, f"12. the fence ran on two études at three widths ({fenced} of 6)")
             # ---- 10, swept: Daniel's étude, the window RESIZED every 10 px from 340 to 1300 — the seat re-measures on a
             # resize, so the shape holds at widths no list names (the old header moved it at 410-470 and 720-780) ----
             name, link = L["all"][-1]

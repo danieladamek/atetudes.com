@@ -12,6 +12,12 @@
   THE HEIGHT is the Multetudes door's measured embed height (hub/doors/multetudes.door.mjs `embed.height`), stated in
   hugo.yaml `params.etudeEmbedHeight`; check_site.py asserts the two agree.
 
+  THE FRAME FITS ITS ÉTUDE (261123, *Player - the frame fits the étude, no white space under it*): the player states
+  its height — its tallest chord at the frame's width (hub/modules/etude-player.mjs, message atetudes:player-height,
+  hub/embed-fit.mjs) — and the one script below, written once per page, sets each étude frame to what ITS player said
+  (the message's source must be that frame's window, from this site). The measured height stays in the markup as the
+  height before the message comes and for a reader without script.
+
   SURVIVING CONSTRAINT (the item): whichever shell wins the re-scope, this becomes a hook in engine/markdown.mjs's
   renderToHtml — so it stays this small: one regex for the app, one encoding, one piece of markup. */ -}}
 {{- $body := strings.TrimSpace .Inner -}}
@@ -21,6 +27,9 @@
 {{- $h := site.Params.etudeEmbedHeight -}}
 {{- if not $h -}}{{- errorf "%s: hugo.yaml states no params.etudeEmbedHeight for an etude fence" .Position -}}{{- end -}}
 <div class="etude-embed">
-<iframe src="/embed/{{ $app }}/{{ $frag | safeURL }}" title="An étude on the neck, from At-Etudes" loading="lazy" style="display:block;width:100%;height:{{ $h }}px;border:0"></iframe>
+<iframe src="/embed/{{ $app }}/{{ $frag | safeURL }}" title="An étude on the neck, from At-Etudes" loading="lazy" data-etude-player style="display:block;width:100%;height:{{ $h }}px;border:0"></iframe>
 <p><a href="/studies/{{ $app }}/study.html{{ $frag | safeURL }}">Play this étude on At-Etudes</a></p>
 </div>
+{{- if not (.Page.Store.Get "etudeFrameFit") }}{{ .Page.Store.Set "etudeFrameFit" true }}
+<script>addEventListener("message",function(e){var m=e.data;if(e.origin!==location.origin||!m||m.type!=="atetudes:player-height"||typeof m.height!=="number"||!(m.height>0))return;document.querySelectorAll("iframe[data-etude-player]").forEach(function(f){if(f.contentWindow===e.source)f.style.height=Math.ceil(m.height)+"px"})});</script>
+{{- end }}

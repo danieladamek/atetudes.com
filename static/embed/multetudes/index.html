@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multetudes · At-Etudes</title>
 <!-- BUILT FILE. Door "player", lock {"field":true,"audio":true,"surface":"player"}.
-     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/atchart.mjs, engine/etude-block.mjs, engine/etude-link.mjs, hub/etude-record.mjs, hub/modules/etude-player.mjs, engine/position.mjs, engine/string-run.mjs, engine/role.mjs, engine/selection.mjs, engine/structures.mjs, engine/reference.mjs, engine/progression.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/brand.mjs, hub/marks.mjs, hub/object-of-tones.mjs, hub/modules/field-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/card-shell.mjs, hub/shell.mjs
+     Contains: engine/note-events.mjs, engine/voices.mjs, engine/chord.mjs, engine/tetrad-voicings.mjs, engine/isolation.mjs, engine/voice-identity.mjs, engine/field.mjs, engine/open-string.mjs, engine/tetrad-sequence.mjs, engine/drill.mjs, engine/string-sets.mjs, engine/motion.mjs, engine/figure.mjs, hub/bus.mjs, hub/tempo.mjs, hub/modules/audio-card.mjs, engine/atchart.mjs, engine/etude-block.mjs, engine/etude-link.mjs, hub/etude-record.mjs, engine/structures.mjs, engine/position.mjs, engine/role.mjs, engine/selection.mjs, engine/reference.mjs, engine/progression.mjs, hub/embed-fit.mjs, hub/modules/etude-player.mjs, engine/string-run.mjs, engine/etude-timeline.mjs, hub/modules/etude-walk.mjs, engine/tunings.mjs, engine/shared-config.mjs, engine/gamut.mjs, hub/mini.mjs, hub/bpm-field.mjs, hub/clock.mjs, engine/degree-palette.mjs, hub/palette.mjs, hub/legend.mjs, hub/motif.mjs, hub/readout.mjs, hub/brand.mjs, hub/marks.mjs, hub/object-of-tones.mjs, hub/modules/field-board.mjs, engine/metronome.mjs, hub/modules/metronome-card.mjs, engine/chart-line.mjs, hub/modules/timeline-strip.mjs, hub/card-shell.mjs, hub/shell.mjs
      Regenerate: node hub/tools/build.mjs player
      (What the lock does NOT reach is deliberately unnamed here — a file that
       names its pruned modules still contains their names.) -->
@@ -129,6 +129,16 @@ footer{color:var(--gray);font-size:11.5px;margin-top:18px;line-height:1.5}
 .pl-msg{margin:0;color:var(--ink)}
 .pl-msg:empty{display:none}
 .pl-open{margin-left:auto;font-size:12px;color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+/* the page ends at its last line (261123): the shell's 60 px under the footer is space for a page you scroll, and in a
+ * frame sized to the player it is only white space under the étude */
+.wrap:has(.pl-foot){padding-bottom:6px}
+/* NO SCROLLBAR OF ITS OWN (261123, measured): a frame a moment too short for the player — a host's frame resizing a
+ * beat behind its column — gave the player a classic scrollbar, which narrowed its layout under 600 px, which drew
+ * the tall phone neck, which kept the scrollbar: stuck 173 px over its frame at 604 px wide. The page still scrolls
+ * (wheel, touch, keys); it just never takes width from the layout, so the player is always laid out at its frame's
+ * width — the width it was measured at. */
+html:has(.pl-foot){scrollbar-width:none}
+html:has(.pl-foot)::-webkit-scrollbar{display:none}
 
 
 #fieldSvg{width:100%;height:auto;display:block;outline:none;min-width:0}
@@ -5331,116 +5341,137 @@ function etudeRecord(doc) {
 return { EXCLUDED, PLACE, etudeRecord };
 })();
 
-/* ===== hub/modules/etude-player.mjs ===== */
-const __m_hub_modules_etude_player_mjs = (() => {
-const { fromFragment, toFragment } = __m_engine_etude_link_mjs;
-const { checkEtude, ETUDE_V } = __m_engine_etude_block_mjs;
-const { etudeRecord } = __m_hub_etude_record_mjs;
-const { CLOCK, CLOCK_STATE, announce, listen } = __m_hub_bus_mjs;
-/* etude-player.mjs — THE PLAYER'S OWN PART: the étude from the link, the refusal, Open in Multetudes, one at a time
- * (261120 — child 3 of the étude embed epic; Daniel's scope and his two rulings of 2026-11-20 are in the item,
- * *Player door — the neck, chord symbols, transport and tempo*).
+/* ===== engine/structures.mjs ===== */
+const __m_engine_structures_mjs = (() => {
+const { parseChord, resolveRoman } = __m_engine_chord_mjs;
+const { parseAtchart, serializeAtchart } = __m_engine_atchart_mjs;
+/* structures.mjs — the palette's structure catalog (component v1).
  *
- * WHAT IT DOES, AND WHAT IT LEAVES TO OTHERS. The neck, the chord readout, play/stop and the tempo are field-board's
- * (ruling 1: the neck is drawn once); the walk is etude-walk's; the grid is the metronome card's, mounted hidden
- * (ruling 2). This module holds no musical fact of its own (golden rule 1, web form): the étude arrives as the
- * link's block, read by engine/etude-link.mjs — the ONLY reader, which draws the §6 line — and goes home by the
- * record's own restore, exactly as a pasted block does in Multetudes. Every note sounded is derived from it, now.
+ * The notepad arc's child 3, tier 2/3/4 derivations — shared family code
+ * (the v0.6 harmony panel and Substitute Teacher's substitution lab are its
+ * later consumers). Pure: no DOM, no audio.
  *
- * IT NEVER GUESSES. A link it cannot read, an étude another app wrote, a version newer than this build reads, a value
- * the block's grammar or the bench refuses, or typed changes (§6): the neck is not shown, the reason is, in plain ink,
- * and Open in Multetudes stays when there is an étude to open. Restoring part of an étude would play something the
- * author did not write — so a single refused value refuses the whole link (unlike Multetudes' paste, which skips and
- * names: there a person is at the bench to see it).
+ * THE LOAD-BEARING CONSTRAINT (golden rule 1): a structure is defined ONCE
+ * as a degree pattern — roman numerals with qualities — and transposed into
+ * the requested key by pitch-class math through engine/chord.mjs's
+ * resolveRoman (consumer #2 of the v0.6 resolution path; no parallel one).
+ * A table of twelve hand-typed ii–V–I progressions would be a spec violation
+ * even with identical output — and the grep test asserts no quoted absolute
+ * chord symbol exists anywhere in this module's source. Enharmonic spelling
+ * per key is resolveRoman's named rule (Db in the flat keys, C# in the sharp
+ * ones, double accidentals where the arithmetic demands them), re-parsed by
+ * parseChord so every resolution passes the parser's structural assertions.
  *
- * ONE PLAYER AT A TIME (Daniel, 2026-11-20): starting one stops every other. The players are same-origin documents
- * (atetudes.com) on one host page, so a BroadcastChannel reaches them all — and under storage partitioning it is keyed
- * by the top-level site, which is exactly "the page they are embedded in". (Two tabs of the same host page share it
- * too: starting a player in one stops a player in the other. Accepted — still one sound at a time.)
+ * Everything this module emits is VALID APP INPUT BY CONSTRUCTION:
+ * chart bodies parse as .atchart.md chart blocks; changes lines parse
+ * symbol-by-symbol through parseChord; the chord chooser's whole matrix is
+ * load-asserted through the parser.
  */
 
 
+// ---------- the catalog: degree patterns, bar groupings ----------
 
+const STRUCTURES = [
+  { id: "ii-V-I", name: "ii–V–I",
+    bars: [["ii7", "V7"], ["Imaj7"]] },
+  { id: "ii-V-i", name: "ii–V–i (minor)",
+    bars: [["iiø7", "V7"], ["i7"]] },
+  { id: "turnaround", name: "turnaround (I–vi–ii–V)",
+    bars: [["Imaj7", "vi7"], ["ii7", "V7"]] },
+  { id: "blues-12", name: "twelve-bar blues",
+    bars: [["I7"], ["IV7"], ["I7"], ["I7"], ["IV7"], ["IV7"], ["I7"], ["I7"],
+      ["V7"], ["IV7"], ["I7"], ["V7"]] },
+  { id: "rhythm-a", name: "rhythm changes — A section",
+    bars: [["Imaj7", "vi7"], ["ii7", "V7"], ["Imaj7", "vi7"], ["ii7", "V7"],
+      ["I7"], ["IV7"], ["Imaj7", "V7"], ["Imaj7"]] },
+  { id: "cycle-4ths", name: "cycle of fourths",
+    bars: [["I"], ["IV"], ["bVII"], ["bIII"], ["bVI"], ["bII"], ["bV"],
+      ["VII"], ["III"], ["VI"], ["II"], ["V"]] },
+];
 
-/** the channel every player on a page shares — named once */
-const PLAYER_CHANNEL = "atetudes-player";
+/** The chooser's twelve roots — flats preferred where ambiguous, every one
+ * parseChord-valid (asserted at load). These are pitch NAMES, not chords:
+ * the grep forbids quoted root+quality combinations, not bare roots. */
+const CHORD_ROOTS =
+  ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 
-/** a location hash → { snapshot } to play, or { reason } (and `snapshot` when there is an étude to open elsewhere).
- * Pure: the module's one decision, testable without a page. */
-function playable(hash, app, readsUpTo = ETUDE_V) {
-  const r = fromFragment(hash);
-  if (r.reason) return { reason: r.reason };
-  if (r.app && r.app !== app) return { reason: `this link holds an étude ${r.app} wrote; this player plays ${app} études` };
-  if (typeof r.v !== "number" || !Number.isInteger(r.v) || r.v < 1)
-    return { reason: "this link's étude names no version this player can read" };
-  if (r.v > readsUpTo) return { reason: `this link's étude is version ${r.v}; this player reads up to version ${readsUpTo}` };
-  const refused = [...r.flagged.map((f) => `${f.key || `line ${f.n}`} (${f.reason})`),
-    ...checkEtude(r.snapshot).map((b) => `${b.key} (${b.reason})`)];
-  if (refused.length) return { reason: `this link's étude has a value the player cannot play: ${refused.join("; ")}`, snapshot: r.snapshot };
-  return { snapshot: r.snapshot };
+/** The chooser's qualities — exactly what parseChord accepts (load-asserted;
+ * suffix strings, no roots attached). */
+const CHORD_QUALITIES =
+  ["", "m", "7", "maj7", "m7", "m7b5", "dim7", "6", "m6", "9", "maj9", "m9",
+   "sus4", "aug", "7#5", "7b9", "mMaj7"];
+
+/** Tier 1 — the typographic glyph set (decision 5: no notation font; the
+ * U+1D1xx block is not offered at all). Every glyph renders everywhere with
+ * no font shipped. */
+const GLYPHS =
+  ["♭", "♯", "♮", "°", "ø", "△", "•",
+   "|", "|:", ":|", "->"];
+
+// ---------- derivation ----------
+
+/** resolveStructure(id, key) → { id, name, key, bars:[[symbol,…],…] } —
+ * every symbol derived through resolveRoman and re-parsed by parseChord. */
+function resolveStructure(id, key) {
+  const st = STRUCTURES.find((s) => s.id === id);
+  if (!st) throw new Error('structures: unknown structure "' + id + '"');
+  const bars = st.bars.map((bar) => bar.map((roman) => {
+    const r = resolveRoman(roman, key);
+    if (!r) throw new Error('structures: "' + roman + '" did not resolve in ' + key);
+    parseChord(r.symbol); // the parser's own assertions gate every emission
+    return r.symbol;
+  }));
+  return { id: st.id, name: st.name, key, bars };
 }
 
-const etudePlayer = {
-  id: "etude-player",
-  layer: "surface",
-  requires: { surface: "player" },
-  /* no panel of its own (a panel needs a header band, and this has nothing to head): it ships hidden and its one line
-   * moves at mount — into the page footer when the étude plays, into the neck's place when it is refused */
-  mount_point: "hidden",
-  controls: ["plOpen", "plMsg"],
+/** chartBody(id, key) → the chart-block body in the format engine's
+ * CANONICAL form: the derived bars are round-tripped through parseAtchart/
+ * serializeAtchart, so what the palette inserts is byte-for-byte what the
+ * format itself would write — fixed-point by construction, not imitation. */
+function chartBody(id, key) {
+  const { bars } = resolveStructure(id, key);
+  const raw = "| " + bars.map((b) => b.join(" ")).join(" | ") + " |";
+  const doc = "---\natchart: 1\n---\n```chart\n" + raw + "\n```\n";
+  const out = serializeAtchart(parseAtchart(doc));
+  return out.slice(out.indexOf("```chart\n") + 9, out.lastIndexOf("\n```"));
+}
 
-  markup: `
-  <div class="pl-foot">
-    <span class="hint pl-msg" id="plMsg" data-control="plMsg" role="status"></span>
-    <a class="pl-open" id="plOpen" data-control="plOpen" target="_blank" rel="noopener">Open in Multetudes ↗</a>
-  </div>`,
+/** chartFence(id, key) → the fenced block the notepad inserts (tier 3);
+ * engine/atchart.mjs reads it and sibling apps can act on it. */
+function chartFence(id, key) {
+  return "```chart\n" + chartBody(id, key) + "\n```";
+}
 
-  styles: `
-.pl-foot{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
-.pl-msg{margin:0;color:var(--ink)}
-.pl-msg:empty{display:none}
-.pl-open{margin-left:auto;font-size:12px;color:var(--ink);text-decoration:underline;text-underline-offset:2px}`,
+/** changesLine(id, key) → the flat symbol sequence (tier 4): valid input for
+ * Triadetudes' Break-down changes field by construction — every token is a
+ * parseChord-valid symbol. */
+function changesLine(id, key) {
+  return resolveStructure(id, key).bars.flat().join(" ");
+}
 
-  mount(ctx) {
-    const d = ctx.doc, byId = ctx.byId, win = d.defaultView;
-    const cfg = ctx.door.player || {};
-    const app = cfg.app, open = byId("plOpen"), msg = byId("plMsg");
-    const got = playable(win.location.hash, app);
-    /* the Open link: the same étude, in a new tab, at the full app — through the link's own writer, never restated */
-    const linkTo = (snap) => { try { return cfg.open + toFragment(snap, { app, v: ETUDE_V }); } catch { return null; } };
-    const href = got.snapshot ? linkTo(got.snapshot) : null;
-    if (href) open.href = href; else open.hidden = true;
-    const foot = msg.parentElement;
-    if (got.reason) {
-      msg.textContent = got.reason;
-      /* NOTHING PLAYS: the neck is not shown, and its transport cannot be pressed (the board is field-board's — its
-       * container is hidden whole, never reached into); the reason stands where the neck would be */
-      const neck = byId("fieldSvg");
-      const board = neck && neck.closest(".board");
-      if (board) { board.before(foot); board.hidden = true; }
-      return;
-    }
-    byId("doorFoot").appendChild(foot);
-    /* after every module has mounted and the clock has said what it is (the record sorts clock keys by what the clock
-     * has said on this page), the étude goes home */
-    queueMicrotask(() => etudeRecord(d).restore(got.snapshot));
+/** chordSymbol(root, quality) → the chooser's output, gated by the parser. */
+function chordSymbol(root, quality) {
+  const symbol = root + quality;
+  parseChord(symbol);
+  return symbol;
+}
 
-    /* ONE AT A TIME */
-    if (typeof win.BroadcastChannel !== "function") return;
-    const me = Math.random().toString(36).slice(2);
-    const ch = new win.BroadcastChannel(PLAYER_CHANNEL);
-    let running = false;
-    listen(d, CLOCK_STATE, (m) => {
-      if (!m || typeof m.running !== "boolean") return;
-      if (m.running && !running) ch.postMessage({ started: me });
-      running = m.running;
-    });
-    ch.onmessage = (e) => {
-      if (e.data && e.data.started && e.data.started !== me && running) announce(d, CLOCK, { run: false });
-    };
-  },
-};
-return { PLAYER_CHANNEL, playable, etudePlayer };
+// ---------- load-time assertions (golden rule 1, site form) ----------
+
+{
+  // the whole chooser matrix parses — a chooser that can emit an unparseable
+  // symbol is broken at build time, not at paste time
+  for (const r of CHORD_ROOTS)
+    for (const q of CHORD_QUALITIES) parseChord(r + q);
+  // every structure resolves and re-parses in the probe key
+  for (const st of STRUCTURES) resolveStructure(st.id, "C");
+  // and the derived ii–V–I is what the degree pattern says it is
+  const p = resolveStructure("ii-V-I", "C");
+  if (p.bars.flat().join(" ") !== ["ii7", "V7", "Imaj7"]
+    .map((t) => resolveRoman(t, "C").symbol).join(" "))
+    throw new Error("structures: derivation must go through resolveRoman");
+}
+return { STRUCTURES, CHORD_ROOTS, CHORD_QUALITIES, GLYPHS, resolveStructure, chartBody, chartFence, changesLine, chordSymbol };
 })();
 
 /* ===== engine/position.mjs ===== */
@@ -5674,151 +5705,6 @@ function reanchor(pos, strings, fld) {
     throw new Error("position: a 3-or-4-fret window on one string must offer at least two scale notes");
 }
 return { positionOf, step, windowLo, regionOf, inGamut, materialIn, reanchor };
-})();
-
-/* ===== engine/string-run.mjs ===== */
-const __m_engine_string_run_mjs = (() => {
-const { lowToHigh, slotsOf, stringsOf, translatePattern } = __m_engine_string_sets_mjs;
-const { OPEN_MIDI, opensOf } = __m_engine_field_mjs;
-const { setLabel } = __m_engine_open_string_mjs;
-/* string-run.mjs — THE FREE STRING SET: any set of strings, contiguous or
- * skipped, with a stored identity and a derived label (Multetudes child 2;
- * multetudes-prd.md §2.3 — closes G6 and G16 at one note per string).
- *
- * THE LOAD-BEARING IDEA (the item's): a string skip is how you ask for a
- * spread voicing. On a skipped set the interval between adjacent chosen
- * strings widens, so close-position stacks fail the fret filter and the drops
- * survive. There is no "spread voicing" shape type, and there must not be one.
- * What was missing was never the generator (placeOnSet consults adjacency
- * nowhere) — it was CHOOSING the set, STORING it, and LABELLING it.
- *
- *   the identity   the run itself: an ARRAY OF STRINGS, stored as such.
- *                  `fromSetIndex` is the LOAD-TIME MIGRATION ALIAS the 260820
- *                  measurements prescribe — old configs restore through it;
- *                  nothing ever writes setIndex again (no dual-write).
- *   the label      DERIVED from the run's strings in the family's dialect —
- *                  high → low, en-dashes, uppercase E (N4) — from the open
- *                  strings' own pitch classes. Never enumerated; the test
- *                  greps this file to prove no label literal exists.
- *   the wiring     translation goes THROUGH string-sets.mjs (slotsOf /
- *                  stringsOf / translatePattern) — the relative-state
- *                  doctrine's mechanism, which nothing imported until
- *                  tonight. Nothing is reimplemented here.
- *
- * THE UNEQUAL-SIZE RULE, decided and written down (the item demands an
- * answer; translatePattern refuses by design and keeps refusing):
- *
- *   Translation is EXACT into an equal-or-larger run — every slot exists, and
- *   the equal case round-trips as the identity (string-sets.mjs's own law).
- *   Into a SMALLER run, a slot past the top CLAMPS TO THE TOP SLOT — the
- *   figure keeps its contour and its low notes, and its ceiling flattens onto
- *   the run's highest string — and the translation REPORTS which steps it
- *   clamped. A four-slot figure on a three-string run means: play the same
- *   walk, and the note that lived on the missing fourth string lives on the
- *   highest string you kept. Loud, lossy, and stated — never silent (§4.4;
- *   drill.orderFor's silent overwrite is the named defect class).
- *
- * Pure: no DOM, no globals, load-time structural assertions.
- */
-
-
-
-/* THE LABEL RULE, DECIDED (night 44, 261008 — Daniel): an open string is
- * spelled by the direction of its move from standard — down flat, up sharp,
- * unmoved natural (open-string.mjs, one derivation, the reason beside it).
- * Until tonight this module threw on a non-natural open string by design:
- * "the label rule needs a decision". The opens are the FIELD's now, handed
- * in; OPEN_MIDI here is the default a caller without a field gets. */
-
-/** makeRun([6,4,3,1]) → { strings, label, contiguous, opens }
- * `strings` stored low pitch → high pitch (descending numbers — the family's
- * storage order); `opens` parallel open-string midis (placeOnSet's `set`);
- * `label` high → low (Shell 4's reading), derived. */
-function makeRun(strings, opens = OPEN_MIDI) {
-  if (!Array.isArray(strings) || !strings.length)
-    throw new Error("string-run: a run is a non-empty array of strings");
-  if (!opens || typeof opens !== "object") throw new Error("string-run: a run needs the field's opens (fld.opens)");
-  const set = [...new Set(strings)];
-  if (set.length !== strings.length) throw new Error("string-run: a run repeats a string");
-  for (const s of set)
-    if (!Number.isInteger(s) || s < 1 || s > 6)
-      throw new Error(`string-run: string ${s} is not a real string`);
-  const lh = lowToHigh(set);                       // descending numbers = ascending pitch
-  const run = {
-    strings: lh,
-    opens: lh.map((s) => opens[s]),
-    label: setLabel(set, opens, OPEN_MIDI),
-    contiguous: lh.every((s, i) => i === 0 || s === lh[i - 1] - 1),
-  };
-  for (let i = 1; i < run.opens.length; i++)
-    if (run.opens[i] <= run.opens[i - 1])
-      throw new Error("string-run: opens must ascend low → high with the strings");
-  return run;
-}
-
-/** THE MIGRATION ALIAS: an old config's `setIndex`, read against the
- * enumeration it indexed (the caller passes it — engine/tetrad-sequence.mjs's
- * STRING_SETS). Load-time only; nothing writes setIndex back. */
-function fromSetIndex(i, sets, opens = OPEN_MIDI) {
-  if (!Array.isArray(sets) || !sets[i])
-    throw new Error(`string-run: setIndex ${i} does not name a set in the given enumeration`);
-  return makeRun(sets[i].strings, opens);
-}
-
-/** translateFigure(pattern, fromRun, toRun) → { pattern, clamped }
- * pattern: absolute string numbers (the player's reading). Equal sizes
- * delegate to string-sets.mjs's translatePattern, exactness asserted there.
- * Unequal sizes apply THE RULE above; `clamped` lists the 0-based steps whose
- * slot was flattened onto the top slot — [] means the translation was exact. */
-function translateFigure(pattern, fromRun, toRun) {
-  if (pattern === null || pattern === undefined) return { pattern: null, clamped: [] };
-  if (fromRun.strings.length === toRun.strings.length)
-    return { pattern: translatePattern(pattern, fromRun.strings, toRun.strings), clamped: [] };
-  const slots = slotsOf(pattern, fromRun.strings);
-  const top = toRun.strings.length - 1;
-  const clamped = [];
-  const mapped = slots.map((k, i) => {
-    if (k <= top) return k;
-    clamped.push(i);
-    return top;
-  });
-  const out = stringsOf(mapped, toRun.strings);
-  if (slots.some((k) => k <= top)) {
-    // derived, then asserted: every unclamped step still reads the same slot
-    const back = slotsOf(out, toRun.strings);
-    for (let i = 0; i < slots.length; i++)
-      if (!clamped.includes(i) && back[i] !== slots[i])
-        throw new Error("string-run: an unclamped step changed slot in translation");
-  }
-  return { pattern: out, clamped };
-}
-
-/* ---------------- load-time structural assertions (golden rule 1) ---------------- */
-
-{
-  // the label rule is total (night 44): every open of the default names, and a moved one
-  // names by its direction — G–D–A–D for the low set in drop D
-  const moved = setLabel([6, 5, 4, 3], opensOf({ 6: -2 }), OPEN_MIDI).split("–");
-  if (moved.length !== 4 || moved[3] !== "D" || moved[0] !== "G")
-    throw new Error("string-run: the label rule does not follow a moved string (drop D's low set ends on D)");
-  // the label reads high → low: four contiguous runs, spot arithmetic
-  const r = makeRun([6, 5, 4, 3]);
-  if (r.label.split("–").length !== 4 || !r.contiguous)
-    throw new Error("string-run: the contiguous four-string run mislabels");
-  const sk = makeRun([6, 4, 3, 1]);
-  if (sk.contiguous) throw new Error("string-run: {6,4,3,1} is not contiguous");
-  if (sk.strings.join() !== "6,4,3,1")
-    throw new Error("string-run: storage order is low pitch → high pitch");
-  // growing is exact; the clamp reports; nothing is silent
-  const from = makeRun([4, 3, 2, 1]), to3 = makeRun([3, 2, 1]);
-  const t = translateFigure([4, 3, 4, 3, 2, 1], from, to3);
-  if (!t.clamped.length)
-    throw new Error("string-run: a 4-slot figure on a 3-string run must report its clamp");
-  const grow = translateFigure([3, 2, 1], to3, from);
-  if (grow.clamped.length || grow.pattern.join() !== "4,3,2")
-    throw new Error("string-run: growing a run must translate exactly, by slot");
-}
-return { makeRun, fromSetIndex, translateFigure };
 })();
 
 /* ===== engine/role.mjs ===== */
@@ -7168,139 +7054,6 @@ function bracketOf(order) {
 return { STACK_DEPTH, objectDegrees, defaultPick, tonePick, pickOf, objectOf, renderPick, degreeOfTone, parseTones, objectOffsets, objectTones, UNCAPPED, capOf, gripFit, chordSupply, materialFor, chordSuppliedSentence, fieldPartition, diatonicTones, oneOfEach, everyOccurrence, scaleTake, offersOn, droppedRoleSentence, windowRoleSentence, orderBy, extensionsOf, extensionSentence, groupClause, assertOrder, bracketOf };
 })();
 
-/* ===== engine/structures.mjs ===== */
-const __m_engine_structures_mjs = (() => {
-const { parseChord, resolveRoman } = __m_engine_chord_mjs;
-const { parseAtchart, serializeAtchart } = __m_engine_atchart_mjs;
-/* structures.mjs — the palette's structure catalog (component v1).
- *
- * The notepad arc's child 3, tier 2/3/4 derivations — shared family code
- * (the v0.6 harmony panel and Substitute Teacher's substitution lab are its
- * later consumers). Pure: no DOM, no audio.
- *
- * THE LOAD-BEARING CONSTRAINT (golden rule 1): a structure is defined ONCE
- * as a degree pattern — roman numerals with qualities — and transposed into
- * the requested key by pitch-class math through engine/chord.mjs's
- * resolveRoman (consumer #2 of the v0.6 resolution path; no parallel one).
- * A table of twelve hand-typed ii–V–I progressions would be a spec violation
- * even with identical output — and the grep test asserts no quoted absolute
- * chord symbol exists anywhere in this module's source. Enharmonic spelling
- * per key is resolveRoman's named rule (Db in the flat keys, C# in the sharp
- * ones, double accidentals where the arithmetic demands them), re-parsed by
- * parseChord so every resolution passes the parser's structural assertions.
- *
- * Everything this module emits is VALID APP INPUT BY CONSTRUCTION:
- * chart bodies parse as .atchart.md chart blocks; changes lines parse
- * symbol-by-symbol through parseChord; the chord chooser's whole matrix is
- * load-asserted through the parser.
- */
-
-
-// ---------- the catalog: degree patterns, bar groupings ----------
-
-const STRUCTURES = [
-  { id: "ii-V-I", name: "ii–V–I",
-    bars: [["ii7", "V7"], ["Imaj7"]] },
-  { id: "ii-V-i", name: "ii–V–i (minor)",
-    bars: [["iiø7", "V7"], ["i7"]] },
-  { id: "turnaround", name: "turnaround (I–vi–ii–V)",
-    bars: [["Imaj7", "vi7"], ["ii7", "V7"]] },
-  { id: "blues-12", name: "twelve-bar blues",
-    bars: [["I7"], ["IV7"], ["I7"], ["I7"], ["IV7"], ["IV7"], ["I7"], ["I7"],
-      ["V7"], ["IV7"], ["I7"], ["V7"]] },
-  { id: "rhythm-a", name: "rhythm changes — A section",
-    bars: [["Imaj7", "vi7"], ["ii7", "V7"], ["Imaj7", "vi7"], ["ii7", "V7"],
-      ["I7"], ["IV7"], ["Imaj7", "V7"], ["Imaj7"]] },
-  { id: "cycle-4ths", name: "cycle of fourths",
-    bars: [["I"], ["IV"], ["bVII"], ["bIII"], ["bVI"], ["bII"], ["bV"],
-      ["VII"], ["III"], ["VI"], ["II"], ["V"]] },
-];
-
-/** The chooser's twelve roots — flats preferred where ambiguous, every one
- * parseChord-valid (asserted at load). These are pitch NAMES, not chords:
- * the grep forbids quoted root+quality combinations, not bare roots. */
-const CHORD_ROOTS =
-  ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-
-/** The chooser's qualities — exactly what parseChord accepts (load-asserted;
- * suffix strings, no roots attached). */
-const CHORD_QUALITIES =
-  ["", "m", "7", "maj7", "m7", "m7b5", "dim7", "6", "m6", "9", "maj9", "m9",
-   "sus4", "aug", "7#5", "7b9", "mMaj7"];
-
-/** Tier 1 — the typographic glyph set (decision 5: no notation font; the
- * U+1D1xx block is not offered at all). Every glyph renders everywhere with
- * no font shipped. */
-const GLYPHS =
-  ["♭", "♯", "♮", "°", "ø", "△", "•",
-   "|", "|:", ":|", "->"];
-
-// ---------- derivation ----------
-
-/** resolveStructure(id, key) → { id, name, key, bars:[[symbol,…],…] } —
- * every symbol derived through resolveRoman and re-parsed by parseChord. */
-function resolveStructure(id, key) {
-  const st = STRUCTURES.find((s) => s.id === id);
-  if (!st) throw new Error('structures: unknown structure "' + id + '"');
-  const bars = st.bars.map((bar) => bar.map((roman) => {
-    const r = resolveRoman(roman, key);
-    if (!r) throw new Error('structures: "' + roman + '" did not resolve in ' + key);
-    parseChord(r.symbol); // the parser's own assertions gate every emission
-    return r.symbol;
-  }));
-  return { id: st.id, name: st.name, key, bars };
-}
-
-/** chartBody(id, key) → the chart-block body in the format engine's
- * CANONICAL form: the derived bars are round-tripped through parseAtchart/
- * serializeAtchart, so what the palette inserts is byte-for-byte what the
- * format itself would write — fixed-point by construction, not imitation. */
-function chartBody(id, key) {
-  const { bars } = resolveStructure(id, key);
-  const raw = "| " + bars.map((b) => b.join(" ")).join(" | ") + " |";
-  const doc = "---\natchart: 1\n---\n```chart\n" + raw + "\n```\n";
-  const out = serializeAtchart(parseAtchart(doc));
-  return out.slice(out.indexOf("```chart\n") + 9, out.lastIndexOf("\n```"));
-}
-
-/** chartFence(id, key) → the fenced block the notepad inserts (tier 3);
- * engine/atchart.mjs reads it and sibling apps can act on it. */
-function chartFence(id, key) {
-  return "```chart\n" + chartBody(id, key) + "\n```";
-}
-
-/** changesLine(id, key) → the flat symbol sequence (tier 4): valid input for
- * Triadetudes' Break-down changes field by construction — every token is a
- * parseChord-valid symbol. */
-function changesLine(id, key) {
-  return resolveStructure(id, key).bars.flat().join(" ");
-}
-
-/** chordSymbol(root, quality) → the chooser's output, gated by the parser. */
-function chordSymbol(root, quality) {
-  const symbol = root + quality;
-  parseChord(symbol);
-  return symbol;
-}
-
-// ---------- load-time assertions (golden rule 1, site form) ----------
-
-{
-  // the whole chooser matrix parses — a chooser that can emit an unparseable
-  // symbol is broken at build time, not at paste time
-  for (const r of CHORD_ROOTS)
-    for (const q of CHORD_QUALITIES) parseChord(r + q);
-  // every structure resolves and re-parses in the probe key
-  for (const st of STRUCTURES) resolveStructure(st.id, "C");
-  // and the derived ii–V–I is what the degree pattern says it is
-  const p = resolveStructure("ii-V-I", "C");
-  if (p.bars.flat().join(" ") !== ["ii7", "V7", "Imaj7"]
-    .map((t) => resolveRoman(t, "C").symbol).join(" "))
-    throw new Error("structures: derivation must go through resolveRoman");
-}
-return { STRUCTURES, CHORD_ROOTS, CHORD_QUALITIES, GLYPHS, resolveStructure, chartBody, chartFence, changesLine, chordSymbol };
-})();
-
 /* ===== engine/reference.mjs ===== */
 const __m_engine_reference_mjs = (() => {
 const { field, notesOn, degAgainst } = __m_engine_field_mjs;
@@ -7999,6 +7752,491 @@ function chordAt(prog, index, fld, object, pick) {   // pick: tonePick(cfg) — 
     throw new Error("progression: a bad token must refuse by name and fall back to the tonic bar");
 }
 return { cycleDegreesWalk, progressionOf, AS_CHARTED, beatsOf, walkSchedule, movementWord, chartBodyOf, chordAt };
+})();
+
+/* ===== hub/embed-fit.mjs ===== */
+const __m_hub_embed_fit_mjs = (() => {
+/* embed-fit.mjs — A PASTED FRAME THAT FITS ITS ÉTUDE AT EVERY WIDTH (261123, *Player - the frame fits the étude, no
+ * white space under it*; Daniel's ruling 09:12: B, falling back to A).
+ *
+ * The problem. A bare iframe cannot size itself, and where embed code is pasted (Obsidian, a feed reader, a hosted
+ * blog editor) no script of ours runs. So the height has to be written into the markup, as a function of the width
+ * the frame is given. The player's natural height at its tallest chord is not one curve: it climbs with the width
+ * (the neck is drawn to the width) and drops at each width where the header rewraps or the neck changes its window.
+ *
+ * What this module does with that. It takes what the player itself measured — its tallest chord's height at many
+ * widths (never a typed number: presets-card asks the real player, in a frame) — and writes it as ONE inline CSS
+ * declaration a sanitiser that keeps style attributes keeps:
+ *
+ *   padding-top: max( min(<line 1>, <gate: width under b1>), min(<line 2>, <gates: a2 … b2>), … )
+ *
+ * In padding, a percentage is a percentage of the WIDTH, so `s% + c px` is a straight line in the frame's width, and
+ * `(100% - a px) * 100000` is a gate: hugely positive past `a`, hugely negative before it. Each line holds one stretch
+ * of widths and sits at or above every height measured there; neighbouring stretches overlap across the gap between
+ * their samples, so the frame is never shorter than the player at a measured width or between two of them. The first
+ * declaration, `padding-top: <A>px`, is A's single number (the tallest height at any measured width): a host whose
+ * sanitiser drops the second declaration still shows the whole player, with some space under it. With no style at
+ * all, the iframe's own width/height attributes do the same.
+ *
+ * Nothing here is musical; it is geometry of the page. Pure, tested in hub/tests/embed-fit.test.mjs.
+ */
+
+/** player → its host: { type, height, width } — the étude's tallest chord at this width, in px (etude-player sends) */
+const HEIGHT_MSG = "atetudes:player-height";
+/** host → player: { type } — please state your height now */
+const MEASURE_MSG = "atetudes:player-measure";
+
+/** the widths the player is measured at — a blog column to a wide Obsidian pane. Past either end the end lines
+ * continue (the player's .wrap stops growing at 1212 px, so the last stretch is flat). */
+const FIT_WIDTHS = Array.from({ length: 101 }, (_, i) => 300 + i * 10);
+
+/** a gate's steepness: 1 px past its width it is already 100000 px — taller than any line */
+const STEEP = 100000;
+
+/** samples [[width, height], …] → stretches [{ a, b, s, c }]: over widths a…b (the first and last sample it covers)
+ * the frame's height is s·width + c, at or above every sample there, never more than `tol` above any of them. */
+function fitStretches(samples, { tol = 12, pad = 6 } = {}) {
+  const pts = [...samples].map(([w, h]) => [Number(w), Number(h)]).sort((x, y) => x[0] - y[0]);
+  if (!pts.length || pts.some(([w, h]) => !(w > 0) || !(h > 0))) throw new Error("embed-fit: no measured heights to fit");
+  const lineOver = (seg) => {
+    if (seg.length === 1) return { s: 0, c: seg[0][1] };
+    const n = seg.length, mw = seg.reduce((t, p) => t + p[0], 0) / n, mh = seg.reduce((t, p) => t + p[1], 0) / n;
+    const sxx = seg.reduce((t, p) => t + (p[0] - mw) ** 2, 0), sxy = seg.reduce((t, p) => t + (p[0] - mw) * (p[1] - mh), 0);
+    const s = sxx ? sxy / sxx : 0;
+    return { s, c: Math.max(...seg.map(([w, h]) => h - s * w)) };   // lifted onto the highest sample
+  };
+  const excess = (seg, { s, c }) => Math.max(...seg.map(([w, h]) => s * w + c - h));
+  const out = [];
+  for (let i = 0; i < pts.length;) {
+    let j = i + 1, best = lineOver(pts.slice(i, j));
+    while (j < pts.length) {
+      const cand = lineOver(pts.slice(i, j + 1));
+      if (excess(pts.slice(i, j + 1), cand) > tol) break;
+      best = cand; j++;
+    }
+    out.push({ a: pts[i][0], b: pts[j - 1][0], s: best.s, c: best.c + pad });
+    i = j;
+  }
+  // the guarantee, asserted on the numbers it will write (rounded as they will be written)
+  for (const [w, h] of pts) if (frameAt(out, w) < h) throw new Error(`embed-fit: the frame at ${w} px is shorter than the player (${h})`);
+  return out;
+}
+
+const r4 = (x) => Math.round(x * 1e4) / 1e4;
+const up = (x) => Math.ceil(x);
+
+/** where stretch i's gates open: half a pixel past the neighbour's last sample, half a pixel short of the next one's
+ * first — so at every measured width only its own line holds, and in a gap between two stretches (where the player
+ * rewraps at a width nobody sampled) both do, and the taller wins */
+const gatesOf = (stretches, i) => [i ? stretches[i - 1].b + 0.5 : -Infinity, i < stretches.length - 1 ? stretches[i + 1].a - 0.5 : Infinity];
+
+/** the frame's height at width w, as the CSS will compute it */
+function frameAt(stretches, w) {
+  let best = -Infinity;
+  stretches.forEach((st, i) => {
+    const [lo, hi] = gatesOf(stretches, i);
+    if (w <= lo || w >= hi) return;
+    best = Math.max(best, (r4(st.s * 100) / 100) * w + up(st.c));
+  });
+  return best;
+}
+
+/** stretches → the padding-top expression (the value after `padding-top:`) */
+function paddingExpr(stretches) {
+  const terms = stretches.map((st, i) => {
+    const pct = r4(st.s * 100), c = up(st.c);
+    const line = pct === 0 ? `${c}px` : `${pct}% + ${c}px`;
+    const [lo, hi] = gatesOf(stretches, i), gates = [];
+    if (lo > -Infinity) gates.push(`(100% - ${lo}px) * ${STEEP}`);
+    if (hi < Infinity) gates.push(`(${hi}px - 100%) * ${STEEP}`);
+    return gates.length ? `min(${line}, ${gates.join(", ")})` : (pct === 0 ? line : `calc(${line})`);
+  });
+  return terms.length === 1 ? terms[0] : `max(${terms.join(", ")})`;
+}
+
+/** the pasted markup. `fit` = { stretches, tallest } from the player's own measurement, or null (not measured: the
+ * door's general embed height, the frame every étude fits). */
+function embedMarkup({ src, open, height, fit = null, title = "An étude on the neck, from At-Etudes" }) {
+  const link = `<p><a href="${open}">Play this étude on At-Etudes</a></p>\n`;
+  if (!fit) return `<iframe src="${src}" title="${title}" loading="lazy" ` +
+    `style="display:block;width:100%;height:${height}px;border:0"></iframe>\n` + link;
+  const a = up(fit.tallest);
+  return `<div style="position:relative;width:100%;height:0;padding-top:${a}px;padding-top:${paddingExpr(fit.stretches)}">` +
+    `<iframe src="${src}" title="${title}" loading="lazy" width="100%" height="${a}" frameborder="0" ` +
+    `style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"></iframe></div>\n` + link;
+}
+
+/** a jump: two neighbouring samples further apart in height than any line through the player climbs in that span
+ * (its steepest stretch, the narrow neck, is ~0.6 px per px) — the header rewrapped, or the neck changed its window,
+ * somewhere between them */
+const isJump = ([w1, h1], [w2, h2]) => w2 - w1 > 1 && Math.abs(h2 - h1) > 4 + 0.6 * (w2 - w1);
+
+/** MEASURE THE REAL PLAYER (Copy embed code's half): load `src` — the player of this étude — in a frame nobody sees,
+ * set the frame to each width in turn, and collect what the player says its tallest chord needs there; then, in every
+ * gap that holds a jump, halve the gap until the jump's width is known to the pixel (a stretch's line is only as good
+ * as the samples that end it). Resolves to [[width, height], …]; rejects when the player cannot be reached (offline,
+ * from a file) or stops answering. The frame is tall (no inner scrollbar narrows the layout being measured) and
+ * transparent, on the page rather than off it (an off-screen frame may not be laid out at its new width), and
+ * removed when done. */
+function measureInPlayer(doc, src, widths = FIT_WIDTHS, { timeout = 5000, onProgress = null } = {}) {
+  const win = doc.defaultView, origin = new URL(src, doc.baseURI).origin;
+  const f = doc.createElement("iframe");
+  f.setAttribute("aria-hidden", "true"); f.tabIndex = -1; f.title = "measuring the player";
+  f.style.cssText = `position:fixed;left:0;top:0;width:${widths[0]}px;height:1600px;border:0;opacity:0;pointer-events:none;z-index:-1`;
+  let want = null;   // { w, resolve, reject, timer }
+  const ask = () => { try { f.contentWindow.postMessage({ type: MEASURE_MSG }, origin === "null" ? "*" : origin); } catch (_) { /* not loaded yet */ } };
+  const on = (e) => {
+    if (!want || e.source !== f.contentWindow || (origin !== "null" && e.origin !== origin)) return;
+    const m = e.data;
+    if (!m || m.type !== HEIGHT_MSG || typeof m.height !== "number" || m.width !== want.w) return;   // said before the frame took its width
+    const w = want; want = null; win.clearTimeout(w.timer); w.resolve(m.height);
+  };
+  const at = (w) => new Promise((resolve, reject) => {
+    want = { w, resolve, reject, timer: win.setTimeout(() => reject(new Error(`the player did not answer at ${w} px`)), timeout) };
+    f.style.width = `${w}px`;
+  });
+  win.addEventListener("message", on);
+  const nudge = win.setInterval(ask, 400);   // a resize the frame never reported is asked for
+  const run = async () => {
+    const first = at(widths[0]);
+    f.src = src; doc.body.appendChild(f);
+    const out = [[widths[0], await first]];
+    for (let k = 1; k < widths.length; k++) {
+      out.push([widths[k], await at(widths[k])]);
+      if (onProgress) onProgress(k + 1, widths.length);
+    }
+    for (let i = 0; i + 1 < out.length; i++)
+      while (isJump(out[i], out[i + 1])) {
+        const mid = Math.floor((out[i][0] + out[i + 1][0]) / 2);
+        out.splice(i + 1, 0, [mid, await at(mid)]);
+        if (!isJump(out[i], out[i + 1])) i++;   // the jump is in the upper half
+      }
+    return out;
+  };
+  return run().finally(() => { win.clearInterval(nudge); win.removeEventListener("message", on); f.remove(); });
+}
+return { HEIGHT_MSG, MEASURE_MSG, FIT_WIDTHS, fitStretches, frameAt, paddingExpr, embedMarkup, isJump, measureInPlayer };
+})();
+
+/* ===== hub/modules/etude-player.mjs ===== */
+const __m_hub_modules_etude_player_mjs = (() => {
+const { fromFragment, toFragment } = __m_engine_etude_link_mjs;
+const { checkEtude, ETUDE_V } = __m_engine_etude_block_mjs;
+const { etudeRecord } = __m_hub_etude_record_mjs;
+const { progressionOf } = __m_engine_progression_mjs;
+const { HEIGHT_MSG, MEASURE_MSG } = __m_hub_embed_fit_mjs;
+const { CLOCK, CLOCK_STATE, CONFIG_CHANGED, STEP_CHANGED, announce, listen } = __m_hub_bus_mjs;
+/* etude-player.mjs — THE PLAYER'S OWN PART: the étude from the link, the refusal, Open in Multetudes, one at a time
+ * (261120 — child 3 of the étude embed epic; Daniel's scope and his two rulings of 2026-11-20 are in the item,
+ * *Player door — the neck, chord symbols, transport and tempo*).
+ *
+ * WHAT IT DOES, AND WHAT IT LEAVES TO OTHERS. The neck, the chord readout, play/stop and the tempo are field-board's
+ * (ruling 1: the neck is drawn once); the walk is etude-walk's; the grid is the metronome card's, mounted hidden
+ * (ruling 2). This module holds no musical fact of its own (golden rule 1, web form): the étude arrives as the
+ * link's block, read by engine/etude-link.mjs — the ONLY reader, which draws the §6 line — and goes home by the
+ * record's own restore, exactly as a pasted block does in Multetudes. Every note sounded is derived from it, now.
+ *
+ * IT NEVER GUESSES. A link it cannot read, an étude another app wrote, a version newer than this build reads, a value
+ * the block's grammar or the bench refuses, or typed changes (§6): the neck is not shown, the reason is, in plain ink,
+ * and Open in Multetudes stays when there is an étude to open. Restoring part of an étude would play something the
+ * author did not write — so a single refused value refuses the whole link (unlike Multetudes' paste, which skips and
+ * names: there a person is at the bench to see it).
+ *
+ * ONE PLAYER AT A TIME (Daniel, 2026-11-20): starting one stops every other. The players are same-origin documents
+ * (atetudes.com) on one host page, so a BroadcastChannel reaches them all — and under storage partitioning it is keyed
+ * by the top-level site, which is exactly "the page they are embedded in". (Two tabs of the same host page share it
+ * too: starting a player in one stops a player in the other. Accepted — still one sound at a time.)
+ *
+ * THE PLAYER STATES ITS HEIGHT (261123, *Player - the frame fits the étude, no white space under it*). A bare iframe
+ * cannot size itself, so the player tells whoever holds it: a message named HEIGHT_MSG (hub/embed-fit.mjs), numbers only — its natural
+ * height and the width it was measured at. The height is the étude's TALLEST chord at this width, never the current
+ * chord's: a frame that grew and shrank with the chords would make the post jump under its reader. It is measured
+ * by the player's own layout — every chord drawn in turn, read, and the shown chord drawn back, in one task, before
+ * anything paints — and only while stopped: the pass walks the step echo every board answers, and a playing walk
+ * would take an echo for an advance. While playing, a width change can only grow the frame; the exact pass runs at
+ * the stop. It is sent once laid out, again when the fonts have come, on every width change, and when a host asks
+ * (MEASURE_MSG) — the atetudes.com fence (layouts/_markup/render-codeblock-etude.html) and Copy embed code's
+ * measuring frame (presets-card) are the two that listen.
+ */
+
+
+
+
+
+
+/** the channel every player on a page shares — named once */
+const PLAYER_CHANNEL = "atetudes-player";
+
+/** a location hash → { snapshot } to play, or { reason } (and `snapshot` when there is an étude to open elsewhere).
+ * Pure: the module's one decision, testable without a page. */
+function playable(hash, app, readsUpTo = ETUDE_V) {
+  const r = fromFragment(hash);
+  if (r.reason) return { reason: r.reason };
+  if (r.app && r.app !== app) return { reason: `this link holds an étude ${r.app} wrote; this player plays ${app} études` };
+  if (typeof r.v !== "number" || !Number.isInteger(r.v) || r.v < 1)
+    return { reason: "this link's étude names no version this player can read" };
+  if (r.v > readsUpTo) return { reason: `this link's étude is version ${r.v}; this player reads up to version ${readsUpTo}` };
+  const refused = [...r.flagged.map((f) => `${f.key || `line ${f.n}`} (${f.reason})`),
+    ...checkEtude(r.snapshot).map((b) => `${b.key} (${b.reason})`)];
+  if (refused.length) return { reason: `this link's étude has a value the player cannot play: ${refused.join("; ")}`, snapshot: r.snapshot };
+  return { snapshot: r.snapshot };
+}
+
+const etudePlayer = {
+  id: "etude-player",
+  layer: "surface",
+  requires: { surface: "player" },
+  /* no panel of its own (a panel needs a header band, and this has nothing to head): it ships hidden and its one line
+   * moves at mount — into the page footer when the étude plays, into the neck's place when it is refused */
+  mount_point: "hidden",
+  controls: ["plOpen", "plMsg"],
+
+  markup: `
+  <div class="pl-foot">
+    <span class="hint pl-msg" id="plMsg" data-control="plMsg" role="status"></span>
+    <a class="pl-open" id="plOpen" data-control="plOpen" target="_blank" rel="noopener">Open in Multetudes ↗</a>
+  </div>`,
+
+  styles: `
+.pl-foot{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
+.pl-msg{margin:0;color:var(--ink)}
+.pl-msg:empty{display:none}
+.pl-open{margin-left:auto;font-size:12px;color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+/* the page ends at its last line (261123): the shell's 60 px under the footer is space for a page you scroll, and in a
+ * frame sized to the player it is only white space under the étude */
+.wrap:has(.pl-foot){padding-bottom:6px}
+/* NO SCROLLBAR OF ITS OWN (261123, measured): a frame a moment too short for the player — a host's frame resizing a
+ * beat behind its column — gave the player a classic scrollbar, which narrowed its layout under 600 px, which drew
+ * the tall phone neck, which kept the scrollbar: stuck 173 px over its frame at 604 px wide. The page still scrolls
+ * (wheel, touch, keys); it just never takes width from the layout, so the player is always laid out at its frame's
+ * width — the width it was measured at. */
+html:has(.pl-foot){scrollbar-width:none}
+html:has(.pl-foot)::-webkit-scrollbar{display:none}`,
+
+  mount(ctx) {
+    const d = ctx.doc, byId = ctx.byId, win = d.defaultView;
+    const cfg = ctx.door.player || {};
+    const app = cfg.app, open = byId("plOpen"), msg = byId("plMsg");
+    const got = playable(win.location.hash, app);
+    /* the Open link: the same étude, in a new tab, at the full app — through the link's own writer, never restated */
+    const linkTo = (snap) => { try { return cfg.open + toFragment(snap, { app, v: ETUDE_V }); } catch { return null; } };
+    const href = got.snapshot ? linkTo(got.snapshot) : null;
+    if (href) open.href = href; else open.hidden = true;
+    const foot = msg.parentElement;
+
+    /* THE HEIGHT (see the header): the page's own height — the body and its margins, which is what a frame must hold —
+     * at the étude's tallest chord */
+    const natural = () => {
+      const b = d.body, cs = win.getComputedStyle(b);
+      return Math.ceil(b.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom));
+    };
+    let conf = {}, at = 0, running = false, sent = 0, stale = false;
+    listen(d, CONFIG_CHANGED, (m) => { if (m && typeof m === "object") conf = { ...conf, ...m }; });
+    listen(d, STEP_CHANGED, (m) => { if (m && m.request !== true && typeof m.index === "number") at = m.index; });
+    const tallest = () => {
+      if (got.reason) return natural();
+      const n = Math.max(1, progressionOf(conf, conf.key, conf.scale).chords.length), back = at;
+      let t = 0;
+      /* the step echo every board draws from, attack-borne (the sound did not travel on it — audio-card never sounds
+       * one), so nothing is heard. It starts on the chord AFTER the shown one and ends on the shown one: a board
+       * redraws only for a step it is not already on, and the shown chord's drawing may be from the last width
+       * (measured: read first, it carried the phone neck past 600 px). */
+      for (let k = 1; k <= n; k++) { announce(d, STEP_CHANGED, { index: (back + k) % n, attack: true }); t = Math.max(t, natural()); }
+      return t;
+    };
+    const report = () => {
+      if (win.parent === win) return;
+      let h;
+      if (running) { h = natural(); stale = true; if (h <= sent) return; }   // playing: only ever grow
+      else { h = tallest(); stale = false; }
+      sent = h;
+      win.parent.postMessage({ type: HEIGHT_MSG, height: h, width: win.innerWidth }, "*");
+    };
+    let lastW = win.innerWidth;
+    /* after the resize's own turn: the neck redraws for its media query only once the resize events have run */
+    win.addEventListener("resize", () => { if (win.innerWidth !== lastW) { lastW = win.innerWidth; win.setTimeout(report, 0); } });
+    win.addEventListener("message", (e) => { if (e.source === win.parent && e.data && e.data.type === MEASURE_MSG) report(); });
+    listen(d, CLOCK_STATE, (m) => {
+      if (m && typeof m.running === "boolean") { const was = running; running = m.running; if (was && !running && stale) report(); }
+    });
+    const settle = () => { win.setTimeout(report, 0); if (d.fonts && d.fonts.ready) d.fonts.ready.then(() => win.setTimeout(report, 0)); };
+
+    if (got.reason) {
+      msg.textContent = got.reason;
+      /* NOTHING PLAYS: the neck is not shown, and its transport cannot be pressed (the board is field-board's — its
+       * container is hidden whole, never reached into); the reason stands where the neck would be */
+      const neck = byId("fieldSvg");
+      const board = neck && neck.closest(".board");
+      if (board) { board.before(foot); board.hidden = true; }
+      settle();
+      return;
+    }
+    byId("doorFoot").appendChild(foot);
+    /* after every module has mounted and the clock has said what it is (the record sorts clock keys by what the clock
+     * has said on this page), the étude goes home */
+    queueMicrotask(() => { etudeRecord(d).restore(got.snapshot); settle(); });
+
+    /* ONE AT A TIME */
+    if (typeof win.BroadcastChannel !== "function") return;
+    const me = Math.random().toString(36).slice(2);
+    const ch = new win.BroadcastChannel(PLAYER_CHANNEL);
+    let playing = false;
+    listen(d, CLOCK_STATE, (m) => {
+      if (!m || typeof m.running !== "boolean") return;
+      if (m.running && !playing) ch.postMessage({ started: me });
+      playing = m.running;
+    });
+    ch.onmessage = (e) => {
+      if (e.data && e.data.started && e.data.started !== me && playing) announce(d, CLOCK, { run: false });
+    };
+  },
+};
+return { PLAYER_CHANNEL, playable, etudePlayer };
+})();
+
+/* ===== engine/string-run.mjs ===== */
+const __m_engine_string_run_mjs = (() => {
+const { lowToHigh, slotsOf, stringsOf, translatePattern } = __m_engine_string_sets_mjs;
+const { OPEN_MIDI, opensOf } = __m_engine_field_mjs;
+const { setLabel } = __m_engine_open_string_mjs;
+/* string-run.mjs — THE FREE STRING SET: any set of strings, contiguous or
+ * skipped, with a stored identity and a derived label (Multetudes child 2;
+ * multetudes-prd.md §2.3 — closes G6 and G16 at one note per string).
+ *
+ * THE LOAD-BEARING IDEA (the item's): a string skip is how you ask for a
+ * spread voicing. On a skipped set the interval between adjacent chosen
+ * strings widens, so close-position stacks fail the fret filter and the drops
+ * survive. There is no "spread voicing" shape type, and there must not be one.
+ * What was missing was never the generator (placeOnSet consults adjacency
+ * nowhere) — it was CHOOSING the set, STORING it, and LABELLING it.
+ *
+ *   the identity   the run itself: an ARRAY OF STRINGS, stored as such.
+ *                  `fromSetIndex` is the LOAD-TIME MIGRATION ALIAS the 260820
+ *                  measurements prescribe — old configs restore through it;
+ *                  nothing ever writes setIndex again (no dual-write).
+ *   the label      DERIVED from the run's strings in the family's dialect —
+ *                  high → low, en-dashes, uppercase E (N4) — from the open
+ *                  strings' own pitch classes. Never enumerated; the test
+ *                  greps this file to prove no label literal exists.
+ *   the wiring     translation goes THROUGH string-sets.mjs (slotsOf /
+ *                  stringsOf / translatePattern) — the relative-state
+ *                  doctrine's mechanism, which nothing imported until
+ *                  tonight. Nothing is reimplemented here.
+ *
+ * THE UNEQUAL-SIZE RULE, decided and written down (the item demands an
+ * answer; translatePattern refuses by design and keeps refusing):
+ *
+ *   Translation is EXACT into an equal-or-larger run — every slot exists, and
+ *   the equal case round-trips as the identity (string-sets.mjs's own law).
+ *   Into a SMALLER run, a slot past the top CLAMPS TO THE TOP SLOT — the
+ *   figure keeps its contour and its low notes, and its ceiling flattens onto
+ *   the run's highest string — and the translation REPORTS which steps it
+ *   clamped. A four-slot figure on a three-string run means: play the same
+ *   walk, and the note that lived on the missing fourth string lives on the
+ *   highest string you kept. Loud, lossy, and stated — never silent (§4.4;
+ *   drill.orderFor's silent overwrite is the named defect class).
+ *
+ * Pure: no DOM, no globals, load-time structural assertions.
+ */
+
+
+
+/* THE LABEL RULE, DECIDED (night 44, 261008 — Daniel): an open string is
+ * spelled by the direction of its move from standard — down flat, up sharp,
+ * unmoved natural (open-string.mjs, one derivation, the reason beside it).
+ * Until tonight this module threw on a non-natural open string by design:
+ * "the label rule needs a decision". The opens are the FIELD's now, handed
+ * in; OPEN_MIDI here is the default a caller without a field gets. */
+
+/** makeRun([6,4,3,1]) → { strings, label, contiguous, opens }
+ * `strings` stored low pitch → high pitch (descending numbers — the family's
+ * storage order); `opens` parallel open-string midis (placeOnSet's `set`);
+ * `label` high → low (Shell 4's reading), derived. */
+function makeRun(strings, opens = OPEN_MIDI) {
+  if (!Array.isArray(strings) || !strings.length)
+    throw new Error("string-run: a run is a non-empty array of strings");
+  if (!opens || typeof opens !== "object") throw new Error("string-run: a run needs the field's opens (fld.opens)");
+  const set = [...new Set(strings)];
+  if (set.length !== strings.length) throw new Error("string-run: a run repeats a string");
+  for (const s of set)
+    if (!Number.isInteger(s) || s < 1 || s > 6)
+      throw new Error(`string-run: string ${s} is not a real string`);
+  const lh = lowToHigh(set);                       // descending numbers = ascending pitch
+  const run = {
+    strings: lh,
+    opens: lh.map((s) => opens[s]),
+    label: setLabel(set, opens, OPEN_MIDI),
+    contiguous: lh.every((s, i) => i === 0 || s === lh[i - 1] - 1),
+  };
+  for (let i = 1; i < run.opens.length; i++)
+    if (run.opens[i] <= run.opens[i - 1])
+      throw new Error("string-run: opens must ascend low → high with the strings");
+  return run;
+}
+
+/** THE MIGRATION ALIAS: an old config's `setIndex`, read against the
+ * enumeration it indexed (the caller passes it — engine/tetrad-sequence.mjs's
+ * STRING_SETS). Load-time only; nothing writes setIndex back. */
+function fromSetIndex(i, sets, opens = OPEN_MIDI) {
+  if (!Array.isArray(sets) || !sets[i])
+    throw new Error(`string-run: setIndex ${i} does not name a set in the given enumeration`);
+  return makeRun(sets[i].strings, opens);
+}
+
+/** translateFigure(pattern, fromRun, toRun) → { pattern, clamped }
+ * pattern: absolute string numbers (the player's reading). Equal sizes
+ * delegate to string-sets.mjs's translatePattern, exactness asserted there.
+ * Unequal sizes apply THE RULE above; `clamped` lists the 0-based steps whose
+ * slot was flattened onto the top slot — [] means the translation was exact. */
+function translateFigure(pattern, fromRun, toRun) {
+  if (pattern === null || pattern === undefined) return { pattern: null, clamped: [] };
+  if (fromRun.strings.length === toRun.strings.length)
+    return { pattern: translatePattern(pattern, fromRun.strings, toRun.strings), clamped: [] };
+  const slots = slotsOf(pattern, fromRun.strings);
+  const top = toRun.strings.length - 1;
+  const clamped = [];
+  const mapped = slots.map((k, i) => {
+    if (k <= top) return k;
+    clamped.push(i);
+    return top;
+  });
+  const out = stringsOf(mapped, toRun.strings);
+  if (slots.some((k) => k <= top)) {
+    // derived, then asserted: every unclamped step still reads the same slot
+    const back = slotsOf(out, toRun.strings);
+    for (let i = 0; i < slots.length; i++)
+      if (!clamped.includes(i) && back[i] !== slots[i])
+        throw new Error("string-run: an unclamped step changed slot in translation");
+  }
+  return { pattern: out, clamped };
+}
+
+/* ---------------- load-time structural assertions (golden rule 1) ---------------- */
+
+{
+  // the label rule is total (night 44): every open of the default names, and a moved one
+  // names by its direction — G–D–A–D for the low set in drop D
+  const moved = setLabel([6, 5, 4, 3], opensOf({ 6: -2 }), OPEN_MIDI).split("–");
+  if (moved.length !== 4 || moved[3] !== "D" || moved[0] !== "G")
+    throw new Error("string-run: the label rule does not follow a moved string (drop D's low set ends on D)");
+  // the label reads high → low: four contiguous runs, spot arithmetic
+  const r = makeRun([6, 5, 4, 3]);
+  if (r.label.split("–").length !== 4 || !r.contiguous)
+    throw new Error("string-run: the contiguous four-string run mislabels");
+  const sk = makeRun([6, 4, 3, 1]);
+  if (sk.contiguous) throw new Error("string-run: {6,4,3,1} is not contiguous");
+  if (sk.strings.join() !== "6,4,3,1")
+    throw new Error("string-run: storage order is low pitch → high pitch");
+  // growing is exact; the clamp reports; nothing is silent
+  const from = makeRun([4, 3, 2, 1]), to3 = makeRun([3, 2, 1]);
+  const t = translateFigure([4, 3, 4, 3, 2, 1], from, to3);
+  if (!t.clamped.length)
+    throw new Error("string-run: a 4-slot figure on a 3-string run must report its clamp");
+  const grow = translateFigure([3, 2, 1], to3, from);
+  if (grow.clamped.length || grow.pattern.join() !== "4,3,2")
+    throw new Error("string-run: growing a run must translate exactly, by slot");
+}
+return { makeRun, fromSetIndex, translateFigure };
 })();
 
 /* ===== engine/etude-timeline.mjs ===== */

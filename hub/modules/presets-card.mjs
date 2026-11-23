@@ -23,6 +23,7 @@ import { etudeRecord } from "../etude-record.mjs";
 import { describe } from "../../engine/etude-describe.mjs";
 import { etudeBlock, findEtudeBlock, readEtudeBlock, checkEtude, ETUDE_V } from "../../engine/etude-block.mjs";
 import { LINK_KEY, linkable, toFragment, fromFragment } from "../../engine/etude-link.mjs";
+import { measureInPlayer, fitStretches, embedMarkup, FIT_WIDTHS } from "../embed-fit.mjs";
 
 /* label · the config it seeds. `take` defaults back to "one" exactly as v0.9
  * resets it, so a preset states only what it means. */
@@ -74,7 +75,7 @@ export const presetsCard = {
     <div class="hint ps-blockmsg" id="psEmbedWhy"></div>
     <div class="hint ps-blockmsg" id="psBlockMsg" role="status"></div>
   </div>
-  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here. Copy note block copies the étude's settings (never its notes) as an etude block, to paste into an Obsidian note where RiffRaft plays it; paste such a block into the field beside it and the étude comes back here, every setting at once. Copy embed code copies a player of this étude for a web page: an iframe, with a plain link beneath it for sites that take no iframes. A link to an étude opens it here the same way; an étude with typed changes travels in neither, and the button says why.</div>`,
+  <div class="hint ps-note info">A preset sets up one of the journal page's exercises — the strings, the placement, the object and its tones — and leaves every control live to change; the key, the scale and the centre stay whatever you set them to. The card remembers which preset you started from, and says so once you've changed what it set. Below, it describes the whole étude as it stands, in words, updating as you change anything; the transport along the top plays and steps it from here. Copy note block copies the étude's settings (never its notes) as an etude block, to paste into an Obsidian note where RiffRaft plays it; paste such a block into the field beside it and the étude comes back here, every setting at once. Copy embed code copies a player of this étude for a web page: an iframe, its height measured for this étude at every column width, with a plain link beneath it for sites that take no iframes. A link to an étude opens it here the same way; an étude with typed changes travels in neither, and the button says why.</div>`,
 
   styles: `
 .ps-miniseat{margin:0 0 8px}
@@ -195,15 +196,37 @@ export const presetsCard = {
         embedWhy.textContent = ok === true ? "" : `No embed code: ${ok.reason}.`;
       };
       record.onChange(paintEmbed); paintEmbed();
+      /* THE FRAME FITS THE ÉTUDE (261123; Daniel's ruling 09:12, B falling back to A): the code's height is measured,
+       * never typed — this étude in the real player, at every width from a phone to a wide pane (embed-fit.mjs), and
+       * written as a frame whose height follows its column's width, with A's single number beneath it for a host that
+       * drops the width-following part. Measured once per étude (a few seconds) and kept for the page's life; if the
+       * player cannot be reached (offline, opened from a file), the code carries the door's general height, said so. */
+      const fits = new Map();
+      let measuring = false;
       embedBtn.addEventListener("click", async () => {
+        if (measuring) return;
         let frag;
         try { frag = toFragment(record.snapshot(), { app: ctx.door.id, v: ETUDE_V }); }
         catch (e) { say(String(e.message || e)); return; }
-        const text = `<iframe src="${embed.player}${frag}" title="An étude on the neck, from At-Etudes" loading="lazy" ` +
-          `style="display:block;width:100%;height:${embed.height}px;border:0"></iframe>\n` +
-          `<p><a href="${embed.open}${frag}">Play this étude on At-Etudes</a></p>\n`;
-        try { await d.defaultView.navigator.clipboard.writeText(text); say("copied: embed code, ready to paste into a web page's HTML"); }
-        catch (_) { say("clipboard unavailable: this browser would not let the page copy"); }
+        let fit = fits.get(frag), note = "";
+        if (!fit) {
+          measuring = true; embedBtn.disabled = true;
+          say(`measuring this étude in the player, at ${FIT_WIDTHS.length} widths…`);
+          try {
+            const samples = await measureInPlayer(d, embed.player + frag, FIT_WIDTHS,
+              { onProgress: (k, n) => { if (k % 10 === 0) say(`measuring this étude in the player: ${k} of ${n} widths…`); } });
+            fit = { stretches: fitStretches(samples), tallest: Math.max(...samples.map((x) => x[1])) };
+            fits.set(frag, fit);
+          } catch (_) {
+            fit = null; note = ` — the player could not be reached to measure it, so the frame has the general height (${embed.height} px)`;
+          } finally { measuring = false; paintEmbed(); }
+        }
+        const text = embedMarkup({ src: embed.player + frag, open: embed.open + frag, height: embed.height, fit });
+        try { await d.defaultView.navigator.clipboard.writeText(text); say(`copied: embed code, ready to paste into a web page's HTML${note}`); }
+        catch (_) {
+          say(fit ? "measured: click again to copy it (this browser copies only straight after a click)"
+                  : "clipboard unavailable: this browser would not let the page copy");
+        }
       });
     }
     /* OPEN FROM A LINK (261120): a #etude= fragment is read by etude-link's reader — the same reader and refusals as a

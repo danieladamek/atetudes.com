@@ -1,3 +1,23 @@
+## 2026-11-23 — An embedded étude's frame fits the étude; Multetudes v1.1.22
+
+- **`/embed/multetudes/`** (re-published byte-identical from `hub/build/player.html`), Update Log 261123.1,
+  *Player - the frame fits the étude, no white space under it*:
+  - The player now tells the page holding it how tall it is. The height is the étude's tallest chord at the
+    frame's width, so the frame never moves while the étude plays.
+  - It ends 6 px under its last line; before, there were 60 px of empty space below it.
+  - It never shows a scrollbar of its own. A frame that was briefly too short used to narrow the layout into the
+    tall phone neck and stay stuck there.
+- **The étude fence on atetudes.com** (`layouts/_markup/render-codeblock-etude.html`): each frame takes the height
+  its own player reports. 760 px stays in the markup as the height before that message arrives and for readers
+  without script. No post uses a fence yet; it was proven on a Hugo-built page in the gate.
+- **Multetudes v1.1.22** (`static/studies/multetudes/study.html`): Settings → Copy embed code measures the étude in
+  the real player (about 2 s, once per étude). It then writes a frame whose height follows the width of the column
+  it is pasted into: a few px over the player at any width, never under.
+  - If a host drops the width-following part, the code also carries one number per étude, the étude's tallest at any
+    width.
+  - If the player can't be reached (offline, or opened from a file), the code carries the general 760 and says so.
+  - **Embed code copied before today keeps working**, with its old 760 px frame. Re-copy it to lose the white space.
+
 ## 2026-11-21 — The voices Daniel picked by ear; Multetudes v1.1.21, Tetradetudes v0.6.25
 
 - **Multetudes v1.1.21** (`static/studies/multetudes/study.html`) and **`/embed/multetudes/`** (re-published
