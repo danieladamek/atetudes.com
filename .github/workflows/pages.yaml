@@ -66,6 +66,18 @@ jobs:
         # a runner-managed Python, so `pip install` below is not fighting ubuntu's externally-managed interpreter
         with:
           python-version: "3.12"
+      # 261123: player_door.py §12 builds a content page with étude fences through Hugo (the fence's frame-fitting
+      # script, checked on the artifact) — the same Hugo as publish's, set up the same way
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Setup Hugo (for player_door.py's fence page)
+        env:
+          HUGO_VERSION: "0.164.0"
+        run: |
+          wget -O ${{ runner.temp }}/hugo.deb \
+            https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb
+          sudo dpkg -i ${{ runner.temp }}/hugo.deb
       - name: Door lock suite (browser) — with the empty-lookup guard and the red effect-scan (night 81)
         # family spec §4.2.2's AUTHORITATIVE half. Playwright is a CI devDependency, approved by Daniel 2026-08-16,
         # pinned to the version the gate was developed against; it ships in nothing.
