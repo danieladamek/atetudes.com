@@ -1,3 +1,15 @@
+## 2026-11-25 — The blog is the Slog (Daniel, 261125)
+
+- **`/blog/`** is titled **Slog**, in the navigation, on the section page and on the landing shelf. The URL, the feed
+  and every post address are unchanged: `/blog/` stays.
+- **The section's intro** (`content/blog/_index.md`) is a paragraph drawn from the Coda of Daniel's first post: an open
+  practice journal, not an informational blog.
+- **The landing card** (`content/_index.md`) reads "An open practice journal" in place of "Notes on the system".
+- **Seen:** built with Hugo 0.164.0 on `5f0e98b` plus these three files; `/blog/` at 1280 and 390 and `/` at 1280 in
+  Chromium, no horizontal scroll. Run before the push this time: engine tests 791/0, `check_studies.py`,
+  `check_tools.py`, `etude_fence.py --no-browser` 6/0, `paths.py`. Site paths only, so no app gate.
+- **Not run here:** `check_site.py`'s deploy-record step (needs GitHub access).
+
 ## 2026-11-25 — The fence test counts the site's own fences; the post's first push did not deploy
 
 - **`662f47b` did not deploy.** The publish job failed at its last step, `tools/etude_fence.py`: 2 of 6 assertions.

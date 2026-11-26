@@ -46,12 +46,12 @@ layout: hextra-home
 
 {{< tool-cards >}}
 
-<h2 class="shelf-heading shelf-heading-plain hx:text-2xl hx:font-semibold">Blog</h2>
+<h2 class="shelf-heading shelf-heading-plain hx:text-2xl hx:font-semibold">Slog</h2>
 
 {{< cards >}}
   {{< card
     link="/blog/"
-    title="Notes on the system"
-    subtitle="How the studies are built, what changed, and what's next."
+    title="An open practice journal"
+    subtitle="Intentions, observations, challenges and discoveries from the practice room."
   >}}
 {{< /cards >}}

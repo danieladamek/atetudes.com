@@ -22,7 +22,7 @@ menu:
     - name: "Tools"
       pageRef: "/tools"
       weight: 2
-    - name: "Blog"
+    - name: "Slog"
       pageRef: "/blog"
       weight: 3
     - name: "Search"
