@@ -28,6 +28,14 @@ SHOTS = Path(sys.argv[sys.argv.index("--shots") + 1]) if "--shots" in sys.argv e
 SLUG = "etude-fence-test"
 fails, n = [], 0
 
+def site_fences():
+    """THE SITE'S OWN FENCES (261125): the first real post with a fence shipped, so the throwaway build holds the site's
+    players beside the test post's. Counted from content/ the way check_etude_embeds counts them — never a typed number.
+    → (fences, pages carrying one)"""
+    import re
+    per = [len(re.findall(r"^```etude[ \t]*$", f.read_text(encoding="utf-8"), re.M)) for f in (REPO / "content").rglob("*.md")]
+    return sum(per), sum(1 for c in per if c)
+
 def check(ok, msg):
     global n
     n += 1
@@ -60,6 +68,7 @@ def serve(root):
     return httpd, port
 
 def main():
+    SITE, SITE_PAGES = site_fences()   # the site's own posts' players, beside the test post's (261125)
     F = fences(); H = F.pop("height")   # the door's measured embed height — never a number typed here
     check(all(F[k].startswith("```etude\n") for k in F), "4. the fences are the note block's own (```etude)")
     with tempfile.TemporaryDirectory() as t:
@@ -68,7 +77,7 @@ def main():
         r, out, post = build(tmp, f"The first.\n\n{F['a']}\n\nThe second.\n\n{F['b']}\n\nA custom one.\n\n{F['custom']}\n\nAfter.")
         check(r.returncode == 0, f"1. hugo renders the post: {r.stderr[:200]}")
         probs, found, nf, _ = check_etude_embeds(out, (REPO / "content", post))
-        check(found == 3 and nf >= 3, f"1. the check read every player: {found} of {nf} fences")
+        check(found == 3 + SITE and nf >= 3 + SITE, f"1. the check read every player: {found} of {nf} fences")
         check(len(probs) == 1 and f"blog/{SLUG}/index.html, player 3 of 3" in probs[0] and "typed changes never travel in a link (charter §6)" in probs[0],
               f"1. the check fails on the custom fence alone, by page, place and reason: {probs}")
         # ---- 3. a fence with no app: line fails the build itself ----
@@ -78,7 +87,7 @@ def main():
         # ---- 2. with the custom one removed: clean, and two players that stop each other ----
         r, out, post = build(tmp, f"The first.\n\n{F['a']}\n\nThe second.\n\n{F['b']}\n\nAfter.")
         probs, found, nf, pages = check_etude_embeds(out, (REPO / "content", post))
-        check(r.returncode == 0 and probs == [] and found == 2 and pages == 1, f"2. the clean post passes the check: {probs}, {found} players on {pages} page(s)")
+        check(r.returncode == 0 and probs == [] and found == 2 + SITE and pages == 1 + SITE_PAGES, f"2. the clean post passes the check: {probs}, {found} players on {pages} page(s)")
         if not BROWSER:
             print("(--no-browser: the two players were not played)")
         hs, port = serve(out)

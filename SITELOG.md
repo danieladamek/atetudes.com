@@ -1,4 +1,16 @@
-## 2026-11-25 — A blog post with a live étude: C Major — Cycle of 4ths on 3rds and 7ths (not yet pushed)
+## 2026-11-25 — The fence test counts the site's own fences; the post's first push did not deploy
+
+- **`662f47b` did not deploy.** The publish job failed at its last step, `tools/etude_fence.py`: 2 of 6 assertions.
+  The test mounts a two-fence test post into a throwaway build and expected exactly those players in it. It was
+  written when no post carried a fence, and the new post is the first. The live site stayed as it was.
+- **`tools/etude_fence.py`:** the two counts add the fences found in `content/` (counted the way `check_site.py` counts
+  them), so a real post with a fence no longer fails the test. Nothing else in it changed.
+- **Seen:** on a clone of `662f47b` with Hugo 0.164.0: before the change, the same two failures; after it, 6/0 without
+  a browser and 18/0 with one. `check_studies.py` and `check_tools.py` pass; engine tests 791/0.
+- **Not run here:** the app gate (door locks, `player_door.py`), which this push owes because `tools/` changed; and
+  `check_site.py`'s deploy-record step, which needs GitHub access.
+
+## 2026-11-25 — A blog post with a live étude: C Major — Cycle of 4ths on 3rds and 7ths
 
 - **`/blog/c-major-cycle-of-4ths-on-3rds-and-7ths/`** (`content/blog/c-major-cycle-of-4ths-on-3rds-and-7ths.md`): Daniel's
   practice-journal post, from his Obsidian note of 261123. The first post to carry an `etude` fence, so the first
