@@ -1,3 +1,23 @@
+## 2026-11-25 — A blog post with a live étude: C Major — Cycle of 4ths on 3rds and 7ths (not yet pushed)
+
+- **`/blog/c-major-cycle-of-4ths-on-3rds-and-7ths/`** (`content/blog/c-major-cycle-of-4ths-on-3rds-and-7ths.md`): Daniel's
+  practice-journal post, from his Obsidian note of 261123. The first post to carry an `etude` fence, so the first
+  page on the site that plays an étude in place.
+  - **The étude** is the block from the embed code Daniel copied in Multetudes (C major, tetrads, cycle of fourths,
+    figure 3-7, strings 3-2-1 near fret 5). The fence's body is that embed's fragment decoded, checked equal by
+    script; the player's own `playable()` accepts it. The pasted iframe HTML in the note was replaced by the fence.
+  - **Two captures** of the shipped studies, as Daniel pasted them, in `static/assets/blog/c-major-cycle-of-4ths-on-3rds-and-7ths/`:
+    `modes-from-pentatonic-boxes-box-2.png` and `cycle-of-4ths-3rds-and-7ths-on-the-staff.png`. Unedited, with alt text.
+  - **The prose is Daniel's.** Spacing and four typos fixed; bare URLs became links; three corrections he ruled (below).
+- **`/blog/welcome/` is hidden, not removed** (Daniel, 261125): `build: list: never` in `content/blog/welcome.md`. It is
+  off `/blog/`, the feed, the navigation, the sitemap and site search. The page still serves at `/blog/welcome/`, and
+  `/blog/welcome.html` still redirects to it. No URL changed.
+- **Daniel's three corrections, 261125:** "back in August 2026"; G7 is (V7); CM7 is (Imaj7).
+- **Seen:** built with Hugo 0.164.0 + Hextra v0.12.3 and opened in Chromium at 1280 and 390. The player loads and its
+  frame takes the height it reports (477 px at 1280, 594 px at 390); both images fit the column; no horizontal
+  scroll; no console errors; `/blog/` lists the post first and the feed carries it.
+- **Not run here:** `tools/check_site.py` on the built artifact (CI runs it in publish). Site paths only, so no app gate.
+
 ## 2026-11-23 — An embedded étude's frame fits the étude; Multetudes v1.1.22
 
 - **`/embed/multetudes/`** (re-published byte-identical from `hub/build/player.html`), Update Log 261123.1,
